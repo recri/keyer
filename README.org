@@ -15,16 +15,20 @@
 * Paddle Interface
   I use a paddle interface built on a breadboard from a Teensy 2.0 (from
   http://www.pjrc.com/teensy/), a stereo audio jack, and three jumper
-  wires.  (Teensy B0 -> jack dit, B1 -> dah, GND -> common).  The
-  software to make B0 and B1 transmit USB:MIDI is an example program
+  wires.
+| Teensy B0     | -> | stereo jack dit    |
+| Teensy B1     | -> | stereo jack dah    |
+| Teensy GND    | -> | stereo jack common |
+| Iambic paddle | -> | stereo jack        |
+| Teensy USB    | -> | computer           |
+  The software to make B0 and B1 transmit USB:MIDI is an example program
   installed with the Teensyduino extension to the Arduino development
   package.
 
-  [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg]]
-
   [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3]].
 
-  There is a Teensyduino application in MidiKey/MidiKey.ino.
+  There is a Teensyduino application to translate paddle transitions
+  into MIDI events in MidiKey/MidiKey.ino
 * Plugin building
   The plugin builds on Ubuntu 11.10 with the build-essentials, jackd2,
   and libjack-jackd2-dev packages installed.  Just run make in the
@@ -85,19 +89,20 @@
    There are images in the images directory that show what I see when
    I start up this set up my machine.
    
-   On the MIDI panel I connect: system -> keyer_iambic; keyer_iambic
-   -> keyer_tone; and keyer_ascii -> keyer_tone
-
-   On the Audio panel I connect: keyer_tone -> system
-
+   On the MIDI panel I connect:
+   | system       | -> | keyer_iambic |
+   | keyer_iambic | -> | keyer_tone   |
+   | keyer_ascii  | -> | keyer_tone   |
+   On the Audio panel I connect:
+   | keyer_tone | -> | system |
    On the ALSA panel I don't connect anything, but I look to see that
    the Teensy MIDI device is connected. 
 
    This is just one possible set up.  If you don't have a MIDI
    enabled paddle, skip keyer_iambic.  If you don't need no stinking
    keyboard keyer, skip keyer_ascii.  If you want to make a pile up,
-   you should be able to start multiple keyer_ascii's and
-   keyer_tone's and mix the results into one jack channel.
+   you should be able to start multiple keyer_ascii's and keyer_tone's
+   and mix the results into one jack channel.
 * Details, Bugs, and Issues
 ** option usage
    Everybody shares the same option definition table, implements those
@@ -187,7 +192,8 @@
 ** keyer_straight - using a straight key
    There isn't any app for this, you wire the MIDI system device
    directly to keyer_tone input, and make sure that your MidiKey
-   is sending note 0 for the key.
+   is sending note 0 for the key, or reconfigure keyer_tone to listen
+   to the channel and note your key is sending.
 ** keyer_tone - midi to i/q tone generator
    It uses a filter based I/Q oscillator which requires a couple of
    multiplies and adds for each step, and the steps are configured to
@@ -196,6 +202,9 @@
    It uses the same oscillator to generate a sine ramp for key on and
    key off.  The "rise" and "fall" times can be independently set to the
    desired number of milliseconds.
+
+   The "ramp" option sets "rise" and "fall" to the same number of
+   milliseconds.
 
    The other parameters to keyer_tone are "gain" in decibels and
    "freq" in hertz.
@@ -221,4 +230,14 @@
     Should add MIDI input to receive the iambic shaped keying. That
     could be used to key a transmitter, play a sidetone, wiggle a PTT
     line, or flash some LED's.
-** overall issues
+** ToDo
+*** iambic - Rewrite the process loop -> iambic_transition
+    Make it call iambic_transition at a specified granularity
+    irrespective of the jack buffer size, like twice per dit clock.
+*** iambic - Implement mode B
+    Should only require a short memory of key states, make the next
+    element decision at end of inter-element space based on key state
+    at 1.5 dit clocks in the past.
+*** MidiKey - less debouncing
+*** ascii - install more code points
+
