@@ -1,0 +1,41 @@
+* sdrkit keyer
+  This is a morse code keyer consisting of jack audio connection kit
+  plugins.  There's a plugin, keyer_tone, that generates i/q cw tones, a
+  plugin, keyer_ascii, that translates ascii text into midi events to
+  drive the tone generator, and an iambic keyer plugin, keyer_iambic,
+  for translating midi events from an iambic paddle into midi events
+  into midi events to drive the tone generator.
+** Paddle Interface
+   I use a paddle interface built on a breadboard from a Teensy 2.0 (from
+   http://www.pjrc.com/teensy/), a stereo audio jack, and three jumper
+   wires.  (Teensy B0 -> jack dit, B1 -> dah, GND -> common).  The
+   software to make B0 and B1 transmit USB:MIDI is an example program
+   installed with the Teensyduino extension to the Arduino development
+   package.
+** Plugin usage
+   To use the plugins is a bit rough at the moment.  You need to start
+   them as separate programs, each running in a shell window, and
+   then connect them in Qjackctl or some other jack wiring
+   interface.  They need to be in shell windows because, at the
+   moment, they'll block if you detach them.  I use three separate
+   emacs shell windows so I can turn up the verbose option and see
+   what's happening in each. 
+*** Wiring on Qjackctl
+    For wiring I use Qjackctl with jack configured to use the "raw" midi
+    interface.
+**** On the MIDI panel I connect:
+     system -> keyer_iambic
+     keyer_iambic -> keyer_tone
+     keyer_ascii -> keyer_tone<
+**** On the Audio panel I connect:
+     keyer_tone -> system
+**** On the ALSA panel I don't connect anything
+     but I look to see that the Teensy MIDI device is connected.
+**** In images:
+     [[http://github.com/recri/keyer/images/Screenshot at 2011-12-27 02:50:36.png][the Audio panel]]
+     [[http://github.com/recri/keyer/images/Screenshot at 2011-12-27 02:50:55.png][the MIDI panel]]
+     [[http://github.com/recri/keyer/images/Screenshot at 2011-12-27 02:51:04.png][the ALSA panel]]
+     [[http://github.com/recri/keyer/images/Screenshot at 2011-12-27 02:52:18.png][and my emacs shell buffers]]
+*** Automation
+    All this could be automated with jack_connect, but I have enough half
+    tested code as it is.
