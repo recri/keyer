@@ -10,6 +10,8 @@
   The keyer_iambic plugin translates midi events from an iambic paddle
   into midi events to drive the tone generator.
 
+  Everything runs and times itself off the jack sample rate, there is
+  no polling so everything happens with the least latency possible.
 * Paddle Interface
   I use a paddle interface built on a breadboard from a Teensy 2.0 (from
   http://www.pjrc.com/teensy/), a stereo audio jack, and three jumper
@@ -18,46 +20,56 @@
   installed with the Teensyduino extension to the Arduino development
   package.
 
-  There are some blurry photos in images/keyer-*.jpg.
+  [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg]]
 
   [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3]].
 
-  There is a Teensyduino application in MidiKey/MidiKey.ino
+  There is a Teensyduino application in MidiKey/MidiKey.ino.
+* Plugin building
+  The plugin builds on Ubuntu 11.10 with the build-essentials, jackd2,
+  and libjack-jackd2-dev packages installed.  Just run make in the
+  keyers directory.
+
+  Note that Ubuntu 11.10 has some confusion in the jackd packaging.
+  Some audio packages were built against jackd1 and some against the
+  jackd agnostic package, so some audio libraries will force
+  installation of the old jackd version 1 package.  I force jackd2
+  because it's better.
 * Plugin usage
-   To use the plugins is a bit rough at the moment.
+  Use of the plugins is a bit rough at the moment.
 
-   You need to start them as separate programs, each running in a
-   shell window, and then connect them in Qjackctl or with some other
-   jack wiring interface.
+  You need to start them as separate programs, each running in a
+  shell window, and then connect them in Qjackctl or with some other
+  jack wiring interface.
    
-   They need to be in shell windows because, at the moment, they'll
-   block if you detach them as background processes. It's also useful
-   to be able to adjust options or see verbose output.
+  They need to be in shell windows because, at the moment, they'll
+  block if you detach them as background processes. It's also useful
+  to be able to adjust options or see verbose output.
    
-   I use three separate emacs shell windows so I can turn up the
-   verbose option and see what's happening in each. 
+  I use three separate emacs shell windows so I can turn up the
+  verbose option and see what's happening in each. 
 
-   The plugins all accept the same command line options. You can get a
-   usage summary with the --help option, or any other unrecognized
-   option.  It shows the default values and briefly describes each
-   option.
+  The plugins all accept the same command line options. You can get a
+  usage summary with the --help option, or any other unrecognized
+  option.  It shows the default values and briefly describes each
+  option.
 
-   The "server" and "client" options are only effective at the command
-   line.
+  The "server" and "client" options are only effective at the command
+  line.
 
-   All other options can be adjusted with inline commands typed to the
-   standard input of the running modules.  Simply put the basename of
-   the option inside <> with the desired value.  So the reset the tone
-   frequency to 440Hz, use <freq440>.
+  All other options can be adjusted with inline commands typed to the
+  standard input of the running modules.  Simply put the basename of
+  the option inside <> with the desired value.  So the reset the tone
+  frequency to 440Hz, use <freq440>.
    
-   You can also query the current values of the options inline. Just
-   put the base option name inside <> with a question mark.  So the
-   current words per minute settings are printed with <wpm?>.
+  You can also query the current values of the options inline. Just
+  put the base option name inside <> with a question mark.  So the
+  current words per minute settings are printed with <wpm?>.
 
-   All the plugins recognize all of the options.  The keyer_ascii and
-   keyer_iambic plugins will send keyer_tone option changes as midi
-   sysex and if keyer_tone is connected it will implement the
-   changes.
+  All the plugins recognize all of the options.  The keyer_ascii and
+  keyer_iambic plugins will send keyer_tone option changes as midi
+  sysex and if keyer_tone is connected it will implement the
+  changes.
 * Wiring on Qjackctl
    For wiring I use Qjackctl with jack configured to use the "raw" midi
    interface.
