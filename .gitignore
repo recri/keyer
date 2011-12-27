@@ -1,0 +1,5 @@
+keyer_ascii
+keyer_iambic
+keyer_tone
+*.o
+*~

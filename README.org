@@ -17,41 +17,179 @@
 
   There is a Teensyduino application in MidiKey/MidiKey.ino
 * Plugin usage
-   To use the plugins is a bit rough at the moment.  You need to start
-   them as separate programs, each running in a shell window, and
-   then connect them in Qjackctl or some other jack wiring
-   interface.  They need to be in shell windows because, at the
-   moment, they'll block if you detach them.  I use three separate
-   emacs shell windows so I can turn up the verbose option and see
-   what's happening in each. 
-** Wiring on Qjackctl
-    For wiring I use Qjackctl with jack configured to use the "raw" midi
-    interface.
-*** On the MIDI panel I connect:
-     system -> keyer_iambic
-     keyer_iambic -> keyer_tone
-     keyer_ascii -> keyer_tone<
-*** On the Audio panel I connect:
-     keyer_tone -> system
-*** On the ALSA panel I don't connect anything
-    but I look to see that the Teensy MIDI device is connected.
-*** There are images in the images directory
-** Automation
-    All this could be automated with jack_connect, but I have enough half
-    tested code as it is.
-** The plugins all accept the same command line options.
-    You can get a usage summary with the --help option, or any other
-    unrecognized option.  It shows the default values and briefly
-    describes each option.
-** Command line options are also available as inline commands
-    typed to the standard input of the running modules.  Simply put
-    the basename of the option inside <> with the desired value.  So
-    the reset the tone frequency to 440Hz, use <freq440>.
-** You can query the current values of the options inline, too.
-   Just put the base option name inside <> with a question mark.  So
-    the current words per minute settings are printed with <wpm?>.
-** The keyer_ascii and keyer_iambic plugins will pass options on
-    to the connected keyer_tone plugin.
-* Bugs
-** keyer_iambic
-***  Mode A only, or something like that.
+   To use the plugins is a bit rough at the moment.
+
+   You need to start them as separate programs, each running in a
+   shell window, and then connect them in Qjackctl or with some other
+   jack wiring interface.
+   
+   They need to be in shell windows because, at the moment, they'll
+   block if you detach them as background processes. It's also useful
+   to be able to adjust options or see verbose output.
+   
+   I use three separate emacs shell windows so I can turn up the
+   verbose option and see what's happening in each. 
+
+   The plugins all accept the same command line options. You can get a
+   usage summary with the --help option, or any other unrecognized
+   option.  It shows the default values and briefly describes each
+   option.
+
+   The "server" and "client" options are only effective at the command
+   line.
+
+   All other options can be adjusted with inline commands typed to the
+   standard input of the running modules.  Simply put the basename of
+   the option inside <> with the desired value.  So the reset the tone
+   frequency to 440Hz, use <freq440>.
+   
+   You can also query the current values of the options inline. Just
+   put the base option name inside <> with a question mark.  So the
+   current words per minute settings are printed with <wpm?>.
+
+   All the plugins recognize all of the options.  The keyer_ascii and
+   keyer_iambic plugins will send keyer_tone option changes as midi
+   sysex and if keyer_tone is connected it will implement the
+   changes.
+
+* Wiring on Qjackctl
+   For wiring I use Qjackctl with jack configured to use the "raw" midi
+   interface.
+
+   All this could be automated with jack_connect, or automatically
+   implemented in the plugins themselves, but I have enough half
+   tested code as it is.
+
+   You will be most in control if you start jack with qjackctl before
+   you launch any of the plugins.  Starting a plugin before jack
+   results in an autostart and a chunk of messages from jackd.
+
+   There are images in the images directory that show what I see when
+   I start up this set up my machine.
+   
+   On the MIDI panel I connect: system -> keyer_iambic; keyer_iambic
+   -> keyer_tone; and keyer_ascii -> keyer_tone
+
+   On the Audio panel I connect: keyer_tone -> system
+
+   On the ALSA panel I don't connect anything, but I look to see that
+   the Teensy MIDI device is connected. 
+
+   This is just one possible set up.  If you don't have a MIDI
+   enabled paddle, skip keyer_iambic.  If you don't need no stinking
+   keyboard keyer, skip keyer_ascii.  If you want to make a pile up,
+   you should be able to start multiple keyer_ascii's and
+   keyer_tone's and mix the results into one jack channel.
+* Details, Bugs, and Issues
+** option usage
+   Everybody shares the same option definition table, implements those
+   that apply to itself, and sends changes downstream if that makes
+   sense.
+
+   The options are implemented as command line options using a
+   "--name value".
+
+   The options are implemented as inline commands using a
+   "<namevalue>" non-syntax inherited from dttsp.
+
+   Almost all options are runtime configurable.
+** common options for all apps
+   "verbose" generates output to standard error and will slow down the
+   jack process callback if set high enough.
+
+   "chan" specifies which midi channel the communication runs on.
+   Note that midi channel 1 is encoded as 0 in midi events.
+
+   "note" specifies which midi note is used for communication. In the
+   case of keyer_iambic, "note" specifies the dit and the dah is found
+   one higher.  Note that midi note 0 is encoded as 0 in midi events.
+
+   "server" specifies the jack server name to connect to.
+
+   "client" specifies the jack client name to connect as.
+
+** common options for morse code timing
+   "word" specifies the number of dit clocks in a word.  Use 50 for
+  PARIS and 60 for CODEX.
+
+  "wpm" specifies the words per minute, used with "word" to compute
+  the dit clocks per minute.
+
+  "dah" specifies the number of dit clocks in a dah, defaults to 3.0.
+  
+  "ies" specifies the number of dit clocks in an inter-element space,
+  defaults to 1.0.
+
+  "ils" specifies the number of dit clocks in an inter-letter space,
+  defaults to 3.0.
+
+  "iws" specifies the number of dit clocks in an inter-word space,
+  defaults to 7.0, but you can jack this up get Farnsworth word
+  spacing where strings of letters are sent fast with large gaps
+  between the words.
+
+** keyer_ascii - jack ascii to morse keyer
+   keyer_ascii implements the common options and the common timing
+   options.
+
+   You type to the program's standard input to supply the characters
+   to be sent.  Anything it knows will be encoded, that which it
+   doesn't know gets silently ignored.
+
+   You can send prosigns by using the backslash.  The input sequence
+   \sk will send ...-.-, and \\sos will send ...---...
+
+   And you can insert option queries and settings inline with the <>
+   syntax, so <wpm?> to query words per minute and <wpm22.5> to set
+   "wpm" to 22.5.
+** keyer_iambic - jack iambic paddle to morse keyer
+   The iambic keyer implements the common options and the common
+   timing options.  In addition it implements.
+
+   "swap" reverses the sense of dit and dah.  Normally dit comes in on
+  the "chan" channel at "note" and dah one note higher.  Default 0.
+
+  "alsp" specifies if the keyer does automatic letter spacing or
+  simply turns off.  Default 0.
+
+  "awsp" specifies if the keyer does automatic word spacing or simply
+  turns off.  Default 0.
+
+  "mode" should specify if the keyer implements iambic mode A or mode
+  B, but the keyer only does what it does at the moment.
+*** Mode A only, or something like that.
+*** Stuck keys sometimes, probably MidiKey problem
+** keyer_straight - using a straight key
+   There isn't any app for this, you wire the MIDI system device
+   directly to keyer_tone input, and make sure that your MidiKey
+   is sending note 0 for the key.
+** keyer_tone - jack midi to i/q tone generator
+   It uses a filter based I/Q oscillator which requires a couple of
+   multiplies and adds for each step, and the steps are configured to
+   be exactly the desired phase difference for each sample.
+
+   It uses the same oscillator to generate a sine ramp for key on and
+   key off.  The "rise" and "fall" times can be independently set to the
+   desired number of milliseconds.
+
+   The other parameters to keyer_tone are "gain" in decibels and
+   "freq" in hertz.
+** MidiKey - Teesyduino application
+   There's very little to this, you compile in the Teensyduino
+   augmented Arduino environment.
+
+   Be sure to specify your board on the Tools > Board menu, and be
+   sure to specify MIDI on the Tools > USB Type menu.
+   
+   Once you've downloaded the compiled sketch, you should see "ID
+   16c0:0485 VOTI" listed by lsusb, "USB-Audio - Teensy MIDI" listed
+   in /proc/asound/cards, and the same should show up in Qjackctl on
+   the ALSA panel.
+
+   Don't forget to install the udev rules file for the Teensy.
+
+*** Bugs and Issues
+    I think the key debouncing is just slowing down and missing some
+    of the key transitions.
+
+    Should add MIDI input to receive the iambic shaped
