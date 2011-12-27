@@ -1,10 +1,15 @@
 * Ascii/Iambic morse keyer using Jack audio connection kit
   This is a morse code keyer consisting of jack audio connection kit
-  plugins.  There's a plugin, keyer_tone, that generates i/q cw tones, a
-  plugin, keyer_ascii, that translates ascii text into midi events to
-  drive the tone generator, and an iambic keyer plugin, keyer_iambic,
-  for translating midi events from an iambic paddle into midi events
+  plugins.
+
+  The keyer_tone plugin generates i/q cw tones from midi events.
+
+  The keyer_ascii plugin translates ascii text into midi events to
+  drive the tone generator.
+
+  The keyer_iambic plugin translates midi events from an iambic paddle
   into midi events to drive the tone generator.
+
 * Paddle Interface
   I use a paddle interface built on a breadboard from a Teensy 2.0 (from
   http://www.pjrc.com/teensy/), a stereo audio jack, and three jumper
@@ -14,6 +19,8 @@
   package.
 
   There are some blurry photos in images/keyer-*.jpg.
+
+  [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3]].
 
   There is a Teensyduino application in MidiKey/MidiKey.ino
 * Plugin usage
@@ -51,7 +58,6 @@
    keyer_iambic plugins will send keyer_tone option changes as midi
    sysex and if keyer_tone is connected it will implement the
    changes.
-
 * Wiring on Qjackctl
    For wiring I use Qjackctl with jack configured to use the "raw" midi
    interface.
@@ -87,12 +93,19 @@
    sense.
 
    The options are implemented as command line options using a
-   "--name value".
+   "--name value" syntax, that's two minus signs in front of the
+   option name as one argument followed by the value as a second
+   argument.
 
    The options are implemented as inline commands using a
-   "<namevalue>" non-syntax inherited from dttsp.
+   "<namevalue>" syntax, that's the option name directly concatenated
+   with the option value inside a less-than greater-than bracket.
 
-   Almost all options are runtime configurable.
+   Almost all options are runtime configurable, the jack "server"
+   and jack "client" names cannot be changed once the plugin starts.
+
+   All of the options which are numbers, eg "wpm", "dah", "freq", and
+   "gain", are floating point values.
 ** common options for all apps
    "verbose" generates output to standard error and will slow down the
    jack process callback if set high enough.
@@ -107,7 +120,6 @@
    "server" specifies the jack server name to connect to.
 
    "client" specifies the jack client name to connect as.
-
 ** common options for morse code timing
    "word" specifies the number of dit clocks in a word.  Use 50 for
   PARIS and 60 for CODEX.
@@ -127,8 +139,7 @@
   defaults to 7.0, but you can jack this up get Farnsworth word
   spacing where strings of letters are sent fast with large gaps
   between the words.
-
-** keyer_ascii - jack ascii to morse keyer
+** keyer_ascii - ascii to morse keyer
    keyer_ascii implements the common options and the common timing
    options.
 
@@ -142,7 +153,7 @@
    And you can insert option queries and settings inline with the <>
    syntax, so <wpm?> to query words per minute and <wpm22.5> to set
    "wpm" to 22.5.
-** keyer_iambic - jack iambic paddle to morse keyer
+** keyer_iambic - iambic paddle to morse keyer
    The iambic keyer implements the common options and the common
    timing options.  In addition it implements.
 
@@ -157,13 +168,15 @@
 
   "mode" should specify if the keyer implements iambic mode A or mode
   B, but the keyer only does what it does at the moment.
-*** Mode A only, or something like that.
-*** Stuck keys sometimes, probably MidiKey problem
+*** Bugs and Issues
+   Mode A only, or something like that.
+
+   Stuck keys sometimes, probably MidiKey problem
 ** keyer_straight - using a straight key
    There isn't any app for this, you wire the MIDI system device
    directly to keyer_tone input, and make sure that your MidiKey
    is sending note 0 for the key.
-** keyer_tone - jack midi to i/q tone generator
+** keyer_tone - midi to i/q tone generator
    It uses a filter based I/Q oscillator which requires a couple of
    multiplies and adds for each step, and the steps are configured to
    be exactly the desired phase difference for each sample.
@@ -186,10 +199,14 @@
    in /proc/asound/cards, and the same should show up in Qjackctl on
    the ALSA panel.
 
-   Don't forget to install the udev rules file for the Teensy.
-
+   Don't forget to install the /etc/udev/rules.d rules file for the
+   Teensy.
 *** Bugs and Issues
-    I think the key debouncing is just slowing down and missing some
-    of the key transitions.
+    I think the key debouncing is just slowing things down and missing
+    some of the key transitions as a consequence.  Iambic paddles are
+    not consumer grade push buttons.
 
-    Should add MIDI input to receive the iambic shaped
+    Should add MIDI input to receive the iambic shaped keying. That
+    could be used to key a transmitter, play a sidetone, wiggle a PTT
+    line, or flash some LED's.
+** overall issues
