@@ -12,8 +12,10 @@
   software to make B0 and B1 transmit USB:MIDI is an example program
   installed with the Teensyduino extension to the Arduino development
   package.
-** There are some blurry photos in images/keyer-*.jpg.
-** There is a Teensyduino application in MidiKey/MidiKey.ino
+
+  There are some blurry photos in images/keyer-*.jpg.
+
+  There is a Teensyduino application in MidiKey/MidiKey.ino
 * Plugin usage
    To use the plugins is a bit rough at the moment.  You need to start
    them as separate programs, each running in a shell window, and
