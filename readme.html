@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+  <head>
+    <title>sdrkit keyer</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  </head>
+  <body>
+    <p>
+      This is a morse code keyer consisting of jack audio connection kit
+      plugins.  There's a plugin, keyer_tone, that generates i/q cw tones, a
+      plugin, keyer_ascii, that translates ascii text into midi events to
+      drive the tone generator, and an iambic keyer plugin, keyer_iambic,
+      for translating midi events from an iambic paddle into midi events
+      into midi events to drive the tone generator.
+    </p><p>
+      I use a paddle interface built on a breadboard from a Teensy 2.0 (from
+      http://www.pjrc.com/teensy/), a stereo audio jack, and three jumper
+      wires.  (Teensy B0 -> jack dit, B1 -> dah, GND -> common).  The
+      software to make B0 and B1 transmit USB:MIDI is an example program
+      installed with the Teensyduino extension to the Arduino development
+      package.
+    </p><p>
+      To use the plugins is a bit rough at the moment.  You need to start
+      them as separate programs, each running in a shell window, and
+      then connect them in Qjackctl or some other jack wiring
+      interface.  They need to be in shell windows because, at the
+      moment, they'll block if you detach them.  I use three separate
+      emacs shell windows so I can turn up the verbose option and see
+      what's happening in each. 
+    </p><p>
+      For wiring I use Qjackctl with jack configured to use the "raw" midi
+      interface.
+      </p><p>
+      On the MIDI panel I connect:
+      <ul>
+	<li>system -> keyer_iambic</li>
+	<li>keyer_iambic -> keyer_tone</li>
+	<li>keyer_ascii -> keyer_tone</li>
+      </ul>
+      On the Audio panel I connect:
+      <ul>
+	<li>keyer_tone -> system</li>
+      </ul>
+      On the ALSA panel I don't connect anything, but I look to see that the 
+      Teensy MIDI device is connected.
+      </p><p>
+      In images, we have the Audio panel:
+      <div align="center">
+	<img src="images/Screenshot at 2011-12-27 02:50:36.png" />
+      </div>
+      and the MIDI panel:
+      <div align="center">
+	<img src="images/Screenshot at 2011-12-27 02:50:55.png" />
+      </div>
+      and the ALSA panel:
+      <div align="center">
+	<img src="images/Screenshot at 2011-12-27 02:51:04.png" />
+      </div>
+      and my emacs shell buffers:
+      <div align="center">
+	<img src="images/Screenshot at 2011-12-27 02:52:18.png" />
+      </div>
+      showing the three programs running.
+      </p><p>
+      All this could be automated with jack_connect, but I have enough half
+      tested code as it is.  I'm 
+      </p>
+  </body>
+</html>
