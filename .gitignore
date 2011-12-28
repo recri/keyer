@@ -1,5 +1,7 @@
 keyer_ascii
 keyer_iambic
 keyer_tone
+keyer_decode
+keyer_detone
 *.o
 *~
