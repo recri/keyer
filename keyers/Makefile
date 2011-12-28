@@ -13,8 +13,11 @@ ALL=../bin/keyer_tone ../bin/keyer_ascii ../bin/keyer_iambic
 
 all: $(ALL)
 
+all-clean:: clean
+	rm -f $(ALL)
+
 clean::
-	rm -f *~ *.o $(ALL)
+	rm -f *~ *.o
 
 ../bin/keyer_tone: keyer_tone.c keyer_options.o keyer_framework.o keyer_timing.h
 	mkdir -p ../bin

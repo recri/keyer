@@ -1,0 +1,852 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+package require Tk
+
+##
+## The game is to learn the morse code patterns by listening
+## to morse code characters and groups of characters and
+## responding.
+##
+## For the moment you must type to respond, but that's not
+## ideal, what we want is to respond in morse code.  If you
+## can remember the dits and dahs long enough to key them
+## back, then you're establishing the auditory-muscular loop
+## between the sounds and the motions that make the sound.
+## It's that auditory-muscular loop that the meaning gets
+## attached to in your brain.  Until you establish the loop,
+## by practising listening and responding, you will always
+## be fumbling around.
+##
+## In any case, the idea is to make it a game where you're
+## given patterns and a chance to respond.  When you respond
+## correctly, the pattern is decoded visually in a rewarding
+## color.
+##
+## If you respond incorrectly or fail to respond, the pattern
+## is repeated, repeated with increasing visual cues, and
+## finally decoded in an unrewarding color.
+##
+## The game should keep track of your progress and repeat
+## things which you have problems until you get them right.
+##
+## the game should start with the shortest patterns and
+## build up.  in fact, probably work at particular lengths
+## whether they're single letters or combinations.
+##
+## as you get better, the characters will become digrams,
+## trigrams, and longer.  Not much point in applying the
+## expected character frequencies, since that isn't what
+## you'll need to copy over the air.
+##
+
+##
+## todo -
+## [ ] - use separate tones for ascii and iambic
+##
+
+proc send-puts {target opt value} {
+    global send
+    puts $send($target-fp) "<$opt$value>"
+}
+
+proc send-puts-text {target text} {
+    global send
+    puts $send($target-fp) $text
+}
+
+proc send-open {target} {
+    global send
+    set bindir [file dirname [info script]]
+    set send($target-binary) [file join $bindir keyer_$target]
+    # test for file exists
+    set send($target-out-file) "/tmp/play-morse-[pid]-$target.out"
+    set send($target-fp) [open "|$send($target-binary) >& $send($target-out-file)" w]
+    fconfigure $send($target-fp) -buffering none
+    # set a fileevent on the out-file
+}
+
+proc send-close {target} {
+    global send
+    close $send($target-fp)
+    file delete $send($target-out-file)
+    foreach name [array names send $target-*] {
+	unset send($name)
+    }
+}
+
+##
+## parameters and operating data
+##
+array set data {
+
+    tone-freq 750
+    tone-gain -30
+    tone-rise 5
+    tone-fall 5
+    ascii-wpm 15
+    ascii-word 60
+    ascii-dah 3
+    ascii-ies 1
+    ascii-ils 3
+    ascii-iws 7
+    iambic-wpm 15
+    iambic-word 60
+    iambic-dah 3
+    iambic-ies 1
+    iambic-ils 3
+    iambic-iws 7
+    iambic-mode A
+    iambic-alsp 0
+    iambic-awsp 0
+    iambic-swap 0
+
+    w6rec.com.letter.sets {
+	EISH5 TMO0 AWJ1 NDB6 AUV4
+    }
+
+    words {
+	QRL QRM QRN QRS QRT QRZ QSB QSL QSO QSY QTH QRX
+	/ 73 88 ?
+	ABT ADR AGE AGN ANT BEAM BK BN
+	C CL CPY CQ CUL DE DSW DX
+	EL ES FB GA GB GE GM GN GND GUD
+	HI HR HV HW
+	K
+	LID LOOP
+	N NAME NR NW
+	OM OP 
+	PKT PSE PWR
+	R RCVR RIG RPT RST
+	SAN SK SRI SSB
+	TEMP TEST TKS TMW TNX TU
+	UR
+	VERT VY
+	WATT WX 
+	XYL
+	YAGI YL YRS
+    }
+
+    all-letters {
+	 "\"" "\b" {!} {$} {%} {'} {(} {)} {*} {+} {,} {-} {.} {/} 
+	{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}
+	{:} {;} {=} {?} {@}
+	{A} {B} {C} {D} {E} {F} {G} {H} {I} {J} {K} {L} {M} {N} {O} {P} {Q} {R} {S} {T} {U} {V} {W} {X} {Y} {Z}
+	{_}
+    }
+
+    game-play-letters {
+	{+} {,} {-} {.} {/}
+	{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}
+	{=} {?}
+	{A} {B} {C} {D} {E} {F} {G} {H} {I} {J} {K} {L} {M} {N} {O} {P} {Q} {R} {S} {T} {U} {V} {W} {X} {Y} {Z}
+    }
+    game-play-max-interval 5000
+    game-play-level 14
+    play 0
+}
+
+#
+# morse code table
+# . indicates key down, space indicates key up
+# there is no key transition between adjacent
+# dots or spaces.
+# A space extends the end of letter off by two.
+# The end of letter space is added by code-get
+#
+array set code {
+    \b {. . . . . . . .}
+    { } {  }
+    {!} {. . . ... .}
+    \" {. ... . . ... .}
+    {$} {. . . ... . . ...}
+    {%} {. ... . . .} 
+    {'} {. ... ... ... ... .}
+    {(} {... . ... ... .}
+    {)} {... . ... ... . ...}
+    {*} {. . . ... . ...}
+    {+} {. ... . ... .}
+    {,} {... ... . . ... ...}
+    {-} {... . . . . ...}
+    {.} {. ... . ... . ...}
+    {/} {... . . ... .}
+    {0} {... ... ... ... ...}
+    {1} {. ... ... ... ...}
+    {2} {. . ... ... ...}
+    {3} {. . . ... ...}
+    {4} {. . . . ...}
+    {5} {. . . . .}
+    {6} {... . . . .}
+    {7} {... ... . . .}
+    {8} {... ... ... . .}
+    {9} {... ... ... ... .}
+    {:} {... ... ... . . .}
+    {;} {... . ... . ... .}
+    {=} {... . . . ...}
+    {?} {. . ... ... . .}
+    {@} {. ... ... . ... .}
+    {A} {. ...}
+    {B} {... . . .}
+    {C} {... . ... .}
+    {D} {... . .}
+    {E} {.}
+    {F} {. . ... .}
+    {G} {... ... .}
+    {H} {. . . .}
+    {I} {. .}
+    {J} {. ... ... ...}
+    {K} {... . ...}
+    {L} {. ... . .}
+    {M} {... ...}
+    {N} {... .}
+    {O} {... ... ...}
+    {P} {. ... ... .}
+    {Q} {... ... . ...}
+    {R} {. ... .}
+    {S} {. . .}
+    {T} {...}
+    {U} {. . ...}
+    {V} {. . . ...}
+    {W} {. ... ...}
+    {X} {... . . ...}
+    {Y} {... . ... ...}
+    {Z} {... ... . .}
+    {_} {. . ... ... . ...}
+    {a} {. ...}
+    {b} {... . . .}
+    {c} {... . ... .}
+    {d} {... . .}
+    {e} {.}
+    {f} {. . ... .}
+    {g} {... ... .}
+    {h} {. . . .}
+    {i} {. .}
+    {j} {. ... ... ...}
+    {k} {... . ...}
+    {l} {. ... . .}
+    {m} {... ...}
+    {n} {... .}
+    {o} {... ... ...}
+    {p} {. ... ... .}
+    {q} {... ... . ...}
+    {r} {. ... .}
+    {s} {. . .}
+    {t} {...}
+    {u} {. . ...}
+    {v} {. . . ...}
+    {w} {. ... ...}
+    {x} {... . . ...}
+    {y} {... . ... ...}
+    {z} {... ... . .}
+    {À} {. ... ... . ...}
+    {Á} {. ... ... . ...}
+    {Â} {. ... ... . ...}
+    {Ä} {. ... . ...}
+    {Ç} {... ... ... ...}
+    {È} {. . ... . .}
+    {É} {. . ... . .}
+    {Ñ} {... ... . ... ...}
+    {Ö} {... ... ... .}
+    {Ü} {. . ... ...}
+    {à} {. ... ... . ...}
+    {á} {. ... ... . ...}
+    {â} {. ... ... . ...}
+    {ä} {. ... . ...}
+    {ç} {... ... ... ...}
+    {è} {. . ... . .}
+    {é} {. . ... . .}
+    {ñ} {... ... . ... ...}
+    {ö} {... ... ... .}
+    {ü} {. . ... ...}
+}
+
+#
+# read an code string out of the code elements
+# pass multiple characters as individual arguments
+# to concatenate their codes
+#
+proc code-get {args} {
+    global code
+    set result {}
+    foreach c $args {
+	append result $code($c)
+    }
+    return "$result   "
+}
+	
+#
+# initialize the code lengths
+#
+proc code-init {} {
+    global data
+    global code
+    foreach c [array names code] {
+	set length($c) [string length [code-get $c]]
+    }
+    set data(game-play-letter-lengths) [array get length]
+}
+
+#
+# play some text
+#
+proc play-text {text} {
+    global data
+    send-puts-text ascii $text
+}
+
+#
+# clear whatever might be displayed
+#
+proc clear-screen {} {
+    .c delete all
+    update idletasks
+}
+
+#
+# draw the morse code for the text in the specified color
+#
+proc draw-text {text color} {
+    global data
+    set x 0
+    set s { }
+    foreach c [split $text {}] {
+	foreach d [split [code-get $c] {}] {
+	    if {$d ne $s} {
+		set s $d
+		lappend ys $x
+	    }
+	    incr x
+	}
+    }
+    #puts $ys
+    set w [winfo width .c]
+    set h [winfo height .c]
+    foreach {x1 x2} $ys {
+	.c create rectangle $x1 1 $x2 0 -fill $color -outline $color
+    }
+    .c scale all 0 0 10 10
+    .c move all 10 [expr {$h/2}]
+    update idletasks
+}
+
+#
+# display the text in the specified color
+#
+proc show-text {text color} {
+    #puts "show-text $text"
+    if {$text eq "\b"} { set text "\\b" }
+    set text [string tolower $text]
+    foreach {x1 y1 x2 y2} [.c bbox all] break
+    .c create text [expr {$x2+40}] [expr {($y1+$y2)/2}] -text $text -fill $color -font {Times 20}
+    update idletasks
+}
+
+#
+# pick a text from the supplied list
+#
+proc pick-one-of {list} {
+    return [lindex $list [expr {int([llength $list]*rand())}]]
+}
+
+#
+# load the cumulative game score from disk
+#
+proc game-score-load {} {
+    global score
+    global data
+    if { ! [file exists $data(score-file)]} {
+	set fp [open $data(score-file) w]
+	close $fp
+	array set score {}
+    } else {
+	set fp [open $data(score-file) r]
+	array set score [read $fp]
+	close $fp
+    }
+    # game-score-summarize
+}
+
+#
+# write the cumulative game score to disk
+#
+proc game-score-save {} {
+    global score
+    global data
+    set fp [open $data(score-file) w]
+    puts $fp [array get score]
+    close $fp
+}
+
+#
+# summarize the game score
+#
+proc game-score-summarize {} {
+    global score
+    foreach {name value} [array get score] {
+	puts " {$name} {$value}"
+    }
+}
+
+#
+# score a play in the game
+#
+proc game-score {text result} {
+    global score
+    foreach c [split $text {}] {
+	if {$c eq "\b"} {
+	    append newtext "\\b"
+	} else {
+	    append newtext $c
+	}
+    }
+    lappend score($newtext) $result
+}
+
+#
+# form the game texts which fit into $n dot clocks.
+# take all combinations of letters that are shorter
+# or equal to $n.
+#
+proc game-texts {n} {
+    global data
+    # get the dot lengths of the base letter set
+    array set length $data(game-play-letter-lengths)
+    # prune to the letter set and to the chosen length
+    # form the base set of texts
+    foreach c [array names length] {
+	if {[lsearch $data(game-play-letters) $c] < 0 || $length($c) > $n} {
+	    unset length($c)
+	} else {
+	    lappend texts $c
+	}
+    }
+    # iteratively accumulate new texts
+    set ntexts [llength $texts]
+    while {1} {
+	foreach c [array names length] {
+	    foreach t $texts {
+		if {[lsearch $texts $c$t] < 0} {
+		    set lct $length($c)
+		    incr lct $length($t)
+		    if {$lct <= $n} {
+			set length($c$t) $lct
+			lappend texts $c$t
+		    }
+		}
+	    }
+	}
+	if {[llength $texts] == $ntexts} break
+	set ntexts [llength $texts]
+    }
+    return $texts
+}
+
+array set inputmap {
+    Delete "\b"
+    space " "
+    Tab "  "
+    Return " "
+    BackSpace "\b"
+    Control_L -1
+    Shift_L -1
+    Alt_L -1
+    Control_R -1
+    Shift_R -1
+    Alt_R -1
+    apostrophe "'"
+    colon ":"
+    comma ","
+    dollar {$}
+    equal {=}
+    minus "-"
+    parenleft "("
+    parenright ")"
+    period "."
+    plus "+"
+    question "?"
+    quotedbl \"
+    semicolon ";"
+    slash "/"
+    underscore "_"
+    a a b b c c d d e e f f g g h h i i j j k k l l m m n n o o p p q q r r s s t t u u v v w w x x y y z z
+    A a B b C c D d E e F f G g H h I i J j K k L l M m N n O o P p Q q R r S s T t U u V v W w X x Y y Z z
+    0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9
+}
+
+#
+#
+#
+proc game-player-answer {c} {
+    global data
+    global inputmap
+    if {[info exists inputmap($c)]} {
+	set d $inputmap($c)
+    } else {
+	puts "untranslated game-player-answer $c"
+	set d $c
+    }
+    if {$d == -1} return
+    if {$data(play) == 0} {
+	play-text $d
+	return
+    }
+    append data(game-response-text) $c
+    # does not match
+    while {[string first $data(game-response-text) $data(game-play-text)] != 0} {
+	# score first letter as a confusion
+	game-score $data(game-play-text) [list confused [string index $data(game-response-text) 0]]
+	# toss the first letter
+	set data(game-response-text) [string range $data(game-response-text) 1 end]
+	# exit if nothing left
+	if {$data(game-response-text) eq {}} { return }
+    }
+    # too short to match
+    if {[string length $data(game-response-text)] < [string length $data(game-play-text)]} {
+	return
+    }
+    # exact match
+    if {$data(game-response-text) eq $data(game-play-text)} {
+	catch {after cancel $data(game-play-after)}
+	game-score $data(game-play-text) answered
+	set data(game-next) game-next-text
+	clear-screen
+	draw-text $data(game-play-text) black
+	show-text $data(game-play-text) black
+	set data(game-play-after) [after 1000 game-next]
+	set data(game-response-text) {}
+	return
+    }
+    game-score $data(game-play-text) [list confused $data(game-response-text)]
+    set data(game-response-text) {}
+}
+
+#
+#
+#
+proc game-next {} {
+    global data
+    if {$data(play)} {
+	$data(game-next)
+	set data(game-play-after) [after 5000 game-next]
+    }
+}
+
+#
+#
+#
+proc game-next-text {} {
+    global data
+    set data(game-play-text) [string tolower [pick-one-of $data(game-play-texts)]]
+    set data(game-response-text) {}
+    game-score $data(game-play-text) try
+    # puts "game-next-text picked {$data(game-play-text)}"
+    set data(game-play-interval) $data(game-play-max-interval)
+    clear-screen
+    play-text $data(game-play-text)
+    set data(game-next) game-replay-text-1
+}
+
+#
+#
+#
+proc game-replay-text-1 {} {
+    global data
+    # puts "game-replay-text"
+    game-score $data(game-play-text) missed-once
+    clear-screen
+    play-text $data(game-play-text)
+    draw-text $data(game-play-text) black
+    set data(game-next) game-replay-text-2
+}
+
+#
+#
+#
+proc game-replay-text-2 {} {
+    global data
+    # puts "game-replay-text"
+    game-score $data(game-play-text) missed-twice
+    clear-screen
+    play-text $data(game-play-text)
+    draw-text $data(game-play-text) red
+    show-text $data(game-play-text) red
+    set data(game-next) game-next-text
+}
+
+#
+#
+#
+proc game-play-start {} {
+    global data
+    if {$data(play)} {
+	# start-sound
+	set data(game-next) game-next-text
+	after 500 game-next
+    } else {
+	# stop-sound
+	clear-screen
+    }
+}
+
+#
+#
+#
+proc game-play-level-change {level} {
+    global data
+    switch -regexp $level {
+	{^\d+$} {
+	    set data(game-play-texts) [game-texts $level]
+	}
+	{^words$} {
+	    set data(game-play-texts) $data(words)
+	}
+	default {
+	    set data(game-play-texts) {}
+	    foreach i [split $level {}] {
+		lappend data(game-play-texts) $i
+		foreach j [split $level {}] {
+		    lappend data(game-play-texts) $i$j
+		}
+	    }
+	}
+    }
+}
+
+#
+# update a variable and send it's value onward
+#
+proc ui-send-puts {target opt scale value} {
+    global data
+    if {$scale == 1} {
+	set value $value
+    } elseif {$scale == 10} {
+	set value [format %.1f [expr {double($value)/double($scale)}]]
+    } elseif {$scale == 100} {
+	set value [format %.2f [expr {double($value)/double($scale)}]]
+    } elseif {$scale == 1000} {
+	set value [format %.3f [expr {double($value)/double($scale)}]]
+    }
+    set data($target-$opt-display) $value
+    send-puts $target $opt $value
+}
+
+#
+# generic control panel row
+#
+proc ui-panel-row {w target row opt label from to units} {
+    global data
+    grid [ttk::label $w-o -text $opt] -row $row -column 0 -sticky w
+    grid [ttk::label $w-l -text $label] -row $row -column 1
+    if {[llength $from] > 1} {
+	grid [ttk::frame $w-s] -row $row -column 2 -sticky w
+	foreach x $from {
+	    pack [ttk::radiobutton $w-s.x$x -text $x -variable data($target-$opt) -value $x -command [list send-puts $target $opt $x]] -side left -anchor w
+	}
+    } else {
+	set scale 1
+	switch -regexp $from {
+	    {^-?\d+$} { set scale 1 }
+	    {^-?\d+.\d$} { set scale 10 }
+	    {^-?\d+.\d\d$} { set scale 100 }
+	}
+	grid [ttk::scale $w-s -orient horizontal -from [expr {$from*$scale}] -to [expr {$to*$scale}] -length 250 \
+		  -variable data($target-$opt-scale) -command [list ui-send-puts $target $opt $scale]] -row $row -column 2 -sticky ew
+	set data($target-$opt-scale) [expr {$data($target-$opt)*$scale}]
+	ui-send-puts $target $opt $scale $data($target-$opt-scale)
+	grid [ttk::label $w-v -textvar data($target-$opt-display)] -row $row -column 3 -sticky e
+	if {$units ne {}} {
+	    grid [ttk::label $w-u -text $units] -row $row -column 4 -sticky w
+	}
+    }
+}
+
+#
+# game panel user interface
+#
+proc ui-game-panel {w} {
+    frame $w
+    pack [canvas $w.c -width 800 -height 100] -side top -fill both -expand true
+    pack [frame $w.m] -side bottom -fill x
+    pack [menubutton $w.m.playlevel -text Level -menu .m.playlevel.m] -side left
+    menu .m.playlevel.m -tearoff no
+    foreach i {EISH5 TMO0 AWJ1 NDB6 AUV4 12 14 16 18 20 words} {
+	.m.playlevel.m add radiobutton -label $i -variable data(play-level) -value $i -command [list game-play-level-change $i]
+    }
+    pack [radiobutton $w.m.start -text Start -variable data(play) -command [list game-play-start]] -side left
+    pack [radiobutton $w.m.stop -text Stop -variable data(play) -command [list game-play-start]] -side left
+    return $w
+}
+
+#
+# ascii configure panel
+#
+proc ui-ascii-frame {w row} {
+    foreach {opt label from to units} {
+	wpm {words / minute} 5.0 60.0 {}
+	word {word length} 40 70 dits
+	dah {dah length} 2.5 3.5 dits
+	ies {inter-element length} 0.5 1.5 dits
+	ils {inter-letter length} 2.5 3.5 dits
+	iws {inter-word length} 5 20 dits
+    } {
+	ui-panel-row $w.ascii-$opt ascii $row $opt $label $from $to $units
+	incr row
+    }
+    return $row
+}
+
+#
+# iambic configure panel
+#
+proc ui-iambic-frame {w row} {
+    foreach {opt label from to units} {
+	wpm {words / minute} 5.0 60.0 {}
+	word {word length} 40 70 dits
+	dah {dah length} 2.5 3.5 dits
+	ies {inter-element length} 0.5 1.5 dits
+	ils {inter-letter length} 2.5 3.5 dits
+	iws {inter-word length} 5 50 dits
+	swap {swap paddles} {0 1} {} {}
+	alsp {auto-letter space} {0 1} {} {}
+	awsp {auto-word space} {0 1} {} {}
+	mode {iambic mode} {A B} {} {}
+    } {
+	ui-panel-row $w.iambic-$opt iambic $row $opt $label $from $to $units
+	incr row
+    }
+    return $row
+}
+
+#
+# mouse paddle configure panel
+#
+proc ui-mouse-panel {w} {
+    frame $w
+    return $w
+}
+
+#
+# tone panel configure
+#
+proc ui-tone-frame {w row} {
+    foreach {opt label from to units} {
+	freq {tone frequency} 300.0 1000.0 Hz
+	gain {tone volume} -40.0 0.0 dB
+	rise {key rise time} 0.1 50.0 ms
+	fall {key fall time} 0.1 50.0 ms
+    } {
+	ui-panel-row $w.tone-$opt tone $row $opt $label $from $to $units
+	incr row
+    }
+    return $row
+}
+
+#
+# save the score file and close the window
+#
+proc ui-close {w} {
+    global data
+    global score
+    foreach target {iambic ascii tone} {
+	send-close $target
+    }
+    if {"$w" eq "."} {
+	game-score-save
+	destroy .
+    }
+}
+
+proc ui-input {k} {
+    game-player-answer $k
+}
+#
+# build a user interface
+#
+proc ui-init {} {
+    pack [ttk::notebook .nb] -fill both -expand true
+    .nb add [ttk::frame .nb.ctl] -text Controls
+    set row 0
+    grid [label .nb.ctl.ascii -text {Ascii Keyer}] -row $row -column 0 -columnspan 5
+    set row [ui-ascii-frame .nb.ctl [incr row]]
+    grid [label .nb.ctl.iambic -text {Iambic Keyer}] -row $row -column 0 -columnspan 5
+    set row [ui-iambic-frame .nb.ctl [incr row]]
+    grid [label .nb.ctl.tone -text {Keyer Tone}] -row $row -column 0 -columnspan 5
+    set row [ui-tone-frame .nb.ctl [incr row]]
+
+    if {0} {
+	pack [menubutton .m.text -text Text -menu .m.text.m] -side left
+	menu .m.text.m -tearoff no
+	global data
+	foreach t [list \
+		       "the quick brown fox jumps over the lazy dog" \
+		       "abcdefghijklmnopqrstuvwxyz0123456789" \
+		       [join $data(all-letters) { }] \
+		      ] {
+	    .m.text.m add command -label "[string range $t 0 10] ..." -command [list play-text $t]
+	}
+    }
+    bind . <Destroy> [list ui-close %W]
+    bind . <KeyPress> [list ui-input %K]
+}
+
+#
+# initialize the helper applications
+#
+proc helpers-init {} {
+    global data
+    # start jack
+    # find helpers
+
+    send-open ascii
+    send-open iambic
+    send-open tone
+    # these names may need to change around
+    after 100
+    set retry {}
+    foreach cmd {
+	{jack_connect keyer_ascii:midi_out keyer_tone:midi_in}
+	{jack_connect keyer_iambic:midi_out keyer_tone:midi_in}
+	{jack_connect system:midi_capture_1 keyer_iambic:midi_in}
+	{jack_connect keyer_tone:out_i system:playback_1}
+	{jack_connect keyer_tone:out_q system:playback_2}
+    } {
+	if {[catch "exec $cmd" error]} {
+	    puts "$cmd: yielded $error"
+	    lappend retry $cmd
+	}
+    }
+    foreach cmd $retry {
+	if {[catch "exec $cmd" error]} {
+	    puts "$cmd: failed again, yielded $error"
+	}
+    }
+}
+
+# start playing a sine wave
+proc bgerror {msg} { puts stderr $msg }
+
+# 
+helpers-init
+ui-init
+code-init
+
+set data(score-file) $env(HOME)/.play-morse-score-file
+foreach {opt value} $argv {
+    switch -- $opt {
+	--rate { set data(rate) $value }
+	--hz { set data(hertz) $value }
+	--wpm { set data(wpm) $value }
+	--volume { set data(volume) $value }
+	--score { set data(score-file) $value }
+	--level { set data(game-play-level) $value }
+	default {
+	    error "unknown option $opt"
+	}
+    }
+}
+
+send-puts tone freq $data(tone-freq)
+send-puts tone gain $data(tone-gain)
+send-puts ascii wpm $data(ascii-wpm)
+send-puts iambic wpm $data(ascii-wpm)
+game-score-load
+game-play-level-change $data(game-play-level)
