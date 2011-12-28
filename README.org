@@ -10,6 +10,9 @@
   The keyer_iambic plugin translates midi events from an iambic paddle
   into midi events to drive the tone generator.
 
+  The keyer_decode plugin translates midi events into dits, dahs, and
+  spaces and prints them.
+
   Everything runs and times itself off the jack sample rate, there is
   no polling so everything happens with the least latency possible.
 * Paddle Interface
@@ -177,6 +180,10 @@
    And you can insert option queries and settings inline with the <>
    syntax, so <wpm?> to query words per minute and <wpm22.5> to set
    "wpm" to 22.5.
+** keyer_decode - midi to dit-dah-space decoder
+   keyer_decode implements only the common options.  It infers the
+   dit clock rate from midi note on and off events and writes a stream
+   of decoded '.',  '-', and ' ' to its standard output.
 ** keyer_iambic - iambic paddle to morse keyer
    The iambic keyer implements the common options and the common
    timing options.  In addition it implements.
@@ -248,3 +255,4 @@
 *** MidiKey - less debouncing
 *** ascii - install more code points
 
+    

@@ -1,6 +1,7 @@
 #!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 package require Tk
+package require Expect
 
 ##
 ## The game is to learn the morse code patterns by listening
@@ -44,33 +45,105 @@ package require Tk
 ## [ ] - use separate tones for ascii and iambic
 ##
 
-proc send-puts {target opt value} {
-    global send
-    puts $send($target-fp) "<$opt$value>"
+proc plug-exists {client} {
+    global plug
+    return [info exists plug($client-fp)]
 }
 
-proc send-puts-text {target text} {
-    global send
-    puts $send($target-fp) $text
-}
-
-proc send-open {target} {
-    global send
+proc plug-open {program client {server default}} {
+    global plug
     set bindir [file dirname [info script]]
-    set send($target-binary) [file join $bindir keyer_$target]
+    set plug($client-binary) [file join $bindir $program]
     # test for file exists
-    set send($target-out-file) "/tmp/play-morse-[pid]-$target.out"
-    set send($target-fp) [open "|$send($target-binary) >& $send($target-out-file)" w]
-    fconfigure $send($target-fp) -buffering none
+    set plug($client-out-file) "/tmp/keyer-control-[pid]-$client.out"
+    set plug($client-fp) [open "|$plug($client-binary) --server $server --client $client >& $plug($client-out-file)" w]
+    fconfigure $plug($client-fp) -buffering none
     # set a fileevent on the out-file
+    lappend plug(clients) $client
 }
 
-proc send-close {target} {
-    global send
-    close $send($target-fp)
-    file delete $send($target-out-file)
-    foreach name [array names send $target-*] {
-	unset send($name)
+proc plug-close {client} {
+    global plug
+    if {[plug-exists $client]} {
+	close $plug($client-fp)
+	file delete $plug($client-out-file)
+	foreach name [array names plug $client-*] {
+	    unset plug($name)
+	}
+	set clients {}
+	foreach c $plug(clients) {
+	    if {$c ne $client} {
+		lappend clients $c
+	    }
+	}
+	set plug(clients) $clients
+    } else {
+	puts stderr "non-existent client $client in plug-close"
+    }
+}
+
+proc plug-close-all {} {
+    global plug
+    foreach client $plug(clients) {
+	plug-close $client
+    }
+}
+
+proc plug-puts {client opt value} {
+    global plug
+    if {[plug-exists $client]} {
+	puts $plug($client-fp) "<$opt$value>"
+    } else {
+	puts stderr "non-existent client $client in plug-puts"
+    }
+}
+
+proc plug-puts-text {client text} {
+    global plug
+    if {[plug-exists $client]} {
+	puts $plug($client-fp) $text
+    } else {
+	puts stderr "non-existent client $client in plug-puts-text"
+    }
+}
+
+#
+# initialize the plugged in helper applications
+#
+proc plug-init {} {
+    global data
+    # start jack
+    # find helpers
+
+    plug-open keyer_ascii ascii
+    plug-open keyer_tone ascii_tone
+    plug-open keyer_decode ascii_decode
+    plug-open keyer_iambic iambic
+    plug-open keyer_tone iambic_tone
+    plug-open keyer_decode iambic_decode
+    # these names may need to change around
+    after 100
+    set retry {}
+    foreach cmd {
+	{jack_connect ascii:midi_out ascii_tone:midi_in}
+	{jack_connect ascii:midi_out ascii_decode:midi_in}
+	{jack_connect iambic:midi_out iambic_tone:midi_in}
+	{jack_connect iambic:midi_out iambic_decode:midi_in}
+	{jack_connect system:midi_capture_1 iambic:midi_in}
+	{jack_connect ascii_tone:out_i system:playback_1}
+	{jack_connect ascii_tone:out_q system:playback_2}
+	{jack_connect iambic_tone:out_i system:playback_1}
+	{jack_connect iambic_tone:out_q system:playback_2}
+    } {
+	if {[catch "exec $cmd" error]} {
+	    puts "$cmd: yielded $error"
+	    lappend retry $cmd
+	}
+    }
+    foreach cmd $retry {
+	if {[catch "exec $cmd" error]} {
+	    puts "$cmd: failed again, yielded $error"
+	}
     }
 }
 
@@ -79,16 +152,20 @@ proc send-close {target} {
 ##
 array set data {
 
-    tone-freq 750
-    tone-gain -30
-    tone-rise 5
-    tone-fall 5
+    ascii_tone-freq 700
+    ascii_tone-gain -30
+    ascii_tone-rise 5
+    ascii_tone-fall 5
     ascii-wpm 15
     ascii-word 60
     ascii-dah 3
     ascii-ies 1
     ascii-ils 3
     ascii-iws 7
+    iambic_tone-freq 750
+    iambic_tone-gain -30
+    iambic_tone-rise 5
+    iambic_tone-fall 5
     iambic-wpm 15
     iambic-word 60
     iambic-dah 3
@@ -290,7 +367,7 @@ proc code-init {} {
 #
 proc play-text {text} {
     global data
-    send-puts-text ascii $text
+    plug-puts-text ascii $text
 }
 
 #
@@ -614,7 +691,7 @@ proc game-play-level-change {level} {
 #
 # update a variable and send it's value onward
 #
-proc ui-send-puts {target opt scale value} {
+proc ui-plug-puts {client opt scale value} {
     global data
     if {$scale == 1} {
 	set value $value
@@ -625,21 +702,21 @@ proc ui-send-puts {target opt scale value} {
     } elseif {$scale == 1000} {
 	set value [format %.3f [expr {double($value)/double($scale)}]]
     }
-    set data($target-$opt-display) $value
-    send-puts $target $opt $value
+    set data($client-$opt-display) $value
+    plug-puts $client $opt $value
 }
 
 #
 # generic control panel row
 #
-proc ui-panel-row {w target row opt label from to units} {
+proc ui-panel-row {w client row opt label from to units} {
     global data
     grid [ttk::label $w-o -text $opt] -row $row -column 0 -sticky w
     grid [ttk::label $w-l -text $label] -row $row -column 1
     if {[llength $from] > 1} {
 	grid [ttk::frame $w-s] -row $row -column 2 -sticky w
 	foreach x $from {
-	    pack [ttk::radiobutton $w-s.x$x -text $x -variable data($target-$opt) -value $x -command [list send-puts $target $opt $x]] -side left -anchor w
+	    pack [ttk::radiobutton $w-s.x$x -text $x -variable data($client-$opt) -value $x -command [list plug-puts $client $opt $x]] -side left -anchor w
 	}
     } else {
 	set scale 1
@@ -649,10 +726,10 @@ proc ui-panel-row {w target row opt label from to units} {
 	    {^-?\d+.\d\d$} { set scale 100 }
 	}
 	grid [ttk::scale $w-s -orient horizontal -from [expr {$from*$scale}] -to [expr {$to*$scale}] -length 250 \
-		  -variable data($target-$opt-scale) -command [list ui-send-puts $target $opt $scale]] -row $row -column 2 -sticky ew
-	set data($target-$opt-scale) [expr {$data($target-$opt)*$scale}]
-	ui-send-puts $target $opt $scale $data($target-$opt-scale)
-	grid [ttk::label $w-v -textvar data($target-$opt-display)] -row $row -column 3 -sticky e
+		  -variable data($client-$opt-scale) -command [list ui-plug-puts $client $opt $scale]] -row $row -column 2 -sticky ew
+	set data($client-$opt-scale) [expr {$data($client-$opt)*$scale}]
+	ui-plug-puts $client $opt $scale $data($client-$opt-scale)
+	grid [ttk::label $w-v -textvar data($client-$opt-display)] -row $row -column 3 -sticky e
 	if {$units ne {}} {
 	    grid [ttk::label $w-u -text $units] -row $row -column 4 -sticky w
 	}
@@ -679,7 +756,7 @@ proc ui-game-panel {w} {
 #
 # ascii configure panel
 #
-proc ui-ascii-frame {w row} {
+proc ui-ascii-frame {w client row} {
     foreach {opt label from to units} {
 	wpm {words / minute} 5.0 60.0 {}
 	word {word length} 40 70 dits
@@ -688,7 +765,7 @@ proc ui-ascii-frame {w row} {
 	ils {inter-letter length} 2.5 3.5 dits
 	iws {inter-word length} 5 20 dits
     } {
-	ui-panel-row $w.ascii-$opt ascii $row $opt $label $from $to $units
+	ui-panel-row $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row
     }
     return $row
@@ -697,7 +774,7 @@ proc ui-ascii-frame {w row} {
 #
 # iambic configure panel
 #
-proc ui-iambic-frame {w row} {
+proc ui-iambic-frame {w client row} {
     foreach {opt label from to units} {
 	wpm {words / minute} 5.0 60.0 {}
 	word {word length} 40 70 dits
@@ -710,7 +787,23 @@ proc ui-iambic-frame {w row} {
 	awsp {auto-word space} {0 1} {} {}
 	mode {iambic mode} {A B} {} {}
     } {
-	ui-panel-row $w.iambic-$opt iambic $row $opt $label $from $to $units
+	ui-panel-row $w.$client-$opt $client $row $opt $label $from $to $units
+	incr row
+    }
+    return $row
+}
+
+#
+# tone panel configure
+#
+proc ui-tone-frame {w client row} {
+    foreach {opt label from to units} {
+	freq {tone frequency} 300.0 1000.0 Hz
+	gain {tone volume} -40.0 0.0 dB
+	rise {key rise time} 0.1 50.0 ms
+	fall {key fall time} 0.1 50.0 ms
+    } {
+	ui-panel-row $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row
     }
     return $row
@@ -725,30 +818,12 @@ proc ui-mouse-panel {w} {
 }
 
 #
-# tone panel configure
-#
-proc ui-tone-frame {w row} {
-    foreach {opt label from to units} {
-	freq {tone frequency} 300.0 1000.0 Hz
-	gain {tone volume} -40.0 0.0 dB
-	rise {key rise time} 0.1 50.0 ms
-	fall {key fall time} 0.1 50.0 ms
-    } {
-	ui-panel-row $w.tone-$opt tone $row $opt $label $from $to $units
-	incr row
-    }
-    return $row
-}
-
-#
 # save the score file and close the window
 #
 proc ui-close {w} {
     global data
     global score
-    foreach target {iambic ascii tone} {
-	send-close $target
-    }
+    plug-close-all
     if {"$w" eq "."} {
 	game-score-save
 	destroy .
@@ -765,12 +840,12 @@ proc ui-init {} {
     pack [ttk::notebook .nb] -fill both -expand true
     .nb add [ttk::frame .nb.ctl] -text Controls
     set row 0
-    grid [label .nb.ctl.ascii -text {Ascii Keyer}] -row $row -column 0 -columnspan 5
-    set row [ui-ascii-frame .nb.ctl [incr row]]
-    grid [label .nb.ctl.iambic -text {Iambic Keyer}] -row $row -column 0 -columnspan 5
-    set row [ui-iambic-frame .nb.ctl [incr row]]
-    grid [label .nb.ctl.tone -text {Keyer Tone}] -row $row -column 0 -columnspan 5
-    set row [ui-tone-frame .nb.ctl [incr row]]
+    grid [label .nb.ctl.ascii -text {Ascii Keyer}] -row $row -column 0 -columnspan 5 -sticky w
+    set row [ui-tone-frame .nb.ctl ascii_tone [incr row]]
+    set row [ui-ascii-frame .nb.ctl ascii [incr row]]
+    grid [label .nb.ctl.iambic -text {Iambic Keyer}] -row $row -column 0 -columnspan 5 -sticky w
+    set row [ui-tone-frame .nb.ctl iambic_tone [incr row]]
+    set row [ui-iambic-frame .nb.ctl iambic [incr row]]
 
     if {0} {
 	pack [menubutton .m.text -text Text -menu .m.text.m] -side left
@@ -788,44 +863,11 @@ proc ui-init {} {
     bind . <KeyPress> [list ui-input %K]
 }
 
-#
-# initialize the helper applications
-#
-proc helpers-init {} {
-    global data
-    # start jack
-    # find helpers
-
-    send-open ascii
-    send-open iambic
-    send-open tone
-    # these names may need to change around
-    after 100
-    set retry {}
-    foreach cmd {
-	{jack_connect keyer_ascii:midi_out keyer_tone:midi_in}
-	{jack_connect keyer_iambic:midi_out keyer_tone:midi_in}
-	{jack_connect system:midi_capture_1 keyer_iambic:midi_in}
-	{jack_connect keyer_tone:out_i system:playback_1}
-	{jack_connect keyer_tone:out_q system:playback_2}
-    } {
-	if {[catch "exec $cmd" error]} {
-	    puts "$cmd: yielded $error"
-	    lappend retry $cmd
-	}
-    }
-    foreach cmd $retry {
-	if {[catch "exec $cmd" error]} {
-	    puts "$cmd: failed again, yielded $error"
-	}
-    }
-}
-
 # start playing a sine wave
 proc bgerror {msg} { puts stderr $msg }
 
 # 
-helpers-init
+plug-init
 ui-init
 code-init
 
@@ -844,9 +886,11 @@ foreach {opt value} $argv {
     }
 }
 
-send-puts tone freq $data(tone-freq)
-send-puts tone gain $data(tone-gain)
-send-puts ascii wpm $data(ascii-wpm)
-send-puts iambic wpm $data(ascii-wpm)
+plug-puts ascii_tone freq $data(ascii_tone-freq)
+plug-puts ascii_tone gain $data(ascii_tone-gain)
+plug-puts iambic_tone freq $data(iambic_tone-freq)
+plug-puts iambic_tone gain $data(iambic_tone-gain)
+plug-puts ascii wpm $data(ascii-wpm)
+plug-puts iambic wpm $data(iambic-wpm)
 game-score-load
 game-play-level-change $data(game-play-level)
