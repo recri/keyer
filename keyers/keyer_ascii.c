@@ -237,8 +237,6 @@ static void ascii_queue_midi(char c, char *p, int continues) {
   if (p == 0) {
     if (c == ' ')
       midi_write(data.samples_per.iws-data.samples_per.ils, 0, "");
-    else if (c == '\t')
-      midi_write(2*data.samples_per.iws-data.samples_per.ils, 0, "");
   } else {
     while (*p != 0) {
       if (*p == '.') {
@@ -249,7 +247,7 @@ static void ascii_queue_midi(char c, char *p, int continues) {
       if (p[1] != 0 || continues) {
 	midi_write(data.samples_per.ies, 3, data.note_off);
       } else {
-	midi_write(3*data.samples_per.ils, 3, data.note_off);
+	midi_write(data.samples_per.ils, 3, data.note_off);
       }
       p += 1;
     }

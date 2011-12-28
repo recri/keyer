@@ -77,9 +77,9 @@ static void midi_decode(unsigned count, unsigned char *p) {
 	  int o_dah = observation / 3;		/* if it's a dah, then the length/3 is the dit clock observation */
 	  int d_dit = o_dit - decode.estimate;	/* the dit distance from the current estimate */
 	  int d_dah = o_dah - decode.estimate;	/* the dah distance from the current estimate */
-	  int guess = 100*observation / decode.estimate;
+	  int guess = 100 * observation / decode.estimate;
 	  if (d_dit == 0 || d_dah == 0) {
-	    /* if one of the observations is spot on, the estimate is unchanged */
+	    /* if one of the observations is spot on, then 1/(d*d) will be infinite and the estimate is unchanged */
 	  } else {
 	    /* the weight of an observation is
 	     * the observed frequency of the element
@@ -95,21 +95,21 @@ static void midi_decode(unsigned count, unsigned char *p) {
 	    guess = 100*observation / decode.estimate;	      /* revise our guess */
 	  }
 	  if (guess < 200) {
-	    out = ".";
-	    decode.n_dit += 1;
+	    out = "."; decode.n_dit += 1;
 	  } else {
-	    out = "-";
-	    decode.n_dah += 1;
+	    out = "-"; decode.n_dah += 1;
 	  }
 	  break;
 	}
       case NOTE_ON: /* the end of an inter-element, inter-letter, or a longer space */
 	{
-	  int o_ies = observation, o_ils = observation / 3;
-	  int d_ies = o_ies - decode.estimate, d_ils = o_ils - decode.estimate;
-	  int guess = 100*observation / decode.estimate;
+	  int o_ies = observation;
+	  int o_ils = observation / 3;
+	  int d_ies = o_ies - decode.estimate;
+	  int d_ils = o_ils - decode.estimate;
+	  int guess = 100 * observation / decode.estimate;
 	  if (d_ies == 0 || d_ils == 0) {
-	    /* if one of the observations is spot on, the estimate is unchanged */
+	    /* if one of the observations is spot on, then 1/(d*d) will be infinite and the estimate is unchanged */	    
 	  } else if (guess > 500) {
 	    /* if it looks like a word space, it could be any length, don't worry about how long it is */
 	  } else {
@@ -118,17 +118,14 @@ static void midi_decode(unsigned count, unsigned char *p) {
 	    int update = (o_ies * w_ies + o_ils * w_ils) / wt;
 	    decode.estimate += update;
 	    decode.estimate /= 2;
-	    guess = 100*observation / decode.estimate;
+	    guess = 100 * observation / decode.estimate;
 	  }
 	  if (guess < 200) {
-	    out = "";
-	    decode.n_ies += 1;
+	    out = ""; decode.n_ies += 1;
 	  } else if (guess < 500) {
-	    out = " ";
-	    decode.n_ils += 1;
+	    out = " "; decode.n_ils += 1;
 	  } else {
-	    out = "  ";
-	    decode.n_iws += 1;
+	    out = "   "; decode.n_iws += 1;
 	  }
 	  break;
 	}
