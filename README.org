@@ -39,7 +39,14 @@
   jackd agnostic package, so some audio libraries will force
   installation of the old jackd version 1 package.  I force jackd2
   because it's better.
-* Plugin usage
+* Plugin usage -- semi-automatic
+  There is a tcl/tk application in the bin directory named
+  keyer-control.  It requires installation of the tk package on
+  Ubuntu.  You should run it when jack has already been started and it
+  will attempt to launch the keyer plugins and give you a control
+  interface for adjusting options.  You can also type characters when
+  it has focus and they will be echoed by keyer_ascii.
+* Plugin usage -- manual
   Use of the plugins is a bit rough at the moment.
 
   You need to start them as separate programs, each running in a
