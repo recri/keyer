@@ -53,18 +53,37 @@ static void midi_decode(unsigned count, unsigned char *p) {
     char note = p[1];
     if (channel == fw.opts.chan && note == fw.opts.note) {
       unsigned observation = frame - last_frame;
-      int mark = 0;
+      int mark;
       last_frame = frame;
       switch (p[0]&0xF0) {
-      case NOTE_OFF:
-	/* the end of a dit or a dah */
-	mark = 1;
-	estimate = (estimate + observation  + estimate + observation / 3) / 4;
-	break;
-      case NOTE_ON:
-	/* the end of an inter-element, inter-letter, or inter-word space */
-	estimate = (estimate + observation + estimate + observation / 3 + estimate + observation / 7) / 6;
-	break;
+      case NOTE_OFF: /* the end of a dit or a dah */
+	{
+	  mark = 1;
+	  unsigned o1 = observation, o2 = observation / 3;
+	  unsigned d1 = o1 - estimate, d2 = o2 - estimate;
+	  if (d1 == 0 || d2 == 0) {
+	    /* if one of the observations is spot on, the estimate is unchanged */
+	  } else {
+	    float w1 = 1.0 / (d1*d1), w2 = 1.0 / (d2*d2);
+	    float wt = w1 + w2;
+	    estimate = (unsigned)(estimate + o1 * w1 / wt + o2 * w2 / wt) / 2;
+	  }
+	  break;
+	}
+      case NOTE_ON: /* the end of an inter-element, inter-letter, or inter-word space */
+	{
+	  mark = 0;
+	  unsigned o1 = observation, o2 = observation / 3, o3 = observation / 7;
+	  unsigned d1 = o1 - estimate, d2 = o2 - estimate, d3 = o3 - estimate;
+	  if (d1 == 0 || d2 == 0 || d3 == 0) {
+	    /* if one of the observations is spot on, the estimate is unchanged */
+	  } else {
+	    float w1 = 1.0 / (d1*d1), w2 = 1.0 / (d2*d2), w3 = 1.0 / (d3*d3);
+	    float wt = w1 + w2 + w3;
+	    estimate = (unsigned)(estimate + o1 * w1 / wt + o2 * w2 / wt + o3 * w3 / wt) / 2;
+	  }
+	  break;
+	}
       }
       fprintf(stderr, "T=%d, M=%d, 10*O/T=%d\n", estimate, mark, 18*observation/estimate);
     } else if (fw.opts.verbose > 3)
