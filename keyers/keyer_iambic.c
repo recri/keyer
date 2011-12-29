@@ -211,7 +211,18 @@ static void iambic_transition(unsigned samples) {
   // start a symbol if either paddle is pressed
   if (iambic._keyerState == IAMBIC_OFF) {
     iambic_start_symbol();
+    iambic._halfClockCounter = iambic._halfClock;
+    iambic._prevKeyIn[iambic._prevKeyInPtr++ & (KEY_IN_MEM-1)] = keyIn;
     return;
+  }
+
+  // reduce the half clock by the time elapsed
+  iambic._halfClockCounter -= samples;
+
+  // if the half clock has elapsed, reset it
+  if (iambic._halfClockCounter < 0) {
+    iambic._halfClockCounter = iambic._halfClock;
+    iambic._prevKeyIn[iambic._prevKeyInPtr++ & (KEY_IN_MEM-1)] = keyIn;
   }
 
   // reduce the duration by the time elapsed
