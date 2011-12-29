@@ -1,7 +1,6 @@
 #!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 package require Tk
-package require Expect
 
 ##
 ## The game is to learn the morse code patterns by listening
