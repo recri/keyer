@@ -143,6 +143,9 @@ static void midi_decode(unsigned count, unsigned char *p) {
   }
 }
 
+static void decode_init() {
+}
+
 /*
 ** Jack
 */
@@ -177,6 +180,6 @@ static int decode_process_callback(jack_nframes_t nframes, void *arg) {
 }
 
 int main(int narg, char **args) {
-  keyer_framework_main(&fw, narg, args, "keyer_decode", require_midi_in, decode_process_callback,  NULL);
+  keyer_framework_main(&fw, narg, args, "keyer_decode", require_midi_in, decode_init, decode_process_callback,  NULL);
 }
 

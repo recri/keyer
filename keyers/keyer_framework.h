@@ -29,6 +29,7 @@ typedef struct {
 
 extern void keyer_framework_main(keyer_framework_t *kfp, int argc, char **argv,
 				 char *default_client_name, unsigned ports_required,
+				 void (*init)(),
 				 int (*process_callback)(jack_nframes_t nframes, void *arg),
 				 void (*receive_input_char)(char c));
 

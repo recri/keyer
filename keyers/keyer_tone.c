@@ -99,13 +99,14 @@ static void cwtone_update(cwtone_t *cw) {
     ramp_update(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
     ramp_update(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
   }
-  if (cw->state == CWTONE_NOT_INIT) {
-    cw->state = CWTONE_OFF;
-    cw->gain = pow(10.0, fw.opts.gain / 20.0);
-    osc_init(&cw->tone, fw.opts.freq, fw.opts.sample_rate);
-    ramp_init(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
-    ramp_init(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
-  }
+}
+
+static void cwtone_init(cwtone_t *cw) {
+  cw->state = CWTONE_OFF;
+  cw->gain = pow(10.0, fw.opts.gain / 20.0);
+  osc_init(&cw->tone, fw.opts.freq, fw.opts.sample_rate);
+  ramp_init(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
+  ramp_init(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
 }
 
 static void cwtone_on(cwtone_t *cw) {
@@ -142,8 +143,9 @@ static void cwtone_xy(cwtone_t *cw, float *x, float *y) {
   *y *= scale;
 }
 
-static cwtone_t cwtone = { CWTONE_NOT_INIT };
+static cwtone_t cwtone;
 static unsigned long frame;
+
 /*
 ** decode midi commands
 */
@@ -168,6 +170,11 @@ static void midi_decode(unsigned count, unsigned char *p) {
 	fprintf(stderr, "sysex: %*s\n", count, p+2);
     }
   }
+}
+
+static void tone_init() {
+  cwtone_init(&cwtone);
+  cwtone_update(&cwtone);
 }
 
 /*
@@ -209,6 +216,6 @@ static int tone_process_callback(jack_nframes_t nframes, void *arg) {
 }
 
 int main(int narg, char **args) {
-  keyer_framework_main(&fw, narg, args, "keyer_tone", require_midi_in|require_out_i|require_out_q, tone_process_callback, NULL);
+  keyer_framework_main(&fw, narg, args, "keyer_tone", require_midi_in|require_out_i|require_out_q, tone_init, tone_process_callback, NULL);
 }
 

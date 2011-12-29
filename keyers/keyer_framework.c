@@ -66,6 +66,7 @@ static void signal_handler(int sig) {
 
 extern void keyer_framework_main(keyer_framework_t *kfp, int argc, char **argv,
 				 char *default_client_name, unsigned ports_required,
+				 void (*init)(),
 				 int (*process_callback)(jack_nframes_t nframes, void *arg),
 				 void (*receive_input_char)(char c)) {
   _kfp = kfp;
@@ -83,7 +84,6 @@ extern void keyer_framework_main(keyer_framework_t *kfp, int argc, char **argv,
     exit(1);
   }
 
-  set_sample_rate(&kfp->opts, jack_get_sample_rate(kfp->client));
   jack_set_process_callback(kfp->client, kfp->process_callback, 0);
   jack_set_sample_rate_callback(kfp->client, jack_sample_rate_callback, 0);
   jack_on_shutdown(kfp->client, jack_shutdown_callback, 0);
@@ -96,6 +96,9 @@ extern void keyer_framework_main(keyer_framework_t *kfp, int argc, char **argv,
     kfp->out_i = jack_port_register(kfp->client, "out_i", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
   if (kfp->ports_required & require_out_q)
     kfp->out_q = jack_port_register(kfp->client, "out_q", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+
+  set_sample_rate(&kfp->opts, jack_get_sample_rate(kfp->client));
+  if (init != NULL) init();
 
   if (jack_activate (kfp->client)) {
     fprintf(stderr, "cannot activate client");

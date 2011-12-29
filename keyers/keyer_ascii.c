@@ -80,6 +80,9 @@ static void ascii_modified() {
   }
 }
 
+static void ascii_init() {
+}
+
 /*
 ** jack process callback
 */
@@ -279,5 +282,5 @@ static void ascii_queue_char(char c) {
 }
 
 int main(int argc, char **argv) {
-  keyer_framework_main(&fw, argc, argv, "keyer_ascii", require_midi_out, ascii_process_callback, ascii_queue_char);
+  keyer_framework_main(&fw, argc, argv, "keyer_ascii", require_midi_out, ascii_init, ascii_process_callback, ascii_queue_char);
 }

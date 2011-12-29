@@ -12,7 +12,7 @@ array set data {
     ascii_tone-rise 5
     ascii_tone-fall 5
     ascii-wpm 15
-    ascii-word 60
+    ascii-word 50
     ascii-dah 3
     ascii-ies 1
     ascii-ils 3
@@ -22,7 +22,7 @@ array set data {
     iambic_tone-rise 5
     iambic_tone-fall 5
     iambic-wpm 15
-    iambic-word 60
+    iambic-word 50
     iambic-dah 3
     iambic-ies 1
     iambic-ils 3
@@ -268,11 +268,20 @@ proc plug-exists {client} {
 
 proc plug-open {program client {server default}} {
     global plug
+    global data
     set bindir [file dirname [info script]]
     set plug($client-binary) [file join $bindir $program]
     # test for file exists
     set plug($client-out-file) "/tmp/keyer-control-[pid]-$client.out"
-    set plug($client-fp) [open "|$plug($client-binary) --server $server --client $client >& $plug($client-out-file)" w]
+    set args [list |$plug($client-binary) --server $server --client $client]
+    foreach name [array names data $client-*] {
+	set val $data($name)
+	set name [string range $name [expr {1+[string length $client]}] end]
+	lappend args "--$name" $val
+    }
+    lappend args {>&} $plug($client-out-file)
+    set command [join $args]
+    set plug($client-fp) [open $command w]
     fconfigure $plug($client-fp) -buffering line
     set plug($client-out-fp) [open "$plug($client-out-file)" r]
     fconfigure $plug($client-out-fp) -blocking 0 -buffering line
@@ -283,7 +292,7 @@ proc plug-open {program client {server default}} {
 proc plug-close {client} {
     global plug
     if {[plug-exists $client]} {
-	puts stderr "plug-close $client"
+	#puts stderr "plug-close $client"
 	close $plug($client-fp)
 	close $plug($client-out-fp)
 	file delete $plug($client-out-file)
@@ -773,7 +782,7 @@ proc game-play-level-change {level} {
 proc ui-plug-puts {client opt scale value} {
     global data
     if {$scale == 1} {
-	set value $value
+	set value [format %.0f [expr {double($value)/double($scale)}]]
     } elseif {$scale == 10} {
 	set value [format %.1f [expr {double($value)/double($scale)}]]
     } elseif {$scale == 100} {
@@ -929,7 +938,7 @@ proc ui-close {w} {
 
 proc ui-input {k} {
     global data
-    game-player-answer $data(game-play-canvas) $k
+    plug-puts-text ascii $k
 }
 #
 # build a user interface
@@ -939,7 +948,7 @@ proc ui-init {} {
     .nb add [ui-control-panel .nb.ctl] -text Controls
     .nb add [ui-game-panel .nb.play] -text {Invaders}
     bind . <Destroy> [list ui-close %W]
-    bind . <KeyPress> [list ui-input %K]
+    bind . <KeyPress> [list ui-input %A]
 }
 
 #
@@ -948,10 +957,6 @@ proc ui-init {} {
 proc main {argv} {
     global data
     global env
-
-    plug-init
-    ui-init
-    code-init
 
     set data(score-file) $env(HOME)/.play-morse-score-file
     foreach {opt value} $argv {
@@ -970,12 +975,10 @@ proc main {argv} {
 	}
     }
 
-    plug-puts ascii_tone freq $data(ascii_tone-freq)
-    plug-puts ascii_tone gain $data(ascii_tone-gain)
-    plug-puts iambic_tone freq $data(iambic_tone-freq)
-    plug-puts iambic_tone gain $data(iambic_tone-gain)
-    plug-puts ascii wpm $data(ascii-wpm)
-    plug-puts iambic wpm $data(iambic-wpm)
+    plug-init
+    ui-init
+    code-init
+
     game-score-load
     game-play-level-change $data(game-play-level)
 }

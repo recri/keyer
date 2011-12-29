@@ -65,7 +65,6 @@ static char *iambic_states[] = {
 };
 
 typedef struct {
-  char _initialized;
   char _modified;
 
   char _inDit;
@@ -75,6 +74,12 @@ typedef struct {
   char _keyIn;
   char _lastKeyIn;
   iambic_state_t _keyerState;
+
+  int _halfClock;
+  int _halfClockCounter;
+#define KEY_IN_MEM	8
+  char _prevKeyIn[KEY_IN_MEM];
+  unsigned _prevKeyInPtr;
 } iambic_t;
 
 iambic_t iambic;
@@ -84,7 +89,6 @@ unsigned long frames;
 // initialize the iambic keyer
 static void iambic_init() {
   if (fw.opts.verbose > 2) fprintf(stderr, "%ld: iambic_init()\n", frames);
-  iambic._initialized = 1;
   iambic._modified = 1;
   iambic._inDit = 0;		/* the midi dit value */
   iambic._inDah = 0;		/* the midi dah value */
@@ -95,8 +99,6 @@ static void iambic_init() {
 
 // update the computed parameters
 static void iambic_update() {
-  if ( ! iambic._initialized)
-    iambic_init();
   if (fw.opts.modified) {
     fw.opts.modified = 0;
 
@@ -123,6 +125,7 @@ static void iambic_update() {
   }
   if (iambic._modified) {
     iambic._modified = 0;
+    iambic._halfClock = data.samples_per.dit / 2;
   }
 }
 
@@ -213,9 +216,6 @@ static void iambic_transition(unsigned samples) {
 
   // reduce the duration by the time elapsed
   iambic._keyerDuration -= samples;
-
-  // the mode B determination happens when half the duration
-  // of the element has passed, so around here somewhere
 
   // if the duration has not elapsed, return
   if (iambic._keyerDuration > 0) {
@@ -322,15 +322,15 @@ static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
 	duration = nframes;
       }
     }
+    /* clock the iambic keyer */
+    iambic_transition(1);
   }
   frames += 1;
   if (duration >= nframes)
     duration -= nframes;
-  /* clock the iambic keyer */
-  iambic_transition(nframes);
   return 0;
 }
 
 int main(int argc, char **argv) {
-  keyer_framework_main(&fw, argc, argv, "keyer_iambic", require_midi_in|require_midi_out, iambic_process_callback, NULL);
+  keyer_framework_main(&fw, argc, argv, "keyer_iambic", require_midi_in|require_midi_out, iambic_init, iambic_process_callback, NULL);
 }
