@@ -45,7 +45,6 @@
 ** 2) jack ports required: MIDI_IN|MIDI_OUT|AUDIO_OUT_I|AUDIO_OUT_Q
 ** 3?) initialization function pointer (might be autocalled).
 ** 4) jack process callback function pointer
-** 5) set sample rate function pointer
 */
 
 static keyer_framework_t *_kfp;
@@ -65,8 +64,17 @@ static void signal_handler(int sig) {
   exit(0);
 }
 
-void keyer_framework_main(keyer_framework_t *kfp, int argc, char **argv) {
+extern void keyer_framework_main(keyer_framework_t *kfp, int argc, char **argv,
+				 char *default_client_name, unsigned ports_required,
+				 int (*process_callback)(jack_nframes_t nframes, void *arg),
+				 void (*receive_input_char)(char c)) {
   _kfp = kfp;
+  kfp->argc = argc;
+  kfp->argv = argv;
+  kfp->default_client_name = default_client_name;
+  kfp->ports_required = ports_required;
+  kfp->process_callback = process_callback;
+  kfp->receive_input_char = receive_input_char;
   strncpy(kfp->opts.client, kfp->default_client_name, sizeof(kfp->opts.client));
   main_parse_options(&kfp->opts, argc, argv);
 
@@ -76,8 +84,6 @@ void keyer_framework_main(keyer_framework_t *kfp, int argc, char **argv) {
   }
 
   set_sample_rate(&kfp->opts, jack_get_sample_rate(kfp->client));
-  if (kfp->init) kfp->init();
-
   jack_set_process_callback(kfp->client, kfp->process_callback, 0);
   jack_set_sample_rate_callback(kfp->client, jack_sample_rate_callback, 0);
   jack_on_shutdown(kfp->client, jack_shutdown_callback, 0);

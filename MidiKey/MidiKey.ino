@@ -22,16 +22,23 @@
    another Arduino project was that algorithmic debouncing was
    a waste of time, the paddle is mechanically and electrically
    designed to not bounce.
+   
+   The Bounce library has been modified to accept a microsecond
+   interval.
+   
+   Do not reprogram your Teensy while ALSA and Jack have the MidiKey
+   open as a MIDI device or you will get some system crashes.
 */
 
-#include <Bounce.h>
+#include "WProgram.h"
+#include "Bounce.h"
 
 // the MIDI channel number to send messages
 const int channel = 1;
 // the base midi note
 const int base_note = 0;
-// the milliseconds to debounce
-const int debounce = 1;
+// the microseconds to debounce
+const int debounce = 50;
 
 // Create Bounce objects for each button.  The Bounce object
 // automatically deals with contact chatter or "bounce", and
@@ -58,24 +65,19 @@ void loop() {
   // Update all the buttons.  There should not be any long
   // delays in loop(), so this runs repetitively at a rate
   // faster than the buttons could be pressed and released.
-  button0.update();
-  button1.update();
-
-  // Check each button for "falling" edge.
-  // Send a MIDI Note On message when each button presses
-  // Update the Joystick buttons only upon changes.
-  // falling = high (not pressed - voltage from pullup resistor)
-  //           to low (pressed - button connects pin to ground)
-  if (button0.fallingEdge()) usbMIDI.sendNoteOn(base_note+0, 99, channel);
-  if (button1.fallingEdge()) usbMIDI.sendNoteOn(base_note+1, 99, channel);
-
-  // Check each button for "rising" edge
-  // Send a MIDI Note Off message when each button releases
-  // For many types of projects, you only care when the button
-  // is pressed and the release isn't needed.
-  // rising = low (pressed - button connects pin to ground)
-  //          to high (not pressed - voltage from pullup resistor)
-  if (button0.risingEdge()) usbMIDI.sendNoteOff(base_note+0, 0, channel);
-  if (button1.risingEdge()) usbMIDI.sendNoteOff(base_note+1, 0, channel);
+  if (button0.update()) {
+    if (button0.read()) {
+      usbMIDI.sendNoteOff(base_note+0, 0, channel);
+    } else {
+      usbMIDI.sendNoteOn(base_note+0, 99, channel);
+    }
+  }
+  if (button1.update()) {
+    if (button1.read()) {
+      usbMIDI.sendNoteOff(base_note+1, 0, channel);
+    } else {
+      usbMIDI.sendNoteOn(base_note+1, 99, channel);
+    }
+  }
 }
 

@@ -254,5 +254,32 @@
     at 1.5 dit clocks in the past.
 *** MidiKey - less debouncing
 *** ascii - install more code points
+* Things to Do
+** DONE - MidiKey: to debounce with a period in microseconds.
+   Mangled the existing Bounce class, still not quite right.
+** TODO - MidiKey: to use a less ad hoc debouncer.
+** TODO - MidiKey: to use the LUFA library for USB.
+** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
+** TODO - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
+** TODO - users of keyer_midi.c: to use the new queuing api.
+** DONE - keyer-control: to use a dedicated keyer_tone for each keyer.
+** DONE - keyer-control: to use expect to manage plugins.
+   Didn't work out as I hoped.
+** TODO - keyer_iambic.c: mode B
+** TODO - keyer-control: callsign-invaders ear/key training game.
+** TODO - keyer_detone.c: to convert keyed tones into midi.
+** TODO - new keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
+** TODO - new keyer_binaural.c: to spread a monoaural audio spectrum out spatially using DJ5IL's CodePhaser circuit.
+** TODO - new keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
+** TODO - keyer-control: build, save, and restore custom configurations.
+** TODO - keyer-control: ascii input/output window
+** TODO - keyer-control: examine output of lsp to determine connection possibilities.
+** TODO - keyer-control: jack launching panel.
+** TODO - keyer-control: jack connection panel.
+** TODO - keyer_jack.c: provide missing jack status information.
+** TODO - *: insert license information.
+** TODO - keyer_*.c: distinguish stdout and stderr better.
+** TODO - keyer_framework.c: allow jack thread to buffer output to memory for the main thread to print. Hence input cannot block.
+** TODO - keyer_framework.c: implement a tcl command framework.
 
     

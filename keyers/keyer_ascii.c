@@ -279,11 +279,5 @@ static void ascii_queue_char(char c) {
 }
 
 int main(int argc, char **argv) {
-  fw.default_client_name = "keyer_ascii";
-  fw.ports_required = require_midi_out;
-  fw.process_callback = ascii_process_callback;
-  fw.set_sample_rate = NULL;
-  fw.init = NULL;
-  fw.receive_input_char = ascii_queue_char;
-  keyer_framework_main(&fw, argc, argv);
+  keyer_framework_main(&fw, argc, argv, "keyer_ascii", require_midi_out, ascii_process_callback, ascii_queue_char);
 }

@@ -73,6 +73,7 @@ static keyer_framework_t fw;
 ** with sine ramped attack and decay
 */
 
+#define CWTONE_NOT_INIT	-1	/* not initialized */
 #define CWTONE_OFF	0	/* note is not sounding */
 #define CWTONE_RISE	1	/* note is ramping up to full level */
 #define CWTONE_ON	2	/* note is sounding full level */
@@ -90,14 +91,6 @@ static void cwtone_set_gain(cwtone_t *cw, float gain) {
   cw->gain = pow(10.0, gain / 20.0);
 }
   
-static void cwtone_init(cwtone_t *cw) {
-  cw->state = CWTONE_OFF;
-  cw->gain = pow(10.0, fw.opts.gain / 20.0);
-  osc_init(&cw->tone, fw.opts.freq, fw.opts.sample_rate);
-  ramp_init(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
-  ramp_init(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
-}
-
 static void cwtone_update(cwtone_t *cw) {
   if (fw.opts.modified) {
     fw.opts.modified = 0;
@@ -105,6 +98,13 @@ static void cwtone_update(cwtone_t *cw) {
     osc_update(&cw->tone, fw.opts.freq, fw.opts.sample_rate);
     ramp_update(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
     ramp_update(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
+  }
+  if (cw->state == CWTONE_NOT_INIT) {
+    cw->state = CWTONE_OFF;
+    cw->gain = pow(10.0, fw.opts.gain / 20.0);
+    osc_init(&cw->tone, fw.opts.freq, fw.opts.sample_rate);
+    ramp_init(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
+    ramp_init(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
   }
 }
 
@@ -142,10 +142,10 @@ static void cwtone_xy(cwtone_t *cw, float *x, float *y) {
   *y *= scale;
 }
 
-static cwtone_t cwtone;
+static cwtone_t cwtone = { CWTONE_NOT_INIT };
 static unsigned long frame;
 /*
-** midi commands
+** decode midi commands
 */
 static void midi_decode(unsigned count, unsigned char *p) {
   /* decode note/channel based events */
@@ -171,9 +171,8 @@ static void midi_decode(unsigned count, unsigned char *p) {
 }
 
 /*
-** Jack
+** Jack process callback
 */
-
 static int tone_process_callback(jack_nframes_t nframes, void *arg) {
   void* midi_in = jack_port_get_buffer(fw.midi_in, nframes);
   jack_default_audio_sample_t *out_i = (jack_default_audio_sample_t *) jack_port_get_buffer (fw.out_i, nframes);
@@ -186,8 +185,8 @@ static int tone_process_callback(jack_nframes_t nframes, void *arg) {
   } else {
     event_time = nframes+1;
   }
-  /* for all frames in the buffer */
   cwtone_update(&cwtone);
+  /* for all frames in the buffer */
   for(int i = 0; i < nframes; i++) {
     /* process all midi events at this sample time */
     
@@ -203,22 +202,13 @@ static int tone_process_callback(jack_nframes_t nframes, void *arg) {
     /* compute samples for all sounding notes at this sample time */
     AVOIDDENORMALS;
     cwtone_xy(&cwtone, out_i+i, out_q+i);
+    /* increment frame counter */
     frame += 1;
   }
   return 0;
 }
 
-static void tone_init() {
-  cwtone_init(&cwtone);
-}
-
 int main(int narg, char **args) {
-  fw.default_client_name = "keyer_tone";
-  fw.ports_required = require_midi_in|require_out_i|require_out_q;
-  fw.process_callback = tone_process_callback;
-  fw.set_sample_rate = NULL;
-  fw.init = tone_init;
-  fw.receive_input_char = NULL;
-  keyer_framework_main(&fw, narg, args);
+  keyer_framework_main(&fw, narg, args, "keyer_tone", require_midi_in|require_out_i|require_out_q, tone_process_callback, NULL);
 }
 

@@ -65,6 +65,7 @@ static char *iambic_states[] = {
 };
 
 typedef struct {
+  char _initialized;
   char _modified;
 
   char _inDit;
@@ -80,8 +81,22 @@ iambic_t iambic;
 
 unsigned long frames;
 
+// initialize the iambic keyer
+static void iambic_init() {
+  if (fw.opts.verbose > 2) fprintf(stderr, "%ld: iambic_init()\n", frames);
+  iambic._initialized = 1;
+  iambic._modified = 1;
+  iambic._inDit = 0;		/* the midi dit value */
+  iambic._inDah = 0;		/* the midi dah value */
+  iambic._keyIn = KEYIN_OFF;
+  iambic._lastKeyIn = KEYIN_OFF;
+  iambic._keyerState = IAMBIC_OFF;
+}
+
 // update the computed parameters
 static void iambic_update() {
+  if ( ! iambic._initialized)
+    iambic_init();
   if (fw.opts.modified) {
     fw.opts.modified = 0;
 
@@ -109,18 +124,6 @@ static void iambic_update() {
   if (iambic._modified) {
     iambic._modified = 0;
   }
-}
-
-// initialize the iambic keyer
-static void iambic_init() {
-  if (fw.opts.verbose > 2) fprintf(stderr, "%ld: iambic_init()\n", frames);
-  iambic._modified = 1;
-  iambic._inDit = 0;		/* the midi dit value */
-  iambic._inDah = 0;		/* the midi dah value */
-  iambic._keyIn = KEYIN_OFF;
-  iambic._lastKeyIn = KEYIN_OFF;
-  iambic._keyerState = IAMBIC_OFF;
-  iambic_update();
 }
 
 // transition to the specified state
@@ -329,11 +332,5 @@ static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
 }
 
 int main(int argc, char **argv) {
-  fw.default_client_name = "keyer_iambic";
-  fw.ports_required = require_midi_in|require_midi_out;
-  fw.process_callback = iambic_process_callback;
-  fw.set_sample_rate = NULL;
-  fw.init = iambic_init;
-  fw.receive_input_char = NULL;
-  keyer_framework_main(&fw, argc, argv);
+  keyer_framework_main(&fw, argc, argv, "keyer_iambic", require_midi_in|require_midi_out, iambic_process_callback, NULL);
 }

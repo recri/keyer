@@ -18,7 +18,7 @@
 
 static void handle_atoi(keyer_options_t *kp, char *p, int *ip) {
   if (*p == '?')
-    fprintf(stderr, "%d\n", *ip);
+    fprintf(stdout, "%d\n", *ip);
   else {
     *ip = atoi(p);
     kp->modified = 1;
@@ -26,7 +26,7 @@ static void handle_atoi(keyer_options_t *kp, char *p, int *ip) {
 }
 static void handle_atof(keyer_options_t *kp, char *p, float *ip) {
   if (*p == '?')
-    fprintf(stderr, "%f\n", *ip);
+    fprintf(stdout, "%f\n", *ip);
   else {
     *ip = atof(p);
     kp->modified = 1;
@@ -34,7 +34,7 @@ static void handle_atof(keyer_options_t *kp, char *p, float *ip) {
 }
 static void handle_char(keyer_options_t *kp, char *p, char *ip) {
   if (*p == '?')
-    fprintf(stderr, "%c\n", *ip);
+    fprintf(stdout, "%c\n", *ip);
   else {
     *ip = *p;
     kp->modified = 1;
@@ -42,13 +42,13 @@ static void handle_char(keyer_options_t *kp, char *p, char *ip) {
 }
 static void handle_string(keyer_options_t *kp, char *p, char *ip, size_t size) {
   if (*p == '?')
-    fprintf(stderr, "%s\n", ip);
+    fprintf(stdout, "%s\n", ip);
   else {
     strncpy(ip, p, size);
     kp->modified = 1;
   }
 }
-  
+
 static void handle_verbose(keyer_options_t *kp, char *p) { handle_atoi(kp, p, &kp->verbose); }
 static void handle_chan(keyer_options_t *kp, char *p) { handle_atoi(kp, p, &kp->chan); }
 static void handle_note(keyer_options_t *kp, char *p) { handle_atoi(kp, p, &kp->note); }

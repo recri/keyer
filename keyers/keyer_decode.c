@@ -125,13 +125,13 @@ static void midi_decode(unsigned count, unsigned char *p) {
 	  } else if (guess < 500) {
 	    out = " "; decode.n_ils += 1;
 	  } else {
-	    out = "   "; decode.n_iws += 1;
+	    out = "\n"; decode.n_iws += 1;
 	  }
 	  break;
 	}
       }
       if (fw.opts.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", decode.estimate, p[0], 100*observation/decode.estimate);
-      fprintf(stderr, "%s", out); fflush(stderr);
+      fprintf(stdout, "%s", out); fflush(stdout);
     } else if (fw.opts.verbose > 3)
       fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, fw.opts.chan, fw.opts.note);
   } else if (count > 3 && p[0] == SYSEX) {
@@ -177,11 +177,6 @@ static int decode_process_callback(jack_nframes_t nframes, void *arg) {
 }
 
 int main(int narg, char **args) {
-  fw.default_client_name = "keyer_decode";
-  fw.ports_required = require_midi_in;
-  fw.process_callback = decode_process_callback;
-  fw.init = NULL;
-  fw.receive_input_char = NULL;
-  keyer_framework_main(&fw, narg, args);
+  keyer_framework_main(&fw, narg, args, "keyer_decode", require_midi_in, decode_process_callback,  NULL);
 }
 
