@@ -1,0 +1,10 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+
+lappend auto_path [file join [file dirname [info script]] .. lib]
+
+package require Tk
+package require sdrkit
+package require sdrkit_ui
+
+pack [sdrkit_ui::scope .scope] -fill both -expand true

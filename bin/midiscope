@@ -1,0 +1,95 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+
+lappend auto_path [file join [file dirname [info script]] .. lib]
+
+package require Tk
+package require sdrkit
+
+sdrkit::mtap key
+sdrkit::mtap keyer
+sdrkit::jack connect system:midi_capture_1 key:min
+sdrkit::jack connect iambic:midi_out keyer:min
+
+proc start {} {
+    global data
+    key start
+    keyer start
+    foreach name {key-0 key-0-xy key-1 key-1-xy keyer-0 keyer-0-xy} {
+	set data($name) {}
+    }
+    collect
+}
+
+proc stop {} {
+    global data
+    catch {after cancel $data(token)}
+}
+
+proc clear {} {
+    global data
+    stop
+    .c delete all
+    foreach name {key-0 key-0-xy key-1 key-1-xy keyer-0 keyer-0-xy} {
+	set data($name) {}
+    }
+}
+
+proc collect {} {
+    global data
+    foreach name {key keyer} {
+	foreach item [$name get] {
+	    foreach {time bdata} $item break
+	    binary scan $bdata c* cdata
+	    if {[llength $cdata] == 3} {
+		foreach {cmd note vel} $cdata break
+		if {($cmd&0xff) == 0x80} {
+		    lappend data($name-$note) $time 0
+		    lappend data($name-$note-xy) $time 1 $time 0
+		} else {
+		    lappend data($name-$note) $time 1
+		    lappend data($name-$note-xy) $time 0 $time 1
+		}
+	    }
+	}
+    }
+    foreach name {key keyer} {
+	foreach note {0 1} {
+	    if {[info exists data($name-$note-xy)] && [llength $data($name-$note-xy)] > 3} {
+		.c coords $name-$note $data($name-$note-xy)
+	    }
+	}
+    }
+
+    foreach {x1 y1 x2 y2} [.c bbox all] break
+    set x0 [expr {($x1+$x2)/2}]
+    set y0 [expr {($y1+$y2)/2}]
+    set wd [expr {$x2-$x1}]
+    set ht [expr {$y2-$y1}]
+    set cwd [winfo width .c]
+    set cht [winfo height .c]
+    .c scale all $x0 $y0 [expr {double($cwd)/$wd}] [expr {-double($cht)/$ht/4}]
+    .c move all [expr {$cwd-$x0}] 0
+    .c move key-0 0 [expr {2*$cht/3}]
+    .c move key-1 0 [expr {1*$cht/3}]
+    .c configure -scrollregion [.c bbox all]
+    set data(token) [after 100 [list collect]]
+}
+
+grid [frame .m] -row 0 -column 0
+pack [button .m.start -text {Start Capture} -command start] -side left
+pack [button .m.stop -text {Stop Capture} -command stop] -side left
+pack [button .m.clear -text {Clear} -command clear] -side left
+pack [button .m.quit -text {Quit} -command quit] -side right
+grid [canvas .c] -row 1 -column 0 -sticky nsew
+grid [scrollbar .v] -row 1 -column 1 -sticky ns
+grid [scrollbar .h -orient horizontal] -row 2 -column 0 -sticky ew
+grid columnconfigure . 0 -weight 100
+grid rowconfigure . 1 -weight 100
+.c configure -xscrollcommand [list .h set]
+.c configure -yscrollcommand [list .v set]
+.h configure -command [list .c xview]
+.v configure -command [list .c yview]
+.c create line 0 0 0 0 -tags key-0
+.c create line 0 0 0 0 -tags key-1
+.c create line 0 0 0 0 -tags keyer-0

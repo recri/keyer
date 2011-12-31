@@ -148,7 +148,11 @@ static char iambic_key_and_transition_to(iambic_state_t newState, unsigned newDu
 }
 
 // start a dit if _dit is pressed
+//   if _mode == IAMBIC_MODE_B and
+//   squeeze was released after the last element started and
+//   dah was next
 static char iambic_start_dit() {
+  char keyIn = (fw.opts.mode == 'B') ? iambic._prevKeyIn[(iambic._prevKeyInPtr-6) & (KEY_IN_MEM-1)] : iambic._keyIn;
   return KEYIN_IS_DIT(iambic._keyIn) ? iambic_key_and_transition_to(IAMBIC_DIT, data.samples_per.dit, 1) : 0;
 }
 
@@ -157,7 +161,8 @@ static char iambic_start_dit() {
 //   squeeze was released after the last element started and
 //   dah was next
 static char iambic_start_dah() {
-  return KEYIN_IS_DAH(iambic._keyIn) ? iambic_key_and_transition_to(IAMBIC_DAH, data.samples_per.dah, 1) : 0;
+  char keyIn = (fw.opts.mode == 'B') ? iambic._prevKeyIn[(iambic._prevKeyInPtr-4) & (KEY_IN_MEM-1)] : iambic._keyIn;
+  return KEYIN_IS_DAH(keyIn) ? iambic_key_and_transition_to(IAMBIC_DAH, data.samples_per.dah, 1) : 0;
 }
 
 // continue an interelement space to an intersymbol space

@@ -9,7 +9,7 @@ JACK_LIBS=$(shell pkg-config --libs jack)
 ALSA_LIBS=$(shell pkg-config --libs alsa)
 LIBUSB_LIBS=$(shell pkg-config --libs libusb-1.0)
 
-ALL=../bin/keyer_tone ../bin/keyer_ascii ../bin/keyer_iambic ../bin/keyer_decode
+ALL=../bin/keyer_tone ../bin/keyer_ascii ../bin/keyer_iambic ../bin/keyer_decode ../bin/keyer_iambic2
 
 all: $(ALL)
 
@@ -34,6 +34,10 @@ clean::
 ../bin/keyer_iambic: keyer_iambic.c keyer_options.o keyer_midi.o keyer_framework.o keyer_timing.h
 	mkdir -p ../bin
 	cc -o ../bin/keyer_iambic $(CFLAGS) keyer_iambic.c keyer_options.o keyer_midi.o keyer_framework.o $(JACK_LIBS) -lm
+
+../bin/keyer_iambic2: keyer_iambic2.cc keyer_options.o keyer_midi.o keyer_framework.o keyer_timing.h KeyerIambic.hh
+	mkdir -p ../bin
+	g++ -o ../bin/keyer_iambic2 $(CPPFLAGS) keyer_iambic2.cc keyer_options.o keyer_midi.o keyer_framework.o $(JACK_LIBS) -lm
 
 keyer_options.o: keyer_options.c keyer_options.h
 	cc -c $(CFLAGS) keyer_options.c

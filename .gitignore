@@ -3,5 +3,7 @@ keyer_iambic
 keyer_tone
 keyer_decode
 keyer_detone
+pkgIndex.tcl
 *.o
+*.so
 *~

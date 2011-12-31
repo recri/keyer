@@ -1,0 +1,68 @@
+* The basic UsbMidi Buttons example
+  that comes with the Teensyduino worked,
+  except that occasionally keys would get stuck.
+* Reducing the Bounce period did not help.
+* Rewriting the Bounce code did not help.
+* Replacing the Bounce code with plain digitalReads did not help.
+* The problem is that the usb midi note_on/note_off senders
+  eventually reach the send_raw routine which does a busy wait
+  for the usb interface to become ready.  apparently this can
+  take longer than it takes for an iambic paddle to transition.
+** One solution would be to alter the usb midi code
+   to have it buffer notes, or at least expose a canSendNow
+   method.  But this is messy.
+** The second solution is to use the pin change interrupt to
+   detect the pin changes asynchronously, queue the pin states,
+   and let the main loop busy wait the usb midi interface.
+*** Pin change interrupt map
+   | INT    | PIN | ARDUINO | use                   |
+   | PCINT0 | B0  |       0 | my programmed dit pin |
+   | PCINT1 | B1  |       1 | my programmed dah pin |
+   | PCINT2 | B2  |       2 |                       |
+   | PCINT3 | B3  |       3 |                       |
+   | PCINT4 | B4  |      13 |                       |
+   | PCINT5 | B5  |      14 |                       |
+   | PCINT6 | B6  |      15 |                       |
+   | PCINT7 | B7  |       4 |                       |
+*** Pin change interrupt vector
+    | Vector      | Mask        | Enable      | Purpose    |
+    | PCINT0_vect | PCICR,PCIE0 | PCIFR,PCIF0 | Pin Change |
+*** PCINT0 is both one of the pins which change can interrupt and
+   the name of the interrupt that fires when any of the eight
+   pins changes.
+*** 10 0x12 PCINT0 Pin Change Interrupt Request 0
+*** PCMSK0 masks which pins contribute to interrupt
+*** Interrupt service routine
+    // assuming any two bits of PORTB are used
+    volatile byte pc_buf[ 256];
+    volatile byte pc_wptr;
+    volatile byte pc_rptr;
+    ISR(PCINT0_vect) { pc_buf[pc_wptr++] = PORTB; }
+    // background service
+    while (pc_rptr != pc_wptr) service_byte(pc_buff[pc_rptr++]);
+** A third solution is to use the external interrupt to
+   detect the pin changes asynchronously, queue the pin states,
+   and let the main loop busy wait the usb midi interface.
+   Oh, wait, that's what the Arduino attachInterrupt(interrupt, handler, mode)
+   facility allows.
+*** External interrupt map
+   | INT  | PIN | ARDUINO | use |
+   | EXT0 | PD0 |       5 |     |
+   | EXT1 | PD1 |       6 |     |
+   | EXT2 | PD2 |       7 |     |
+   | EXT3 | PD3 |       8 |     |
+*** External interrupt vectors
+    | Vector    | Mask        | Enable     | Purpose                            |
+    | INT0_vect | EIMSK,IINT0 | EIFR,INTF0 | Interrupt Request, External Signal |
+    | INT1_vect | EIMSK,IINT1 | EIFR,INTF1 |                                    |
+    | INT2_vect | EIMSK,IINT2 | EIFR,INTF2 |                                    |
+    | INT3_vect | EIMSK,IINT3 | EIFR,INTF3 |                                    |
+*** Interrupt service routines
+    // assuming that EXT0 and EXT1 are used
+    volatile byte ei_buf[ 256];
+    volatile byte ei_wptr;
+    volatile byte ei_rptr;
+    ISR(INT0_vect) { pc_buf[pc_wptr++] = PORTD; }
+    ISR(INT1_vect) { pc_buf[pc_wptr++] = PORTD; }
+    // background service
+    while (pc_rptr != pc_wptr) service_byte(pc_buff[pc_rptr++]);

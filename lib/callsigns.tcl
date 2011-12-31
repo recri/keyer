@@ -1,4 +1,4 @@
-package provide callsigns
+package provide callsigns 1.0.0
 
 namespace eval ::callsigns {
     foreach {country data} {
