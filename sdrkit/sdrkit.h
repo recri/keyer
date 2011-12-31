@@ -215,29 +215,35 @@ static int sdrkit_factory(ClientData clientData, Tcl_Interp *interp, int argc, T
   for (int i = 0; i < n_inputs; i++) {
     char buf[256];
     if (n_inputs > 2) {
-      snprintf(buf, 256, "ain%d%c", i/2, i&1 ? 'q' : 'i');
+      snprintf(buf, 256, "in_%d_%c", i/2, i&1 ? 'q' : 'i');
     } else {
-      snprintf(buf, 256, "ain%c", i&1 ? 'q' : 'i');
+      snprintf(buf, 256, "in_%c", i&1 ? 'q' : 'i');
     }
     data->port[i] = jack_port_register(client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
   }
   for (int i = 0; i < n_outputs; i++) {
     char buf[256];
     if (n_outputs > 2) {
-      snprintf(buf, 256, "aout%d%c", i/2, i&1 ? 'q' : 'i');
+      snprintf(buf, 256, "out_%d_%c", i/2, i&1 ? 'q' : 'i');
     } else {
-      snprintf(buf, 256, "aout%c", i&1 ? 'q' : 'i');
+      snprintf(buf, 256, "out_%c", i&1 ? 'q' : 'i');
     }
     data->port[i+n_inputs] = jack_port_register(client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
   }
   for (int i = 0; i < n_midi_inputs; i++) {
     char buf[256];
-    snprintf(buf, 256, "min%d", i);
+    if (n_midi_inputs > 1)
+      snprintf(buf, 256, "midi_in_%d", i);
+    else 
+      snprintf(buf, 256, "midi_in");
     data->port[i+n_inputs+n_outputs] = jack_port_register(client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
   }
   for (int i = 0; i < n_midi_outputs; i++) {
     char buf[256];
-    snprintf(buf, 256, "mout%d", i);
+    if (n_midi_inputs > 1)
+      snprintf(buf, 256, "midi_out_%d", i);
+    else 
+      snprintf(buf, 256, "midi_out");
     data->port[i+n_midi_inputs+n_inputs+n_outputs] = jack_port_register(client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
   }
   // initialize the object data
