@@ -8,8 +8,8 @@ package require sdrkit
 
 sdrkit::mtap key
 sdrkit::mtap keyer
-sdrkit::jack connect system:midi_capture_1 key:min
-sdrkit::jack connect iambic:midi_out keyer:min
+sdrkit::jack connect system:midi_capture_1 key:min0
+sdrkit::jack connect iambic:midi_out keyer:min0
 
 proc start {} {
     global data

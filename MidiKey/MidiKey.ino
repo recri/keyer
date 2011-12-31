@@ -29,41 +29,54 @@
 
 #include "WProgram.h"
 
-// the MIDI channel number to send messages
-const int channel = 1;
-// the base midi note
-const int base_note = 0;
-// the dit pin number
-const int ditPin = 0;
-// the dah pin number
-const int dahPin = 1;
+const int channel = 1;      // the MIDI channel number to send messages
+const int base_note = 0;    // the base midi note
+const int ditPin = 4;       // the dit pin number, is D0
+const int ditInterrupt = 0; // the dit interrupt, is EXT0
+const int ditMask = 1;      // the dit bit in PORTD
+const int dahPin = 5;       // the dah pin number, is D1
+const int dahInterrupt = 1; // the dah interrupt, is EXT1
+const int dahMask = 2;      // the dah bit in PORTD
 
-// the current dit value
-byte dit;
-// the current dah value
-byte dah;
+byte dit;                   // the current dit value
+byte dah;                   // the current dah value
+
+volatile byte buffer[256];  // the buffered PORTD values
+volatile byte wptr;         // the write pointer in buffer
+volatile byte rptr;         // the read pointer in buffer
+
+// interrupt on dit or dah pin, save PORTD contents
+void interrupt() { buffer[wptr++] = PIND; }
 
 void setup() {
   pinMode(ditPin, INPUT_PULLUP);
   pinMode(dahPin, INPUT_PULLUP);
   dit = digitalRead(ditPin);
   dah = digitalRead(dahPin);
+  attachInterrupt(ditInterrupt, interrupt, CHANGE);
+  attachInterrupt(dahInterrupt, interrupt, CHANGE);
 }
 
-
 void loop() {
-  if (digitalRead(ditPin) != dit) {
-    if (dit ^= 1) {
-      usbMIDI.sendNoteOff(base_note+0, 0, channel);
-    } else {
-      usbMIDI.sendNoteOn(base_note+0, 99, channel);
+  while (rptr != wptr) {
+    byte portd = buffer[rptr++];
+    byte new_dit = (portd & ditMask) ? 1 : 0;
+    byte new_dah = (portd & dahMask) ? 1 : 0;
+    if (new_dit != dit) {
+      dit = new_dit;
+      if (dit) {
+        usbMIDI.sendNoteOff(base_note+0, 0, channel);
+      } else {
+        usbMIDI.sendNoteOn(base_note+0, 99, channel);
+      }
     }
-  }
-  if (digitalRead(dahPin) != dah) {
-    if (dah ^= 1) {
-      usbMIDI.sendNoteOff(base_note+1, 0, channel);
-    } else {
-      usbMIDI.sendNoteOn(base_note+1, 99, channel);
+    if (new_dah != dah) {
+      dah = new_dah;
+      if (dah) {
+        usbMIDI.sendNoteOff(base_note+1, 0, channel);
+      } else {
+        usbMIDI.sendNoteOn(base_note+1, 99, channel);
+      }
     }
   }
 }
