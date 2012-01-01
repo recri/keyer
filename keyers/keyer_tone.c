@@ -188,7 +188,8 @@ static int tone_process_callback(jack_nframes_t nframes, void *arg) {
   jack_nframes_t event_count = jack_midi_get_event_count(midi_in), event_index = 0, event_time = 0;
   if (event_index < event_count) {
     jack_midi_event_get(&in_event, midi_in, event_index++);
-    event_time += in_event.time;
+    // event_time += in_event.time;
+    event_time = in_event.time;
   } else {
     event_time = nframes+1;
   }
@@ -201,7 +202,8 @@ static int tone_process_callback(jack_nframes_t nframes, void *arg) {
       midi_decode(in_event.size, in_event.buffer);
       if (event_index < event_count) {
 	jack_midi_event_get(&in_event, midi_in, event_index++);
-	event_time += in_event.time;
+	// event_time += in_event.time;
+	event_time = in_event.time;
       } else {
 	event_time = nframes+1;
       }

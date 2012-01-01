@@ -86,7 +86,6 @@ array set data {
     game-session-beacon-velocity 50
     game-session-beacon-frequency 50
     game-session-beacon-volume -30
-    
 }
 
 #
@@ -379,6 +378,7 @@ proc plug-init {} {
     plug-open keyer_tone ascii_tone
     plug-open keyer_decode ascii_decode
     plug-open keyer_iambic iambic
+    # plug-open keyer_iambic2 iambic
     plug-open keyer_tone iambic_tone
     plug-open keyer_decode iambic_decode
     # these names may need to change around

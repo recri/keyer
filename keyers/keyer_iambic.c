@@ -299,7 +299,8 @@ static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
   int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
   if (in_event_index < in_event_count) {
     jack_midi_event_get(&in_event, midi_in, in_event_index++);
-    in_event_time += in_event.time;
+    // in_event_time += in_event.time;
+    in_event_time = in_event.time;
   } else {
     in_event_time = nframes+1;
   }
@@ -313,7 +314,8 @@ static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
       midi_decode(in_event.size, in_event.buffer);
       if (in_event_index < in_event_count) {
 	jack_midi_event_get(&in_event, midi_in, in_event_index++);
-	in_event_time += in_event.time;
+	// in_event_time += in_event.time;
+	in_event_time = in_event.time;
       } else {
 	in_event_time = nframes+1;
       }

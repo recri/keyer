@@ -14,6 +14,7 @@
    2) to follow the instructions for installing Teensyduino at
    http://www.pjrc.com/teensy/teensyduino.html
    3) on Ubuntu, you will need the gcc-avr and avr-libc packages
+   for Arduino to use.
    4) you may need to install the teensy loader from
    http://www.pjrc.com/teensy/loader.html, I'm not sure.
 
@@ -34,8 +35,6 @@
 
 #include "WProgram.h"
 #include "Debounce.h"
-#include <avr/io.h>
-#include <avr/interrupt.h>
 
 const int channel = 1;      // the MIDI channel number to send messages
 const int base_note = 0;    // the base midi note
@@ -43,14 +42,10 @@ const int base_note = 0;    // the base midi note
 const int ditPin = 0;       // the dit pin number, is B0
 const int dahPin = 1;       // the dah pin number, is B1
 
-const int debounce_steps = 2;
-const int sample_period = 20000;
+const int sample_period = 100;
 
 byte dit;                   // the current dit value
 byte dah;                   // the current dah value
-
-Debounce debounceDit(debounce_steps);
-Debounce debounceDah(debounce_steps);
 
 void setup() {
   pinMode(ditPin, INPUT_PULLUP);
@@ -61,33 +56,20 @@ void setup() {
 
 
 void loop() {
-  static byte loop_counter = 0;
-  static unsigned last_poll;
-  unsigned this_poll = micros();
-  if (last_poll == 0) {
-    last_poll = this_poll;
-    return;
-  } else if ((this_poll - last_poll) < sample_period) {
-     return;
-  }
-  last_poll = this_poll;
-  if (loop_counter ^= 1) {
-    byte new_dit = debounceDit.debounce(digitalRead(ditPin));
-    if (new_dit != dit) {
-      if ((dit = new_dit) != 0) {
-        usbMIDI.sendNoteOff(base_note+0, 0, channel);
-      } else {
-        usbMIDI.sendNoteOn(base_note+0, 99, channel);
-      }
+  byte new_dit = digitalRead(ditPin);
+  if (new_dit != dit) {
+    if ((dit = new_dit) != 0) {
+      usbMIDI.sendNoteOff(base_note+0, 0, channel);
+    } else {
+      usbMIDI.sendNoteOn(base_note+0, 99, channel);
     }
-  } else {
-    byte new_dah = debounceDah.debounce(digitalRead(dahPin));
-    if (new_dah != dah) {
-      if ((dah = new_dah) != 0) {
-        usbMIDI.sendNoteOff(base_note+1, 0, channel);
-      } else {
-        usbMIDI.sendNoteOn(base_note+1, 99, channel);
-      }
+  }
+  byte new_dah = digitalRead(dahPin);
+  if (new_dah != dah) {
+    if ((dah = new_dah) != 0) {
+      usbMIDI.sendNoteOff(base_note+1, 0, channel);
+    } else {
+      usbMIDI.sendNoteOn(base_note+1, 99, channel);
     }
   }
 }

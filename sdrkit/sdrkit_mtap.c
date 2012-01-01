@@ -8,7 +8,6 @@
 /*
 ** Create a tap to buffer midi events.
 */
-#define _BUFFER_SIZE 8192
 
 typedef struct {
   SDRKIT_T_COMMON;
@@ -34,7 +33,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
   jack_nframes_t last_frame = sdrkit_last_frame_time(arg);
   if (event_index < event_count) {
     jack_midi_event_get(&in_event, midi_in, event_index++);
-    event_time += in_event.time;
+    // event_time += in_event.time;
+    event_time = in_event.time;
   } else {
     event_time = nframes+1;
   }
@@ -46,7 +46,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	midi_write(&data->mq, last_frame+i, in_event.size, in_event.buffer);
       if (event_index < event_count) {
 	jack_midi_event_get(&in_event, midi_in, event_index++);
-	event_time += in_event.time;
+	// event_time += in_event.time;
+	event_time = in_event.time;
       } else {
 	event_time = nframes+1;
       }

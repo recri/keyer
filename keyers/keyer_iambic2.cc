@@ -49,7 +49,7 @@ extern "C" {
   unsigned long frames;
 
   // update the computed parameters
-  static void iambic_update() {
+  static void _update() {
     if (fw.opts.modified) {
       fw.opts.modified = 0;
       if (fw.opts.verbose > 2) fprintf(stderr, "%ld: recomputing data from options\n", frames);
@@ -81,19 +81,26 @@ extern "C" {
     }
   }
 
-  static void iambic_keyout(int key) {
+  static void _keyout(int key) {
+    fprintf(stderr, "_keyout(%d)\n", key);
     midi_write(0, 3, key ? data.note_on : data.note_off);
   }
 
-  static void iambic_init() {
-    k.setKeyOut(iambic_keyout);\
+  static void _init() {
+    k.setKeyOut(_keyout);\
   }
 
-  static void iambic_decode(int count, unsigned char *p) {
+  static void _decode(int count, unsigned char *p) {
     if (count == 3) {
       switch (p[0]&0xF0) {
-      case NOTE_OFF: if (p[1]&1) k.paddleDah(0); else k.paddleDit(0); break;
-      case NOTE_ON:  if (p[1]&1) k.paddleDah(1); else k.paddleDit(1); break;
+      case NOTE_OFF:
+	if (p[1]&1) k.paddleDah(0); else k.paddleDit(0);
+	fprintf(stderr, "_decode([%x, %x, ...])\n", p[0], p[1]);
+	break;
+      case NOTE_ON:
+	if (p[1]&1) k.paddleDah(1); else k.paddleDit(1);
+	fprintf(stderr, "_decode([%x, %x, ...])\n", p[0], p[1]);
+	break;
       }
     } else if (count > 3 && p[0] == SYSEX) {
       if (p[1] == SYSEX_VENDOR) {
@@ -107,14 +114,14 @@ extern "C" {
   */
   static unsigned duration = 0;
 
-  static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
+  static int _process_callback(jack_nframes_t nframes, void *arg) {
     void *midi_in = jack_port_get_buffer(fw.midi_in, nframes);
     void *midi_out = jack_port_get_buffer(fw.midi_out, nframes);
     jack_midi_event_t in_event;
     int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
     if (in_event_index < in_event_count) {
       jack_midi_event_get(&in_event, midi_in, in_event_index++);
-      in_event_time += in_event.time;
+      in_event_time = in_event.time;
     } else {
       in_event_time = nframes+1;
     }
@@ -125,10 +132,10 @@ extern "C" {
       /* process all midi input events at this sample frame */
       while (in_event_time == i) {
 	if (fw.opts.verbose > 5) fprintf(stderr, "%ld: process event %x [%x, %x, %x, ...]\n", frames, (unsigned)in_event.size, in_event.buffer[0], in_event.buffer[1], in_event.buffer[2]);
-	iambic_decode(in_event.size, in_event.buffer);
+	_decode(in_event.size, in_event.buffer);
 	if (in_event_index < in_event_count) {
 	  jack_midi_event_get(&in_event, midi_in, in_event_index++);
-	  in_event_time += in_event.time;
+	  in_event_time = in_event.time;
 	} else {
 	  in_event_time = nframes+1;
 	}
@@ -163,7 +170,7 @@ extern "C" {
   }
 
   int main(int argc, char **argv) {
-    keyer_framework_main(&fw, argc, argv, (char *)"keyer_iambic2", require_midi_in|require_midi_out, iambic_init, iambic_process_callback, NULL);
+    keyer_framework_main(&fw, argc, argv, (char *)"keyer_iambic2", require_midi_in|require_midi_out, _init, _process_callback, NULL);
   }
 
 }

@@ -157,7 +157,8 @@ static int decode_process_callback(jack_nframes_t nframes, void *arg) {
   /* initialize */
   if (event_index < event_count) {
     jack_midi_event_get(&in_event, midi_in, event_index++);
-    event_time += in_event.time;
+    // event_time += in_event.time;
+    event_time = in_event.time;
   } else {
     event_time = nframes+1;
   }
@@ -168,7 +169,8 @@ static int decode_process_callback(jack_nframes_t nframes, void *arg) {
       midi_decode(in_event.size, in_event.buffer);
       if (event_index < event_count) {
 	jack_midi_event_get(&in_event, midi_in, event_index++);
-	event_time += in_event.time;
+	// event_time += in_event.time;
+	event_time = in_event.time;
       } else {
 	event_time = nframes+1;
       }
