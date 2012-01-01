@@ -69,7 +69,7 @@ int main(void)
 
 	for (;;)
 	{
-		CheckJoystickMovement();
+		CheckPaddleMovement();
 
 		MIDI_EventPacket_t ReceivedMIDIEvent;
 		while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent))
@@ -96,59 +96,43 @@ void SetupHardware(void)
 	clock_prescale_set(clock_div_1);
 
 	/* Hardware Initialization */
-	Joystick_Init();
-	LEDs_Init();
-	Buttons_Init();
+	// Joystick_Init();
+	// set all PORTB pins for input with pullups
+	DDRB &= ~(0xFF);
+	PORTB |= 0xFF;
+	// LEDs_Init();
+	// set all PORTD pins for output
+	DDRD |= 0xFF;
+	PORTD &= ~(0xFF);
+	// Buttons_Init();
+	// used PORTB for buttons, too
 	USB_Init();
 }
 
+uint8_t Paddles_GetStatus() { return PINB; }
+#define PADDLE_DIT	0x01	/* PB0 for dit paddle */
+#define PADDLE_DAH	0x02	/* PB1 for dah paddle */
+
+uint8_t Buttons_GetStatus() { return PINB; }
+
+#define BUTTONS_BUTTON1 0x80	/* PB7 for button1 */
+
 /** Checks for changes in the position of the board joystick, sending MIDI events to the host upon each change. */
-void CheckJoystickMovement(void)
+void CheckPaddleMovement(void)
 {
-	static uint8_t PrevJoystickStatus;
+	static uint8_t PrevPaddleStatus;
 
 	uint8_t MIDICommand = 0;
 	uint8_t MIDIPitch;
 
-	/* Get current joystick mask, XOR with previous to detect joystick changes */
-	uint8_t JoystickStatus  = Joystick_GetStatus();
-	uint8_t JoystickChanges = (JoystickStatus ^ PrevJoystickStatus);
+	/* Get current paddle mask, XOR with previous to detect paddle changes */
+	uint8_t PaddleStatus  = Paddles_GetStatus();
+	uint8_t PaddleChanges = (PaddleStatus ^ PrevPaddleStatus);
+	uint8_t Channel = MIDI_CHANNEL(1);
 
-	/* Get board button status - if pressed use channel 10 (percussion), otherwise use channel 1 */
-	uint8_t Channel = ((Buttons_GetStatus() & BUTTONS_BUTTON1) ? MIDI_CHANNEL(10) : MIDI_CHANNEL(1));
-
-	if (JoystickChanges & JOY_LEFT)
-	{
-		MIDICommand = ((JoystickStatus & JOY_LEFT)? MIDI_COMMAND_NOTE_ON : MIDI_COMMAND_NOTE_OFF);
-		MIDIPitch   = 0x3C;
-	}
-
-	if (JoystickChanges & JOY_UP)
-	{
-		MIDICommand = ((JoystickStatus & JOY_UP)? MIDI_COMMAND_NOTE_ON : MIDI_COMMAND_NOTE_OFF);
-		MIDIPitch   = 0x3D;
-	}
-
-	if (JoystickChanges & JOY_RIGHT)
-	{
-		MIDICommand = ((JoystickStatus & JOY_RIGHT)? MIDI_COMMAND_NOTE_ON : MIDI_COMMAND_NOTE_OFF);
-		MIDIPitch   = 0x3E;
-	}
-
-	if (JoystickChanges & JOY_DOWN)
-	{
-		MIDICommand = ((JoystickStatus & JOY_DOWN)? MIDI_COMMAND_NOTE_ON : MIDI_COMMAND_NOTE_OFF);
-		MIDIPitch   = 0x3F;
-	}
-
-	if (JoystickChanges & JOY_PRESS)
-	{
-		MIDICommand = ((JoystickStatus & JOY_PRESS)? MIDI_COMMAND_NOTE_ON : MIDI_COMMAND_NOTE_OFF);
-		MIDIPitch   = 0x3B;
-	}
-
-	if (MIDICommand)
-	{
+	if (PaddleChanges & PADDLE_DIT) {
+		MIDICommand = ((PaddleStatus & PADDLE_DIT)? MIDI_COMMAND_NOTE_OFF : MIDI_COMMAND_NOTE_ON);
+		MIDIPitch   = 0;
 		MIDI_EventPacket_t MIDIEvent = (MIDI_EventPacket_t)
 			{
 				.CableNumber = 0,
@@ -163,7 +147,24 @@ void CheckJoystickMovement(void)
 		MIDI_Device_Flush(&Keyboard_MIDI_Interface);
 	}
 
-	PrevJoystickStatus = JoystickStatus;
+	if (PaddleChanges & PADDLE_DAH)
+	{
+		MIDICommand = ((PaddleStatus & PADDLE_DAH)? MIDI_COMMAND_NOTE_OFF : MIDI_COMMAND_NOTE_ON);
+		MIDIPitch   = 1;
+		MIDI_EventPacket_t MIDIEvent = (MIDI_EventPacket_t)
+			{
+				.CableNumber = 0,
+				.Command     = (MIDICommand >> 4),
+
+				.Data1       = MIDICommand | Channel,
+				.Data2       = MIDIPitch,
+				.Data3       = MIDI_STANDARD_VELOCITY,
+			};
+
+		MIDI_Device_SendEventPacket(&Keyboard_MIDI_Interface, &MIDIEvent);
+		MIDI_Device_Flush(&Keyboard_MIDI_Interface);
+	}
+	PrevPaddleStatus = PaddleStatus;
 }
 
 /** Event handler for the library USB Connection event. */
