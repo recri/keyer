@@ -30,12 +30,12 @@
 
   [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3]].
 
-  There is a Teensyduino application to translate paddle transitions
-  into MIDI events in MidiKey/MidiKey.ino
+  The Teensyduino application to translate paddle transitions into
+  MIDI events is in MidiKey/MidiKey.ino
 * Plugin building
-  The plugin builds on Ubuntu 11.10 with the build-essentials, jackd2,
-  and libjack-jackd2-dev packages installed.  Just run make in the
-  keyers directory.
+  The keyer and sdrkit plugins build on Ubuntu 11.10 with the
+  build-essentials, jackd2, libjack-jackd2-dev, and tk-dev packages
+  installed.  Just running make in the root directory should work.
 
   Note that Ubuntu 11.10 has some confusion in the jackd packaging.
   Some audio packages were built against jackd1 and some against the
@@ -44,17 +44,17 @@
   because it's better.
 * Plugin usage -- semi-automatic
   There is a tcl/tk application in the bin directory named
-  keyer-control.  It requires installation of the tk package on
-  Ubuntu.  You should run it when jack has already been started and it
-  will attempt to launch the keyer plugins and give you a control
-  interface for adjusting options.  You can also type characters when
-  it has focus and they will be echoed by keyer_ascii.
+  keyer-control. For the moment, you should run it when jack has
+  already been started and it will launch the keyer plugins, connect
+  them up, and give you a control interface for adjusting options.
+  You can also type characters when it has focus and they will be
+  echoed by keyer_ascii.
 * Plugin usage -- manual
-  Use of the plugins is a bit rough at the moment.
+  Manual use of the plugins is a bit rough at the moment.
 
-  You need to start them as separate programs, each running in a
-  shell window, and then connect them in Qjackctl or with some other
-  jack wiring interface.
+  The keyer plugins need to be started as separate programs, each
+  running in a shell window, and then connect them in Qjackctl or with
+  some other jack wiring interface.
    
   They need to be in shell windows because, at the moment, they'll
   block if you detach them as background processes. It's also useful
@@ -84,7 +84,7 @@
   keyer_iambic plugins will send keyer_tone option changes as midi
   sysex and if keyer_tone is connected it will implement the
   changes.
-* Wiring on Qjackctl
+** Wiring on Qjackctl
    For wiring I use Qjackctl with jack configured to use the "raw" midi
    interface.
 
@@ -239,33 +239,27 @@
 *** Bugs and Issues
     I think the key debouncing is just slowing things down and missing
     some of the key transitions as a consequence.  Iambic paddles are
-    not consumer grade push buttons.
-
-    Should add MIDI input to receive the iambic shaped keying. That
-    could be used to key a transmitter, play a sidetone, wiggle a PTT
-    line, or flash some LED's.
-** ToDo
-*** iambic - Rewrite the process loop -> iambic_transition
-    Make it call iambic_transition at a specified granularity
-    irrespective of the jack buffer size, like twice per dit clock.
-*** iambic - Implement mode B
-    Should only require a short memory of key states, make the next
-    element decision at end of inter-element space based on key state
-    at 1.5 dit clocks in the past.
-*** MidiKey - less debouncing
-*** ascii - install more code points
+    not consumer grade push buttons.  No, it was my bug in the
+    jack_process callback that was causing the dropped event problems.
 * Things to Do
 ** DONE - MidiKey: to debounce with a period in microseconds.
    Mangled the existing Bounce class, still not quite right.
-** TODO - MidiKey: to use a less ad hoc debouncer.
-** TODO - MidiKey: to use the LUFA library for USB.
+** DONE - MidiKey: to use a less ad hoc debouncer.
+** DONE - MidiKey: to use the LUFA library for USB.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
 ** TODO - users of keyer_midi.c: to use the new queuing api.
 ** DONE - keyer-control: to use a dedicated keyer_tone for each keyer.
 ** DONE - keyer-control: to use expect to manage plugins.
    Didn't work out as I hoped.
+** TODO ascii - install more code points
+** DONE - keyer_iambic - Rewrite the process loop -> iambic_transition
+    Make it call iambic_transition at a specified granularity
+    irrespective of the jack buffer size, like twice per dit clock.
 ** TODO - keyer_iambic.c: mode B
+    Should only require a short memory of key states, make the next
+    element decision at end of inter-element space based on key state
+    at 1.5 dit clocks in the past.
 ** TODO - keyer-control: callsign-invaders ear/key training game.
 ** TODO - keyer_detone.c: to convert keyed tones into midi.
 ** TODO - new keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
@@ -281,5 +275,8 @@
 ** TODO - keyer_*.c: distinguish stdout and stderr better.
 ** TODO - keyer_framework.c: allow jack thread to buffer output to memory for the main thread to print. Hence input cannot block.
 ** TODO - keyer_framework.c: implement a tcl command framework.
+** TODO - sdrkit_mtap.c: Should add MIDI input to receive the iambic shaped keying.
+   That could be used to key a transmitter, play a sidetone, wiggle a
+   PTT line, or flash some LED's. 
 
     
