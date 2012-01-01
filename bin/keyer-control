@@ -1,6 +1,12 @@
 #!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
+
+lappend auto_path [file join [file dirname [info script]] .. lib]
+
 package require Tk
+
+package require sdrkit
+package require midiscope
 
 ##
 ## parameters and operating data
@@ -915,6 +921,9 @@ proc ui-control-panel {w} {
     return $w
 }
 
+proc ui-midiscope-panel {w} {
+    return [midiscope $w]
+}
 #
 # mouse paddle configure panel
 #
@@ -946,6 +955,7 @@ proc ui-input {k} {
 proc ui-init {} {
     pack [ttk::notebook .nb] -fill both -expand true
     .nb add [ui-control-panel .nb.ctl] -text Controls
+    .nb add [ui-midiscope-panel .nb.sco] -text Scope
     .nb add [ui-game-panel .nb.play] -text {Invaders}
     bind . <Destroy> [list ui-close %W]
     bind . <KeyPress> [list ui-input %A]
