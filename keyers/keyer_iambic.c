@@ -1,5 +1,5 @@
 /** 
-    Copyright (c) 2011 by Roger E Critchlow Jr
+    Copyright (c) 2011,2012 by Roger E Critchlow Jr
 
     keyer_iambic implements an iambic keyer keyed by midi events
     and generating midi events.
@@ -53,7 +53,13 @@ static keyer_data_t data;
 #define KEYIN_IS_DAH(k)	((k)&KEYIN_DAH)
 
 typedef enum {
-  IAMBIC_OFF, IAMBIC_DIT, IAMBIC_DIT_SPACE, IAMBIC_DAH, IAMBIC_DAH_SPACE, IAMBIC_SYMBOL_SPACE, IAMBIC_WORD_SPACE
+  IAMBIC_OFF,			/* silent, no paddles down */
+  IAMBIC_DIT,			/* sounding a dit, dit paddle down */
+  IAMBIC_DIT_SPACE,		/* sounding a space after a dit */
+  IAMBIC_DAH,			/* sounding a dah, dah paddle down */
+  IAMBIC_DAH_SPACE,		/* sounding a space after a dah */
+  IAMBIC_SYMBOL_SPACE,		/* sounding an inter-symbol space */
+  IAMBIC_WORD_SPACE,		/* sounding an inter-word space */
 } iambic_state_t;
 
 static char *iambic_keys[] = {
@@ -61,7 +67,11 @@ static char *iambic_keys[] = {
 };
 
 static char *iambic_states[] = {
-  "OFF", "DIT", "DIT_SPACE", "DAH", "DAH_SPACE", "SYMBOL_SPACE", "WORD_SPACE"
+  "OFF",
+  "DIT", "DIT_SPACE",
+  "DAH", "DAH_SPACE",
+  "SYMBOL_SPACE",
+  "WORD_SPACE"
 };
 
 typedef struct {
@@ -148,20 +158,20 @@ static char iambic_key_and_transition_to(iambic_state_t newState, unsigned newDu
 }
 
 // start a dit if _dit is pressed
-//   if _mode == IAMBIC_MODE_B and
-//   squeeze was released after the last element started and
-//   dah was next
+// or modeB && squeeze was released in last dah
 static char iambic_start_dit() {
-  char keyIn = (fw.opts.mode == 'B') ? iambic._prevKeyIn[(iambic._prevKeyInPtr-6) & (KEY_IN_MEM-1)] : iambic._keyIn;
-  return KEYIN_IS_DIT(iambic._keyIn) ? iambic_key_and_transition_to(IAMBIC_DIT, data.samples_per.dit, 1) : 0;
+  char keyIn = iambic._keyIn;
+  if (fw.opts.mode == 'B' && iambic._keyIn == KEYIN_OFF && iambic._prevKeyIn[(iambic._prevKeyInPtr-5) & (KEY_IN_MEM-1)] == KEYIN_DIDAH)
+    keyIn = iambic._prevKeyIn[(iambic._prevKeyInPtr-5) & (KEY_IN_MEM-1)];
+  return KEYIN_IS_DIT(keyIn) ? iambic_key_and_transition_to(IAMBIC_DIT, data.samples_per.dit, 1) : 0;
 }
 
-// start a dah if _dah is pressed or
-//   if _mode == IAMBIC_MODE_B and
-//   squeeze was released after the last element started and
-//   dah was next
+// start a dah if _dah is pressed
+// or modeB && squeeze was released in last dit
 static char iambic_start_dah() {
-  char keyIn = (fw.opts.mode == 'B') ? iambic._prevKeyIn[(iambic._prevKeyInPtr-4) & (KEY_IN_MEM-1)] : iambic._keyIn;
+  char keyIn = iambic._keyIn;
+  if (fw.opts.mode == 'B' && iambic._keyIn == KEYIN_OFF && iambic._prevKeyIn[(iambic._prevKeyInPtr-3) & (KEY_IN_MEM-1)] == KEYIN_DIDAH)
+    keyIn = iambic._prevKeyIn[(iambic._prevKeyInPtr-3) & (KEY_IN_MEM-1)];
   return KEYIN_IS_DAH(keyIn) ? iambic_key_and_transition_to(IAMBIC_DAH, data.samples_per.dah, 1) : 0;
 }
 

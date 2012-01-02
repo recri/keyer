@@ -5,28 +5,37 @@ lappend auto_path [file join [file dirname [info script]] .. lib]
 
 package require Tk
 
-package require sdrkit
-package require midiscope
+#package require sdrkit
+#package require midiscope
 
 ##
 ## parameters and operating data
 ##
 array set data {
+    ascii 1
+    iambic 1
+    
 
     ascii_tone-freq 700
     ascii_tone-gain -30
     ascii_tone-rise 5
     ascii_tone-fall 5
+
     ascii-wpm 15
     ascii-word 50
     ascii-dah 3
     ascii-ies 1
     ascii-ils 3
     ascii-iws 7
+
+    ascii-chan 1
+    ascii-note 0
+
     iambic_tone-freq 750
     iambic_tone-gain -30
     iambic_tone-rise 5
     iambic_tone-fall 5
+
     iambic-wpm 15
     iambic-word 50
     iambic-dah 3
@@ -38,229 +47,8 @@ array set data {
     iambic-awsp 0
     iambic-swap 0
 
-    game-w6rec-letter-sets {
-	EISH5 TMO0 AWJ1 NDB6 AUV4
-    }
-
-    game-words {
-	QRL QRM QRN QRS QRT QRZ QSB QSL QSO QSY QTH QRX
-	/ 73 88 ?
-	ABT ADR AGE AGN ANT BEAM BK BN
-	C CL CPY CQ CUL DE DSW DX
-	EL ES FB GA GB GE GM GN GND GUD
-	HI HR HV HW
-	K
-	LID LOOP
-	N NAME NR NW
-	OM OP 
-	PKT PSE PWR
-	R RCVR RIG RPT RST
-	SAN SK SRI SSB
-	TEMP TEST TKS TMW TNX TU
-	UR
-	VERT VY
-	WATT WX 
-	XYL
-	YAGI YL YRS
-    }
-
-    game-all-letters {
-	 "\"" "\b" {!} {$} {%} {'} {(} {)} {*} {+} {,} {-} {.} {/} 
-	{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}
-	{:} {;} {=} {?} {@}
-	{A} {B} {C} {D} {E} {F} {G} {H} {I} {J} {K} {L} {M} {N} {O} {P} {Q} {R} {S} {T} {U} {V} {W} {X} {Y} {Z}
-	{_}
-    }
-
-    game-play-letters {
-	{+} {,} {-} {.} {/}
-	{0} {1} {2} {3} {4} {5} {6} {7} {8} {9}
-	{=} {?}
-	{A} {B} {C} {D} {E} {F} {G} {H} {I} {J} {K} {L} {M} {N} {O} {P} {Q} {R} {S} {T} {U} {V} {W} {X} {Y} {Z}
-    }
-    game-play-max-interval 5000
-    game-play-level 14
-    play 0
-
-    game-session-size 50
-    game-session-beacon-velocity 50
-    game-session-beacon-frequency 50
-    game-session-beacon-volume -30
-}
-
-#
-# morse code table
-# . indicates key down, space indicates key up
-# there is no key transition between adjacent
-# dots or spaces.
-# A space extends the end of letter off by two.
-# The end of letter space is added by code-get
-# Only used to count dits to restrict the length of "words".
-#
-array set code {
-    \b {. . . . . . . .}
-    { } {  }
-    {!} {. . . ... .}
-    \" {. ... . . ... .}
-    {$} {. . . ... . . ...}
-    {%} {. ... . . .} 
-    {'} {. ... ... ... ... .}
-    {(} {... . ... ... .}
-    {)} {... . ... ... . ...}
-    {*} {. . . ... . ...}
-    {+} {. ... . ... .}
-    {,} {... ... . . ... ...}
-    {-} {... . . . . ...}
-    {.} {. ... . ... . ...}
-    {/} {... . . ... .}
-    {0} {... ... ... ... ...}
-    {1} {. ... ... ... ...}
-    {2} {. . ... ... ...}
-    {3} {. . . ... ...}
-    {4} {. . . . ...}
-    {5} {. . . . .}
-    {6} {... . . . .}
-    {7} {... ... . . .}
-    {8} {... ... ... . .}
-    {9} {... ... ... ... .}
-    {:} {... ... ... . . .}
-    {;} {... . ... . ... .}
-    {=} {... . . . ...}
-    {?} {. . ... ... . .}
-    {@} {. ... ... . ... .}
-    {A} {. ...}
-    {B} {... . . .}
-    {C} {... . ... .}
-    {D} {... . .}
-    {E} {.}
-    {F} {. . ... .}
-    {G} {... ... .}
-    {H} {. . . .}
-    {I} {. .}
-    {J} {. ... ... ...}
-    {K} {... . ...}
-    {L} {. ... . .}
-    {M} {... ...}
-    {N} {... .}
-    {O} {... ... ...}
-    {P} {. ... ... .}
-    {Q} {... ... . ...}
-    {R} {. ... .}
-    {S} {. . .}
-    {T} {...}
-    {U} {. . ...}
-    {V} {. . . ...}
-    {W} {. ... ...}
-    {X} {... . . ...}
-    {Y} {... . ... ...}
-    {Z} {... ... . .}
-    {_} {. . ... ... . ...}
-    {a} {. ...}
-    {b} {... . . .}
-    {c} {... . ... .}
-    {d} {... . .}
-    {e} {.}
-    {f} {. . ... .}
-    {g} {... ... .}
-    {h} {. . . .}
-    {i} {. .}
-    {j} {. ... ... ...}
-    {k} {... . ...}
-    {l} {. ... . .}
-    {m} {... ...}
-    {n} {... .}
-    {o} {... ... ...}
-    {p} {. ... ... .}
-    {q} {... ... . ...}
-    {r} {. ... .}
-    {s} {. . .}
-    {t} {...}
-    {u} {. . ...}
-    {v} {. . . ...}
-    {w} {. ... ...}
-    {x} {... . . ...}
-    {y} {... . ... ...}
-    {z} {... ... . .}
-    {À} {. ... ... . ...}
-    {Á} {. ... ... . ...}
-    {Â} {. ... ... . ...}
-    {Ä} {. ... . ...}
-    {Ç} {... ... ... ...}
-    {È} {. . ... . .}
-    {É} {. . ... . .}
-    {Ñ} {... ... . ... ...}
-    {Ö} {... ... ... .}
-    {Ü} {. . ... ...}
-    {à} {. ... ... . ...}
-    {á} {. ... ... . ...}
-    {â} {. ... ... . ...}
-    {ä} {. ... . ...}
-    {ç} {... ... ... ...}
-    {è} {. . ... . .}
-    {é} {. . ... . .}
-    {ñ} {... ... . ... ...}
-    {ö} {... ... ... .}
-    {ü} {. . ... ...}
-}
-
-#
-# read an code string out of the code elements
-# pass multiple characters as individual arguments
-# to concatenate their codes
-#
-proc code-get {args} {
-    global code
-    set result {}
-    foreach c $args {
-	append result $code($c)
-    }
-    return "$result   "
-}
-	
-proc code-for-text {text} {
-    return {}
-    foreach c [split $text {}] {
-	set up 0
-	set down 0
-	set ccode [code-get $c]
-	foreach d [split $ccode {}] {
-	    if {$d eq {.}} {
-		incr down
-		if {$up == 1} {
-		    append code {}
-		} elseif {$up == 3} {
-		    append code { }
-		} elseif {$up == 7} {
-		    append code "\n"
-		}
-		set up 0
-	    } elseif {$d eq { }} {
-		incr up
-		if {$down == 1} {
-		    append code {.}
-		} elseif {$down == 3} {
-		    append code {-}
-		} else {
-		    error "code-get returned a $down length element in $ccode"
-		}
-		set down 0
-	    }
-	}
-    }
-    return $code
-}
-		    
-	    
-#
-# initialize the code lengths
-#
-proc code-init {} {
-    global data
-    global code
-    foreach c [array names code] {
-	set length($c) [string length [code-get $c]]
-    }
-    set data(game-play-letter-lengths) [array get length]
+    iambic-chan 1
+    iambic-note 0
 }
 
 ##
@@ -366,35 +154,33 @@ proc plug-init {} {
 	    ascii:* -
 	    iambic:* -
 	    ascii_tone:* -
-	    iambic_tone:* -
-	    ascii_decode:* -
-	    iambic_decode:* {
+	    iambic_tone:* {
 		error "the [lindex [split $line :] 0] client is still running"
 	    }
 	}
     }
-    # find helpers
-    plug-open keyer_ascii ascii
-    plug-open keyer_tone ascii_tone
-    plug-open keyer_decode ascii_decode
-    plug-open keyer_iambic iambic
-    # plug-open keyer_iambic2 iambic
-    plug-open keyer_tone iambic_tone
-    plug-open keyer_decode iambic_decode
+    # make helpers
+    set connects {}
+    if {$data(ascii)} {
+	plug-open keyer_ascii ascii
+	plug-open keyer_tone ascii_tone
+	lappend connects {jack_connect ascii:midi_out ascii_tone:midi_in}
+	lappend connects {jack_connect ascii_tone:out_i system:playback_1}
+	lappend connects {jack_connect ascii_tone:out_q system:playback_2}
+    }
+    if {$data(iambic)} {
+	plug-open keyer_iambic iambic
+	# plug-open keyer_iambic2 iambic
+	plug-open keyer_tone iambic_tone
+	lappend connects {jack_connect system:midi_capture_1 iambic:midi_in}
+	lappend connects {jack_connect iambic:midi_out iambic_tone:midi_in}
+	lappend connects {jack_connect iambic_tone:out_i system:playback_1}
+	lappend connects {jack_connect iambic_tone:out_q system:playback_2}
+    }
     # these names may need to change around
     after 500
     set retry {}
-    foreach cmd {
-	{jack_connect ascii:midi_out ascii_tone:midi_in}
-	{jack_connect ascii:midi_out ascii_decode:midi_in}
-	{jack_connect iambic:midi_out iambic_tone:midi_in}
-	{jack_connect iambic:midi_out iambic_decode:midi_in}
-	{jack_connect system:midi_capture_1 iambic:midi_in}
-	{jack_connect ascii_tone:out_i system:playback_1}
-	{jack_connect ascii_tone:out_q system:playback_2}
-	{jack_connect iambic_tone:out_i system:playback_1}
-	{jack_connect iambic_tone:out_q system:playback_2}
-    } {
+    foreach cmd $connects {
 	if {[catch "exec $cmd" error]} {
 	    puts "$cmd: yielded $error"
 	    lappend retry $cmd
@@ -414,373 +200,6 @@ proc play-text {text} {
     plug-puts-text ascii $text
 }
 
-#
-# load the cumulative game score from disk
-#
-proc game-score-load {} {
-    global score
-    global data
-    if { ! [file exists $data(score-file)]} {
-	set fp [open $data(score-file) w]
-	close $fp
-	array set score {}
-    } else {
-	set fp [open $data(score-file) r]
-	array set score [read $fp]
-	close $fp
-    }
-    # game-score-summarize
-}
-
-#
-# write the cumulative game score to disk
-#
-proc game-score-save {} {
-    global score
-    global data
-    set fp [open $data(score-file) w]
-    puts $fp [array get score]
-    close $fp
-}
-
-#
-# summarize the game score
-#
-proc game-score-summarize {} {
-    global score
-    foreach {name value} [array get score] {
-	puts " {$name} {$value}"
-    }
-}
-
-#
-# score a play in the game
-#
-proc game-score {text result} {
-    global score
-    foreach c [split $text {}] {
-	if {$c eq "\b"} {
-	    append newtext "\\b"
-	} else {
-	    append newtext $c
-	}
-    }
-    lappend score($newtext) $result
-}
-
-#
-# game sprite display
-#
-proc game-play-text {w text} {
-    play-text $text
-}
-
-#
-# clear whatever might be displayed
-#
-proc game-clear-screen {w} {
-    $w delete all
-    update idletasks
-}
-
-#
-# form the game texts which fit into $n dot clocks.
-# take all combinations of letters that are shorter
-# or equal to $n.
-#
-proc game-texts {n} {
-    global data
-    # get the dot lengths of the base letter set
-    array set length $data(game-play-letter-lengths)
-    # prune to the letter set and to the chosen length
-    # form the base set of texts
-    foreach c [array names length] {
-	if {[lsearch $data(game-play-letters) $c] < 0 || $length($c) > $n} {
-	    unset length($c)
-	} else {
-	    lappend texts $c
-	}
-    }
-    # iteratively accumulate new texts
-    set ntexts [llength $texts]
-    while {1} {
-	foreach c [array names length] {
-	    foreach t $texts {
-		if {[lsearch $texts $c$t] < 0} {
-		    set lct $length($c)
-		    incr lct $length($t)
-		    if {$lct <= $n} {
-			set length($c$t) $lct
-			lappend texts $c$t
-		    }
-		}
-	    }
-	}
-	if {[llength $texts] == $ntexts} break
-	set ntexts [llength $texts]
-    }
-    return $texts
-}
-
-array set inputmap {
-    Delete "\b"
-    space " "
-    Tab "  "
-    Return " "
-    BackSpace "\b"
-    Control_L -1
-    Shift_L -1
-    Alt_L -1
-    Control_R -1
-    Shift_R -1
-    Alt_R -1
-    apostrophe "'"
-    colon ":"
-    comma ","
-    dollar {$}
-    equal {=}
-    minus "-"
-    parenleft "("
-    parenright ")"
-    period "."
-    plus "+"
-    question "?"
-    quotedbl \"
-    semicolon ";"
-    slash "/"
-    underscore "_"
-    a a b b c c d d e e f f g g h h i i j j k k l l m m n n o o p p q q r r s s t t u u v v w w x x y y z z
-    A a B b C c D d E e F f G g H h I i J j K k L l M m N n O o P p Q q R r S s T t U u V v W w X x Y y Z z
-    0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9
-}
-
-proc canvas-width {w} {
-    return [winfo width $w]
-}
-
-proc canvas-height {w} {
-    return [winfo height $w]
-}
-
-proc canvas-random-x {w {inset 0.1}} {
-    set wd [canvas-width $w]
-    return [expr {$wd*($inset + (1-2*$inset)*rand())}]
-}
-
-proc canvas-random-y {w {inset 0.1}} {
-    set ht [canvas-height $w]
-    return [expr {$ht*($inset + (1-2*$inset)*rand())}]
-}
-
-proc canvas-state-tag {w tag state} {
-    foreach i [$w find withtag $tag] {
-	$w itemconfig $i -state $state
-    }
-}
-proc canvas-show-tag {w tag} { canvas-state-tag $w $tag normal }
-
-proc canvas-hide-tag {w tag} { canvas-state-tag $w $tag hidden }
-
-proc canvas-color-tag {w tag color} {
-    foreach i [$w find withtag $tag] {
-	catch {$w itemconfig $i -outline $color}
-	$w itemconfig $i -fill $color
-    }
-}
-    
-proc sprite-hide {w id} { canvas-hide-tag $w sprite-$id-part }
-
-proc sprite-show {w id} { canvas-show-tag $w sprite-$id-part }
-
-proc sprite-tailor {w id showtext showcode} {
-    foreach {show tag} [list $showtext sprite-$id-text $showcode sprite-$id-code] {
-	if {$show} {
-	    canvas-show-tag $id $tag
-	} else {
-	    canvas-hide-tag $id sprite-$id-$tag
-	}
-    }
-}
-
-proc sprite-move {w id dx dy} { $w move sprite-$id-part $dx $dy }
-
-proc sprite-move-to {w id x y} {
-    foreach {x1 y1 x2 y2} [$w bbox sprite-$id-part] break
-    sprite-move $w $id [expr {$x-($x1+$x2)/2}] [expr {$y-($y1+$y2)/2}]
-}
-
-proc sprite-color {w id color} { canvas-color-tag $w sprite-$id-part $color }
-
-proc sprite-ball {w id} {
-    foreach {x1 y1 x2 y2} [$w bbox sprite-$id-part] break
-    set wd [expr {$x2-$x1}]
-    set ht [expr {$y2-$y1}]
-    set x [expr {($x1+$x2)/2}]
-    set y [expr {($y1+$y2)/2}]
-    set r [expr {1.5*max($wd/2, $ht/2)}]
-    return [list $x $y $r]
-}
-
-proc sprite-x {w id} { return [lindex [sprite-ball $w $id] 0] }
-proc sprite-y {w id} { return [lindex [sprite-ball $w $id] 1] }
-proc sprite-r {w id} { return [lindex [sprite-ball $w $id] 2] }
-
-proc sprite-make-code {w id text} {
-    set x 0
-    set s { }
-    foreach c [split $text {}] {
-	foreach d [split [code-get $c] {}] {
-	    if {$d ne $s} {
-		set s $d
-		lappend ys $x
-	    }
-	    incr x
-	}
-    }
-    #puts $ys
-    foreach {x1 x2} $ys {
-	$w create rectangle $x1 1 $x2 0 -fill black -outline black -tags [list sprite-$id-part sprite-$id-code]
-    }
-    $w scale sprite-$id-code 0 0 2 2
-}
-
-proc sprite-make-text {w id text} {
-    foreach {x1 y1 x2 y2} [$w bbox sprite-$id-part] break
-    set x [expr {($x1+$x2)/2}]
-    return [$w create text $x $y1 -text $text -anchor s -tags [list sprite-$id-part sprite-$id-text]]
-}
-
-proc sprite-make-token {w id} {
-    foreach {x y r} [sprite-ball $w $id] break
-    return [$w create oval [expr {$x-$r}] [expr {$y-$r}] [expr {$x+$r}] [expr {$y+$r}] -fill {} -outline black -tags [list sprite-$id-part sprite-$id-token]]
-}
-
-proc sprite-make {w id text code} {
-    global data
-    sprite-make-code $w $id $text
-    sprite-make-text $w $id $text
-    $w lower sprite-$id-text sprite-$id-code
-    sprite-make-token $w $id
-    $w lower sprite-$id-token sprite-$id-text
-    sprite-move $w $id -1000 -1000
-    set data(game-sprite-$id) [list $id $text $code]
-}
-
-proc sprite-text {w id} {
-    global data
-    return [lindex $data(game-sprite-$id) 1]
-}
-
-proc sprite-code {w id} {
-    global data
-    return [lindex $data(game-sprite-$id) 2]
-}
-
-proc sprite-sound {w id} {
-    game-play-text $w [sprite-text $w $id]
-}
-
-#
-# play one step in the life of a sprite
-#
-proc game-play-step {w} {
-    global data
-    if { ! $data(play)} {
-	# game cancelled
-	return
-    }
-    if {$data(game-play-sprite) eq {}} {
-	# no sprite in play
-	if {[llength $data(game-play-sprites)] == 0} {
-	    # no sprites left, session over
-	    puts "game-play-next session over"
-	    set data(play) 0
-	    return
-	} else {
-	    # no sprite in play, start one
-	    set data(game-play-sprite) [lindex $data(game-play-sprites) 0]
-	    set data(game-play-sprites) [lrange $data(game-play-sprites) 1 end]
-	    catch {unset data(game-play-stimulus)}
-	    catch {unset data(game-play-stimulus-played)}
-	    set r [sprite-r $w $data(game-play-sprite)]
-	    sprite-move-to $w $data(game-play-sprite) [canvas-random-x $w] [expr {-$r}]
-	    sprite-sound $w $data(game-play-sprite)
-	    after 100 [list game-play-step $w]
-	    puts "game-play-step started new sprite"
-	}
-    } else {
-	# sprite in play
-	append data(game-play-stimulus) [plug-read ascii_decode]
-	if {$data(game-play-stimulus) ne {}} {
-	    puts "stimulus $data(game-play-stimulus)"
-	}
-	append data(game-play-response) [plug-read iambic_decode]
-	if {$data(game-play-response) ne {}} {
-	    puts "response $data(game-play-response)"
-	}
-	sprite-move $w $data(game-play-sprite) 1 [expr {rand()}]
-	after 100 [list game-play-step $w]
-	# puts "game-play-step incremented step"
-    }
-}
-
-#
-# set up the next session of game play
-#
-proc game-play-start {w} {
-    global data
-    if {$data(play)} {
-	game-clear-screen $w
-	foreach name [array names data game-sprite-*] {
-	    unset data($name)
-	}
-	set sprites {}
-	for {set i 0} {$i < $data(game-session-size)} {incr i} {
-	    set id [expr {int([llength $data(game-play-texts)]*rand())}]
-	    set text [string tolower [lindex $data(game-play-texts) $id]]
-	    set code [code-for-text $text]
-	    sprite-make $w $i $text $code
-	    # puts "sprite-make $w $id $text $code"
-	    lappend sprites $i
-	}
-	#update idletasks; after 5000
-	#foreach i $sprites { sprite-hide $w $i }
-	#update idletasks; after 5000
-	#foreach i $sprites { sprite-show $w $i }
-	#update idletasks; after 5000
-	#foreach i $sprites { sprite-color $w $i red }
-	#update idletasks; after 5000
-	#foreach i $sprites { sprite-move $w $i -1000 -1000 }
-	set data(game-play-sprites) $sprites
-	set data(game-play-sprite) {}
-	after 100 [list game-play-step $w]
-	puts "game-play-start started game"
-    }
-}
-
-#
-#
-#
-proc game-play-level-change {level} {
-    global data
-    switch -regexp $level {
-	{^\d+$} {
-	    set data(game-play-texts) [game-texts $level]
-	}
-	{^words$} {
-	    set data(game-play-texts) $data(words)
-	}
-	default {
-	    set data(game-play-texts) {}
-	    foreach i [split $level {}] {
-		lappend data(game-play-texts) $i
-		foreach j [split $level {}] {
-		    lappend data(game-play-texts) $i$j
-		}
-	    }
-	}
-    }
-}
 
 #
 # update a variable and send it's value onward
@@ -831,28 +250,7 @@ proc ui-panel-row {w client row opt label from to units} {
 }
 
 #
-# game panel user interface
-#
-proc ui-game-panel {w} {
-    global data
-    set data(game-play-canvas) $w.c
-    ttk::frame $w
-    pack [canvas $w.c] -side top -fill both -expand true
-    pack [ttk::frame $w.m] -side bottom
-    pack [ttk::menubutton $w.m.playlevel -text Level -menu $w.m.playlevel.m] -side left
-    pack [ttk::radiobutton $w.m.start -text Start -variable data(play) -value 1 -command [list game-play-start $w.c]] -side left
-    pack [ttk::radiobutton $w.m.stop -text Stop -variable data(play) -value 0 -command [list game-play-start $w.c]] -side left
-    menu $w.m.playlevel.m -tearoff no
-    foreach i {EISH5 TMO0 AWJ1 NDB6 AUV4 12 14 16 18 20 words} {
-	$w.m.playlevel.m add radiobutton -label $i -variable data(play-level) -value $i -command [list game-play-level-change $i]
-    }
-    pack [ttk::checkbutton $w.m.showcode -text {Show Code} -variable data(play-show-code)] -side left
-    pack [ttk::checkbutton $w.m.showtext -text {Show Text} -variable data(play-show-text)] -side left
-    return $w
-}
-
-#
-# ascii configure panel
+# configure ascii keyer options
 #
 proc ui-ascii-frame {w client row} {
     foreach {opt label from to units} {
@@ -870,7 +268,7 @@ proc ui-ascii-frame {w client row} {
 }
 
 #
-# iambic configure panel
+# configure iambic keyer options
 #
 proc ui-iambic-frame {w client row} {
     foreach {opt label from to units} {
@@ -892,7 +290,7 @@ proc ui-iambic-frame {w client row} {
 }
 
 #
-# tone panel configure
+# configure tone options
 #
 proc ui-tone-frame {w client row} {
     foreach {opt label from to units} {
@@ -907,90 +305,104 @@ proc ui-tone-frame {w client row} {
     return $row
 }
 
+#
+# configure MIDI options
+#
+proc ui-midi-frame {w client row} {
+    foreach {opt label from to units} {
+	chan {midi channel} 1 16 {}
+	note {midi note} 0 127 {}
+    } {
+	ui-panel-row $w.$client-$opt $client $row $opt $label $from $to $units
+	incr row
+    }
+    return $row
+}
+
+#
+# configure keyer options
+#
 proc ui-control-panel {w} {
+    global data
     ttk::frame $w
     set row 0
-    grid [label $w.ascii -text {Ascii Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
-    set row [ui-tone-frame $w ascii_tone [incr row]]
-    grid [label $w.ascii2 -text {Ascii Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
-    set row [ui-ascii-frame $w ascii [incr row]]
-    grid [label $w.iambic -text {Iambic Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
-    set row [ui-tone-frame $w iambic_tone [incr row]]
-    grid [label $w.iambic2 -text {Iambic Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
-    set row [ui-iambic-frame $w iambic [incr row]]
+
+
+    if {$data(ascii)} {
+	grid [label $w.ascii -text {Ascii Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [ui-tone-frame $w ascii_tone [incr row]]
+	grid [label $w.ascii2 -text {Ascii Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [ui-ascii-frame $w ascii [incr row]]
+	grid [label $w.ascii3 -text {Ascii Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [ui-midi-frame $w ascii [incr row]]
+    }
+
+    if {$data(iambic)} {
+	grid [label $w.iambic -text {Iambic Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [ui-tone-frame $w iambic_tone [incr row]]
+	grid [label $w.iambic2 -text {Iambic Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [ui-iambic-frame $w iambic [incr row]]
+	grid [label $w.iambic3 -text {Iambic Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [ui-midi-frame $w iambic [incr row]]
+    }
+
     return $w
 }
 
-proc ui-midiscope-panel {w} {
-    return [midiscope $w]
-}
 #
-# mouse paddle configure panel
-#
-proc ui-mouse-panel {w} {
-    ttk::frame $w
-    return $w
-}
-
-#
-# save the score file and close the window
+# close the window
 #
 proc ui-close {w} {
     global data
     global score
     if {"$w" eq "."} {
 	plug-close-all
-	game-score-save
 	destroy .
     }
 }
 
 proc ui-input {k} {
     global data
-    plug-puts-text ascii $k
+    if {$data(ascii)} {
+	plug-puts-text ascii $k
+    }
 }
+
 #
 # build a user interface
 #
 proc ui-init {} {
-    pack [ttk::notebook .nb] -fill both -expand true
-    .nb add [ui-control-panel .nb.ctl] -text Controls
-    .nb add [ui-midiscope-panel .nb.sco] -text Scope
-    .nb add [ui-game-panel .nb.play] -text {Invaders}
+    pack [ui-control-panel .ctl]
     bind . <Destroy> [list ui-close %W]
     bind . <KeyPress> [list ui-input %A]
 }
 
 #
-#
+# 
 #
 proc main {argv} {
     global data
     global env
 
-    set data(score-file) $env(HOME)/.play-morse-score-file
     foreach {opt value} $argv {
 	switch -- $opt {
-	    --ascii-freq { set data(ascii_tone-freq) $value }
+	    --ascii { set data(ascii) $value }
 	    --ascii-wpm { set data(ascii-wpm) $value }
+	    --ascii-freq { set data(ascii_tone-freq) $value }
 	    --ascii-gain { set data(ascii_tone-gain) $value }
-	    --iambic-freq { set data(iambic_tone-freq) $value }
+	    --iambic { set data(iambic) $value }
 	    --iambic-wpm { set data(iambic-wpm) $value }
+	    --iambic-freq { set data(iambic_tone-freq) $value }
 	    --iambic-gain { set data(iambic_tone-gain) $value }
-	    --score { set data(score-file) $value }
-	    --level { set data(game-play-level) $value }
 	    default {
 		error "unknown option $opt"
 	    }
 	}
     }
-
-    plug-init
-    ui-init
-    code-init
-
-    game-score-load
-    game-play-level-change $data(game-play-level)
+    if {$data(ascii) || $data(iambic)} {
+	plug-init
+	ui-init
+    }
 }
 
 main $argv
