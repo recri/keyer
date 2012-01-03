@@ -1,5 +1,5 @@
-#ifndef KEYER_OSC_H
-#define KEYER_OSC_H
+#ifndef OSC_H
+#define OSC_H
 
 /*
 ** oscillator.

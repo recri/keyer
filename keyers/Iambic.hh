@@ -1,15 +1,15 @@
-#ifndef KeyerIambic_hh
-#define KeyerIambic_hh
+#ifndef Iambic_hh
+#define Iambic_hh
 
 /*
 ** A morse code keyer reduced to a simple logic class.
 **
 ** // usage
-** KeyerIambic k();	// to make a keyer
+** Iambic k();	// to make a keyer
 ** k.paddleDit(on);	// to set the dit paddle state
 ** k.paddleDah(on);	// to set the dah paddle state
 ** k.clock(ticks);	// to advance the clock by ticks
-** k.setKeyOut(func);	// function to receive transitions
+** k.setKeyOut(func, arg);	// function to receive transitions
 **
 ** // parameter setting
 ** k.set*(param)
@@ -23,7 +23,7 @@
 ** in case the int is too small on an microprocessor
 */
 
-class KeyerIambic {
+class Iambic {
 private:
 #define KEYIN(dit,dah) (((dit)<<1)|(dah))
   typedef unsigned char byte;
@@ -36,16 +36,15 @@ private:
   static bool KEYIN_IS_DAH(int keyIn) { return (keyIn&KEYIN_DAH)!=0; }
   
 public:
-  KeyerIambic() {
+  Iambic() {
     _rawDit = 0;
     _rawDah = 0;
-    _keyOut = false;
 
     _keyIn = KEYIN_OFF;
     _lastKeyIn = KEYIN_OFF;
     _prevKeyInPtr = 0;
 
-    setKeyOut((void (*)(int))0);
+    setKeyOut((void (*)(int, void *))0, (void *)0);
     setTick(1);
     setSwapped(false);
     setModeB(false);
@@ -107,7 +106,7 @@ public:
   }
 
   // set the function to be called for key transitions
-  void setKeyOut(void (*keyOut)(int on)) { _keyOut = keyOut; }
+  void setKeyOut(void (*keyOut)(int on, void *arg), void *arg) { _keyOut = keyOut; _keyOutArg = arg; }
   // set the microseconds in a tick
   void setTick(float tick) { _tick = tick; _update = true; }
   // set the words per minute generated
@@ -167,7 +166,8 @@ public:
 
   byte _rawDit;			// input dit state, unswapped
   byte _rawDah;			// input dah state, unswapped
-  void (*_keyOut)(int on);	// output key state function
+  void (*_keyOut)(int on, void *arg);	// output key state function
+  void *_keyOutArg;		// output key state function argument
 
   float _tick;			// microseconds per tick
   bool _swapped;		// paddles are swapped
@@ -214,7 +214,7 @@ public:
   // with the specified duration
   // and set the key out state
   bool _transitionTo(keyerState newState, int newDuration, bool keyOut) {
-    if (_keyOut) _keyOut(keyOut ? 1 : 0);
+    if (_keyOut) _keyOut(keyOut ? 1 : 0, _keyOutArg);
     return _transitionTo(newState, newDuration);
   }
   
@@ -262,4 +262,4 @@ public:
   }
 };
 
-#endif // Keyer_h
+#endif // Iambic_hh

@@ -20,25 +20,14 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 */
 
-#include <jack/jack.h>
-#include <jack/midiport.h>
-#include <stdio.h>
-#include <string.h>
-#include <signal.h>
+#define OPTIONS_TIMING	1
+#define OPTIONS_KEYER	1
 
-#include "keyer_options.h"
-#include "keyer_midi.h"
-#include "keyer_timing.h"
-#include "keyer_framework.h"
-
-typedef struct {
-  keyer_timing_t samples_per;
-  unsigned char note_on[3];
-  unsigned char note_off[3];
-} keyer_data_t;
-  
-static keyer_framework_t fw;
-static keyer_data_t data;
+#include "framework.h"
+#include "options.h"
+#include "midi.h"
+#include "midi_buffer.h"
+#include "timing.h"
 
 /*
 ** iambic keyer
@@ -60,13 +49,13 @@ typedef enum {
   IAMBIC_DAH_SPACE,		/* sounding a space after a dah */
   IAMBIC_SYMBOL_SPACE,		/* sounding an inter-symbol space */
   IAMBIC_WORD_SPACE,		/* sounding an inter-word space */
-} iambic_state_t;
+} _state_t;
 
-static char *iambic_keys[] = {
+static char *_keys[] = {
   "OFF", "DAH", "DIT", "DIDAH"
 };
 
-static char *iambic_states[] = {
+static char *_states[] = {
   "OFF",
   "DIT", "DIT_SPACE",
   "DAH", "DAH_SPACE",
@@ -83,7 +72,7 @@ typedef struct {
   int _keyerDuration;
   char _keyIn;
   char _lastKeyIn;
-  iambic_state_t _keyerState;
+  _state_t _keyerState;
 
   int _halfClock;
   int _halfClockCounter;
@@ -92,207 +81,217 @@ typedef struct {
   unsigned _prevKeyInPtr;
 } iambic_t;
 
-iambic_t iambic;
-
-unsigned long frames;
+typedef struct {
+  framework_t fw;
+  timing_t samples_per;
+  unsigned char note_on[3];
+  unsigned char note_off[3];
+  iambic_t iambic;
+  unsigned long frames;
+  unsigned duration;
+  options_t sent;
+  midi_buffer_t midi;
+} _t;
 
 // initialize the iambic keyer
-static void iambic_init() {
-  if (fw.opts.verbose > 2) fprintf(stderr, "%ld: iambic_init()\n", frames);
-  iambic._modified = 1;
-  iambic._inDit = 0;		/* the midi dit value */
-  iambic._inDah = 0;		/* the midi dah value */
-  iambic._keyIn = KEYIN_OFF;
-  iambic._lastKeyIn = KEYIN_OFF;
-  iambic._keyerState = IAMBIC_OFF;
+static void _init(void *arg) {
+  _t *dp = (_t *)arg;
+  if (dp->fw.opts.verbose > 2) fprintf(stderr, "%ld: iambic_init()\n", dp->frames);
+  dp->iambic._modified = 1;
+  dp->iambic._inDit = 0;		/* the midi dit value */
+  dp->iambic._inDah = 0;		/* the midi dah value */
+  dp->iambic._keyIn = KEYIN_OFF;
+  dp->iambic._lastKeyIn = KEYIN_OFF;
+  dp->iambic._keyerState = IAMBIC_OFF;
+  dp->duration = 0;
+  midi_init(&dp->midi);
 }
 
 // update the computed parameters
-static void iambic_update() {
-  if (fw.opts.modified) {
-    fw.opts.modified = 0;
+static void _update(_t *dp) {
+  if (dp->fw.opts.modified) {
+    dp->fw.opts.modified = 0;
 
-    if (fw.opts.verbose > 2) fprintf(stderr, "%ld: recomputing data from options\n", frames);
+    if (dp->fw.opts.verbose > 2) fprintf(stderr, "%ld: recomputing data from options\n", dp->frames);
 
     /* timer recomputation */
-    keyer_timing_update(&fw.opts, &data.samples_per);
-    if (fw.opts.verbose) keyer_timing_report(stderr, &fw.opts, &data.samples_per);
+    keyer_timing_update(&dp->fw.opts, &dp->samples_per);
+    if (dp->fw.opts.verbose) keyer_timing_report(stderr, &dp->fw.opts, &dp->samples_per);
 
     /* midi note on/off */
-    data.note_on[0] = NOTE_ON|(fw.opts.chan-1); data.note_on[1] = fw.opts.note;
-    data.note_off[0] = NOTE_OFF|(fw.opts.chan-1); data.note_on[1] = fw.opts.note;
+    dp->note_on[0] = NOTE_ON|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
+    dp->note_off[0] = NOTE_OFF|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
 
     /* pass on parameters to tone keyer */
-    static keyer_options_t sent;
     char buffer[128];
-    if (sent.rise != fw.opts.rise) { sprintf(buffer, "<rise%.1f>", sent.rise = fw.opts.rise); midi_sysex_write(buffer); }
-    if (sent.fall != fw.opts.fall) { sprintf(buffer, "<fall%.1f>", sent.fall = fw.opts.fall); midi_sysex_write(buffer); }
-    if (sent.freq != fw.opts.freq) { sprintf(buffer, "<freq%.1f>", sent.freq = fw.opts.freq); midi_sysex_write(buffer); }
-    if (sent.gain != fw.opts.gain) { sprintf(buffer, "<gain%.1f>", sent.gain = fw.opts.gain); midi_sysex_write(buffer); }
+    if (dp->sent.rise != dp->fw.opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->fw.opts.rise); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_sysex_write(&dp->midi, buffer); }
 
     /* trigger iambic updates */
-    iambic._modified = 1;
+    dp->iambic._modified = 1;
   }
-  if (iambic._modified) {
-    iambic._modified = 0;
-    iambic._halfClock = data.samples_per.dit / 2;
+  if (dp->iambic._modified) {
+    dp->iambic._modified = 0;
+    dp->iambic._halfClock = dp->samples_per.dit / 2;
   }
 }
 
 // transition to the specified state
 // with the specified duration
-static char iambic_transition_to(iambic_state_t newState, unsigned newDuration) {
-  if (fw.opts.verbose > 5) fprintf(stderr, "%ld: to %s for %d\n", frames, iambic_states[newState], newDuration);
-  iambic._keyerState = newState;
-  iambic._keyerDuration += newDuration;
+static char _transition_to(_t *dp, _state_t newState, unsigned newDuration) {
+  if (dp->fw.opts.verbose > 5) fprintf(stderr, "%ld: to %s for %d\n", dp->frames, _states[newState], newDuration);
+  dp->iambic._keyerState = newState;
+  dp->iambic._keyerDuration += newDuration;
   return 1;
 }
 
 // transition to the specified state
 // with the specified state duration
 // and send a key event with specified duration
-static char iambic_key_and_transition_to(iambic_state_t newState, unsigned newDuration, char keyOut) {
-  if (fw.opts.verbose > 5) fprintf(stderr, "%ld: key %d %x\n", frames, newDuration, keyOut);
-  midi_write(newDuration, 3, keyOut ? data.note_on : data.note_off);
-  return iambic_transition_to(newState, newDuration);
+static char _key_and_transition_to(_t *dp, _state_t newState, unsigned newDuration, char keyOut) {
+  if (dp->fw.opts.verbose > 5) fprintf(stderr, "%ld: key %d %x\n", dp->frames, newDuration, keyOut);
+  midi_write(&dp->midi, newDuration, 3, keyOut ? dp->note_on : dp->note_off);
+  return _transition_to(dp, newState, newDuration);
 }
 
 // start a dit if _dit is pressed
 // or modeB && squeeze was released in last dah
-static char iambic_start_dit() {
-  char keyIn = iambic._keyIn;
-  if (fw.opts.mode == 'B' && iambic._keyIn == KEYIN_OFF && iambic._prevKeyIn[(iambic._prevKeyInPtr-5) & (KEY_IN_MEM-1)] == KEYIN_DIDAH)
-    keyIn = iambic._prevKeyIn[(iambic._prevKeyInPtr-5) & (KEY_IN_MEM-1)];
-  return KEYIN_IS_DIT(keyIn) ? iambic_key_and_transition_to(IAMBIC_DIT, data.samples_per.dit, 1) : 0;
+static char _start_dit(_t *dp) {
+  char keyIn = dp->iambic._keyIn;
+  if (dp->fw.opts.mode == 'B' && dp->iambic._keyIn == KEYIN_OFF && dp->iambic._prevKeyIn[(dp->iambic._prevKeyInPtr-5) & (KEY_IN_MEM-1)] == KEYIN_DIDAH)
+    keyIn = dp->iambic._prevKeyIn[(dp->iambic._prevKeyInPtr-5) & (KEY_IN_MEM-1)];
+  return KEYIN_IS_DIT(keyIn) ? _key_and_transition_to(dp, IAMBIC_DIT, dp->samples_per.dit, 1) : 0;
 }
 
 // start a dah if _dah is pressed
 // or modeB && squeeze was released in last dit
-static char iambic_start_dah() {
-  char keyIn = iambic._keyIn;
-  if (fw.opts.mode == 'B' && iambic._keyIn == KEYIN_OFF && iambic._prevKeyIn[(iambic._prevKeyInPtr-3) & (KEY_IN_MEM-1)] == KEYIN_DIDAH)
-    keyIn = iambic._prevKeyIn[(iambic._prevKeyInPtr-3) & (KEY_IN_MEM-1)];
-  return KEYIN_IS_DAH(keyIn) ? iambic_key_and_transition_to(IAMBIC_DAH, data.samples_per.dah, 1) : 0;
+static char _start_dah(_t *dp) {
+  char keyIn = dp->iambic._keyIn;
+  if (dp->fw.opts.mode == 'B' && dp->iambic._keyIn == KEYIN_OFF && dp->iambic._prevKeyIn[(dp->iambic._prevKeyInPtr-3) & (KEY_IN_MEM-1)] == KEYIN_DIDAH)
+    keyIn = dp->iambic._prevKeyIn[(dp->iambic._prevKeyInPtr-3) & (KEY_IN_MEM-1)];
+  return KEYIN_IS_DAH(keyIn) ? _key_and_transition_to(dp, IAMBIC_DAH, dp->samples_per.dah, 1) : 0;
 }
 
 // continue an interelement space to an intersymbol space
 // or an intersymbol space to an interword space
-static char iambic_continue_space(iambic_state_t newState, unsigned newDuration) {
-  if (fw.opts.verbose > 5) fprintf(stderr, "%ld: continue space %d\n", frames, newDuration);
-  midi_write(newDuration, 0, "");
-  return iambic_transition_to(newState, newDuration);
+static char _continue_space(_t *dp, _state_t newState, unsigned newDuration) {
+  if (dp->fw.opts.verbose > 5) fprintf(stderr, "%ld: continue space %d\n", dp->frames, newDuration);
+  midi_write(&dp->midi, newDuration, 0, "");
+  return _transition_to(dp, newState, newDuration);
 }
 
-static char iambic_symbol_space() {
-  return fw.opts.alsp ? iambic_continue_space(IAMBIC_SYMBOL_SPACE, data.samples_per.ils-data.samples_per.ies) : 0;
+static char _symbol_space(_t *dp) {
+  return dp->fw.opts.alsp ? _continue_space(dp, IAMBIC_SYMBOL_SPACE, dp->samples_per.ils-dp->samples_per.ies) : 0;
 }
 
-static char iambic_word_space() {
-  return fw.opts.awsp ? iambic_continue_space(IAMBIC_WORD_SPACE, data.samples_per.iws-data.samples_per.ils) : 0;
+static char _word_space(_t *dp) {
+  return dp->fw.opts.awsp ? _continue_space(dp, IAMBIC_WORD_SPACE, dp->samples_per.iws-dp->samples_per.ils) : 0;
 }
 
 // return to keyer idle state
-static char iambic_finish() {
-  return iambic_transition_to(IAMBIC_OFF, 0L);
+static char _finish(_t *dp) {
+  return _transition_to(dp, IAMBIC_OFF, 0L);
 }
 
 // at the beginning of the next symbol
 // we may be currently at dit+dah, but
 // we want to start with which ever
 // paddle was pressed first
-static char iambic_start_symbol() {
-  if (iambic._keyIn != KEYIN_DIDAH || iambic._lastKeyIn != KEYIN_DAH)
-    return iambic_start_dit() || iambic_start_dah() ? 1 : 0;
+static char _start_symbol(_t *dp) {
+  if (dp->iambic._keyIn != KEYIN_DIDAH || dp->iambic._lastKeyIn != KEYIN_DAH)
+    return _start_dit(dp) || _start_dah(dp) ? 1 : 0;
   else
-    return iambic_start_dah() || iambic_start_dit() ? 1 : 0;
+    return _start_dah(dp) || _start_dit(dp) ? 1 : 0;
 }
 
 // start an interelement space
-static char iambic_start_space(iambic_state_t newState) {
-  return iambic_key_and_transition_to(newState, data.samples_per.ies, 0);
+static char _start_space(_t *dp, _state_t newState) {
+  return _key_and_transition_to(dp, newState, dp->samples_per.ies, 0);
 }
 
 // process keyer state
 // and generate transitions
-static void iambic_transition(unsigned samples) {
+static void iambic_transition(_t *dp, unsigned samples) {
   // construct input key state
-  char keyIn = fw.opts.swap ? KEYIN(iambic._inDah, iambic._inDit) : KEYIN(iambic._inDit, iambic._inDah);
-  if (iambic._keyIn != keyIn) {
-    if (fw.opts.verbose > 5) fprintf(stderr, "%ld: keyIn %x\n", frames, keyIn);
-    iambic._lastKeyIn = iambic._keyIn;
+  char keyIn = dp->fw.opts.swap ? KEYIN(dp->iambic._inDah, dp->iambic._inDit) : KEYIN(dp->iambic._inDit, dp->iambic._inDah);
+  if (dp->iambic._keyIn != keyIn) {
+    if (dp->fw.opts.verbose > 5) fprintf(stderr, "%ld: keyIn %x\n", dp->frames, keyIn);
+    dp->iambic._lastKeyIn = dp->iambic._keyIn;
   }
-  iambic._keyIn = keyIn;
+  dp->iambic._keyIn = keyIn;
 
   // start a symbol if either paddle is pressed
-  if (iambic._keyerState == IAMBIC_OFF) {
-    iambic_start_symbol();
-    iambic._halfClockCounter = iambic._halfClock;
-    iambic._prevKeyIn[iambic._prevKeyInPtr++ & (KEY_IN_MEM-1)] = keyIn;
+  if (dp->iambic._keyerState == IAMBIC_OFF) {
+    _start_symbol(dp);
+    dp->iambic._halfClockCounter = dp->iambic._halfClock;
+    dp->iambic._prevKeyIn[dp->iambic._prevKeyInPtr++ & (KEY_IN_MEM-1)] = keyIn;
     return;
   }
 
   // reduce the half clock by the time elapsed
-  iambic._halfClockCounter -= samples;
+  dp->iambic._halfClockCounter -= samples;
 
   // if the half clock has elapsed, reset it
-  if (iambic._halfClockCounter < 0) {
-    iambic._halfClockCounter = iambic._halfClock;
-    iambic._prevKeyIn[iambic._prevKeyInPtr++ & (KEY_IN_MEM-1)] = keyIn;
+  if (dp->iambic._halfClockCounter < 0) {
+    dp->iambic._halfClockCounter = dp->iambic._halfClock;
+    dp->iambic._prevKeyIn[dp->iambic._prevKeyInPtr++ & (KEY_IN_MEM-1)] = keyIn;
   }
 
   // reduce the duration by the time elapsed
-  iambic._keyerDuration -= samples;
+  dp->iambic._keyerDuration -= samples;
 
   // if the duration has not elapsed, return
-  if (iambic._keyerDuration > 0) {
+  if (dp->iambic._keyerDuration > 0) {
     return;
   }
   
   // compute updated parameters 
-  iambic_update();
+  _update(dp);
 
-  if (fw.opts.verbose > 4) fprintf(stderr, "%ld: dur %d key %s state %s\n", frames, iambic._keyerDuration, iambic_keys[iambic._keyIn], iambic_states[iambic._keyerState]);
+  if (dp->fw.opts.verbose > 4) fprintf(stderr, "%ld: dur %d key %s state %s\n", dp->frames, dp->iambic._keyerDuration, _keys[dp->iambic._keyIn], _states[dp->iambic._keyerState]);
 
   // determine the next element by the current paddle state
-  switch (iambic._keyerState) {
+  switch (dp->iambic._keyerState) {
   case IAMBIC_DIT: // finish the dit with an interelement space
-    iambic_start_space(IAMBIC_DIT_SPACE);
+    _start_space(dp, IAMBIC_DIT_SPACE);
     return;
   case IAMBIC_DAH: // finish the dah with an interelement space
-    iambic_start_space(IAMBIC_DAH_SPACE);
+    _start_space(dp, IAMBIC_DAH_SPACE);
     return;
   case IAMBIC_DIT_SPACE: // start the next element or finish the symbol
-    iambic_start_dah() || iambic_start_dit() || iambic_symbol_space() || iambic_finish();
+    _start_dah(dp) || _start_dit(dp) || _symbol_space(dp) || _finish(dp);
     return;
   case IAMBIC_DAH_SPACE: // start the next element or finish the symbol	
-    iambic_start_dit() || iambic_start_dah() || iambic_symbol_space() || iambic_finish();
+    _start_dit(dp) || _start_dah(dp) || _symbol_space(dp) || _finish(dp);
     return;
   case IAMBIC_SYMBOL_SPACE: // start a new symbol or finish the word
-    iambic_start_symbol() || iambic_word_space() || iambic_finish();
+    _start_symbol(dp) || _word_space(dp) || _finish(dp);
     return;
   case IAMBIC_WORD_SPACE:  // start a new symbol or go to off
-    iambic_start_symbol() || iambic_finish();
+    _start_symbol(dp) || _finish(dp);
     return;
   }
 }
 
-static void iambic_dit_key(int on) {
-  iambic._inDit = on;
+static void _dit_key(_t *dp, int on) {
+  dp->iambic._inDit = on;
 }
 
-static void iambic_dah_key(int on) {
-  iambic._inDah = on;
+static void _dah_key(_t *dp, int on) {
+  dp->iambic._inDah = on;
 }
 
-static void midi_decode(int count, unsigned char *p) {
+static void _decode(_t *dp, int count, unsigned char *p) {
   if (count == 3) {
     switch (p[0]&0xF0) {
-    case NOTE_OFF: if (p[1]&1) iambic_dah_key(0); else iambic_dit_key(0); break;
-    case NOTE_ON:  if (p[1]&1) iambic_dah_key(1); else iambic_dit_key(1); break;
+    case NOTE_OFF: if (p[1]&1) _dah_key(dp, 0); else _dit_key(dp, 0); break;
+    case NOTE_ON:  if (p[1]&1) _dah_key(dp, 1); else _dit_key(dp, 1); break;
     }
   } else if (count > 3 && p[0] == SYSEX) {
     if (p[1] == SYSEX_VENDOR) {
-      main_parse_command(&fw.opts, p+3);
+      options_parse_command(&dp->fw.opts, p+3);
     }
   }
 }
@@ -300,11 +299,11 @@ static void midi_decode(int count, unsigned char *p) {
 /*
 ** jack process callback
 */
-static unsigned duration = 0;
 
-static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
-  void *midi_in = jack_port_get_buffer(fw.midi_in, nframes);
-  void *midi_out = jack_port_get_buffer(fw.midi_out, nframes);
+static int _process(jack_nframes_t nframes, void *arg) {
+  _t *dp = (_t *)arg;
+  void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
+  void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
   jack_midi_event_t in_event;
   int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
   if (in_event_index < in_event_count) {
@@ -320,8 +319,8 @@ static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
   for(int i = 0; i < nframes; i++) {
     /* process all midi input events at this sample frame */
     while (in_event_time == i) {
-      if (fw.opts.verbose > 5) fprintf(stderr, "%ld: process event %x [%x, %x, %x, ...]\n", frames, (unsigned)in_event.size, in_event.buffer[0], in_event.buffer[1], in_event.buffer[2]);
-      midi_decode(in_event.size, in_event.buffer);
+      if (dp->fw.opts.verbose > 5) fprintf(stderr, "%ld: process event %x [%x, %x, %x, ...]\n", dp->frames, (unsigned)in_event.size, in_event.buffer[0], in_event.buffer[1], in_event.buffer[2]);
+      _decode(dp, in_event.size, in_event.buffer);
       if (in_event_index < in_event_count) {
 	jack_midi_event_get(&in_event, midi_in, in_event_index++);
 	// in_event_time += in_event.time;
@@ -331,34 +330,54 @@ static int iambic_process_callback(jack_nframes_t nframes, void *arg) {
       }
     }
     /* process all midi output events at this sample frame */
-    while (duration == i) {
-      if (midi_readable()) {
-	if (fw.opts.verbose > 4) fprintf(stderr, "%ld: midi_readable, duration %u, count %u\n", frames, midi_duration(), midi_count());
-	duration += midi_duration();
-	unsigned count = midi_count();
+    while (dp->duration == i) {
+      if (midi_readable(&dp->midi)) {
+	if (dp->fw.opts.verbose > 4) fprintf(stderr, "%ld: midi_readable, duration %u, count %u\n", dp->frames, midi_duration(&dp->midi), midi_count(&dp->midi));
+	dp->duration += midi_duration(&dp->midi);
+	unsigned count = midi_count(&dp->midi);
 	if (count != 0) {
 	  unsigned char* buffer = jack_midi_event_reserve(midi_out, i, count);
 	  if (buffer == NULL) {
-	    fprintf(stderr, "%ld: jack won't buffer %d midi bytes!\n", frames, count);
+	    fprintf(stderr, "%ld: jack won't buffer %d midi bytes!\n", dp->frames, count);
 	  } else {
-	    midi_read_bytes(count, buffer);
-	    if (fw.opts.verbose > 5) fprintf(stderr, "%ld: sent %x [%x, %x, %x, ...]\n", frames, count, buffer[0], buffer[1], buffer[2]);
+	    midi_read_bytes(&dp->midi, count, buffer);
+	    if (dp->fw.opts.verbose > 5) fprintf(stderr, "%ld: sent %x [%x, %x, %x, ...]\n", dp->frames, count, buffer[0], buffer[1], buffer[2]);
 	  }
 	}
-	midi_read_next();
+	midi_read_next(&dp->midi);
       } else {
-	duration = nframes;
+	dp->duration = nframes;
       }
     }
     /* clock the iambic keyer */
-    iambic_transition(1);
+    iambic_transition(dp, 1);
   }
-  frames += 1;
-  if (duration >= nframes)
-    duration -= nframes;
+  dp->frames += 1;
+  if (dp->duration >= nframes)
+    dp->duration -= nframes;
   return 0;
 }
 
+#if AS_BIN
 int main(int argc, char **argv) {
-  keyer_framework_main(&fw, argc, argv, "keyer_iambic", require_midi_in|require_midi_out, iambic_init, iambic_process_callback, NULL);
+  _t data;
+  framework_main((void *)&data, argc, argv, "keyer_iambic", 0,0,1,1, _init, _process, NULL);
 }
+#endif
+
+#if AS_TCL
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  _update(clientData);
+  return TCL_OK;
+}
+
+static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return framework_factory(clientData, interp, argc, objv, 0,0,1,1, _command, _process, sizeof(_t), _init, NULL, "config|cget");
+}
+
+int DLLEXPORT Keyer_iambic_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "keyer", "1.0.0", "keyer::iambic", _factory);
+}
+#endif

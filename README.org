@@ -32,6 +32,9 @@
 
   The Teensyduino application to translate paddle transitions into
   MIDI events is in MidiKey/MidiKey.ino
+
+  Glen Overby has built another MIDI key interface which is described
+  here http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html
 * Plugin building
   The keyer and sdrkit plugins build on Ubuntu 11.10 with the
   build-essentials, jackd2, libjack-jackd2-dev, and tk-dev packages
@@ -42,6 +45,12 @@
   jackd agnostic package, so some audio libraries will force
   installation of the old jackd version 1 package.  I force jackd2
   because it's better.
+* Plugin installing
+  No provision for installing into local or system wide application
+  directories has been made, but if you copy the the programs in the
+  ./bin directory into /usr/local/bin, copy the directories in the
+  ./lib directory into /usr/local/lib, and you have /usr/local/bin in
+  your path, then everything should work.
 * Plugin usage -- semi-automatic
   There is a tcl/tk application in the bin directory named
   keyer-control. For the moment, you should run it when jack has
@@ -247,8 +256,10 @@
 ** DONE - MidiKey: to use a less ad hoc debouncer.
 ** DONE - MidiKey: to use the LUFA library for USB.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
+   Won't fit in an Altoids Smalls box.
 ** TODO - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
 ** TODO - users of keyer_midi.c: to use the new queuing api.
+** TODO - keyer_ascii.c: to throttle input down to the output rate.
 ** DONE - keyer-control: to use a dedicated keyer_tone for each keyer.
 ** DONE - keyer-control: to use expect to manage plugins.
    Didn't work out as I hoped.

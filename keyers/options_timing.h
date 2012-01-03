@@ -1,0 +1,6 @@
+  { "word", "dits in a word", "50.0", options_handle_word, option_float, offsetof(options_t, word) },
+  { "wpm", "words per minute", "18.0", options_handle_wpm, option_float, offsetof(options_t, wpm) },
+  { "dah", "dah length in dits", "3.0", options_handle_dah, option_float, offsetof(options_t, dah) },
+  { "ies", "inter-element space in dits", "1.0", options_handle_ies, option_float, offsetof(options_t, ies) },
+  { "ils", "inter-letter space in dits", "3.0", options_handle_ils, option_float, offsetof(options_t, ils) },
+  { "iws", "inter-word space in dits", "7.0", options_handle_iws, option_float, offsetof(options_t, iws) },

@@ -1,6 +1,6 @@
-CFLAGS=-std=c99 -g -O3 -DUSE_TCL_STUBS 
-CPPFLAGS= -g -O3 -DUSE_TCL_STUBS 
-LIBS=-ltclstub8.6
+CFLAGS=-std=c99 -g -O3 -I/usr/include/tcl8.5 -DUSE_TCL_STUBS 
+CPPFLAGS= -g -O3 -I/usr/include/tcl8.5 -DUSE_TCL_STUBS 
+LIBS=-ltclstub8.5
 
 JACK_CFLAGS=$(shell pkg-config --cflags jack)
 ALSA_CFLAGS=$(shell pkg-config --cflags alsa)
@@ -9,9 +9,13 @@ JACK_LIBS=$(shell pkg-config --libs jack)
 ALSA_LIBS=$(shell pkg-config --libs alsa)
 LIBUSB_LIBS=$(shell pkg-config --libs libusb-1.0)
 
-ALL=../bin/keyer_tone ../bin/keyer_ascii ../bin/keyer_iambic ../bin/keyer_decode ../bin/keyer_iambic2
+LIBDIR=../lib/keyers
 
-all: $(ALL)
+ALL=../bin/keyer_tone ../bin/keyer_ascii ../bin/keyer_iambic ../bin/keyer_decode ../bin/keyer_iambicpp
+ALL2=$(LIBDIR)/keyer_tone.so $(LIBDIR)/keyer_ascii.so $(LIBDIR)/keyer_iambic.so $(LIBDIR)/keyer_decode.so $(LIBDIR)/keyer_iambicpp.so
+
+all:: $(ALL) $(ALL2)
+	cd $(LIBDIR) && make all
 
 all-clean:: clean
 	rm -f $(ALL)
@@ -19,31 +23,43 @@ all-clean:: clean
 clean::
 	rm -f *~ *.o
 
-../bin/keyer_tone: keyer_tone.c keyer_options.o keyer_framework.o keyer_timing.h
+../bin/keyer_tone: keyer_tone.c framework.h options.h timing.h
 	mkdir -p ../bin
-	cc -o ../bin/keyer_tone $(CFLAGS) keyer_tone.c keyer_options.o keyer_framework.o $(JACK_LIBS) -lm
+	cc -o ../bin/keyer_tone $(CFLAGS) -DAS_BIN keyer_tone.c $(JACK_LIBS) -lm
 
-../bin/keyer_decode: keyer_decode.c keyer_options.o keyer_framework.o
+../bin/keyer_decode: keyer_decode.c framework.h options.h
 	mkdir -p ../bin
-	cc -o ../bin/keyer_decode $(CFLAGS) keyer_decode.c keyer_options.o keyer_framework.o $(JACK_LIBS) -lm
+	cc -o ../bin/keyer_decode $(CFLAGS) -DAS_BIN keyer_decode.c  $(JACK_LIBS) -lm
 
-../bin/keyer_ascii: keyer_ascii.c keyer_options.o keyer_midi.o keyer_framework.o keyer_timing.h
+../bin/keyer_ascii: keyer_ascii.c framework.h options.h timing.h midi.h
 	mkdir -p ../bin
-	cc -o ../bin/keyer_ascii $(CFLAGS) keyer_ascii.c keyer_options.o keyer_midi.o keyer_framework.o $(JACK_LIBS) -lm
+	cc -o ../bin/keyer_ascii $(CFLAGS) -DAS_BIN keyer_ascii.c $(JACK_LIBS) -lm
 
-../bin/keyer_iambic: keyer_iambic.c keyer_options.o keyer_midi.o keyer_framework.o keyer_timing.h
+../bin/keyer_iambic: keyer_iambic.c framework.h options.h timing.h midi.h
 	mkdir -p ../bin
-	cc -o ../bin/keyer_iambic $(CFLAGS) keyer_iambic.c keyer_options.o keyer_midi.o keyer_framework.o $(JACK_LIBS) -lm
+	cc -o ../bin/keyer_iambic $(CFLAGS) -DAS_BIN keyer_iambic.c $(JACK_LIBS) -lm
 
-../bin/keyer_iambic2: keyer_iambic2.cc keyer_options.o keyer_midi.o keyer_framework.o keyer_timing.h KeyerIambic.hh
+../bin/keyer_iambicpp: keyer_iambicpp.cc Iambic.hh framework.h options.h timing.h midi.h
 	mkdir -p ../bin
-	g++ -o ../bin/keyer_iambic2 $(CPPFLAGS) keyer_iambic2.cc keyer_options.o keyer_midi.o keyer_framework.o $(JACK_LIBS) -lm
+	g++ -o ../bin/keyer_iambicpp $(CPPFLAGS) -DAS_BIN keyer_iambicpp.cc $(JACK_LIBS) -lm
 
-keyer_options.o: keyer_options.c keyer_options.h
-	cc -c $(CFLAGS) keyer_options.c
+$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h options.h timing.h
+	mkdir -p $(LIBDIR)
+	cc -o $(LIBDIR)/keyer_tone.so -shared -fPIC -DAS_TCL $(CFLAGS) keyer_tone.c $(JACK_LIBS) $(LIBS) -lm
 
-keyer_midi.o: keyer_midi.c keyer_midi.h
-	cc -c $(CFLAGS) keyer_midi.c
+$(LIBDIR)/keyer_decode.so: keyer_decode.c framework.h options.h
+	mkdir -p $(LIBDIR)
+	cc -o $(LIBDIR)/keyer_decode.so $(CFLAGS) -shared -fPIC -DAS_TCL keyer_decode.c  $(JACK_LIBS) $(LIBS) -lm
 
-keyer_framework.o: keyer_framework.c keyer_framework.h
-	cc -c $(CFLAGS) keyer_framework.c
+$(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h options.h timing.h midi.h
+	mkdir -p $(LIBDIR)
+	cc -o $(LIBDIR)/keyer_ascii.so $(CFLAGS) -shared -fPIC -DAS_TCL keyer_ascii.c $(JACK_LIBS) $(LIBS) -lm
+
+$(LIBDIR)/keyer_iambic.so: keyer_iambic.c framework.h options.h timing.h midi.h
+	mkdir -p $(LIBDIR)
+	cc -o $(LIBDIR)/keyer_iambic.so $(CFLAGS) -shared -fPIC -DAS_TCL keyer_iambic.c $(JACK_LIBS) $(LIBS) -lm
+
+$(LIBDIR)/keyer_iambicpp.so: keyer_iambicpp.cc Iambic.hh framework.h options.h timing.h midi.h
+	mkdir -p $(LIBDIR)
+	g++ -o $(LIBDIR)/keyer_iambicpp.so $(CPPFLAGS) -shared -fPIC -DAS_TCL keyer_iambicpp.cc $(JACK_LIBS) $(LIBS) -lm
+

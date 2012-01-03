@@ -1,0 +1,197 @@
+/** 
+    Copyright (c) 2011 by Roger E Critchlow Jr
+
+    keyer_iambic implements an iambic keyer keyed by midi events
+    and generating midi events.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+*/
+
+#include "Iambic.hh"
+
+extern "C" {
+
+#define OPTIONS_TIMING	1
+#define OPTIONS_KEYER	1
+
+#include "framework.h"
+#include "options.h"
+#include "midi.h"
+#include "midi_buffer.h"
+#include "timing.h"
+
+  typedef struct {
+    framework_t fw;
+    timing_t samples_per;
+    unsigned char note_on[3];
+    unsigned char note_off[3];
+    Iambic k;
+    unsigned duration;
+    unsigned long frames;
+    options_t sent;
+    midi_buffer_t midi;
+  } _t;
+
+  // update the computed parameters
+  static void _update(_t *dp) {
+    if (dp->fw.opts.modified) {
+      dp->fw.opts.modified = 0;
+      if (dp->fw.opts.verbose > 2) fprintf(stderr, "%ld: recomputing data from options\n", dp->frames);
+
+      /* keyer recomputation */
+      dp->k.setTick(1000000.0 / dp->fw.opts.sample_rate);
+      dp->k.setWord(dp->fw.opts.word);
+      dp->k.setWpm(dp->fw.opts.wpm);
+      dp->k.setDah(dp->fw.opts.dah);
+      dp->k.setIes(dp->fw.opts.ies);
+      dp->k.setIls(dp->fw.opts.ils);
+      dp->k.setIws(dp->fw.opts.iws);
+      dp->k.setAutoIls(dp->fw.opts.alsp);
+      dp->k.setAutoIws(dp->fw.opts.awsp);
+      dp->k.setSwapped(dp->fw.opts.swap);
+      dp->k.setModeB(dp->fw.opts.mode == 'B');
+
+      /* midi note on/off */
+      dp->note_on[0] = NOTE_ON|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
+      dp->note_off[0] = NOTE_OFF|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
+
+      /* pass on parameters to tone keyer */
+      char buffer[128];
+      if (dp->sent.rise != dp->fw.opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->fw.opts.rise); midi_sysex_write(&dp->midi, buffer); }
+      if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_sysex_write(&dp->midi, buffer); }
+      if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_sysex_write(&dp->midi, buffer); }
+      if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_sysex_write(&dp->midi, buffer); }
+    }
+  }
+
+  static void _keyout(int key, void *arg) {
+    _t *dp = (_t *)arg;
+    fprintf(stderr, "_keyout(%d)\n", key);
+    midi_write(&dp->midi, 0, 3, key ? dp->note_on : dp->note_off);
+  }
+
+  static void _init(void *arg) {
+    _t *dp = (_t *)arg;
+    dp->k.setKeyOut(_keyout, arg);
+    dp->duration = 0;
+    midi_init(&dp->midi);
+  }
+
+  static void _decode(_t *dp, int count, unsigned char *p) {
+    if (count == 3) {
+      switch (p[0]&0xF0) {
+      case NOTE_OFF:
+	if (p[1]&1) dp->k.paddleDah(0); else dp->k.paddleDit(0);
+	fprintf(stderr, "_decode([%x, %x, ...])\n", p[0], p[1]);
+	break;
+      case NOTE_ON:
+	if (p[1]&1) dp->k.paddleDah(1); else dp->k.paddleDit(1);
+	fprintf(stderr, "_decode([%x, %x, ...])\n", p[0], p[1]);
+	break;
+      }
+    } else if (count > 3 && p[0] == SYSEX) {
+      if (p[1] == SYSEX_VENDOR) {
+	options_parse_command(&dp->fw.opts, (char *)p+3);
+      }
+    }
+  }
+
+  /*
+  ** jack process callback
+  */
+
+  static int _process(jack_nframes_t nframes, void *arg) {
+    _t *dp = (_t *)arg;
+    void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
+    void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
+    jack_midi_event_t in_event;
+    int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
+    if (in_event_index < in_event_count) {
+      jack_midi_event_get(&in_event, midi_in, in_event_index++);
+      in_event_time = in_event.time;
+    } else {
+      in_event_time = nframes+1;
+    }
+    /* this is important, very strange if omitted */
+    jack_midi_clear_buffer(midi_out);
+    /* for all frames in the buffer */
+    for(int i = 0; i < nframes; i++) {
+      /* process all midi input events at this sample frame */
+      while (in_event_time == i) {
+	if (dp->fw.opts.verbose > 5)
+	  fprintf(stderr, "%ld: process event %x [%x, %x, %x, ...]\n", dp->frames, (unsigned)in_event.size, in_event.buffer[0], in_event.buffer[1], in_event.buffer[2]);
+	_decode(dp, in_event.size, in_event.buffer);
+	if (in_event_index < in_event_count) {
+	  jack_midi_event_get(&in_event, midi_in, in_event_index++);
+	  in_event_time = in_event.time;
+	} else {
+	  in_event_time = nframes+1;
+	}
+      }
+      /* process all midi output events at this sample frame */
+      while (dp->duration == i) {
+	if (midi_readable(&dp->midi)) {
+	  if (dp->fw.opts.verbose > 4)
+	    fprintf(stderr, "%ld: midi_readable, duration %u, count %u\n", dp->frames, midi_duration(&dp->midi), midi_count(&dp->midi));
+	  dp->duration += midi_duration(&dp->midi);
+	  unsigned count = midi_count(&dp->midi);
+	  if (count != 0) {
+	    unsigned char* buffer = jack_midi_event_reserve(midi_out, i, count);
+	    if (buffer == NULL) {
+	      fprintf(stderr, "%ld: jack won't buffer %d midi bytes!\n", dp->frames, count);
+	    } else {
+	      midi_read_bytes(&dp->midi, count, buffer);
+	      if (dp->fw.opts.verbose > 5) fprintf(stderr, "%ld: sent %x [%x, %x, %x, ...]\n", dp->frames, count, buffer[0], buffer[1], buffer[2]);
+	    }
+	  }
+	  midi_read_next(&dp->midi);
+	} else {
+	  dp->duration = nframes;
+	}
+      }
+      /* clock the iambic keyer */
+      dp->k.clock(1);
+    }
+    dp->frames += 1;
+    if (dp->duration >= nframes)
+      dp->duration -= nframes;
+    return 0;
+  }
+
+#if AS_BIN
+  int main(int argc, char **argv) {
+    _t data;
+    framework_main((void *)&data, argc, argv, (char *)"keyer_iambic2", 0,0,1,1, _init, _process, NULL);
+  }
+#endif
+#if AS_TCL
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  _update((_t *)clientData);
+  return TCL_OK;
+}
+
+static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return framework_factory(clientData, interp, argc, objv, 0,0,1,1, _command, _process, sizeof(_t), _init, NULL, (char *)"config|cget|cdoc");
+}
+
+int DLLEXPORT Keyer_iambicpp_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "keyer", "1.0.0", "keyer::iambicpp", _factory);
+}
+#endif
+
+}

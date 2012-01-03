@@ -1,7 +1,7 @@
-#ifndef KEYER_RAMP_H
-#define KEYER_RAMP_H
+#ifndef RAMP_H
+#define RAMP_H
 
-#include "keyer_osc.h"
+#include "osc.h"
 
 /*
 ** sine attack/decay ramp

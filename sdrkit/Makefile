@@ -9,18 +9,21 @@ JACK_LIBS=$(shell pkg-config --libs jack)
 ALSA_LIBS=$(shell pkg-config --libs alsa)
 LIBUSB_LIBS=$(shell pkg-config --libs libusb-1.0)
 
-ALL=../lib/sdrkit_agc.so \
-	../lib/sdrkit_atap.so \
-	../lib/sdrkit_biquad.so \
-	../lib/sdrkit_constant.so \
-	../lib/sdrkit_gain.so \
-	../lib/sdrkit_iqbalancer.so \
-	../lib/sdrkit_jack.so \
-	../lib/sdrkit_mixer.so \
-	../lib/sdrkit_mtap.so \
-	../lib/sdrkit_oscillator.so
+LIBDIR=../lib/sdrkit
 
-all: $(ALL)
+ALL=$(LIBDIR)/sdrkit_agc.so \
+	$(LIBDIR)/sdrkit_atap.so \
+	$(LIBDIR)/sdrkit_biquad.so \
+	$(LIBDIR)/sdrkit_constant.so \
+	$(LIBDIR)/sdrkit_gain.so \
+	$(LIBDIR)/sdrkit_iqbalancer.so \
+	$(LIBDIR)/sdrkit_jack.so \
+	$(LIBDIR)/sdrkit_mixer.so \
+	$(LIBDIR)/sdrkit_mtap.so \
+	$(LIBDIR)/sdrkit_oscillator.so
+
+all:: $(ALL)
+	cd $(LIBDIR) && make all
 
 all-clean:: clean
 	rm -f $(ALL)
@@ -28,33 +31,43 @@ all-clean:: clean
 clean::
 	rm -f *~ *.o
 
-../lib/sdrkit_agc.so: sdrkit_agc.c sdrkit.h
+$(LIBDIR)/sdrkit_agc.so: sdrkit_agc.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_atap.so: sdrkit_atap.c sdrkit.h
+$(LIBDIR)/sdrkit_atap.so: sdrkit_atap.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_biquad.so: sdrkit_biquad.c sdrkit.h
+$(LIBDIR)/sdrkit_biquad.so: sdrkit_biquad.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_constant.so: sdrkit_constant.c sdrkit.h
+$(LIBDIR)/sdrkit_constant.so: sdrkit_constant.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_gain.so: sdrkit_gain.c sdrkit.h
+$(LIBDIR)/sdrkit_gain.so: sdrkit_gain.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_iqbalancer.so: sdrkit_iqbalancer.c sdrkit.h
+$(LIBDIR)/sdrkit_iqbalancer.so: sdrkit_iqbalancer.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_jack.so: sdrkit_jack.c sdrkit.h
+$(LIBDIR)/sdrkit_jack.so: sdrkit_jack.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_mixer.so: sdrkit_mixer.c sdrkit.h
+$(LIBDIR)/sdrkit_mixer.so: sdrkit_mixer.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_mtap.so: sdrkit_mtap.c sdrkit.h
+$(LIBDIR)/sdrkit_mtap.so: sdrkit_mtap.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-../lib/sdrkit_oscillator.so: sdrkit_oscillator.c sdrkit.h
+$(LIBDIR)/sdrkit_oscillator.so: sdrkit_oscillator.c sdrkit.h
+	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

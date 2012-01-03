@@ -29,102 +29,96 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-//#define _POSIX_C_SOURCE 199309L
-#include <jack/jack.h>
-#include <jack/midiport.h>
-#include <stdio.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <strings.h>
-#include <math.h>
+#define OPTIONS_TIMING	1
+#define OPTIONS_TONE	1
 
-#include "keyer_options.h"
-#include "keyer_midi.h"
-#include "keyer_timing.h"
-#include "keyer_framework.h"
+#include "framework.h"
+#include "options.h"
+#include "midi.h"
+#include "midi_buffer.h"
+#include "timing.h"
 
 typedef struct {
-  keyer_timing_t samples_per;
+  framework_t fw;
+  timing_t samples_per;
   unsigned char note_on[3];
   unsigned char note_off[3];
-  /* need to target sysex to the desired destination */
-} ascii_data_t;
+  options_t sent;
+  unsigned duration;
+  char prosign[16], n_prosign, n_slash;
+  midi_buffer_t midi;
+} _t;
 
-static keyer_framework_t fw;
-static ascii_data_t data;
+static void _update(_t *dp) {
+  if (dp->fw.opts.modified) {
+    dp->fw.opts.modified = 0;
 
-static void ascii_modified() {
-  if (fw.opts.modified) {
-    fw.opts.modified = 0;
-
-    if (fw.opts.verbose > 2)
+    if (dp->fw.opts.verbose > 2)
       fprintf(stderr, "recomputing data from options\n");
 
     /* update timing computations */
-    keyer_timing_update(&fw.opts, &data.samples_per);
+    keyer_timing_update(&dp->fw.opts, &dp->samples_per);
 
     /* midi note on/off */
-    data.note_on[0] = NOTE_ON|(fw.opts.chan-1); data.note_on[1] = fw.opts.note;
-    data.note_off[0] = NOTE_OFF|(fw.opts.chan-1); data.note_on[1] = fw.opts.note;
+    dp->note_on[0] = NOTE_ON|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
+    dp->note_off[0] = NOTE_OFF|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
 
     /* pass on parameters to tone keyer */
-    static keyer_options_t sent;
     char buffer[128];
-    if (sent.rise != fw.opts.rise) { sprintf(buffer, "<rise%.1f>", sent.rise = fw.opts.rise); midi_sysex_write(buffer); }
-    if (sent.fall != fw.opts.fall) { sprintf(buffer, "<fall%.1f>", sent.fall = fw.opts.fall); midi_sysex_write(buffer); }
-    if (sent.freq != fw.opts.freq) { sprintf(buffer, "<freq%.1f>", sent.freq = fw.opts.freq); midi_sysex_write(buffer); }
-    if (sent.gain != fw.opts.gain) { sprintf(buffer, "<gain%.1f>", sent.gain = fw.opts.gain); midi_sysex_write(buffer); }
+    if (dp->sent.rise != dp->fw.opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->fw.opts.rise); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_sysex_write(&dp->midi, buffer); }
   }
 }
 
-static void ascii_init() {
+static void _init(void *arg) {
+  _t *dp = (_t *)arg;
+  dp->duration = 0;
+  midi_init(&dp->midi);
 }
 
 /*
 ** jack process callback
 */
-static unsigned duration = 0;
-
-static int ascii_process_callback(jack_nframes_t nframes, void *arg) {
-  void* midi_out = jack_port_get_buffer(fw.midi_out, nframes);
+static int _process(jack_nframes_t nframes, void *arg) {
+  _t *dp = (_t *)arg;
+  void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
   jack_midi_clear_buffer(midi_out);
-  ascii_modified();
+  _update(dp);
   /* for each frame in this callback */
   for(int i = 0; i < nframes; i += 1) {
-    while (i == duration) {
-      if (midi_readable()) {
-	if (fw.opts.verbose > 4)
-	  fprintf(stderr, "midi_readable, duration %u, count %u\n", midi_duration(), midi_count());
-	duration += midi_duration();
-	if (midi_count() != 0) {
-	  unsigned count = midi_count();
+    while (i == dp->duration) {
+      if (midi_readable(&dp->midi)) {
+	if (dp->fw.opts.verbose > 4)
+	  fprintf(stderr, "midi_readable, duration %u, count %u\n", midi_duration(&dp->midi), midi_count(&dp->midi));
+	dp->duration += midi_duration(&dp->midi);
+	if (midi_count(&dp->midi) != 0) {
+	  unsigned count = midi_count(&dp->midi);
 	  unsigned char* buffer = jack_midi_event_reserve(midi_out, i, count);
 	  if (buffer == NULL) {
 	    fprintf(stderr, "jack won't buffer %d midi bytes!\n", count);
 	  } else {
-	    midi_read_bytes(count, buffer);
-	    if (fw.opts.verbose > 4)
+	    midi_read_bytes(&dp->midi, count, buffer);
+	    if (dp->fw.opts.verbose > 4)
 	      fprintf(stderr, "sent %x [%x, %x, %x, ...]\n", count, buffer[0], buffer[1], buffer[2]);
 	  }
 	}
-	midi_read_next();
+	midi_read_next(&dp->midi);
       } else {
-	duration = nframes;
+	dp->duration = nframes;
       }
     }
   }
-  if (duration >= nframes)
-    duration -= nframes;
+  if (dp->duration >= nframes)
+    dp->duration -= nframes;
   return 0;
 }
 
 /*
 ** translate queued characters into morse code key transitions
 */
-static char *ascii_morse_table[128] = {
+static char *_morse_table[128] = {
   /* 000 NUL */ 0, /* 001 SOH */ 0, /* 002 STX */ 0, /* 003 ETX */ 0,
   /* 004 EOT */ 0, /* 005 ENQ */ 0, /* 006 ACK */ 0, /* 007 BEL */ 0,
   /* 008  BS */ 0, /* 009  HT */ 0, /* 010  LF */ 0, /* 011  VT */ 0,
@@ -235,22 +229,22 @@ static char *ascii_morse_table[128] = {
 ** queue a string of . and - as midi events
 ** terminate with an inter letter space unless continues
 */
-static void ascii_queue_midi(char c, char *p, int continues) {
+static void _queue_midi(_t *dp, char c, char *p, int continues) {
   /* normal send single character */
   if (p == 0) {
     if (c == ' ')
-      midi_write(data.samples_per.iws-data.samples_per.ils, 0, "");
+      midi_write(&dp->midi, dp->samples_per.iws-dp->samples_per.ils, 0, "");
   } else {
     while (*p != 0) {
       if (*p == '.') {
-	midi_write(data.samples_per.dit, 3, data.note_on);
+	midi_write(&dp->midi, dp->samples_per.dit, 3, dp->note_on);
       } else if (*p == '-') {
-	midi_write(data.samples_per.dah, 3, data.note_on);
+	midi_write(&dp->midi, dp->samples_per.dah, 3, dp->note_on);
       }
       if (p[1] != 0 || continues) {
-	midi_write(data.samples_per.ies, 3, data.note_off);
+	midi_write(&dp->midi, dp->samples_per.ies, 3, dp->note_off);
       } else {
-	midi_write(data.samples_per.ils, 3, data.note_off);
+	midi_write(&dp->midi, dp->samples_per.ils, 3, dp->note_off);
       }
       p += 1;
     }
@@ -261,26 +255,57 @@ static void ascii_queue_midi(char c, char *p, int continues) {
 ** translate a single character into morse code
 ** but implement an escape to allow prosign construction
 */
-static void ascii_queue_char(char c) {
-  static char prosign[16], n_prosign, n_slash;
+static void _queue_char(char c, void *arg) {
+  _t *dp = (_t *)arg;
   if (c == '\\') {
     /* use \ab to send prosign a concatenated to b with no interletter space */
     /* multiple slashes to get longer prosigns, so \\sos or \s\os */
-    n_slash += 1;
-  } else if (n_slash != 0) {
-    prosign[n_prosign++] = c;
-    if (n_prosign == n_slash+1) {
-      for (int i = 0; i < n_prosign; i += 1) {
-	ascii_queue_midi(prosign[i], ascii_morse_table[prosign[i]&127], i != n_prosign-1);
+    dp->n_slash += 1;
+  } else if (dp->n_slash != 0) {
+    dp->prosign[dp->n_prosign++] = c;
+    if (dp->n_prosign == dp->n_slash+1) {
+      for (int i = 0; i < dp->n_prosign; i += 1) {
+	_queue_midi(dp, dp->prosign[i], _morse_table[dp->prosign[i]&127], i != dp->n_prosign-1);
       }
-      n_prosign = 0;
-      n_slash = 0;
+      dp->n_prosign = 0;
+      dp->n_slash = 0;
     }
   } else {
-    ascii_queue_midi(c, ascii_morse_table[c&0x7f], 0);
+    _queue_midi(dp, c, _morse_table[c&0x7f], 0);
   }
 }
 
+#if AS_BIN
 int main(int argc, char **argv) {
-  keyer_framework_main(&fw, argc, argv, "keyer_ascii", require_midi_out, ascii_init, ascii_process_callback, ascii_queue_char);
+  _t data;
+  framework_main((void *)&data, argc, argv, "keyer_ascii", 0,0,0,1, _init, _process, _queue_char);
 }
+#endif
+
+#if AS_TCL
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc > 1 && strcmp(Tcl_GetString(objv[1]),"puts") == 0) {
+    // put the argument strings separated by spaces
+    for (int i = 2; i < argc; i += 1) {
+      for (char *p = Tcl_GetString(objv[i]); *p != 0; p += 1)
+	_queue_char(*p, clientData);
+      if (i != argc-1)
+	_queue_char(' ', clientData);
+    }
+    return TCL_OK;
+  }
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  _update(clientData);
+  return TCL_OK;
+}
+
+static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return framework_factory(clientData, interp, argc, objv, 0,0,0,1, _command, _process, sizeof(_t), _init, NULL, "config|cget|cdoc|puts");
+}
+
+int DLLEXPORT Keyer_ascii_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "keyer", "1.0.0", "keyer::ascii", _factory);
+}
+#endif
+

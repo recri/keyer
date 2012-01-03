@@ -1,5 +1,5 @@
-#ifndef KEYER_TIMING_H
-#define KEYER_TIMING_H
+#ifndef TIMING_H
+#define TIMING_H
 
 typedef struct {
   unsigned dit;
@@ -9,9 +9,9 @@ typedef struct {
   unsigned iws;
   unsigned rise;
   unsigned fall;
-} keyer_timing_t;
+} timing_t;
 
-static void keyer_timing_update(keyer_options_t *opts, keyer_timing_t *samples_per) {
+static void keyer_timing_update(options_t *opts, timing_t *samples_per) {
   /* dit samples = (samples_per_second * second_per_minute) / (words_per_minute * dits_per_word)  */
   samples_per->dit = (unsigned) ((opts->sample_rate * 60) / (opts->wpm * opts->word));
   samples_per->dah = opts->dah * samples_per->dit;
@@ -25,7 +25,7 @@ static void keyer_timing_update(keyer_options_t *opts, keyer_timing_t *samples_p
 
 #include <stdio.h>
 
-static void keyer_timing_report(FILE *fp, keyer_options_t *opts, keyer_timing_t *samples_per) {
+static void keyer_timing_report(FILE *fp, options_t *opts, timing_t *samples_per) {
   fprintf(fp, "sample_rate = %u\n", opts->sample_rate);
   fprintf(fp, "word -> %f\n", opts->word);
   fprintf(fp, "wpm -> %f\n", opts->wpm);

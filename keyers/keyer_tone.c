@@ -36,24 +36,16 @@
     
 */
 
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
+#define OPTIONS_TONE 1
+
+#include "framework.h"
+#include "options.h"
+#include "midi.h"
+
 #include <math.h>
 
-#include <jack/jack.h>
-#include <jack/midiport.h>
-
-#include "keyer_options.h"
-#include "keyer_midi.h"
-#include "keyer_osc.h"
-#include "keyer_ramp.h"
-#include "keyer_framework.h"
-
-static keyer_framework_t fw;
+#include "osc.h"
+#include "ramp.h"
 
 // On Intel set FZ (Flush to Zero) and DAZ (Denormals Are Zero) flags to avoid costly denormals
 #ifdef __SSE__
@@ -87,103 +79,113 @@ typedef struct {
   ramp_t fall;			/* tone off ramp */
 } cwtone_t;
 
-static void cwtone_set_gain(cwtone_t *cw, float gain) {
-  cw->gain = pow(10.0, gain / 20.0);
+typedef struct {
+  framework_t fw;
+  cwtone_t cwtone;
+  unsigned long frame;
+} _t;
+
+static void cwtone_set_gain(_t *dp, float gain) {
+  dp->cwtone.gain = pow(10.0, gain / 20.0);
 }
   
-static void cwtone_update(cwtone_t *cw) {
-  if (fw.opts.modified) {
-    fw.opts.modified = 0;
-    cw->gain = pow(10.0, fw.opts.gain / 20.0);
-    osc_update(&cw->tone, fw.opts.freq, fw.opts.sample_rate);
-    ramp_update(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
-    ramp_update(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
+static void cwtone_update(_t *dp) {
+  if (dp->fw.opts.modified) {
+    dp->fw.opts.modified = 0;
+    dp->cwtone.gain = pow(10.0, dp->fw.opts.gain / 20.0);
+    osc_update(&dp->cwtone.tone, dp->fw.opts.freq, dp->fw.opts.sample_rate);
+    ramp_update(&dp->cwtone.rise, dp->fw.opts.rise, dp->fw.opts.sample_rate);
+    ramp_update(&dp->cwtone.fall, dp->fw.opts.fall, dp->fw.opts.sample_rate);
   }
 }
 
-static void cwtone_init(cwtone_t *cw) {
-  cw->state = CWTONE_OFF;
-  cw->gain = pow(10.0, fw.opts.gain / 20.0);
-  osc_init(&cw->tone, fw.opts.freq, fw.opts.sample_rate);
-  ramp_init(&cw->rise, fw.opts.rise, fw.opts.sample_rate);
-  ramp_init(&cw->fall, fw.opts.fall, fw.opts.sample_rate);
+static void cwtone_init(_t *dp) {
+  dp->cwtone.state = CWTONE_OFF;
+  dp->cwtone.gain = pow(10.0, dp->fw.opts.gain / 20.0);
+  osc_init(&dp->cwtone.tone, dp->fw.opts.freq, dp->fw.opts.sample_rate);
+  ramp_init(&dp->cwtone.rise, dp->fw.opts.rise, dp->fw.opts.sample_rate);
+  ramp_init(&dp->cwtone.fall, dp->fw.opts.fall, dp->fw.opts.sample_rate);
 }
 
-static void cwtone_on(cwtone_t *cw) {
-  cw->state = CWTONE_RISE;
-  ramp_reset(&cw->rise);
+static void cwtone_on(_t *dp) {
+  dp->cwtone.state = CWTONE_RISE;
+  ramp_reset(&dp->cwtone.rise);
 }
 
-static void cwtone_off(cwtone_t *cw) {
-  cw->state = CWTONE_FALL;
-  ramp_reset(&cw->fall);
+static void cwtone_off(_t *dp) {
+  dp->cwtone.state = CWTONE_FALL;
+  ramp_reset(&dp->cwtone.fall);
 }
 
-static void cwtone_xy(cwtone_t *cw, float *x, float *y) {
-  float scale = cw->gain;
-  switch (cw->state) {
+static void cwtone_xy(_t *dp, float *x, float *y) {
+  float scale = dp->cwtone.gain;
+  switch (dp->cwtone.state) {
   case CWTONE_OFF:	/* note is not sounding */
     scale = 0;
     break;
   case CWTONE_RISE:	/* note is ramping up to full level */
-    scale *= ramp_next(&cw->rise);
-    if (ramp_done(&cw->rise))
-      cw->state = CWTONE_ON;
+    scale *= ramp_next(&dp->cwtone.rise);
+    if (ramp_done(&dp->cwtone.rise))
+      dp->cwtone.state = CWTONE_ON;
     break;
   case CWTONE_ON:	/* note is sounding full level */
     break;
   case CWTONE_FALL:	/* note is ramping down to off */
-    scale *= 1-ramp_next(&cw->fall);
-    if (ramp_done(&cw->fall))
-      cw->state = CWTONE_OFF;
+    scale *= 1-ramp_next(&dp->cwtone.fall);
+    if (ramp_done(&dp->cwtone.fall))
+      dp->cwtone.state = CWTONE_OFF;
     break;
   }
-  osc_next_xy(&cw->tone, x, y);
+  osc_next_xy(&dp->cwtone.tone, x, y);
   *x *= scale;
   *y *= scale;
 }
 
-static cwtone_t cwtone;
-static unsigned long frame;
-
 /*
 ** decode midi commands
 */
-static void midi_decode(unsigned count, unsigned char *p) {
+static void _decode(_t *dp, unsigned count, unsigned char *p) {
   /* decode note/channel based events */
-  if (fw.opts.verbose > 4)
-    fprintf(stderr, "%ld: midi_decode(%x, [%x, %x, %x, ...]\n", frame, count, p[0], p[1], p[2]);
+  if (dp->fw.opts.verbose > 4)
+    fprintf(stderr, "%ld: _decode(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     char channel = (p[0]&0xF)+1;
     char note = p[1];
-    if (channel == fw.opts.chan && note == fw.opts.note)
+    if (channel == dp->fw.opts.chan && note == dp->fw.opts.note)
       switch (p[0]&0xF0) {
-      case NOTE_OFF: cwtone_off(&cwtone); break;
-      case NOTE_ON:  cwtone_on(&cwtone); break;
+      case NOTE_OFF: cwtone_off(dp); break;
+      case NOTE_ON:  cwtone_on(dp); break;
       }
-    else if (fw.opts.verbose > 3)
-      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, fw.opts.chan, fw.opts.note);
+    else if (dp->fw.opts.verbose > 3)
+      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->fw.opts.chan, dp->fw.opts.note);
   } else if (count > 3 && p[0] == SYSEX) {
     if (p[1] == SYSEX_VENDOR) {
-      main_parse_command(&fw.opts, p+3);
-      if (fw.opts.verbose > 3)
+      options_parse_command(&dp->fw.opts, p+3);
+      if (dp->fw.opts.verbose > 3)
 	fprintf(stderr, "sysex: %*s\n", count, p+2);
     }
   }
 }
 
-static void tone_init() {
-  cwtone_init(&cwtone);
-  cwtone_update(&cwtone);
+static void _init(void *arg) {
+  _t *dp = (_t *) arg;
+  cwtone_init(dp);
+  cwtone_update(dp);
+}
+
+static void _update(void *arg) {
+  _t *dp = (_t *) arg;
+  cwtone_update(dp);
 }
 
 /*
 ** Jack process callback
 */
-static int tone_process_callback(jack_nframes_t nframes, void *arg) {
-  void* midi_in = jack_port_get_buffer(fw.midi_in, nframes);
-  jack_default_audio_sample_t *out_i = (jack_default_audio_sample_t *) jack_port_get_buffer (fw.out_i, nframes);
-  jack_default_audio_sample_t *out_q = (jack_default_audio_sample_t *) jack_port_get_buffer (fw.out_q, nframes);
+static int _process(jack_nframes_t nframes, void *arg) {
+  _t *dp = (_t *)arg;
+  void* midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
+  jack_default_audio_sample_t *out_i = (jack_default_audio_sample_t *) jack_port_get_buffer(framework_output(dp,0), nframes);
+  jack_default_audio_sample_t *out_q = (jack_default_audio_sample_t *) jack_port_get_buffer(framework_output(dp,1), nframes);
   jack_midi_event_t in_event;
   jack_nframes_t event_count = jack_midi_get_event_count(midi_in), event_index = 0, event_time = 0;
   if (event_index < event_count) {
@@ -193,13 +195,13 @@ static int tone_process_callback(jack_nframes_t nframes, void *arg) {
   } else {
     event_time = nframes+1;
   }
-  cwtone_update(&cwtone);
+  cwtone_update(dp);
   /* for all frames in the buffer */
   for(int i = 0; i < nframes; i++) {
     /* process all midi events at this sample time */
     
     while (event_time == i) {
-      midi_decode(in_event.size, in_event.buffer);
+      _decode(dp, in_event.size, in_event.buffer);
       if (event_index < event_count) {
 	jack_midi_event_get(&in_event, midi_in, event_index++);
 	// event_time += in_event.time;
@@ -210,14 +212,34 @@ static int tone_process_callback(jack_nframes_t nframes, void *arg) {
     }
     /* compute samples for all sounding notes at this sample time */
     AVOIDDENORMALS;
-    cwtone_xy(&cwtone, out_i+i, out_q+i);
+    cwtone_xy(dp, out_i+i, out_q+i);
     /* increment frame counter */
-    frame += 1;
+    dp->frame += 1;
   }
   return 0;
 }
 
+#if AS_BIN
 int main(int narg, char **args) {
-  keyer_framework_main(&fw, narg, args, "keyer_tone", require_midi_in|require_out_i|require_out_q, tone_init, tone_process_callback, NULL);
+  _t data;
+  framework_main((void *)&data, narg, args, "keyer_tone", 0,2,1,0, _init, _process, NULL);
 }
+#endif
+
+#if AS_TCL
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  _update(clientData);
+  return TCL_OK;
+}
+
+static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return framework_factory(clientData, interp, argc, objv, 0,2,1,0, _command, _process, sizeof(_t), _init, NULL, "config|cget");
+}
+
+int DLLEXPORT Keyer_tone_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "keyer", "1.0.0", "keyer::tone", _factory);
+}
+#endif
 
