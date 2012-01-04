@@ -1,0 +1,37 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+
+lappend auto_path [file join [file dirname [info script]] .. lib]
+
+package require Tk
+package require keyer-control
+#
+# 
+#
+proc main {argv} {
+    global data
+    global env
+
+    foreach {opt value} $argv {
+	switch -- $opt {
+	    --ascii { set data(ascii) $value }
+	    --ascii-wpm { set data(ascii-wpm) $value }
+	    --ascii-freq { set data(ascii_tone-freq) $value }
+	    --ascii-gain { set data(ascii_tone-gain) $value }
+	    --iambic { set data(iambic) $value }
+	    --iambicpp { set data(iambicpp) $value }
+	    --iambic-wpm { set data(iambic-wpm) $value }
+	    --iambic-freq { set data(iambic_tone-freq) $value }
+	    --iambic-gain { set data(iambic_tone-gain) $value }
+	    default {
+		error "unknown option $opt"
+	    }
+	}
+    }
+    if {$data(ascii) || $data(iambic)} {
+	plug-init
+	ui-init
+    }
+}
+
+main $argv
