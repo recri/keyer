@@ -11,8 +11,7 @@ LIBUSB_LIBS=$(shell pkg-config --libs libusb-1.0)
 
 LIBDIR=../lib/keyer
 
-ALL=../bin/keyer_tone ../bin/keyer_ascii ../bin/keyer_iambic ../bin/keyer_decode
-ALL2=$(LIBDIR)/keyer_tone.so $(LIBDIR)/keyer_ascii.so $(LIBDIR)/keyer_iambic.so $(LIBDIR)/keyer_decode.so
+ALL=$(LIBDIR)/keyer_tone.so $(LIBDIR)/keyer_ascii.so $(LIBDIR)/keyer_iambic.so $(LIBDIR)/keyer_decode.so
 
 all:: $(ALL) $(ALL2)
 	cd $(LIBDIR) && make all
