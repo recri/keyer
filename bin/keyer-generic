@@ -1,0 +1,121 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+
+# set the tcl package search path to look in ../lib from the script
+lappend auto_path [file join [file dirname [info script]] .. lib]
+
+# require the package that implements the iambic keyer
+package require keyer
+
+# set the common options which all apps implement
+array set opts {
+    -verbose 0
+    -server default
+    -chan 1 -note 0
+}
+
+# switch on the script name to determine the application
+switch -glob [info script] {
+    *keyer-ascii {
+	# default option values for the ascii keyer
+	array set opts {
+	    -client ascii
+	    -chan 1 -note 0
+	    -word 50 -wpm 18 -dah 3 -ies 1 -ils 3 -iws 7
+	}
+	# command to implement ascii keyer
+	set command keyer::ascii
+    }
+    *keyer-decode {
+	# default option values for the decode keyer
+	array set opts {
+	    -client decode
+	}
+	# command to implement iambic keyer
+	set command keyer::decode
+    }
+    *keyer-iambic {
+	# default option values for iambic keyer
+	array set opts {
+	    -client iambic
+	    -word 50 -wpm 18 -dah 3 -ies 1 -ils 3 -iws 7
+	    -swap 0 -alsp 0 -awsp 0 -mode A
+	}
+	# command to implement iambic keyer
+	set command keyer::iambic
+    }
+    *keyer-tone {
+	# default option values for tone keyer
+	array set opts {
+	    -client tone
+	    -freq 700 -gain -30 -rise 5 -fall 5
+	}
+	# command to implement tone keyer
+	set command keyer::tone
+    }
+    default {
+	error "unimplemented keyer command [file tail [info script]]"
+    }
+}
+
+# foreach pair of arguments provided
+foreach {option value} $argv {
+    if {[info exists opts([string range $option 1 end])]} {
+	# if the option name with a - prepended matches a default option, set it
+	set opts([string range $option 1 end]) $value
+    } elseif {[info exists opts($option)]} {
+	# or if the option name as it is matches a default option, set it
+	set opts($option) $value
+    } else {
+	error "unrecognized option: $option"
+    }
+}
+
+# start the client
+# using the command set in the switch
+# using the -client option as the client name
+# and using the options from the defaults or
+# from the arguments supplied
+set client $opts(-client)
+$command $client {*}[array get opts]
+
+# decide what to do now based on the command
+switch $command {
+    keyer::iambic -
+    keyer::tone -
+    keyer::ascii {
+	# pass back inline options,
+	# or, for ascii, pass back raw text input 
+	fconfigure stdin -buffering line
+	while {[gets stdin line] >= 0} {
+	    if {[regexp {^<(.*)>$} $line all middle]} {
+		#puts "matching $middle against options"
+		foreach name [array names opts] {
+		    set barename [string range $name 1 end]
+		    # puts "matching {$barename} against {$middle}"
+		    if {[string first $barename $middle] == 0} {
+			set value [string range $middle [string length $barename] end]
+			if {$value eq {?}} {
+			    puts [$client cget $name]
+			} else {
+			    $client config $name $value
+			}
+			break
+		    }
+		}
+	    } elseif {$command eq {keyer::ascii}} {
+		$opts(-client) puts $line\n
+		puts "$opts(-client) puts $line\n"
+	    }
+	}
+    }
+    keyer::decode {
+	# print out what it finds
+	# no inline commands, too messy
+	fconfigure stdout -buffering none
+	while {1} {
+	    after 250
+	    if {[string length [set line [$opts(-client) gets]]]} { puts -nonewline $line }
+	}
+   }
+}
