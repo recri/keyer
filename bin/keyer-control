@@ -4,6 +4,8 @@
 lappend auto_path [file join [file dirname [info script]] .. lib]
 
 package require Tk
+package require keyer
+package require sdrkit
 
 ##
 ## parameters and operating data
@@ -11,13 +13,14 @@ package require Tk
 array set data {
     ascii 1
     iambic 1
-    
 
+    #ascii_tone-verbose 5
     ascii_tone-freq 700
     ascii_tone-gain -30
     ascii_tone-rise 5
     ascii_tone-fall 5
 
+    #ascii-verbose 5
     ascii-wpm 15
     ascii-word 50
     ascii-dah 3
@@ -28,11 +31,13 @@ array set data {
     ascii-chan 1
     ascii-note 0
 
+    #iambic_tone-verbose 5
     iambic_tone-freq 750
     iambic_tone-gain -30
     iambic_tone-rise 5
     iambic_tone-fall 5
 
+    iambic-verbose 5
     iambic-wpm 15
     iambic-word 50
     iambic-dah 3
@@ -53,44 +58,32 @@ array set data {
 ##
 proc plug-exists {client} {
     global plug
-    return [info exists plug($client-fp)]
+    return [info exists plug($client)]
 }
 
-proc plug-open {program client {server default}} {
+proc plug-open {command client {server default}} {
     global plug
     global data
-    set bindir [file dirname [info script]]
-    set plug($client-binary) [file join $bindir $program]
-    # test for file exists
-    set plug($client-out-file) "/tmp/keyer-control-[pid]-$client.out"
-    set args [list |$plug($client-binary) --server $server --client $client]
+    set args {}
     foreach name [array names data $client-*] {
 	set val $data($name)
 	set name [string range $name [expr {1+[string length $client]}] end]
-	lappend args "--$name" $val
+	lappend args "-$name" $val
     }
-    lappend args {>&} $plug($client-out-file)
-    set command [join $args]
-    set plug($client-fp) [open $command w]
-    fconfigure $plug($client-fp) -buffering line
-    set plug($client-out-fp) [open "$plug($client-out-file)" r]
-    fconfigure $plug($client-out-fp) -blocking 0 -buffering line
-    # fileevent $plug($client-out-fp) readable "plug-readable $client"
+    eval [concat [list $command $client -server $server] $args]
+    set plug($client) $client
     lappend plug(clients) $client
 }
 
 proc plug-close {client} {
     global plug
     if {[plug-exists $client]} {
-	#puts stderr "plug-close $client"
-	close $plug($client-fp)
-	close $plug($client-out-fp)
-	file delete $plug($client-out-file)
 	foreach name [array names plug $client-*] {
 	    unset plug($name)
 	}
 	set i [lsearch -exact $plug(clients) $client]
 	set plug(clients) [lreplace $plug(clients) $i $i]
+	rename $plug(client) {}
     } else {
 	puts stderr "non-existent client $client in plug-close"
     }
@@ -106,7 +99,9 @@ proc plug-close-all {} {
 proc plug-puts {client opt value} {
     global plug
     if {[plug-exists $client]} {
-	puts $plug($client-fp) "<$opt$value>"
+	#puts "$plug($client) config -$opt $value"
+	$plug($client) config -$opt $value
+	#puts "$plug($client) cget -$opt -> [$plug($client) cget -$opt]"
     } else {
 	puts stderr "non-existent client $client in plug-puts"
     }
@@ -115,28 +110,15 @@ proc plug-puts {client opt value} {
 proc plug-puts-text {client text} {
     global plug
     if {[plug-exists $client]} {
-	puts $plug($client-fp) $text
+	$plug($client) puts $text
     } else {
 	puts stderr "non-existent client $client in plug-puts-text"
     }
 }
 
-proc plug-readable {client} {
-    global plug
-    # puts "plug-readable $client"
-    if {[gets $plug($client-out-fp) line] < 0} {
-	if {[eof $plug($client-out-fp)]} {
-	    # don't close, they're files that will grow
-	    # plug-close $client
-	}
-	return;
-    }
-    lappend plug($client-input) $line
-}
-
 proc plug-read {client} {
     global plug
-    return [read $plug($client-out-fp)]
+    return [$plug($client) gets]
 }
 
 #
@@ -146,45 +128,56 @@ proc plug-init {} {
     global data
     # start jack
     # look for zombie helpers?
-    foreach line [split [string trim [exec jack_lsp]] \n] {
-	switch -glob $line {
-	    ascii:* -
-	    iambic:* -
-	    ascii_tone:* -
-	    iambic_tone:* {
-		error "the [lindex [split $line :] 0] client is still running"
+    set ports [sdrkit::jack list-ports]
+    foreach port [dict keys $ports] {
+	foreach conn [dict get $ports $port connections] {
+	    switch -glob $line {
+		ascii:* -
+		iambic:* -
+		ascii_tone:* -
+		iambic_tone:* {
+		    error "the [lindex [split $line :] 0] client is still running"
+		}
+	    }
+	}
+	switch -glob $port {
+	    system:midi_capture_* {
+		set midi_capture $port
 	    }
 	}
     }
     # make helpers
     set connects {}
     if {$data(ascii)} {
-	plug-open keyer_ascii ascii
-	plug-open keyer_tone ascii_tone
-	lappend connects {jack_connect ascii:midi_out ascii_tone:midi_in}
-	lappend connects {jack_connect ascii_tone:out_i system:playback_1}
-	lappend connects {jack_connect ascii_tone:out_q system:playback_2}
+	plug-open keyer::ascii ascii
+	plug-open keyer::tone ascii_tone
+	lappend connects {sdrkit::jack connect ascii:midi_out ascii_tone:midi_in}
+	lappend connects {sdrkit::jack connect ascii_tone:out_i system:playback_1}
+	lappend connects {sdrkit::jack connect ascii_tone:out_q system:playback_2}
     }
     if {$data(iambic)} {
-	plug-open keyer_iambic iambic
-	# plug-open keyer_iambic2 iambic
-	plug-open keyer_tone iambic_tone
-	lappend connects {jack_connect system:midi_capture_1 iambic:midi_in}
-	lappend connects {jack_connect iambic:midi_out iambic_tone:midi_in}
-	lappend connects {jack_connect iambic_tone:out_i system:playback_1}
-	lappend connects {jack_connect iambic_tone:out_q system:playback_2}
+	if { ! [info exists midi_capture]} {
+	    error "no midi_capture port for keyer connection"
+	}
+	# plug-open keyer::iambic iambic
+	plug-open keyer::iambic iambic
+	plug-open keyer::tone iambic_tone
+	lappend connects [list sdrkit::jack connect $midi_capture iambic:midi_in]
+	lappend connects {sdrkit::jack connect iambic:midi_out iambic_tone:midi_in}
+	lappend connects {sdrkit::jack connect iambic_tone:out_i system:playback_1}
+	lappend connects {sdrkit::jack connect iambic_tone:out_q system:playback_2}
     }
     # these names may need to change around
     after 500
     set retry {}
     foreach cmd $connects {
-	if {[catch "exec $cmd" error]} {
+	if {[catch "eval $cmd" error]} {
 	    puts "$cmd: yielded $error"
 	    lappend retry $cmd
 	}
     }
     foreach cmd $retry {
-	if {[catch "exec $cmd" error]} {
+	if {[catch "eval $cmd" error]} {
 	    puts "$cmd: failed again, yielded $error"
 	}
     }
@@ -388,6 +381,7 @@ proc main {argv} {
 	    --ascii-freq { set data(ascii_tone-freq) $value }
 	    --ascii-gain { set data(ascii_tone-gain) $value }
 	    --iambic { set data(iambic) $value }
+	    --iambicpp { set data(iambicpp) $value }
 	    --iambic-wpm { set data(iambic-wpm) $value }
 	    --iambic-freq { set data(iambic_tone-freq) $value }
 	    --iambic-gain { set data(iambic_tone-gain) $value }

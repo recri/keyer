@@ -23,6 +23,7 @@
 #include "framework.h"
 #include "options.h"
 #include "midi.h"
+#include "ring_buffer.h"
 
 typedef struct {
   unsigned last_frame;	/* frame of last event */
@@ -38,7 +39,10 @@ typedef struct {
   framework_t fw;
   decode_t decode;
   unsigned frame;
-  /* Tcl needs a ring buffer to store decoded elements */
+  #define _SIZE 512
+  unsigned rptr;
+  unsigned wptr;
+  char buff[_SIZE];
 } _t;
 
 /*
@@ -128,7 +132,12 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
       fprintf(stdout, "%s", out); fflush(stdout);
 #endif
 #if AS_TCL
-      
+      if (buffer_writeable(dp->wptr, dp->rptr, _SIZE)) {
+	if (*out != 0)
+	  dp->buff[buffer_index(dp->wptr++, _SIZE)] = *out;
+      } else {
+	fprintf(stderr, "keyer_decode: buffer overflow writing \"%s\"\n", out);
+      }
 #endif
     } else if (dp->fw.opts.verbose > 3)
       fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->fw.opts.chan, dp->fw.opts.note);
@@ -193,6 +202,14 @@ int main(int narg, char **args) {
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc == 2 && strcmp(Tcl_GetString(objv[1]), "gets") == 0) {
     // return the current decoded string
+    _t *dp = (_t *)clientData;
+    unsigned n = buffer_items_available_to_read(dp->wptr, dp->rptr, _SIZE);
+    char buff[512];
+    if (n > 512)
+      n = 512;
+    for (int i = 0; i < n; i += 1)
+      buff[i] = dp->buff[buffer_index(dp->rptr++, _SIZE)];
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(buff, n));
     return TCL_OK;
   }
   if (framework_command(clientData, interp, argc, objv) != TCL_OK)

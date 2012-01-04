@@ -1,0 +1,11 @@
+* sdrkit
+** computing an fft over some window of audio
+   could be synchronized with the frame clock
+   samples are buffered until frameclock mod fftsize is zero,
+   then compute the fft and start buffering the next input
+   buffer.
+   meanwhile, the results of the previous fft, or second
+   previous, could be supplied as output samples.  So the
+   audio time domain signal is transformed to an audio freq
+   domain signal, which is similarly aligned to the frameclock
+   so the time domain makes sense.

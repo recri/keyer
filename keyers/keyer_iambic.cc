@@ -207,8 +207,8 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   return framework_factory(clientData, interp, argc, objv, 0,0,1,1, _command, _process, sizeof(_t), _init, NULL, (char *)"config|cget|cdoc");
 }
 
-int DLLEXPORT Keyer_iambicpp_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer", "1.0.0", "keyer::iambicpp", _factory);
+int DLLEXPORT Keyer_iambic_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "keyer", "1.0.0", "keyer::iambic", _factory);
 }
 #endif
 
