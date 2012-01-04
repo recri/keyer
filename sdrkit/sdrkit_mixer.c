@@ -8,6 +8,10 @@
 /*
 ** create a mixer module which combines its inputs into an output
 ** no parameters.
+** if one channel produces a real constant, then this is simply
+** a gain block that scales by the real constant.
+** if one channel produces a complex constant, then this scales
+** and rotates.
 */
 typedef struct {
   SDRKIT_T_COMMON;
@@ -29,8 +33,8 @@ static int mixer_process(jack_nframes_t nframes, void *arg) {
     const _Complex float a = *in0++ + *in1++ * I;
     const _Complex float b = *in2++ + *in3++ * I;
     const _Complex float c = a * b;
-    *out0++ = creal(c);
-    *out1++ = cimag(c);
+    *out0++ = crealf(c);
+    *out1++ = cimagf(c);
   }
   return 0;
 }

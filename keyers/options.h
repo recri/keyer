@@ -109,7 +109,6 @@ static void options_handle_freq(options_t *kp, char *p) { options_handle_atof(kp
 static void options_handle_gain(options_t *kp, char *p) { options_handle_atof(kp, p, &kp->gain); }
 static void options_handle_rise(options_t *kp, char *p) { options_handle_atof(kp, p, &kp->rise); }
 static void options_handle_fall(options_t *kp, char *p) { options_handle_atof(kp, p, &kp->fall); }
-static void options_handle_ramp(options_t *kp, char *p) { options_handle_atof(kp, p, &kp->rise); }
 
 static void options_handle_word(options_t *kp, char *p) { options_handle_atof(kp, p, &kp->word); }
 static void options_handle_wpm(options_t *kp, char *p) { options_handle_atof(kp, p, &kp->wpm); }
@@ -208,6 +207,7 @@ static int options_usage(Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
 }
 
 static int options_parse_options(options_t *kp, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  options_t save = *kp;
   if (argc < 2)
     return options_usage(interp, argc, objv);
   // default server name from environment
@@ -222,21 +222,52 @@ static int options_parse_options(options_t *kp, Tcl_Interp *interp, int argc, Tc
   // process arguments
   for (int i = 2; i < argc; i += 2) {
     char *arg = Tcl_GetString(objv[i]);
-    if (arg[0] != '-' || objv[i+1] == NULL) 
-      return options_usage(interp, argc, objv);
-    option_table_t *op = options_find_option(arg+1);
-    if (op != NULL)
-      op->handler(kp, Tcl_GetString(objv[i+1]));
-    else
-      return options_usage(interp, argc, objv);
+    option_table_t *op;
+    if (arg[0] != '-' || (op = options_find_option(arg+1)) == NULL) {
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("unknown option: \"%s\"", arg));
+      *kp = save;
+      return TCL_ERROR;
+    }
+    if (objv[i+1] == NULL) {
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("missing option value for \"%s\"", arg));
+      *kp = save;
+      return TCL_ERROR;
+    } 
+    op->handler(kp, Tcl_GetString(objv[i+1]));
   }
   return TCL_OK;
+}
+
+static Tcl_Obj *options_get_tcl_value(options_t *kp, option_table_t *op) {
+  switch (op->type) {
+  case option_bool:
+  case option_int:
+    return Tcl_NewIntObj(*(int *)(((char *)kp)+op->offset));
+  case option_nframes_t:
+    return Tcl_NewIntObj(*(jack_nframes_t *)(((char *)kp)+op->offset));
+  case option_float:
+    return Tcl_NewDoubleObj(*(float *)(((char *)kp)+op->offset));
+  case option_char:
+    return Tcl_NewStringObj((char *)(((char *)kp)+op->offset), 1);
+  case option_string:
+    return Tcl_NewStringObj((char *)(((char *)kp)+op->offset), -1);
+  default:
+    return Tcl_ObjPrintf("unknown option type %d for \"-%s\"", op->type, op->name);
+  }
 }
 
 static int options_parse_config(options_t *kp, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc == 2) {
     // dump config
-    return TCL_ERROR;
+    Tcl_Obj *result = Tcl_NewObj();
+    for (int j = 0; j < sizeof(options_table)/sizeof(options_table[0]); j += 1) {
+      Tcl_Obj *item = Tcl_NewObj();
+      Tcl_ListObjAppendElement(interp, item, Tcl_ObjPrintf("%s", options_table[j].name));
+      Tcl_ListObjAppendElement(interp, item, options_get_tcl_value(kp, options_table+j));
+      Tcl_ListObjAppendElement(interp, result, item);
+    }
+    Tcl_SetObjResult(interp, result);
+    return TCL_OK;
   }
   // process arguments
   for (int i = 2; i < argc; i += 2) {
@@ -251,22 +282,22 @@ static int options_parse_config(options_t *kp, Tcl_Interp *interp, int argc, Tcl
   }
   return TCL_OK;
 }
+
 static int options_parse_cget(options_t *kp, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc == 2) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("wrong # args: should be \"%s cget option\"", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
   char *arg = Tcl_GetString(objv[2]);
-  option_table_t *op;
-  if (arg[0] != '-')
-    op = options_find_option(arg);
-  else
-    op = options_find_option(arg+1);
+  option_table_t *op = options_find_option(arg[0] != '-' ? arg : arg+1);
   if (op != NULL) {
-  } else {
+    Tcl_SetObjResult(interp, options_get_tcl_value(kp, op));
+    return TCL_OK;
   }
+  Tcl_SetObjResult(interp, Tcl_ObjPrintf("unknown option \"%s\"", arg));
   return TCL_ERROR;
 }
+
 static int options_parse_cdoc(options_t *kp, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc == 2) {
     Tcl_Obj *result = Tcl_NewObj();
@@ -285,10 +316,8 @@ static int options_parse_cdoc(options_t *kp, Tcl_Interp *interp, int argc, Tcl_O
   if (op != NULL) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("%s", op->usage));
     return TCL_OK;
-  } else {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("unknown option \"%s\"", arg));
-    return TCL_ERROR;
   }
+  Tcl_SetObjResult(interp, Tcl_ObjPrintf("unknown option \"%s\"", arg));
   return TCL_ERROR;
 }
 #endif

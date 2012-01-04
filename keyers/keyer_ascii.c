@@ -46,22 +46,33 @@ typedef struct {
   options_t sent;
   unsigned duration;
   char prosign[16], n_prosign, n_slash;
+  unsigned long frames;
   midi_buffer_t midi;
 } _t;
+
+static char *preface(_t *dp, const char *file, int line) {
+  static char buff[256];
+  sprintf(buff, "%s:%s:%d@%ld", dp->fw.opts.client, file, line, dp->frames);
+  return buff;
+}
+  
+#define PREFACE	preface(dp, __FILE__, __LINE__)
 
 static void _update(_t *dp) {
   if (dp->fw.opts.modified) {
     dp->fw.opts.modified = 0;
 
-    if (dp->fw.opts.verbose > 2)
-      fprintf(stderr, "recomputing data from options\n");
+    if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _update\n", PREFACE);
 
     /* update timing computations */
     keyer_timing_update(&dp->fw.opts, &dp->samples_per);
+    if (dp->fw.opts.verbose > 2) keyer_timing_report(stderr, &dp->fw.opts, &dp->samples_per);
 
     /* midi note on/off */
-    dp->note_on[0] = NOTE_ON|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
-    dp->note_off[0] = NOTE_OFF|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
+    dp->note_on[0] = NOTE_ON|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note; dp->note_on[2] = 0;
+    dp->note_off[0] = NOTE_OFF|(dp->fw.opts.chan-1); dp->note_off[1] = dp->fw.opts.note; dp->note_off[2] = 0;
+    if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s note_on = %x, %x, %x\n", PREFACE, dp->note_on[0], dp->note_on[1], dp->note_on[2]);
+    if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s note_off = %x, %x, %x\n", PREFACE, dp->note_off[0], dp->note_off[1], dp->note_off[2]);
 
     /* pass on parameters to tone keyer */
     char buffer[128];
@@ -75,6 +86,8 @@ static void _update(_t *dp) {
 static void _init(void *arg) {
   _t *dp = (_t *)arg;
   dp->duration = 0;
+  dp->n_prosign = 0;
+  dp->n_slash = 0;
   midi_init(&dp->midi);
 }
 
@@ -90,8 +103,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   for(int i = 0; i < nframes; i += 1) {
     while (i == dp->duration) {
       if (midi_readable(&dp->midi)) {
-	if (dp->fw.opts.verbose > 4)
-	  fprintf(stderr, "midi_readable, duration %u, count %u\n", midi_duration(&dp->midi), midi_count(&dp->midi));
+	if (dp->fw.opts.verbose > 4) fprintf(stderr, "%s midi_readable, duration %u, count %u\n", PREFACE, midi_duration(&dp->midi), midi_count(&dp->midi));
 	dp->duration += midi_duration(&dp->midi);
 	if (midi_count(&dp->midi) != 0) {
 	  unsigned count = midi_count(&dp->midi);
@@ -100,8 +112,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	    fprintf(stderr, "jack won't buffer %d midi bytes!\n", count);
 	  } else {
 	    midi_read_bytes(&dp->midi, count, buffer);
-	    if (dp->fw.opts.verbose > 4)
-	      fprintf(stderr, "sent %x [%x, %x, %x, ...]\n", count, buffer[0], buffer[1], buffer[2]);
+	    if (dp->fw.opts.verbose > 4) fprintf(stderr, "%s sent %x [%x, %x, %x, ...]\n", PREFACE, count, buffer[0], buffer[1], buffer[2]);
 	  }
 	}
 	midi_read_next(&dp->midi);
@@ -109,6 +120,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	dp->duration = nframes;
       }
     }
+    dp->frames += 1;
   }
   if (dp->duration >= nframes)
     dp->duration -= nframes;
@@ -233,17 +245,22 @@ static void _queue_midi(_t *dp, char c, char *p, int continues) {
   /* normal send single character */
   if (p == 0) {
     if (c == ' ')
+      if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi delay %d\n", PREFACE, dp->samples_per.iws-dp->samples_per.ils);
       midi_write(&dp->midi, dp->samples_per.iws-dp->samples_per.ils, 0, "");
   } else {
     while (*p != 0) {
       if (*p == '.') {
+	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi dit %d\n", PREFACE, dp->samples_per.dit);
 	midi_write(&dp->midi, dp->samples_per.dit, 3, dp->note_on);
       } else if (*p == '-') {
+	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi dah %d\n", PREFACE, dp->samples_per.dah);
 	midi_write(&dp->midi, dp->samples_per.dah, 3, dp->note_on);
       }
       if (p[1] != 0 || continues) {
+	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi ies %d)\n", PREFACE, dp->samples_per.ies);
 	midi_write(&dp->midi, dp->samples_per.ies, 3, dp->note_off);
       } else {
+	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi ils %d)\n", PREFACE, dp->samples_per.ils);
 	midi_write(&dp->midi, dp->samples_per.ils, 3, dp->note_off);
       }
       p += 1;
@@ -257,6 +274,9 @@ static void _queue_midi(_t *dp, char c, char *p, int continues) {
 */
 static void _queue_char(char c, void *arg) {
   _t *dp = (_t *)arg;
+  if (dp->fw.opts.verbose) fprintf(stderr, "%s _queue_char('%c')\n", PREFACE, c);
+  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s _queue_char n_slash %d, n_prosign %d\n", PREFACE, dp->n_slash, dp->n_prosign);
+  
   if (c == '\\') {
     /* use \ab to send prosign a concatenated to b with no interletter space */
     /* multiple slashes to get longer prosigns, so \\sos or \s\os */

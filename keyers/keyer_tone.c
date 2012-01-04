@@ -65,7 +65,6 @@
 ** with sine ramped attack and decay
 */
 
-#define CWTONE_NOT_INIT	-1	/* not initialized */
 #define CWTONE_OFF	0	/* note is not sounding */
 #define CWTONE_RISE	1	/* note is ramping up to full level */
 #define CWTONE_ON	2	/* note is sounding full level */
@@ -85,12 +84,14 @@ typedef struct {
   unsigned long frame;
 } _t;
 
-static void cwtone_set_gain(_t *dp, float gain) {
-  dp->cwtone.gain = pow(10.0, gain / 20.0);
-}
-  
 static void cwtone_update(_t *dp) {
   if (dp->fw.opts.modified) {
+    if (dp->fw.opts.verbose) fprintf(stderr, "%s:%s:%d cwtone_update\n", dp->fw.opts.client, __FILE__, __LINE__);
+    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update freq %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.freq);
+    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update gain %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.gain);
+    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update rise %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.rise);
+    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update fall %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.fall);
+    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update rate %d\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.sample_rate);
     dp->fw.opts.modified = 0;
     dp->cwtone.gain = pow(10.0, dp->fw.opts.gain / 20.0);
     osc_update(&dp->cwtone.tone, dp->fw.opts.freq, dp->fw.opts.sample_rate);
@@ -100,6 +101,12 @@ static void cwtone_update(_t *dp) {
 }
 
 static void cwtone_init(_t *dp) {
+  if (dp->fw.opts.verbose) fprintf(stderr, "%s:%s:%d cwtone_init\n", dp->fw.opts.client, __FILE__, __LINE__);
+  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init freq %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.freq);
+  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init gain %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.gain);
+  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init rise %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.rise);
+  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init fall %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.fall);
+  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init rate %d\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.sample_rate);
   dp->cwtone.state = CWTONE_OFF;
   dp->cwtone.gain = pow(10.0, dp->fw.opts.gain / 20.0);
   osc_init(&dp->cwtone.tone, dp->fw.opts.freq, dp->fw.opts.sample_rate);
@@ -147,7 +154,7 @@ static void cwtone_xy(_t *dp, float *x, float *y) {
 static void _decode(_t *dp, unsigned count, unsigned char *p) {
   /* decode note/channel based events */
   if (dp->fw.opts.verbose > 4)
-    fprintf(stderr, "%ld: _decode(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
+    fprintf(stderr, "%s:%s:%d @%ld _decode(%x, [%x, %x, %x, ...]\n", dp->fw.opts.client, __FILE__, __LINE__, dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     char channel = (p[0]&0xF)+1;
     char note = p[1];
@@ -162,7 +169,7 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
     if (p[1] == SYSEX_VENDOR) {
       options_parse_command(&dp->fw.opts, p+3);
       if (dp->fw.opts.verbose > 3)
-	fprintf(stderr, "sysex: %*s\n", count, p+2);
+	fprintf(stderr, "%s:%s:%d sysex: %*s\n", dp->fw.opts.client, __FILE__, __LINE__, count, p+2);
     }
   }
 }
@@ -170,7 +177,6 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 static void _init(void *arg) {
   _t *dp = (_t *) arg;
   cwtone_init(dp);
-  cwtone_update(dp);
 }
 
 static void _update(void *arg) {

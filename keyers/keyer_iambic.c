@@ -93,6 +93,14 @@ typedef struct {
   midi_buffer_t midi;
 } _t;
 
+static char *preface(_t *dp, const char *file, int line) {
+  static char buff[256];
+  sprintf(buff, "%s:%s:%d@%ld", dp->fw.opts.client, file, line, dp->frames);
+  return buff;
+				 }
+  
+#define PREFACE	preface(dp, __FILE__, __LINE__)
+
 // initialize the iambic keyer
 static void _init(void *arg) {
   _t *dp = (_t *)arg;
@@ -116,7 +124,7 @@ static void _update(_t *dp) {
 
     /* timer recomputation */
     keyer_timing_update(&dp->fw.opts, &dp->samples_per);
-    if (dp->fw.opts.verbose) keyer_timing_report(stderr, &dp->fw.opts, &dp->samples_per);
+    if (dp->fw.opts.verbose > 2) keyer_timing_report(stderr, &dp->fw.opts, &dp->samples_per);
 
     /* midi note on/off */
     dp->note_on[0] = NOTE_ON|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note;
@@ -285,14 +293,29 @@ static void _dah_key(_t *dp, int on) {
 
 static void _decode(_t *dp, int count, unsigned char *p) {
   if (count == 3) {
-    switch (p[0]&0xF0) {
-    case NOTE_OFF: if (p[1]&1) _dah_key(dp, 0); else _dit_key(dp, 0); break;
-    case NOTE_ON:  if (p[1]&1) _dah_key(dp, 1); else _dit_key(dp, 1); break;
+    unsigned char channel = (p[0]&0xF)+1;
+    unsigned char command = p[0]&0xF0;
+    unsigned char note = p[1];
+    if (channel != dp->fw.opts.chan) {
+      if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mychan=0x%x\n", PREFACE, channel, note, dp->fw.opts.chan, dp->fw.opts.note);
+    } else if (note == dp->fw.opts.note) {
+      if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
+      switch (command) {
+      case NOTE_OFF: _dit_key(dp, 0); break;
+      case NOTE_ON:  _dit_key(dp, 1); break;
+      }
+    } else if (note == dp->fw.opts.note+1) {
+      if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
+      switch (command) {
+      case NOTE_OFF:  _dah_key(dp, 0); break;
+      case NOTE_ON:   _dah_key(dp, 1); break;
+      }
+    } else {
+      if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mynote=0x%x\n", PREFACE, channel, note, dp->fw.opts.chan, dp->fw.opts.note);
     }
-  } else if (count > 3 && p[0] == SYSEX) {
-    if (p[1] == SYSEX_VENDOR) {
-      options_parse_command(&dp->fw.opts, p+3);
-    }
+  } else if (count > 3 && p[0] == SYSEX && p[1] == SYSEX_VENDOR) {
+    if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode([%x, %x, %x, ...])\n", PREFACE, p[0], p[1], p[2]);
+    options_parse_command(&dp->fw.opts, (char *)p+3);
   }
 }
 

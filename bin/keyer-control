@@ -5,9 +5,6 @@ lappend auto_path [file join [file dirname [info script]] .. lib]
 
 package require Tk
 
-#package require sdrkit
-#package require midiscope
-
 ##
 ## parameters and operating data
 ##

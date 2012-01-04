@@ -148,7 +148,7 @@ static void framework_main(void *arg, int argc, char **argv,
   kfp->n_outputs = n_outputs;
   kfp->n_midi_inputs = n_midi_inputs;
   kfp->n_midi_outputs = n_midi_outputs;
-  kfp->port = (jack_port_t **)malloc((n_inputs+n_outputs+n_midi_inputs+n_midi_outputs)*sizeof(jack_port_t *));
+  kfp->port = (jack_port_t **)calloc((n_inputs+n_outputs+n_midi_inputs+n_midi_outputs), sizeof(jack_port_t *));
   if (kfp->port == NULL) {
     fprintf(stderr, "memory allocation failure\n");
     exit(2);
@@ -302,10 +302,11 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
 			     void (*command_delete)(void *arg),
 			     char *commands) {
   if (argc < 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s name", Tcl_GetString(objv[0])));
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s name [-option value ...]", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
   framework_t *data = (framework_t *)Tcl_Alloc(data_size);
+  memset(data, 0, data_size);
   // fprintf(stderr, "framework_factory: data %p\n", data);  
   if (data == NULL) {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
@@ -331,6 +332,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   data->n_midi_inputs = n_midi_inputs;
   data->n_midi_outputs = n_midi_outputs;
   data->port = (jack_port_t **)Tcl_Alloc((n_inputs+n_outputs+n_midi_inputs+n_midi_outputs)*sizeof(jack_port_t *));
+  memset(data->port, 0, (n_inputs+n_outputs+n_midi_inputs+n_midi_outputs)*sizeof(jack_port_t *));
   data->command_delete = NULL;
   data->commands = commands;
   // fprintf(stderr, "framework_factory: port %p\n", data->port);  
@@ -373,6 +375,8 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
       snprintf(buf, 256, "midi_out");
     data->port[i+n_midi_inputs+n_inputs+n_outputs] = jack_port_register(client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
   }
+  // set the sample rate
+  options_set_sample_rate(&data->opts, jack_get_sample_rate(data->client));
   // initialize the object data
   init((void *)data);
   data->command_delete = command_delete;
