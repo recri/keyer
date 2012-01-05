@@ -16,8 +16,9 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#if 0
-  if (fabs(newfreq) >= 0.5 * uni->rate.sample)
-    return -1;
-  newfreq *= 2.0 * M_PI / uni->rate.sample;
+#ifndef SDRKIT_MATH_H
+#define SDRKIT_MATH_H
+
+static float sqr(float x) { return (x * x); }
+
 #endif
