@@ -22,7 +22,7 @@ static struct {
 };
 
 /* complex short float one dimensional transform */
-static int Tcl_fftw_create_plan_specific(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_create_plan_specific(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {int int int pointer-var int pointer-var int} pointer */
   int n, dir, flags, ilength, istride, olength, ostride;
   fftw_complex *in, *out;
@@ -43,11 +43,10 @@ static int Tcl_fftw_create_plan_specific(ClientData dummy, Tcl_Interp *interp, i
     return TCL_ERROR;
   }
   plan = fftw_create_plan_specific(n, (fftw_direction)dir, flags, (fftw_complex *)in, istride, (fftw_complex *)out, ostride);
-  Tcl_ResetResult(interp);
-  Tcl_SetIntObj(Tcl_GetObjResult(interp), (int)plan);
+  Tcl_SetObjResult(interp, Tcl_NewLongObj((long)plan));
   return TCL_OK;
 }  
-static int Tcl_fftw_create_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_create_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {int int int} pointer */
   int n, dir, flags;
   fftw_plan plan;
@@ -61,37 +60,36 @@ static int Tcl_fftw_create_plan(ClientData dummy, Tcl_Interp *interp, int objc, 
     return TCL_ERROR;
   }
   plan = fftw_create_plan(n, (fftw_direction)dir, flags);
-  Tcl_ResetResult(interp);
-  Tcl_SetIntObj(Tcl_GetObjResult(interp), (int)plan);
+  Tcl_SetObjResult(interp, Tcl_NewLongObj((long)plan));
   return TCL_OK;
 }
-static int Tcl_fftw_print_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_print_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {pointer} void */ 
   fftw_plan plan;
   if (objc != 2) {
     Tcl_WrongNumArgs(interp, 1, objv, "plan");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK) {
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK) {
     return TCL_ERROR;
   }
   fftw_print_plan(plan);
   return TCL_OK;
 }
-static int Tcl_fftw_destroy_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_destroy_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {pointer} void */
   fftw_plan plan;
   if (objc != 2) {
     Tcl_WrongNumArgs(interp, 1, objv, "plan");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK) {
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK) {
     return TCL_ERROR;
   }
   fftw_destroy_plan(plan);
   return TCL_OK;
 }
-static int Tcl_fftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {pointer int pointer-var int int pointer-var int int} void */
   fftw_plan plan;
   int howmany, ilength, istride, idist, olength, ostride, odist;
@@ -100,7 +98,7 @@ static int Tcl_fftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CON
     Tcl_WrongNumArgs(interp, 1, objv, "plan howmany float-in stride-in dist-in float-out stride-out dist-out");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK
       || Tcl_GetIntFromObj(interp, objv[2], &howmany) != TCL_OK
       || (in = (fftw_complex *)Tcl_GetByteArrayFromObj(objv[3], &ilength)) == NULL
       || Tcl_GetIntFromObj(interp, objv[4], &istride) != TCL_OK
@@ -115,7 +113,7 @@ static int Tcl_fftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CON
   fftw(plan, howmany, in, istride, idist, out, ostride, odist);
   return TCL_OK;
 }
-static int Tcl_fftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {pointer pointer-var pointer-var} void */
   fftw_plan plan;
   int ilength, olength;
@@ -124,7 +122,7 @@ static int Tcl_fftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj 
     Tcl_WrongNumArgs(interp, 1, objv, "plan float-in float-out");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK
       || (in = (fftw_complex *)Tcl_GetByteArrayFromObj(objv[2], &ilength)) == NULL
       || (out = (fftw_complex *)Tcl_GetByteArrayFromObj(objv[3], &olength)) == NULL
       || ilength != olength
@@ -136,7 +134,7 @@ static int Tcl_fftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj 
 }
 
 /* wisdom management */
-static int Tcl_fftw_forget_wisdom(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_forget_wisdom(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /*  {} void */
   if (objc != 1) {
     Tcl_WrongNumArgs(interp, 1, objv, "");
@@ -145,7 +143,7 @@ static int Tcl_fftw_forget_wisdom(ClientData dummy, Tcl_Interp *interp, int objc
   fftw_forget_wisdom();
   return TCL_OK;
 }
-static int Tcl_fftw_export_wisdom_to_string(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_export_wisdom_to_string(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {} pointer-utf8 */
   char *wisdom;
   if (objc != 1) {
@@ -158,7 +156,7 @@ static int Tcl_fftw_export_wisdom_to_string(ClientData dummy, Tcl_Interp *interp
   fftw_free(wisdom);
   return TCL_OK;
 }
-static int Tcl_fftw_import_wisdom_from_string(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _fftw_import_wisdom_from_string(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /*  {pointer-utf8} */
   if (objc != 2) {
     Tcl_WrongNumArgs(interp, 1, objv, "wisdom");
@@ -171,7 +169,7 @@ static int Tcl_fftw_import_wisdom_from_string(ClientData dummy, Tcl_Interp *inte
 }
 
 /* real short float one dimensional transform */
-static int Tcl_rfftw_create_plan_specific(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _rfftw_create_plan_specific(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {int int int pointer-var int pointer-var int} pointer */
   int n, dir, flags, ilength, istride, olength, ostride;
   fftw_real *in, *out;
@@ -192,11 +190,10 @@ static int Tcl_rfftw_create_plan_specific(ClientData dummy, Tcl_Interp *interp, 
     return TCL_ERROR;
   }
   plan = rfftw_create_plan_specific(n, (fftw_direction)dir, flags, (fftw_real *)in, istride, (fftw_real *)out, ostride);
-  Tcl_ResetResult(interp);
-  Tcl_SetIntObj(Tcl_GetObjResult(interp), (int)plan);
+  Tcl_SetObjResult(interp, Tcl_NewLongObj((long)plan));
   return TCL_OK;
 }
-static int Tcl_rfftw_create_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _rfftw_create_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /*  {int int int} pointer */
   int n, dir, flags;
   fftw_plan plan;
@@ -210,37 +207,36 @@ static int Tcl_rfftw_create_plan(ClientData dummy, Tcl_Interp *interp, int objc,
     return TCL_ERROR;
   }
   plan = rfftw_create_plan(n, (fftw_direction)dir, flags);
-  Tcl_ResetResult(interp);
-  Tcl_SetIntObj(Tcl_GetObjResult(interp), (int)plan);
+  Tcl_SetObjResult(interp, Tcl_NewLongObj((long)plan));
   return TCL_OK;
 }
-static int Tcl_rfftw_print_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _rfftw_print_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {pointer} void */
   fftw_plan plan;
   if (objc != 2) {
     Tcl_WrongNumArgs(interp, 1, objv, "plan");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK) {
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK) {
     return TCL_ERROR;
   }
   rfftw_print_plan(plan);
   return TCL_OK;
 }
-static int Tcl_rfftw_destroy_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _rfftw_destroy_plan(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {pointer} void */
   fftw_plan plan;
   if (objc != 2) {
     Tcl_WrongNumArgs(interp, 1, objv, "plan");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK) {
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK) {
     return TCL_ERROR;
   }
   rfftw_destroy_plan(plan);
   return TCL_OK;
 }
-static int Tcl_rfftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _rfftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /*  {pointer int pointer-var int int pointer-var int int} void */
   fftw_plan plan;
   int howmany, ilength, istride, idist, olength, ostride, odist;
@@ -249,7 +245,7 @@ static int Tcl_rfftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CO
     Tcl_WrongNumArgs(interp, 1, objv, "plan howmany float-in stride-in dist-in float-out stride-out dist-out");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK
       || Tcl_GetIntFromObj(interp, objv[2], &howmany) != TCL_OK
       || (in = (fftw_real *)Tcl_GetByteArrayFromObj(objv[3], &ilength)) == NULL
       || Tcl_GetIntFromObj(interp, objv[4], &istride) != TCL_OK
@@ -264,7 +260,7 @@ static int Tcl_rfftw(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CO
   rfftw(plan, howmany, in, istride, idist, out, ostride, odist);
   return TCL_OK;
 }
-static int Tcl_rfftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
+static int _rfftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   /* {pointer pointer-var pointer-var} void */
   fftw_plan plan;
   int ilength, olength;
@@ -273,7 +269,7 @@ static int Tcl_rfftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj
     Tcl_WrongNumArgs(interp, 1, objv, "plan float-in float-out");
     return TCL_ERROR;
   }
-  if (Tcl_GetIntFromObj(interp, objv[1], (int *)&plan) != TCL_OK) {
+  if (Tcl_GetLongFromObj(interp, objv[1], (long *)&plan) != TCL_OK) {
     Tcl_ResetResult(interp);
     Tcl_AppendResult(interp, "cannot parse plan", NULL);
     return TCL_ERROR;
@@ -304,28 +300,28 @@ static int Tcl_rfftw_one(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj
 
 int Sfftw_Init(Tcl_Interp *interp) {
 	
-    if (Tcl_PkgProvide(interp, "Sfftw", "1.0") == TCL_ERROR) {
+    if (Tcl_PkgProvide(interp, "sfftw", "1.0.0") == TCL_ERROR) {
         return TCL_ERROR;
     }
 
     /*
      * Create sfftw commands.
      */
-    Tcl_CreateObjCommand(interp, "fftw_create_plan_specific", Tcl_fftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw_create_plan", Tcl_fftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw_print_plan", Tcl_fftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw_destroy_plan", Tcl_fftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw", Tcl_fftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw_one", Tcl_fftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw_forget_wisdom", Tcl_fftw_forget_wisdom, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw_export_wisdom", Tcl_fftw_export_wisdom_to_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "fftw_import_wisdom", Tcl_fftw_import_wisdom_from_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "rfftw_create_plan_specific", Tcl_rfftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "rfftw_create_plan", Tcl_rfftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "rfftw_print_plan", Tcl_rfftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "rfftw_destroy_plan", Tcl_rfftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "rfftw", Tcl_rfftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "rfftw_one", Tcl_rfftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::create_plan_specific", _fftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::create_plan", _fftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::print_plan", _fftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::destroy_plan", _fftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::ft", _fftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::one", _fftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::forget_wisdom", _fftw_forget_wisdom, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::export_wisdom", _fftw_export_wisdom_to_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::import_wisdom", _fftw_import_wisdom_from_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::r_create_plan_specific", _rfftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::r_create_plan", _rfftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::r_print_plan", _rfftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::r_destroy_plan", _rfftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::r_ft", _rfftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::r_one", _rfftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
 
     return TCL_OK;
 }
