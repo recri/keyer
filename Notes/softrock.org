@@ -1,0 +1,9 @@
+* Reduce the gain on the softrock output amp
+  Using the sdr-widget with a softrock can be improved by reducing the
+  gain on the output op amps.
+  http://groups.google.com/group/sdr-widget/msg/c46b463dede0fd3b
+  Replacing 4k99 with 499 (or matched 470)
+  on the RX Ensemble II at R32 and R33.
+  on the RXTX Ensemble at R56 and R59.
+  In all cases, the feedback resistors from op amp output to inverting
+  input.

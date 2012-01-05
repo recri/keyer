@@ -50,6 +50,10 @@ static int sdrkit_sample_rate(void *_sdrkit) {
   return (int)jack_get_sample_rate(((sdrkit_t *)_sdrkit)->client);
 }
 
+static jack_nframes_t sdrkit_buffer_size(void *_sdrkit) {
+  return jack_get_buffer_size(((sdrkit_t *)_sdrkit)->client);
+}
+
 static char *sdrkit_client_name(void *_sdrkit) {
   return jack_get_client_name(((sdrkit_t *)_sdrkit)->client);
 }

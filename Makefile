@@ -1,16 +1,9 @@
+SUBDIRS=keyer sdrkit lib/keyer lib/sdrkit lib/keyer-ui lib/sdrkit-ui
 all::
-	cd keyer && $(MAKE) all
-	cd sdrkit && $(MAKE) all
-	cd lib/keyer && $(MAKE) all
-	cd lib/sdrkit && $(MAKE) all
-	cd lib/keyer-ui && $(MAKE) all
-	cd lib/sdrkit-ui && $(MAKE) all
+	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 
 clean::
-	cd keyers && $(MAKE) clean
-	cd sdrkit && $(MAKE) clean
-	cd lib/keyer && $(MAKE) clean
-	cd lib/sdrkit && $(MAKE) clean
-	cd lib/keyer-ui && $(MAKE) clean
-	cd lib/sdrkit-ui && $(MAKE) clean
+	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) clean); done
 
+all-clean::
+	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all-clean); done

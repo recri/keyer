@@ -59,6 +59,7 @@ proc keyer-control::panel-row {w client row opt label from to units} {
 # configure ascii keyer options
 #
 proc keyer-control::ascii-frame {w client row} {
+    global data
     foreach {opt label from to units} {
 	wpm {words / minute} 5.0 60.0 {}
 	word {word length} 40 70 dits
@@ -77,6 +78,7 @@ proc keyer-control::ascii-frame {w client row} {
 # configure iambic keyer options
 #
 proc keyer-control::iambic-frame {w client row} {
+    global data
     foreach {opt label from to units} {
 	wpm {words / minute} 5.0 60.0 {}
 	word {word length} 40 70 dits
@@ -99,6 +101,7 @@ proc keyer-control::iambic-frame {w client row} {
 # configure tone options
 #
 proc keyer-control::tone-frame {w client row} {
+    global data
     foreach {opt label from to units} {
 	freq {tone frequency} 300.0 1000.0 Hz
 	gain {tone volume} -40.0 0.0 dB
@@ -115,6 +118,7 @@ proc keyer-control::tone-frame {w client row} {
 # configure MIDI options
 #
 proc keyer-control::midi-frame {w client row} {
+    global data
     foreach {opt label from to units} {
 	chan {midi channel} 1 16 {}
 	note {midi note} 0 127 {}
@@ -131,6 +135,7 @@ proc keyer-control::midi-frame {w client row} {
 proc keyer-control::panel {w ascii ascii_tone iambic iambic_tone opts} {
     global data
     array set data $opts
+    puts "initialized data with $opts"
 
     ttk::frame $w
     set row 0

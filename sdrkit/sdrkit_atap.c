@@ -8,81 +8,71 @@
 /*
 ** Create a tap to buffer samples for processing in the background.
 **
-** The original solution simply buffered samples into a Tcl binary,
-** and then returned the binary and a pointer to the current write
-** position on demand.
+** Background thinking has come to the conclusion that we allocate a
+** humongous buffer and circularly stream samples into it.  Tcl gets
+** the largest contiguous chunk available along with the frame time for
+** the start of the chunk.
 **
-** But the Tcl side is going to run slower than the sample side, and
-** to keep its buffer of samples stable it would need to immediately
-** copy them out to a new binary before the sample side overwrote them,
-** and that's a costly operation in Tcl.
+** The buffer is ATAP_N_SECONDS * sample_rate * 2 floats, rounded up
+** to a buffer size.
 **
-** So plan B became to maintain a circular buffer of samples
-** and fill a Tcl binary with the most recent buffer size on demand.
-**
-** And plan C became to double buffer.  The Tcl side can supply two buffers, the
-** sample side will fill one buffer circularly until the tap contents
-** are requested, then switch to the other buffer.
-**
-** Separate streams or interleaved samples?  It's easier if we interleave.
+** And they're not interleaved by sample, they're interleaved by jack
+** buffer size.  You get nframes of I followed by nframes of Q, because
+** that's what the tap delivers fastest.
 */
+
+#ifndef ATAP_N_SECONDS
+#define ATAP_N_SECONDS 2 
+#endif
 
 typedef struct {
   SDRKIT_T_COMMON;
-  Tcl_Obj *p_buff, *p_bytes;
-  int p_ptr;
+  jack_nframes_t wframe;
+  jack_nframes_t rframe;
+  size_t wptr;
+  size_t rptr;
+  size_t size;
+  float *buffer;
 } atap_t;
 
 static void atap_init(void *arg) {
   atap_t *data = (atap_t *)arg;
-  data->p_ptr = 0;
-  Tcl_Obj *bytes = Tcl_NewByteArrayObj("", 0);
-  Tcl_IncrRefCount(bytes);
-  Tcl_SetByteArrayLength(bytes, 16*1024*2*sizeof(float)); 
-  data->p_bytes = bytes;
-  Tcl_Obj *buff = Tcl_NewByteArrayObj("", 0);
-  Tcl_IncrRefCount(buff);
-  Tcl_SetByteArrayLength(buff, 32*1024*2*sizeof(float));
-  data->p_buff = buff;
+  data->wframe = 0;
+  data->rframe = 0;
+  data->wptr = 0;
+  data->rptr = 0;
+  unsigned n_buffers = (ATAP_N_SECONDS * sdrkit_sample_rate(arg) + sdrkit_buffer_size(arg)) / sdrkit_buffer_size(arg);
+  data->size = n_buffers*sdrkit_buffer_size(arg)*2*sizeof(float);
+  if (data->size == 0 || (data->size & (data->size-1)) != 0)
+    fprintf(stderr, "%s:%d: buffer size computation yielded 0x%lx\n", __FILE__, __LINE__, data->size);
+  data->buffer = (float *)Tcl_Alloc(data->size);
+  if (data->buffer == NULL)
+    fprintf(stderr, "%s:%d: allocation of %ld bytes failed\n", __FILE__, __LINE__, data->size);
 }
 
 static void atap_delete(void *arg) {
   atap_t *data = (atap_t *)arg;
-  Tcl_Obj *buff = data->p_buff;
-  data->p_buff = NULL;
-  Tcl_DecrRefCount(buff);
-  Tcl_Obj *bytes = data->p_bytes;
-  data->p_bytes = NULL;
-  Tcl_DecrRefCount(bytes);
+  void *buffer = (void *)data->buffer;
+  data->buffer = NULL;
+  Tcl_Free(buffer);
 }
 
 static int atap_process(jack_nframes_t nframes, void *arg) {
   atap_t *data = (atap_t *)arg;
-  if (data->p_buff != NULL) {
-    int length;
-    float *buff = (float *)Tcl_GetByteArrayFromObj(data->p_buff, &length);
-    float *in0 = jack_port_get_buffer(data->port[0], nframes);
-    float *in1 = jack_port_get_buffer(data->port[1], nframes);
-    length /= sizeof(float);
-    if (in0 && in1) {
-      for (int i = nframes; --i >= 0; ) {
-	buff[data->p_ptr++] = *in0++;
-	buff[data->p_ptr++] = *in1++;
-	data->p_ptr &= length - 1;
-      }
-    } else if (in0) {
-      for (int i = nframes; --i >= 0; ) {
-	buff[data->p_ptr++] = *in0++;
-	buff[data->p_ptr++] = 0;
-	data->p_ptr &= length - 1;
-      }
-    } else if (in1) {
-      for (int i = nframes; --i >= 0; ) {
-	buff[data->p_ptr++] = 0;
-	buff[data->p_ptr++] = *in1++;
-	data->p_ptr &= length - 1;
-      }
-    }
+  data->wframe = sdrkit_last_frame_time(arg);
+  float *in0 = jack_port_get_buffer(data->port[0], nframes);
+  if (in0) memcpy(data->buffer+data->wptr, in0, nframes*sizeof(float));
+  else memset(data->buffer+data->wptr, 0, nframes*sizeof(float));
+  data->wptr += nframes;
+  data->wptr &= data->size-1;
+  float *in1 = jack_port_get_buffer(data->port[1], nframes);
+  if (in1) memcpy(data->buffer+data->wptr, in1, nframes*sizeof(float));
+  else memset(data->buffer+data->wptr, 0, nframes*sizeof(float));
+  data->wptr += nframes;
+  data->wptr &= data->size-1;
+  if (data->rptr == data->wptr) {
+    data->rptr += 2*nframes;
+    data->rptr &= data->size-1;
   }
   return 0;
 }
@@ -91,50 +81,20 @@ static int atap_command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl
   atap_t *data = (atap_t *)clientData;
   if (argc == 1) {
     // return tap buffer
-    int buff_length, bytes_length;
-    float *buff = (float *)Tcl_GetByteArrayFromObj(data->p_buff, &buff_length);
-    float *bytes = (float *)Tcl_GetByteArrayFromObj(data->p_bytes, &bytes_length);
-    buff_length /= sizeof(float);
-    bytes_length /= sizeof(float);
-    int read_ptr = data->p_ptr - bytes_length;
-    if (read_ptr >= 0) {
-      memcpy(bytes, buff+read_ptr, bytes_length * sizeof(float));
-    } else {
-      int length1;
-      read_ptr &= buff_length-1;
-      length1 = buff_length-read_ptr;
-      memcpy(bytes, buff+read_ptr, length1*sizeof(float));
-      memcpy(bytes+length1, buff, (bytes_length-length1)*sizeof(float));
-    }
-    Tcl_SetObjResult(interp, data->p_bytes);
+    unsigned char *p = (unsigned char *)(data->buffer+data->rptr);
+    size_t n = ((data->rptr < data->wptr) ? data->wptr : data->size) - data->rptr;
+    Tcl_Obj *result[] = {
+      Tcl_NewIntObj(data->rframe), 
+      Tcl_NewByteArrayObj(p, n*sizeof(float)),
+      NULL
+    };
+    data->rptr += n;
+    data->rptr &= data->size-1;
+    data->rframe += n/2;
+    Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
     return TCL_OK;
   }
-  if (argc >= 3 && strcmp(Tcl_GetString(objv[1]), "-b") == 0) {
-    // resize tap buffer
-    Tcl_Obj *new_bytes = objv[2];
-    int new_bytes_length;
-    Tcl_GetByteArrayFromObj(new_bytes, &new_bytes_length);
-    if ((new_bytes_length % 2*sizeof(float)) != 0) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("new buffer length %d is not a multiple of %d", new_bytes_length, (int)(2*sizeof(float))));
-      return TCL_ERROR;
-    }
-    if ((new_bytes_length & (new_bytes_length-1)) != 0) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("new buffer length %d is not a power of 2", new_bytes_length));
-      return TCL_ERROR;
-    }
-    // disable buffering for a moment
-    Tcl_Obj *buff = data->p_buff;
-    data->p_buff = NULL;
-    Tcl_SetByteArrayLength(buff, 2*new_bytes_length);
-    Tcl_DecrRefCount(data->p_bytes);
-    Tcl_IncrRefCount(new_bytes);
-    data->p_bytes = new_bytes;
-    data->p_ptr = 0;
-    // reenable buffering
-    data->p_buff = buff;
-    return TCL_OK;
-  }
-  Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s [-b binary]", Tcl_GetString(objv[0])));
+  Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s", Tcl_GetString(objv[0])));
   return TCL_ERROR;
 }
 

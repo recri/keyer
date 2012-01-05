@@ -13,11 +13,13 @@ package require keyer-control
 #
 
 array set opts {
-    ascii 0
+    ascii 1
     iambic 1
 
-    keyer-channel 1
-    keyer-note 0
+    iambic-chan 1
+    iambic-note 0
+    ascii-chan 1
+    ascii-note 0
 
     ascii_tone-freq 700
     ascii_tone-gain -30
@@ -53,8 +55,8 @@ array set opts {
 #
 proc client-opts {client} {
     global opts
-    foreach name [array names data $client-*] {
-	set val $data($name)
+    foreach name [array names opts $client-*] {
+	set val $opts($name)
 	set name [string range $name [expr {1+[string length $client]}] end]
 	lappend args "-$name" $val
     }
@@ -92,7 +94,7 @@ proc client-init {} {
     set clients {}
     set connects {}
     # make the ascii keyer
-    if {$data(ascii)} {
+    if {$opts(ascii)} {
         keyer::ascii ascii {*}[client-opts ascii]
 	lappend clients ascii
 	keyer::tone ascii_tone {*}[client-opts ascii_tone]
@@ -104,7 +106,7 @@ proc client-init {} {
 	lappend clients {} {}
     }
     # make the iambic keyer
-    if {$data(iambic)} {
+    if {$opts(iambic)} {
 	if { ! [info exists midi_capture]} {
 	    error "no midi_capture port for keyer connection"
 	}
