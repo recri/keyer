@@ -37,6 +37,7 @@
 */
 
 #define OPTIONS_TONE 1
+#define OPTIONS_TIMING 1
 
 #include "framework.h"
 #include "options.h"

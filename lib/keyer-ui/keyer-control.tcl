@@ -135,7 +135,7 @@ proc keyer-control::midi-frame {w client row} {
 proc keyer-control::panel {w ascii ascii_tone iambic iambic_tone opts} {
     global data
     array set data $opts
-    puts "initialized data with $opts"
+    # puts "initialized data with $opts"
 
     ttk::frame $w
     set row 0

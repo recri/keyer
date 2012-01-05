@@ -20,6 +20,8 @@
     
 */
 
+#define OPTIONS_TIMING	1
+
 #include "framework.h"
 #include "options.h"
 #include "midi.h"
@@ -146,6 +148,7 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
       options_parse_command(&dp->fw.opts, p+3);
       if (dp->fw.opts.verbose > 3)
 	fprintf(stderr, "sysex: %*s\n", count, p+2);
+      dp->decode.estimate = (dp->fw.opts.sample_rate * 60) / (dp->fw.opts.wpm * dp->fw.opts.word);
     }
   }
 }

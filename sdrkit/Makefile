@@ -5,9 +5,11 @@ LIBS=-ltclstub8.5
 JACK_CFLAGS=$(shell pkg-config --cflags jack)
 ALSA_CFLAGS=$(shell pkg-config --cflags alsa)
 LIBUSB_CFLAGS=$(shell pkg-config --cflags libusb-1.0)
+FFTW3_CFLAGS=$(shell pkg-config --cflags fftw3f)
 JACK_LIBS=$(shell pkg-config --libs jack)
 ALSA_LIBS=$(shell pkg-config --libs alsa)
 LIBUSB_LIBS=$(shell pkg-config --libs libusb-1.0)
+FFTW3_LIBS=$(shell pkg-config --libs fftw3f)
 
 LIBDIR=../lib/sdrkit
 
@@ -20,7 +22,8 @@ ALL=$(LIBDIR)/sdrkit_agc.so \
 	$(LIBDIR)/sdrkit_jack.so \
 	$(LIBDIR)/sdrkit_mixer.so \
 	$(LIBDIR)/sdrkit_mtap.so \
-	$(LIBDIR)/sdrkit_oscillator.so
+	$(LIBDIR)/sdrkit_oscillator.so \
+	$(LIBDIR)/sdrkit_spectrum.so
 
 all:: $(ALL)
 	cd $(LIBDIR) && make all
@@ -70,4 +73,8 @@ $(LIBDIR)/sdrkit_mtap.so: sdrkit_mtap.c sdrkit.h
 $(LIBDIR)/sdrkit_oscillator.so: sdrkit_oscillator.c sdrkit.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/sdrkit_spectrum.so: sdrkit_spectrum.c sdrkit.h sdrkit_window.h
+	mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(LIBS)
 

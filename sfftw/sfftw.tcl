@@ -1,15 +1,6 @@
 package provide sfftw 1.0
-package require Sfftw
-if {0} {
-    package require Ffidl 0.5
-}
 
 namespace eval ::sfftw:: {
-    # library pointers for linux
-    set dir /usr/local/lib
-    set lib1 [file join $dir libsfftw.so]
-    set lib2 [file join $dir libsrfftw.so]
-
     # flags for direction
     set FFTW_FORWARD -1
     set FFTW_BACKWARD 1
@@ -24,19 +15,14 @@ namespace eval ::sfftw:: {
 				        # same plan can be used in parallel by
 				        # multiple threads
 
-    if {0} {
-	# complex short float one dimensional transform
-	::ffidl::callout ::sfftw::fftw_create_plan_specific {int int int pointer-var int pointer-var int} pointer \
-	    [::ffidl::symbol $lib1 fftw_create_plan_specific]
-	::ffidl::callout ::sfftw::fftw_create_plan {int int int} pointer \
-	    [::ffidl::symbol $lib1 fftw_create_plan]
-	::ffidl::callout ::sfftw::fftw_print_plan {pointer} void \
-	    [::ffidl::symbol $lib1 fftw_print_plan]
-	::ffidl::callout ::sfftw::fftw_destroy_plan {pointer} void \
-	    [::ffidl::symbol $lib1 fftw_destroy_plan]
-	::ffidl::callout ::sfftw::fftw {pointer int pointer-var int int pointer-var int int} void \
-	    [::ffidl::symbol $lib1 fftw]
-	::ffidl::callout ::sfftw::fftw_one {pointer pointer-var pointer-var} void \
+    # 
+    # complex short float one dimensional transform
+    # ::sfftw::create_plan_specific {int int int pointer-var int pointer-var int} pointer 
+    # ::sfftw::create_plan {int int int} pointer 
+    # ::sfftw::print_plan {pointer} void 
+    # ::sfftw::destroy_plan {pointer} void
+    # ::sfftw::fftw {pointer int pointer-var int int pointer-var int int} void
+    # ::ffidl::callout ::sfftw::fftw_one {pointer pointer-var pointer-var} void \
 	    [::ffidl::symbol $lib1 fftw_one]
 	
 	# wisdom management

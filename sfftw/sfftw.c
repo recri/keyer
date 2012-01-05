@@ -19,7 +19,7 @@ static struct {
   "FFTW_THREADSAFE", 128		 /* guarantee plan is read-only so that the */
 					 /* same plan can be used in parallel by */
 					 /* multiple threads */
-};
+n};
 
 /* complex short float one dimensional transform */
 static int _fftw_create_plan_specific(ClientData dummy, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
@@ -307,21 +307,21 @@ int Sfftw_Init(Tcl_Interp *interp) {
     /*
      * Create sfftw commands.
      */
-    Tcl_CreateObjCommand(interp, "sfftw::create_plan_specific", _fftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::create_plan", _fftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::print_plan", _fftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::destroy_plan", _fftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::ft", _fftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::one", _fftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::forget_wisdom", _fftw_forget_wisdom, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::export_wisdom", _fftw_export_wisdom_to_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::import_wisdom", _fftw_import_wisdom_from_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::r_create_plan_specific", _rfftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::r_create_plan", _rfftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::r_print_plan", _rfftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::r_destroy_plan", _rfftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::r_ft", _rfftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
-    Tcl_CreateObjCommand(interp, "sfftw::r_one", _rfftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_create_plan_specific", _fftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_create_plan", _fftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_print_plan", _fftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_destroy_plan", _fftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw", _fftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_one", _fftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_forget_wisdom", _fftw_forget_wisdom, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_export_wisdom", _fftw_export_wisdom_to_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::fftw_import_wisdom", _fftw_import_wisdom_from_string, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::rfftw_create_plan_specific", _rfftw_create_plan_specific, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::rfftw_create_plan", _rfftw_create_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::rfftw_print_plan", _rfftw_print_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::rfftw_destroy_plan", _rfftw_destroy_plan, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::rfftw", _rfftw, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
+    Tcl_CreateObjCommand(interp, "sfftw::rfftw_one", _rfftw_one, (ClientData) 0, (Tcl_CmdDeleteProc *) NULL);
 
     return TCL_OK;
 }

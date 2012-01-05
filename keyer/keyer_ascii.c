@@ -80,6 +80,9 @@ static void _update(_t *dp) {
     if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_sysex_write(&dp->midi, buffer); }
     if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_sysex_write(&dp->midi, buffer); }
     if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_sysex_write(&dp->midi, buffer); }
+    /* or to decoder */
+    if (dp->sent.word != dp->fw.opts.word) { sprintf(buffer, "<word%.1f>", dp->sent.word = dp->fw.opts.word); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.wpm != dp->fw.opts.wpm) { sprintf(buffer, "<wpm%.1f>", dp->sent.wpm = dp->fw.opts.wpm); midi_sysex_write(&dp->midi, buffer); }
   }
 }
 
@@ -304,6 +307,7 @@ int main(int argc, char **argv) {
 
 #if AS_TCL
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *data = (_t *)clientData;
   if (argc > 1 && strcmp(Tcl_GetString(objv[1]),"puts") == 0) {
     // put the argument strings separated by spaces
     for (int i = 2; i < argc; i += 1) {
@@ -312,6 +316,14 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       if (i != argc-1)
 	_queue_char(' ', clientData);
     }
+    return TCL_OK;
+  }
+  if (argc == 2 && strcmp(Tcl_GetString(objv[1]), "pending") == 0) {
+    Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_n_readable(&data->midi)));
+    return TCL_OK;
+  }
+  if (argc == 2 && strcmp(Tcl_GetString(objv[1]), "available") == 0) {
+    Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_n_writeable(&data->midi)));
     return TCL_OK;
   }
   if (framework_command(clientData, interp, argc, objv) != TCL_OK)

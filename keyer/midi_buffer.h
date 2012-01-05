@@ -68,12 +68,20 @@ static unsigned midi_byte_index(unsigned ptr) {
 ** midi read side
 ** this part is called from the jack process callback
 */
+static int midi_n_readable(midi_buffer_t *bp) {
+  return buffer_items_available_to_read(bp->midi_write_ptr, bp->midi_read_ptr, MIDI_EVENTS);
+}
+
 static int midi_readable(midi_buffer_t *bp) {
   return buffer_readable(bp->midi_write_ptr, bp->midi_read_ptr, MIDI_EVENTS);
 }
 
+static int midi_n_bytes_readable(midi_buffer_t *bp) {
+  return buffer_items_available_to_read(bp->midi_byte_write_ptr, bp->midi_byte_read_ptr, MIDI_BYTES);
+}
+
 static int midi_bytes_readable(midi_buffer_t *bp, int count) {
-  return buffer_items_available_to_read(bp->midi_byte_write_ptr, bp->midi_byte_read_ptr, MIDI_BYTES) >= count;
+  return midi_n_bytes_readable(bp) >= count;
 }
 
 static unsigned midi_duration(midi_buffer_t *bp) {
@@ -101,12 +109,20 @@ static void midi_read_next(midi_buffer_t *bp) {
 ** midi write side
 ** this part is called from outside the jack process callback
 */
+static int midi_n_writeable(midi_buffer_t *bp) {
+  return buffer_items_available_to_write(bp->midi_write_ptr, bp->midi_read_ptr, MIDI_EVENTS);
+}
+
 static int midi_writeable(midi_buffer_t *bp) {
   return buffer_writeable(bp->midi_write_ptr, bp->midi_read_ptr, MIDI_EVENTS);
 }
 
+static int midi_n_bytes_writeable(midi_buffer_t *bp) {
+  return buffer_items_available_to_write(bp->midi_byte_write_ptr, bp->midi_byte_read_ptr, MIDI_BYTES);
+}
+
 static int midi_bytes_writeable(midi_buffer_t *bp, unsigned count) {
-  return buffer_items_available_to_write(bp->midi_byte_write_ptr, bp->midi_byte_read_ptr, MIDI_BYTES) >= count;
+  return midi_n_bytes_writeable(bp) >= count;
 }
 
 static unsigned midi_write_bytes(midi_buffer_t *bp, short count, unsigned char *bytes) {
