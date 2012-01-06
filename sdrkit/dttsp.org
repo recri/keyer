@@ -73,3 +73,45 @@
 * do_rx_spectrum
 ** if SPEC_POST_DET: accumulate complex(real*sqrt(2), 0)
 ** else accumulate samples
+* dttsp spectrum computation
+ reassembling dttsp spectrum computation
+
+ spectrum.h -
+	constant definitions
+	SpecBlock data structure
+ spectrum.c -
+	snap_spectrum - fill timebuf from accumulator and window
+	snap_scope - steal samples from accumulator for scope
+	compute_spectrum - compute spectrum from timebuf
+	    convert result to Cmag() or Log10P(Csqrmag())
+	    reorder result
+	init_spectrum - initialize
+	reinit_spectrum - reinitialize
+	finish_spectrum
+	NB - nothing that puts data into the accumulator
+ sdr.c -
+	do_rx_spectrum - copy samples into accumulator
+	    SPEC_POST_DET uses sqrt(2)*real, 0
+	    otherwise complex sample
+ update.c -
+	reqSpectrum - snap_spectrum
+	setSpectrumPolyphase -
+	    if polyphase newFIR_Lowpass_REAL.coeffs -> spec.window
+	    else makewindow
+	setSpectrumWindow - if ! polyphase makewindow
+	setSpectrumType type scale rxk
+      getSpectrumInfo
+ sdr-main.c -
+      spectrum_thread -
+	    compute_spectrum or copy spec.oscope
+
+ Basically:
+	continuously feed samples into the accumulator
+	on snap_spectrum set up the input
+	  either a simple windowed buffer full
+	  or a fancy polyphase low pass window
+	     over the past 8 buffers
+      on compute_spectrum do the fft and reformat
+	  the output
+
+	the parameters are the size, and the window/polyphase setup

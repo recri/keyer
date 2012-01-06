@@ -16,9 +16,38 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
+/*
+** these functions are stolen from dttsp/banal.h
+**
+** AVOIDDENORMALS comes from http://faust.grame.fr/
+*/
 #ifndef SDRKIT_MATH_H
 #define SDRKIT_MATH_H
 
-static float sqr(float x) { return (x * x); }
+#include <math.h>
+
+#define MONDO 1e16
+#define BITSY 1e-16
+#define KINDA 2.56e2
+
+static float sqrf(float x) { return (x * x); }
+static float Log10(float x) { return log10(x + BITSY); }
+static float Log10P(float x) { return +10.0 * log10(x + BITSY); }
+static float Log10Q(float x) { return -10.0 * log10(x + BITSY); }
+static float dBP(float x) { return 20.0 * log10(x + BITSY); }
+static float DamPlus(float x0, float x1) { return 0.9995 * x0 + 0.0005 * x1; }
+
+// On Intel set FZ (Flush to Zero) and DAZ (Denormals Are Zero)
+// flags to avoid costly denormals
+#ifdef __SSE__
+    #include <xmmintrin.h>
+    #ifdef __SSE2__
+        #define AVOIDDENORMALS _mm_setcsr(_mm_getcsr() | 0x8040)
+    #else
+        #define AVOIDDENORMALS _mm_setcsr(_mm_getcsr() | 0x8000)
+    #endif
+#else
+    #define AVOIDDENORMALS 
+#endif
 
 #endif

@@ -85,6 +85,9 @@ extern "C" {
       if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_sysex_write(&dp->midi, buffer); }
       if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_sysex_write(&dp->midi, buffer); }
       if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_sysex_write(&dp->midi, buffer); }
+      /* or to decoder */
+      if (dp->sent.word != dp->fw.opts.word) { sprintf(buffer, "<word%.1f>", dp->sent.word = dp->fw.opts.word); midi_sysex_write(&dp->midi, buffer); }
+      if (dp->sent.wpm != dp->fw.opts.wpm) { sprintf(buffer, "<wpm%.1f>", dp->sent.wpm = dp->fw.opts.wpm); midi_sysex_write(&dp->midi, buffer); }
     }
   }
 

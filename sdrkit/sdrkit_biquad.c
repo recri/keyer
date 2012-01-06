@@ -29,22 +29,23 @@
 typedef struct {
   float a1, a2, b0, b1, b2;
   float w11, w12, w21, w22;
-} biquad_params_t;
+} _params_t;
 
 typedef struct {
   SDRKIT_T_COMMON;
-  biquad_params_t *current, p[2];
-} biquad_t;
+  _params_t *current, p[2];
+} _t;
 
-static void biquad_init(void *arg) {
-  biquad_t *data = (biquad_t *)arg;
+static void *_init(void *arg) {
+  _t *data = (_t *)arg;
   data->current = data->p+0;
   data->current->w11 = data->current->w12 = data->current->w21 = data->current->w22 = 0.0;
+  return arg;
 }
 
-static int biquad_process(jack_nframes_t nframes, void *arg) {
-  biquad_t *data = (biquad_t *)arg;
-  biquad_params_t *p = data->current;
+static int _process(jack_nframes_t nframes, void *arg) {
+  _t *data = (_t *)arg;
+  _params_t *p = data->current;
   float *in0 = jack_port_get_buffer(data->port[0], nframes);
   float *in1 = jack_port_get_buffer(data->port[1], nframes);
   float *out0 = jack_port_get_buffer(data->port[2], nframes);
@@ -66,10 +67,10 @@ static int biquad_process(jack_nframes_t nframes, void *arg) {
   }
 }
 
-static int biquad_command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  biquad_t *data = (biquad_t *)clientData;
-  biquad_params_t *current = data->current;
-  biquad_params_t *next = current == data->p ? data->p+1 : data->p+0;
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *data = (_t *)clientData;
+  _params_t *current = data->current;
+  _params_t *next = current == data->p ? data->p+1 : data->p+0;
   if (argc == 1)
     return sdrkit_return_values(interp, Tcl_ObjPrintf("-a1 %f -a2 %f -b0 %f -b1 %f -b2 %f",
 						   current->a1, current->a2, current->b0, current->b1, current->b2));
@@ -104,11 +105,11 @@ static int biquad_command(ClientData clientData, Tcl_Interp *interp, int argc, T
   return TCL_ERROR;
 }
 
-static int biquad_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 2, 2, 0, 0, biquad_command, biquad_process, sizeof(biquad_t), biquad_init, NULL);
+static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return sdrkit_factory(clientData, interp, argc, objv, 2, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
 }
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_biquad_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::biquad", biquad_factory);
+  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::biquad", _factory);
 }

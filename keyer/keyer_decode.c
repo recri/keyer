@@ -20,6 +20,11 @@
   keyer_decode reads midi note on and note off, infers a dit clock,
   and produces a string of dits, dahs, and spaces.
     
+  It currently gets confused if it starts on something that's all
+  dah's and spaces, so I'm cheating and sending the wpm from the
+  keyers.  It should wait until it's seen both dits and dahs before
+  making its first guesses.
+
 */
 
 #define OPTIONS_TIMING	1
@@ -75,7 +80,7 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
       case NOTE_OFF: /* the end of a dit or a dah */
 	{
 	  int o_dit = observation;			/* if it's a dit, then the length is the dit clock observation */
-	  int o_dah = observation / 3;		/* if it's a dah, then the length/3 is the dit clock observation */
+	  int o_dah = observation / 3;			/* if it's a dah, then the length/3 is the dit clock observation */
 	  int d_dit = o_dit - dp->decode.estimate;	/* the dit distance from the current estimate */
 	  int d_dah = o_dah - dp->decode.estimate;	/* the dah distance from the current estimate */
 	  int guess = 100 * observation / dp->decode.estimate;
@@ -89,11 +94,11 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 	     */
 	    float w_dit = 1.0 * dp->decode.n_dit / (d_dit*d_dit); /* raw weight of dit observation */
 	    float w_dah = 1.0 * dp->decode.n_dah / (d_dah*d_dah); /* raw weight of dah observation */
-	    float wt = w_dit + w_dah;			      /* weight normalization */
+	    float wt = w_dit + w_dah;				  /* weight normalization */
 	    int update = (o_dit * w_dit + o_dah * w_dah) / wt;
 	    dp->decode.estimate += update;
 	    dp->decode.estimate /= 2;
-	    guess = 100*observation / dp->decode.estimate;	      /* revise our guess */
+	    guess = 100*observation / dp->decode.estimate;	  /* revise our guess */
 	  }
 	  if (guess < 200) {
 	    out = "."; dp->decode.n_dit += 1;

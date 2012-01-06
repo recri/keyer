@@ -32,10 +32,11 @@ typedef struct {
   char started;
 } _t;
 
-static void _init(void *arg) {
+static void *_init(void *arg) {
   _t *data = (_t *)arg;
   midi_queue_init(&data->mq);
   data->started = 0;
+  return arg;
 }
 
 static void _delete(void *arg) {

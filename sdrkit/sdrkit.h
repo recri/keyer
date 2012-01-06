@@ -37,19 +37,7 @@
 #include <tcl.h>
 #include <jack/jack.h>
 
-// On Intel set FZ (Flush to Zero) and DAZ (Denormals Are Zero)
-// flags to avoid costly denormals
-#ifdef __SSE__
-    #include <xmmintrin.h>
-    #ifdef __SSE2__
-        #define AVOIDDENORMALS _mm_setcsr(_mm_getcsr() | 0x8040)
-    #else
-        #define AVOIDDENORMALS _mm_setcsr(_mm_getcsr() | 0x8000)
-    #endif
-#else
-    #define AVOIDDENORMALS 
-#endif
-
+/* this should be better encapsulated against conflict with client definitions */
 #define SDRKIT_T_COMMON				\
   jack_client_t *client;			\
   char n_inputs;				\
@@ -191,7 +179,7 @@ static int sdrkit_factory(ClientData clientData, Tcl_Interp *interp, int argc, T
 		       int (*command)(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv),
 		       int (*process)(jack_nframes_t nframes, void *arg),
 		       size_t data_size,
-		       void (*init)(void *arg),
+		       void *(*init)(void *arg),
 		       void (*command_delete)(void *arg)) {
   if (argc != 2) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s name", Tcl_GetString(objv[0])));

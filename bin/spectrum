@@ -1,3 +1,5 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
@@ -15,14 +17,10 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-all:: pkgIndex.tcl
 
-clean::
-	rm -f *~
+lappend auto_path [file join [file dirname [info script]] .. lib]
 
-all-clean:: clean
-	rm -f pkgIndex.tcl
+package require Tk
+package require spectrum
 
-pkgIndex.tcl: $(wildcard *.so) $(filter-out pkgIndex.tcl, $(wildcard *.tcl))
-	echo 'pkg_mkIndex .' | tclsh
-
+pack [spectrum .scope 4096 10] -fill both -expand true

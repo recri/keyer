@@ -28,28 +28,29 @@
 */
 typedef struct {
   _Complex float c;
-} constant_params_t;
+} _params_t;
 
 typedef struct {
   SDRKIT_T_COMMON;
-  constant_params_t *current, p[2];
-} constant_t;
+  _params_t *current, p[2];
+} _t;
 
-static void constant_init(void *arg) {
-  constant_t * const data = (constant_t *)arg;
+static void *_init(void *arg) {
+  _t * const data = (_t *)arg;
   data->current = &data->p[0];
   data->current->c = 1.0;
-  // fprintf(stderr, "constant_init: data %p, data->current %p\n", data, data->current);
+  // fprintf(stderr, "_init: data %p, data->current %p\n", data, data->current);
+  return arg;
 }
 
-static int constant_process(jack_nframes_t nframes, void *arg) {
-  const constant_t * const data = (constant_t *)arg;
-  const constant_params_t * const p = data->current;
+static int _process(jack_nframes_t nframes, void *arg) {
+  const _t * const data = (_t *)arg;
+  const _params_t * const p = data->current;
   float *out0 = jack_port_get_buffer(data->port[0], nframes);
   float *out1 = jack_port_get_buffer(data->port[1], nframes);
   static int calls = 0;
   //if ((calls++ % 192000) == 0)
-    //fprintf(stderr, "constant_process: nframes %d, data %p, params: %p, out0 %p, out1 %p\n", nframes, data, p, out0, out1);
+    //fprintf(stderr, "_process: nframes %d, data %p, params: %p, out0 %p, out1 %p\n", nframes, data, p, out0, out1);
   for (int i = nframes; --i >= 0; ) {
     *out0++ = crealf(p->c);
     *out1++ = cimagf(p->c);
@@ -57,9 +58,9 @@ static int constant_process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
-static int constant_command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  constant_t *data = (constant_t *)clientData;
-  constant_params_t *next = data->current == data->p ? data->p+1 : data->p+0;
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *data = (_t *)clientData;
+  _params_t *next = data->current == data->p ? data->p+1 : data->p+0;
   float real = 0, imag = 0;
   if (argc == 1)
     return sdrkit_return_values(interp, Tcl_ObjPrintf("-real %f -imag %f", creal(data->current->c), cimag(data->current->c)));
@@ -85,11 +86,11 @@ static int constant_command(ClientData clientData, Tcl_Interp *interp, int argc,
   return TCL_ERROR;
 }
 
-static int constant_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 0, 2, 0, 0, constant_command, constant_process, sizeof(constant_t), constant_init, NULL);
+static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return sdrkit_factory(clientData, interp, argc, objv, 0, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
 }  
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_constant_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::constant", constant_factory);
+  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::constant", _factory);
 }

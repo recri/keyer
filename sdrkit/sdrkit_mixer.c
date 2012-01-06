@@ -22,6 +22,8 @@
 
 #include "sdrkit.h"
 
+#include "sdrkit_math.h"
+
 /*
 ** create a mixer module which combines its inputs into an output
 ** no parameters.
@@ -32,13 +34,14 @@
 */
 typedef struct {
   SDRKIT_T_COMMON;
-} mixer_t;
+} _t;
 
-static void mixer_init(void *arg) {
+static void *_init(void *arg) {
+  return arg;
 }
 
-static int mixer_process(jack_nframes_t nframes, void *arg) {
-  mixer_t *data = (mixer_t *)arg;
+static int _process(jack_nframes_t nframes, void *arg) {
+  _t *data = (_t *)arg;
   float *in0 = jack_port_get_buffer(data->port[0], nframes);
   float *in1 = jack_port_get_buffer(data->port[1], nframes);
   float *in2 = jack_port_get_buffer(data->port[2], nframes);
@@ -56,18 +59,18 @@ static int mixer_process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
-static int mixer_command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc == 1)
     return sdrkit_return_values(interp, Tcl_NewStringObj("", 0));
   Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s", Tcl_GetString(objv[0])));
   return TCL_ERROR;
 }
 
-static int mixer_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 4, 2, 0, 0, mixer_command, mixer_process, sizeof(mixer_t), mixer_init, NULL);
+static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return sdrkit_factory(clientData, interp, argc, objv, 4, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
 }
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_mixer_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::mixer", mixer_factory);
+  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::mixer", _factory);
 }

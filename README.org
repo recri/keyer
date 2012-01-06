@@ -1,21 +1,37 @@
 * Ascii/Iambic morse keyer using Jack audio connection kit
   This is a morse code keyer consisting of jack audio connection kit
-  plugins.
+  plugins and a variety of Tcl based tools for playing with them.
 
-  The keyer_tone plugin generates i/q cw tones from midi events.
+  The [[keyer-control]] panel launches iambic and ascii keyers with 
+  independent tone generators, wires them up, and allows their
+  parameters to be fiddled with.
 
-  The keyer_ascii plugin translates ascii text into midi events to
+  The [[pileup]] application resurrects an application written by Richard
+  Everitt, G4ZFE, for testing your ability to read callsigns in a CW
+  pileup.
+
+  The intended usage of these modules is as Tcl extensions, but I've
+  left the following modules packaged as stand alone commands, though
+  they are simply Tcl scripts.
+
+  The [[keyer-tone]] plugin generates i/q cw tones from midi events.
+
+  The [[keyer-ascii]] plugin translates ascii text into midi events to
   drive the tone generator.
 
-  The keyer_iambic plugin translates midi events from an iambic paddle
+  The [[keyer-iambic]] plugin translates midi events from an iambic paddle
   into midi events to drive the tone generator.
 
-  The keyer_decode plugin translates midi events into dits, dahs, and
+  The [[keyer-decode]] plugin translates midi events into dits, dahs, and
   spaces and prints them.
 
   Everything runs and times itself off the jack sample rate, there is
   no polling so everything happens with the least latency possible.
 * Paddle Interface
+  The whole point was to get CW keying information into the computer with
+  the lowest latency possible, so you'll need a MIDI-USB-Keyer dongle to
+  hookup your keys.
+
   I use a paddle interface built on a breadboard from a Teensy 2.0 (from
   http://www.pjrc.com/teensy/), a stereo audio jack, and three jumper
   wires.
@@ -24,27 +40,31 @@
 | Teensy GND    | -> | stereo jack common |
 | Iambic paddle | -> | stereo jack        |
 | Teensy USB    | -> | computer           |
-  The software to make B0 and B1 transmit USB:MIDI is an example program
-  installed with the Teensyduino extension to the Arduino development
-  package.
 
-  [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3].
+  [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3]].
 
   The Teensyduino application to translate paddle transitions into
-  MIDI events is in MidiKey/MidiKey.ino
+  MIDI events is in MidiKey/MidiKey.ino.  The instructions for building
+  it are in the source code.
 
-  I've now packaged the keyer dongle into an Altoids Smalls tin, shown [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][in the tin]], and [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]].
-  The perf board is supported on 5/8" standoffs of the bottom of the tin.
-  The Teensy is mounted on upside down header pins, short end through the perf board long end through the Teensy
-  mounting holes.  The Teensy and stereo jack are super glued onto the perf board.  The stereo jack lugs are soldered
-  to a set of five header pins.  The connections are wire-wrapped.
+  I've packaged the keyer dongle into an Altoids Smalls tin, shown
+  [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][in the tin]], and [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]]. The perf board is supported on 5/8"
+  standoffs   of the bottom of the tin.  The Teensy is mounted on
+  upside down header pins, short end through the perf board long end
+  through the Teensy mounting holes. The Teensy and stereo jack are
+  super glued onto the perf board.  The stereo jack lugs are soldered
+  to a set of five header pins.  The rest of the connections are
+  wire-wrapped between long legs of header pins.
 
-  The set of 11 pins at the left edge of the [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]] image is a Sparkfun Blackberry trackball breakout which is unsupported
-  in the software at the moment.  
+  The set of 11 pins at the left edge of the [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]] image is a
+  Sparkfun Blackberry trackball breakout which is unsupported in the
+  software at the moment.  You can see the trackball erupting through
+  [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][the tin]].
   
-  Glen Overby has built another MIDI key interface which is described
-  here http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html.
+  Glen Overby built another MIDI key interface which is described here
+  http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html. 
   It should work with this software if the MIDI note is set properly.
+  It was Glen's work which got me restarted on this project.
 * Plugin building
   The keyer and sdrkit plugins build on Ubuntu 11.10 with the
   build-essentials, jackd2, libjack-jackd2-dev, and tk-dev packages
@@ -185,7 +205,7 @@
   defaults to 7.0, but you can jack this up get Farnsworth word
   spacing where strings of letters are sent fast with large gaps
   between the words.
-** keyer_ascii - ascii to morse keyer
+** keyer-ascii - ascii to morse keyer
    keyer_ascii implements the common options and the common timing
    options.
 
@@ -199,11 +219,11 @@
    And you can insert option queries and settings inline with the <>
    syntax, so <wpm?> to query words per minute and <wpm22.5> to set
    "wpm" to 22.5.
-** keyer_decode - midi to dit-dah-space decoder
+** keyer-decode - midi to dit-dah-space decoder
    keyer_decode implements only the common options.  It infers the
    dit clock rate from midi note on and off events and writes a stream
    of decoded '.',  '-', and ' ' to its standard output.
-** keyer_iambic - iambic paddle to morse keyer
+** keyer-iambic - iambic paddle to morse keyer
    The iambic keyer implements the common options and the common
    timing options.  In addition it implements.
 
@@ -222,12 +242,12 @@
    Mode A only, or something like that.
 
    Stuck keys sometimes, probably MidiKey problem
-** keyer_straight - using a straight key
+** keyer-straight - using a straight key
    There isn't any app for this, you wire the MIDI system device
    directly to keyer_tone input, and make sure that your MidiKey
    is sending note 0 for the key, or reconfigure keyer_tone to listen
    to the channel and note your key is sending.
-** keyer_tone - midi to i/q tone generator
+** keyer-tone - midi to i/q tone generator
    It uses a filter based I/Q oscillator which requires a couple of
    multiplies and adds for each step, and the steps are configured to
    be exactly the desired phase difference for each sample.

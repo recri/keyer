@@ -128,7 +128,7 @@ static void window_make(const window_type_t type, const int size, float *window)
     const int midp1 = (size + 1) / 2;
     for (int i = 0, j = size - 1; i <= midn; i++, j--)
       window[j] =
-	(window[i] = (float) (1.0 - sqr((float) (i - midm1) / (float) midp1)));
+	(window[i] = (float) (1.0 - sqrf((float) (i - midm1) / (float) midp1)));
     break;
   }
   case WINDOW_PARZEN: {

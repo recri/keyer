@@ -1,0 +1,84 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# just make an oscillator
+#
+lappend auto_path [file join [file dirname [info script]] .. lib]
+
+package require Tk
+package require sdrkit
+
+array set data {
+    name osc
+    freq 600
+    gain -30
+}
+
+foreach {option value} $argv {
+    switch -- $option {
+	-n - -name - --name {
+	    set data(name) $value
+	}
+	-f - -freq - --freq - -frequency --frequency {
+	    set data(freq) $value
+	}
+	-g - -gain - --gain {
+	    set data(gain) $value
+	}
+	default {
+	    error "unknown option \"$option\""
+	}
+    }
+}
+
+sdrkit::oscillator $data(name)
+sdrkit::gain $data(name)_gain
+sdrkit::jack connect $data(name):out_i $data(name)_gain:in_i
+sdrkit::jack connect $data(name):out_q $data(name)_gain:in_q
+
+proc set-gain {v} {
+    $::data(name)_gain [expr {pow(10,$v/10.0)}]
+    set ::data(gain-label) [format %.1f $v]
+}
+
+proc set-freq {v} {
+    $::data(name) -frequency $v
+    set ::data(freq-label) [format %.1f $v]
+}
+
+set-gain $data(gain)
+set-freq $data(freq)
+
+proc shutdown {w} {
+    if {$w eq {.}} {
+	rename $::data(name) {}
+	rename $::data(name)_gain {}
+    }
+}
+
+grid [ttk::label .gain-l -textvar data(gain-label)] -row 0 -column 0
+grid [ttk::label .gain-u -text dB] -row 0 -column 1
+grid [ttk::scale .gain-s -from 0.0 -to -160.0 -command set-gain -variable data(gain)] -row 0 -column 2 -sticky ew
+grid [ttk::label .freq-l -textvar data(freq-label)] -row 1 -column 0
+grid [ttk::label .freq-u -text Hz] -row 1 -column 1
+grid [ttk::scale .freq-s -from 400.0 -to 1600.0 -command set-freq -variable data(freq)] -row 1 -column 2 -sticky ew
+grid columnconfigure . 2 -weight 100
+bind . <Destroy> [list shutdown %W]
