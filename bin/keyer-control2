@@ -92,7 +92,7 @@ proc client-init {} {
     set ports [sdrkit::jack list-ports]
     foreach port [dict keys $ports] {
 	foreach conn [dict get $ports $port connections] {
-	    switch -glob $line {
+	    switch -glob $conn {
 		ascii:* -
 		iambic:* -
 		ascii_tone:* -

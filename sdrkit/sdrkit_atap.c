@@ -35,6 +35,9 @@
 ** the start of the chunk for the size requested.  And the result byte
 ** array is floats interleaved i/q by sample, so I don't have to explain
 ** why it isn't.
+**
+** Now I wonder why it isn't the other way, which would be more convenient
+** for scoping.  Hmm.
 */
 
 #ifndef _N_MILLI_SECONDS
