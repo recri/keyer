@@ -21,12 +21,14 @@
 #
 # just make an oscillator
 #
-lappend auto_path [file join [file dirname [info script]] .. lib]
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
 
 array set data {
+    server default
     name osc
     freq 600
     gain -30
@@ -34,18 +36,11 @@ array set data {
 
 foreach {option value} $argv {
     switch -- $option {
-	-n - -name - --name {
-	    set data(name) $value
-	}
-	-f - -freq - --freq - -frequency --frequency {
-	    set data(freq) $value
-	}
-	-g - -gain - --gain {
-	    set data(gain) $value
-	}
-	default {
-	    error "unknown option \"$option\""
-	}
+	-n - -name - --name { set data(name) $value }
+	-f - -freq - --freq - -frequency --frequency { set data(freq) $value }
+	-g - -gain - --gain { set data(gain) $value }
+	-s - -server - --server { set data(server) $value }
+	default { error "unknown option \"$option\"" }
     }
 }
 

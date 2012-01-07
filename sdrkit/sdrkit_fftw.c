@@ -21,7 +21,7 @@
 */
 
 #include "sdrkit.h"
-#include "sdrkit_window.h"
+#include "window.h"
 
 #include <complex.h>
 #include <fftw3.h>
@@ -97,12 +97,14 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   // compute the fft
   fftwf_execute(data->plan);
   // create the result
-  if (argc == 2)
-    Tcl_SetObjResult(interp,Tcl_NewByteArrayObj((unsigned char *)data->inout, data->size*2*sizeof(float)));
-  else {
-    Tcl_SetByteArrayObj(objv[2], (unsigned char *)data->inout, data->size*2*sizeof(float));
-    Tcl_SetObjResult(interp, objv[2]);
+  Tcl_Obj *result;
+  if (argc == 2) {
+    result = Tcl_NewByteArrayObj((unsigned char *)data->inout, data->size*2*sizeof(float));
+  } else {
+    Tcl_SetByteArrayObj(result = objv[2], (unsigned char *)data->inout, data->size*2*sizeof(float));
   }
+  // set the result
+  Tcl_SetObjResult(interp,result);
   // return success
   return TCL_OK;
 }
@@ -110,6 +112,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 /*
 ** The factory command creates an fft command with specified
 ** command name, size of fft, fftw planbits, and window.
+** could supply the window as a byte array.
 */
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   char *command_name;

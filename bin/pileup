@@ -126,7 +126,8 @@
 ### 2) don't type your answers, key them back
 ###
 
-lappend auto_path [file join [file dirname [info script]] .. lib]
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require keyer

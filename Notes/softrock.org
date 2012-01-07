@@ -7,3 +7,8 @@
   on the RXTX Ensemble at R56 and R59.
   In all cases, the feedback resistors from op amp output to inverting
   input.
+* Match the BS170's on the TX amp
+  The BS170's in the output stage of the RXTX Ensemble are often all
+  over the place in their specs, but they're cheap so buy a bunch and
+  pick your own matched pairs.
+  https://sites.google.com/site/g4zfqradio/matching-bs170-for-softrock

@@ -199,10 +199,10 @@ static void window_make(const window_type_t type, const int size, float *window)
   }
   case WINDOW_EXPONENTIAL: {
     const int midn = size >> 1;
-    const float expn = (float) (log(2.0) / (float) midn + 1.0);
+    const float expn = logf(2.0) / midn + 1.0f;
     float expsum = 1.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--) {
-      window[j] = (window[i] = (float) (expsum - 1.0));
+      window[j] = window[i] = expsum - 1.0f;
       expsum *= expn;
     }
     break;
@@ -210,15 +210,14 @@ static void window_make(const window_type_t type, const int size, float *window)
   case WINDOW_RIEMANN: {
     const int midn = size >> 1;
     const float two_pi = 2 * M_PI;
-    const float sr1 = two_pi / (float) size;
+    const float sr1 = two_pi / size;
     for (int i = 0, j = size - 1; i <= midn; i++, j--) {
       if (i == midn)
-	window[j] = (window[i] = 1.0);
+	window[j] = window[i] = 1.0;
       else {
 	/* split out because NeXT C compiler can't handle the full expression */
-	float cx = sr1 * (midn - i);
-	window[i] = (float) (sin(cx) / cx);
-	window[j] = window[i];
+	const float cx = sr1 * (midn - i);
+	window[j] = window[i] = sinf(cx) / cx;
       }
     }
     break;
@@ -227,32 +226,19 @@ static void window_make(const window_type_t type, const int size, float *window)
     const float two_pi = 2 * M_PI;
     const float a0 = 0.35875f, a1 = 0.48829f, a2 = 0.14128f, a3 = 0.01168f;
     for (int i = 0; i < size; i++) {
-      window[i] =
-	(float) (a0 -
-		 a1 * cos(two_pi * (float) (i + 0.5) /
-			  (float) (size - 1)) +
-		 a2 * cos(2.0 * two_pi * (float) (i + 0.5) /
-			  (float) (size - 1)) -
-		 a3 * cos(3.0 * two_pi * (float) (i + 0.5) /
-			  (float) (size - 1)));
+      const float arg = two_pi * (i + 0.5f) / (size - 1);
+      window[i] = a0 - a1 * cosf(arg) + a2 * cosf(2.0 * arg) - a3 * cosf(3.0 * arg);
     }
     break;
   }
   case WINDOW_NUTTALL: {
     const float two_pi = 2 * M_PI;
     const float a0 = 0.3635819f, a1 = 0.4891775f, a2 = 0.1365995f, a3 = 0.0106411f;
-
     for (int i = 0; i < size; i++) {
-	window[i] =
-	  (float) (a0 -
-		  a1 * cos(two_pi * (float) (i + 0.5) /
-			   (float) (size - 1)) +
-		  a2 * cos(2.0 * two_pi * (float) (i + 0.5) /
-			   (float) (size - 1)) -
-		  a3 * cos(3.0 * two_pi * (float) (i + 0.5) /
-			   (float) (size - 1)));
-      }
-      break;
+      const float arg = two_pi * (i + 0.5f) / (size - 1);
+      window[i] = a0 - a1 * cosf(arg) + a2 * cosf(2.0 * arg) - a3 * cosf(3.0 * arg);
+    }
+    break;
   }
   }
 }

@@ -50,7 +50,7 @@ $(LIBDIR)/sdrkit_constant.so: sdrkit_constant.c sdrkit.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_fftw.so: sdrkit_fftw.c sdrkit.h sdrkit_window.h sdrkit_math.h
+$(LIBDIR)/sdrkit_fftw.so: sdrkit_fftw.c sdrkit.h window.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(LIBS)
 

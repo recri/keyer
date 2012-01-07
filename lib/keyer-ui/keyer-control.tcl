@@ -121,7 +121,7 @@ proc keyer-control::tone-frame {w client row} {
     global data
     foreach {opt label from to units} {
 	freq {tone frequency} 300.0 1000.0 Hz
-	gain {tone volume} -40.0 0.0 dB
+	gain {tone volume} 0.0 -80.0 dB
 	rise {key rise time} 0.1 50.0 ms
 	fall {key fall time} 0.1 50.0 ms
     } {

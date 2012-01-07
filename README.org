@@ -1,34 +1,109 @@
-* Ascii/Iambic morse keyer using Jack audio connection kit
+* Ascii/Iambic morse keyer (and more) using Jack audio connection kit.
   This is a morse code keyer consisting of jack audio connection kit
-  plugins and a variety of Tcl based tools for playing with them.
+  plugins and a variety of additional Tcl hosted SDR tools for testing
+  and playing with them.
 
-  The [[keyer-control]] panel launches iambic and ascii keyers with 
+  The [[keyer-control]] application launches iambic and ascii keyers with
   independent tone generators, wires them up, and allows their
   parameters to be fiddled with.
 
-  The [[pileup]] application resurrects an application written by Richard
-  Everitt, G4ZFE, for testing your ability to read callsigns in a CW
-  pileup.
+  The essential [[prerequisites]] for using this are a computer running
+  Linux - Ubuntu is my preference - to build and host the applications.
+  With that you can run the ascii keyer, listen to the output, examine
+  the waveforms, and see how the system works.
 
-  The intended usage of these modules is as Tcl extensions, but I've
-  left the following modules packaged as stand alone commands, though
-  they are simply Tcl scripts.
+  Adding a [[MidiKeyer]] USB dongle will allow you to translate your
+  paddle or straight key switch closures into MIDI events and transmit
+  them to the computer over USB.  With that you can fully exercise the
+  iambic keyer and play with some of the games which require you to
+  key in the answers.
 
-  The [[keyer-tone]] plugin generates i/q cw tones from midi events.
+  The ultimate goal of this project is to produce a collection of
+  software defined radio modules which can be plugged together using
+  Jack for low-latency audio and midi communication and using Tcl/Tk
+  for control and user interface.  A software kit for building SDR
+  applications, hence sdrkit.  Watch it happen.
+* Prerequisites
+  I've written these instructions as I use them on a laptop running
+  Ubuntu 11.10, the Oneiric Ocelot release.  Most of it is generic
+  enough to work on other current Linux systems with minor
+  translations of package management tools and package names. It's
+  also generic enough to port to MacOS or Windows.  But I don't run
+  other Linux systems, MacOS, or Windows so asking me to help you make
+  it work is a lost cause.
 
-  The [[keyer-ascii]] plugin translates ascii text into midi events to
-  drive the tone generator.
+  I will be assuming that you have installed the keyer sources in your
+  home directory, which I abbreviate as "~".  So I will refer to the
+  keyer source directory as "~/keyer" in all that follows.   It
+  doesn't depend on being there, you can install it anywhere, but
+  these instructions will depend on you making the necessary
+  translation if you install the sources someplace else.
+** Required packages
+   Using your preferred Ubuntu package manager, you want to install:
+   | build-essentials   |
+   | git-core           |
+   | jackd2             |
+   | libfftw3-dev       |
+   | libjack-jackd2-dev |
+   | qjackctl           |
+   | tk-dev             |
+   These are not all the required packages.  Several other packages
+   will be dragged in because they're required by the packages
+   listed. 
 
-  The [[keyer-iambic]] plugin translates midi events from an iambic paddle
-  into midi events to drive the tone generator.
+   Note that Ubuntu 11.10 has some confusion in the jackd packaging.
+   Some audio packages were built against jackd1 and some against the
+   jackd agnostic package, so some audio libraries will force
+   installation  of the old jackd version 1 package.  I force jackd2
+   because it's better.  I don't know if jackd1 will work.
+** Getting the source
+   The sources are archived at https://github.com/recri/keyer.
+   Assuming that you want the sources to be in ~/keyer,
+   #+BEGIN_EXAMPLE
+   cd ~ && git clone https://github.com/recri/keyer
+   #+END_EXAMPLE
+   will create a new directory named "keyer" in your home directory.
+   The sources will be up to date as of the time that you clone the 
+   repository.
 
-  The [[keyer-decode]] plugin translates midi events into dits, dahs, and
-  spaces and prints them.
+   Running:
+   #+BEGIN_EXAMPLE
+   cd ~/keyer && git pull origin master
+   #+END_EXAMPLE
+   will refresh your sources to the most recent at any time.  It's
+   prudent to run: 
+   #+BEGIN_EXAMPLE
+   cd ~/keyer && make all-clean
+   #+END_EXAMPLE
+   before refreshing the sources because the list of things to be built
+   and cleaned up is changing all the time.
 
-  Everything runs and times itself off the jack sample rate, there is
-  no polling so everything happens with the least latency possible.
-* Paddle Interface
-  The whole point was to get CW keying information into the computer with
+   If things get messed up (and you have no local changes to preserve)
+   you can always:
+   #+BEGIN_EXAMPLE
+   cd ~ && rm -fr keyer && git clone https://github.com/recri/keyer
+   #+END_EXAMPLE
+   to start over again.
+** Building
+   #+BEGIN_EXAMPLE
+   cd ~/keyer && make
+   #+END_EXAMPLE
+   will compile everything needed to run.
+
+   #+BEGIN_EXAMPLE
+   cd ~/keyer && make clean
+   #+END_EXAMPLE
+   will remove intermediate files not required to run.
+
+   #+BEGIN_EXAMPLE
+   cd ~/keyer && make all-clean
+   #+END_EXAMPLE
+   should remove all built files.
+** Installing
+   I don't do any install. I usually run the scripts from ~/keyer
+   manually prefixing bin/ to get the commands I want to run.
+** Paddle Interface
+  The whole point is to get CW keying information into the computer with
   the lowest latency possible, so you'll need a MIDI-USB-Keyer dongle to
   hookup your keys.
 
@@ -65,114 +140,54 @@
   http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html. 
   It should work with this software if the MIDI note is set properly.
   It was Glen's work which got me restarted on this project.
-* Plugin building
-  The keyer and sdrkit plugins build on Ubuntu 11.10 with the
-  build-essentials, jackd2, libjack-jackd2-dev, and tk-dev packages
-  installed.  Just running make in the root directory should work.
+* Usage
+  My basic usage pattern is to use qjackctl to configure my jack
+  server, start the server, control the server, and manually make
+  connections between modules.
+  
+  You can configure your jack server to "autolaunch" whenever an
+  application tries to open it, but the result will be that you get a 
+  bunch of messages from jackd which appear to come from your
+  application, the messages look the same whether jackd succeeds or
+  fails to start, and the autolaunched jackd may or may not be visible 
+  and controllable from qjackctl.  So turn off the autolaunch feature
+  and use qjackctl so you can see what's happening.
 
-  Note that Ubuntu 11.10 has some confusion in the jackd packaging.
-  Some audio packages were built against jackd1 and some against the
-  jackd agnostic package, so some audio libraries will force
-  installation of the old jackd version 1 package.  I force jackd2
-  because it's better.
-* Plugin installing
-  No provision for installing into local or system wide application
-  directories has been made, but if you copy the the programs in the
-  ./bin directory into /usr/local/bin, copy the directories in the
-  ./lib directory into /usr/local/lib, and you have /usr/local/bin in
-  your path, then everything should work.
-* Plugin usage -- semi-automatic
-  There is a tcl/tk application in the bin directory named
-  keyer-control. For the moment, you should run it when jack has
-  already been started and it will launch the keyer plugins, connect
-  them up, and give you a control interface for adjusting options.
-  You can also type characters when it has focus and they will be
-  echoed by keyer_ascii.
-* Plugin usage -- manual
-  Manual use of the plugins is a bit rough at the moment.
+  All of the scripts in ~/keyer/bin are now Tcl/Tk scripts. I'm going
+  to describe what they do, but for the fullest documentation of the
+  options each script implements, you should open the script file in a
+  text editor and scroll to the end of the file.  Each application
+  should define a "main" procedure which parses command line options,
+  and you should be able to figure out what the options do.
 
-  The keyer plugins need to be started as separate programs, each
-  running in a shell window, and then connect them in Qjackctl or with
-  some other jack wiring interface.
-   
-  They need to be in shell windows because, at the moment, they'll
-  block if you detach them as background processes. It's also useful
-  to be able to adjust options or see verbose output.
-   
-  I use three separate emacs shell windows so I can turn up the
-  verbose option and see what's happening in each. 
+  The problem is that I change things that I don't like, so a
+  canonical description of how things work is hard to pin down.
+** Options
+   Almost all commands will accept some set of options that allow you
+   to alter the default behavior of the command, but almost all
+   commands have a user interface, too.
 
-  The plugins all accept the same command line options. You can get a
-  usage summary with the --help option, or any other unrecognized
-  option.  It shows the default values and briefly describes each
-  option.
-
-  The "server" and "client" options are only effective at the command
-  line.
-
-  All other options can be adjusted with inline commands typed to the
-  standard input of the running modules.  Simply put the basename of
-  the option inside <> with the desired value.  So the reset the tone
-  frequency to 440Hz, use <freq440>.
-   
-  You can also query the current values of the options inline. Just
-  put the base option name inside <> with a question mark.  So the
-  current words per minute settings are printed with <wpm?>.
-
-  All the plugins recognize all of the options.  The keyer_ascii and
-  keyer_iambic plugins will send keyer_tone option changes as midi
-  sysex and if keyer_tone is connected it will implement the
-  changes.
-** Wiring on Qjackctl
-   For wiring I use Qjackctl with jack configured to use the "raw" midi
-   interface.
-
-   All this could be automated with jack_connect, or automatically
-   implemented in the plugins themselves, but I have enough half
-   tested code as it is.
-
-   You will be most in control if you start jack with qjackctl before
-   you launch any of the plugins.  Starting a plugin before jack
-   results in an autostart and a chunk of messages from jackd.
-
-   There are images in the images directory that show what I see when
-   I start up this set up my machine.
-   
-   On the MIDI panel I connect:
-   | system       | -> | keyer_iambic |
-   | keyer_iambic | -> | keyer_tone   |
-   | keyer_ascii  | -> | keyer_tone   |
-   On the Audio panel I connect:
-   | keyer_tone | -> | system |
-   On the ALSA panel I don't connect anything, but I look to see that
-   the Teensy MIDI device is connected. 
-
-   This is just one possible set up.  If you don't have a MIDI
-   enabled paddle, skip keyer_iambic.  If you don't need no stinking
-   keyboard keyer, skip keyer_ascii.  If you want to make a pile up,
-   you should be able to start multiple keyer_ascii's and keyer_tone's
-   and mix the results into one jack channel.
-* Details, Bugs, and Issues
-** option usage
-   Everybody shares the same option definition table, implements those
-   that apply to itself, and sends changes downstream if that makes
-   sense.
-
-   The options are implemented as command line options using a
+   Generally options are implemented as command line options using a
    "--name value" syntax, that's two minus signs in front of the
    option name as one argument followed by the value as a second
    argument.
+   
+   The command line option parsers are getting more forgiving, some of
+   them will accept a single minus sign or even a one character
+   abbreviation.
 
-   The options are implemented as inline commands using a
-   "<namevalue>" syntax, that's the option name directly concatenated
-   with the option value inside a less-than greater-than bracket.
+   Tcl configuration options use a "-name value" syntax, that's one
+   minus sign in front of the option name as one argument followed by
+   the value as a second argument.
 
    Almost all options are runtime configurable, the jack "server"
    and jack "client" names cannot be changed once the plugin starts.
+   They determine which server the plugin connects to and what name it
+   uses in the connection.
 
    All of the options which are numbers, eg "wpm", "dah", "freq", and
    "gain", are floating point values.
-** common options for all apps
+*** common options for (potentially) all apps
    "verbose" generates output to standard error and will slow down the
    jack process callback if set high enough.
 
@@ -186,7 +201,7 @@
    "server" specifies the jack server name to connect to.
 
    "client" specifies the jack client name to connect as.
-** common options for morse code timing
+*** common options for morse code timing
    "word" specifies the number of dit clocks in a word.  Use 50 for
   PARIS and 60 for CODEX.
 
@@ -205,7 +220,8 @@
   defaults to 7.0, but you can jack this up get Farnsworth word
   spacing where strings of letters are sent fast with large gaps
   between the words.
-** keyer-ascii - ascii to morse keyer
+** keyer-control - launch and control ascii and iambic midi keyers
+** keyer-ascii - ascii to midi morse keyer
    keyer_ascii implements the common options and the common timing
    options.
 
@@ -223,7 +239,7 @@
    keyer_decode implements only the common options.  It infers the
    dit clock rate from midi note on and off events and writes a stream
    of decoded '.',  '-', and ' ' to its standard output.
-** keyer-iambic - iambic paddle to morse keyer
+** keyer-iambic - iambic paddle midi to midi morse keyer
    The iambic keyer implements the common options and the common
    timing options.  In addition it implements.
 
@@ -280,6 +296,12 @@
     some of the key transitions as a consequence.  Iambic paddles are
     not consumer grade push buttons.  No, it was my bug in the
     jack_process callback that was causing the dropped event problems.
+** gain - gain module
+** midiscope - midi event capture and display
+** oscillator - oscillator module
+** pileup - cw pileup simulator
+** scope - audio signal capture and display
+** spectrum - audio spectrogram capture and display
 * Things to Do
 ** DONE - MidiKey: to debounce with a period in microseconds.
    Mangled the existing Bounce class, still not quite right.
@@ -288,12 +310,15 @@
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
    Won't fit in an Altoids Smalls box.
 ** TODO - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
+   and doesn't scare me as bad as the current interface.
 ** TODO - users of keyer_midi.c: to use the new queuing api.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
 ** DONE - keyer-control: to use a dedicated keyer_tone for each keyer.
 ** DONE - keyer-control: to use expect to manage plugins.
    Didn't work out as I hoped.
-** TODO ascii - install more code points
+** TODO - keyer_ascii: install more code points
+   There's more to Morse code than the basic US Ham usage, but I'm not
+   sure how to best internationalize the table.
 ** DONE - keyer_iambic - Rewrite the process loop -> iambic_transition
     Make it call iambic_transition at a specified granularity
     irrespective of the jack buffer size, like twice per dit clock.
@@ -301,18 +326,15 @@
     Should only require a short memory of key states, make the next
     element decision at end of inter-element space based on key state
     at 1.5 dit clocks in the past.
-** TODO - keyer-control: callsign-invaders ear/key training game.
 ** TODO - keyer_detone.c: to convert keyed tones into midi.
-** TODO - new keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
-** TODO - new keyer_binaural.c: to spread a monoaural audio spectrum out spatially using DJ5IL's CodePhaser circuit.
-** TODO - new keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
 ** TODO - keyer-control: build, save, and restore custom configurations.
 ** TODO - keyer-control: ascii input/output window
 ** TODO - keyer-control: examine output of lsp to determine connection possibilities.
 ** TODO - keyer-control: jack launching panel.
 ** TODO - keyer-control: jack connection panel.
-** TODO - keyer_jack.c: provide missing jack status information.
-** TODO - *: insert license information.
+** TODO - keyer-control: don't die when midi_capture device is missing
+** TODO - sdrkit_jack.c: provide missing jack status information.
+** DONE - *: insert license information.
 ** TODO - keyer_*.c: distinguish stdout and stderr better.
 ** TODO - keyer_framework.c: allow jack thread to buffer output to memory for the main thread to print. Hence input cannot block.
 ** TODO - keyer_framework.c: implement a tcl command framework.
@@ -322,3 +344,36 @@
    PTT line, or flash some LED's. 
 
     
+** TODO - bin/*: follow symlinked scripts back to the source directory
+** TODO - bin/midiscope: display logic transitions of midi events.
+** TODO - bin/scope: display audio baseband waveforms
+** TODO - new bin/spectrum: spectrogram/waterfall display
+** TODO - new bin/invaders: callsign-invaders ear/key training game.
+** TODO - new bin/pileup: echo back callsigns in a pileup situation
+** TODO - new keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
+** TODO - new keyer_binaural.c: to spread a monoaural audio spectrum out spatially using DJ5IL's CodePhaser circuit.
+** TODO - new keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
+* Credits
+  This code is derived from many sources.
+
+  The largest debt is to the dttsp sources, Copyright (C) 2004, 2005,
+  2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY.
+  Many of the modules here are directly or indirectly derived from
+  their code.
+
+* Licensing
+  Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+   
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA

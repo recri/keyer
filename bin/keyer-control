@@ -18,7 +18,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-lappend auto_path [file join [file dirname [info script]] .. lib]
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require keyer
@@ -80,6 +81,10 @@ proc client-opts {client} {
     return $args
 }
 
+proc message {msg} {
+    puts $msg
+}
+
 #
 # initialize the clients
 #
@@ -124,15 +129,16 @@ proc client-init {} {
     }
     # make the iambic keyer
     if {$opts(iambic)} {
-	if { ! [info exists midi_capture]} {
-	    error "no midi_capture port for keyer connection"
-	}
 	# plug-open keyer::iambic iambic
 	keyer::iambic iambic {*}[client-opts iambic]
 	lappend clients iambic
 	keyer::tone iambic_tone {*}[client-opts iambic_tone]
 	lappend clients iambic_tone
-	lappend connects [list sdrkit::jack connect $midi_capture iambic:midi_in]
+	if { ! [info exists midi_capture]} {
+	    message "no midi_capture port for keyer connection"
+	} else {
+	    lappend connects [list sdrkit::jack connect $midi_capture iambic:midi_in]
+	}
 	lappend connects {sdrkit::jack connect iambic:midi_out iambic_tone:midi_in}
 	lappend connects {sdrkit::jack connect iambic_tone:out_i system:playback_1}
 	lappend connects {sdrkit::jack connect iambic_tone:out_q system:playback_2}

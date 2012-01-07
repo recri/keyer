@@ -18,28 +18,28 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# just make a gain block
-#
-lappend auto_path [file join [file dirname [info script]] .. lib]
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
 
 package require sdrkit
 
+#
+# just make a gain block
+# needs a user interface
+# needs to implement server option
+#
+
 array set data {
+    server default
     gain 0.001
     name gain
 }
 
 foreach {option value} $argv {
     switch -- $option {
-	--g -
-	--gain {
-	    set data(gain) $value
-	}
-	--n -
-	--name {
-	    set data(name) $value
-	}
+	-g - --gain - -gain { set data(gain) $value }
+	-n - --name - -name { set data(name) $value }
+	-s - --server - -server { set data(server) $value }
     }
 }
 
