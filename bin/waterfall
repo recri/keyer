@@ -37,36 +37,37 @@ namespace eval ::waterfall {
 }
 
 #
-# only pal==0 is hotiron, don't know what the others do, yet
+# pal 0 is hotiron, approximate spectrum of a black body as it is heated
 #
-proc ::hotiron {lev min max pal} {
-    set hue [expr {min(1,max(0,($lev-$min)/($max-$min)))}]
+proc ::hotiron {hue pal} {
     switch $pal {
-	0 { lassign [list [expr {3*($hue+0.03)}] [expr {3*($hue-.333333)}] [expr {3*($hue-.666667)}]] red green blue }
-	1 { lassign [list [expr {3*($hue+0.03)}] [expr {3*($hue-.666667)}] [expr {3*($hue-.333333)}]] red green blue }
-	2 { lassign [list [expr {3*($hue-.666667)}] [expr {3*($hue+0.03)}] [expr {3*($hue-.333333)}]] red green blue }
-	3 { lassign [list [expr {3*($hue-.333333)}] [expr {3*($hue+0.03)}] [expr {3*($hue-.666667)}]] red green blue }
-	4 { lassign [list [expr {3*($hue-.333333)}] [expr {3*($hue-.666667)}] [expr {3*($hue+0.03)}]] red green blue }
-	5 { lassign [list [expr {3*($hue-.666667)}] [expr {3*($hue-.333333)}] [expr {3*($hue+0.03)}]] red green blue }
+	0 { lassign [list [expr {3*($hue+0.03)}] [expr {3*($hue-.333333)}] [expr {3*($hue-.666667)}]] r g b }
+	1 { lassign [list [expr {3*($hue+0.03)}] [expr {3*($hue-.666667)}] [expr {3*($hue-.333333)}]] r g b }
+	2 { lassign [list [expr {3*($hue-.666667)}] [expr {3*($hue+0.03)}] [expr {3*($hue-.333333)}]] r g b }
+	3 { lassign [list [expr {3*($hue-.333333)}] [expr {3*($hue+0.03)}] [expr {3*($hue-.666667)}]] r g b }
+	4 { lassign [list [expr {3*($hue-.333333)}] [expr {3*($hue-.666667)}] [expr {3*($hue+0.03)}]] r g b }
+	5 { lassign [list [expr {3*($hue-.666667)}] [expr {3*($hue-.333333)}] [expr {3*($hue+0.03)}]] r g b }
     }
-    return [format {#%02x%02x%02x} [expr {int(255*min(1,max($red,0)))}] [expr {int(255*min(1,max($green,0)))}] [expr {int(255*min(1,max($blue,0)))}]]
+    return [format {#%02x%02x%02x} [expr {int(255*min(1,max($r,0)))}] [expr {int(255*min(1,max($g,0)))}] [expr {int(255*min(1,max($b,0)))}]]
 }
 
-proc ::hotiron-test {} {
-    for {set p 0} {$p < 6} {incr p} {
-	image create photo p$p -palette 256/256/256
-	for {set i 0} {$i < 1024} {incr i} {
-	    p$p put [hotiron $i 0.0 1024.0 $p] -to $i 0 [expr {$i+1}] 16
-	}
-	pack [ttk::label .p$p -image p$p] -side top
+proc ::hotiron-test {p n} {
+    set max [expr {double($n)}]
+    image create photo p$p -palette 256/256/256
+    for {set i 0} {$i < $n} {incr i} {
+	p$p put [hotiron [expr {$i/$max}] $p] -to $i 0 [expr {$i+1}] 32
     }
+    pack [ttk::label .p$p -image p$p] -side top
 }
 
 proc waterfall::pixel {w level} {
     upvar #0 $w data
-    set i color-$data(level_pal)-[expr {int(10*$level)}]
+    # clamp to percentage of range
+    set level [expr {min(1,max(0,($level-$data(level_min))/($data(level_max)-$data(level_min))))}]
+    # use 100 levels
+    set i color-$data(level_pal)-[expr {int(100*$level)}]
     if { ! [info exists data($i)]} {
-	set data($i) [::hotiron $level $data(level_min) $data(level_max) $data(level_pal)]
+	set data($i) [::hotiron $level $data(level_pal)]
 	# puts "assigned $data($i) to level $level"
     }
     return $data($i)
@@ -74,21 +75,52 @@ proc waterfall::pixel {w level} {
 
 proc waterfall::capture {w} {
     upvar #0 $w data
+
+    # capture a buffer
     foreach {f b} [::$data(tap) $data(n)] break
+
+    # compute the fft
     set l [::$data(fft) $b]
+
+    # convert the coefficients to a list
     binary scan $l f* levels
     
+    # reorder the results from most negative frequency to most positive
+    # compute the power, and convert to pixels
     ## they're ordered from 0 .. most positive, most negative .. just < 0
     ## k/T, T = total sample time, n * 1/sample_rate
+    set spectrum {}
     set scanline {}
     foreach {re im} [concat [lrange $levels [expr {1+$data(n)}] end] [lrange $levels 0 $data(n)]] {
 	# squared magnitude means 10*log10 dB
-	lappend scanline [pixel $w [expr {10*log10($re*$re+$im*$im+1e-16)}]]
+	set p [expr {10*log10($re*$re+$im*$im+1e-16)}]
+	lappend spectrum $p
+	lappend scanline [pixel $w $p]
     }
-    $data(image2) copy $data(image1) -from 0 0 -to 0 1
-    $data(image2) put [list $scanline] -to 0 0 $data(n) 1
-    $data(image1) copy $data(image2)
+
+    # store the new scanline into image2 at row $i
+    # note that $i steps backwards on each scan line
+    set n $data(n)
+    set i [expr {$n-1-($data(i)%$n)}]; # row of image1 to update
+    set j [expr {$i+1}];	       # next row of image 1
+    $data(image2) put [list $scanline] -to 0 $i $n $j
+
+    # copy rows $i to end from image2 into rows 0 to $k of image1
+    set k [expr {$n-$i}];	       # rows from i to end
+    $data(image1) copy $data(image2) -from 0 $i $n $n -to 0 0 $n $k
+
+    # if $i is at zero, then we already copied all of image2 to image1
+    if {$l >= 0} {
+	# copy rows 0 to $i from image2 into rows $k to end of image1
+	$data(image1) copy $data(image2) -from 0 0 $n $i -to 0 $k $n $n
+    }
+    puts "scanline $data(i) :: $i $j :: $i $n -> 0 $k :: 0 $i -> $k $n"
+    # reconfigure the label so it redisplays
     $w.l configure -image $data(image1)
+
+    # increment our scanline index
+    incr data(i)
+
     # update idletasks
     after $data(p) [list waterfall::capture $w]
 }
@@ -97,6 +129,7 @@ proc waterfall::waterfall {w n p} {
     upvar #0 $w data
     ttk::frame $w
     array set data [array get ::waterfall::default_data]
+    set data(i) 0
     set data(n) $n
     set data(p) $p
     set data(tap) waterfall_tap_$::waterfall::n
@@ -120,7 +153,10 @@ proc waterfall::waterfall {w n p} {
 proc waterfall {w n p} { return [waterfall::waterfall $w $n $p] }
 
 proc main {argv} {
-    pack [waterfall .scope 640 10] -fill both -expand true
+    pack [waterfall .scope 128 100] -fill both -expand true
 }
 
 main $argv
+# foreach p {0 1 2 3 4 5} { hotiron-test $p 1024 }
+
+		 
