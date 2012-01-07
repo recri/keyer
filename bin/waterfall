@@ -132,6 +132,14 @@ proc waterfall::capture {w} {
     after $data(p) [list waterfall::capture $w]
 }
 
+proc waterfall::value-menu {w n v} {
+    upvar #0 $w data
+    pack [ttk::menubutton $w.m.$n -textvariable ${w}(label-$n) -menu $w.m.$n.m] -side left
+    menu $w.m.$n.m -tearoff no
+    foreach t $data(value-$n) {
+	$w.m.$n.m add radiobutton -label "$n $t" -value "$n $t" -variable ${w}(label-$n) -command [list set ${w}($v) $t]
+    }
+}
 proc waterfall::waterfall {w n p} {
     upvar #0 $w data
     ttk::frame $w
@@ -149,21 +157,9 @@ proc waterfall::waterfall {w n p} {
 	catch {sdrkit::jack connect $x:out_q $data(tap):in_q}
     }
     pack [ttk::frame $w.m] -side top -fill x
-    pack [ttk::menubutton $w.m.palette -textvariable ${w}(label-palette) -menu $w.m.palette.m] -side left
-    menu $w.m.palette.m -tearoff no
-    foreach t $data(value-palette) {
-	$w.m.palette.m add radiobutton -label "palette $t" -value "palette $t" -variable ${w}(label-palette) -command [list set ${w}(level_pal) $t]
-    }
-    pack [ttk::menubutton $w.m.min -textvariable ${w}(label-min) -menu $w.m.min.m] -side left
-    menu $w.m.min.m -tearoff no
-    foreach t $data(value-min)  {
-	$w.m.min.m add radiobutton -label "min $t" -value "min $t" -variable ${w}(label-min) -command [list set ${w}(level_min) $t]
-    }
-    pack [ttk::menubutton $w.m.max -textvariable ${w}(label-max) -menu $w.m.max.m] -side left
-    menu $w.m.max.m -tearoff no
-    foreach t $data(value-max) {
-	$w.m.max.m add radiobutton -label "max $t" -value "max $t" -variable ${w}(label-max) -command [list set ${w}(level_max) $t]
-    }
+    value-menu $w palette level_pal
+    value-menu $w min level_min
+    value-menu $w max level_max
     set data(image1) [image create photo -palette 256/256/256 -width $n -height $n]
     set data(image2) [image create photo -palette 256/256/256 -width $n -height $n]
     pack [ttk::label $w.l -image $data(image1)] -side top
