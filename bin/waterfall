@@ -105,29 +105,42 @@ proc waterfall::capture {w} {
 	lappend scanline [pixel $w $p]
     }
 
-    # store the new scanline into image2 at row $i
-    # note that $i steps backwards on each scan line
-    set n $data(n)
-    set i [expr {$n-1-($data(i)%$n)}]; # row of image1 to update
-    set j [expr {$i+1}];	       # next row of image 1
-    $data(image2) put [list $scanline] -to 0 $i $n $j
-
-    # copy rows $i to end from image2 into rows 0 to $k of image1
-    set k [expr {$n-$i}];	       # rows from i to end
-    $data(image1) copy $data(image2) -from 0 $i $n $n -to 0 0 $n $k
-
-    # if $i is at zero, then we already copied all of image2 to image1
-    if {$l >= 0} {
-	# copy rows 0 to $i from image2 into rows $k to end of image1
-	$data(image1) copy $data(image2) -from 0 0 $n $i -to 0 $k $n $n
+    if {0} {
+	# store the new scanline into image2 at row $i
+	# note that $i steps backwards on each scan line
+	set n $data(n)
+	set i [expr {$n-1-($data(i)%$n)}]; # row of image1 to update
+	set j [expr {$i+1}];	       # next row of image 1
+	$data(image2) put [list $scanline] -to 0 $i $n $j
+	
+	# copy rows $i to end from image2 into rows 0 to $k of image1
+	set k [expr {$n-$i}];	       # rows from i to end
+	$data(image1) copy $data(image2) -from 0 $i $n $n -to 0 0 $n $k
+	
+	# if $i is at zero, then we already copied all of image2 to image1
+	if {$l >= 0} {
+	    # copy rows 0 to $i from image2 into rows $k to end of image1
+	    $data(image1) copy $data(image2) -from 0 0 $n $i -to 0 $k $n $n
+	}
+	#puts "scanline $data(i) :: $i $j :: $i $n -> 0 $k :: 0 $i -> $k $n"
+	# reconfigure the label so it redisplays
+	$w.l configure -image $data(image1)
+    } else {
+	# scroll all the canvas images down by 1
+	$w.c move all 0 1
+	# find the image that scrolled off the bottom
+	set i [expr {($data(i)+$data(n)-1)%$data(n)}]
+	# rewrite its image contents with the scanline
+	$data(img-$i) put $scanline
+	# reset the image of the canvas item
+	$w.c itemconfig $data(item-$i) -image $data(img-$i)
+	# move the item to the top
+	$w.c move $data(item-$i) 0 [expr {-$data(n)}]
     }
-    #puts "scanline $data(i) :: $i $j :: $i $n -> 0 $k :: 0 $i -> $k $n"
-    # reconfigure the label so it redisplays
-    $w.l configure -image $data(image1)
 
     # increment our scanline index
     incr data(i)
-
+    
     # schedule next capture
     after $data(p) [list waterfall::capture $w]
 }
@@ -160,9 +173,17 @@ proc waterfall::waterfall {w n p} {
     value-menu $w palette level_pal
     value-menu $w min level_min
     value-menu $w max level_max
-    set data(image1) [image create photo -palette 256/256/256 -width $n -height $n]
-    set data(image2) [image create photo -palette 256/256/256 -width $n -height $n]
-    pack [ttk::label $w.l -image $data(image1)] -side top
+    if {0} {
+	set data(image1) [image create photo -palette 256/256/256 -width $n -height $n]
+	set data(image2) [image create photo -palette 256/256/256 -width $n -height $n]
+	pack [ttk::label $w.l -image $data(image1)] -side top
+    } else {
+	pack [ttk::canvas $w.c -width $data(n) -height $data(n)] -side top
+	for {set i 0} {$i < $data(n)} {incr i} {
+	    set data(img-$i) [image create photo -width $data(n) -height 1 -palette 256/256/256]
+	    set data(item-$i) [$w.c create image 0 $i -image img$w-$i -anchor w]
+	}
+    }
     after 100 [list waterfall::capture $w]
     return $w
 }
@@ -185,4 +206,4 @@ proc main {argv} {
 main $argv
 # foreach p {0 1 2 3 4 5} { hotiron-test $p 1024 }
 
-		 
+
