@@ -8,9 +8,9 @@
   parameters to be fiddled with.
 
   The essential [[prerequisites]] for using this are a computer running
-  Linux - Ubuntu is my preference - to build and host the applications.
-  With that you can run the ascii keyer, listen to the output, examine
-  the waveforms, and see how the system works.
+  Linux build and host the applications. With that you can run the
+  ascii keyer, listen to the output, examine the waveforms, and see
+  how the system works.
 
   Adding a [[MidiKeyer]] USB dongle will allow you to translate your
   paddle or straight key switch closures into MIDI events and transmit
@@ -102,14 +102,14 @@
 ** Installing
    I don't do any install. I usually run the scripts from ~/keyer
    manually prefixing bin/ to get the commands I want to run.
-** Paddle Interface
-  The whole point is to get CW keying information into the computer with
-  the lowest latency possible, so you'll need a MIDI-USB-Keyer dongle to
-  hookup your keys.
+** MidiKey
+  Originally, the whole point is to get CW keying information into the
+  computer with the lowest latency possible.  To do that you'll need a
+  MIDI-USB-Keyer dongle to hookup your keys.
 
-  I use a paddle interface built on a breadboard from a Teensy 2.0 (from
-  http://www.pjrc.com/teensy/), a stereo audio jack, and three jumper
-  wires.
+  I started with a paddle interface built on a breadboard from a
+  Teensy 2.0 (from http://www.pjrc.com/teensy/), a stereo audio jack,
+  and three jumper wires.
 | Teensy B0     | -> | stereo jack dit    |
 | Teensy B1     | -> | stereo jack dah    |
 | Teensy GND    | -> | stereo jack common |
@@ -136,6 +136,9 @@
   software at the moment.  You can see the trackball erupting through
   [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][the tin]].
   
+  In retrospect, I'd switch to using input pins closer to the stereo
+  jack end of the Teensy.
+
   Glen Overby built another MIDI key interface which is described here
   http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html. 
   It should work with this software if the MIDI note is set properly.
@@ -332,27 +335,30 @@
 ** TODO - keyer-control: examine output of lsp to determine connection possibilities.
 ** TODO - keyer-control: jack launching panel.
 ** TODO - keyer-control: jack connection panel.
-** TODO - keyer-control: don't die when midi_capture device is missing
+** DONE - keyer-control: don't die when midi_capture device is missing
 ** TODO - sdrkit_jack.c: provide missing jack status information.
 ** DONE - *: insert license information.
-** TODO - keyer_*.c: distinguish stdout and stderr better.
+** DONE - keyer_*.c: distinguish stdout and stderr better.
 ** TODO - keyer_framework.c: allow jack thread to buffer output to memory for the main thread to print. Hence input cannot block.
-** TODO - keyer_framework.c: implement a tcl command framework.
+** DONE - keyer_framework.c: implement a tcl command framework.
 ** TODO - keyer_tone.c: protect against 0 rise or fall
-** TODO - sdrkit_mtap.c: Should add MIDI input to receive the iambic shaped keying.
+** DONE - sdrkit_mtap.c: Should add MIDI input to receive the iambic shaped keying.
    That could be used to key a transmitter, play a sidetone, wiggle a
    PTT line, or flash some LED's. 
 
-    
-** TODO - bin/*: follow symlinked scripts back to the source directory
-** TODO - bin/midiscope: display logic transitions of midi events.
-** TODO - bin/scope: display audio baseband waveforms
-** TODO - new bin/spectrum: spectrogram/waterfall display
-** TODO - new bin/invaders: callsign-invaders ear/key training game.
-** TODO - new bin/pileup: echo back callsigns in a pileup situation
-** TODO - new keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
-** TODO - new keyer_binaural.c: to spread a monoaural audio spectrum out spatially using DJ5IL's CodePhaser circuit.
-** TODO - new keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
+** DONE - bin/*: follow symlinked scripts back to the source directory
+** DONE - bin/midiscope: display logic transitions of midi events.
+** DONE - bin/scope: display audio baseband waveforms
+** DONE - bin/spectrum: spectrogram display
+** TODO - bin/waterfall: persistent spectrogram display
+** TODO - bin/invaders: callsign-invaders ear/key training game.
+** TODO - bin/pileup: echo back callsigns in a pileup situation
+** TODO - keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
+   Does a gain block do that all by itself when jack routes multiple inputs?
+** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially using DJ5IL's CodePhaser circuit.
+** TODO - sdrkit_binaural.c: to spread i/q binaurally according to dttsp
+** TODO - sdrkit_monoiq.c: convert an monoaural signal to i/q by up-sampling and shifting.    
+** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
 * Credits
   This code is derived from many sources.
 
