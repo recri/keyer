@@ -23,6 +23,7 @@ ALL=$(LIBDIR)/sdrkit_agc.so \
 	$(LIBDIR)/sdrkit_jack.so \
 	$(LIBDIR)/sdrkit_mixer.so \
 	$(LIBDIR)/sdrkit_mtap.so \
+	$(LIBDIR)/sdrkit_noise.so \
 	$(LIBDIR)/sdrkit_oscillator.so
 
 all:: $(ALL)
@@ -71,6 +72,10 @@ $(LIBDIR)/sdrkit_mixer.so: sdrkit_mixer.c sdrkit.h sdrkit_math.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/sdrkit_mtap.so: sdrkit_mtap.c sdrkit.h
+	mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/sdrkit_noise.so: sdrkit_noise.c sdrkit.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
