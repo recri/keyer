@@ -26,20 +26,34 @@ lappend auto_path [file join [file dirname $script] .. lib]
 package require Tk
 package require sdrkit
 
+#
+# this needs to be three or four layers of implementation.
+# 1) at the core we have the atap and fftw extensions
+# 2) these get wrapped to make spectrum generator
 namespace eval ::waterfall {
-    set n 0
+    set n 0;			# waterfall counter
     array set default_data  {  
+	size 512
+	n-periods 400
 	connect {iambic_tone ascii_tone}
 	type magnitude
 	level_min -125.0
 	label-min {min -125.0}
-	value-min {-160.0 -155.0 -150.0 -155.0 -150.0 -145.0 -140.0 -135.0 -130.0 -125.0 -120.0 -115.0 -110.0 -105.0 -100.0 -95.0 -90.0 -85.0 -80.0}
+	value-min {-160.0 -130.0 -125.0 -120.0 -115.0 -110.0 -105.0 -100.0}
 	level_max -60.0
 	label-max {max -60.0}
-	value-max {-80.0 -75.0 -70.0 -65.0 -60.0 -55.0 -50.0 -45.0 -40.0}
+	value-max {-80.0 -75.0 -70.0 -65.0 -60.0 -55.0 -50.0 -45.0 -40.0 0.0}
 	level_pal 0
 	label-palette {palette 0}
 	value-palette {0 1 2 3 4 5}
+	atten 0.0
+	label-atten {atten 0.0}
+	value-atten {0 -20.0 -40.0 -60.0 -80.0 -100.0 -120.0 -140.0 -160.0}
+	period 50
+	label-period {period 50}
+	value-period {10 25 50 75 100}
+	canvas-width -1
+	canvas-height -1
     }
 }
 
@@ -83,68 +97,92 @@ proc waterfall::pixel {w level} {
 proc waterfall::capture {w} {
     upvar #0 $w data
 
-    # capture a buffer
-    foreach {f b} [::$data(tap) $data(n)] break
+    # cache some useful variables
+    set wd $data(canvas-width)
+    set ht $data(canvas-height)
 
-    # compute the fft
-    set l [::$data(fft) $b]
-
-    # convert the coefficients to a list
-    binary scan $l f* levels
-    
-    # reorder the results from most negative frequency to most positive
-    # compute the power, and convert to pixels
-    ## they're ordered from 0 .. most positive, most negative .. just < 0
-    ## k/T, T = total sample time, n * 1/sample_rate
-    set spectrum {}
-    set scanline {}
-    foreach {re im} [concat [lrange $levels [expr {1+$data(n)}] end] [lrange $levels 0 $data(n)]] {
-	# squared magnitude means 10*log10 dB
-	set p [expr {10*log10($re*$re+$im*$im+1e-16)}]
-	lappend spectrum $p
-	lappend scanline [pixel $w $p]
-    }
-
-    if {0} {
-	# store the new scanline into image2 at row $i
-	# note that $i steps backwards on each scan line
-	set n $data(n)
-	set i [expr {$n-1-($data(i)%$n)}]; # row of image1 to update
-	set j [expr {$i+1}];	       # next row of image 1
-	$data(image2) put [list $scanline] -to 0 $i $n $j
+    if {$wd > 0 && $ht > 0} {
+	# capture a buffer
+	foreach {f b} [::$data(tap) $wd] break
 	
-	# copy rows $i to end from image2 into rows 0 to $k of image1
-	set k [expr {$n-$i}];	       # rows from i to end
-	$data(image1) copy $data(image2) -from 0 $i $n $n -to 0 0 $n $k
+	# compute the fft
+	set l [::$data(fft) $b]
 	
-	# if $i is at zero, then we already copied all of image2 to image1
-	if {$l >= 0} {
-	    # copy rows 0 to $i from image2 into rows $k to end of image1
-	    $data(image1) copy $data(image2) -from 0 0 $n $i -to 0 $k $n $n
+	# convert the coefficients to a list
+	binary scan $l f* levels
+	
+	# reorder the results from most negative frequency to most positive
+	# compute the power, and convert to pixels
+	## they're ordered from 0 .. most positive, most negative .. just < 0
+	## k/T, T = total sample time, n * 1/sample_rate
+	set spectrum {}
+	set scanline {}
+	foreach {re im} [concat [lrange $levels [expr {1+$wd}] end] [lrange $levels 0 $wd]] {
+	    # squared magnitude means 10*log10 dB
+	    set p [expr {10*log10($re*$re+$im*$im+1e-16)}]
+	    lappend spectrum $p
+	    lappend scanline [pixel $w [expr {$p+$data(atten)}]]
 	}
-	#puts "scanline $data(i) :: $i $j :: $i $n -> 0 $k :: 0 $i -> $k $n"
-	# reconfigure the label so it redisplays
-	$w.l configure -image $data(image1)
-    } else {
+	
 	# scroll all the canvas images down by 1
 	$w.c move all 0 1
+
 	# find the image that scrolled off the bottom
-	set i [expr {($data(i)+$data(n)-1)%$data(n)}]
+	set i [expr {($ht-$data(i)-1)%$ht}]
+
 	# rewrite its image contents with the scanline
-	$data(img-$i) put $scanline
+	$data(img-$i) put [list $scanline]
+
 	# reset the image of the canvas item
 	$w.c itemconfig $data(item-$i) -image $data(img-$i)
-	# move the item to the top
-	$w.c move $data(item-$i) 0 [expr {-$data(n)}]
-    }
 
-    # increment our scanline index
-    incr data(i)
-    
+	# move the item to the top
+	$w.c move $data(item-$i) 0 [expr {-$ht}]
+	
+	# increment our scanline index
+	incr data(i)
+	
+    }
     # schedule next capture
-    after $data(p) [list waterfall::capture $w]
+    after $data(period) [list waterfall::capture $w]
 }
 
+proc waterfall::configure {w cw width height} {
+    if {$w eq $cw} {
+	set w [winfo parent $w]
+	upvar #0 $w data
+	if {$width != $data(canvas-width)} {
+	    set data(canvas-width) $width
+	    catch {rename $data(fft) {}}
+	    ::sdrkit::fftw $data(fft) $data(canvas-width)
+	}
+	if {$height != $data(canvas-height)} {
+	    catch {$w.c delete all}
+	    set data(canvas-height) $height
+	    for {set i 0} {$i < $data(canvas-height)} {incr i} {
+		if {[info exists data(img-$i)]} {
+		    $data(img-$i) blank
+		    $data(img-$i) configure -width $data(canvas-width)
+		} else {
+		    set data(img-$i) [image create photo -width $data(canvas-width) -height 1 -palette 256/256/256]
+		}
+		set data(item-$i) [$w.c create image 0 $i -image $data(img-$i) -anchor nw -state normal]
+	    }
+	    set data(i) 0
+	}
+    }
+}
+
+proc waterfall::destroy {w cw} {
+    if {$w eq $cw} {
+	upvar #0 $w data
+	rename $data(tap) {}
+	rename $data(fft) {}
+	foreach img [array names data img-*] {
+	    rename $data($img) {}
+	}
+    }
+}
 proc waterfall::value-menu {w n v} {
     upvar #0 $w data
     pack [ttk::menubutton $w.m.$n -textvariable ${w}(label-$n) -menu $w.m.$n.m] -side left
@@ -153,18 +191,17 @@ proc waterfall::value-menu {w n v} {
 	$w.m.$n.m add radiobutton -label "$n $t" -value "$n $t" -variable ${w}(label-$n) -command [list set ${w}($v) $t]
     }
 }
-proc waterfall::waterfall {w n p} {
+
+proc waterfall::waterfall {w opts} {
     upvar #0 $w data
     ttk::frame $w
     array set data [array get ::waterfall::default_data]
+    array set data $opts
     set data(i) 0
-    set data(n) $n
-    set data(p) $p
     set data(tap) waterfall_tap_$::waterfall::n
     set data(fft) waterfall_fft_$::waterfall::n
     incr ::waterfall::n
     ::sdrkit::atap $data(tap)
-    ::sdrkit::fftw $data(fft) $data(n)
     foreach x $data(connect) {
 	catch {sdrkit::jack connect $x:out_i $data(tap):in_i}
 	catch {sdrkit::jack connect $x:out_q $data(tap):in_q}
@@ -173,34 +210,31 @@ proc waterfall::waterfall {w n p} {
     value-menu $w palette level_pal
     value-menu $w min level_min
     value-menu $w max level_max
-    if {0} {
-	set data(image1) [image create photo -palette 256/256/256 -width $n -height $n]
-	set data(image2) [image create photo -palette 256/256/256 -width $n -height $n]
-	pack [ttk::label $w.l -image $data(image1)] -side top
-    } else {
-	pack [ttk::canvas $w.c -width $data(n) -height $data(n)] -side top
-	for {set i 0} {$i < $data(n)} {incr i} {
-	    set data(img-$i) [image create photo -width $data(n) -height 1 -palette 256/256/256]
-	    set data(item-$i) [$w.c create image 0 $i -image img$w-$i -anchor w]
-	}
-    }
+    value-menu $w atten atten
+    value-menu $w period period
+    pack [canvas $w.c -width $data(size) -height $data(n-periods)] -side top -expand true -fill both
+    # configure canvas image set 
+    bind . <Configure> [list ::waterfall::configure $w.c %W %w %h]
+    bind . <Destroy> [list ::waterfall::destroy $w %W]
     after 100 [list waterfall::capture $w]
     return $w
 }
 
-proc waterfall {w n p} { return [waterfall::waterfall $w $n $p] }
+proc waterfall {w opts} { return [waterfall::waterfall $w $opts] }
 
 proc main {argv} {
-    array set data {size 128 period 100}
+    array set data {}
     foreach {option value} $argv {
 	switch -- $option {
 	    -n - --size { set data(size) $value }
 	    -p - --period { set data(period) $value }
 	    -c - --connect { set data(connect) $value }
+	    -h - --height -
+	    --n-periods { set data(n-periods) $value }
 	    default { error "unknown option: \"$option\"" }
 	}
     }
-    pack [waterfall .scope $data(size) $data(period)] -fill both -expand true
+    pack [waterfall .fall [array get data]] -fill both -expand true
 }
 
 main $argv
