@@ -31,8 +31,8 @@
 
 #include "framework.h"
 #include "options.h"
-#include "midi.h"
-#include "ring_buffer.h"
+#include "../dspkit/midi.h"
+#include "../dspkit/ring_buffer.h"
 
 typedef struct {
   unsigned last_frame;	/* frame of last event */
@@ -48,10 +48,9 @@ typedef struct {
   framework_t fw;
   decode_t decode;
   unsigned frame;
-  #define _SIZE 512
-  unsigned rptr;
-  unsigned wptr;
-  char buff[_SIZE];
+  #define RING_SIZE 512
+  ring_buffer_t ring;
+  unsigned char buff[RING_SIZE];
 } _t;
 
 /*
@@ -77,7 +76,7 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
       char *out;				   /* decoded element */
       dp->decode.last_frame = dp->frame;
       switch (p[0]&0xF0) {
-      case NOTE_OFF: /* the end of a dit or a dah */
+      case MIDI_NOTE_OFF: /* the end of a dit or a dah */
 	{
 	  int o_dit = observation;			/* if it's a dit, then the length is the dit clock observation */
 	  int o_dah = observation / 3;			/* if it's a dah, then the length/3 is the dit clock observation */
@@ -107,7 +106,7 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 	  }
 	  break;
 	}
-      case NOTE_ON: /* the end of an inter-element, inter-letter, or a longer space */
+      case MIDI_NOTE_ON: /* the end of an inter-element, inter-letter, or a longer space */
 	{
 	  int o_ies = observation;
 	  int o_ils = observation / 3;
@@ -137,21 +136,16 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 	}
       }
       if (dp->fw.opts.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->decode.estimate, p[0], 100*observation/dp->decode.estimate);
-#if AS_BIN
-      fprintf(stdout, "%s", out); fflush(stdout);
-#endif
-#if AS_TCL
-      if (buffer_writeable(dp->wptr, dp->rptr, _SIZE)) {
+      if (ring_buffer_writeable(&dp->ring)) {
 	if (*out != 0)
-	  dp->buff[buffer_index(dp->wptr++, _SIZE)] = *out;
+	  ring_buffer_put(&dp->ring, 1, out);
       } else {
 	fprintf(stderr, "keyer_decode: buffer overflow writing \"%s\"\n", out);
       }
-#endif
     } else if (dp->fw.opts.verbose > 3)
       fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->fw.opts.chan, dp->fw.opts.note);
-  } else if (count > 3 && p[0] == SYSEX) {
-    if (p[1] == SYSEX_VENDOR) {
+  } else if (count > 3 && p[0] == MIDI_SYSEX) {
+    if (p[1] == MIDI_SYSEX_VENDOR) {
       options_parse_command(&dp->fw.opts, p+3);
       if (dp->fw.opts.verbose > 3)
 	fprintf(stderr, "sysex: %*s\n", count, p+2);
@@ -162,6 +156,7 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 
 static void _init(void *arg) {
   _t *dp = (_t *)arg;
+  ring_buffer_init(&dp->ring, RING_SIZE, dp->buff);
   dp->decode = (decode_t){ 0, 6000, 1, 1, 1, 1, 1 };
 }
 
@@ -201,25 +196,16 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
-#if AS_BIN
-int main(int narg, char **args) {
-  _t data;
-  framework_main((void *)&data, narg, args, "keyer_decode", 0,0,1,0, _init, _process,  NULL);
-}
-#endif
-
-#if AS_TCL
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc == 2 && strcmp(Tcl_GetString(objv[1]), "gets") == 0) {
     // return the current decoded string
     _t *dp = (_t *)clientData;
-    unsigned n = buffer_items_available_to_read(dp->wptr, dp->rptr, _SIZE);
-    char buff[512];
-    if (n > 512)
-      n = 512;
-    for (int i = 0; i < n; i += 1)
-      buff[i] = dp->buff[buffer_index(dp->rptr++, _SIZE)];
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(buff, n));
+    // hmm, how to avoid the buffer here, allocate a byte array?
+    unsigned n = ring_buffer_items_available_to_read(&dp->ring);
+    Tcl_Obj *result = Tcl_NewObj();
+    char *buff = Tcl_SetByteArrayLength(result, n);
+    ring_buffer_get(&dp->ring, n, buff);
+    Tcl_SetObjResult(interp, result);
     return TCL_OK;
   }
   if (framework_command(clientData, interp, argc, objv) != TCL_OK)
@@ -235,4 +221,3 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 int DLLEXPORT Keyer_decode_Init(Tcl_Interp *interp) {
   return framework_init(interp, "keyer", "1.0.0", "keyer::decode", _factory);
 }
-#endif

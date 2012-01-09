@@ -36,17 +36,14 @@
 
 #include "framework.h"
 #include "options.h"
-#include "midi.h"
-#include "midi_buffer.h"
+#include "../dspkit/midi.h"
+#include "../dspkit/midi_buffer.h"
 #include "timing.h"
 
 typedef struct {
   framework_t fw;
   timing_t samples_per;
-  unsigned char note_on[3];
-  unsigned char note_off[3];
   options_t sent;
-  unsigned duration;
   char prosign[16], n_prosign, n_slash;
   unsigned long frames;
   midi_buffer_t midi;
@@ -70,30 +67,23 @@ static void _update(_t *dp) {
     keyer_timing_update(&dp->fw.opts, &dp->samples_per);
     if (dp->fw.opts.verbose > 2) keyer_timing_report(stderr, &dp->fw.opts, &dp->samples_per);
 
-    /* midi note on/off */
-    dp->note_on[0] = NOTE_ON|(dp->fw.opts.chan-1); dp->note_on[1] = dp->fw.opts.note; dp->note_on[2] = 0;
-    dp->note_off[0] = NOTE_OFF|(dp->fw.opts.chan-1); dp->note_off[1] = dp->fw.opts.note; dp->note_off[2] = 0;
-    if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s note_on = %x, %x, %x\n", PREFACE, dp->note_on[0], dp->note_on[1], dp->note_on[2]);
-    if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s note_off = %x, %x, %x\n", PREFACE, dp->note_off[0], dp->note_off[1], dp->note_off[2]);
-
     /* pass on parameters to tone keyer */
     char buffer[128];
-    if (dp->sent.rise != dp->fw.opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->fw.opts.rise); midi_sysex_write(&dp->midi, buffer); }
-    if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_sysex_write(&dp->midi, buffer); }
-    if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_sysex_write(&dp->midi, buffer); }
-    if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.rise != dp->fw.opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->fw.opts.rise); midi_buffer_write_sysex(&dp->midi, buffer); }
+    if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_buffer_write_sysex(&dp->midi, buffer); }
+    if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_buffer_write_sysex(&dp->midi, buffer); }
+    if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_buffer_write_sysex(&dp->midi, buffer); }
     /* or to decoder */
-    if (dp->sent.word != dp->fw.opts.word) { sprintf(buffer, "<word%.1f>", dp->sent.word = dp->fw.opts.word); midi_sysex_write(&dp->midi, buffer); }
-    if (dp->sent.wpm != dp->fw.opts.wpm) { sprintf(buffer, "<wpm%.1f>", dp->sent.wpm = dp->fw.opts.wpm); midi_sysex_write(&dp->midi, buffer); }
+    if (dp->sent.word != dp->fw.opts.word) { sprintf(buffer, "<word%.1f>", dp->sent.word = dp->fw.opts.word); midi_buffer_write_sysex(&dp->midi, buffer); }
+    if (dp->sent.wpm != dp->fw.opts.wpm) { sprintf(buffer, "<wpm%.1f>", dp->sent.wpm = dp->fw.opts.wpm); midi_buffer_write_sysex(&dp->midi, buffer); }
   }
 }
 
 static void _init(void *arg) {
   _t *dp = (_t *)arg;
-  dp->duration = 0;
   dp->n_prosign = 0;
   dp->n_slash = 0;
-  midi_init(&dp->midi);
+  midi_buffer_init(&dp->midi);
 }
 
 /*
@@ -102,33 +92,44 @@ static void _init(void *arg) {
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
+  void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, jack_last_frame_time(dp->fw.client));
+  int buffer_event_index = 0, buffer_event_time = 0;
+  int buffer_event_count = midi_buffer_get_event_count(buffer_in);
+  jack_midi_event_t buffer_event;
+  // find out what the midi_buffer has for us to do
+
+  if (buffer_event_index < buffer_event_count) {
+    midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
+    buffer_event_time = buffer_event.time;
+  } else {
+    buffer_event_time = nframes+1;
+  }
+  // clear the jack output buffer
   jack_midi_clear_buffer(midi_out);
+  // update our options
   _update(dp);
   /* for each frame in this callback */
   for(int i = 0; i < nframes; i += 1) {
-    while (i == dp->duration) {
-      if (midi_readable(&dp->midi)) {
-	if (dp->fw.opts.verbose > 4) fprintf(stderr, "%s midi_readable, duration %u, count %u\n", PREFACE, midi_duration(&dp->midi), midi_count(&dp->midi));
-	dp->duration += midi_duration(&dp->midi);
-	if (midi_count(&dp->midi) != 0) {
-	  unsigned count = midi_count(&dp->midi);
-	  unsigned char* buffer = jack_midi_event_reserve(midi_out, i, count);
-	  if (buffer == NULL) {
-	    fprintf(stderr, "jack won't buffer %d midi bytes!\n", count);
-	  } else {
-	    midi_read_bytes(&dp->midi, count, buffer);
-	    if (dp->fw.opts.verbose > 4) fprintf(stderr, "%s sent %x [%x, %x, %x, ...]\n", PREFACE, count, buffer[0], buffer[1], buffer[2]);
-	  }
+    /* process all midi output events at this sample frame */
+    while (buffer_event_time == i) {
+      if (buffer_event.size != 0) {
+	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, buffer_event.size);
+	if (buffer == NULL) {
+	  fprintf(stderr, "%s:%d:%ld: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, dp->frames, buffer_event.size);
+	} else {
+	  memcpy(buffer, buffer_event.buffer, buffer_event.size);
 	}
-	midi_read_next(&dp->midi);
+      }
+      if (buffer_event_index < buffer_event_count) {
+	midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
+	buffer_event_time = buffer_event.time;
       } else {
-	dp->duration = nframes;
+	buffer_event_time = nframes+1;
       }
     }
+    /* bump the frame counter */
     dp->frames += 1;
   }
-  if (dp->duration >= nframes)
-    dp->duration -= nframes;
   return 0;
 }
 
@@ -242,31 +243,35 @@ static char *_morse_table[128] = {
   /* 127 DEL */ "........"
 };
 
+static void _flush_midi(_t *dp) {
+  midi_buffer_queue_flush(&dp->midi);
+}
+
 /*
 ** queue a string of . and - as midi events
 ** terminate with an inter letter space unless continues
 */
 static void _queue_midi(_t *dp, char c, char *p, int continues) {
   /* normal send single character */
-  if (p == 0) {
+  if (p == NULL) {
     if (c == ' ')
       if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi delay %d\n", PREFACE, dp->samples_per.iws-dp->samples_per.ils);
-      midi_write(&dp->midi, dp->samples_per.iws-dp->samples_per.ils, 0, "");
+    midi_buffer_queue_delay(&dp->midi, dp->samples_per.iws-dp->samples_per.ils);
   } else {
     while (*p != 0) {
       if (*p == '.') {
 	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi dit %d\n", PREFACE, dp->samples_per.dit);
-	midi_write(&dp->midi, dp->samples_per.dit, 3, dp->note_on);
+	midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dit, dp->fw.opts.chan, dp->fw.opts.note, 0);
       } else if (*p == '-') {
 	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi dah %d\n", PREFACE, dp->samples_per.dah);
-	midi_write(&dp->midi, dp->samples_per.dah, 3, dp->note_on);
+	midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dah, dp->fw.opts.chan, dp->fw.opts.note, 0);
       }
       if (p[1] != 0 || continues) {
 	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi ies %d)\n", PREFACE, dp->samples_per.ies);
-	midi_write(&dp->midi, dp->samples_per.ies, 3, dp->note_off);
+	midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ies, dp->fw.opts.chan, dp->fw.opts.note, 0);
       } else {
 	if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _queue_midi ils %d)\n", PREFACE, dp->samples_per.ils);
-	midi_write(&dp->midi, dp->samples_per.ils, 3, dp->note_off);
+	midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ils, dp->fw.opts.chan, dp->fw.opts.note, 0);
       }
       p += 1;
     }
@@ -283,7 +288,7 @@ static void _queue_char(char c, void *arg) {
   if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s _queue_char n_slash %d, n_prosign %d\n", PREFACE, dp->n_slash, dp->n_prosign);
   
   if (c == '\\') {
-    /* use \ab to send prosign a concatenated to b with no interletter space */
+    /* use \ab to send prosign of a concatenated to b with no inter-letter space */
     /* multiple slashes to get longer prosigns, so \\sos or \s\os */
     dp->n_slash += 1;
   } else if (dp->n_slash != 0) {
@@ -294,20 +299,14 @@ static void _queue_char(char c, void *arg) {
       }
       dp->n_prosign = 0;
       dp->n_slash = 0;
+      _flush_midi(dp);
     }
   } else {
     _queue_midi(dp, c, _morse_table[c&0x7f], 0);
+    _flush_midi(dp);
   }
 }
 
-#if AS_BIN
-int main(int argc, char **argv) {
-  _t data;
-  framework_main((void *)&data, argc, argv, "keyer_ascii", 0,0,0,1, _init, _process, _queue_char);
-}
-#endif
-
-#if AS_TCL
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   if (argc > 1 && strcmp(Tcl_GetString(objv[1]),"puts") == 0) {
@@ -321,11 +320,11 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     return TCL_OK;
   }
   if (argc == 2 && strcmp(Tcl_GetString(objv[1]), "pending") == 0) {
-    Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_n_readable(&data->midi)));
+    Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_buffer_readable(&data->midi)));
     return TCL_OK;
   }
   if (argc == 2 && strcmp(Tcl_GetString(objv[1]), "available") == 0) {
-    Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_n_writeable(&data->midi)));
+    Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_buffer_writeable(&data->midi)));
     return TCL_OK;
   }
   if (framework_command(clientData, interp, argc, objv) != TCL_OK)
@@ -341,5 +340,4 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 int DLLEXPORT Keyer_ascii_Init(Tcl_Interp *interp) {
   return framework_init(interp, "keyer", "1.0.0", "keyer::ascii", _factory);
 }
-#endif
 

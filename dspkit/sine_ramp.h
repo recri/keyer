@@ -15,10 +15,10 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef RAMP_H
-#define RAMP_H
+#ifndef SINE_RAMP_H
+#define SINE_RAMP_H
 
-#include "osc.h"
+#include "oscillator.h"
 
 /*
 ** sine attack/decay ramp
@@ -27,33 +27,33 @@
 typedef struct {
   int target;			/* sample length of ramp */
   int current;			/* current sample point in ramp */
-  osc_t ramp;			/* ramp oscillator */
-} ramp_t;
+  oscillator_t ramp;		/* ramp oscillator */
+} sine_ramp_t;
 
-static void ramp_init(ramp_t *r, float ms, int samples_per_second) {
+static void sine_ramp_init(sine_ramp_t *r, float ms, int samples_per_second) {
   r->target = samples_per_second * (ms / 1000);
   r->current = 0;
-  osc_init(&r->ramp, 1000/(4*ms), samples_per_second);
+  oscillator_init(&r->ramp, 1000/(4*ms), samples_per_second);
 }
 
-static void ramp_update(ramp_t *r, float ms, int samples_per_second) {
+static void sine_ramp_update(sine_ramp_t *r, float ms, int samples_per_second) {
   r->target = samples_per_second * (ms / 1000);
-  osc_update(&r->ramp, 1000/(4*ms), samples_per_second);
+  oscillator_update(&r->ramp, 1000/(4*ms), samples_per_second);
 }
 
-static void ramp_reset(ramp_t *r) {
+static void sine_ramp_reset(sine_ramp_t *r) {
   r->current = 0;
-  osc_reset(&r->ramp);
+  oscillator_reset(&r->ramp);
 }
 
-static float ramp_next(ramp_t *r) {
+static float sine_ramp_next(sine_ramp_t *r) {
   float x, y;
   r->current += 1;
-  osc_next_xy(&r->ramp, &x, &y);
+  oscillator_next_xy(&r->ramp, &x, &y);
   return y;
 }
 
-static int ramp_done(ramp_t *r) {
+static int sine_ramp_done(sine_ramp_t *r) {
   return r->current == r->target;
 }
 

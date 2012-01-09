@@ -15,31 +15,27 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef RING_BUFFER_H
-#define RING_BUFFER_H
+#ifndef MIDI_H
+#define MIDI_H
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 /*
-** circular buffer arithmetic
+** MIDI commands semi-implemented
 */
+#define MIDI_NOTE_OFF		0x80
+#define MIDI_NOTE_ON		0x90
+#define MIDI_NOTE_TOUCH		0xA0
+#define MIDI_CHAN_CONTROL	0xB0
+#define MIDI_SYSEX		0xF0
+#define MIDI_SYSEX_VENDOR	0x7D
+#define MIDI_SYSEX_END		0xF7
 
-static unsigned buffer_items_available_to_read(unsigned wptr, unsigned rptr, unsigned size) {
-  return wptr-rptr;
+#ifdef __cplusplus
 }
-
-static unsigned buffer_items_available_to_write(unsigned wptr, unsigned rptr, unsigned size) {
-  return size-buffer_items_available_to_read(wptr, rptr, size);
-}
-
-static int buffer_readable(unsigned wptr, unsigned rptr, unsigned size) {
-  return buffer_items_available_to_read(wptr, rptr, size) > 0;
-}
-
-static int buffer_writeable(unsigned wptr, unsigned rptr, unsigned size) {
-  return buffer_items_available_to_write(wptr, rptr, size) > 0;
-}
-
-static unsigned buffer_index(unsigned ptr, unsigned size) {
-  return (ptr&(size-1));
-}
+#endif
 
 #endif

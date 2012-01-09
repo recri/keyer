@@ -15,8 +15,8 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef OSC_H
-#define OSC_H
+#ifndef OSCILLATOR_H
+#define OSCILLATOR_H
 
 /*
 ** oscillator.
@@ -24,11 +24,11 @@
 */
 typedef struct {
   float xi, c, x, y;
-} osc_t;
+} oscillator_t;
 
 static float squaref(float x) { return x * x; }
 
-static void osc_set_hertz(osc_t *o, float hertz, int samples_per_second, int init) {
+static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_second, int init) {
   const float pi = 3.14159265358979323846;
   float current_xi = o->xi;
   float wps = hertz / samples_per_second;
@@ -43,25 +43,27 @@ static void osc_set_hertz(osc_t *o, float hertz, int samples_per_second, int ini
   }
 }
 
-static void osc_init(osc_t *o, float hertz, int samples_per_second) {
-  osc_set_hertz(o, hertz, samples_per_second, 1);
+static void oscillator_init(oscillator_t *o, float hertz, int samples_per_second) {
+  oscillator_set_hertz(o, hertz, samples_per_second, 1);
 }
 
-static void osc_update(osc_t *o, float hertz, int samples_per_second) {
-  osc_set_hertz(o, hertz, samples_per_second, 0);
+static void oscillator_update(oscillator_t *o, float hertz, int samples_per_second) {
+  oscillator_set_hertz(o, hertz, samples_per_second, 0);
 }
 
-static void osc_reset(osc_t *o) {
+static void oscillator_reset(oscillator_t *o) {
   o->x = o->xi;
   o->y = 0;
 }
 
-static void osc_next_xy(osc_t *o, float *x, float *y) {
+/*
+  check if keeping 1/xi is worth while, 
+*/
+static void oscillator_next_xy(oscillator_t *o, float *x, float *y) {
   float t = (o->x + o->y) * o->c;
   float nx = t-o->y;
   float ny = t+o->x;
-  *x = (o->x = nx) / o->xi;	/* check if keeping 1/xi is worth while */
+  *x = (o->x = nx) / o->xi;
   *y = o->y = ny;
 }
-
 #endif
