@@ -39,7 +39,7 @@ all-clean:: clean
 clean::
 	rm -f *~ *.o
 
-$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h options.h timing.h ../dspkit/midi.h ../dspkit/keyed_tone.h
+$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h options.h ../dspkit/midi.h ../dspkit/keyed_tone.h
 	mkdir -p $(LIBDIR)
 	cc -o $(LIBDIR)/keyer_tone.so -shared -fPIC -DAS_TCL $(CFLAGS) keyer_tone.c $(JACK_LIBS) $(LIBS) -lm
 
@@ -47,11 +47,11 @@ $(LIBDIR)/keyer_decode.so: keyer_decode.c framework.h options.h ../dspkit/midi.h
 	mkdir -p $(LIBDIR)
 	cc -o $(LIBDIR)/keyer_decode.so $(CFLAGS) -shared -fPIC -DAS_TCL keyer_decode.c  $(JACK_LIBS) $(LIBS) -lm
 
-$(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h options.h timing.h ../dspkit/midi.h ../dspkit/midi_buffer.h
+$(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h options.h ../dspkit/midi.h ../dspkit/midi_buffer.h ../dspkit/morse_timing.h ../dspkit/morse_coding.h
 	mkdir -p $(LIBDIR)
 	cc -o $(LIBDIR)/keyer_ascii.so $(CFLAGS) -shared -fPIC -DAS_TCL keyer_ascii.c $(JACK_LIBS) $(LIBS) -lm
 
-$(LIBDIR)/keyer_iambic.so: keyer_iambic.cc framework.h options.h timing.h ../dspkit/midi.h ../dspkit/midi_buffer.h
+$(LIBDIR)/keyer_iambic.so: keyer_iambic.cc framework.h options.h ../dspkit/midi.h ../dspkit/midi_buffer.h
 	mkdir -p $(LIBDIR)
 	g++ -o $(LIBDIR)/keyer_iambic.so $(CPPFLAGS) -shared -fPIC -DAS_TCL keyer_iambic.cc $(JACK_LIBS) $(LIBS) -lm
 

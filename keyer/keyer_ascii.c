@@ -38,11 +38,12 @@
 #include "options.h"
 #include "../dspkit/midi.h"
 #include "../dspkit/midi_buffer.h"
-#include "timing.h"
+#include "../dspkit/morse_timing.h"
+#include "../dspkit/morse_coding.h"
 
 typedef struct {
   framework_t fw;
-  timing_t samples_per;
+  morse_timing_t samples_per;
   options_t sent;
   char prosign[16], n_prosign, n_slash;
   unsigned long frames;
@@ -64,8 +65,8 @@ static void _update(_t *dp) {
     if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _update\n", PREFACE);
 
     /* update timing computations */
-    keyer_timing_update(&dp->fw.opts, &dp->samples_per);
-    if (dp->fw.opts.verbose > 2) keyer_timing_report(stderr, &dp->fw.opts, &dp->samples_per);
+    // maybe this wasn't the best idea
+    morse_timing(&dp->samples_per, dp->fw.opts.sample_rate, dp->fw.opts.word, dp->fw.opts.wpm, dp->fw.opts.dah, dp->fw.opts.ies, dp->fw.opts.ils, dp->fw.opts.iws);
 
     /* pass on parameters to tone keyer */
     char buffer[128];
@@ -133,116 +134,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
-/*
-** translate queued characters into morse code key transitions
-*/
-static char *_morse_table[128] = {
-  /* 000 NUL */ 0, /* 001 SOH */ 0, /* 002 STX */ 0, /* 003 ETX */ 0,
-  /* 004 EOT */ 0, /* 005 ENQ */ 0, /* 006 ACK */ 0, /* 007 BEL */ 0,
-  /* 008  BS */ 0, /* 009  HT */ 0, /* 010  LF */ 0, /* 011  VT */ 0,
-  /* 012  FF */ 0, /* 013  CR */ 0, /* 014  SO */ 0, /* 015  SI */ 0,
-  /* 016 DLE */ 0, /* 017 DC1 */ 0, /* 018 DC2 */ 0, /* 019 DC3 */ 0,
-  /* 020 DC4 */ 0, /* 021 NAK */ 0, /* 022 SYN */ 0, /* 023 ETB */ 0,
-  /* 024 CAN */ 0, /* 025  EM */ 0, /* 026 SUB */ 0, /* 027 ESC */ 0,
-  /* 028  FS */ 0, /* 029  GS */ 0, /* 030  RS */ 0, /* 031  US */ 0,
-  /* 032  SP */ 0,
-  /* 033   ! */ "...-.",	// [SN]
-  /* 034   " */ ".-..-.",	// [RR]
-  /* 035   # */ 0,
-  /* 036   $ */ "...-..-",	// [SX]
-  /* 037   % */ ".-...",	// [AS]
-  /* 038   & */ 0,
-  /* 039   ' */ ".----.",	// [WG]
-  /* 040   ( */ "-.--.",	// [KN]
-  /* 041   ) */ "-.--.-",	// [KK]
-  /* 042   * */ "...-.-",	// [SK]
-  /* 043   + */ ".-.-.",	// [AR]
-  /* 044   , */ "--..--",
-  /* 045   - */ "-....-",
-  /* 046   . */ ".-.-.-",
-  /* 047   / */ "-..-.",
-  /* 048   0 */ "-----",
-  /* 049   1 */ ".----",
-  /* 050   2 */ "..---",
-  /* 051   3 */ "...--",
-  /* 052   4 */ "....-",
-  /* 053   5 */ ".....",
-  /* 054   6 */ "-....",
-  /* 055   7 */ "--...",
-  /* 056   8 */ "---..",
-  /* 057   9 */ "----.",
-  /* 058   : */ "---...",	// [OS]
-  /* 059   ; */ "-.-.-.",	// [KR]
-  /* 060   < */ 0,
-  /* 061   = */ "-...-",	// [BT]
-  /* 062   > */ 0,
-  /* 063   ? */ "..--..",	// [IMI]
-  /* 064   @ */ ".--.-.",
-  /* 065   A */ ".-",
-  /* 066   B */ "-...",
-  /* 067   C */ "-.-.",
-  /* 068   D */ "-..",
-  /* 069   E */ ".",
-  /* 070   F */ "..-.",
-  /* 071   G */ "--.",
-  /* 072   H */ "....",
-  /* 073   I */ "..",
-  /* 074   J */ ".---",
-  /* 075   K */ "-.-",
-  /* 076   L */ ".-..",
-  /* 077   M */ "--",
-  /* 078   N */ "-.",
-  /* 079   O */ "---",
-  /* 080   P */ ".--.",
-  /* 081   Q */ "--.-",
-  /* 082   R */ ".-.",
-  /* 083   S */ "...",
-  /* 084   T */ "-",
-  /* 085   U */ "..-",
-  /* 086   V */ "...-",
-  /* 087   W */ ".--",
-  /* 088   X */ "-..-",
-  /* 089   Y */ "-.--",
-  /* 090   Z */ "--..",
-  /* 091   [ */ 0,
-  /* 092   \ */ 0,
-  /* 093   ] */ 0,
-  /* 094   ^ */ 0,
-  /* 095   _ */ "..--.-",	// [UK]
-  /* 096   ` */ 0,
-  /* 097   a */ ".-",
-  /* 098   b */ "-...",
-  /* 099   c */ "-.-.",
-  /* 100   d */ "-..",
-  /* 101   e */ ".",
-  /* 102   f */ "..-.",
-  /* 103   g */ "--.",
-  /* 104   h */ "....",
-  /* 105   i */ "..",
-  /* 106   j */ ".---",
-  /* 107   k */ "-.-",
-  /* 108   l */ ".-..",
-  /* 109   m */ "--",
-  /* 110   n */ "-.",
-  /* 111   o */ "---",
-  /* 112   p */ ".--.",
-  /* 113   q */ "--.-",
-  /* 114   r */ ".-.",
-  /* 115   s */ "...",
-  /* 116   t */ "-",
-  /* 117   u */ "..-",
-  /* 118   v */ "...-",
-  /* 119   w */ ".--",
-  /* 120   x */ "-..-",
-  /* 121   y */ "-.--",
-  /* 122   z */ "--..",
-  /* 123   { */ 0,
-  /* 124   | */ 0,
-  /* 125   } */ 0,
-  /* 126   ~ */ 0,
-  /* 127 DEL */ "........"
-};
-
 static void _flush_midi(_t *dp) {
   midi_buffer_queue_flush(&dp->midi);
 }
@@ -295,14 +186,14 @@ static void _queue_char(char c, void *arg) {
     dp->prosign[dp->n_prosign++] = c;
     if (dp->n_prosign == dp->n_slash+1) {
       for (int i = 0; i < dp->n_prosign; i += 1) {
-	_queue_midi(dp, dp->prosign[i], _morse_table[dp->prosign[i]&127], i != dp->n_prosign-1);
+	_queue_midi(dp, dp->prosign[i], morse_coding(dp->prosign[i]), i != dp->n_prosign-1);
       }
       dp->n_prosign = 0;
       dp->n_slash = 0;
       _flush_midi(dp);
     }
   } else {
-    _queue_midi(dp, c, _morse_table[c&0x7f], 0);
+    _queue_midi(dp, c, morse_coding(c), 0);
     _flush_midi(dp);
   }
 }

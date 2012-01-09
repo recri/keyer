@@ -31,14 +31,14 @@ typedef struct {
 } sine_ramp_t;
 
 static void sine_ramp_init(sine_ramp_t *r, float ms, int samples_per_second) {
-  r->target = samples_per_second * (ms / 1000);
+  r->target = samples_per_second * (ms / 1000.0f);
   r->current = 0;
-  oscillator_init(&r->ramp, 1000/(4*ms), samples_per_second);
+  oscillator_init(&r->ramp, 1000.0f/(4.0f*ms), samples_per_second);
 }
 
 static void sine_ramp_update(sine_ramp_t *r, float ms, int samples_per_second) {
-  r->target = samples_per_second * (ms / 1000);
-  oscillator_update(&r->ramp, 1000/(4*ms), samples_per_second);
+  r->target = samples_per_second * (ms / 1000.0f);
+  oscillator_update(&r->ramp, 1000.0f/(4.0f*ms), samples_per_second);
 }
 
 static void sine_ramp_reset(sine_ramp_t *r) {

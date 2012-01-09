@@ -33,11 +33,9 @@ extern "C" {
 #include "options.h"
 #include "../dspkit/midi.h"
 #include "../dspkit/midi_buffer.h"
-#include "timing.h"
 
   typedef struct {
     framework_t fw;
-    timing_t samples_per;
     Iambic k;
     unsigned long frames;
     options_t sent;
