@@ -15,8 +15,8 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef SUBCOMMAND_H
-#define SUBCOMMAND_H
+#ifndef FW_SUBCOMMAND_H
+#define FW_SUBCOMMAND_H
 
 /*
 ** provide common subcommand processing
@@ -26,5 +26,19 @@
 
 #include <tcl.h>
 #include <jack/jack.h>
+
+#include "fw_options.h"
+
+typedef struct {
+  char *name;			/* subcommand name */
+  int (*handler)(ClientData, Tcl_Interp *, int argc, Tcl_Obj* const *objv);
+} fw_subcommand_table_t;
+
+static int fw_subcommand_configure(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+}
+static int fw_subcommand_cget(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+}
+static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+}
 
 #endif

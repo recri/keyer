@@ -45,6 +45,7 @@
   char n_midi_inputs;				\
   char n_midi_outputs;				\
   jack_port_t **port;				\
+  int (*process)(jack_nframes_t nframes, void *arg);	\
   void (*command_delete)(void *)
 
 typedef struct {
@@ -98,6 +99,7 @@ static int sdrkit_get_float(Tcl_Interp *interp, Tcl_Obj *obj, float *result) {
 }
 
 /* return a list of values */
+/* should be config with no arguments */
 static int sdrkit_return_values(Tcl_Interp *interp, Tcl_Obj *values) {
   int argc;
   const char **argv;
@@ -118,7 +120,8 @@ static void sdrkit_delete(void *_sdrkit) {
   // fprintf(stderr, "sdrkit_delete(%p)\n", dsp);
   if (dsp->client) {
     // fprintf(stderr, "sdrkit_delete(%p) client %p\n", _sdrkit, dsp->client);
-    jack_deactivate(dsp->client);
+    if (dsp->process != NULL)
+      jack_deactivate(dsp->client);
     // fprintf(stderr, "sdrkit_delete(%p) client deactivated\n", _sdrkit);
     jack_client_close(dsp->client);
     // fprintf(stderr, "sdrkit_delete(%p) client closed\n", _sdrkit);
@@ -175,13 +178,14 @@ static const char * const sdrkit_find_server(int argc, Tcl_Obj* const *objv) {
 
 /* create a new dsp module factory */
 static int sdrkit_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv,
-		       const int n_inputs, const int n_outputs, const int n_midi_inputs, const int n_midi_outputs,
-		       int (*command)(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv),
-		       int (*process)(jack_nframes_t nframes, void *arg),
-		       size_t data_size,
-		       void *(*init)(void *arg),
-		       void (*command_delete)(void *arg)) {
-  if (argc != 2) {
+			  const int n_inputs, const int n_outputs, const int n_midi_inputs, const int n_midi_outputs,
+			  int (*command)(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv),
+			  int (*process)(jack_nframes_t nframes, void *arg),
+			  size_t data_size,
+			  void *(*init)(void *arg),
+			  void (*command_delete)(void *arg)) {
+  /* this should accept configure options */
+  if (argc < 2) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s name", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
@@ -213,66 +217,72 @@ static int sdrkit_factory(ClientData clientData, Tcl_Interp *interp, int argc, T
   data->n_outputs = n_outputs;
   data->n_midi_inputs = n_midi_inputs;
   data->n_midi_outputs = n_midi_outputs;
-  data->port = (jack_port_t **)Tcl_Alloc((n_inputs+n_outputs+n_midi_inputs+n_midi_outputs)*sizeof(jack_port_t *));
-  data->command_delete = NULL;
-  // fprintf(stderr, "sdrkit_factory: port %p\n", data->port);  
-  if (data->port == NULL) {
-    sdrkit_delete(data);
-    Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
-    return TCL_ERROR;
-  }
-  for (int i = 0; i < n_inputs; i++) {
-    char buf[256];
-    if (n_inputs > 2) {
-      snprintf(buf, 256, "in_%d_%c", i/2, i&1 ? 'q' : 'i');
-    } else {
-      snprintf(buf, 256, "in_%c", i&1 ? 'q' : 'i');
+  if (n_inputs+n_outputs+n_midi_inputs+n_midi_outputs != 0) {
+    data->port = (jack_port_t **)Tcl_Alloc((n_inputs+n_outputs+n_midi_inputs+n_midi_outputs)*sizeof(jack_port_t *));
+    data->command_delete = NULL;
+    // fprintf(stderr, "sdrkit_factory: port %p\n", data->port);  
+    if (data->port == NULL) {
+      sdrkit_delete(data);
+      Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
+      return TCL_ERROR;
     }
-    data->port[i] = jack_port_register(client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-  }
-  for (int i = 0; i < n_outputs; i++) {
-    char buf[256];
-    if (n_outputs > 2) {
-      snprintf(buf, 256, "out_%d_%c", i/2, i&1 ? 'q' : 'i');
-    } else {
-      snprintf(buf, 256, "out_%c", i&1 ? 'q' : 'i');
+    for (int i = 0; i < n_inputs; i++) {
+      char buf[256];
+      if (n_inputs > 2) {
+	snprintf(buf, 256, "in_%d_%c", i/2, i&1 ? 'q' : 'i');
+      } else {
+	snprintf(buf, 256, "in_%c", i&1 ? 'q' : 'i');
+      }
+      data->port[i] = jack_port_register(client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
     }
-    data->port[i+n_inputs] = jack_port_register(client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-  }
-  for (int i = 0; i < n_midi_inputs; i++) {
-    char buf[256];
-    if (n_midi_inputs > 1)
-      snprintf(buf, 256, "midi_in_%d", i);
-    else 
-      snprintf(buf, 256, "midi_in");
-    data->port[i+n_inputs+n_outputs] = jack_port_register(client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
-  }
-  for (int i = 0; i < n_midi_outputs; i++) {
-    char buf[256];
-    if (n_midi_inputs > 1)
-      snprintf(buf, 256, "midi_out_%d", i);
-    else 
-      snprintf(buf, 256, "midi_out");
-    data->port[i+n_midi_inputs+n_inputs+n_outputs] = jack_port_register(client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+    for (int i = 0; i < n_outputs; i++) {
+      char buf[256];
+      if (n_outputs > 2) {
+	snprintf(buf, 256, "out_%d_%c", i/2, i&1 ? 'q' : 'i');
+      } else {
+	snprintf(buf, 256, "out_%c", i&1 ? 'q' : 'i');
+      }
+      data->port[i+n_inputs] = jack_port_register(client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+    }
+    for (int i = 0; i < n_midi_inputs; i++) {
+      char buf[256];
+      if (n_midi_inputs > 1)
+	snprintf(buf, 256, "midi_in_%d", i);
+      else 
+	snprintf(buf, 256, "midi_in");
+      data->port[i+n_inputs+n_outputs] = jack_port_register(client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+    }
+    for (int i = 0; i < n_midi_outputs; i++) {
+      char buf[256];
+      if (n_midi_inputs > 1)
+	snprintf(buf, 256, "midi_out_%d", i);
+      else 
+	snprintf(buf, 256, "midi_out");
+      data->port[i+n_midi_inputs+n_inputs+n_outputs] = jack_port_register(client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+    }
   }
   // initialize the object data
   init((void *)data);
   data->command_delete = command_delete;
   // set generic callbacks
   jack_on_shutdown(client, sdrkit_delete, data);
-  jack_set_process_callback(client, process, data);
+  // only if there is one
+  if (process != NULL)
+    jack_set_process_callback(client, process, data);
   // create Tcl command
   Tcl_CreateObjCommand(interp, cmd_name, command, (ClientData)data, sdrkit_delete);
   // activate the client
   // fprintf(stderr, "sdrkit_factory: activate client\n");  
-  status = (jack_status_t)jack_activate(client);
-  if (status) {
-    // fprintf(stderr, "sdrkit_factory: activate failed\n");  
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("jack_activate(%s) failed: ", client_name));
-    // this is just a guess, the header doesn't say it's so
-    // jack_status_report(adaptp->interp, status);
-    sdrkit_delete(data);
-    return TCL_ERROR;
+  if (process != NULL) {
+    status = (jack_status_t)jack_activate(client);
+    if (status) {
+      // fprintf(stderr, "sdrkit_factory: activate failed\n");  
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("jack_activate(%s) failed: ", client_name));
+      // this is just a guess, the header doesn't say it's so
+      // jack_status_report(adaptp->interp, status);
+      sdrkit_delete(data);
+      return TCL_ERROR;
+    }
   }
   // fprintf(stderr, "sdrkit_factory: returning okay\n");
   Tcl_SetObjResult(interp, objv[1]);

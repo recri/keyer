@@ -31,8 +31,8 @@
 #include <jack/midiport.h>
 #include <tcl.h>
 
-#include "options.h"
-#include "subcommands.h"
+#include "fw_options.h"
+#include "fw_subcommands.h"
 
 typedef struct {
   options_t opts;
