@@ -20,87 +20,75 @@
 /*
 */
 
-/*
-** This should be widget configure|cget|start|stop
-** options: -frequency hertz -phase angle -gain dB
-** actually, phase doesn't work as an option
-*/
 #include "sdrkit.h"
 
-#include "../dspkit/oscillator.h"
+#include "../dspkit/lo_mixer.h"
 
 typedef struct {
   SDRKIT_T_COMMON;
-  oscillator_t o;
+  lo_mixer_t lo;
   int modified;
   float hertz;
-  float dBgain;
-  float gain;
   int sample_rate;
 } _t;
 
-static void _update(_t *data) {
-  if (data->modified) {
-    data->modified = 0;
-    oscillator_update(&data->o, data->hertz, data->sample_rate);
-    data->gain = powf(10, data->dBgain / 20);
+static void _setup(_t *data, float hertz) {
+  if (hertz != data->hertz) {
+    data->hertz = hertz;
+    data->modified = 1;
   }
 }
   
+static void _update(_t *data) {
+  if (data->modified) {
+    data->modified = 0;
+    lo_mixer_update(&data->lo, data->hertz, data->sample_rate);
+  }
+}
+
 static void *_init(void *arg) {
   _t * const data = (_t *)arg;
   data->modified = 0;
   data->hertz = 440.0f;
-  data->dBgain = -30;
-  data->gain = powf(10, data->dBgain / 20);
   data->sample_rate = sdrkit_sample_rate(data);
-  oscillator_init(&data->o, data->hertz, data->sample_rate);
+  lo_mixer_init(&data->lo, data->hertz, data->sample_rate);
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
-  float *out0 = jack_port_get_buffer(data->port[0], nframes);
-  float *out1 = jack_port_get_buffer(data->port[1], nframes);
+  float *in0 = jack_port_get_buffer(data->port[0], nframes);
+  float *in1 = jack_port_get_buffer(data->port[1], nframes);
+  float *out0 = jack_port_get_buffer(data->port[2], nframes);
+  float *out1 = jack_port_get_buffer(data->port[3], nframes);
   for (int i = nframes; --i >= 0; ) {
     _update(data);
-    float _Complex z = data->gain * oscillator(&data->o);
-    *out0++ = creal(z);
-    *out1++ = cimag(z);
+    float _Complex out = lo_mixer(&data->lo, *in0++ + I * *in1++);
+    *out0++ = creal(out);
+    *out1++ = cimag(out);
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
+  float hertz = 0;
   if (argc == 1)
-    return sdrkit_return_values(interp, Tcl_ObjPrintf("-frequency %f -gain %f", data->hertz, data->gain));
+    return sdrkit_return_values(interp, Tcl_ObjPrintf("-frequency %f", data->hertz));
   if (argc == 3) {
     char *opt = Tcl_GetString(objv[1]);
     if (strcmp(opt, "-frequency") == 0) {
-      float hertz;
       if (sdrkit_get_float(interp, objv[2], &hertz) != TCL_OK)
 	return TCL_ERROR;
-      if (fabs(hertz) > sdrkit_sample_rate(clientData) / 4) {
-	Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1f is more than samplerate/4", hertz));
-	return TCL_ERROR;
-      }
-      if (hertz != data->hertz) {
-	data->modified = 1;
-	data->hertz = hertz;
-      }
-      return TCL_OK;
+    } else {
+      goto usage;
     }
-    if (strcmp(opt, "-gain") == 0) {
-      float dBgain;
-      if (sdrkit_get_float(interp, objv[2], &dBgain) != TCL_OK)
-	return TCL_ERROR;
-      if (dBgain != data->dBgain) {
-	data->modified = 1;
-	data->dBgain = dBgain;
-      }
-      return TCL_OK;
+    if (fabs(hertz) > sdrkit_sample_rate(clientData) / 4) {
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1f is more than samplerate/4", hertz));
+      return TCL_ERROR;
     }
+    _setup(data, hertz);
+    return TCL_OK;
   }
  usage:
   Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s [-frequency hertz]", Tcl_GetString(objv[0])));
@@ -108,10 +96,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 0, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
+  return sdrkit_factory(clientData, interp, argc, objv, 2, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Sdrkit_oscillator_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::oscillator", _factory);
+int DLLEXPORT Sdrkit_lo_mixer_Init(Tcl_Interp *interp) {
+  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::lo_mixer", _factory);
 }

@@ -18,14 +18,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+#
+# just make some noise
+#
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
+package require Tk
 package require sdrkit
 
 array set data {
     server default
-    name gain
+    name noise
     length 320
     gain -30.0
     max-gain 0.0
@@ -56,7 +60,7 @@ proc main {argv} {
 	}
     }
 
-    sdrkit::gain $data(name)
+    sdrkit::noise $::data(name)
     wm title . $::data(name)
     set-gain $data(gain)
 

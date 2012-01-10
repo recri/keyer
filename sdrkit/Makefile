@@ -21,6 +21,7 @@ ALL=$(LIBDIR)/sdrkit_agc.so \
 	$(LIBDIR)/sdrkit_gain.so \
 	$(LIBDIR)/sdrkit_iqbalancer.so \
 	$(LIBDIR)/sdrkit_jack.so \
+	$(LIBDIR)/sdrkit_lo_mixer.so \
 	$(LIBDIR)/sdrkit_mixer.so \
 	$(LIBDIR)/sdrkit_mtap.so \
 	$(LIBDIR)/sdrkit_noise.so \
@@ -51,7 +52,7 @@ $(LIBDIR)/sdrkit_constant.so: sdrkit_constant.c sdrkit.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_fftw.so: sdrkit_fftw.c sdrkit.h window.h sdrkit_math.h
+$(LIBDIR)/sdrkit_fftw.so: sdrkit_fftw.c sdrkit.h ../dspkit/window.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(LIBS)
 
@@ -64,6 +65,10 @@ $(LIBDIR)/sdrkit_iqbalancer.so: sdrkit_iqbalancer.c sdrkit.h sdrkit_math.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/sdrkit_jack.so: sdrkit_jack.c sdrkit.h
+	mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/sdrkit_lo_mixer.so: sdrkit_lo_mixer.c sdrkit.h ../dspkit/lo_mixer.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

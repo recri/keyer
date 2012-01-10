@@ -66,4 +66,10 @@ static void oscillator_next_xy(oscillator_t *o, float *x, float *y) {
   *x = (o->x = nx) / o->xi;
   *y = o->y = ny;
 }
+
+static float _Complex oscillator(oscillator_t *o) {
+  float x, y;
+  oscillator_next_xy(o,&x,&y);
+  return x + I * y;
+}
 #endif

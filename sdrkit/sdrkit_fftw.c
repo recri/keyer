@@ -21,7 +21,7 @@
 */
 
 #include "sdrkit.h"
-#include "window.h"
+#include "../dspkit/window.h"
 
 #include <complex.h>
 #include <fftw3.h>

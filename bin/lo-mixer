@@ -18,23 +18,27 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+#
+# just make an oscillator
+#
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
+package require Tk
 package require sdrkit
 
 array set data {
     server default
-    name gain
+    name lo_mixer
     length 320
-    gain -30.0
-    max-gain 0.0
-    min-gain -160.0
+    freq 600.0
+    min-freq 1.0
+    max-freq 23500
 }
 
-proc set-gain {v} {
-    $::data(name) $v
-    set ::data(gain-label) [format %.1f $v]
+proc set-freq {v} {
+    $::data(name) -frequency $v
+    set ::data(freq-label) [format %.1f $v]
 }
 
 proc shutdown {w} {
@@ -49,22 +53,22 @@ proc main {argv} {
 	    -n - -name - --name { set ::data(name) $value }
 	    -s - -server - --server { set ::data(server) $value }
 	    -l - -length - --length { set ::data(length) $value }
-	    -g - -gain - --gain { set ::data(gain) $value }
-	    -min-gain - --min-gain { set ::data(min-gain) $value }
-	    -max-gain - --max-gain { set ::data(max-gain) $value }
+	    -f - -freq - --freq - -frequency - --frequency { set ::data(freq) $value }
+	    -min-freq - --min-freq { set ::data(min-freq) $value }
+	    -max-freq - --max-freq { set ::data(max-freq) $value }
 	    default { error "unknown option \"$option\"" }
 	}
     }
 
-    sdrkit::gain $data(name)
+    sdrkit::lo_mixer $::data(name)
     wm title . $::data(name)
-    set-gain $data(gain)
+    set-freq $::data(freq)
 
-    grid [ttk::label .gain-l -textvar ::data(gain-label)] -row 0 -column 0
-    grid [ttk::label .gain-u -text dB] -row 0 -column 1
-    grid [ttk::scale .gain-s -from $::data(max-gain) -to $::data(min-gain) -command set-gain -variable ::data(gain) -length $::data(length)] -row 0 -column 2 -sticky ew
+    set row 0
+    grid [ttk::label .freq-l -textvar ::data(freq-label)] -row $row -column 0
+    grid [ttk::label .freq-u -text Hz] -row $row -column 1
+    grid [ttk::scale .freq-s -from $::data(min-freq) -to $::data(max-freq) -command set-freq -variable ::data(freq) -length $::data(length)] -row $row -column 2 -sticky ew
+
     grid columnconfigure . 2 -weight 100
     bind . <Destroy> [list shutdown %W]
 }
-
-main $argv

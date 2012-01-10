@@ -28,8 +28,14 @@ package require sdrkit
 
 #
 # this needs to be three or four layers of implementation.
-# 1) at the core we have the atap and fftw extensions
-# 2) these get wrapped to make spectrum generator
+# 1) the core waterfall widget just does a waterfall display
+# it gets fed data and told how to display it.
+# 2) that core waterfall widget gets wrapped in a controller
+# widget that allows the how to display it to be interactively
+# modified.
+# 3) that controller widget gets wrapped into a toplevel app
+# window that also allows control of the spectrum source
+#
 namespace eval ::waterfall {
     set n 0;			# waterfall counter
     array set default_data  {  

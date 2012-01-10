@@ -30,27 +30,17 @@ package require sdrkit
 array set data {
     server default
     name osc
-    freq 600
-    gain -30
+    length 320
+    freq 600.0
+    min-freq 1.0
+    max-freq 23500
+    gain -30.0
+    min-gain -160.0
+    max-gain 0.0
 }
-
-foreach {option value} $argv {
-    switch -- $option {
-	-n - -name - --name { set data(name) $value }
-	-f - -freq - --freq - -frequency --frequency { set data(freq) $value }
-	-g - -gain - --gain { set data(gain) $value }
-	-s - -server - --server { set data(server) $value }
-	default { error "unknown option \"$option\"" }
-    }
-}
-
-sdrkit::oscillator $data(name)
-sdrkit::gain $data(name)_gain
-sdrkit::jack connect $data(name):out_i $data(name)_gain:in_i
-sdrkit::jack connect $data(name):out_q $data(name)_gain:in_q
 
 proc set-gain {v} {
-    $::data(name)_gain [expr {pow(10,$v/10.0)}]
+    $::data(name) -gain $v
     set ::data(gain-label) [format %.1f $v]
 }
 
@@ -59,21 +49,47 @@ proc set-freq {v} {
     set ::data(freq-label) [format %.1f $v]
 }
 
-set-gain $data(gain)
-set-freq $data(freq)
-
 proc shutdown {w} {
     if {$w eq {.}} {
 	rename $::data(name) {}
-	rename $::data(name)_gain {}
     }
 }
 
-grid [ttk::label .gain-l -textvar data(gain-label)] -row 0 -column 0
-grid [ttk::label .gain-u -text dB] -row 0 -column 1
-grid [ttk::scale .gain-s -from 0.0 -to -160.0 -command set-gain -variable data(gain)] -row 0 -column 2 -sticky ew
-grid [ttk::label .freq-l -textvar data(freq-label)] -row 1 -column 0
-grid [ttk::label .freq-u -text Hz] -row 1 -column 1
-grid [ttk::scale .freq-s -from 400.0 -to 1600.0 -command set-freq -variable data(freq)] -row 1 -column 2 -sticky ew
-grid columnconfigure . 2 -weight 100
-bind . <Destroy> [list shutdown %W]
+proc main {argv} {
+    if {$::data(max-freq) > [sdrkit::jack sample-rate]/4} {
+	set ::data(max-freq) [expr {[sdrkit::jack sample-rate]/4.01}]
+    }
+    foreach {option value} $argv {
+	switch -- $option {
+	    -n - -name - --name { set ::data(name) $value }
+	    -s - -server - --server { set ::data(server) $value }
+	    -l - -length - --length { set ::data(length) $value }
+	    -f - -freq - --freq - -frequency - --frequency { set ::data(freq) $value }
+	    -min-freq - --min-freq { set ::data(min-freq) $value }
+	    -max-freq - --max-freq { set ::data(max-freq) $value }
+	    -g - -gain - --gain { set ::data(gain) $value }
+	    -min-gain - --min-gain { set ::data(min-gain) $value }
+	    -max-gain - --max-gain { set ::data(max-gain) $value }
+	    default { error "unknown option \"$option\"" }
+	}
+    }
+
+    sdrkit::oscillator $::data(name)
+    wm title . $::data(name)
+    set-gain $::data(gain)
+    set-freq $::data(freq)
+
+    set row 0
+    grid [ttk::label .gain-l -textvar ::data(gain-label)] -row $row -column 0
+    grid [ttk::label .gain-u -text dB] -row $row -column 1
+    grid [ttk::scale .gain-s -from $::data(max-gain) -to $::data(min-gain) -command set-gain -variable ::data(gain) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .freq-l -textvar ::data(freq-label)] -row $row -column 0
+    grid [ttk::label .freq-u -text Hz] -row $row -column 1
+    grid [ttk::scale .freq-s -from $::data(min-freq) -to $::data(max-freq) -command set-freq -variable ::data(freq) -length $::data(length)] -row $row -column 2 -sticky ew
+
+    grid columnconfigure . 2 -weight 100
+    bind . <Destroy> [list shutdown %W]
+}
+
+main $argv
