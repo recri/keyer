@@ -80,7 +80,7 @@ $(LIBDIR)/sdrkit_mtap.so: sdrkit_mtap.c sdrkit.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_noise.so: sdrkit_noise.c sdrkit.h
+$(LIBDIR)/sdrkit_noise.so: sdrkit_noise.c framework.h fw_option.h fw_subcommand.h ../dspkit/avoid_denormals.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

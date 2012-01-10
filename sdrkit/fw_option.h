@@ -57,14 +57,14 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
     if (Tcl_GetLongFromObj(interp, val, &nval) != TCL_OK)
       return TCL_ERROR;
     *(jack_nframes_t *)(clientData+entry->offset) = (jack_nframes_t)nval;
-    return TCL_ERROR;
+    return TCL_OK;
   }
   case fw_option_float: {
     double fval;
     if (Tcl_GetDoubleFromObj(interp, val, &fval) != TCL_OK)
       return TCL_ERROR;
     *(float *)(clientData+entry->offset) = fval;
-    return TCL_ERROR;
+    return TCL_OK;
   }
   case fw_option_char: {
     int clength;
@@ -115,7 +115,6 @@ static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *inter
     return NULL;
   }
 }
-
 
 /*
 ** called by command create to process option arguments starting at objv[2].

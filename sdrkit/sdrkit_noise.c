@@ -20,31 +20,37 @@
 /*
 */
 
-#include "sdrkit.h"
-#include "sdrkit_math.h"
-
+// must precede
 #define _XOPEN_SOURCE 500
 #include <stdlib.h>
+
+#include <math.h>
+#include "../dspkit/avoid_denormals.h"
+
+#include "framework.h"
+
 
 /*
 ** make noise, specified dB level
 */
 typedef struct {
-  SDRKIT_T_COMMON;
+  framework_t fw;
   float gain;
+  float dBgain;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  data->gain = 0.0001;
+  data->dBgain = -30.0f;
+  data->gain = powf(10.0f, data->dBgain / 20.0f);
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
-  float *out0 = jack_port_get_buffer(data->port[0], nframes);
-  float *out1 = jack_port_get_buffer(data->port[1], nframes);
-  AVOIDDENORMALS;
+  float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
+  float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
+  AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
     *out0++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
     *out1++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
@@ -54,27 +60,42 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc == 1) {
-    Tcl_SetObjResult(interp, Tcl_NewDoubleObj(20*log10(data->gain)));
-    return TCL_OK;
-  }
-  if (argc == 2) {
-    float dBgain;
-    if (sdrkit_get_float(interp, objv[1], &dBgain) == TCL_OK) {
-      data->gain = powf(10, dBgain / 20);
-      return TCL_OK;
-    }
-    return TCL_ERROR;
-  }
-  Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s", Tcl_GetString(objv[0])));
-  return TCL_ERROR;
+  float dBgain = data->dBgain;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+  if (data->dBgain != dBgain) data->gain = powf(10.0f, dBgain / 20.0f);
+  return TCL_OK;
 }
 
+static const fw_option_table_t _options[] = {
+  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
+  { "-client", "client", "Client", "constant", fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-gain",   "gain",   "Gain",   "-100.0",   fw_option_float,	offsetof(_t, dBgain),	      "noise level in dB" },
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  NULL,				// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  0, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 0, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_noise_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::noise", _factory);
+  return framework_init(interp, "sdrkit_noise", "1.0.0", "sdrkit::noise", _factory);
 }
