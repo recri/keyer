@@ -62,7 +62,7 @@ proc main {argv} {
 
     sdrkit::noise $::data(name)
     wm title . $::data(name)
-    set-gain $data(gain)
+    set-gain $::data(gain)
 
     grid [ttk::label .gain-l -textvar ::data(gain-label)] -row 0 -column 0
     grid [ttk::label .gain-u -text dB] -row 0 -column 1

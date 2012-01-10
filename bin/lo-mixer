@@ -72,3 +72,5 @@ proc main {argv} {
     grid columnconfigure . 2 -weight 100
     bind . <Destroy> [list shutdown %W]
 }
+
+main $argv

@@ -19,29 +19,34 @@
 #ifndef DELAY_H
 #define DELAY_H
 
-#include "ring_buffer.h"
+#include "float_ring_buffer.h"
 
 typedef struct {
-  ring_buffer_t ring;
   int max_delay;
   int delay;
+  ring_buffer_t ring;
   float *buff;
 } delay_t;
 
-static void delay_init(delay_t *p, int samples) {
+static void *delay_init(delay_t *p, int delay, int max_delay, float *buff) {
+    p->max_delay = max_delay;
+    p->delay = delay;
+    p->buff = buff;
+    return float_ring_buffer_init(&p->ring, max_delay, buff);
 }
 
-static void delay_set_delay(delay_t *p, int samples) {
-  if (p->max_delay < samples) {
-    // reallocate buff to fit, adjust max_delay
-  }
-  if (p->max_delay >= samples) {
-    p->delay = samples;
-    p->ring.rptr = ring_buffer_index(&p->ring, p->ring.wptr-p->delay);
+static void delay_set_delay(delay_t *p, int delay) {
+  if (delay <= max_delay)
+    p->delay = delay;
+    p->ring.rptr = float_ring_buffer_index(&p->ring, p->ring.wptr-p->delay);
   }
 }
 
 static float delay(delay_t *p, float sample) {
+  float delayed_sample;
+  float_ring_buffer_get(&p->ring, 1, &delayed_sample);
+  float_ring_buffer_put(&p->ring, 1, &sample);
+  return delayed_sample;
 }
 
 #endif

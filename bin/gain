@@ -21,6 +21,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
+package require Tk
 package require sdrkit
 
 array set data {
@@ -56,9 +57,9 @@ proc main {argv} {
 	}
     }
 
-    sdrkit::gain $data(name)
+    sdrkit::gain $::data(name)
     wm title . $::data(name)
-    set-gain $data(gain)
+    set-gain $::data(gain)
 
     grid [ttk::label .gain-l -textvar ::data(gain-label)] -row 0 -column 0
     grid [ttk::label .gain-u -text dB] -row 0 -column 1
