@@ -20,7 +20,9 @@
 /*
 */
 
-#include "sdrkit.h"
+#include <math.h>
+
+#include "framework.h"
 
 /*
 ** Create an audio tap to extract samples for processing outside
@@ -45,7 +47,7 @@
 #endif
 
 typedef struct {
-  SDRKIT_T_COMMON;
+  framework_t fw;
   jack_nframes_t wframe;	// current write frame time
   size_t size;			// number of floats allocated, power of two
   float *ibuffer;		// buffer for i samples
@@ -58,13 +60,13 @@ static void *_init(void *arg) {
   unsigned n_buffers = (_N_MILLI_SECONDS * sdrkit_sample_rate(arg)) / (sdrkit_buffer_size(arg) * 1000);
   if ((n_buffers & (n_buffers-1)) != 0) {
     // fprintf(stderr, "n_buffers %x\n", n_buffers);
-    n_buffers = pow(2, 1+(int)(log10(n_buffers)/log10(2)));
+    n_buffers = powf(2.0f, 1.0f+(int)(log10f(n_buffers)/log10f(2.0f)));
     // fprintf(stderr, "n_buffers %x\n", n_buffers);
   }
   data->size = n_buffers*sdrkit_buffer_size(arg);	 // this is floats
   if (data->size == 0 || (data->size & (data->size-1)) != 0) {
     fprintf(stderr, "%s:%d: buffer size computation yielded 0x%lx\n", __FILE__, __LINE__, data->size);
-    return NULL;
+    return "n_buffers not power of two?";
   }
   data->ibuffer = (float *)Tcl_Alloc(data->size*sizeof(float));
   data->qbuffer = (float *)Tcl_Alloc(data->size*sizeof(float));
@@ -74,7 +76,7 @@ static void *_init(void *arg) {
     data->ibuffer = NULL;
     if (data->qbuffer != NULL) Tcl_Free((void *)data->qbuffer);
     data->qbuffer = NULL;
-    return NULL;
+    return "allocation of buffers failed";
   }
   return arg;
 }
@@ -98,11 +100,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
     // need to implement a misaligned copy/set, but I'm betting that jacks frame time is
     // buffer aligned
   } else {
-    float *in0 = jack_port_get_buffer(data->port[0], nframes);
+    float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
     if (in0) memcpy(data->ibuffer+offset, in0, nframes*sizeof(float));
     else memset(data->ibuffer+offset, 0, nframes*sizeof(float));
 
-    float *in1 = jack_port_get_buffer(data->port[1], nframes);
+    float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
     if (in1) memcpy(data->qbuffer+offset, in1, nframes*sizeof(float));
     else memset(data->qbuffer+offset, 0, nframes*sizeof(float));
   }
@@ -113,15 +115,19 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return framework_command(clientData, interp, argc, objv);
+}
+
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
 
-  if (argc < 2 || argc > 3) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s n_samples [ output_byte_array ]", Tcl_GetString(objv[0])));
+  if (argc < 3 || argc > 4) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get n_samples [ output_byte_array ]", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
 
   int n_samples;
-  if (Tcl_GetIntFromObj(interp, objv[1], &n_samples) != TCL_OK) {
+  if (Tcl_GetIntFromObj(interp, objv[2], &n_samples) != TCL_OK) {
     return TCL_ERROR;
   }
 
@@ -135,10 +141,22 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   size_t rptr = rframe & (data->size-1);
   Tcl_Obj *result[] = {
     Tcl_NewLongObj(rframe), 
-    argc > 2 ? objv[2] : Tcl_NewObj(),
+    NULL,
     NULL
   };
+
+  if (argc == 4) {
+    if (Tcl_IsShared(objv[3])) {
+      Tcl_SetObjResult(interp, Tcl_NewStringObj("destination byte array is shared and cannot be overwritten",-1));
+      return TCL_ERROR;
+    }
+    result[1] = objv[3];
+  } else {
+    result[1] = Tcl_NewObj();
+  }
+
   float *samples = (float *)Tcl_SetByteArrayLength(result[1], n_samples*2*sizeof(float));
+
   if (samples == NULL) {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("failed to allocate result buffer", -1));
     return TCL_ERROR;
@@ -153,11 +171,32 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   return TCL_OK;
 }
 
+static const fw_option_table_t _options[] = {
+  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
+  { "-client", "client", "Client", "constant", fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "get", _get },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  _delete,			// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  2, 0, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 2, 0, 0, 0, _command, _process, sizeof(_t), _init, _delete);
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
-// the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_atap_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::atap", _factory);
+  return framework_init(interp, "sdrkit_atap", "1.0.0", "sdrkit::atap", _factory);
 }

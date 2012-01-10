@@ -20,77 +20,72 @@
 /*
 */
 
-#include "sdrkit.h"
+#include "framework.h"
 
 /*
 ** create a constant module which produces constant samples
 ** two scalar parameters, the real and imaginary
 */
 typedef struct {
-  _Complex float c;
-} _params_t;
-
-typedef struct {
-  SDRKIT_T_COMMON;
-  _params_t *current, p[2];
+  framework_t fw;
+  float real, imag;
 } _t;
 
 static void *_init(void *arg) {
-  _t * const data = (_t *)arg;
-  data->current = &data->p[0];
-  data->current->c = 1.0;
-  // fprintf(stderr, "_init: data %p, data->current %p\n", data, data->current);
+  _t * data = (_t *)arg;
+  data->real = 1.0f;
+  data->imag = 0.0f;
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
   const _t * const data = (_t *)arg;
-  const _params_t * const p = data->current;
-  float *out0 = jack_port_get_buffer(data->port[0], nframes);
-  float *out1 = jack_port_get_buffer(data->port[1], nframes);
-  static int calls = 0;
-  //if ((calls++ % 192000) == 0)
-    //fprintf(stderr, "_process: nframes %d, data %p, params: %p, out0 %p, out1 %p\n", nframes, data, p, out0, out1);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   for (int i = nframes; --i >= 0; ) {
-    *out0++ = crealf(p->c);
-    *out1++ = cimagf(p->c);
+    *out0++ = data->real;
+    *out1++ = data->imag;
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  _t *data = (_t *)clientData;
-  _params_t *next = data->current == data->p ? data->p+1 : data->p+0;
-  float real = 0, imag = 0;
-  if (argc == 1)
-    return sdrkit_return_values(interp, Tcl_ObjPrintf("-real %f -imag %f", creal(data->current->c), cimag(data->current->c)));
-  if (argc == 3 || argc == 5) {
-    for (int i = 1; i < argc; i += 2) {
-      char *opt = Tcl_GetString(objv[i]);
-      if (strcmp(opt, "-real") == 0) {
-	if (sdrkit_get_float(interp, objv[i+1], &real) != TCL_OK)
-	  return TCL_ERROR;
-      } else if (strcmp(opt, "-imag") == 0) {
-	if (sdrkit_get_float(interp, objv[i+1], &imag) != TCL_OK)
-	  return TCL_ERROR;
-      } else {
-	goto usage;
-      }
-    }
-    next->c = real + imag * I;
-    data->current = next;
-    return TCL_OK;
-  }
- usage:
-  Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s [-real value] [-imag value]", Tcl_GetString(objv[0])));
-  return TCL_ERROR;
+  // fprintf(stderr, "%s:_command(%lx, %lx, %d, %lx)\n", __FILE__, (long)clientData, (long)interp, argc, (long)objv);
+  return framework_command(clientData, interp, argc, objv);
 }
 
+static const fw_option_table_t _options[] = {
+  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
+  { "-client", "client", "Client", "constant", fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-real",   "real",   "Real",   "1.0",      fw_option_float,	offsetof(_t, real),	      "real part of constant produced" },
+  { "-imag",   "imag",   "Imag",   "0.0",      fw_option_float,	offsetof(_t, imag),	      "imaginary part of constant produced" },
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  NULL,				// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  2, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 0, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
+  // fprintf(stderr, "%s: _command = %lx, template.command = %lx\n", __FILE__, (long)_command, (long)_template.command);
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }  
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_constant_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::constant", _factory);
+  return framework_init(interp, "sdrkit_constant", "1.0.0", "sdrkit::constant", _factory);
 }

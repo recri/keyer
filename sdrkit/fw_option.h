@@ -25,29 +25,8 @@
 ** and get them handled in a consistent manner.
 */
 
-#include <tcl.h>
-#include <jack/jack.h>
 
-typedef enum {
-  // fw_option_abbrev,		/* abbreviation, not used */
-  fw_option_int,
-  fw_option_nframes,
-  fw_option_float,
-  fw_option_char,
-  fw_option_boolean,
-  // fw_option_string,
-} fw_option_type_t;
-
-typedef struct {
-  fw_option_type_t type;		/* option type */
-  size_t offset;		/* offset in clientData */
-  char *name;			/* option name */
-  char *db_name;		/* option database name */
-  char *class_name;		/* option class name */
-  char *default_value;		/* option default value */
-} fw_option_table_t;
-
-static int fw_option_lookup(char *string, fw_option_table_t *table) {
+static int fw_option_lookup(char *string, const fw_option_table_t *table) {
   for (int i = 0; table[i].name != NULL; i += 1)
     if (strcmp(table[i].name, string) == 0)
       return i;
@@ -64,42 +43,50 @@ static int fw_option_wrong_number_of_arguments(Tcl_Interp *interp) {
   return TCL_ERROR;
 }
 
-static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp, Tcl_Obj *val, fw_option_table_t *entry) {
+static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp, Tcl_Obj *val, const fw_option_table_t *entry) {
   switch (entry->type) {
-  case fw_option_int:
+  case fw_option_int: {
     int ival;
     if (Tcl_GetIntFromObj(interp, val, &ival) != TCL_OK)
       return TCL_ERROR;
     *(int *)(clientData+entry->offset) = ival;
     return TCL_OK;
-  case fw_option_nframes:
+  }
+  case fw_option_nframes: {
     long nval;
     if (Tcl_GetLongFromObj(interp, val, &nval) != TCL_OK)
       return TCL_ERROR;
     *(jack_nframes_t *)(clientData+entry->offset) = (jack_nframes_t)nval;
     return TCL_ERROR;
-  case fw_option_float:
+  }
+  case fw_option_float: {
     double fval;
     if (Tcl_GetDoubleFromObj(interp, val, &fval) != TCL_OK)
       return TCL_ERROR;
     *(float *)(clientData+entry->offset) = fval;
     return TCL_ERROR;
-  case fw_option_char:
+  }
+  case fw_option_char: {
     int clength;
-    char *cval= Tcl_GetStringFromObj(val, &length);
-    if (length != 1) {
+    char *cval= Tcl_GetStringFromObj(val, &clength);
+    if (clength != 1) {
       Tcl_SetObjResult(interp, Tcl_ObjPrintf("character option value is longer than one character: \"%s\"", cval));
       return TCL_ERROR;
     }
     *(char *)(clientData+entry->offset) = *cval;
     return TCL_OK;
-  case fw_option_boolean:
+  }
+  case fw_option_boolean: {
     int bval;
     if (Tcl_GetBooleanFromObj(interp, val, &bval) != TCL_OK)
       return TCL_ERROR;
     *(int *)(clientData+entry->offset) = bval;
     return TCL_OK;
-    // case fw_option_string:
+  }
+  case fw_option_obj: 
+    Tcl_IncrRefCount(val);
+    *(Tcl_Obj **)(clientData+entry->offset) = val;
+    return TCL_OK;
   default:
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
     return TCL_ERROR;
@@ -109,7 +96,7 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
 /*
 **
 */
-static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *interp, fw_option_table_t *entry) {
+static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *interp, const fw_option_table_t *entry) {
   switch (entry->type) {
   case fw_option_int:
     return Tcl_NewIntObj(*(int *)(clientData+entry->offset));
@@ -121,6 +108,8 @@ static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *inter
     return Tcl_NewStringObj((char *)(clientData+entry->offset), 1);
   case fw_option_boolean:
     return Tcl_NewIntObj(*(int *)(clientData+entry->offset));
+  case fw_option_obj:
+    return *(Tcl_Obj **)(clientData+entry->offset);
   default:
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
     return NULL;
@@ -131,7 +120,9 @@ static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *inter
 /*
 ** called by command create to process option arguments starting at objv[2].
 */
-static int fw_option_create(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, fw_option_table_t *table) {
+static int fw_option_create(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  const fw_option_table_t *table = fp->options;
   if ((argc & 1) != 0) return fw_option_wrong_number_of_arguments(interp);
   for (int i = 2; i < argc; i += 2) {
     int j = fw_option_lookup(Tcl_GetString(objv[i]), table);
@@ -144,11 +135,14 @@ static int fw_option_create(ClientData clientData, Tcl_Interp *interp, int argc,
 /*
 ** called by configure subcommand to process option arguments starting at objv[2]
 */
-static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, fw_option_table_t *table) {
+static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  const fw_option_table_t *table = fp->options;
   if (argc == 2) {
     // dump configuration
     Tcl_Obj *result = Tcl_NewObj();
     for (int i = 0; table[i].name != NULL; i += 1) {
+      // fprintf(stderr, "configure processing for %s\n", table[i].name);
       Tcl_Obj *entry[] = {
 	Tcl_NewStringObj(table[i].name, -1),
 	Tcl_NewStringObj(table[i].db_name, -1),
@@ -156,23 +150,29 @@ static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int ar
 	Tcl_NewStringObj(table[i].default_value, -1),
 	fw_option_get_value_obj(clientData, interp, table+i)
       };
-      if (entry[4] == NULL)
+      if (entry[4] == NULL) {
+	// fprintf(stderr, "no value for %s???\n", table[i].name);
 	return TCL_ERROR;
-      if (Tcl_ListObjAppendElement(interp, result, Tcl_NewListObj(5, entry)) != TCL_OK)
+      }
+      if (Tcl_ListObjAppendElement(interp, result, Tcl_NewListObj(5, entry)) != TCL_OK) {
+	// fprintf(stderr, "cannot append element to result for %s???\n", table[i].name);
 	return TCL_ERROR;
+      }
     }
     Tcl_SetObjResult(interp, result);
     return TCL_OK;
   } else {
     // the caller had better be prepared to restore clientData on error
-    return fw_option_create(clientData, interp, argc, objv, table);
+    return fw_option_create(clientData, interp, argc, objv);
   }
 }
 
 /*
 ** called by cget subcommand to process option arguments starting at objv[2]
 */
-static int fw_option_cget(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, fw_option_table_t *table) {
+static int fw_option_cget(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  const fw_option_table_t *table = fp->options;
   if (argc != 3) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s cget option", Tcl_GetString(objv[0])));
     return TCL_ERROR;
@@ -183,6 +183,22 @@ static int fw_option_cget(ClientData clientData, Tcl_Interp *interp, int argc, T
   if (result == NULL)
     return TCL_ERROR;
   Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/*
+** called by cdoc subcommand to process option arguments starting at objv[2]
+*/
+static int fw_option_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  const fw_option_table_t *table = fp->options;
+  if (argc != 3) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s cdoc option", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+  int j = fw_option_lookup(Tcl_GetString(objv[2]), table);
+  if (j < 0) return fw_option_unrecognized_option_name(interp, Tcl_GetString(objv[2]));
+  Tcl_SetObjResult(interp, Tcl_NewStringObj(table[j].doc_string, -1));
   return TCL_OK;
 }
 

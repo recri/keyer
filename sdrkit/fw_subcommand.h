@@ -22,23 +22,51 @@
 ** provide common subcommand processing
 **
 ** allows commands to hand off command implementation
+** for configure, cget, and cdoc to common option processor
+** while specifying their own implementations for everything else
 */
 
-#include <tcl.h>
-#include <jack/jack.h>
-
-#include "fw_options.h"
-
-typedef struct {
-  char *name;			/* subcommand name */
-  int (*handler)(ClientData, Tcl_Interp *, int argc, Tcl_Obj* const *objv);
-} fw_subcommand_table_t;
+static char *fw_subcommand_subcommands(ClientData clientData) {
+  framework_t *fp = (framework_t *)clientData;
+  if (fp->subcommands_string == NULL) {
+    const fw_subcommand_table_t *table = fp->subcommands;
+    fp->subcommands_string = Tcl_NewObj();
+    Tcl_IncrRefCount(fp->subcommands_string);
+    for (int i = 0; table[i].name != NULL; i += 1) {
+      if (i != 0) {
+	Tcl_AppendToObj(fp->subcommands_string, ", ", 2);
+	if (table[i+1].name == NULL)
+	  Tcl_AppendToObj(fp->subcommands_string, "or ", 3);
+      }
+      Tcl_AppendToObj(fp->subcommands_string, table[i].name, -1);
+    }
+  }
+  return Tcl_GetString(fp->subcommands_string);
+}
 
 static int fw_subcommand_configure(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return fw_option_configure(clientData, interp, argc, objv);
 }
 static int fw_subcommand_cget(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return fw_option_cget(clientData, interp, argc, objv);
+}
+static int fw_subcommand_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return fw_option_cdoc(clientData, interp, argc, objv);
 }
 static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  // fprintf(stderr, "fw_subcommand_dispatch(%lx, %lx, %d, %lx)\n", (long)clientData, (long)interp, argc, (long)objv);
+  const fw_subcommand_table_t *table = fp->subcommands;
+  if (argc < 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s subcommand [ ... ]", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+  char *subcmd = Tcl_GetString(objv[1]);
+  for (int i = 0; table[i].name != NULL; i += 1)
+    if (strcmp(subcmd, table[i].name) == 0)
+      return table[i].handler(clientData, interp, argc, objv);
+  Tcl_SetObjResult(interp, Tcl_ObjPrintf("unrecognized subcommand \"%s\", should one of %s", subcmd, fw_subcommand_subcommands(clientData)));
+  return TCL_ERROR;
 }
 
 #endif

@@ -40,7 +40,7 @@ $(LIBDIR)/sdrkit_agc.so: sdrkit_agc.c sdrkit.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_atap.so: sdrkit_atap.c sdrkit.h
+$(LIBDIR)/sdrkit_atap.so: sdrkit_atap.c framework.h fw_option.h fw_subcommand.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -48,7 +48,7 @@ $(LIBDIR)/sdrkit_biquad.so: sdrkit_biquad.c sdrkit.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_constant.so: sdrkit_constant.c sdrkit.h
+$(LIBDIR)/sdrkit_constant.so: sdrkit_constant.c framework.h fw_option.h fw_subcommand.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

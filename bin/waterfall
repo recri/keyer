@@ -25,6 +25,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
+package require sdrkit_atap
 
 #
 # this needs to be three or four layers of implementation.
@@ -109,7 +110,7 @@ proc waterfall::capture {w} {
 
     if {$wd > 0 && $ht > 0} {
 	# capture a buffer
-	foreach {f b} [::$data(tap) $wd] break
+	foreach {f b} [::$data(tap) get $wd] break
 	
 	# compute the fft
 	set l [::$data(fft) $b]

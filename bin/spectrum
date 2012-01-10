@@ -25,6 +25,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
+package require sdrkit_atap
 
 namespace eval ::spectrum {
     set n 0
@@ -37,7 +38,7 @@ namespace eval ::spectrum {
 
 proc spectrum::capture {w} {
     upvar #0 $w data
-    foreach {f b} [::$data(tap) $data(n)] break
+    foreach {f b} [::$data(tap) get $data(n)] break
     set l [::$data(fft) $b]
     binary scan $l f* levels
     

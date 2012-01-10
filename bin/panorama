@@ -23,6 +23,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
+package require sdrkit_atap
 
 ##
 ## waterfall
@@ -329,7 +330,7 @@ proc ::capture::capture {w} {
     set n  $data(-size)
 
     # capture a buffer
-    foreach {f b} [::$data(tap) $n] break
+    foreach {f b} [::$data(tap) get $n] break
 	
     # compute the fft
     set l [::$data(fft) $b]

@@ -25,6 +25,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
+package require sdrkit_atap
 
 namespace eval ::scope {
     array set default_data {
@@ -108,7 +109,7 @@ proc scope::clear {w} {
 
 proc scope::collect {w} {
     upvar #0 ::scope::$w data
-    foreach {f b} [$data(tap) $data(capture-samples)] break
+    foreach {f b} [$data(tap) get $data(capture-samples)] break
     binary scan $b f* samples
     if { ! [info exists data(capture-start-frame)]} {
 	set data(capture-start-frame) $f
