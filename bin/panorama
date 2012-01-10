@@ -376,7 +376,7 @@ proc ::capture::spectrum {w args} {
 
 namespace eval ::panorama {
     array set default_data {
-	-zoom 2.0
+	-zoom 1.0
 	-scroll 0.0
 	-connect {}
 	-period 50
