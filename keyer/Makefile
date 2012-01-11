@@ -39,7 +39,7 @@ all-clean:: clean
 clean::
 	rm -f *~ *.o
 
-$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h options.h ../dspkit/midi.h ../dspkit/keyed_tone.h
+$(LIBDIR)/keyer_tone.so: keyer_tone.c ../sdrkit/framework.h fw_options_def.h fw_options_var.h ../dspkit/midi.h ../dspkit/keyed_tone.h
 	mkdir -p $(LIBDIR)
 	cc -o $(LIBDIR)/keyer_tone.so -shared -fPIC -DAS_TCL $(CFLAGS) keyer_tone.c $(JACK_LIBS) $(LIBS) -lm
 

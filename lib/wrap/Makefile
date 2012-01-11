@@ -24,5 +24,5 @@ all-clean:: clean
 	rm -f pkgIndex.tcl
 
 pkgIndex.tcl: $(wildcard *.so) $(filter-out pkgIndex.tcl, $(wildcard *.tcl))
-	echo 'lappend auto_path ..; pkg_mkIndex -verbose .' | tclsh
+	echo 'pkg_mkIndex .' | tclsh
 

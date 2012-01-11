@@ -38,13 +38,11 @@
 
 */
 
-#define OPTIONS_TONE 1
-#define OPTIONS_TIMING 1
+#define FW_OPTIONS_TONE 1
+#define FW_OPTIONS_TIMING 1
 
-#include "framework.h"
-#include "options.h"
+#include "../sdrkit/framework.h"
 #include "../dspkit/midi.h"
-
 #include "../dspkit/avoid_denormals.h"
 #include "../dspkit/keyed_tone.h"
 
@@ -52,71 +50,63 @@ typedef struct {
   framework_t fw;
   keyed_tone_t tone;
   unsigned long frame;
+  int modified;
+#include "fw_options_var.h"
 } _t;
-
-static void cwtone_update(_t *dp) {
-  if (dp->fw.opts.modified) {
-    if (dp->fw.opts.verbose) fprintf(stderr, "%s:%s:%d cwtone_update\n", dp->fw.opts.client, __FILE__, __LINE__);
-    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update freq %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.freq);
-    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update gain %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.gain);
-    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update rise %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.rise);
-    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update fall %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.fall);
-    if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_update rate %d\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.sample_rate);
-    dp->fw.opts.modified = 0;
-    keyed_tone_update(&dp->tone, dp->fw.opts.gain, dp->fw.opts.freq, dp->fw.opts.rise, dp->fw.opts.fall, dp->fw.opts.sample_rate);
-  }
-}
-
-static void cwtone_init(_t *dp) {
-  if (dp->fw.opts.verbose) fprintf(stderr, "%s:%s:%d cwtone_init\n", dp->fw.opts.client, __FILE__, __LINE__);
-  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init freq %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.freq);
-  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init gain %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.gain);
-  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init rise %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.rise);
-  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init fall %.1f\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.fall);
-  if (dp->fw.opts.verbose > 1) fprintf(stderr, "%s:%s:%d cwtone_init rate %d\n", dp->fw.opts.client, __FILE__, __LINE__, dp->fw.opts.sample_rate);
-  keyed_tone_init(&dp->tone, dp->fw.opts.gain, dp->fw.opts.freq, dp->fw.opts.rise, dp->fw.opts.fall, dp->fw.opts.sample_rate);
-}
-
-static void cwtone_on(_t *dp) { keyed_tone_on(&dp->tone); }
-
-static void cwtone_off(_t *dp) { keyed_tone_off(&dp->tone); }
-
-static void cwtone_xy(_t *dp, float *x, float *y) { keyed_tone_xy(&dp->tone, x, y); }
 
 /*
 ** decode midi commands
 */
 static void _decode(_t *dp, unsigned count, unsigned char *p) {
   /* decode note/channel based events */
-  if (dp->fw.opts.verbose > 4)
-    fprintf(stderr, "%s:%s:%d @%ld _decode(%x, [%x, %x, %x, ...]\n", dp->fw.opts.client, __FILE__, __LINE__, dp->frame, count, p[0], p[1], p[2]);
+  if (dp->verbose > 4)
+    fprintf(stderr, "%s:%s:%d @%ld _decode(%x, [%x, %x, %x, ...]\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     char channel = (p[0]&0xF)+1;
     char note = p[1];
-    if (channel == dp->fw.opts.chan && note == dp->fw.opts.note)
+    if (channel == dp->chan && note == dp->note)
       switch (p[0]&0xF0) {
-      case MIDI_NOTE_OFF: cwtone_off(dp); break;
-      case MIDI_NOTE_ON:  cwtone_on(dp); break;
+      case MIDI_NOTE_OFF: keyed_tone_off(&dp->tone); break;
+      case MIDI_NOTE_ON:  keyed_tone_on(&dp->tone); break;
       }
-    else if (dp->fw.opts.verbose > 3)
-      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->fw.opts.chan, dp->fw.opts.note);
+    else if (dp->verbose > 3)
+      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->chan, dp->note);
   } else if (count > 3 && p[0] == MIDI_SYSEX) {
     if (p[1] == MIDI_SYSEX_VENDOR) {
-      options_parse_command(&dp->fw.opts, p+3);
-      if (dp->fw.opts.verbose > 3)
-	fprintf(stderr, "%s:%s:%d sysex: %*s\n", dp->fw.opts.client, __FILE__, __LINE__, count, p+2);
+      // FIX.ME - options_parse_command(&dp->fw.opts, p+3);
+      if (dp->verbose > 3)
+	fprintf(stderr, "%s:%s:%d sysex: %*s\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, count, p+2);
     }
   }
 }
 
-static void _init(void *arg) {
+static void *_init(void *arg) {
   _t *dp = (_t *) arg;
-  cwtone_init(dp);
+  if (dp->verbose) fprintf(stderr, "%s:%s:%d init\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
+  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init freq %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->freq);
+  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init gain %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->gain);
+  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->rise);
+  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->fall);
+  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
+  dp->chan = 1;
+  dp->note = 0;
+  void *p = keyed_tone_init(&dp->tone, dp->gain, dp->freq, dp->rise, dp->fall, sdrkit_sample_rate(arg));
+  if (p != &dp->tone) return p;
+  return arg;
 }
 
 static void _update(void *arg) {
   _t *dp = (_t *) arg;
-  cwtone_update(dp);
+  if (dp->modified) {
+    if (dp->verbose) fprintf(stderr, "%s:%s:%d _update\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
+    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update freq %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->freq);
+    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update gain %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->gain);
+    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->rise);
+    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->fall);
+    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
+    dp->modified = 0;
+    keyed_tone_update(&dp->tone, dp->gain, dp->freq, dp->rise, dp->fall, sdrkit_sample_rate(arg));
+  }
 }
 
 /*
@@ -124,9 +114,9 @@ static void _update(void *arg) {
 */
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
-  void* midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
-  jack_default_audio_sample_t *out_i = (jack_default_audio_sample_t *) jack_port_get_buffer(framework_output(dp,0), nframes);
-  jack_default_audio_sample_t *out_q = (jack_default_audio_sample_t *) jack_port_get_buffer(framework_output(dp,1), nframes);
+  void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
+  float *out_i = jack_port_get_buffer(framework_output(dp,0), nframes);
+  float *out_q = jack_port_get_buffer(framework_output(dp,1), nframes);
   jack_midi_event_t in_event;
   jack_nframes_t event_count = jack_midi_get_event_count(midi_in), event_index = 0, event_time = 0;
   if (event_index < event_count) {
@@ -136,8 +126,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
   } else {
     event_time = nframes+1;
   }
-  /* implement updated options */
-  cwtone_update(dp);
+  /* possibly implement updated options */
+  _update(dp);
   /* avoid denormalized numbers */
   AVOID_DENORMALS;
   /* for all frames in the buffer */
@@ -154,7 +144,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
       }
     }
     /* compute samples for all sounding notes at this sample time */
-    cwtone_xy(dp, out_i+i, out_q+i);
+    keyed_tone_xy(&dp->tone, out_i+i, out_q+i);
+
     /* increment frame counter */
     dp->frame += 1;
   }
@@ -162,17 +153,41 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
-    return TCL_ERROR;
-  _update(clientData);
+  _t *dp = (_t *)clientData;
+  float save_freq = dp->freq, save_gain = dp->gain, save_rise = dp->rise, save_fall = dp->fall;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+  dp->modified = (save_freq != dp->freq) || (save_gain != dp->gain || save_rise != dp->rise || save_fall != dp->fall);
   return TCL_OK;
 }
 
+static const fw_option_table_t _options[] = {
+#include "fw_options_def.h"
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  NULL,				// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  0, 2, 1, 0			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_factory(clientData, interp, argc, objv, 0,2,1,0, _command, _process, sizeof(_t), _init, NULL, "config|cget");
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 int DLLEXPORT Keyer_tone_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer", "1.0.0", "keyer::tone", _factory);
+  return framework_init(interp, "keyer::tone", "1.0.0", "keyer::tone", _factory);
 }
 

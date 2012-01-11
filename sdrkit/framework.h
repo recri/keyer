@@ -25,6 +25,12 @@
 ** and parsing sub-command ensembles.
 */
 
+/*
+** needs some way to indicate that -server and -client are not
+** available after command creation.
+** needs some way to indicate that live options have been modified.
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
@@ -428,6 +434,14 @@ static void framework_jack_status_report(Tcl_Interp *interp, jack_status_t statu
   if (status & JackClientZombie) Tcl_AppendResult(interp, "; " stringify(JackClientZombie), NULL);
 }  
 
+static void framework_dump_template(const framework_t *template) {
+  fprintf(stderr, "template %lx\n", (long)template);
+  fprintf(stderr, "options %lx\n", (long)template->options);
+  for (int i = 0; template->options[i].name != NULL; i += 1) fprintf(stderr, "  %d %s\n", i, template->options[i].name);
+  fprintf(stderr, "subcommands %lx\n", (long)template->subcommands);
+  for (int i = 0; template->subcommands[i].name != NULL; i += 1) fprintf(stderr, "  %d %s\n", i, template->subcommands[i].name);  
+}
+
 /* keyer module factory command */
 /* usage: keyer_module_type_name command_name [options] */
 static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const framework_t *template, size_t data_size) {
@@ -437,7 +451,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s name [option value ...]", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
-
+  // framework_dump_template(template);
   // check for some sanity
   if (template->command == NULL) {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("command pointer?", -1));
@@ -597,6 +611,11 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   return TCL_OK;
 }
 
+//
+// framework_init - initializes a loadable tcl/tk module
+// and installs a single factory command which creates
+// instances of the command type.
+//
 static int framework_init(Tcl_Interp *interp, const char *pkg, const char *pkg_version, const char *name, int (*factory)(ClientData, Tcl_Interp *, int, Tcl_Obj* const *)) {
   // tcl stubs and tk stubs are needed for dynamic loading,
   // you must have this set as a compiler option

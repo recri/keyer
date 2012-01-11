@@ -47,12 +47,13 @@ static void keyed_tone_update(keyed_tone_t *p, float gain_dB, float freq, float 
   sine_ramp_update(&p->fall, fall, sample_rate);
 }
 
-static void keyed_tone_init(keyed_tone_t *p, float gain_dB, float freq, float rise, float fall, unsigned sample_rate) {
+static void *keyed_tone_init(keyed_tone_t *p, float gain_dB, float freq, float rise, float fall, unsigned sample_rate) {
   p->state = KEYED_TONE_OFF;
   p->gain = powf(10.0f, gain_dB / 20.0f);
   oscillator_init(&p->tone, freq, sample_rate);
   sine_ramp_init(&p->rise, rise, sample_rate);
   sine_ramp_init(&p->fall, fall, sample_rate);
+  return p;
 }
 
 static void keyed_tone_on(keyed_tone_t *p) {
