@@ -15,11 +15,11 @@ LIBDIR=../lib/sdrkit
 
 ALL=$(LIBDIR)/sdrkit_agc.so \
 	$(LIBDIR)/atap.so \
-	$(LIBDIR)/sdrkit_biquad.so \
+	$(LIBDIR)/biquad.so \
 	$(LIBDIR)/constant.so \
 	$(LIBDIR)/sdrkit_fftw.so \
 	$(LIBDIR)/gain.so \
-	$(LIBDIR)/sdrkit_iqbalancer.so \
+	$(LIBDIR)/iq_balance.so \
 	$(LIBDIR)/sdrkit_jack.so \
 	$(LIBDIR)/sdrkit_lo_mixer.so \
 	$(LIBDIR)/sdrkit_mixer.so \
@@ -44,7 +44,7 @@ $(LIBDIR)/atap.so: atap.c framework.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_biquad.so: sdrkit_biquad.c sdrkit.h sdrkit_math.h
+$(LIBDIR)/biquad.so: biquad.c framework.h ../dspkit/biquad_filter.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -60,7 +60,7 @@ $(LIBDIR)/gain.so: gain.c framework.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_iqbalancer.so: sdrkit_iqbalancer.c sdrkit.h sdrkit_math.h
+$(LIBDIR)/iq_balance.so: iq_balance.c framework.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

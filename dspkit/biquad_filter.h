@@ -1,4 +1,3 @@
-/* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
@@ -16,8 +15,32 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#if 0
-  if (fabs(newfreq) >= 0.5 * uni->rate.sample)
-    return -1;
-  newfreq *= 2.0 * M_PI / uni->rate.sample;
+
+#ifndef BIQUAD_FILTER_H
+#define BIQUAD_FILTER_H
+
+/*
+** Biquad filter - rewritten from everywhere
+*/
+
+#include <complex.h>
+
+typedef struct {
+  float a1, a2, b0, b1, b2;
+  float _Complex w11, w12;
+} biquad_filter_t;
+
+static void *biquad_filter_init(biquad_filter_t *p) {
+  p->a1 = p->a2 = p->b0 = p->b1 = p->b2 = 0.0f;
+  p->w11 = p->w12 = 0.0f;
+  return p;
+}
+
+static float _Complex biquad_filter(biquad_filter_t *p, const float _Complex x) {
+  float _Complex w10 = x - p->a1 * p->w11 + p->a2 * p->w12;
+  float _Complex y = p->b0 * w10 + p->b1 * p->w11 + p->b2 * p->w12;
+  p->w12 = p->w11;
+  p->w11 = w10;
+  return y;
+}
 #endif
