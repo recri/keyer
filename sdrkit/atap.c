@@ -198,5 +198,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Atap_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit_atap", "1.0.0", "sdrkit::atap", _factory);
+  return framework_init(interp, "sdrkit::atap", "1.0.0", "sdrkit::atap", _factory);
 }

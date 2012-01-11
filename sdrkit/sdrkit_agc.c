@@ -857,5 +857,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_agc_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::agc", _factory);
+  return sdrkit_init(interp, "sdrkit::agc", "1.0.0", "sdrkit::agc", _factory);
 }

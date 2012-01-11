@@ -227,7 +227,7 @@ int DLLEXPORT Sdrkit_jack_Init(Tcl_Interp *interp) {
     return TCL_ERROR;
   }
 #endif
-  Tcl_PkgProvide(interp, "sdrkit", "1.0.0");
+  Tcl_PkgProvide(interp, "sdrkit::jack", "1.0.0");
   Tcl_CreateObjCommand(interp, "sdrkit::jack", _command, NULL, NULL);
   return TCL_OK;
 }

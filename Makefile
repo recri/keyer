@@ -1,4 +1,4 @@
-SUBDIRS=keyer sdrkit lib/keyer lib/sdrkit lib/keyer-ui lib/sdrkit-ui
+SUBDIRS=keyer sdrkit lib/keyer lib/sdrkit lib/keyer-ui lib/sdrkit-ui lib/wrap
 all::
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 

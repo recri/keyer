@@ -111,5 +111,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Sdrkit_mtap_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit", "1.0.0", "sdrkit::mtap", _factory);
+  return sdrkit_init(interp, "sdrkit::mtap", "1.0.0", "sdrkit::mtap", _factory);
 }
