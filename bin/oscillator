@@ -80,11 +80,11 @@ proc main {argv} {
     set-freq $::data(freq)
 
     set row 0
-    grid [ttk::label .gain-l -textvar ::data(gain-label)] -row $row -column 0
+    grid [ttk::label .gain-l -textvar ::data(gain-label) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .gain-u -text dB] -row $row -column 1
     grid [ttk::scale .gain-s -from $::data(max-gain) -to $::data(min-gain) -command set-gain -variable ::data(gain) -length $::data(length)] -row $row -column 2 -sticky ew
     incr row
-    grid [ttk::label .freq-l -textvar ::data(freq-label)] -row $row -column 0
+    grid [ttk::label .freq-l -textvar ::data(freq-label) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .freq-u -text Hz] -row $row -column 1
     grid [ttk::scale .freq-s -from $::data(min-freq) -to $::data(max-freq) -command set-freq -variable ::data(freq) -length $::data(length)] -row $row -column 2 -sticky ew
 

@@ -14,17 +14,17 @@ FFTW3_LIBS=$(shell pkg-config --libs fftw3f)
 LIBDIR=../lib/sdrkit
 
 ALL=$(LIBDIR)/sdrkit_agc.so \
-	$(LIBDIR)/sdrkit_atap.so \
+	$(LIBDIR)/atap.so \
 	$(LIBDIR)/sdrkit_biquad.so \
-	$(LIBDIR)/sdrkit_constant.so \
+	$(LIBDIR)/constant.so \
 	$(LIBDIR)/sdrkit_fftw.so \
-	$(LIBDIR)/sdrkit_gain.so \
+	$(LIBDIR)/gain.so \
 	$(LIBDIR)/sdrkit_iqbalancer.so \
 	$(LIBDIR)/sdrkit_jack.so \
 	$(LIBDIR)/sdrkit_lo_mixer.so \
 	$(LIBDIR)/sdrkit_mixer.so \
 	$(LIBDIR)/sdrkit_mtap.so \
-	$(LIBDIR)/sdrkit_noise.so \
+	$(LIBDIR)/noise.so \
 	$(LIBDIR)/sdrkit_oscillator.so
 
 all:: $(ALL)
@@ -40,7 +40,7 @@ $(LIBDIR)/sdrkit_agc.so: sdrkit_agc.c sdrkit.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_atap.so: sdrkit_atap.c framework.h fw_option.h fw_subcommand.h
+$(LIBDIR)/atap.so: atap.c framework.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -48,7 +48,7 @@ $(LIBDIR)/sdrkit_biquad.so: sdrkit_biquad.c sdrkit.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_constant.so: sdrkit_constant.c framework.h fw_option.h fw_subcommand.h
+$(LIBDIR)/constant.so: constant.c framework.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -56,7 +56,7 @@ $(LIBDIR)/sdrkit_fftw.so: sdrkit_fftw.c sdrkit.h ../dspkit/window.h sdrkit_math.
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_gain.so: sdrkit_gain.c sdrkit.h sdrkit_math.h
+$(LIBDIR)/gain.so: gain.c framework.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -80,11 +80,11 @@ $(LIBDIR)/sdrkit_mtap.so: sdrkit_mtap.c sdrkit.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_noise.so: sdrkit_noise.c framework.h fw_option.h fw_subcommand.h ../dspkit/avoid_denormals.h
+$(LIBDIR)/noise.so: noise.c framework.h ../dspkit/avoid_denormals.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_oscillator.so: sdrkit_oscillator.c sdrkit.h sdrkit_math.h
+$(LIBDIR)/sdrkit_oscillator.so: sdrkit_oscillator.c sdrkit.h sdrkit_math.h ../dspkit/oscillator.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

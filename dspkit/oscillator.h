@@ -18,6 +18,8 @@
 #ifndef OSCILLATOR_H
 #define OSCILLATOR_H
 
+#include <complex.h>
+
 /*
 ** oscillator.
 ** uses a recursive filter which will oscillate up to 1/4 sample rate

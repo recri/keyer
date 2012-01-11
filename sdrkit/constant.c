@@ -20,56 +20,45 @@
 /*
 */
 
-// must precede
-#define _XOPEN_SOURCE 500
-#include <stdlib.h>
-
-#include <math.h>
-#include "../dspkit/avoid_denormals.h"
-
 #include "framework.h"
 
-
 /*
-** make noise, specified dB level
+** create a constant module which produces constant samples
+** two scalar parameters, the real and imaginary
 */
 typedef struct {
   framework_t fw;
-  float gain;
-  float dBgain;
+  float real, imag;
 } _t;
 
 static void *_init(void *arg) {
-  _t *data = (_t *)arg;
-  data->dBgain = -30.0f;
-  data->gain = powf(10.0f, data->dBgain / 20.0f);
+  _t * data = (_t *)arg;
+  data->real = 1.0f;
+  data->imag = 0.0f;
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
-  _t *data = (_t *)arg;
-  float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
-  float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
-  AVOID_DENORMALS;
+  const _t * const data = (_t *)arg;
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   for (int i = nframes; --i >= 0; ) {
-    *out0++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
-    *out1++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
+    *out0++ = data->real;
+    *out1++ = data->imag;
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  _t *data = (_t *)clientData;
-  float dBgain = data->dBgain;
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (data->dBgain != dBgain) data->gain = powf(10.0f, dBgain / 20.0f);
-  return TCL_OK;
+  // fprintf(stderr, "%s:_command(%lx, %lx, %d, %lx)\n", __FILE__, (long)clientData, (long)interp, argc, (long)objv);
+  return framework_command(clientData, interp, argc, objv);
 }
 
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
   { "-client", "client", "Client", "constant", fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
-  { "-gain",   "gain",   "Gain",   "-100.0",   fw_option_float,	offsetof(_t, dBgain),	      "noise level in dB" },
+  { "-real",   "real",   "Real",   "1.0",      fw_option_float,	offsetof(_t, real),	      "real part of constant produced" },
+  { "-imag",   "imag",   "Imag",   "0.0",      fw_option_float,	offsetof(_t, imag),	      "imaginary part of constant produced" },
   { NULL }
 };
 
@@ -88,14 +77,15 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  2, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  // fprintf(stderr, "%s: _command = %lx, template.command = %lx\n", __FILE__, (long)_command, (long)_template.command);
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
-}
+}  
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Sdrkit_noise_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit_noise", "1.0.0", "sdrkit::noise", _factory);
+int DLLEXPORT Constant_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit_constant", "1.0.0", "sdrkit::constant", _factory);
 }

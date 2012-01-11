@@ -22,7 +22,7 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit
+package require sdrkit_gain
 
 array set data {
     server default
@@ -34,7 +34,7 @@ array set data {
 }
 
 proc set-gain {v} {
-    $::data(name) $v
+    $::data(name) configure -gain $v
     set ::data(gain-label) [format %.1f $v]
 }
 
@@ -61,7 +61,7 @@ proc main {argv} {
     wm title . $::data(name)
     set-gain $::data(gain)
 
-    grid [ttk::label .gain-l -textvar ::data(gain-label)] -row 0 -column 0
+    grid [ttk::label .gain-l -textvar ::data(gain-label) -width 10 -anchor e] -row 0 -column 0
     grid [ttk::label .gain-u -text dB] -row 0 -column 1
     grid [ttk::scale .gain-s -from $::data(max-gain) -to $::data(min-gain) -command set-gain -variable ::data(gain) -length $::data(length)] -row 0 -column 2 -sticky ew
     grid columnconfigure . 2 -weight 100
