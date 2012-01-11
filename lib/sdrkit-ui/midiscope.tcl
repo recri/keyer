@@ -17,6 +17,9 @@
 # 
 package provide midiscope 1.0.0
 
+package require sdrkit::mtap
+package require sdrkit::jack
+
 namespace eval ::midiscope {}
 
 proc midiscope::start-taps {w} {

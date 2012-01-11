@@ -25,11 +25,11 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit
+package require sdrkit::lo-mixer
 
 array set data {
     server default
-    name lo_mixer
+    name lo-mixer
     length 320
     freq 600.0
     min-freq 1.0
@@ -60,7 +60,7 @@ proc main {argv} {
 	}
     }
 
-    sdrkit::lo_mixer $::data(name)
+    sdrkit::lo-mixer $::data(name)
     wm title . $::data(name)
     set-freq $::data(freq)
 

@@ -25,7 +25,8 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit
+package require sdrkit::oscillator
+package require sdrkit::jack
 
 array set data {
     server default

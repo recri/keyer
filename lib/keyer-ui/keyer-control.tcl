@@ -18,11 +18,8 @@
 package provide keyer-control 1.0.0
 
 package require keyer
-package require sdrkit
 
-namespace eval keyer-control {
-
-}
+namespace eval keyer-control {}
 
 #
 # update a variable and send it's value onward

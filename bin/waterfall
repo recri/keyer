@@ -24,8 +24,9 @@ lappend auto_path [file join [file dirname $script] .. lib]
 #package provide waterfall 1.0.0
 
 package require Tk
-package require sdrkit
-package require sdrkit_atap
+package require sdrkit::atap
+package require sdrkit::fftw
+package require sdrkit::jack
 
 #
 # this needs to be three or four layers of implementation.

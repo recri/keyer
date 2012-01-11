@@ -24,8 +24,9 @@ lappend auto_path [file join [file dirname $script] .. lib]
 #package provide spectrum 1.0.0
 
 package require Tk
-package require sdrkit
-package require sdrkit_atap
+package require sdrkit::atap
+package require sdrkit::fftw
+package require sdrkit::jack
 
 namespace eval ::spectrum {
     set n 0
