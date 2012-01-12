@@ -357,15 +357,15 @@
 ** DONE - MidiKey: to use the LUFA library for USB.
    Glen Overby's sources use LUFA, the LufaMidiKey here needs revision.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
+** DONE - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
    Won't fit in an Altoids Smalls box.
-** TODO - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
    and doesn't scare me as bad as the current interface.
 ** TODO - keyer_ascii.c: to fix the timing glitches visible in scope
-** TODO - keyer_iambkc.c: to fix the timing glitces visible in scope
+** TODO - keyer_iambic.c: to fix the timing glitces visible in scope
 ** TODO - keyer_tone.c: to fix the ramping glitches visible in scope
-** TODO - abstract Oscillator class in a header.
+** DONE - abstract Oscillator class in a header.
 ** TODO - abstract DttspOscillator class in a header.
-** TODO - users of keyer_midi.c: to use the new queuing api.
+** DONE - users of keyer_midi.c: to use the new queuing api.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
 ** DONE - keyer-control: to use a dedicated keyer_tone for each keyer.
 ** DONE - keyer-control: to use expect to manage plugins.
@@ -381,6 +381,7 @@
     element decision at end of inter-element space based on key state
     at 1.5 dit clocks in the past.
 ** TODO - keyer_detone.c: to convert keyed tones into midi.
+** TODO - keyer_decode.c: rename to keyer_detime.c
 ** TODO - keyer-control: build, save, and restore custom configurations.
 ** TODO - keyer-control: ascii input/output window
 ** TODO - keyer-control: examine output of lsp to determine connection possibilities.
@@ -415,6 +416,9 @@
 ** TODO - general abstraction - sdrkit: dspkit wrapped as Tcl extensions with consistent options handling
    the command framework lives here
 ** TODO - general abstraction - jackit: sdrkit variation wrapped to jack process loop    
+** TODO - sdrkit/framework.h - readonly options
+** TODO - sdrkit/framework.h - command documentation strings
+** TODO - sdrkit/framework.h - subcommand documentation strings
 * Credits
   This code is derived from many sources.
 

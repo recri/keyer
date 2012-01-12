@@ -212,7 +212,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Sdrkit_jack_Init(Tcl_Interp *interp) {
+int DLLEXPORT Jack_Init(Tcl_Interp *interp) {
   // tcl stubs and tk stubs are needed for dynamic loading,
   // you must have this set as a compiler option
 #ifdef USE_TCL_STUBS

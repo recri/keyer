@@ -33,7 +33,7 @@ typedef struct {
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  return biquad_filter_init(&data->bq);
+  void *p = biquad_filter_init(&data->bq); if (p != &data->bq) return p;
   return arg;
 }
 

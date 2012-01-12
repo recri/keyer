@@ -20,8 +20,10 @@
 /*
 */
 
-#include "sdrkit.h"
+#include <complex.h>
 
+#include "framework.h"
+#include "../dspkit/avoid_denormals.h"
 #include "sdrkit_math.h"
 
 /*
@@ -33,7 +35,7 @@
 ** and rotates.
 */
 typedef struct {
-  SDRKIT_T_COMMON;
+  framework_t fw;
 } _t;
 
 static void *_init(void *arg) {
@@ -42,13 +44,13 @@ static void *_init(void *arg) {
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
-  float *in0 = jack_port_get_buffer(data->port[0], nframes);
-  float *in1 = jack_port_get_buffer(data->port[1], nframes);
-  float *in2 = jack_port_get_buffer(data->port[2], nframes);
-  float *in3 = jack_port_get_buffer(data->port[3], nframes);
-  float *out0 = jack_port_get_buffer(data->port[4], nframes);
-  float *out1 = jack_port_get_buffer(data->port[5], nframes);
-  AVOIDDENORMALS;
+  float *in0 = jack_port_get_buffer(framework_input(data,0), nframes);
+  float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
+  float *in2 = jack_port_get_buffer(framework_input(data,2), nframes);
+  float *in3 = jack_port_get_buffer(framework_input(data,3), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
+  float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
+  AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
     const _Complex float a = *in0++ + *in1++ * I;
     const _Complex float b = *in2++ + *in3++ * I;
@@ -60,17 +62,38 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc == 1)
-    return sdrkit_return_values(interp, Tcl_NewStringObj("", 0));
-  Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s", Tcl_GetString(objv[0])));
-  return TCL_ERROR;
+  return framework_command(clientData, interp, argc, objv);
 }
 
+static const fw_option_table_t _options[] = {
+  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
+  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  NULL,				// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  4, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 4, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Sdrkit_mixer_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit::mixer", "1.0.0", "sdrkit::mixer", _factory);
+int DLLEXPORT Mixer_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::mixer", "1.0.0", "sdrkit::mixer", _factory);
 }

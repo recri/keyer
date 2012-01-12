@@ -215,7 +215,7 @@ static int _gets(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   _t *dp = (_t *)clientData;
   // hmm, how to avoid the buffer here, allocate a byte array?
   unsigned n = ring_buffer_items_available_to_read(&dp->ring);
-  fprintf(stderr, "%s:%d %u bytes available\n", __FILE__, __LINE__, n);
+  // fprintf(stderr, "%s:%d %u bytes available\n", __FILE__, __LINE__, n);
   Tcl_Obj *result = Tcl_NewObj();
   char *buff = Tcl_SetByteArrayLength(result, n);
   ring_buffer_get(&dp->ring, n, buff);
@@ -254,7 +254,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 0, 1			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 1, 0			// inputs,outputs,midi_inputs,midi_outputs
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

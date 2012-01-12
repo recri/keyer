@@ -344,11 +344,29 @@ static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int
 /*
 ** framework utilities
 */
-static jack_port_t *framework_port(void *p, int i) { return ((framework_t *)p)->port[i]; }
-static jack_port_t *framework_input(void *p, int i) { return framework_port(p, i); }
-static jack_port_t *framework_output(void *p, int i) { return framework_port(p, i+((framework_t *)p)->n_inputs); }
-static jack_port_t *framework_midi_input(void *p, int i) { return framework_port(p, i+((framework_t *)p)->n_inputs+((framework_t *)p)->n_outputs); }
-static jack_port_t *framework_midi_output(void *p, int i) { return framework_port(p, i+((framework_t *)p)->n_inputs+((framework_t *)p)->n_outputs+((framework_t *)p)->n_midi_inputs); }
+static jack_port_t *framework_port(void *p, int i) {
+  return ((framework_t *)p)->port[i];
+}
+static jack_port_t *framework_input(void *p, int i) {
+  framework_t *fp = (framework_t *)p;
+  if (i < 0 || i >= fp->n_inputs) fprintf(stderr, "invalid framework_input %d\n", i);
+  return framework_port(p, i);
+}
+static jack_port_t *framework_output(void *p, int i) {
+  framework_t *fp = (framework_t *)p;
+  if (i < 0 || i >= fp->n_outputs) fprintf(stderr, "invalid framework_output %d\n", i);
+  return framework_port(p, i+((framework_t *)p)->n_inputs);
+}
+static jack_port_t *framework_midi_input(void *p, int i) {
+  framework_t *fp = (framework_t *)p;
+  if (i < 0 || i >= fp->n_midi_inputs) fprintf(stderr, "invalid framework_midi_input %d\n", i);
+  return framework_port(p, i+((framework_t *)p)->n_inputs+((framework_t *)p)->n_outputs);
+}
+static jack_port_t *framework_midi_output(void *p, int i) {
+  framework_t *fp = (framework_t *)p;
+  if (i < 0 || i >= fp->n_midi_outputs) fprintf(stderr, "invalid framework_midi_output %d\n", i);
+  return framework_port(p, i+((framework_t *)p)->n_inputs+((framework_t *)p)->n_outputs+((framework_t *)p)->n_midi_inputs);
+}
 
 static int sdrkit_sample_rate(void *arg) {
   return (int)jack_get_sample_rate(((framework_t *)arg)->client);

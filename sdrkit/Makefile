@@ -18,17 +18,17 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_iambic.so \
 	$(LIBDIR)/keyer_tone.so
 
-ALL=$(LIBDIR)/sdrkit_agc.so \
+ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/atap.so \
 	$(LIBDIR)/biquad.so \
 	$(LIBDIR)/constant.so \
 	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
-	$(LIBDIR)/sdrkit_jack.so \
-	$(LIBDIR)/sdrkit_lo_mixer.so \
-	$(LIBDIR)/sdrkit_mixer.so \
-	$(LIBDIR)/sdrkit_mtap.so \
+	$(LIBDIR)/jack.so \
+	$(LIBDIR)/lo_mixer.so \
+	$(LIBDIR)/mixer.so \
+	$(LIBDIR)/mtap.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
 	$(KEYERS)
@@ -42,7 +42,7 @@ all-clean:: clean
 clean::
 	rm -f *~ *.o
 
-$(LIBDIR)/sdrkit_agc.so: sdrkit_agc.c sdrkit.h sdrkit_math.h
+$(LIBDIR)/agc.so: agc.c framework.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -58,7 +58,7 @@ $(LIBDIR)/constant.so: constant.c framework.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/fftw.so: fftw.c sdrkit.h ../dspkit/window.h sdrkit_math.h
+$(LIBDIR)/fftw.so: fftw.c framework.h ../dspkit/window.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
@@ -70,19 +70,19 @@ $(LIBDIR)/iq_balance.so: iq_balance.c framework.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_jack.so: sdrkit_jack.c sdrkit.h
+$(LIBDIR)/jack.so: jack.c
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_lo_mixer.so: sdrkit_lo_mixer.c sdrkit.h ../dspkit/lo_mixer.h
+$(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../dspkit/lo_mixer.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_mixer.so: sdrkit_mixer.c sdrkit.h sdrkit_math.h
+$(LIBDIR)/mixer.so: mixer.c framework.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_mtap.so: sdrkit_mtap.c sdrkit.h
+$(LIBDIR)/mtap.so: mtap.c framework.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -90,7 +90,7 @@ $(LIBDIR)/noise.so: noise.c framework.h ../dspkit/avoid_denormals.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator.so: oscillator.c sdrkit.h sdrkit_math.h ../dspkit/oscillator.h
+$(LIBDIR)/oscillator.so: oscillator.c framework.h sdrkit_math.h ../dspkit/oscillator.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

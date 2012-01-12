@@ -1,4 +1,3 @@
-/* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
@@ -15,27 +14,6 @@
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
-*/
-
-/*
-** the dttsp agc delays the signal by some number of samples,
-** difficult to determine, while it figures out what the gain
-** should be, even before these many reparameterizations
-** get thrown in.
-**
-** a->sndx is the output index in a circular buffer,
-** a->indx is the input index in the same buffer,
-** a->fastindx is another index in the same buffer.
-** the three indexes get initialized in a particular
-** relationship when the agc is started, and they get
-** incremented and reduced by buffer size on each
-** iteration through the loop.
-** then there are the codes from update which modifie
-** rx[RL]->dttspagc.gen->sndx by itself. so there are
-** bugs.
-**
-** really should track the agc level and run it through
-** some tests to see what it does and doesn't do.
 */
 #if 0				// dsp mailing lists
 				// also quoted below
@@ -824,38 +802,28 @@ else if (signal_below_threshold() && gain_not_too_high_already())
 #endif
 
 #endif 
-
-#include "sdrkit.h"
-
-/*
-** create an automatic gain control module
-** many scalar parameters
-*/
+#ifndef AGC_H
+#define AGC_H
 typedef struct {
-} _params_t;
+  float limit;
+  float attack;
+  float decay;
+  float slope;
+  float hangtime;
+  float samprate;
+  float maxGain;
+  float minGain;
+  float curGain;
+} agc_t;
 
-typedef struct {
-  SDRKIT_T_COMMON;
-  _params_t *current, p[2];
-} _t;
-  
-static void *_init(void *arg) {
-  _t *data = (_t *)arg;
-  data->current = data->p+0;
-  return arg;
+#include <complex.h>
+
+static void *agc_init(agc_t *p, int sample_rate) {
+  return p;
 }
 
-static int _process(jack_nframes_t nframes, void *arg) {
+static float _Complex agc(agc_t *p, float _Complex x) {
+  return x;
 }
+#endif
 
-static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-}
-
-static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 2, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
-}
-
-// the initialization function which installs the adapter factory
-int DLLEXPORT Sdrkit_agc_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit::agc", "1.0.0", "sdrkit::agc", _factory);
-}

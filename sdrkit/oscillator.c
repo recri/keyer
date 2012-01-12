@@ -26,6 +26,9 @@
 ** actually, phase doesn't work as an option
 */
 
+#include <math.h>
+#include <complex.h>
+
 #include "framework.h"
 #include "../dspkit/oscillator.h"
 
@@ -79,8 +82,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->modified = 1;
   }
   if (data->hertz != hertz) {
-    if (data->hertz > sdrkit_sample_rate(data)/4) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz > sample rate/4", data->hertz));
+    if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz is more than samplerate/4", data->hertz));
       data->hertz = hertz;
       data->dBgain = dBgain;
       return TCL_ERROR;
