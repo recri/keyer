@@ -26,16 +26,16 @@
 
 extern "C" {
 
-#define FW_OPTIONS_TONE		1
-#define FW_OPTIONS_TIMING	1
-#define FW_OPTIONS_KEYER	1
+#define KEYER_OPTIONS_TONE		1
+#define KEYER_OPTIONS_TIMING	1
+#define KEYER_OPTIONS_KEYER	1
 
 #include "../sdrkit/framework.h"
 #include "../dspkit/midi.h"
 #include "../dspkit/midi_buffer.h"
 
   typedef struct {
-#include "fw_options_var.h"
+#include "keyer_options_var.h"
   } options_t;
 
   typedef struct {
@@ -230,7 +230,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-#include "fw_options_def.h"
+#include "keyer_options_def.h"
   { NULL, NULL, NULL, NULL, fw_option_none, 0, NULL }
 };
 

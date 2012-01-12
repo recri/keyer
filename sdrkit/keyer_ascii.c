@@ -250,7 +250,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-#include "fw_options_def.h"
+#include "keyer_options_def.h"
   { NULL }
 };
 
