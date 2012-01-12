@@ -25,12 +25,12 @@
 ** options: -frequency hertz -phase angle -gain dB
 ** actually, phase doesn't work as an option
 */
-#include "sdrkit.h"
 
+#include "framework.h"
 #include "../dspkit/oscillator.h"
 
 typedef struct {
-  SDRKIT_T_COMMON;
+  framework_t fw;
   oscillator_t o;
   int modified;
   float hertz;
@@ -60,8 +60,8 @@ static void *_init(void *arg) {
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
-  float *out0 = jack_port_get_buffer(data->port[0], nframes);
-  float *out1 = jack_port_get_buffer(data->port[1], nframes);
+  float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
+  float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   for (int i = nframes; --i >= 0; ) {
     _update(data);
     float _Complex z = data->gain * oscillator(&data->o);
@@ -73,45 +73,54 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc == 1)
-    return sdrkit_return_values(interp, Tcl_ObjPrintf("-frequency %f -gain %f", data->hertz, data->gain));
-  if (argc == 3) {
-    char *opt = Tcl_GetString(objv[1]);
-    if (strcmp(opt, "-frequency") == 0) {
-      float hertz;
-      if (sdrkit_get_float(interp, objv[2], &hertz) != TCL_OK)
-	return TCL_ERROR;
-      if (fabs(hertz) > sdrkit_sample_rate(clientData) / 4) {
-	Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1f is more than samplerate/4", hertz));
-	return TCL_ERROR;
-      }
-      if (hertz != data->hertz) {
-	data->modified = 1;
-	data->hertz = hertz;
-      }
-      return TCL_OK;
-    }
-    if (strcmp(opt, "-gain") == 0) {
-      float dBgain;
-      if (sdrkit_get_float(interp, objv[2], &dBgain) != TCL_OK)
-	return TCL_ERROR;
-      if (dBgain != data->dBgain) {
-	data->modified = 1;
-	data->dBgain = dBgain;
-      }
-      return TCL_OK;
-    }
+  float dBgain = data->dBgain, hertz = data->hertz;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+  if (data->dBgain != dBgain) {
+    data->modified = 1;
   }
- usage:
-  Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s [-frequency hertz]", Tcl_GetString(objv[0])));
-  return TCL_ERROR;
+  if (data->hertz != hertz) {
+    if (data->hertz > sdrkit_sample_rate(data)/4) {
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz > sample rate/4", data->hertz));
+      data->hertz = hertz;
+      data->dBgain = dBgain;
+      return TCL_ERROR;
+    }
+    data->modified = 1;
+  }
+  return TCL_OK;
 }
 
+static const fw_option_table_t _options[] = {
+  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
+  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-gain",   "gain",   "Gain",   "-30.0",    fw_option_float,	offsetof(_t, dBgain),	      "gain in dB" },
+  { "-freq",   "frequency","Hertz","700.0",    fw_option_float,	offsetof(_t, hertz),	      "frequency of oscillator in Hertz" },
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  NULL,				// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  0, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return sdrkit_factory(clientData, interp, argc, objv, 0, 2, 0, 0, _command, _process, sizeof(_t), _init, NULL);
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Sdrkit_oscillator_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit::oscillator", "1.0.0", "sdrkit::oscillator", _factory);
+int DLLEXPORT Oscillator_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::oscillator", "1.0.0", "sdrkit::oscillator", _factory);
 }

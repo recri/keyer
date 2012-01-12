@@ -22,7 +22,7 @@ ALL=$(LIBDIR)/sdrkit_agc.so \
 	$(LIBDIR)/atap.so \
 	$(LIBDIR)/biquad.so \
 	$(LIBDIR)/constant.so \
-	$(LIBDIR)/sdrkit_fftw.so \
+	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
 	$(LIBDIR)/sdrkit_jack.so \
@@ -30,7 +30,7 @@ ALL=$(LIBDIR)/sdrkit_agc.so \
 	$(LIBDIR)/sdrkit_mixer.so \
 	$(LIBDIR)/sdrkit_mtap.so \
 	$(LIBDIR)/noise.so \
-	$(LIBDIR)/sdrkit_oscillator.so \
+	$(LIBDIR)/oscillator.so \
 	$(KEYERS)
 
 all:: $(ALL)
@@ -58,9 +58,9 @@ $(LIBDIR)/constant.so: constant.c framework.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_fftw.so: sdrkit_fftw.c sdrkit.h ../dspkit/window.h sdrkit_math.h
+$(LIBDIR)/fftw.so: fftw.c sdrkit.h ../dspkit/window.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/gain.so: gain.c framework.h sdrkit_math.h
 	mkdir -p $(LIBDIR)
@@ -90,7 +90,7 @@ $(LIBDIR)/noise.so: noise.c framework.h ../dspkit/avoid_denormals.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/sdrkit_oscillator.so: sdrkit_oscillator.c sdrkit.h sdrkit_math.h ../dspkit/oscillator.h
+$(LIBDIR)/oscillator.so: oscillator.c sdrkit.h sdrkit_math.h ../dspkit/oscillator.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

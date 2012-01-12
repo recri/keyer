@@ -20,19 +20,23 @@
 /*
 */
 
-#include "sdrkit.h"
-#include "../dspkit/window.h"
-
 #include <complex.h>
+#define __USE_XOPEN
+#include <math.h>
 #include <fftw3.h>
 
+#include "framework.h"
+#include "../dspkit/window.h"
 
 /*
 ** create a complex 1d fft
 ** size of fft as parameter to factory
 */
 typedef struct {
+  framework_t fw;
   int size;			/* number of complex floats */
+  int planbits;
+  int window_type;
   fftwf_complex *inout;		/* input/output array */
   fftwf_plan plan;		/* fftw plan */
   float *window;		/* window */
@@ -44,24 +48,19 @@ static void _delete(void *arg) {
     if (data->plan != NULL) fftwf_destroy_plan(data->plan);
     if (data->inout != NULL) fftwf_free(data->inout);
     if (data->window != NULL) fftwf_free(data->window);
-    Tcl_Free((void *)data);
   }
 }
 
-static _t *_init(int size, int planbits, int window_type) {
-  _t *data = (_t *)Tcl_Alloc(sizeof(_t));
-  if (data == NULL) return NULL;
-  memset((void *)data, 0, sizeof(_t));
-  data->size = size;
+static void *_init(void *arg) {
+  _t *data = (_t *)arg;
   if ((data->inout = (fftwf_complex *)fftwf_malloc(data->size*sizeof(fftwf_complex))) &&
       (data->window = (float *)fftwf_malloc(data->size*sizeof(float))) &&
-      (data->plan = fftwf_plan_dft_1d(data->size,  data->inout, data->inout, FFTW_FORWARD, planbits))) {
-    window_make(window_type, data->size, data->window);
+      (data->plan = fftwf_plan_dft_1d(data->size,  data->inout, data->inout, FFTW_FORWARD, data->planbits))) {
+    window_make(data->window_type, data->size, data->window);
     return data;
-  } else {
-    _delete(data);
-    return NULL;
   }
+  _delete(data);
+  return "allocation failure";
 }
 
 /*
@@ -75,18 +74,18 @@ static _t *_init(int size, int planbits, int window_type) {
 ** second output byte array argument, which may be the same as the
 ** input byte array.
 */
-static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int _exec(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   int n;
   float _Complex *input;
   Tcl_Obj *output = NULL;
   // check the argument count
-  if (argc < 2 || argc > 3) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s input_byte_array [ output_byte_array ]", Tcl_GetString(objv[0])));
+  if (argc < 3 || argc > 4) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s exec input_byte_array [ output_byte_array ]", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
   // check the input byte array
-  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[1], &n)) == NULL || n < data->size*2*sizeof(float)) {
+  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[2], &n)) == NULL || n < data->size*2*sizeof(float)) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("byte_array argument does have not %d samples", data->size));
     return TCL_ERROR;
   }
@@ -98,55 +97,53 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   fftwf_execute(data->plan);
   // create the result
   Tcl_Obj *result;
-  if (argc == 2) {
+  if (argc == 3) {
     result = Tcl_NewByteArrayObj((unsigned char *)data->inout, data->size*2*sizeof(float));
   } else {
-    Tcl_SetByteArrayObj(result = objv[2], (unsigned char *)data->inout, data->size*2*sizeof(float));
+    Tcl_SetByteArrayObj(result = objv[3], (unsigned char *)data->inout, data->size*2*sizeof(float));
   }
   // set the result
   Tcl_SetObjResult(interp,result);
   // return success
   return TCL_OK;
 }
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return framework_command(clientData, interp, argc, objv);
+}
 
-/*
-** The factory command creates an fft command with specified
-** command name, size of fft, fftw planbits, and window.
-** could supply the window as a byte array.
-*/
+static const fw_option_table_t _options[] = {
+  { "-server",  "server",  "Server",  "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
+  { "-client",  "client",  "Client",  NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-size",    "size",    "Samples", "4096",     fw_option_int,	offsetof(_t, size),	      "size of fft computed" },
+  { "-planbits","planbits","Planbits","0",	  fw_option_int,	offsetof(_t, planbits),	      "fftw plan bits" },
+  { "-window",  "window",  "Window",  "11",       fw_option_int,	offsetof(_t, window_type),    "window used in fft" },
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { "exec",	 _exec },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  _delete,			// delete function
+  NULL,				// sample rate function
+  NULL,				// process callback
+  0, 0, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  char *command_name;
-  int size = 4096, planbits = 0, window_type = WINDOW_BLACKMANHARRIS;
-  if (argc >= 2 || argc <= 5) {
-    command_name = Tcl_GetString(objv[1]);
-    if (argc > 2) {
-      if (Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK) {
-	return TCL_ERROR;
-      } else if (argc > 3) {
-	if (Tcl_GetIntFromObj(interp, objv[3], &planbits) != TCL_OK) {
-	  return TCL_ERROR;
-	} else if (argc > 4) {
-	  if (Tcl_GetIntFromObj(interp, objv[4], &window_type) != TCL_OK) {
-	    return TCL_ERROR;
-	  }
-	}
-      }
-    }
-    // fprintf(stderr, "calling _init(%d, %x)\n", size, planbits);
-    _t *data = _init(size, planbits, window_type);
-    if (data == NULL) {
-      Tcl_SetObjResult(interp, Tcl_NewStringObj("allocation failed", -1));
-      return TCL_ERROR;
-    }
-    Tcl_CreateObjCommand(interp, command_name, _command, (ClientData)data, _delete);
-    return TCL_OK;
-  } else {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s command_name [ size [ planbits [ window_type ] ] ]", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Sdrkit_fftw_Init(Tcl_Interp *interp) {
-  return sdrkit_init(interp, "sdrkit::fftw", "1.0.0", "sdrkit::fftw", _factory);
+int DLLEXPORT Fftw_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::fftw", "1.0.0", "sdrkit::fftw", _factory);
 }

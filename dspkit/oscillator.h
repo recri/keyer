@@ -19,6 +19,7 @@
 #define OSCILLATOR_H
 
 #include <complex.h>
+#include <math.h>
 
 /*
 ** oscillator.
