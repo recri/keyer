@@ -46,8 +46,9 @@ static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_s
   }
 }
 
-static void oscillator_init(oscillator_t *o, float hertz, int samples_per_second) {
+static void *oscillator_init(oscillator_t *o, float hertz, int samples_per_second) {
   oscillator_set_hertz(o, hertz, samples_per_second, 1);
+  return o;
 }
 
 static void oscillator_update(oscillator_t *o, float hertz, int samples_per_second) {

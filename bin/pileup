@@ -131,7 +131,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require keyer::ascii
-package require keyer::decode
+package require keyer::detime
 package require keyer::iambic
 package require keyer::tone
 package require sdrkit::jack
@@ -482,7 +482,7 @@ proc hear_callsign {call voice continuation} {
     if {[ascii$voice pending]} {
 	set data(after-$voice) [after 100 [list hear_callsign $call $voice $continuation]]
     } else {
-	heard_callsign  $call [string trim [decode$voice gets]]
+	heard_callsign  $call [string trim [detime$voice gets]]
 	set data(after-$voice) [eval $continuation]
     }
 }
@@ -520,12 +520,12 @@ proc start_voice {voice} {
     # start keyer
     keyer::ascii ascii$voice
     keyer::tone tone$voice
-    keyer::decode decode$voice
+    keyer::detime detime$voice
     # connect
     sdrkit::jack connect ascii$voice:midi_out tone$voice:midi_in
     sdrkit::jack connect tone$voice:out_i system:playback_1
     sdrkit::jack connect tone$voice:out_q system:playback_2
-    sdrkit::jack connect ascii$voice:midi_out decode$voice:midi_in
+    sdrkit::jack connect ascii$voice:midi_out detime$voice:midi_in
     # loop until all sent
     sound_voice $voice
 }
@@ -535,7 +535,7 @@ proc stop_voice {voice} {
     catch {after cancel $data(after-$voice)}
     rename ascii$voice {}
     rename tone$voice {}
-    rename decode$voice {}
+    rename detime$voice {}
 }
 
 proc start {} {

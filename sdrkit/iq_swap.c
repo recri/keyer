@@ -20,84 +20,42 @@
 /*
 */
 
-/*
-** This should be widget configure|cget|start|stop
-** options: -frequency hertz -phase angle -gain dB
-** actually, phase doesn't work as an option
-*/
-
-#include <math.h>
 #include <complex.h>
 
 #include "framework.h"
-#include "../dspkit/oscillator.h"
 
+/*
+** swap i/q.
+** You can do this by simply reversing the audio wiring in jack, too.
+*/
 typedef struct {
   framework_t fw;
-  oscillator_t o;
-  int modified;
-  float hertz;
-  float dBgain;
-  float gain;
-  int sample_rate;
 } _t;
 
-static void _update(_t *data) {
-  if (data->modified) {
-    data->modified = 0;
-    oscillator_update(&data->o, data->hertz, data->sample_rate);
-    data->gain = powf(10, data->dBgain / 20);
-  }
-}
-  
 static void *_init(void *arg) {
-  _t * const data = (_t *)arg;
-  data->modified = 0;
-  data->hertz = 440.0f;
-  data->dBgain = -30;
-  data->gain = powf(10, data->dBgain / 20);
-  data->sample_rate = sdrkit_sample_rate(data);
-  void *p = oscillator_init(&data->o, data->hertz, data->sample_rate); if (p != &data->o) return p;
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
+  float *in0 = jack_port_get_buffer(framework_input(data,0), nframes);
+  float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   for (int i = nframes; --i >= 0; ) {
-    _update(data);
-    float _Complex z = data->gain * oscillator(&data->o);
-    *out0++ = creal(z);
-    *out1++ = cimag(z);
+    *out0++ = *in1++;
+    *out1++ = *in0++;
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  _t *data = (_t *)clientData;
-  float dBgain = data->dBgain, hertz = data->hertz;
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (data->dBgain != dBgain) {
-    data->modified = 1;
-  }
-  if (data->hertz != hertz) {
-    if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz is more than samplerate/4", data->hertz));
-      data->hertz = hertz;
-      data->dBgain = dBgain;
-      return TCL_ERROR;
-    }
-    data->modified = 1;
-  }
-  return TCL_OK;
+  return framework_command(clientData, interp, argc, objv);
 }
 
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
   { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
-  { "-gain",   "gain",   "Gain",   "-30.0",    fw_option_float,	offsetof(_t, dBgain),	      "gain in dB" },
-  { "-freq",   "frequency","Hertz","700.0",    fw_option_float,	offsetof(_t, hertz),	      "frequency of oscillator in Hertz" },
   { NULL }
 };
 
@@ -116,7 +74,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  1, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -124,6 +82,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Oscillator_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::oscillator", "1.0.0", "sdrkit::oscillator", _factory);
+int DLLEXPORT Iq_swap_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::iq-swap", "1.0.0", "sdrkit::iq-swap", _factory);
 }

@@ -22,8 +22,9 @@
 lappend auto_path [file join [file dirname [info script]] .. lib]
 
 # require the package that implements the iambic keyer
-package require keyer
 package require keyer::ascii
+package require keyer::detime
+package require keyer::iambic
 package require keyer::tone
 
 # set the common options which all apps implement
@@ -45,13 +46,13 @@ switch -glob [info script] {
 	# command to implement ascii keyer
 	set command keyer::ascii
     }
-    *keyer-decode {
-	# default option values for the decode keyer
+    *keyer-detime {
+	# default option values for the detime keyer
 	array set opts {
-	    -client decode
+	    -client detime
 	}
 	# command to implement iambic keyer
-	set command keyer::decode
+	set command keyer::detime
     }
     *keyer-iambic {
 	# default option values for iambic keyer
@@ -128,7 +129,7 @@ switch $command {
 	    }
 	}
     }
-    keyer::decode {
+    keyer::detime {
 	# print out what it finds
 	# no inline commands, too messy
 	fconfigure stdout -buffering none

@@ -45,13 +45,13 @@ typedef struct {
   unsigned n_ies;	/* number of inter-element spaces estimated */
   unsigned n_ils;	/* number of inter-letter spaces estimated */
   unsigned n_iws;	/* number of inter-word spaces estimated */
-} decode_t;
+} detime_t;
 
 typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  decode_t decode;
+  detime_t detime;
   unsigned frame;
   #define RING_SIZE 512
   ring_buffer_t ring;
@@ -69,25 +69,25 @@ typedef struct {
 ** But weight the T, 3*T, and 7*T observations by the inverse of their squared distance from the current
 ** estimate, and weight the T, 3*T, and 7*T observations by their observed frequency in morse code.
 */
-static void _decode(_t *dp, unsigned count, unsigned char *p) {
-  /* decode note/channel based events */
+static void _detime(_t *dp, unsigned count, unsigned char *p) {
+  /* detime note/channel based events */
   if (dp->opts.verbose > 4)
-    fprintf(stderr, "%d: midi_decode(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
+    fprintf(stderr, "%d: midi_detime(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     char channel = (p[0]&0xF)+1;
     char note = p[1];
     if (channel == dp->opts.chan && note == dp->opts.note) {
-      int observation = dp->frame - dp->decode.last_frame; /* length of observed element or space */
-      char *out;				   /* decoded element */
-      dp->decode.last_frame = dp->frame;
+      int observation = dp->frame - dp->detime.last_frame; /* length of observed element or space */
+      char *out;				   /* detimed element */
+      dp->detime.last_frame = dp->frame;
       switch (p[0]&0xF0) {
       case MIDI_NOTE_OFF: /* the end of a dit or a dah */
 	{
 	  int o_dit = observation;			/* if it's a dit, then the length is the dit clock observation */
 	  int o_dah = observation / 3;			/* if it's a dah, then the length/3 is the dit clock observation */
-	  int d_dit = o_dit - dp->decode.estimate;	/* the dit distance from the current estimate */
-	  int d_dah = o_dah - dp->decode.estimate;	/* the dah distance from the current estimate */
-	  int guess = 100 * observation / dp->decode.estimate;
+	  int d_dit = o_dit - dp->detime.estimate;	/* the dit distance from the current estimate */
+	  int d_dah = o_dah - dp->detime.estimate;	/* the dah distance from the current estimate */
+	  int guess = 100 * observation / dp->detime.estimate;
 	  if (d_dit == 0 || d_dah == 0) {
 	    /* if one of the observations is spot on, then 1/(d*d) will be infinite and the estimate is unchanged */
 	  } else {
@@ -96,18 +96,18 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 	     * scaled by inverse of distance from our current estimate
 	     * normalized to one over the observations made
 	     */
-	    float w_dit = 1.0 * dp->decode.n_dit / (d_dit*d_dit); /* raw weight of dit observation */
-	    float w_dah = 1.0 * dp->decode.n_dah / (d_dah*d_dah); /* raw weight of dah observation */
+	    float w_dit = 1.0 * dp->detime.n_dit / (d_dit*d_dit); /* raw weight of dit observation */
+	    float w_dah = 1.0 * dp->detime.n_dah / (d_dah*d_dah); /* raw weight of dah observation */
 	    float wt = w_dit + w_dah;				  /* weight normalization */
 	    int update = (o_dit * w_dit + o_dah * w_dah) / wt;
-	    dp->decode.estimate += update;
-	    dp->decode.estimate /= 2;
-	    guess = 100*observation / dp->decode.estimate;	  /* revise our guess */
+	    dp->detime.estimate += update;
+	    dp->detime.estimate /= 2;
+	    guess = 100*observation / dp->detime.estimate;	  /* revise our guess */
 	  }
 	  if (guess < 200) {
-	    out = "."; dp->decode.n_dit += 1;
+	    out = "."; dp->detime.n_dit += 1;
 	  } else {
-	    out = "-"; dp->decode.n_dah += 1;
+	    out = "-"; dp->detime.n_dah += 1;
 	  }
 	  break;
 	}
@@ -115,37 +115,37 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 	{
 	  int o_ies = observation;
 	  int o_ils = observation / 3;
-	  int d_ies = o_ies - dp->decode.estimate;
-	  int d_ils = o_ils - dp->decode.estimate;
-	  int guess = 100 * observation / dp->decode.estimate;
+	  int d_ies = o_ies - dp->detime.estimate;
+	  int d_ils = o_ils - dp->detime.estimate;
+	  int guess = 100 * observation / dp->detime.estimate;
 	  if (d_ies == 0 || d_ils == 0) {
 	    /* if one of the observations is spot on, then 1/(d*d) will be infinite and the estimate is unchanged */	    
 	  } else if (guess > 500) {
 	    /* if it looks like a word space, it could be any length, don't worry about how long it is */
 	  } else {
-	    float w_ies = 1.0 * dp->decode.n_ies / (d_ies*d_ies), w_ils = 1.0 * dp->decode.n_ils / (d_ils*d_ils);
+	    float w_ies = 1.0 * dp->detime.n_ies / (d_ies*d_ies), w_ils = 1.0 * dp->detime.n_ils / (d_ils*d_ils);
 	    float wt = w_ies + w_ils;
 	    int update = (o_ies * w_ies + o_ils * w_ils) / wt;
-	    dp->decode.estimate += update;
-	    dp->decode.estimate /= 2;
-	    guess = 100 * observation / dp->decode.estimate;
+	    dp->detime.estimate += update;
+	    dp->detime.estimate /= 2;
+	    guess = 100 * observation / dp->detime.estimate;
 	  }
 	  if (guess < 200) {
-	    out = ""; dp->decode.n_ies += 1;
+	    out = ""; dp->detime.n_ies += 1;
 	  } else if (guess < 500) {
-	    out = " "; dp->decode.n_ils += 1;
+	    out = " "; dp->detime.n_ils += 1;
 	  } else {
-	    out = "\n"; dp->decode.n_iws += 1;
+	    out = "\n"; dp->detime.n_iws += 1;
 	  }
 	  break;
 	}
       }
-      if (dp->opts.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->decode.estimate, p[0], 100*observation/dp->decode.estimate);
+      if (dp->opts.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->detime.estimate, p[0], 100*observation/dp->detime.estimate);
       if (ring_buffer_writeable(&dp->ring)) {
 	if (*out != 0)
 	  ring_buffer_put(&dp->ring, 1, out);
       } else {
-	fprintf(stderr, "keyer_decode: buffer overflow writing \"%s\"\n", out);
+	fprintf(stderr, "keyer_detime: buffer overflow writing \"%s\"\n", out);
       }
     } else if (dp->opts.verbose > 3)
       fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->opts.chan, dp->opts.note);
@@ -162,14 +162,14 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
-    dp->decode.estimate = (sdrkit_sample_rate(dp) * 60) / (dp->opts.wpm * dp->opts.word);
+    dp->detime.estimate = (sdrkit_sample_rate(dp) * 60) / (dp->opts.wpm * dp->opts.word);
   }
 }
 
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
   void *p = ring_buffer_init(&dp->ring, RING_SIZE, dp->buff); if (p != &dp->ring) return p;
-  dp->decode = (decode_t){ 0, 6000, 1, 1, 1, 1, 1 };
+  dp->detime = (detime_t){ 0, 6000, 1, 1, 1, 1, 1 };
   return arg;
 }
 
@@ -195,7 +195,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   for(int i = 0; i < nframes; i++) {
     /* process all midi events at this sample time */
     while (event_time == i) {
-      _decode(dp, in_event.size, in_event.buffer);
+      _detime(dp, in_event.size, in_event.buffer);
       if (event_index < event_count) {
 	jack_midi_event_get(&in_event, midi_in, event_index++);
 	// event_time += in_event.time;
@@ -211,7 +211,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _gets(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  // return the current decoded string
+  // return the current detimed string
   _t *dp = (_t *)clientData;
   // hmm, how to avoid the buffer here, allocate a byte array?
   unsigned n = ring_buffer_items_available_to_read(&dp->ring);
@@ -261,6 +261,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
-int DLLEXPORT Keyer_decode_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::decode", "1.0.0", "keyer::decode", _factory);
+int DLLEXPORT Keyer_detime_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "keyer::detime", "1.0.0", "keyer::detime", _factory);
 }
