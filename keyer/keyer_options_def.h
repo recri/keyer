@@ -15,22 +15,22 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef FW_OPTIONS_DEF_H
-#define FW_OPTIONS_DEF_H
+#ifndef KEYER_OPTIONS_DEF_H
+#define KEYER_OPTIONS_DEF_H
   // common options
   { "-server",  "server",  "Server",  "default",  fw_option_obj,   offsetof(_t, fw.server_name), "jack server name" },
   { "-client",  "client",  "Client",  NULL,       fw_option_obj,   offsetof(_t, fw.client_name), "jack client name" },
   { "-verbose", "verbose", "Verbose", "0",	  fw_option_int,   offsetof(_t, opts.verbose),   "amount of diagnostic output" },
   { "-chan",    "channel", "Channel", "1",        fw_option_int,   offsetof(_t, opts.chan),	 "midi channel used for keyer" },
   { "-note",    "note",    "Note",    "0",	  fw_option_int,   offsetof(_t, opts.note),	 "base midi note used for keyer" },
-#if FW_OPTIONS_TONE
+#if KEYER_OPTIONS_TONE
   // tone options    
   { "-freq",    "frequency","Hertz",  "700.0",	  fw_option_float, offsetof(_t, opts.freq),	 "frequency of tone in hertz" },
   { "-gain",    "gain",     "Decibel","-30.0",    fw_option_float, offsetof(_t, opts.gain),	 "level of tone in decibels" },
   { "-rise",    "rise",     "Ramp",   "5.0",      fw_option_float, offsetof(_t, opts.rise),	 "rise time in milliseconds" },
   { "-fall",    "fall",     "Ramp",   "5.0",      fw_option_float, offsetof(_t, opts.fall),      "fall time in milliseconds" },
 #endif
-#if FW_OPTIONS_TIMING
+#if KEYER_OPTIONS_TIMING
   // timing options
   { "-word",    "word",     "Dits",   "50.0",     fw_option_float, offsetof(_t, opts.word),      "dits in a word" },
   { "-wpm",     "wpm",      "Words",  "18.0",     fw_option_float, offsetof(_t, opts.wpm),	 "words per minute" },
@@ -39,7 +39,7 @@
   { "-ils",	"ils",	    "Dits",   "3.0",	  fw_option_float, offsetof(_t, opts.ils),	 "inter-letter space in dits" },
   { "-iws",	"iws",	    "Dits",   "7.0",      fw_option_float, offsetof(_t, opts.iws),	 "inter-word space in dits" },
 #endif
-#if FW_OPTIONS_KEYER
+#if KEYER_OPTIONS_KEYER
   // keyer options
   { "-swap",	"swap",	    "Bool",   "0",	  fw_option_boolean,offsetof(_t, opts.swap),	 "swap the dit and dah paddles" },
   { "-alsp",	"alsp",	    "Bool",   "0",	  fw_option_boolean,offsetof(_t, opts.alsp),	 "auto letter spacing" },

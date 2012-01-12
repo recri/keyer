@@ -31,17 +31,17 @@
 
 */
 
-#define FW_OPTIONS_TIMING	1
-#define FW_OPTIONS_TONE		1
+#define KEYER_OPTIONS_TIMING	1
+#define KEYER_OPTIONS_TONE		1
 
-#include "../sdrkit/framework.h"
+#include "framework.h"
 #include "../dspkit/midi.h"
 #include "../dspkit/midi_buffer.h"
 #include "../dspkit/morse_timing.h"
 #include "../dspkit/morse_coding.h"
 
 typedef struct {
-  #include "fw_options_var.h"
+  #include "keyer_options_var.h"
 } options_t;
 
 typedef struct {

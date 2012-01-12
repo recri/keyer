@@ -15,19 +15,19 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef FW_OPTIONS_VAR_H
-#define FW_OPTIONS_VAR_H
+#ifndef KEYER_OPTIONS_VAR_H
+#define KEYER_OPTIONS_VAR_H
 // common options
 int verbose, chan, note;
-#if FW_OPTIONS_TONE
+#if KEYER_OPTIONS_TONE
 // tone options    
 float freq, gain, rise, fall;
 #endif
-#if FW_OPTIONS_TIMING
+#if KEYER_OPTIONS_TIMING
 // timing options
 float word, wpm, dah, ies, ils, iws;
 #endif
-#if FW_OPTIONS_KEYER
+#if KEYER_OPTIONS_KEYER
 int swap, alsp, awsp, mode;
 #endif
 #endif

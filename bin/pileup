@@ -130,7 +130,10 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require keyer
+package require keyer::ascii
+package require keyer::decode
+package require keyer::iambic
+package require keyer::tone
 package require sdrkit::jack
 package require keyer-control
 
@@ -487,8 +490,8 @@ proc hear_callsign {call voice continuation} {
 proc send_callsign {call voice speed tone continuation} {
     global data
     set data(max_speed) [expr {max($data(max_speed), $speed)}]
-    tone$voice config -freq $tone
-    ascii$voice config -wpm $speed
+    tone$voice configure -freq $tone
+    ascii$voice configure -wpm $speed
     ascii$voice puts $call
     hear_callsign $call $voice $continuation
 }

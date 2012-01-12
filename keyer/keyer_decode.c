@@ -27,13 +27,16 @@
 
 */
 
-#define OPTIONS_TIMING	1
+#define KEYER_OPTIONS_TIMING	1
 
 #include "framework.h"
-#include "options.h"
 #include "../dspkit/midi.h"
 #include "../dspkit/ring_buffer.h"
 
+typedef struct {
+#include "keyer_options_var.h"
+} options_t;
+  
 typedef struct {
   unsigned last_frame;	/* frame of last event */
   int estimate;		/* estimated dot clock period */
@@ -46,6 +49,8 @@ typedef struct {
 
 typedef struct {
   framework_t fw;
+  int modified;
+  options_t opts;
   decode_t decode;
   unsigned frame;
   #define RING_SIZE 512
@@ -66,12 +71,12 @@ typedef struct {
 */
 static void _decode(_t *dp, unsigned count, unsigned char *p) {
   /* decode note/channel based events */
-  if (dp->fw.opts.verbose > 4)
+  if (dp->opts.verbose > 4)
     fprintf(stderr, "%d: midi_decode(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     char channel = (p[0]&0xF)+1;
     char note = p[1];
-    if (channel == dp->fw.opts.chan && note == dp->fw.opts.note) {
+    if (channel == dp->opts.chan && note == dp->opts.note) {
       int observation = dp->frame - dp->decode.last_frame; /* length of observed element or space */
       char *out;				   /* decoded element */
       dp->decode.last_frame = dp->frame;
@@ -135,29 +140,37 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 	  break;
 	}
       }
-      if (dp->fw.opts.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->decode.estimate, p[0], 100*observation/dp->decode.estimate);
+      if (dp->opts.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->decode.estimate, p[0], 100*observation/dp->decode.estimate);
       if (ring_buffer_writeable(&dp->ring)) {
 	if (*out != 0)
 	  ring_buffer_put(&dp->ring, 1, out);
       } else {
 	fprintf(stderr, "keyer_decode: buffer overflow writing \"%s\"\n", out);
       }
-    } else if (dp->fw.opts.verbose > 3)
-      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->fw.opts.chan, dp->fw.opts.note);
+    } else if (dp->opts.verbose > 3)
+      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->opts.chan, dp->opts.note);
   } else if (count > 3 && p[0] == MIDI_SYSEX) {
     if (p[1] == MIDI_SYSEX_VENDOR) {
-      options_parse_command(&dp->fw.opts, p+3);
-      if (dp->fw.opts.verbose > 3)
+      // FIX.ME options_parse_command(&dp->opts, p+3);
+      if (dp->opts.verbose > 3)
 	fprintf(stderr, "sysex: %*s\n", count, p+2);
-      dp->decode.estimate = (dp->fw.opts.sample_rate * 60) / (dp->fw.opts.wpm * dp->fw.opts.word);
+      dp->modified = 1;
     }
   }
 }
 
-static void _init(void *arg) {
+static void _update(_t *dp) {
+  if (dp->modified) {
+    dp->modified = 0;
+    dp->decode.estimate = (sdrkit_sample_rate(dp) * 60) / (dp->opts.wpm * dp->opts.word);
+  }
+}
+
+static void *_init(void *arg) {
   _t *dp = (_t *)arg;
-  ring_buffer_init(&dp->ring, RING_SIZE, dp->buff);
+  void *p = ring_buffer_init(&dp->ring, RING_SIZE, dp->buff); if (p != &dp->ring) return p;
   dp->decode = (decode_t){ 0, 6000, 1, 1, 1, 1, 1 };
+  return arg;
 }
 
 /*
@@ -177,6 +190,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   } else {
     event_time = nframes+1;
   }
+  _update(dp);
   /* for all frames in the buffer */
   for(int i = 0; i < nframes; i++) {
     /* process all midi events at this sample time */
@@ -196,28 +210,57 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
+static int _gets(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  // return the current decoded string
+  _t *dp = (_t *)clientData;
+  // hmm, how to avoid the buffer here, allocate a byte array?
+  unsigned n = ring_buffer_items_available_to_read(&dp->ring);
+  fprintf(stderr, "%s:%d %u bytes available\n", __FILE__, __LINE__, n);
+  Tcl_Obj *result = Tcl_NewObj();
+  char *buff = Tcl_SetByteArrayLength(result, n);
+  ring_buffer_get(&dp->ring, n, buff);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc == 2 && strcmp(Tcl_GetString(objv[1]), "gets") == 0) {
-    // return the current decoded string
-    _t *dp = (_t *)clientData;
-    // hmm, how to avoid the buffer here, allocate a byte array?
-    unsigned n = ring_buffer_items_available_to_read(&dp->ring);
-    Tcl_Obj *result = Tcl_NewObj();
-    char *buff = Tcl_SetByteArrayLength(result, n);
-    ring_buffer_get(&dp->ring, n, buff);
-    Tcl_SetObjResult(interp, result);
-    return TCL_OK;
-  }
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+  _t *data = (_t *)clientData;
+  options_t save = data->opts;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    data->opts = save;
     return TCL_ERROR;
-  // _update(clientData);
+  }
+  data->modified = (data->opts.word != save.word || data->opts.wpm != save.wpm);
   return TCL_OK;
 }
 
+static const fw_option_table_t _options[] = {
+#include "fw_options_def.h"
+  { NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { "gets",	 _gets },
+  { NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  NULL,				// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  0, 0, 0, 1			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_factory(clientData, interp, argc, objv, 0,0,1,0, _command, _process, sizeof(_t), _init, NULL, "config|cget|cdoc|gets");
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 int DLLEXPORT Keyer_decode_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer", "1.0.0", "keyer::decode", _factory);
+  return framework_init(interp, "keyer::decode", "1.0.0", "keyer::decode", _factory);
 }
