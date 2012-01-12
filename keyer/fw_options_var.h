@@ -27,7 +27,7 @@ float freq, gain, rise, fall;
 // timing options
 float word, wpm, dah, ies, ils, iws;
 #endif
-#if OPTIONS_KEYER
+#if FW_OPTIONS_KEYER
 int swap, alsp, awsp, mode;
 #endif
 #endif

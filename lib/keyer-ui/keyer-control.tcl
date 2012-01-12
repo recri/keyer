@@ -17,7 +17,9 @@
 # 
 package provide keyer-control 1.0.0
 
-package require keyer
+package require keyer::ascii
+package require keyer::iambic
+package require keyer::tone
 
 namespace eval keyer-control {}
 
@@ -36,13 +38,7 @@ proc keyer-control::client-config {client opt scale value} {
 	set value [format %.3f [expr {double($value)/double($scale)}]]
     }
     set data($client-$opt-display) $value
-    switch -glob $client {
-	*tone {
-	    puts "$client configure -$opt $value"
-	    $client configure -$opt $value
-	}
-	default { $client config -$opt $value }
-    }
+    $client configure -$opt $value
 }
 
 #

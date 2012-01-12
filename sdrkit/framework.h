@@ -42,7 +42,7 @@
 ** option definitions
 */
 typedef enum {
-  // fw_option_abbrev,		/* abbreviation, not used */
+  fw_option_none,
   fw_option_int,
   fw_option_nframes,		/* jack_nframes_t */
   fw_option_float,
@@ -52,13 +52,13 @@ typedef enum {
 } fw_option_type_t;
 
 typedef struct {
-  char *name;			/* option name */
-  char *db_name;		/* option database name */
-  char *class_name;		/* option class name */
-  char *default_value;		/* option default value */
-  fw_option_type_t type;	/* option type */
-  size_t offset;		/* offset in clientData */
-  char *doc_string;		/* option documentation string */
+  const char *name;			/* option name */
+  const char *db_name;			/* option database name */
+  const char *class_name;		/* option class name */
+  const char *default_value;		/* option default value */
+  const fw_option_type_t type;		/* option type */
+  const size_t offset;			/* offset in clientData */
+  const char *doc_string;		/* option documentation string */
 } fw_option_table_t;
 
 /*
@@ -66,7 +66,7 @@ typedef struct {
 */
 
 typedef struct {
-  char *name;			/* subcommand name */
+  const char *name;			/* subcommand name */
   int (*handler)(ClientData, Tcl_Interp *, int argc, Tcl_Obj* const *objv);
 } fw_subcommand_table_t;
 
@@ -84,7 +84,7 @@ typedef struct {
   const fw_subcommand_table_t *subcommands;
   void *(*init)(void *);
   int (*command)(ClientData, Tcl_Interp *, int, Tcl_Obj* const *);
-  void (*delete)(void *);
+  void (*cdelete)(void *);
   int (*sample_rate)(jack_nframes_t, void *);
   int (*process)(jack_nframes_t, void *);
   char n_inputs;
@@ -129,23 +129,20 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
   switch (entry->type) {
   case fw_option_int: {
     int ival;
-    if (Tcl_GetIntFromObj(interp, val, &ival) != TCL_OK)
-      return TCL_ERROR;
-    *(int *)(clientData+entry->offset) = ival;
+    if (Tcl_GetIntFromObj(interp, val, &ival) != TCL_OK) return TCL_ERROR;
+    *(int *)((char *)clientData+entry->offset) = ival;
     return TCL_OK;
   }
   case fw_option_nframes: {
     long nval;
-    if (Tcl_GetLongFromObj(interp, val, &nval) != TCL_OK)
-      return TCL_ERROR;
-    *(jack_nframes_t *)(clientData+entry->offset) = (jack_nframes_t)nval;
+    if (Tcl_GetLongFromObj(interp, val, &nval) != TCL_OK) return TCL_ERROR;
+    *(jack_nframes_t *)((char *)clientData+entry->offset) = (jack_nframes_t)nval;
     return TCL_OK;
   }
   case fw_option_float: {
     double fval;
-    if (Tcl_GetDoubleFromObj(interp, val, &fval) != TCL_OK)
-      return TCL_ERROR;
-    *(float *)(clientData+entry->offset) = fval;
+    if (Tcl_GetDoubleFromObj(interp, val, &fval) != TCL_OK) return TCL_ERROR;
+    *(float *)((char *)clientData+entry->offset) = fval;
     return TCL_OK;
   }
   case fw_option_char: {
@@ -155,19 +152,18 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
       Tcl_SetObjResult(interp, Tcl_ObjPrintf("character option value is longer than one character: \"%s\"", cval));
       return TCL_ERROR;
     }
-    *(char *)(clientData+entry->offset) = *cval;
+    *(char *)((char *)clientData+entry->offset) = *cval;
     return TCL_OK;
   }
   case fw_option_boolean: {
     int bval;
-    if (Tcl_GetBooleanFromObj(interp, val, &bval) != TCL_OK)
-      return TCL_ERROR;
-    *(int *)(clientData+entry->offset) = bval;
+    if (Tcl_GetBooleanFromObj(interp, val, &bval) != TCL_OK) return TCL_ERROR;
+    *(int *)((char *)clientData+entry->offset) = bval;
     return TCL_OK;
   }
   case fw_option_obj: 
     Tcl_IncrRefCount(val);
-    *(Tcl_Obj **)(clientData+entry->offset) = val;
+    *(Tcl_Obj **)((char *)clientData+entry->offset) = val;
     return TCL_OK;
   default:
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
@@ -180,18 +176,12 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
 */
 static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *interp, const fw_option_table_t *entry) {
   switch (entry->type) {
-  case fw_option_int:
-    return Tcl_NewIntObj(*(int *)(clientData+entry->offset));
-  case fw_option_nframes:
-    return Tcl_NewLongObj(*(jack_nframes_t *)(clientData+entry->offset));
-  case fw_option_float:
-    return Tcl_NewDoubleObj(*(float *)(clientData+entry->offset));
-  case fw_option_char:
-    return Tcl_NewStringObj((char *)(clientData+entry->offset), 1);
-  case fw_option_boolean:
-    return Tcl_NewIntObj(*(int *)(clientData+entry->offset));
-  case fw_option_obj:
-    return *(Tcl_Obj **)(clientData+entry->offset);
+  case fw_option_int:     return Tcl_NewIntObj(*(int *)((char *)clientData+entry->offset));
+  case fw_option_nframes: return Tcl_NewLongObj(*(jack_nframes_t *)((char *)clientData+entry->offset));
+  case fw_option_float:   return Tcl_NewDoubleObj(*(float *)((char *)clientData+entry->offset));
+  case fw_option_char:    return Tcl_NewStringObj((char *)((char *)clientData+entry->offset), 1);
+  case fw_option_boolean: return Tcl_NewIntObj(*(int *)((char *)clientData+entry->offset));
+  case fw_option_obj:     return *(Tcl_Obj **)((char *)clientData+entry->offset);
   default:
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
     return NULL;
@@ -199,9 +189,9 @@ static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *inter
 }
 
 /*
-** called by command create to process option arguments starting at objv[2].
+** called by fw_option_create or fw_option_configure
 */
-static int fw_option_create(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int fw_option_collect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
   const fw_option_table_t *table = fp->options;
   if ((argc & 1) != 0) return fw_option_wrong_number_of_arguments(interp);
@@ -211,6 +201,23 @@ static int fw_option_create(ClientData clientData, Tcl_Interp *interp, int argc,
     if (fw_option_set_option_value(clientData, interp, objv[i+1], table+j) != TCL_OK) return TCL_ERROR;
   }
   return TCL_OK;
+}
+
+/*
+** called by command create to process option arguments starting at objv[2].
+*/
+static int fw_option_create(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  // but first we install default values
+  framework_t *fp = (framework_t *)clientData;
+  const fw_option_table_t *table = fp->options;
+  for (int i = 0; table[i].name != NULL; i += 1) {
+    if (table[i].default_value != NULL) {
+      if (fw_option_set_option_value(clientData, interp, Tcl_NewStringObj(table[i].default_value,-1), table+i) != TCL_OK) {
+	return TCL_ERROR;
+      }
+    }
+  }
+  return fw_option_collect(clientData, interp, argc, objv);
 }
 
 /*
@@ -244,7 +251,7 @@ static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int ar
     return TCL_OK;
   } else {
     // the caller had better be prepared to restore clientData on error
-    return fw_option_create(clientData, interp, argc, objv);
+    return fw_option_collect(clientData, interp, argc, objv);
   }
 }
 
@@ -396,8 +403,8 @@ static void framework_delete(void *arg) {
     jack_client_close(dsp->client);
     // fprintf(stderr, "framework_delete(%p) client closed\n", _sdrkit);
   }
-  if (dsp->delete) {
-    dsp->delete(arg);
+  if (dsp->cdelete) {
+    dsp->cdelete(arg);
   }
   // fprintf(stderr, "framework_delete(%p) command deleted\n", _sdrkit);
   if (dsp->port) {
@@ -434,17 +441,17 @@ static void framework_jack_status_report(Tcl_Interp *interp, jack_status_t statu
   if (status & JackClientZombie) Tcl_AppendResult(interp, "; " stringify(JackClientZombie), NULL);
 }  
 
-static void framework_dump_template(const framework_t *template) {
-  fprintf(stderr, "template %lx\n", (long)template);
-  fprintf(stderr, "options %lx\n", (long)template->options);
-  for (int i = 0; template->options[i].name != NULL; i += 1) fprintf(stderr, "  %d %s\n", i, template->options[i].name);
-  fprintf(stderr, "subcommands %lx\n", (long)template->subcommands);
-  for (int i = 0; template->subcommands[i].name != NULL; i += 1) fprintf(stderr, "  %d %s\n", i, template->subcommands[i].name);  
+static void framework_dump_template(const framework_t *atemplate) {
+  fprintf(stderr, "template %lx\n", (long)atemplate);
+  fprintf(stderr, "options %lx\n", (long)atemplate->options);
+  for (int i = 0; atemplate->options[i].name != NULL; i += 1) fprintf(stderr, "  %d %s\n", i, atemplate->options[i].name);
+  fprintf(stderr, "subcommands %lx\n", (long)atemplate->subcommands);
+  for (int i = 0; atemplate->subcommands[i].name != NULL; i += 1) fprintf(stderr, "  %d %s\n", i, atemplate->subcommands[i].name);  
 }
 
 /* keyer module factory command */
 /* usage: keyer_module_type_name command_name [options] */
-static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const framework_t *template, size_t data_size) {
+static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const framework_t *atemplate, size_t data_size) {
 
   // test for insufficient arguments
   if (argc < 2) {
@@ -453,15 +460,15 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   }
   // framework_dump_template(template);
   // check for some sanity
-  if (template->command == NULL) {
+  if (atemplate->command == NULL) {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("command pointer?", -1));
     return TCL_ERROR;
   }
-  if (template->n_inputs+template->n_outputs+template->n_midi_inputs+template->n_midi_outputs != 0 && template->process == NULL) {
+  if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs != 0 && atemplate->process == NULL) {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("jack ports but no jack process callback?", -1));
     return TCL_ERROR;
   }
-  if (template->n_inputs+template->n_outputs+template->n_midi_inputs+template->n_midi_outputs == 0 && template->process != NULL) {
+  if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs == 0 && atemplate->process != NULL) {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("no jack ports for jack process callback?", -1));
     return TCL_ERROR;
   }
@@ -473,19 +480,19 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   // allocate command data
   framework_t *data = (framework_t *)Tcl_Alloc(data_size);
   if (data == NULL) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
+    Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation afailure", -1));
     return TCL_ERROR;
   }
 
   // initialize command data
   memset(data, 0, data_size);
-  memcpy(data, template, sizeof(framework_t));
-  data->delete = NULL;		// deferred until after data->init is called
+  memcpy(data, atemplate, sizeof(framework_t));
+  data->cdelete = NULL;		// deferred until after data->init is called
   data->class_name = objv[0];
   Tcl_IncrRefCount(data->class_name);
   data->command_name = objv[1];
   Tcl_IncrRefCount(data->command_name);
-  // fprintf(stderr, "%s data->command %lx, template->command %lx\n", command_name, (long)data->command, (long)template->command);
+  // fprintf(stderr, "%s data->command %lx, atemplate->command %lx\n", command_name, (long)data->command, (long)atemplate->command);
 
   // parse command line options
   if (fw_option_create(data, interp, argc, objv) != TCL_OK) {
@@ -495,7 +502,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
 
   // get jack server and client names
   char *server_name = data->server_name != NULL ? Tcl_GetString(data->server_name) :
-    getenv("JACK_DEFAULT_SERVER") != NULL ? getenv("JACK_DEFAULT_SERVER") : "default";
+    getenv("JACK_DEFAULT_SERVER") != NULL ? getenv("JACK_DEFAULT_SERVER") : (char *)"default";
   char *client_name = data->client_name != NULL ? Tcl_GetString(data->client_name) : command_name;
 
   // remove namespaces from client name
@@ -566,7 +573,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   // returns data pointer on success, error string on failure
   // failure does not leave command specific stuff to be cleaned up
   if (data->init != NULL) {
-    void *p = template->init((void *)data);
+    void *p = atemplate->init((void *)data);
     if (p != data) {
       // initialization failed
       Tcl_SetObjResult(interp, Tcl_ObjPrintf("init of \"%s\", a \"%s\" command, failed: \"%s\"", command_name, class_name, (char *)p));
@@ -574,7 +581,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
       return TCL_ERROR;
     }
   }
-  data->delete = template->delete;
+  data->cdelete = atemplate->cdelete;
 
   // create server_name, client_name, class_name, and command_name objects
 

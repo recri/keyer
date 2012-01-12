@@ -26,103 +26,112 @@
 
 extern "C" {
 
-#define OPTIONS_TIMING	1
-#define OPTIONS_KEYER	1
+#define FW_OPTIONS_TONE		1
+#define FW_OPTIONS_TIMING	1
+#define FW_OPTIONS_KEYER	1
 
-#include "framework.h"
-#include "options.h"
+#include "../sdrkit/framework.h"
 #include "../dspkit/midi.h"
 #include "../dspkit/midi_buffer.h"
+
+  typedef struct {
+#include "fw_options_var.h"
+  } options_t;
 
   typedef struct {
     framework_t fw;
     Iambic k;
     unsigned long frames;
+    int modified;
+    options_t opts;
     options_t sent;
     midi_buffer_t midi;
   } _t;
 
-  static char *preface(_t *dp, const char *file, int line) {
+  static char *_preface(_t *dp, const char *file, int line) {
     static char buff[256];
-    sprintf(buff, "%s:%s:%d@%ld", dp->fw.opts.client, file, line, dp->frames);
+    sprintf(buff, "%s:%s:%d@%ld", Tcl_GetString(dp->fw.client_name), file, line, dp->frames);
     return buff;
   }
   
-#define PREFACE	preface(dp, __FILE__, __LINE__)
+#define PREFACE	_preface(dp, __FILE__, __LINE__)
 
   // update the computed parameters
   static void _update(_t *dp) {
-    if (dp->fw.opts.modified) {
-      dp->fw.opts.modified = 0;
-      // if (dp->fw.opts.verbose > 2) fprintf(stderr, "%s _update\n", PREFACE);
+    if (dp->modified) {
+      dp->modified = 0;
+      // if (dp->opts.verbose > 2) fprintf(stderr, "%s _update\n", PREFACE);
 
       /* keyer recomputation */
-      dp->k.setVerbose(dp->fw.opts.verbose);
-      dp->k.setTick(1000000.0 / dp->fw.opts.sample_rate);
-      dp->k.setWord(dp->fw.opts.word);
-      dp->k.setWpm(dp->fw.opts.wpm);
-      dp->k.setDah(dp->fw.opts.dah);
-      dp->k.setIes(dp->fw.opts.ies);
-      dp->k.setIls(dp->fw.opts.ils);
-      dp->k.setIws(dp->fw.opts.iws);
-      dp->k.setAutoIls(dp->fw.opts.alsp != 0);
-      dp->k.setAutoIws(dp->fw.opts.awsp != 0);
-      dp->k.setSwapped(dp->fw.opts.swap != 0);
-      dp->k.setMode(dp->fw.opts.mode);
+      dp->k.setVerbose(dp->opts.verbose);
+      dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
+      dp->k.setWord(dp->opts.word);
+      dp->k.setWpm(dp->opts.wpm);
+      dp->k.setDah(dp->opts.dah);
+      dp->k.setIes(dp->opts.ies);
+      dp->k.setIls(dp->opts.ils);
+      dp->k.setIws(dp->opts.iws);
+      dp->k.setAutoIls(dp->opts.alsp != 0);
+      dp->k.setAutoIws(dp->opts.awsp != 0);
+      dp->k.setSwapped(dp->opts.swap != 0);
+      dp->k.setMode(dp->opts.mode);
 
       /* pass on parameters to tone keyer */
       char buffer[128];
-      if (dp->sent.rise != dp->fw.opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->fw.opts.rise); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
-      if (dp->sent.fall != dp->fw.opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->fw.opts.fall); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
-      if (dp->sent.freq != dp->fw.opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->fw.opts.freq); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
-      if (dp->sent.gain != dp->fw.opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->fw.opts.gain); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
+      if (dp->sent.rise != dp->opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->opts.rise); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
+      if (dp->sent.fall != dp->opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->opts.fall); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
+      if (dp->sent.freq != dp->opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->opts.freq); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
+      if (dp->sent.gain != dp->opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->opts.gain); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
       /* or to decoder */
-      if (dp->sent.word != dp->fw.opts.word) { sprintf(buffer, "<word%.1f>", dp->sent.word = dp->fw.opts.word); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
-      if (dp->sent.wpm != dp->fw.opts.wpm) { sprintf(buffer, "<wpm%.1f>", dp->sent.wpm = dp->fw.opts.wpm); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
+      if (dp->sent.word != dp->opts.word) { sprintf(buffer, "<word%.1f>", dp->sent.word = dp->opts.word); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
+      if (dp->sent.wpm != dp->opts.wpm) { sprintf(buffer, "<wpm%.1f>", dp->sent.wpm = dp->opts.wpm); midi_buffer_write_sysex(&dp->midi, (unsigned char *)buffer); }
     }
   }
 
   static void _keyout(int key, void *arg) {
     _t *dp = (_t *)arg;
-    // if (dp->fw.opts.verbose) fprintf(stderr, "%s _keyout(%d)\n", PREFACE, key);
+    // if (dp->opts.verbose) fprintf(stderr, "%s _keyout(%d)\n", PREFACE, key);
     if (key)
-      midi_buffer_write_note_on(&dp->midi, 0, dp->fw.opts.chan, dp->fw.opts.note, 0);
+      midi_buffer_write_note_on(&dp->midi, 0, dp->opts.chan, dp->opts.note, 0);
     else
-      midi_buffer_write_note_off(&dp->midi, 0, dp->fw.opts.chan, dp->fw.opts.note, 0);
+      midi_buffer_write_note_off(&dp->midi, 0, dp->opts.chan, dp->opts.note, 0);
   }
 
-  static void _init(void *arg) {
+  static void *_init(void *arg) {
     _t *dp = (_t *)arg;
     dp->k.setKeyOut(_keyout, arg);
-    midi_buffer_init(&dp->midi);
+    void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
+    dp->modified = 1;
+    _update(dp);
+    return arg;
   }
 
   static void _decode(_t *dp, int count, unsigned char *p) {
-    // if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode %d bytes\n", PREFACE, count);
+    // if (dp->opts.verbose) fprintf(stderr, "%s _decode %d bytes\n", PREFACE, count);
     if (count == 3) {
       unsigned char channel = (p[0]&0xF)+1;
       unsigned char command = p[0]&0xF0;
       unsigned char note = p[1];
-      if (channel != dp->fw.opts.chan) {
-	// if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mychan=0x%x\n", PREFACE, channel, note, dp->fw.opts.chan, dp->fw.opts.note);
-      } else if (note == dp->fw.opts.note) {
-	// if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
+      if (channel != dp->opts.chan) {
+	// if (dp->opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mychan=0x%x\n", PREFACE, channel, note, dp->opts.chan, dp->opts.note);
+      } else if (note == dp->opts.note) {
+	// if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
 	switch (command) {
 	case MIDI_NOTE_OFF: dp->k.paddleDit(false); break;
 	case MIDI_NOTE_ON:  dp->k.paddleDit(true); break;
 	}
-      } else if (note == dp->fw.opts.note+1) {
-	// if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
+      } else if (note == dp->opts.note+1) {
+	// if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
 	switch (command) {
 	case MIDI_NOTE_OFF: dp->k.paddleDah(false); break;
 	case MIDI_NOTE_ON:  dp->k.paddleDah(true); break;
 	}
       } else {
-	// if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mynote=0x%x\n", PREFACE, channel, note, dp->fw.opts.chan, dp->fw.opts.note);
+	// if (dp->opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mynote=0x%x\n", PREFACE, channel, note, dp->opts.chan, dp->opts.note);
       }
     } else if (count > 3 && p[0] == MIDI_SYSEX && p[1] == MIDI_SYSEX_VENDOR) {
-      // if (dp->fw.opts.verbose) fprintf(stderr, "%s _decode([%x, %x, %x, ...])\n", PREFACE, p[0], p[1], p[2]);
-      options_parse_command(&dp->fw.opts, (char *)p+3);
+      // if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, %x, ...])\n", PREFACE, p[0], p[1], p[2]);
+      // FIX.ME - options_parse_command(&dp->opts, (char *)p+3);
     }
   }
 
@@ -134,7 +143,7 @@ extern "C" {
     _t *dp = (_t *)arg;
     void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
     void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-    void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, jack_last_frame_time(dp->fw.client));
+    void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, sdrkit_last_frame_time(dp));
     int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
     int buffer_event_count = midi_buffer_get_event_count(buffer_in), buffer_event_index = 0, buffer_event_time = 0;
     jack_midi_event_t in_event, buffer_event;
@@ -197,18 +206,58 @@ extern "C" {
   }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+  _t *data = (_t *)clientData;
+  options_t save = data->opts;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    data->opts = save;
     return TCL_ERROR;
-  _update((_t *)clientData);
+  }
+  data->modified = (data->opts.word != save.word ||
+		    data->opts.wpm != save.wpm ||
+		    data->opts.dah != save.dah ||
+		    data->opts.ies != save.ies ||
+		    data->opts.ils != save.ils ||
+		    data->opts.iws != save.iws ||
+		    data->opts.freq != save.freq ||
+		    data->opts.gain != save.gain ||
+		    data->opts.rise != save.rise ||
+		    data->opts.fall != save.fall ||
+		    data->opts.swap != save.swap ||
+		    data->opts.alsp != save.alsp ||
+		    data->opts.awsp != save.awsp ||
+		    data->opts.mode != save.mode);
   return TCL_OK;
 }
 
+static const fw_option_table_t _options[] = {
+#include "fw_options_def.h"
+  { NULL, NULL, NULL, NULL, fw_option_none, 0, NULL }
+};
+
+static const fw_subcommand_table_t _subcommands[] = {
+  { "configure", fw_subcommand_configure },
+  { "cget",      fw_subcommand_cget },
+  { "cdoc",      fw_subcommand_cdoc },
+  { NULL, NULL }
+};
+
+static const framework_t _template = {
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  NULL,				// delete function
+  NULL,				// sample rate function
+  _process,			// process callback
+  0, 0, 1, 1			// inputs,outputs,midi_inputs,midi_outputs
+};
+
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_factory(clientData, interp, argc, objv, 0,0,1,1, _command, _process, sizeof(_t), _init, NULL, (char *)"config|cget|cdoc");
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 int DLLEXPORT Keyer_iambic_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer", "1.0.0", "keyer::iambic", _factory);
+  return framework_init(interp, "keyer::iambic", "1.0.0", "keyer::iambic", _factory);
 }
 
 }

@@ -59,7 +59,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", "constant", fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
   { "-gain",   "gain",   "Gain",   "1.0",      fw_option_float,	offsetof(_t, iqb.gain),	      "linear gain to I signal" },
   { "-phase",  "phase",  "Phase",  "0.0",      fw_option_float,	offsetof(_t, iqb.phase),      "sine of phase adjustment" },
   { NULL }

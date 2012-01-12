@@ -59,7 +59,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // w(0) = x - a1*w(1) + a2*w(2); y = b0*w(0) + b1*w(1) + b2*w(2)
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", "constant", fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
   { "-a1",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.a1),	      "coefficient a1" },
   { "-a2",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.a2),	      "coefficient a2" },
   { "-b0",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.b0),	      "coefficient b0" },

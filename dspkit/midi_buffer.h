@@ -63,12 +63,14 @@ typedef struct {
   jack_midi_event_t events[MIDI_BUFFER_EVENT_BUFFER_SIZE];
 } midi_buffer_t;
 
-static void midi_buffer_init(midi_buffer_t *bp) {
-  ring_buffer_init(&bp->ring, MIDI_BUFFER_BYTES, bp->buff);
-  ring_buffer_init(&bp->wring, MIDI_BUFFER_BYTES, bp->wbuff);
-  ring_buffer_init(&bp->rring, MIDI_BUFFER_BYTES, bp->rbuff);
+static void *midi_buffer_init(midi_buffer_t *bp) {
+  void *p;
+  p = ring_buffer_init(&bp->ring, MIDI_BUFFER_BYTES, bp->buff); if (p != &bp->ring) return p;
+  p = ring_buffer_init(&bp->wring, MIDI_BUFFER_BYTES, bp->wbuff); if (p != &bp->wring) return p;
+  p = ring_buffer_init(&bp->rring, MIDI_BUFFER_BYTES, bp->rbuff); if (p != &bp->rring) return p;
   bp->head_frame = 0;
   bp->event_count = 0;
+  return bp;
 }
 
 /*

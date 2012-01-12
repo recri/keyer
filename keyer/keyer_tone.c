@@ -47,11 +47,15 @@
 #include "../dspkit/keyed_tone.h"
 
 typedef struct {
+  #include "fw_options_var.h"
+} options_t;
+
+typedef struct {
   framework_t fw;
   keyed_tone_t tone;
   unsigned long frame;
   int modified;
-#include "fw_options_var.h"
+  options_t opts;
 } _t;
 
 /*
@@ -59,22 +63,22 @@ typedef struct {
 */
 static void _decode(_t *dp, unsigned count, unsigned char *p) {
   /* decode note/channel based events */
-  if (dp->verbose > 4)
+  if (dp->opts.verbose > 4)
     fprintf(stderr, "%s:%s:%d @%ld _decode(%x, [%x, %x, %x, ...]\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     char channel = (p[0]&0xF)+1;
     char note = p[1];
-    if (channel == dp->chan && note == dp->note)
+    if (channel == dp->opts.chan && note == dp->opts.note)
       switch (p[0]&0xF0) {
       case MIDI_NOTE_OFF: keyed_tone_off(&dp->tone); break;
       case MIDI_NOTE_ON:  keyed_tone_on(&dp->tone); break;
       }
-    else if (dp->verbose > 3)
-      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->chan, dp->note);
+    else if (dp->opts.verbose > 3)
+      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->opts.chan, dp->opts.note);
   } else if (count > 3 && p[0] == MIDI_SYSEX) {
     if (p[1] == MIDI_SYSEX_VENDOR) {
       // FIX.ME - options_parse_command(&dp->fw.opts, p+3);
-      if (dp->verbose > 3)
+      if (dp->opts.verbose > 3)
 	fprintf(stderr, "%s:%s:%d sysex: %*s\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, count, p+2);
     }
   }
@@ -82,15 +86,15 @@ static void _decode(_t *dp, unsigned count, unsigned char *p) {
 
 static void *_init(void *arg) {
   _t *dp = (_t *) arg;
-  if (dp->verbose) fprintf(stderr, "%s:%s:%d init\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
-  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init freq %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->freq);
-  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init gain %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->gain);
-  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->rise);
-  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->fall);
-  if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _init rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
-  dp->chan = 1;
-  dp->note = 0;
-  void *p = keyed_tone_init(&dp->tone, dp->gain, dp->freq, dp->rise, dp->fall, sdrkit_sample_rate(arg));
+  if (dp->opts.verbose) fprintf(stderr, "%s:%s:%d init\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
+  if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init freq %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.freq);
+  if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init gain %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.gain);
+  if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.rise);
+  if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.fall);
+  if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
+  dp->opts.chan = 1;
+  dp->opts.note = 0;
+  void *p = keyed_tone_init(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall, sdrkit_sample_rate(arg));
   if (p != &dp->tone) return p;
   return arg;
 }
@@ -98,14 +102,14 @@ static void *_init(void *arg) {
 static void _update(void *arg) {
   _t *dp = (_t *) arg;
   if (dp->modified) {
-    if (dp->verbose) fprintf(stderr, "%s:%s:%d _update\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
-    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update freq %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->freq);
-    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update gain %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->gain);
-    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->rise);
-    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->fall);
-    if (dp->verbose > 1) fprintf(stderr, "%s:%s:%d _update rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
+    if (dp->opts.verbose) fprintf(stderr, "%s:%s:%d _update\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
+    if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _update freq %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.freq);
+    if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _update gain %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.gain);
+    if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _update rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.rise);
+    if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _update fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.fall);
+    if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _update rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
     dp->modified = 0;
-    keyed_tone_update(&dp->tone, dp->gain, dp->freq, dp->rise, dp->fall, sdrkit_sample_rate(arg));
+    keyed_tone_update(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall, sdrkit_sample_rate(arg));
   }
 }
 
@@ -154,9 +158,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  float save_freq = dp->freq, save_gain = dp->gain, save_rise = dp->rise, save_fall = dp->fall;
+  float save_freq = dp->opts.freq, save_gain = dp->opts.gain, save_rise = dp->opts.rise, save_fall = dp->opts.fall;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  dp->modified = (save_freq != dp->freq) || (save_gain != dp->gain || save_rise != dp->rise || save_fall != dp->fall);
+  dp->modified = (save_freq != dp->opts.freq) || (save_gain != dp->opts.gain || save_rise != dp->opts.rise || save_fall != dp->opts.fall);
   return TCL_OK;
 }
 

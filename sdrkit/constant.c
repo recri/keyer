@@ -56,7 +56,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", "constant", fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
   { "-real",   "real",   "Real",   "1.0",      fw_option_float,	offsetof(_t, real),	      "real part of constant produced" },
   { "-imag",   "imag",   "Imag",   "0.0",      fw_option_float,	offsetof(_t, imag),	      "imaginary part of constant produced" },
   { NULL }
