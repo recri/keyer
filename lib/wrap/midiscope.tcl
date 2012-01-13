@@ -17,14 +17,18 @@
 # 
 package provide midiscope 1.0.0
 
+package require sdrkit::atap
 package require sdrkit::mtap
 package require sdrkit::jack
 
 namespace eval ::midiscope {}
 
 proc midiscope::start-taps {w} {
+    ::sdrkit::atap tone_tap
     ::sdrkit::mtap key_tap
     ::sdrkit::mtap keyer_tap
+    ::sdrkit::jack connect iambic_tone:out_i tone_tap:in_i
+    ::sdrkit::jack connect iambic_tone:out_q tone_tap:in_q
     ::sdrkit::jack connect system:midi_capture_1 key_tap:midi_in
     ::sdrkit::jack connect iambic:midi_out keyer_tap:midi_in
 }
@@ -67,7 +71,7 @@ proc midiscope::clear {w} {
 proc midiscope::collect {w} {
     upvar #0 $w data
     foreach name {key_tap keyer_tap} {
-	foreach item [$name get] {
+	foreach item [$name gets] {
 	    foreach {time bdata} $item break
 	    set time [expr {double($time-$data(start-frame))/$data(sample-rate)}]
 	    binary scan $bdata c* cdata

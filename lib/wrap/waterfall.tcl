@@ -15,17 +15,112 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide wrap::waterfall 1.0.0
-package require wrap
-package require sdrkit::atap
-namespace eval ::wrap {}
-#
-# waterfall block
-#
-proc ::wrap::waterfall {w} {
-    upvar #0 $w data
-    default_window $w
-    cleanup_func $w [::sdrkit::atap ::wrap::cmd::$w]
+package provide waterfall 1.0.0
+
+package require Tk
+
+##
+## waterfall
+##
+
+namespace eval ::waterfall {
+    array set default_data {
+	-height 200
+	-atten 0
+	-pal 0
+	-min -125.0
+	-max -60.0
+	-scale 1.0
+	-offset 0.0
+    }
+}
+
+proc ::waterfall::hotiron {hue pal} {
+    switch $pal {
+	0 { lassign [list [expr {3*($hue+0.03)}] [expr {3*($hue-.333333)}] [expr {3*($hue-.666667)}]] r g b }
+	1 { lassign [list [expr {3*($hue+0.03)}] [expr {3*($hue-.666667)}] [expr {3*($hue-.333333)}]] r g b }
+	2 { lassign [list [expr {3*($hue-.666667)}] [expr {3*($hue+0.03)}] [expr {3*($hue-.333333)}]] r g b }
+	3 { lassign [list [expr {3*($hue-.333333)}] [expr {3*($hue+0.03)}] [expr {3*($hue-.666667)}]] r g b }
+	4 { lassign [list [expr {3*($hue-.333333)}] [expr {3*($hue-.666667)}] [expr {3*($hue+0.03)}]] r g b }
+	5 { lassign [list [expr {3*($hue-.666667)}] [expr {3*($hue-.333333)}] [expr {3*($hue+0.03)}]] r g b }
+    }
+    return \#[format {%02x%02x%02x} [expr {int(255*min(1,max($r,0)))}] [expr {int(255*min(1,max($g,0)))}] [expr {int(255*min(1,max($b,0)))}]]
+}
+
+proc ::waterfall::pixel {w level} {
+    upvar #0 ::waterfall::$w data
+    # clamp to percentage of range
+    set level [expr {min(1,max(0,($level-$data(-min))/($data(-max)-$data(-min))))}]
+    # use 100 levels
+    set i color-$data(-pal)-[expr {int(100*$level)}]
+    if { ! [info exists data($i)]} {
+	set data($i) [hotiron $level $data(-pal)]
+	# puts "assigned $data($i) to level $level"
+    }
+    return $data($i)
+}
+
+proc ::waterfall::update {w xy} {
+    upvar #0 ::waterfall::$w data
+
+    set scanline {}
+    set x0 [lindex $xy 0]
+    foreach {x y} $xy {
+	lappend scanline [pixel $w [expr {$y+$data(-atten)}]]
+    }
+	
+    # scroll all the canvas images down by 1
+    $w move all 0 1
+
+    # create a new canvas image
+    set i $data(line-number)
+    set data(img-$i) [image create photo]
+    $data(img-$i) put [list $scanline]
+    set data(item-$i) [$w create image $x0 0 -anchor nw -image $data(img-$i)]
+    $w scale $data(item-$i) 0 0 $data(-scale) 1
+    $w move $data(item-$i) $data(-offset) 0
+
+    # increment our scanline index
+    incr data(line-number)
+}
+
+proc ::waterfall::configure {w args} {
+    upvar #0 ::waterfall::$w data
+    array set save [array get data]
+    foreach {option value} $args {
+	switch -- $option {
+	    -scale -
+	    -offset {
+		set adjustpos 1
+		set data($option) $value
+	    }
+	    default {
+		set data($option) $value
+	    }
+	}
+    }
+    if {[info exists adjustpos]} {
+	$w move all [expr {-$save(-offset)}] 0
+	$w scale all 0 0 [expr {$data(-scale)/$save(-scale)}] 1
+	$w move all $data(-offset) 0
+	# puts "waterfall::configure -scale $data(-scale) -offset $data(-offset) bbox [$w bbox all]"
+    }
+}
+    
+proc ::waterfall::waterfall {w args} {
+    upvar #0 ::waterfall::$w data
+    array set data [array get ::waterfall::default_data]
+    array set data $args
+    canvas $w -height $data(-height) -bg black
+    set data(line-number) 0
     return $w
+}
+
+proc ::waterfall::defaults {} {
+    return [array get ::waterfall::default_data]
+}
+
+proc ::waterfall {w args} {
+    return [::waterfall::waterfall $w {*}$args]
 }
 

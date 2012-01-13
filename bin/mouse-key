@@ -22,48 +22,10 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::midi-insert
-
-# implement a key on mouse buttons or key presses
-
-array set data {
-    server default
-    name mouse-key
-    chan 1
-    note 0
-    midi-note-off		0x80
-    midi-note-on		0x90
-}
-
-proc note-on {n} {
-    $::data(name) puts [binary format ccc [expr {$::data(midi-note-on)|($::data(chan)-1)}] [expr {$::data(note)+($n&1)}] 0]
-}
-
-proc note-off {n} {
-    $::data(name) puts [binary format ccc [expr {$::data(midi-note-off)|($::data(chan)-1)}] [expr {$::data(note)+($n&1)}] 0]
-}
+package require mouse-key
 
 proc main {argv} {
-    foreach {option value} $argv {
-	switch -- $option {
-	    -name - --name { set ::data(name) $value }
-	    -s - -server - --server { set ::data(server) $value }
-	    -c - -chan - --channel { set ::data(chan) $value }
-	    -n - -note - --note { set ::data(note) $value }
-	    default { error "unknown option \"$option\"" }
-	}
-    }
-    sdrkit::midi-insert $::data(name)
-    wm title . $::data(name)
-    pack [canvas .c] -fill both -expand true
-    bind .c <ButtonPress-1> [list note-on 0]
-    bind .c <ButtonRelease-1> [list note-off 0]
-    bind .c <ButtonPress-3> [list note-on 1]
-    bind .c <ButtonRelease-3> [list note-off 1]
-    focus .c
-    bind .c <KeyPress> [list note-on %N]
-    bind .c <KeyRelease> [list note-off %N]
-    bind . <Destroy> [list shutdown %W]
+    mouse-key . {*}$argv
 }
 
 main $argv
