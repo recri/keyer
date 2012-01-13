@@ -1,3 +1,4 @@
+/* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
@@ -26,7 +27,7 @@
 
 extern "C" {
 
-#define KEYER_OPTIONS_TONE		1
+#define KEYER_OPTIONS_TONE	1
 #define KEYER_OPTIONS_TIMING	1
 #define KEYER_OPTIONS_KEYER	1
 

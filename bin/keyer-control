@@ -116,6 +116,9 @@ proc client-init {} {
 	    system:midi_capture_* {
 		set midi_capture $port
 	    }
+	    mouse-key:midi_out {
+		set mouse_key $port
+	    }
 	}
     }
     # make helpers
@@ -140,10 +143,11 @@ proc client-init {} {
 	lappend clients iambic
 	keyer::tone iambic_tone {*}[client-opts iambic_tone]
 	lappend clients iambic_tone
-	if { ! [info exists midi_capture]} {
-	    message "no midi_capture port for keyer connection"
-	} else {
+	if {[info exists midi_capture]} {
 	    lappend connects [list sdrkit::jack connect $midi_capture iambic:midi_in]
+	}
+	if {[info exists mouse_key]} {
+	    lappend connects [list sdrkit::jack connect $mouse_key iambic:midi_in]
 	}
 	lappend connects {sdrkit::jack connect iambic:midi_out iambic_tone:midi_in}
 	lappend connects {sdrkit::jack connect iambic_tone:out_i system:playback_1}

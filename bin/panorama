@@ -302,7 +302,7 @@ proc ::capture::configure {w args} {
 		if {$value != $data(-size)} {
 		    set data(-size) $value
 		    catch {rename $data(fft) {}}
-		    ::sdrkit::fftw $data(fft) $value
+		    ::sdrkit::fftw $data(fft) -size $value
 		}
 		set data($option) $value
 	    }
@@ -333,7 +333,7 @@ proc ::capture::capture {w} {
     foreach {f b} [::$data(tap) get $n] break
 	
     # compute the fft
-    set l [::$data(fft) $b]
+    set l [::$data(fft) exec $b]
 	
     # convert the coefficients to a list
     binary scan $l f* levels

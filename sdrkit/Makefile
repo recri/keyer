@@ -29,6 +29,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/iq_swap.so \
 	$(LIBDIR)/jack.so \
 	$(LIBDIR)/lo_mixer.so \
+	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/mixer.so \
 	$(LIBDIR)/mono_to_iq.so \
 	$(LIBDIR)/mtap.so \
@@ -82,6 +83,10 @@ $(LIBDIR)/jack.so: jack.c
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../dspkit/lo_mixer.h
+	mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../dspkit/midi_buffer.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

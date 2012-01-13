@@ -8,9 +8,11 @@
   parameters to be fiddled with.
 
   The essential prerequisites for using this are a computer running
-  Linux build and host the applications. With that you can run the
-  ascii keyer, listen to the output, examine the waveforms, and see
-  how the system works.
+  Linux to build and to host the applications. With that you can run
+  the ascii keyer, listen to the output, examine the waveforms, and
+  see how the system works.  You can also launch the mouse key
+  application and hook it up to the iambic keyer, though mouse buttons
+  or key board keys do not make for great telegraphy.
 
   Adding a MidiKeyer USB dongle will allow you to translate your
   paddle or straight key switch closures into MIDI events and transmit
@@ -33,7 +35,8 @@
   these instructions will depend on you making the necessary
   translation if you install the sources someplace else.
 ** Required packages
-   Using your preferred Ubuntu package manager, you want to install:
+   Using your preferred Ubuntu package manager, you want to install
+   the following packages:
    | build-essentials   |
    | git-core           |
    | jackd2             |
@@ -82,7 +85,9 @@
    #+BEGIN_EXAMPLE
    cd ~/keyer && make
    #+END_EXAMPLE
-   will compile everything needed to run.
+   will compile everything needed to run.  If you have problems,
+   please go back to the list of required packages and make sure you
+   didn't miss one.
 
    #+BEGIN_EXAMPLE
    cd ~/keyer && make clean
@@ -97,9 +102,9 @@
    I don't do any install. I usually run the scripts from ~/keyer
    manually prefixing bin/ to get the commands I want to run.
 ** MidiKey
-  Originally, the whole point is to get CW keying information into the
-  computer with the lowest latency possible.  To do that you'll need a
-  MIDI-USB-Keyer dongle to hookup your keys.
+  The whole point is to get CW keying information into the computer
+  with the lowest latency possible.  To do that you'll need a
+  MIDI-USB-Keyer dongle to hookup your straight key or paddle.
 
   I started with a paddle interface built on a breadboard from a
   Teensy 2.0 (from http://www.pjrc.com/teensy/), a stereo audio jack,
@@ -145,10 +150,11 @@
   You can configure your jack server to "autolaunch" whenever an
   application tries to open it, but the result will be that you get a 
   bunch of messages from jackd which appear to come from your
-  application, the messages look the same whether jackd succeeds or
-  fails to start, and the autolaunched jackd may or may not be visible 
-  and controllable from qjackctl.  So turn off the autolaunch feature
-  and use qjackctl so you can see what's happening.
+  application, the messages look pretty much the same whether jackd
+  succeeds or fails to start, and the autolaunched jackd may or may
+  not be visible and controllable from qjackctl.  So turn off the
+  autolaunch feature and use qjackctl so you can see what's
+  happening.
 
   All of the scripts in ~/keyer/bin are now Tcl/Tk scripts. I'm going
   to describe what they do, but for the fullest documentation of the
@@ -170,34 +176,25 @@
     where you go to figure out how a particular computation is
     performed or to steal code for your own use.
 
-    Note that dspkit is entirely header files.
+    Note that dspkit is entirely header files.  You include the
+    implementation, define an instance, initialize, and use it.  The
+    code is all static to the file that includes it, so it can be
+    optimized to nothing if it isn't used.
 *** sdrkit - software defined radio
-    This will define the framework for wrapping dspkit as Tcl commands
-    so they can be loaded and executed within a Tcl/Tk application.
-    This covers command creation and deletion, options handling, and
-    subcommand processing.
-
-    This is also where the plain Tcl commands get defined.
-*** jackit - Jack enabled modules
-    Jack modules are Tcl commands that link themselves into the Jack
-    computation graph.  This involves defining a Jack process
-    callback, opening Jack ports, and subsequent clean up.
-
-    This is also where the Jack enabled modules get defined.
-*** vizkit - visualization modules
-    Software defined radio requires fast display for meters, scopes,
-    spectrum, and waterfall displays.
+    This defines the framework for wrapping dspkit components into Tcl
+    commands so they can be loaded and executed within a Tcl/Tk
+    application. This covers mostly boring stuff like command creation
+    and deletion, options handling, subcommand processing, and the
+    gory details of being a Jack component.
 *** lib/* - tcl code and compiled loadable modules
     The lib directory is structured as a collection of sub-directories
     which could be safely installed into a system lib directory.
 *** lib/sdrkit - where sdrkit installs loadable modules
-*** lib/jackit - where jackit installs loadable modules
-*** lib/vizkit - where vizkit installs loadable modules
-*** lib/wrapit - Tcl code for wrapping up loadable modules
-    The commands implemented by sdrkit, jackit, and vizkit are
-    barebones computational modules.  The code in wrapit wraps the
-    barebones computations into a ui widget with controls for managing
-    the wrapped computation or display.
+*** lib/wrap - Tcl code for wrapping up loadable modules
+    The commands implemented by sdrkit are barebones computational
+    modules.  The code in wrapit wraps the barebones computations into
+    a ui widget with controls for managing the wrapped computation or
+    display.
     
     So a wrapped vizkit::scope will provide scrollbars for shifting
     the display, buttons for adjusting the horizontal and vertical
@@ -291,16 +288,16 @@
    timing options.  In addition it implements.
 
    "swap" reverses the sense of dit and dah.  Normally dit comes in on
-  the "chan" channel at "note" and dah one note higher.  Default 0.
+   the "chan" channel at "note" and dah one note higher.  Default 0.
 
-  "alsp" specifies if the keyer does automatic letter spacing or
-  simply turns off.  Default 0.
+   "alsp" specifies if the keyer does automatic letter spacing or
+   simply turns off.  Default 0.
 
-  "awsp" specifies if the keyer does automatic word spacing or simply
-  turns off.  Default 0.
+   "awsp" specifies if the keyer does automatic word spacing or simply
+   turns off.  Default 0.
 
-  "mode" should specify if the keyer implements iambic mode A or mode
-  B, but the keyer only does what it does at the moment.
+   "mode" should specify if the keyer implements iambic mode A or mode
+   B, but the keyer only does what it does at the moment.
 *** Bugs and Issues
    Mode A only, or something like that.
 
@@ -352,27 +349,30 @@
 ** waterfall - audio waterfall capture and display
 ** panorama - combined spectrogram and waterfall display
 * Things to Do
-** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
+** TODO - keyer_tone.c: protect against 0 rise or fall
+** TODO - keyer timing: protect against 0 clocks in all possibilities
 ** TODO - keyer_ascii.c: to fix the timing glitches visible in scope
 ** TODO - keyer_iambic.c: to fix the timing glitces visible in scope
 ** TODO - keyer_tone.c: to fix the ramping glitches visible in scope
+** TODO - midiscope: reorganize into three digital panes and an audio
+   pane so all aspects of keying can be compared.
+** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract DttspOscillator class in a header.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
 ** TODO - keyer_ascii: install more code points
    There's more to Morse code than the basic US Ham usage, but I'm not
    sure how to best internationalize the table.
 ** TODO - keyer_iambic.c: mode B
-    Should only require a short memory of key states, make the next
-    element decision at end of inter-element space based on key state
-    at 1.5 dit clocks in the past.
-** TODO - keyer_detone.c: to convert keyed tones into midi.
+   Should only require a short memory of key states, make the next
+   element decision at end of inter-element space based on key state
+   at 1.5 dit clocks in the past.
+** TODO - keyer_detone.c: to convert keyed cw into midi note on/off events.
 ** TODO - keyer-control: build, save, and restore custom configurations.
 ** TODO - keyer-control: ascii input/output window
 ** TODO - keyer-control: jack launching panel.
 ** TODO - keyer-control: jack connection panel.
+** TODO - keyer-control: offer to launch mouse-key
 ** TODO - sdrkit_jack.c: provide missing jack status information.
-** TODO - keyer_tone.c: protect against 0 rise or fall
-** TODO - keyer timing: protect against 0 clocks in all possibilities
 ** TODO - bin/invaders: callsign-invaders ear/key training game.
 ** TODO - bin/pileup: echo back callsigns in a pileup situation
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
@@ -381,10 +381,6 @@
    The binaural option in dttsp simply leaves the I/Q as it is, the
    monoaural option discards the Q and pans the result to a specified
    azimuth.
-** TODO - sdrkit_monoiq.c: convert an monoaural signal to i/q by up-sampling and shifting.
-   I've thought this out.  It appears that simply taking the mono
-   channel as I and the mono channel delayed by one sample as Q is
-   equivalent to doing quadrature detection at samplerate/4.
 ** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
 ** TODO - general abstraction - dspkit: c and c++ modules in headers for pure computation.
    oscillators, mixers, filters, modulators, demodulators.
@@ -419,7 +415,6 @@
 ** DONE - sdrkit_mtap.c: Should add MIDI input to receive the iambic shaped keying.
    That could be used to key a transmitter, play a sidetone, wiggle a
    PTT line, or flash some LED's. 
-
 ** DONE - bin/*: follow symlinked scripts back to the source directory
 ** DONE - bin/midiscope: display logic transitions of midi events.
 ** DONE - bin/scope: display audio baseband waveforms
@@ -432,6 +427,10 @@
    Does a gain block do that all by itself when jack routes multiple
    inputs?  Yes.  The problem would be in mixing multiple I/Q channels
    together. 
+** DONE - sdrkit_mono_to_iq.c: convert an monoaural signal to i/q by up-sampling and shifting.
+   I've thought this out.  It appears that simply taking the mono
+   channel as I and the mono channel delayed by one sample as Q is
+   equivalent to doing quadrature detection at samplerate/4.
 * Credits
   This code is derived from many sources.
 

@@ -160,27 +160,27 @@ static int midi_buffer_queue_drop(midi_buffer_t *bp) {
 /*
 ** queue events, deferred flush.
 */
+static int midi_buffer_queue_command(midi_buffer_t *bp, unsigned duration, unsigned char *bytes, int size) {
+  midi_buffer_event_t e;
+  int n1, n2;
+  e.duration = duration;
+  e.size = size;
+  n1 = midi_buffer_queue_bytes(bp, (unsigned char *)&e, sizeof(e));
+  if (n1 < 0) return n1;
+  n2 = midi_buffer_queue_bytes(bp, bytes, size);
+  if (n2 < 0) return n2;
+  return n1+n2;
+}  
 static int midi_buffer_queue_note_on(midi_buffer_t *bp, unsigned duration, int chan, int note, int vel) {
   midi_buffer_event_t e;
   unsigned char note_on[] = { MIDI_NOTE_ON|(chan-1), note, vel };
-  int n1, n2;
-  e.duration = duration;
-  e.size = sizeof(note_on);
-  n1 = midi_buffer_queue_bytes(bp, (unsigned char *)&e, sizeof(e));
-  if (n1 < 0) return n1;
-  n2 = midi_buffer_queue_bytes(bp, note_on, sizeof(note_on));
-  if (n2 < 0) return n2;
-  return n1+n2;
+  return midi_buffer_queue_command(bp, duration, note_on, 3) > 0 ? 1 : -1;
 }
 
 static int midi_buffer_queue_note_off(midi_buffer_t *bp, unsigned duration, int chan, int note, int vel) {
   midi_buffer_event_t e;
   unsigned char note_off[] = { MIDI_NOTE_OFF|(chan-1), note, vel };
-  e.duration = duration;
-  e.size = sizeof(note_off);
-  if (midi_buffer_queue_bytes(bp, (unsigned char *)&e, sizeof(e)) < 0) return -1;
-  if (midi_buffer_queue_bytes(bp, note_off, sizeof(note_off)) < 0) return -1;
-  return 1;
+  return midi_buffer_queue_command(bp, duration, note_off, 3) > 0 ? 1 : -1;
 }
 
 static int midi_buffer_queue_delay(midi_buffer_t *bp, unsigned duration) {
@@ -208,6 +208,11 @@ static int midi_buffer_queue_sysex(midi_buffer_t *bp, unsigned char *p) {
 /*
 ** write events, queue and flush
 */
+static int midi_buffer_write_command(midi_buffer_t *bp, unsigned duration, unsigned char *bytes, int count) {
+  midi_buffer_queue_command(bp, duration, bytes, count);
+  return midi_buffer_queue_flush(bp);
+}
+
 static int midi_buffer_write_note_on(midi_buffer_t *bp, unsigned duration, int chan, int note, int vel) {
   midi_buffer_queue_note_on(bp, duration, chan, note, vel);
   return midi_buffer_queue_flush(bp);
@@ -227,7 +232,7 @@ static int midi_buffer_write_sysex(midi_buffer_t *bp, unsigned char *p) {
   midi_buffer_queue_sysex(bp, p);
   return midi_buffer_queue_flush(bp);
 }
-  
+
 /*
 ** routines for implementing pending and avaialble
 */
