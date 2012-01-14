@@ -58,12 +58,12 @@ static void *keyed_tone_init(keyed_tone_t *p, float gain_dB, float freq, float r
 
 static void keyed_tone_on(keyed_tone_t *p) {
   p->state = KEYED_TONE_RISE;
-  sine_ramp_reset(&p->rise);
+  sine_ramp_start_rise(&p->rise);
 }
 
 static void keyed_tone_off(keyed_tone_t *p) {
   p->state = KEYED_TONE_FALL;
-  sine_ramp_reset(&p->fall);
+  sine_ramp_start_fall(&p->fall);
 }
 
 static void keyed_tone_xy(keyed_tone_t *p, float *x, float *y) {
@@ -80,7 +80,7 @@ static void keyed_tone_xy(keyed_tone_t *p, float *x, float *y) {
   case KEYED_TONE_ON:	/* note is sounding full level */
     break;
   case KEYED_TONE_FALL:	/* note is ramping down to off */
-    scale *= 1-sine_ramp_next(&p->fall);
+    scale *= sine_ramp_next(&p->fall);
     if (sine_ramp_done(&p->fall))
       p->state = KEYED_TONE_OFF;
     break;

@@ -60,6 +60,13 @@ proc ::waterfall::pixel {w level} {
     return $data($i)
 }
 
+proc ::waterfall::destroy {w} {
+    upvar #0 ::waterfall::$w data
+    foreach img [array names data img-*] {
+	rename $data($img) {}
+    }
+}
+
 proc ::waterfall::update {w xy} {
     upvar #0 ::waterfall::$w data
 
@@ -107,17 +114,17 @@ proc ::waterfall::configure {w args} {
     }
 }
     
+proc ::waterfall::defaults {} {
+    return [array get ::waterfall::default_data]
+}
+
 proc ::waterfall::waterfall {w args} {
     upvar #0 ::waterfall::$w data
-    array set data [array get ::waterfall::default_data]
+    array set data [::waterfall::defaults]
     array set data $args
     canvas $w -height $data(-height) -bg black
     set data(line-number) 0
     return $w
-}
-
-proc ::waterfall::defaults {} {
-    return [array get ::waterfall::default_data]
 }
 
 proc ::waterfall {w args} {

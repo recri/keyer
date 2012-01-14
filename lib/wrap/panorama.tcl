@@ -75,10 +75,6 @@ proc ::panorama::window-destroy {w cw} {
     ::waterfall::destroy $w.w
     ::spectrum::destroy $w.s
     ::frequency::destroy $w.f
-
-    foreach img [array names data img-*] {
-	rename $data($img) {}
-    }
 }
 
 proc ::panorama::panorama {w args} {

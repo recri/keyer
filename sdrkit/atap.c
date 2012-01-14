@@ -40,10 +40,16 @@
 **
 ** Now I wonder why it isn't the other way, which would be more convenient
 ** for scoping.  Hmm.
+**
+** So this should:
+** [ ]  allow configuration of the buffer size
+** [ ]  allow getting the samples as array of complex
+** [ ]  allow getting the samples as array of i and array of q
+** [ ]  be named iq-tap or audio-tap
 */
 
 #ifndef _N_MILLI_SECONDS
-#define _N_MILLI_SECONDS 250
+#define _N_MILLI_SECONDS 500
 #endif
 
 typedef struct {
@@ -97,8 +103,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   size_t offset = (data->wframe&(data->size-1));
   if (offset + nframes > data->size) {
     fprintf(stderr, "offset = %ld + nframes = %ld > size = %ld\n", offset, (long)nframes, data->size);
-    // need to implement a misaligned copy/set, but I'm betting that jacks frame time is
-    // buffer aligned
+    // need to implement a misaligned copy/set, but I'm betting that jacks frame time is buffer aligned
   } else {
     float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
     if (in0) memcpy(data->ibuffer+offset, in0, nframes*sizeof(float));

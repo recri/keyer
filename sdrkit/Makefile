@@ -21,6 +21,7 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 
 ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/atap.so \
+	$(LIBDIR)/audio_tap.so \
 	$(LIBDIR)/biquad.so \
 	$(LIBDIR)/constant.so \
 	$(LIBDIR)/fftw.so \
@@ -51,6 +52,10 @@ $(LIBDIR)/agc.so: agc.c framework.h sdrkit_math.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/atap.so: atap.c framework.h
+	mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/audio_tap.so: audio_tap.c framework.h
 	mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

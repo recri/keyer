@@ -18,6 +18,7 @@
 #ifndef SINE_RAMP_H
 #define SINE_RAMP_H
 
+#include "dmath.h"
 #include "oscillator.h"
 
 /*
@@ -41,9 +42,14 @@ static void sine_ramp_update(sine_ramp_t *r, float ms, int samples_per_second) {
   oscillator_update(&r->ramp, 1000.0f/(4.0f*ms), samples_per_second);
 }
 
-static void sine_ramp_reset(sine_ramp_t *r) {
+static void sine_ramp_start_rise(sine_ramp_t *r) {
   r->current = 0;
   oscillator_reset(&r->ramp);
+}
+
+static void sine_ramp_start_fall(sine_ramp_t *r) {
+  r->current = 0;
+  oscillator_set_phase(&r->ramp, half_pi);
 }
 
 static float sine_ramp_next(sine_ramp_t *r) {

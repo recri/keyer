@@ -18,8 +18,7 @@
 #ifndef OSCILLATOR_H
 #define OSCILLATOR_H
 
-#include <complex.h>
-#include <math.h>
+#include "dmath.h"
 
 /*
 ** oscillator.
@@ -44,6 +43,11 @@ static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_s
   } else {
     o->x *=  o->xi / current_xi;
   }
+}
+
+static void oscillator_set_phase(oscillator_t *o, float radians) {
+  o->x = cosf(radians) * o->xi;
+  o->y = sinf(radians);
 }
 
 static void *oscillator_init(oscillator_t *o, float hertz, int samples_per_second) {

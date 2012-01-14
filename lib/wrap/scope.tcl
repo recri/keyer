@@ -15,21 +15,113 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide wrap::scope 1.0.0
+package provide scope 1.0.0
+
 package require wrap
 package require sdrkit::atap
-namespace eval ::wrap {}
+package require sdrkit::jack
+
+namespace eval ::scope {}
+namespace eval ::scope::cmd {}
+
 #
 # scope block
 #
 # a simple two channel scope
 #
-proc ::wrap::scope {w} {
+proc ::scope::update {w} {
     upvar #0 $w data
-    default_window $w
-    cleanup_func $w [::sdrkit::atap ::wrap::cmd::$w]
+    # the milliseconds displayed on screen, ms/div * 10div
+    set ms_per_screen [expr {$data(hdivision)*10}]
+    # the samples per millisecond, samples/sec / 1000ms/sec
+    set samples_per_ms [expr {[sdrkit::jack sample-rate]/1000.0}]
+    # the number of samples on screen
+    set samples_per_screen [expr {$ms_per_screen * $samples_per_ms}]
+    # the number of pixels per sample
+    set pixels_per_sample [expr {$data(wd) / $samples_per_screen}]
+    # get the current sample buffer
+    set b [::scope::cmd::$w]
+    # count the samples received
+    set ns [expr {[string length $b]/8}]
+    # if that isn't enough, then get more next time
+    if {$ns < $samples_per_screen * 2} {
+	::scope::cmd::$w -b [make_binary [expr {$samples_per_screen * 2}]]
+    }
+    # compute the number of floats to scan
+    set nf [expr {int(min($ns,$samples_per_screen*2))}]
+    set n [binary scan $b f$nf vals]
+    if { ! $data(freeze)} {
+	if {$n == 1 && [llength $vals] == $nf} {
+	    set is {}
+	    set qs {}
+	    set t 0
+	    foreach {i q} $vals {
+		lappend is $t $i
+		lappend qs $t $q
+		incr t
+	    }
+	    if { ! [info exists data(itrace)]} {
+		set data(itrace) [$w.c create line $is -fill blue -tags {trace itrace}]
+		set data(qtrace) [$w.c create line $qs -fill red -tags {trace qtrace}]
+	    } else {
+		$w.c coords $data(itrace) $is
+		$w.c coords $data(qtrace) $qs
+	    }
+	    # move y0 to center screen
+	    # move trigger sample to left
+	    $w.c move trace 0 $data(y0)
+	    # scale according sweep rate and sensitivity
+	    $w.c scale trace 0 $data(y0) $pixels_per_sample [expr {$data(yg)/$data(vdivision)}]
+	    # move
+	} else {
+	    puts "buffer length is [string length $b]"
+	    puts "binary scan tap == $n"
+	    puts "llength \$vals == [llength $vals]"
+	}
+    }
+    ::wrap::cleanup_after $w [after 100 [list ::scope::update $w]]
+}
+
+proc ::scope::configure {bw w width height} {
+    upvar #0 $w data
+    if {$bw eq "$w.c"} {
+	set x0 [expr {$width/2.0}]
+	set y0 [expr {$height/2.0}]
+	set wd [expr {$width-3}]
+	set ht [expr {$height-3}]
+	set xg [expr {$wd/10.0}]
+	set yg [expr {$ht/8.0}]
+	set xmg [expr {$xg/5.0}]
+	set ymg [expr {$yg/5.0}]
+	if { ! [info exists data(x0)]} {
+	    for {set i 0} {$i <= 10} {incr i} {
+		if {$i <= 8} {
+		    set y [expr {$i*$yg+1}]
+		    set data(h$i) [$w.c create line 0 $y $wd $y]
+		}
+		set x [expr {$i*$xg+1}]
+		set data(v$i) [$w.c create line $x 0 $x $ht]
+	    }
+	} else {
+	    for {set i 0} {$i <= 10} {incr i} {
+		if {$i <= 8} {
+		    set y [expr {$i*$yg+1}]
+		    $w.c coords $data(h$i) 0 $y $wd $y
+		}
+		set x [expr {$i*$xg+1}]
+		$w.c coords $data(v$i) $x 0 $x $ht
+	    }
+	}
+	array set data [list x0 $x0 y0 $y0 wd $wd ht $ht xg $xg yg $yg xmg $xmg ymg $ymg]
+    }
+}
+
+proc ::scope::scope {w} {
+    upvar #0 $w data
+    ::wrap::default_window $w
+    ::wrap::cleanup_func $w [::sdrkit::atap ::scope::cmd::$w]
     
-    bind $w <Configure> [list ::wrap::scope_configure %W $w %w %h]
+    bind $w <Configure> [list ::scope::configure %W $w %w %h]
     grid [canvas $w.c -width 400 -height 320] -row 0 -column 0 -sticky nsew
     
     grid [ttk::frame $w.f] -row 0 -column 1 -stick n
@@ -97,94 +189,7 @@ proc ::wrap::scope {w} {
     set data(freeze) 0
     grid columnconfigure $w 0 -weight 1
     grid rowconfigure $w 0 -weight 1
-    cleanup_after $w [after 500 [list ::wrap::scope_update $w]]
+    ::wrap::cleanup_after $w [after 500 [list ::scope::update $w]]
     return $w
-}
-
-proc ::wrap::scope_update {w} {
-    upvar #0 $w data
-    # the milliseconds displayed on screen, ms/div * 10div
-    set ms_per_screen [expr {$data(hdivision)*10}]
-    # the samples per millisecond, samples/sec / 1000ms/sec
-    set samples_per_ms [expr {[sdrkit::jack sample-rate]/1000.0}]
-    # the number of samples on screen
-    set samples_per_screen [expr {$ms_per_screen * $samples_per_ms}]
-    # the number of pixels per sample
-    set pixels_per_sample [expr {$data(wd) / $samples_per_screen}]
-    # get the current sample buffer
-    set b [::wrap::cmd::$w]
-    # count the samples received
-    set ns [expr {[string length $b]/8}]
-    # if that isn't enough, then get more next time
-    if {$ns < $samples_per_screen * 2} {
-	::wrap::cmd::$w -b [make_binary [expr {$samples_per_screen * 2}]]
-    }
-    # compute the number of floats to scan
-    set nf [expr {int(min($ns,$samples_per_screen*2))}]
-    set n [binary scan $b f$nf vals]
-    if { ! $data(freeze)} {
-	if {$n == 1 && [llength $vals] == $nf} {
-	    set is {}
-	    set qs {}
-	    set t 0
-	    foreach {i q} $vals {
-		lappend is $t $i
-		lappend qs $t $q
-		incr t
-	    }
-	    if { ! [info exists data(itrace)]} {
-		set data(itrace) [$w.c create line $is -fill blue -tags {trace itrace}]
-		set data(qtrace) [$w.c create line $qs -fill red -tags {trace qtrace}]
-	    } else {
-		$w.c coords $data(itrace) $is
-		$w.c coords $data(qtrace) $qs
-	    }
-	    # move y0 to center screen
-	    # move trigger sample to left
-	    $w.c move trace 0 $data(y0)
-	    # scale according sweep rate and sensitivity
-	    $w.c scale trace 0 $data(y0) $pixels_per_sample [expr {$data(yg)/$data(vdivision)}]
-	    # move
-	} else {
-	    puts "buffer length is [string length $b]"
-	    puts "binary scan tap == $n"
-	    puts "llength \$vals == [llength $vals]"
-	}
-    }
-    cleanup_after $w [after 100 [list ::wrap::scope_update $w]]
-}
-
-proc ::wrap::scope_configure {bw w width height} {
-    upvar #0 $w data
-    if {$bw eq "$w.c"} {
-	set x0 [expr {$width/2.0}]
-	set y0 [expr {$height/2.0}]
-	set wd [expr {$width-3}]
-	set ht [expr {$height-3}]
-	set xg [expr {$wd/10.0}]
-	set yg [expr {$ht/8.0}]
-	set xmg [expr {$xg/5.0}]
-	set ymg [expr {$yg/5.0}]
-	if { ! [info exists data(x0)]} {
-	    for {set i 0} {$i <= 10} {incr i} {
-		if {$i <= 8} {
-		    set y [expr {$i*$yg+1}]
-		    set data(h$i) [$w.c create line 0 $y $wd $y]
-		}
-		set x [expr {$i*$xg+1}]
-		set data(v$i) [$w.c create line $x 0 $x $ht]
-	    }
-	} else {
-	    for {set i 0} {$i <= 10} {incr i} {
-		if {$i <= 8} {
-		    set y [expr {$i*$yg+1}]
-		    $w.c coords $data(h$i) 0 $y $wd $y
-		}
-		set x [expr {$i*$xg+1}]
-		$w.c coords $data(v$i) $x 0 $x $ht
-	    }
-	}
-	array set data [list x0 $x0 y0 $y0 wd $wd ht $ht xg $xg yg $yg xmg $xmg ymg $ymg]
-    }
 }
 

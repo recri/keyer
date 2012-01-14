@@ -358,6 +358,8 @@
    pane so all aspects of keying can be compared.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract DttspOscillator class in a header.
+** TODO - convert all jack dsp modules to take parameters via MIDI sysex
+** TODO - build a character trie to decode sysex parameter settings.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
 ** TODO - keyer_ascii: install more code points
    There's more to Morse code than the basic US Ham usage, but I'm not

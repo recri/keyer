@@ -15,11 +15,11 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef SDRKIT_WINDOW_H
-#define SDRKIT_WINDOW_H
+#ifndef WINDOW_H
+#define WINDOW_H
 
 /*
-  sdrkit_window.h - generate windowing functions for ffts and filters.
+  window.h - generate windowing functions for ffts and filters.
 
   This file is stolen from dttsp, see comments further down
 */

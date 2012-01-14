@@ -129,7 +129,7 @@ proc midiscope::x-scales {w} {
     return {1e0 2.5e0 5e0 1e1 2.5e1 5e1 1e2 2.5e2 5e2 1e3 2.5e3 5e3 1e4 2.5e4 5e4 1e5 2.5e5 5e5 1e6 2.5e6 5e6 1e7 2.5e7 5e7 1e8 2.5e8 5e8 1e9 2.5e9 5e9 1e10} 
 }
 
-proc midiscope {w} {
+proc midiscope::midiscope {w args} {
     ::midiscope::start-taps $w
     ttk::frame $w
     grid [ttk::frame $w.m] -row 0 -column 0
@@ -153,5 +153,9 @@ proc midiscope {w} {
     $w.c create line 0 0 0 0 -tags key_tap-1
     $w.c create line 0 0 0 0 -tags keyer_tap-0
     return $w
+}
+
+proc midiscope {w args} {
+    return [::midiscope::midiscope $w {*}$args]
 }
 
