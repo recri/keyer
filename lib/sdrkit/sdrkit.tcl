@@ -17,10 +17,9 @@
 # 
 
 package provide ::sdrkit::midi-tap 1.0.0
-package provide ::sdrkit::audio-tap 1.0.0
 
 package require ::sdrkit::mtap
-package require ::sdrkit::atap
+
+namespace eval ::sdrkit {}
 
 proc ::sdrkit::midi-tap {args} { return [::sdrkit::mtap {*}$args] }
-proc ::sdrkit::audio-tap {args} { return [::sdrkit::atap {*}$args] }

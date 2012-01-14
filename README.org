@@ -12,7 +12,7 @@
   the ascii keyer, listen to the output, examine the waveforms, and
   see how the system works.  You can also launch the mouse key
   application and hook it up to the iambic keyer, though mouse buttons
-  or key board keys do not make for great telegraphy.
+  or key board keys do not make for a great telegraphy experience.
 
   Adding a MidiKeyer USB dongle will allow you to translate your
   paddle or straight key switch closures into MIDI events and transmit
@@ -26,14 +26,15 @@
   translations of package management tools and package names. It's
   also generic enough to port to MacOS or Windows.  But I don't run
   other Linux systems, MacOS, or Windows so asking me to help you make
-  it work is a lost cause.
+  it work is a lost cause, unless you want moral support.
 
   I will be assuming that you have installed the keyer sources in your
   home directory, which I abbreviate as "~".  So I will refer to the
   keyer source directory as "~/keyer" in all that follows.   It
-  doesn't depend on being there, you can install it anywhere, but
-  these instructions will depend on you making the necessary
-  translation if you install the sources someplace else.
+  doesn't depend on being there, you can install it anywhere, and that
+  isn't where I install it.  But these instructions will depend on you
+  making the necessary translation if you install the sources
+  someplace else.
 ** Required packages
    Using your preferred Ubuntu package manager, you want to install
    the following packages:
@@ -46,13 +47,13 @@
    | tk-dev             |
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
-   listed. 
+   listed.
 
-   Note that Ubuntu 11.10 has some confusion in the jackd packaging.
+   Note that Ubuntu 11.10 has some confusion in the packaging of jackd.
    Some audio packages were built against jackd1 and some against the
    jackd agnostic package, so some audio libraries will force
    installation  of the old jackd version 1 package.  I force jackd2
-   because it's better.  I don't know if jackd1 will work.
+   because it's what I use.  I don't know if jackd1 will work.
 ** Getting the source
    The sources are archived at https://github.com/recri/keyer.
    Assuming that you want the sources to be in ~/keyer,
@@ -138,14 +139,18 @@
   In retrospect, I'd switch to using input pins closer to the stereo
   jack end of the Teensy.
 
-  Glen Overby built another MIDI key interface which is described here
-  http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html. 
-  It should work with this software if the MIDI note is set properly.
-  It was Glen's work which got me restarted on this project.
+  Glen Overby provoked this project on the dttsp list at yahoo back in
+  November 2011.  He has built another MIDI key interface which is
+  described [[http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html][here]]. It should work with this software if the MIDI note
+  is set properly.
 * Usage
   My basic usage pattern is to use qjackctl to configure my jack
   server, start the server, control the server, and manually make
   connections between modules.
+
+  Some of the commands will automatically make connections to a
+  default set of ports, if the port names match with their
+  expectations.  You can view what happens with qjackctl.
   
   You can configure your jack server to "autolaunch" whenever an
   application tries to open it, but the result will be that you get a 
@@ -156,81 +161,131 @@
   autolaunch feature and use qjackctl so you can see what's
   happening.
 
-  All of the scripts in ~/keyer/bin are now Tcl/Tk scripts. I'm going
-  to describe what they do, but for the fullest documentation of the
-  options each script implements, you should open the script file in a
-  text editor and scroll to the end of the file.  Each application
-  should define a "main" procedure which parses command line options,
-  and you should be able to figure out what the options do.
-
-  The problem is that I change things that I don't like, so a
-  canonical description of how things work is hard to pin down.
+  All of the commands in ~/keyer/bin are now Tcl/Tk scripts. I may or
+  may not describe what they do.  Some of them may go away or change
+  drastically as I figure out what I'm doing.  So for the fullest
+  documentation of the options each script implements, you should open
+  the script file in a text editor and scroll to the end of the file.
+  Each application should define a "main" procedure which parses
+  command line options, and you should be able to figure out what the
+  options do.
 ** Abstraction
-   The code is evolving toward a really nice set of abstractions, but
-   it's a bit of a mess at the moment.
-*** dspkit - digital signal processing
+   The code is evolving toward a really nice set of abstractions and
+   implementations, but it's a bit of a mess at the moment and will
+   continue to be a mess until I get it right.
+
+   My basic gripe with existing SDR code is that it's hard to see what
+   it does because it's usually buried inside some baroque mechanism
+   for putting it together into the radio.  I can't see the parts
+   because they've been potted in hot glue to stick them together.
+
+   I've extracted the bits that do the work into one library, and
+   settled on using Tcl/Tk and Jack as the glue to put the parts
+   together.  So you can see the computations without the glue, and
+   then glue them together in a script to see how they work.
+*** dspkit - just the bits
     This contains plain dsp implementations in c and c++ without
     any distracting details.  Oscillators, filters, mixers,
-    demodulation, modulation, keyers, debouncers, and so on.  Best of
-    breed and less optimal implementations for comparison.  This is
-    where you go to figure out how a particular computation is
-    performed or to steal code for your own use.
+    demodulation, modulation, keyers, debouncers, and so on.  As many
+    alternate implementations as I've found the time to excavate for
+    comparison. This is where you go to figure out how a particular
+    computation is performed or to steal code for your own use.
 
-    Note that dspkit is entirely header files.  You include the
-    implementation, define an instance, initialize, and use it.  The
-    code is all static to the file that includes it, so it can be
-    optimized to nothing if it isn't used.
-*** sdrkit - software defined radio
-    This defines the framework for wrapping dspkit components into Tcl
-    commands so they can be loaded and executed within a Tcl/Tk
-    application. This covers mostly boring stuff like command creation
-    and deletion, options handling, subcommand processing, and the
-    gory details of being a Jack component.
+    I'm doing dspkit entirely as header files.  This is a bit
+    different from the usual hide the implementation one place and
+    expose an interface someplace else, but I've got nothing to hide
+    and I get tired of groveling all over the place trying to figure
+    things out.  It may not work out in the end, but it's worked so
+    far for me.  You include the header which defines an interface and
+    an implementation, define an instance, initialize, and use it.
+    The code is all static to the file that includes it, so the idea
+    is that the unused parts can be optimized to nothing and the used
+    parts can be inlined.
+*** sdrkit - the bits wrapped for use
+    This code is my own baroque implementation of hot glue.  It wraps
+    dspkit components into Tcl commands so they can be loaded and
+    executed within a Tcl/Tk application. This covers mostly boring
+    stuff like command creation and deletion, options handling,
+    subcommand processing, and the gory details of being a Jack
+    component.  And it's all done through an evolving framework that
+    abstracts out the common code, making it very terse and cryptic.
+
+    The end result is a collection of Tcl packages, like
+    sdrkit::oscillator.  You load packages by telling Tcl where to
+    look:
+   #+BEGIN_EXAMPLE
+     % lappend auto_path ~/keyer/lib
+   #+END_EXAMPLE
+     and then telling Tcl what you need:
+   #+BEGIN_EXAMPLE
+     % package require sdrkit::oscillator
+   #+END_EXAMPLE
+     Loading an sdrkit package usually creates a Tcl command factory
+     with the same name as the package.  You use the factory command
+     to create dsp modules.  So: 
+   #+BEGIN_EXAMPLE
+    % sdrkit::oscillator local-oscillator -freq 10000 -gain 0
+   #+END_EXAMPLE
+    creates an oscillator named "local-oscillator" which oscillates at
+    10000 Hertz and has 0 decibels gain relative to full scale.  (Well,
+    it ought to, but the options at create aren't working this
+    afternoon.) "local-oscillator" is now a Tcl command which can be
+    run from the Tcl command line to query and alter its
+    configuration.  If you say:
+   #+BEGIN_EXAMPLE
+    % local-oscillator help
+    unrecognized subcommand "help", should one of configure, cget, or cdoc
+   #+END_EXAMPLE
+    then you get the list of recognized subcommands as an error.  If you say:
+   #+BEGIN_EXAMPLE
+    % join [local-oscillator configure] \n
+    -server server Server default default
+    -client client Client {} local-oscillator
+    -gain gain Gain -30.0 -30.0
+    -freq frequency Hertz 700.0 440.0
+   #+END_EXAMPLE
+    then you get the list of (potentially) configurable options for
+    the command.  (Which shows that the -freq and -gain options to the
+    command creation weren't effective.)  The -server and -client
+    options tell us the Jack server and client name the module
+    registered as, so we can use:
+   #+BEGIN_EXAMPLE
+    % package require sdrkit::jack
+    1.0.0
+    % sdrkit::jack connect local-oscillator:out_i system:playback_1
+   #+END_EXAMPLE
+    to connect one channel of our complex local oscillator to the
+    system audio out. Note that the sdrkit::jack package is an
+    exception to the rule given above, it creates a simple command
+    rather than a command factory.
 *** lib/* - tcl code and compiled loadable modules
     The lib directory is structured as a collection of sub-directories
     which could be safely installed into a system lib directory.
 *** lib/sdrkit - where sdrkit installs loadable modules
+    The lib/sdrkit directory contains, after you make them, a
+    collection of shared object files.  The lib/sdrkit/pkgIndex.tcl
+    file contains a catalog of the packages.
 *** lib/wrap - Tcl code for wrapping up loadable modules
     The commands implemented by sdrkit are barebones computational
-    modules.  The code in wrapit wraps the barebones computations into
-    a ui widget with controls for managing the wrapped computation or
-    display.
-    
-    So a wrapped vizkit::scope will provide scrollbars for shifting
-    the display, buttons for adjusting the horizontal and vertical
-    scales, and dropdowns for selecting the input channels.
-*** bin/* - tcl scripts implementing full applications.    
+    modules.  The code in lib/wrap makes larger functional units.
+*** bin/* - tcl scripts implementing full applications.
+    These are a mixed bag of Tcl/Tk applications which work pretty
+    well in some cases and not at all in others.  The collection will
+    evolve, I'll describe the ones I'm happiest with.
 ** Options
-   Almost all commands will accept some set of options that allow you
-   to alter the default behavior of the command, but almost all
-   commands have a user interface, too.
+   Most of the lib/sdrkit packages install a command factory which
+   allows you to create as many instances of a module as an
+   application requires.  Each module usually implements a series of
+   sub-commands, including sub-commands for configuring, querying, and
+   documenting the options implemented.
 
-   Generally options are implemented as command line options using a
-   "--name value" syntax, that's two minus signs in front of the
-   option name as one argument followed by the value as a second
-   argument.
-   
-   The command line option parsers are getting more forgiving, some of
-   them will accept a single minus sign or even a one character
-   abbreviations.
+   Most of the lib/wrap packages inherit the options of the components
+   they wrap, inherit the options of the Tk widgets which they use for
+   the wrapping, and implement further options for convenience.
 
-   Tcl configuration options use a "-name value" syntax, that's one
-   minus sign in front of the option name as one argument followed by
-   the value as a second argument.  Generally, the command that
-   creates a Tcl command will accept a certain set of configuration
-   options, and the command's "config" and "cget" subcommands will
-   allow the same options to be queried or modified after creation.
+   And the applications in bin/* expose some or all of the options
+   that their lib/sdrkit, lib/wrap, or Tk components implement.
 
-   Most options can be changed after a command is started. The notable
-   exceptions are the jack "server" and jack "client" names.  These
-   cannot be changed once the plugin starts. They determine which
-   server the plugin connects to and what name it uses in the
-   connection.  Changing the MIDI "chan" and "note" on the fly is
-   tricky because the change won't work until both ends of the
-   connection are using the same 
-
-   All of the options which are numbers, eg "wpm", "dah", "freq", and
-   "gain", are floating point values.
 *** common options for all apps
 **** verbose - generates output to standard error.
      Will slow down the jack process callback if set high enough.
@@ -321,6 +376,14 @@
 
    The other parameters to keyer_tone are "gain" in decibels and
    "freq" in hertz.
+** keyer-scope - watch the keyer mess up
+   This is a work in progress designed to debug keyer timing and tone
+   generation.  It starts losing sync with the sample source after a
+   while but it works, after a fashion.  It connects to the system
+   midi capture device to get paddle input events, to the iambic keyer
+   output to get the key logic output, and to the iambic keyer tone
+   generator to get wave forms.  It expects the keyer-control app to
+   be already running.
 ** MidiKey - Teesyduino application
    There's very little to this, you compile in the Teensyduino
    augmented Arduino environment.
@@ -335,27 +398,15 @@
 
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
-*** Bugs and Issues
-    I think the key debouncing is just slowing things down and missing
-    some of the key transitions as a consequence.  Iambic paddles are
-    not consumer grade push buttons.  No, it was my bug in the
-    jack_process callback that was causing the dropped event problems.
-** gain - gain module
-** midiscope - midi event capture and display
-** oscillator - oscillator module
-** pileup - cw pileup simulator
-** scope - audio signal capture and display
-** spectrum - audio spectrogram capture and display
-** waterfall - audio waterfall capture and display
-** panorama - combined spectrogram and waterfall display
 * Things to Do
 ** TODO - keyer_tone.c: protect against 0 rise or fall
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
 ** TODO - keyer_ascii.c: to fix the timing glitches visible in scope
 ** TODO - keyer_iambic.c: to fix the timing glitces visible in scope
-** TODO - keyer_tone.c: to fix the ramping glitches visible in scope
-** TODO - midiscope: reorganize into three digital panes and an audio
-   pane so all aspects of keying can be compared.
+** TODO - keyer_iambic.c: mode B
+   Should only require a short memory of key states, make the next
+   element decision at end of inter-element space based on key state
+   at 1.5 dit clocks in the past.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract DttspOscillator class in a header.
 ** TODO - convert all jack dsp modules to take parameters via MIDI sysex
@@ -364,10 +415,6 @@
 ** TODO - keyer_ascii: install more code points
    There's more to Morse code than the basic US Ham usage, but I'm not
    sure how to best internationalize the table.
-** TODO - keyer_iambic.c: mode B
-   Should only require a short memory of key states, make the next
-   element decision at end of inter-element space based on key state
-   at 1.5 dit clocks in the past.
 ** TODO - keyer_detone.c: to convert keyed cw into midi note on/off events.
 ** TODO - keyer-control: build, save, and restore custom configurations.
 ** TODO - keyer-control: ascii input/output window
@@ -433,6 +480,9 @@
    I've thought this out.  It appears that simply taking the mono
    channel as I and the mono channel delayed by one sample as Q is
    equivalent to doing quadrature detection at samplerate/4.
+** DONE - keyer_tone.c: to fix the ramping glitches visible in scope
+** DONE - midiscope: reorganize into three digital panes and an audio
+   pane so all aspects of keying can be compared.
 * Credits
   This code is derived from many sources.
 
@@ -441,9 +491,16 @@
   Many of the modules here are directly or indirectly derived from
   their code.
 
-  A lot of other code comes from linux audio applications.
+  I've learned a lot from reading documentation, example applications,
+  header files, and library code for [[http://www.alsa-project.org/][ALSA]] and [[http://jackaudio.org/][Jack]].
 
-  Faust http://faust.grame.fr/
+  Perry Cook's [[https://ccrma.stanford.edu/software/stk/][Synthesis Toolkit]] provided one worked example of how to
+  make adjustments to DSP components on the fly.
+
+  Faust, http://faust.grame.fr/, is a really neat idea, dsp computations
+  described as an algebra on infinite streams of samples.  It also
+  provided an example of how not to make adjustments to DSP components
+  on the fly.
 * Licensing
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
