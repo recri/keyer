@@ -37,7 +37,7 @@ array set data {
 }
 
 proc set-freq {v} {
-    $::data(name) -frequency $v
+    $::data(name) configure -freq $v
     set ::data(freq-label) [format %.1f $v]
 }
 

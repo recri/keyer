@@ -38,7 +38,11 @@ proc ::scope::update {w} {
     # the number of samples on screen
     set samples_per_screen [expr {$ms_per_screen * $samples_per_ms}]
     # the number of pixels per sample
-    set pixels_per_sample [expr {$data(wd) / $samples_per_screen}]
+    if {[catch {
+	set pixels_per_sample [expr {$data(wd) / $samples_per_screen}]
+    } error]} {
+	set pixels_per_sample [expr {[winfo width $w] / $samples_per_screen}]
+    }
     # get the current sample buffer
     set b [::scope::cmd::$w]
     # count the samples received

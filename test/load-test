@@ -35,6 +35,7 @@ array set data {
     keyer_tone {keyer::tone norm}
     agc {sdrkit::agc norm}
     atap {sdrkit::atap atap}
+    audio_tap {sdrkit::audio-tap atap}
     biquad {sdrkit::biquad norm}
     constant {sdrkit::constant norm}
     fftw {sdrkit::fftw fftw}
@@ -43,6 +44,7 @@ array set data {
     iq_swap {sdrkit::iq-swap norm}
     jack {sdrkit::jack jack}
     lo_mixer {sdrkit::lo-mixer norm}
+    midi_insert {sdrkit::midi-insert norm}
     mixer {sdrkit::mixer norm}
     mono_to_iq {sdrkit::mono-to-iq norm}
     mtap {sdrkit::mtap norm}

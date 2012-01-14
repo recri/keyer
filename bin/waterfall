@@ -114,7 +114,7 @@ proc waterfall::capture {w} {
 	foreach {f b} [::$data(tap) get $wd] break
 	
 	# compute the fft
-	set l [::$data(fft) $b]
+	set l [::$data(fft) exec $b]
 	
 	# convert the coefficients to a list
 	binary scan $l f* levels
@@ -162,7 +162,7 @@ proc waterfall::configure {w cw width height} {
 	if {$width != $data(canvas-width)} {
 	    set data(canvas-width) $width
 	    catch {rename $data(fft) {}}
-	    ::sdrkit::fftw $data(fft) $data(canvas-width)
+	    ::sdrkit::fftw $data(fft) -size $data(canvas-width)
 	}
 	if {$height != $data(canvas-height)} {
 	    catch {$w.c delete all}

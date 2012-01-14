@@ -40,7 +40,7 @@ namespace eval ::spectrum {
 proc spectrum::capture {w} {
     upvar #0 $w data
     foreach {f b} [::$data(tap) get $data(n)] break
-    set l [::$data(fft) $b]
+    set l [::$data(fft) exec $b]
     binary scan $l f* levels
     
     set report [format {%d samples %d ms %d floats} $data(n) $data(p) [llength $levels]]
@@ -120,7 +120,7 @@ proc spectrum::spectrum {w n p} {
     set data(fft) spectrum_fft_$::spectrum::n
     incr ::spectrum::n
     ::sdrkit::atap $data(tap)
-    ::sdrkit::fftw $data(fft) $data(n)
+    ::sdrkit::fftw $data(fft) -size $data(n)
     grid [ttk::frame $w.m] -row 0 -column 0 -columnspan 2 -sticky ew
     pack [ttk::menubutton $w.m.type -textvariable ${w}(type) -menu $w.m.type.m] -side left
     menu $w.m.type.m -tearoff no
