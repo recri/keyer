@@ -178,6 +178,6 @@ proc keyer-control::panel {w ascii ascii_tone iambic iambic_tone opts} {
 }
 
 proc keyer-control {w ascii ascii_tone iambic iambic_tone opts} {
-    pack [keyer-control::panel $w $ascii $ascii_tone $iambic $iambic_tone $opts]
+    return [keyer-control::panel $w $ascii $ascii_tone $iambic $iambic_tone $opts]
 }
 

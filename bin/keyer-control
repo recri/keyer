@@ -180,7 +180,7 @@ proc main {argv} {
 	}
     }
     if {$opts(ascii) || $opts(iambic)} {
-	keyer-control .ctl {*}[client-init] [array get opts]
+	pack [keyer-control .ctl {*}[client-init] [array get opts]]
 	bind . <Destroy> [list ui-close %W]
 	if {$opts(ascii)} {
 	    bind . <KeyPress> [list ascii puts %A]

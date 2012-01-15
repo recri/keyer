@@ -22,7 +22,7 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require waterfall
+package require hurricane
 package require capture
 
 namespace eval ::main {
@@ -37,7 +37,7 @@ namespace eval ::main {
 
 proc ::main::update {w xy} {
     upvar #0 ::main::$w data
-    ::waterfall::update $w $xy
+    ::hurricane::update $w $xy
 }
 
 proc ::main::configure {w args} {
@@ -57,14 +57,14 @@ proc ::main::window-configure {w cw width height} {
     set srate [sdrkit::jack sample-rate]
     set scale [expr {$data(-zoom)*double($width)/$srate}]
     set offset [expr {double($width)/2}]
-    ::waterfall::configure $w -scale $scale -offset $offset
+    ::hurricane::configure $w -scale $scale -offset $offset
 }
 
 proc ::main::window-destroy {w cw} {
     if {$w ne $cw} return
     upvar #0 ::main::$w data
     ::capture::destroy $w
-    ::waterfall::destroy $w
+    ::hurricane::destroy $w
 }
 
 proc ::main::defaults {} {
@@ -75,7 +75,7 @@ proc ::main::main {w args} {
     upvar #0 ::main::$w data
     ::main::configure $w {*}[::main::defaults]
     ::main::configure $w {*}$args
-    ::waterfall $w
+    ::hurricane $w
     ::capture::spectrum $w -period $data(-period) -size $data(-size) -client ::main::update
     bind . <Configure> [list ::main::window-configure $w %W %w %h]
     bind . <Destroy> [list ::main::window-destroy $w %W]
@@ -85,7 +85,7 @@ proc ::main::main {w args} {
 }
 
 proc ::main {argv} {
-    pack [::main::main .waterfall {*}$argv] -side top -fill both -expand true
+    pack [::main::main .hurricane {*}$argv] -side top -fill both -expand true
 }
 
 ::main $argv

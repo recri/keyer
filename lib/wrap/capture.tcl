@@ -48,20 +48,16 @@ proc ::capture::destroy {w} {
 
 proc ::capture::configure {w args} {
     upvar #0 ::capture::$w data
-    # puts "::capture::configure $w {$args} vs {[array get data]}"
     foreach {option value} $args {
-	# puts "processing $option $value"
 	switch -- $option {
 	    -size {
 		if {$value != $data(-size)} {
-		    # puts "new size $value != $data(-size)"
 		    set data(-size) $value
 		    if {$data(type) eq {spectrum} && [info exists data(fft)]} {
 			catch {rename $data(fft) {}}
 			::sdrkit::fftw $data(fft) -size $value
 		    }
 		    if {$data(type) eq {iq} && [info exists data(tap)]} {
-			# puts "$data(tap) configure -log2size [expr {int(log($data(-size))/log(2))}]"
 			$data(tap) configure -log2size [expr {int(log($data(-size))/log(2))}]
 		    }
 		}
@@ -184,16 +180,9 @@ proc ::capture::start {w} {
     if { ! $data(started)} {
 	set data(started) 1
 	switch $data(type) {
-	    spectrum {
-		after 1 [list ::capture::capture-spectrum $w]
-	    }
-	    iq {
-		after 1 [list ::capture::capture-iq $w]
-	    }
-	    midi {
-		$data(tap) start
-		after 1 [list ::capture::capture-midi $w]
-	    }
+	    spectrum { after 1 [list ::capture::capture-spectrum $w] }
+	    iq { after 1 [list ::capture::capture-iq $w] }
+	    midi { $data(tap) start; after 1 [list ::capture::capture-midi $w] }
 	}
     }
 }
@@ -203,13 +192,9 @@ proc ::capture::stop {w} {
     if {$data(started)} {
 	set data(started) 0
 	switch $data(type) {
-	    spectrum {
-	    }
-	    iq {
-	    }
-	    midi {
-		$data(tap) stop
-	    }
+	    spectrum { }
+	    iq { }
+	    midi { $data(tap) stop }
 	}
     }
 }

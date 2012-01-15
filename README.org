@@ -407,8 +407,13 @@
    Should only require a short memory of key states, make the next
    element decision at end of inter-element space based on key state
    at 1.5 dit clocks in the past.
+** TODO - major renaming 
+   Rename 'sdrkit' to 'tjwrap' because it's a Tcl/Jack wrapper around the around the real 'sdrkit'.
+   Rename 'dspkit' to 'sdrkit' because it's the real kit for SDR.
+   Retain the 'sdrkit::foo' name space because they're wrapped sdrkit modules.
+   Opens the possibility of wrappers using alternate script and audio glue.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
-** TODO - abstract DttspOscillator class in a header.
+** TODO - abstract dttsp oscillator and cwtone class in a header.
 ** TODO - convert all jack dsp modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
