@@ -49,6 +49,11 @@
    will be dragged in because they're required by the packages
    listed.
 
+   The "apt-get" command to install these packages is
+   #+BEGIN_EXAMPLE
+   sudo apt-get install build-essentials git-core jackd2 libfftw3-dev libjack-jackd2-dev qjackctl tk-dev
+   #+END_EXAMPLE
+
    Note that Ubuntu 11.10 has some confusion in the packaging of jackd.
    Some audio packages were built against jackd1 and some against the
    jackd agnostic package, so some audio libraries will force
@@ -81,7 +86,7 @@
    #+BEGIN_EXAMPLE
    cd ~ && rm -fr keyer && git clone https://github.com/recri/keyer
    #+END_EXAMPLE
-   to start over again.
+   to start over again from a clean copy.
 ** Building
    #+BEGIN_EXAMPLE
    cd ~/keyer && make
@@ -89,12 +94,10 @@
    will compile everything needed to run.  If you have problems,
    please go back to the list of required packages and make sure you
    didn't miss one.
-
    #+BEGIN_EXAMPLE
    cd ~/keyer && make clean
    #+END_EXAMPLE
    will remove intermediate files not required to run.
-
    #+BEGIN_EXAMPLE
    cd ~/keyer && make all-clean
    #+END_EXAMPLE
@@ -183,81 +186,34 @@
    settled on using Tcl/Tk and Jack as the glue to put the parts
    together.  So you can see the computations without the glue, and
    then glue them together in a script to see how they work.
-*** dspkit - just the bits
-    This contains plain dsp implementations in c and c++ without
+*** sdrkit - just the bits
+    Sdrkit is plain SDR implementations in c and c++ without
     any distracting details.  Oscillators, filters, mixers,
-    demodulation, modulation, keyers, debouncers, and so on.  As many
-    alternate implementations as I've found the time to excavate for
-    comparison. This is where you go to figure out how a particular
-    computation is performed or to steal code for your own use.
+    demodulation, modulation, keyers, debouncers, and so on.
+    I'll include as many alternate implementations as I find the time
+    to excavate for comparison. This is where you go to figure out how
+    a particular computation is performed or to steal code for your
+    own use.
 
-    I'm doing dspkit entirely as header files.  This is a bit
+    I'm doing sdrkit entirely as header files.  This is a bit
     different from the usual hide the implementation one place and
     expose an interface someplace else, but I've got nothing to hide
     and I get tired of groveling all over the place trying to figure
-    things out.  It may not work out in the end, but it's worked so
-    far for me.  You include the header which defines an interface and
-    an implementation, define an instance, initialize, and use it.
-    The code is all static to the file that includes it, so the idea
-    is that the unused parts can be optimized to nothing and the used
-    parts can be inlined.
-*** sdrkit - the bits wrapped for use
-    This code is my own baroque implementation of hot glue.  It wraps
-    dspkit components into Tcl commands so they can be loaded and
+    out how things work.  It may not work out in the end, but it's
+    worked so far for me.  You include the header which defines an
+    interface and an implementation, define an instance, initialize,
+    and use it. The code is all static to the file that includes it,
+    so the unused parts can be optimized to nothing and the used parts
+    can be inlined.
+*** jack-tcl-wrap - the bits wrapped for use
+    This code is my own baroque implementation of software hot glue.
+    It wraps sdrkit components into Tcl so they can be loaded and
     executed within a Tcl/Tk application. This covers mostly boring
     stuff like command creation and deletion, options handling,
     subcommand processing, and the gory details of being a Jack
     component.  And it's all done through an evolving framework that
     abstracts out the common code, making it very terse and cryptic.
 
-    The end result is a collection of Tcl packages, like
-    sdrkit::oscillator.  You load packages by telling Tcl where to
-    look:
-   #+BEGIN_EXAMPLE
-     % lappend auto_path ~/keyer/lib
-   #+END_EXAMPLE
-     and then telling Tcl what you need:
-   #+BEGIN_EXAMPLE
-     % package require sdrkit::oscillator
-   #+END_EXAMPLE
-     Loading an sdrkit package usually creates a Tcl command factory
-     with the same name as the package.  You use the factory command
-     to create dsp modules.  So: 
-   #+BEGIN_EXAMPLE
-    % sdrkit::oscillator local-oscillator -freq 10000 -gain 0
-   #+END_EXAMPLE
-    creates an oscillator named "local-oscillator" which oscillates at
-    10000 Hertz and has 0 decibels gain relative to full scale.  (Well,
-    it ought to, but the options at create aren't working this
-    afternoon.) "local-oscillator" is now a Tcl command which can be
-    run from the Tcl command line to query and alter its
-    configuration.  If you say:
-   #+BEGIN_EXAMPLE
-    % local-oscillator help
-    unrecognized subcommand "help", should one of configure, cget, or cdoc
-   #+END_EXAMPLE
-    then you get the list of recognized subcommands as an error.  If you say:
-   #+BEGIN_EXAMPLE
-    % join [local-oscillator configure] \n
-    -server server Server default default
-    -client client Client {} local-oscillator
-    -gain gain Gain -30.0 -30.0
-    -freq frequency Hertz 700.0 440.0
-   #+END_EXAMPLE
-    then you get the list of (potentially) configurable options for
-    the command.  (Which shows that the -freq and -gain options to the
-    command creation weren't effective.)  The -server and -client
-    options tell us the Jack server and client name the module
-    registered as, so we can use:
-   #+BEGIN_EXAMPLE
-    % package require sdrkit::jack
-    1.0.0
-    % sdrkit::jack connect local-oscillator:out_i system:playback_1
-   #+END_EXAMPLE
-    to connect one channel of our complex local oscillator to the
-    system audio out. Note that the sdrkit::jack package is an
-    exception to the rule given above, it creates a simple command
-    rather than a command factory.
 *** lib/* - tcl code and compiled loadable modules
     The lib directory is structured as a collection of sub-directories
     which could be safely installed into a system lib directory.
@@ -272,6 +228,72 @@
     These are a mixed bag of Tcl/Tk applications which work pretty
     well in some cases and not at all in others.  The collection will
     evolve, I'll describe the ones I'm happiest with.
+** A brief introduction to Tcl
+    All of the library Tcl scripts and Tcl application scripts build
+    on these basics.
+
+    The end result of jack-tcl-wrap is a collection of Tcl packages,
+    which are located in "~/keyer/lib/sdrkit" and indexed in
+    "~/keyer/lib/sdrkit/pkgIndex.tcl".  You use them by running Tcl,
+    and you run Tcl by executing the Tcl shell command, tclsh:
+   #+BEGIN_EXAMPLE
+     $ tclsh
+     % 
+   #+END_EXAMPLE
+    You load packages by telling Tcl where to look:
+   #+BEGIN_EXAMPLE
+     % lappend auto_path ~/keyer/lib
+     /usr/share/tcltk/tcl8.5 /usr/lib /usr/local/lib/tcltk /usr/local/share/tcltk /usr/lib/tcltk /usr/share/tcltk ~/keyer/lib
+     %
+   #+END_EXAMPLE
+     and then telling Tcl what you need, say an oscillator:
+   #+BEGIN_EXAMPLE
+     % package require sdrkit::oscillator
+     1.0.0
+     %
+   #+END_EXAMPLE
+     Loading an sdrkit package usually creates a Tcl command factory
+     with the same name as the package.  You use the factory command
+     to create SDR modules.  So: 
+   #+BEGIN_EXAMPLE
+    % sdrkit::oscillator lo -freq 10000 -gain 0
+    lo
+    %
+   #+END_EXAMPLE
+    creates an oscillator named "lo" which oscillates at 10000 Hertz
+    and has 0 decibels gain relative to full scale.  (Well, it ought
+    to, but the options at create aren't working this afternoon.)
+    "lo" is now a Tcl command which can be run from the Tcl command
+    line to query and alter its configuration.  If you say:
+   #+BEGIN_EXAMPLE
+    % lo help
+    unrecognized subcommand "help", should one of configure, cget, or cdoc
+    %
+   #+END_EXAMPLE
+    then you get the list of recognized subcommands as an error.  If you say:
+   #+BEGIN_EXAMPLE
+    % join [lo configure] \n
+    -server server Server default default
+    -client client Client {} lo
+    -gain gain Gain -30.0 -30.0
+    -freq frequency Hertz 700.0 440.0
+    %
+   #+END_EXAMPLE
+    then you get the list of (potentially) configurable options for
+    the command.  (Which shows that the -freq and -gain options to the
+    command creation weren't effective.)  The -server and -client
+    options tell us the Jack server and client name the module
+    registered as, so we can use:
+   #+BEGIN_EXAMPLE
+    % package require sdrkit::jack
+    1.0.0
+    % sdrkit::jack connect lo:out_i system:playback_1
+    %
+   #+END_EXAMPLE
+    to connect one channel of our complex local oscillator to the
+    system audio out. Note that the sdrkit::jack package is an
+    exception to the rule given above, it creates a simple command
+    rather than a command factory.
 ** Options
    Most of the lib/sdrkit packages install a command factory which
    allows you to create as many instances of a module as an
@@ -407,14 +429,9 @@
    Should only require a short memory of key states, make the next
    element decision at end of inter-element space based on key state
    at 1.5 dit clocks in the past.
-** TODO - major renaming 
-   Rename 'sdrkit' to 'tjwrap' because it's a Tcl/Jack wrapper around the around the real 'sdrkit'.
-   Rename 'dspkit' to 'sdrkit' because it's the real kit for SDR.
-   Retain the 'sdrkit::foo' name space because they're wrapped sdrkit modules.
-   Opens the possibility of wrappers using alternate script and audio glue.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract dttsp oscillator and cwtone class in a header.
-** TODO - convert all jack dsp modules to take parameters via MIDI sysex
+** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
 ** TODO - keyer_ascii: install more code points
@@ -436,9 +453,9 @@
    monoaural option discards the Q and pans the result to a specified
    azimuth.
 ** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
-** TODO - general abstraction - dspkit: c and c++ modules in headers for pure computation.
+** DONE - general abstraction - sdrkit: c and c++ modules in headers for pure computation.
    oscillators, mixers, filters, modulators, demodulators.
-** TODO - general abstraction - sdrkit: dspkit wrapped as Tcl extensions with consistent options handling
+** TODO - general abstraction - jack-tcl-wrap: sdrkit wrapped as Tcl extensions with consistent options handling
    the command framework lives here
 ** TODO - general abstraction - jackit: sdrkit variation wrapped to jack process loop    
 ** TODO - sdrkit/framework.h - readonly options
@@ -488,6 +505,11 @@
 ** DONE - keyer_tone.c: to fix the ramping glitches visible in scope
 ** DONE - midiscope: reorganize into three digital panes and an audio
    pane so all aspects of keying can be compared.
+** DONE - major renaming 
+   Rename 'sdrkit' to 'tjwrap' because it's a Tcl/Jack wrapper around the around the real 'sdrkit'.
+   Rename 'dspkit' to 'sdrkit' because it's the real kit for SDR.
+   Retain the 'sdrkit::foo' name space because they're wrapped sdrkit modules.
+   Opens the possibility of wrappers using alternate script and audio glue.
 * Credits
   This code is derived from many sources.
 
