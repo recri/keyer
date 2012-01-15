@@ -18,76 +18,59 @@
 */
 
 /*
-** a local oscillator-mixer combination
 */
 
 #include "framework.h"
-#include "../dspkit/lo_mixer.h"
 
+#include <math.h>
+#include <complex.h>
+
+#include "../sdrkit/avoid_denormals.h"
+
+/*
+** create a gain module which scales its inputs by a scalar
+** and stores them into the outputs.
+** a contraction of a real constant and mixer.
+** one scalar parameter.
+*/
 typedef struct {
   framework_t fw;
-  lo_mixer_t lo;
-  int modified;
-  float hertz;
-  float gain;
+  float _Complex gain;
+  float dBgain;
 } _t;
 
-static void _setup(_t *data, float hertz) {
-  if (hertz != data->hertz) {
-    data->hertz = hertz;
-    data->modified = 1;
-  }
-}
-  
-static void _update(_t *data) {
-  if (data->modified) {
-    data->modified = 0;
-    lo_mixer_update(&data->lo, data->hertz, sdrkit_sample_rate(data));
-  }
-}
-
 static void *_init(void *arg) {
-  _t * const data = (_t *)arg;
-  data->modified = 0;
-  data->hertz = 700.0f;
-  lo_mixer_init(&data->lo, data->hertz, sdrkit_sample_rate(data));
+  ((_t *)arg)->gain = 1.0f;
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
-  _t *data = (_t *)arg;
-  float *in0 = jack_port_get_buffer(framework_input(data,0), nframes);
-  float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
-  float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
-  float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
-  _update(data);
+  const _t *data = (_t *)arg;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float _Complex out = lo_mixer(&data->lo, *in0++ + I * *in1++);
-    *out0++ = creal(out);
-    *out1++ = cimag(out);
+    float _Complex z = data-> gain * (*in0++ + I * *in1++);
+    *out0++ = crealf(z);
+    *out1++ = cimagf(z);
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  float hertz = data->hertz;
+  float dBgain = data->dBgain;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (data->hertz != hertz) {
-    if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz is more than samplerate/4", data->hertz));
-      data->hertz = hertz;
-      return TCL_ERROR;
-    }
-    data->modified = 1;
-  }
+  if (data->dBgain != dBgain) data->gain = powf(10.0f, dBgain / 20.0f);
   return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
   { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
-  { "-freq",   "frequency","Hertz","700.0",    fw_option_float,	offsetof(_t, hertz),	      "frequency of oscillator in Hertz" },
+  { "-gain",   "gain",   "Gain",   "-100.0",   fw_option_float,	offsetof(_t, dBgain),	      "noise level in dB" },
   { NULL }
 };
 
@@ -114,6 +97,7 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Lo_mixer_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::lo-mixer", "1.0.0", "sdrkit::lo-mixer", _factory);
+int DLLEXPORT Gain_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::gain", "1.0.0", "sdrkit::gain", _factory);
 }
+

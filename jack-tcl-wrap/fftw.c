@@ -26,7 +26,7 @@
 #include <fftw3.h>
 
 #include "framework.h"
-#include "../dspkit/window.h"
+#include "../sdrkit/window.h"
 
 /*
 ** create a complex 1d fft

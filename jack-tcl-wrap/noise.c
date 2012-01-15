@@ -20,54 +20,56 @@
 /*
 */
 
-#include <complex.h>
+// must precede
+#define _XOPEN_SOURCE 500
+#include <stdlib.h>
+
+#include <math.h>
+#include "../sdrkit/avoid_denormals.h"
 
 #include "framework.h"
-#include "../dspkit/avoid_denormals.h"
-#include "sdrkit_math.h"
+
 
 /*
-** create a mixer module which combines its inputs into an output
-** no parameters.
-** if one channel produces a real constant, then this is simply
-** a gain block that scales by the real constant.
-** if one channel produces a complex constant, then this scales
-** and rotates.
+** make noise, specified dB level
 */
 typedef struct {
   framework_t fw;
+  float gain;
+  float dBgain;
 } _t;
 
 static void *_init(void *arg) {
+  _t *data = (_t *)arg;
+  data->dBgain = -30.0f;
+  data->gain = powf(10.0f, data->dBgain / 20.0f);
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
-  float *in0 = jack_port_get_buffer(framework_input(data,0), nframes);
-  float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
-  float *in2 = jack_port_get_buffer(framework_input(data,2), nframes);
-  float *in3 = jack_port_get_buffer(framework_input(data,3), nframes);
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    const _Complex float a = *in0++ + *in1++ * I;
-    const _Complex float b = *in2++ + *in3++ * I;
-    const _Complex float c = a * b;
-    *out0++ = crealf(c);
-    *out1++ = cimagf(c);
+    *out0++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
+    *out1++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_command(clientData, interp, argc, objv);
+  _t *data = (_t *)clientData;
+  float dBgain = data->dBgain;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+  if (data->dBgain != dBgain) data->gain = powf(10.0f, dBgain / 20.0f);
+  return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
   { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-gain",   "gain",   "Gain",   "-100.0",   fw_option_float,	offsetof(_t, dBgain),	      "noise level in dB" },
   { NULL }
 };
 
@@ -86,7 +88,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  4, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  0, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -94,6 +96,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Mixer_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::mixer", "1.0.0", "sdrkit::mixer", _factory);
+int DLLEXPORT Noise_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::noise", "1.0.0", "sdrkit::noise", _factory);
 }

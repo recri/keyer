@@ -18,24 +18,42 @@
 */
 
 /*
-** create an IQ balancer module which adjusts the phase and relative magnitude of an IQ channel
-** 
+** the dttsp agc delays the signal by some number of samples,
+** difficult to determine, while it figures out what the gain
+** should be, even before these many reparameterizations
+** get thrown in.
+**
+** a->sndx is the output index in a circular buffer,
+** a->indx is the input index in the same buffer,
+** a->fastindx is another index in the same buffer.
+** the three indexes get initialized in a particular
+** relationship when the agc is started, and they get
+** incremented and reduced by buffer size on each
+** iteration through the loop.
+** then there are the codes from update which modifie
+** rx[RL]->dttspagc.gen->sndx by itself. so there are
+** bugs.
+**
+** really should track the agc level and run it through
+** some tests to see what it does and doesn't do.
 */
 
-#include <complex.h>
-
 #include "framework.h"
-
-#include "../dspkit/iq_balance.h"
+#include "../sdrkit/agc.h"
+/*
+** create an automatic gain control module
+** many scalar parameters
+*/
 
 typedef struct {
   framework_t fw;
-  iq_balance_t iqb;
+  int modified;
+  agc_t agc;
 } _t;
-
+  
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *p = iq_balance_init(&data->iqb); if (p != &data->iqb) return p;
+  void *p = agc_init(&data->agc, sdrkit_sample_rate(arg)); if (p != &data->agc) return p;
   return arg;
 }
 
@@ -46,7 +64,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = iq_balance(&data->iqb, *in0++ + *in1++ * I);
+    float _Complex y = agc(&data->agc, *in0++ + *in1++ * I);
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }
@@ -61,8 +79,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 static const fw_option_table_t _options[] = {
   { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
   { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
-  { "-gain",   "gain",   "Gain",   "1.0",      fw_option_float,	offsetof(_t, iqb.gain),	      "linear gain to I signal" },
-  { "-phase",  "phase",  "Phase",  "0.0",      fw_option_float,	offsetof(_t, iqb.phase),      "sine of phase adjustment" },
   { NULL }
 };
 
@@ -86,12 +102,11 @@ static const framework_t _template = {
   2, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
 };
 
-// the factory command which creates iq balance commands
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Iq_balance_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::iq-balance", "1.0.0", "sdrkit::iq-balance", _factory);
+int DLLEXPORT Agc_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::agc", "1.0.0", "sdrkit::agc", _factory);
 }

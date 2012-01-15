@@ -42,9 +42,9 @@
 #define KEYER_OPTIONS_TIMING 1
 
 #include "framework.h"
-#include "../dspkit/midi.h"
-#include "../dspkit/avoid_denormals.h"
-#include "../dspkit/keyed_tone.h"
+#include "../sdrkit/midi.h"
+#include "../sdrkit/avoid_denormals.h"
+#include "../sdrkit/keyed_tone.h"
 
 typedef struct {
   #include "keyer_options_var.h"

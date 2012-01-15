@@ -30,8 +30,8 @@
 #define KEYER_OPTIONS_TIMING	1
 
 #include "framework.h"
-#include "../dspkit/midi.h"
-#include "../dspkit/ring_buffer.h"
+#include "../sdrkit/midi.h"
+#include "../sdrkit/ring_buffer.h"
 
 typedef struct {
 #include "keyer_options_var.h"

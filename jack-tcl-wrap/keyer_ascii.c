@@ -35,10 +35,10 @@
 #define KEYER_OPTIONS_TONE		1
 
 #include "framework.h"
-#include "../dspkit/midi.h"
-#include "../dspkit/midi_buffer.h"
-#include "../dspkit/morse_timing.h"
-#include "../dspkit/morse_coding.h"
+#include "../sdrkit/midi.h"
+#include "../sdrkit/midi_buffer.h"
+#include "../sdrkit/morse_timing.h"
+#include "../sdrkit/morse_coding.h"
 
 typedef struct {
   #include "keyer_options_var.h"

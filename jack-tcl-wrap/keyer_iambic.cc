@@ -23,7 +23,7 @@
 
 */
 
-#include "../dspkit/Iambic.hh"
+#include "../sdrkit/Iambic.hh"
 
 extern "C" {
 
@@ -31,9 +31,9 @@ extern "C" {
 #define KEYER_OPTIONS_TIMING	1
 #define KEYER_OPTIONS_KEYER	1
 
-#include "../sdrkit/framework.h"
-#include "../dspkit/midi.h"
-#include "../dspkit/midi_buffer.h"
+#include "framework.h"
+#include "../sdrkit/midi.h"
+#include "../sdrkit/midi_buffer.h"
 
   typedef struct {
 #include "keyer_options_var.h"

@@ -23,8 +23,8 @@
 #include "framework.h"
 
 #include <complex.h>
-#include "../dspkit/avoid_denormals.h"
-#include "../dspkit/biquad_filter.h"
+#include "../sdrkit/avoid_denormals.h"
+#include "../sdrkit/biquad_filter.h"
 
 typedef struct {
   framework_t fw;

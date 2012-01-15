@@ -21,7 +21,7 @@
 */
 
 #include "framework.h"
-#include "../dspkit/midi_buffer.h"
+#include "../sdrkit/midi_buffer.h"
 
 /*
 ** Insert midi events into Jack.
