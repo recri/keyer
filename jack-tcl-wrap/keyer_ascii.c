@@ -42,6 +42,7 @@
 
 typedef struct {
   #include "keyer_options_var.h"
+  Tcl_Obj *dict;
 } options_t;
 
 typedef struct {
@@ -231,6 +232,18 @@ static int _available(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_O
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
+  if (data->opts.dict == NULL) {
+    fprintf(stderr, "initializing morse code dictionary\n");
+    data->opts.dict = Tcl_NewDictObj();
+    Tcl_IncrRefCount(data->opts.dict);
+    for (char i = 0; i < sizeof(morse_coding_table)/sizeof(morse_coding_table[0]); i += 1) 
+      if (morse_coding_table[i] != NULL)
+	if (Tcl_DictObjPut(interp, data->opts.dict, Tcl_NewStringObj(&i, 1), Tcl_NewStringObj(morse_coding_table[i], -1)) != TCL_OK) {
+	  fprintf(stderr, "error encoding %c -> %s into morse dictionary\n", i, morse_coding_table[i]);
+	  Tcl_DecrRefCount(data->opts.dict);
+	  data->opts.dict = NULL;
+	}
+  }
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
     data->opts = save;
@@ -251,6 +264,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "keyer_options_def.h"
+  { "-dict",	"dict",     "Morse",  NULL,	  fw_option_dict,  offsetof(_t, opts.dict),	 "morse code dictionary" },
   { NULL }
 };
 

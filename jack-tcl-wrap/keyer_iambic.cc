@@ -190,7 +190,7 @@ extern "C" {
 	char midi_note_event[] = { dp->key_out_event | (dp->opts.chan-1), dp->opts.note, 0 };
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
 	if (buffer == NULL) {
-	  fprintf(stderr, "%ld: jack won't buffer %ld midi bytes!\n", dp->frames, 3);
+	  fprintf(stderr, "%ld: jack won't buffer 3 midi bytes!\n", dp->frames);
 	} else {
 	  memcpy(buffer, midi_note_event, 3);
 	}

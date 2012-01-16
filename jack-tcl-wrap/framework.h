@@ -49,6 +49,7 @@ typedef enum {
   fw_option_char,
   fw_option_boolean,
   fw_option_obj,		/* Tcl_Obj * */
+  fw_option_dict,		/* Tcl_Obj * which is a Tcl dict */
 } fw_option_type_t;
 
 typedef struct {
@@ -161,6 +162,16 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
     *(int *)((char *)clientData+entry->offset) = bval;
     return TCL_OK;
   }
+  case fw_option_dict: {
+    Tcl_Obj *result;
+    if (Tcl_DictObjGet(interp, val, Tcl_NewStringObj("", 0), &result) != TCL_OK) {
+      Tcl_SetResult(interp, (char *)"argument is not a dict", TCL_STATIC);
+      return TCL_ERROR;
+    }
+    Tcl_IncrRefCount(val);
+    *(Tcl_Obj **)((char *)clientData+entry->offset) = val;
+    return TCL_OK;
+  }
   case fw_option_obj: 
     Tcl_IncrRefCount(val);
     *(Tcl_Obj **)((char *)clientData+entry->offset) = val;
@@ -181,6 +192,7 @@ static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *inter
   case fw_option_float:   return Tcl_NewDoubleObj(*(float *)((char *)clientData+entry->offset));
   case fw_option_char:    return Tcl_NewStringObj((char *)((char *)clientData+entry->offset), 1);
   case fw_option_boolean: return Tcl_NewIntObj(*(int *)((char *)clientData+entry->offset));
+  case fw_option_dict:    return *(Tcl_Obj **)((char *)clientData+entry->offset);
   case fw_option_obj:     return *(Tcl_Obj **)((char *)clientData+entry->offset);
   default:
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
