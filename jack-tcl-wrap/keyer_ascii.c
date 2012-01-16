@@ -95,11 +95,11 @@ static void *_init(void *arg) {
   if (dp->opts.dict == NULL) {
     dp->opts.dict = Tcl_NewDictObj();
     Tcl_IncrRefCount(dp->opts.dict);
-    for (int i = 0; i < 128; i += 1) 
-      if (morse_coding(i) != NULL) {
-	char c = i;
-	Tcl_DictObjPut(NULL, dp->opts.dict, Tcl_NewStringObj(&c, 1), Tcl_NewStringObj(morse_coding(i), -1));
-      }
+    for (int i = 0; morse_coding_table[i][0] != NULL; i += 1) {
+      Tcl_UniChar ch;
+      Tcl_UtfToUniChar(morse_coding_table[i][0], &ch);
+      Tcl_DictObjPut(NULL, dp->opts.dict, Tcl_NewUnicodeObj(&ch, 1), Tcl_NewStringObj(morse_coding_table[i][1], -1));
+    }
   }
   return arg;
 }
