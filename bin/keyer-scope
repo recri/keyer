@@ -42,8 +42,12 @@ proc ::scope::configure {w args} {
     foreach {option value} $args {
 	switch -- $option {
 	    -height {
+		$w configure -height $value
 		set data(-y-scale) [expr {-0.75*$value/2.0}]
 		set data(-y-origin) [expr {$value/2.0}]
+	    }
+	    -width {
+		$w configure -height $value
 	    }
 	    -x-scale {
 		if {[info exists data(-x-scale)]} {
@@ -54,6 +58,9 @@ proc ::scope::configure {w args} {
 		if {[info exists data(-x-origin)]} {
 		    $w move all [expr {$value-$data(-x-origin)}] 0
 		}
+	    }
+	    -xscrollcommand {
+		$w configure $option $value
 	    }
 	    default {
 	    }
@@ -71,6 +78,10 @@ proc ::scope::start-iq {w sx} {
     set data(q-xy) {}
     catch {$w delete all}
     update-iq $w 0 [binary format f* [lrepeat 1024 0.0]]
+}
+
+proc ::scope::stop-iq {w ex} {
+    ::scope::update-iq $w $ex [binary format f* {0.0 0.0 0.0 0.0}]
 }
 
 proc ::scope::update-iq {w frame iq} {
@@ -121,27 +132,32 @@ proc ::scope::start-event {w sx} {
     $w create line 0 0 0 0 -fill white -tags capture-midi
 }
 
-proc ::scope::update-event {w frame y} {
+proc ::scope::update-event {w frame y {end 0}} {
     upvar #0 ::scope::$w data
-    lappend data(midi-xy) $frame [expr {-$y}] $frame $y
+    if { ! $end} {
+	lappend data(midi-xy) $frame [expr {-$y}]
+    }
+    lappend data(midi-xy) $frame $y
     $w coords capture-midi $data(midi-xy)
     $w scale all 0 0 $data(-x-scale) $data(-y-scale)
     $w move all 0 $data(-y-origin)
     $w configure -scrollregion [$w bbox all]
 }
 
-proc ::scope::stop {w ex} {
-    $w create line $ex 0 $ex 0 -fill white
+proc ::scope::stop-event {w ex} {
+    ::scope::update-event $w $ex -1 1
 }
+
 proc ::scope::defaults {} {
     return [array get ::scope::default_data]
 }
 
 proc ::scope::scope {w args} {
     upvar #0 ::scope::$w data
+    canvas $w -bg black
     ::scope::configure $w {*}[::scope::defaults]
     ::scope::configure $w {*}$args
-    return [canvas $w -height $data(-height) -bg black]
+    return $w
 }
 
 proc ::scope {w args} {
@@ -183,6 +199,7 @@ proc ::time-scale {w args} {
 
 namespace eval ::keyer-scope {
     array set default_data {
+	-verbose 0
 	-chan 1
 	-note 0
 	-zoom 0.01
@@ -291,14 +308,11 @@ proc ::keyer-scope::stop {w} {
     ::capture::stop $w.iq
     ::capture::stop $w.keyer
     ::capture::stop $w.key0
-    ::scope::stop $w.iq $frames
-    ::scope::stop $w.keyer $frames
-    ::scope::stop $w.key0 $frames
-    ::scope::stop $w.key1 $frames
-    #puts "iq: [lrange [$w.iq coords all] 0 10]"
-    #puts "keyer: [lrange [$w.keyer coords all] 0 10]"
-    #puts "key0: [lrange [$w.key0 coords all] 0 10]"
-    #puts "key1: [lrange [$w.key1 coords all] 0 10]"
+    ::scope::stop-iq $w.iq $frames
+    ::scope::stop-event $w.keyer $frames
+    ::scope::stop-event $w.key0 $frames
+    ::scope::stop-event $w.key1 $frames
+    ::keyer-scope::scrollregion $w
 }
 
 proc ::keyer-scope::xview {w args} {
@@ -306,11 +320,15 @@ proc ::keyer-scope::xview {w args} {
     $w.keyer xview {*}$args
     $w.key0 xview {*}$args
     $w.key1 xview {*}$args
-    #puts "keyer-scope::xview $w $args"
+}
+
+proc ::keyer-scope::xscrollcommand-set {w args} {
+    $w.x set {*}$args
 }
 
 proc ::keyer-scope::scrollregion {w} {
     if {[catch {
+	$w.iq configure -scrollregion [$w.iq bbox all]
 	$w.x set {*}[$w.iq xview]
     } error]} {
 	puts $error
@@ -322,7 +340,7 @@ proc ::keyer-scope::keyer-scope {w args} {
     array set data [::keyer-scope::defaults]
     array set data $args
     ttk::panedwindow $w -orient vertical
-    $w add [::scope $w.iq -height 50] -weight 1
+    $w add [::scope $w.iq -height 50 -xscrollcommand [list ::keyer-scope::xscrollcommand-set $w]] -weight 1
     $w add [::scope $w.keyer -height 50] -weight 1
     $w add [::scope $w.key1 -height 50] -weight 1
     $w add [::scope $w.key0 -height 50] -weight 1
