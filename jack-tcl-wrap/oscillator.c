@@ -53,8 +53,8 @@ static void _update(_t *data) {
 static void *_init(void *arg) {
   _t * const data = (_t *)arg;
   data->modified = 0;
-  data->hertz = 440.0f;
-  data->dBgain = -30;
+  // data->hertz = 440.0f;
+  // data->dBgain = -30;
   data->gain = powf(10, data->dBgain / 20);
   data->sample_rate = sdrkit_sample_rate(data);
   void *p = oscillator_init(&data->o, data->hertz, data->sample_rate); if (p != &data->o) return p;

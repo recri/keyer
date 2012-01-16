@@ -40,7 +40,9 @@ typedef struct {
 } _t;
 
 static void *_init(void *arg) {
-  ((_t *)arg)->gain = 1.0f;
+  _t *data = (_t *)arg;
+  // data->dBgain = -30.0f;
+  data->gain = powf(10.0f, data->dBgain / 20.0f);
   return arg;
 }
 

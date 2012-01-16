@@ -49,7 +49,7 @@ static void _update(_t *data) {
 static void *_init(void *arg) {
   _t * const data = (_t *)arg;
   data->modified = 0;
-  data->hertz = 700.0f;
+  // data->hertz = 700.0f;
   lo_mixer_init(&data->lo, data->hertz, sdrkit_sample_rate(data));
   return arg;
 }

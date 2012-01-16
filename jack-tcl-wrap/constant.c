@@ -33,8 +33,8 @@ typedef struct {
 
 static void *_init(void *arg) {
   _t * data = (_t *)arg;
-  data->real = 1.0f;
-  data->imag = 0.0f;
+  // data->real = 1.0f;
+  // data->imag = 0.0f;
   return arg;
 }
 

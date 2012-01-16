@@ -49,7 +49,7 @@
 */
 
 #ifndef _N_MILLI_SECONDS
-#define _N_MILLI_SECONDS 500
+#define _N_MILLI_SECONDS 2000
 #endif
 
 typedef struct {
@@ -136,7 +136,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return TCL_ERROR;
   }
 
-  if (n_samples > data->size/4) {
+  if (n_samples > data->size/2+data->size/4) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("%d samples is too many", n_samples));
     return TCL_ERROR;
   }

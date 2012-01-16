@@ -109,7 +109,7 @@ proc ::capture::capture-spectrum {w} {
 	set dx [expr {[sdrkit::jack sample-rate]/double($n)}]
 	foreach {re im} [concat [lrange $levels [expr {1+$n}] end] [lrange $levels 0 $n]] {
 	    # squared magnitude means 10*log10 dB
-	    lappend xy $x [expr {10*log10($re*$re+$im*$im+1e-16)}]
+	    lappend xy $x [expr {10*log10($re*$re+$im*$im+1e-64)}]
 	    set x [expr {$x+$dx}]
 	}
 	# send the result to the client

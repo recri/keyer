@@ -59,9 +59,13 @@ proc ::persistent-spectrum::scan {w xy} {
     upvar #0 ::persistent-spectrum::$w data
     set freq {}
     set scan {}
+    set min 1e6
+    set max -1e6
     foreach {x y} $xy {
 	if {$x >= $data(-min-f) && $x <= $data(-max-f)} {
 	    lappend freq $x
+	    set min [expr {min($min,$y)}]
+	    set max [expr {max($max,$y)}]
 	    if {$data(-rows)} {
 		lappend scan [pixel $w [expr {$y+$data(-atten)}]]
 	    } else {

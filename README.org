@@ -261,10 +261,7 @@
     %
    #+END_EXAMPLE
     creates an oscillator named "lo" which oscillates at 10000 Hertz
-    and has 0 decibels gain relative to full scale.  (Well, it ought
-    to, but the options at create aren't working this afternoon.)
-    "lo" is now a Tcl command which can be run from the Tcl command
-    line to query and alter its configuration.  If you say:
+    and has 0 decibels gain relative to full scale.  If you say:
    #+BEGIN_EXAMPLE
     % lo help
     unrecognized subcommand "help", should one of configure, cget, or cdoc
@@ -280,20 +277,37 @@
     %
    #+END_EXAMPLE
     then you get the list of (potentially) configurable options for
-    the command.  (Which shows that the -freq and -gain options to the
-    command creation weren't effective.)  The -server and -client
-    options tell us the Jack server and client name the module
-    registered as, so we can use:
+    "lo": the option names, some other names, a default value and the
+    current value.  Which, in this case, shows a bug, that the -freq
+    and -gain options to the command creation weren't effective,
+    because the gain is -30dB and the frequency is 440Hz.  We can
+    fix that with: 
+   #+BEGIN_EXAMPLE
+    % lo configure -freq 10000 -gain 0
+    % 
+   #+END_EXAMPLE
+    and check the result with:
+   #+BEGIN_EXAMPLE
+    % lo cget -freq
+    10000.0
+    % lo cget -gain
+    0.0
+    % 
+   #+END_EXAMPLE
+   The -server and -client options tell us the Jack server and client
+   name the module registered as.  These options are only configurable
+   at creation. We can use:
    #+BEGIN_EXAMPLE
     % package require sdrkit::jack
     1.0.0
     % sdrkit::jack connect lo:out_i system:playback_1
+    % sdrkit::jack connect lo:out_q system:playback_2
     %
    #+END_EXAMPLE
-    to connect one channel of our complex local oscillator to the
-    system audio out. Note that the sdrkit::jack package is an
-    exception to the rule given above, it creates a simple command
-    rather than a command factory.
+    to connect our complex local oscillator to the system audio
+    out. Note that the sdrkit::jack package is an exception to the
+    rule given above, it creates a simple command rather than a
+    command factory.
 ** Options
    Most of the lib/sdrkit packages install a command factory which
    allows you to create as many instances of a module as an
@@ -421,6 +435,7 @@
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
 * Things to Do
+** TODO - framework: figure out why create options are ineffective.
 ** TODO - keyer_tone.c: protect against 0 rise or fall
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
 ** TODO - keyer_ascii.c: to fix the timing glitches visible in scope
@@ -431,6 +446,7 @@
    at 1.5 dit clocks in the past.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract dttsp oscillator and cwtone class in a header.
+** TODO - rename sdrkit/keyed_tone.h to sdrkit/cwtone.h
 ** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
@@ -453,11 +469,6 @@
    monoaural option discards the Q and pans the result to a specified
    azimuth.
 ** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
-** DONE - general abstraction - sdrkit: c and c++ modules in headers for pure computation.
-   oscillators, mixers, filters, modulators, demodulators.
-** TODO - general abstraction - jack-tcl-wrap: sdrkit wrapped as Tcl extensions with consistent options handling
-   the command framework lives here
-** TODO - general abstraction - jackit: sdrkit variation wrapped to jack process loop    
 ** TODO - sdrkit/framework.h - readonly options
 ** TODO - sdrkit/framework.h - command documentation strings
 ** TODO - sdrkit/framework.h - subcommand documentation strings
@@ -510,6 +521,12 @@
    Rename 'dspkit' to 'sdrkit' because it's the real kit for SDR.
    Retain the 'sdrkit::foo' name space because they're wrapped sdrkit modules.
    Opens the possibility of wrappers using alternate script and audio glue.
+** DONE - general abstraction - sdrkit: c and c++ modules in headers for pure computation.
+   oscillators, mixers, filters, modulators, demodulators.
+** DONE - general abstraction - jack-tcl-wrap: sdrkit wrapped as Tcl extensions with consistent options handling
+   the command framework lives here
+** DONE - general abstraction - jackit: sdrkit variation wrapped to jack process loop
+   abandoned in favor of just keeping everything in jack-tcl-wrap.
 * Credits
   This code is derived from many sources.
 

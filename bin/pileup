@@ -141,6 +141,7 @@ package require sdrkit::noise
 
 package require keyer-control
 package require hurricane
+package require capture
 
 #
 # default options
@@ -150,34 +151,29 @@ namespace eval ::main {
     array set data {
 	state 0
 
-	number_competition_callsigns 50
-	number_practise_callsigns 50
-
 	game-menues {
-	    wpm {base speed} words/minute
-	    wpm-range {speed range} words/minute
-	    tone {base tone} Hz
-	    tone-range {tone range} Hz
-	    gain {base gain} dB
-	    gain-range {gain range} dB
-	    noise {noise level} dB
-	    voices {N voices} {}
-	    mode mode {}
-	    n-items {N items} {}
+	    mode mode {} {menu {callsigns} {7 dit words} {9 dit words} {11 dit words} {13 dit} {15 dit} {17 dit} {19 dit} {21 dit} {23 dit} {25 dit} } {}
+	    voices {N voices} {} {menu 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20} {}
+	    n-items {N items} {} {menu 10 50 100 500 1000 5000 10000 50000} {}
+	    wpm {base speed} words/minute {scale 5 60} {}
+	    wpm-range {speed range} words/minute {scale 0 20} {}
+	    gain {base gain} dB {scale 0 -160} {}
+	    gain-range {gain range} dB {scale 160 -160} {}
+	    noise {noise level} dB {scale 0 -160} {noise configure -gain}
+	    output-gain {output gain} dB {scale 0 -160} {pileup configure -gain}
 	}
 
-	mode 0 menu-mode-list { {callsign competition} {callsign practice}
-	    {1 dit} {3 dit} {5 dit} {7 dit} {9 dit} {11 dit} {13 dit} {15 dit} {17 dit} {19 dit} {21 dit} {23 dit} {25 dit}
-	}
-	n_items 10 menu-n-items-list { 10 50 100 500 1000 5000 10000 50000 }
-	base_speed 10 menu-wpm-list {5 7.5 10 12.5 15 17.5 20 22.5 25}
-	speed_range 20 menu-wpm-range-list {5 7.5 10 12.5 15 17.5 20 22.5 25}
-	base_tone 500 menu-tone-list {300 350 400 450 500 550 600 650}
-	tone_range 300 menu-tone-range-list {50 100 200 300 400 500 600}
-	base_gain -30 menu-gain-list {-5 -10 -15 -20 -25 -30 -35 -40}
-	gain_range -5 menu-gain-range-list {-5 -10 -15 -20 -25 -30 -35 -40}
-	noise -40 menu-noise-list {-10 -15 -20 -25 -30 -35 -40 -45 -50 -55 -60 -65 -70 -75 -80 -85}
-	voices 3 menu-voices-list {1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20}
+	mode callsigns
+	voices 3
+	n-items 10
+	wpm 10
+	wpm-range 20
+	tone 500
+	tone-range 300
+	gain -30
+	gain-range -5
+	noise -40
+	output-gain -30
 
 	number_session 0
 	sent {}
@@ -530,9 +526,9 @@ proc ::main::hear_callsign {call voice continuation} {
     }
 }
 
-proc ::main::send_callsign {call voice speed tone continuation} {
+proc ::main::send_callsign {call voice speed tone gain continuation} {
     set ::main::data(max_speed) [expr {max($::main::data(max_speed), $speed)}]
-    tone$voice configure -freq $tone
+    tone$voice configure -freq $tone -gain $gain
     ascii$voice configure -wpm $speed
     ascii$voice puts $call
     hear_callsign $call $voice $continuation
@@ -566,14 +562,16 @@ proc ::main::sound_voice {voice} {
 	# get the callsign to be sent
 	set call [lindex $::main::data(items) 0]; set ::main::data(items) [lrange $::main::data(items) 1 end]
 	# choose a random speed
-	set r_speed [expr {rand () * $::main::data(speed_range) + $::main::data(base_speed)}]
+	set speed [expr {rand() * $::main::data(wpm-range) + $::main::data(wpm)}]
 	# choose a random tone
-	set r_tone [expr {(rand () * $::main::data(tone_range)) + $::main::data(base_tone)}]
+	set tone [expr {(rand() * $::main::data(tone-range)) + $::main::data(tone)}]
+	# choose a random gain
+	set gain [expr {(rand() * $::main::data(gain-range)) + $::main::data(gain)}]
 	# choose the timeout between the end of this call
 	# and the start of the next call on this voice
 	set timeout [expr {int(rand () * 3000)}]
 	# send the callsign and wait for it to finish
-	send_callsign $call $voice $r_speed $r_tone [list after $timeout [list ::main::sound_voice $voice]]
+	send_callsign $call $voice $speed $tone $gain [list after $timeout [list ::main::sound_voice $voice]]
     } else {
 	stop_voice $voice
     }
@@ -690,29 +688,21 @@ proc ::main::start {} {
     .play.m.pause configure -state normal
     .play.m.stop  configure -state normal
     set ::main::data(state) 1
-    # get the menu settings
-    menues-copy
     # choose mode
     switch $::main::data(mode) {
-	0 {
-	    set ::main::data(number_session) $::main::data(number_competition_callsigns)
+	callsigns {
+	    set ::main::data(number_session) $::main::data(n-items)
 	    set ::main::data(items) [choose_items $::main::data(number_session) $::main::data(calls)]
-	}
-	1  {
-	    set ::main::data(number_session) $::main::data(n_items)
-	    set ::main::data(items) [choose_items $::main::data(number_session) $::main::data(calls)]
+	    puts $::main::data(items)
 	}
 	default {
-	    set ::main::data(number_session) $::main::data(n_items)
-	    set ::main::data(items) [generate_items $::main::data(number_session) [expr {1+2*($::main::data(mode)-2)}]]
-
+	    set ::main::data(number_session) $::main::data(n-items)
+	    set ::main::data(items) [generate_items $::main::data(number_session) [lindex $::main::data(mode) 0]]
+	    puts $::main::data(items)
 	}
     }
     # start voices
     set ::main::data(active-voices) 0
-    sdrkit::gain pileup
-    sdrkit::jack connect pileup:out_i system:playback_1
-    sdrkit::jack connect pileup:out_q system:playback_2
     for {set voice 0} {$voice < $::main::data(voices)} {incr voice} {
 	start_voice $voice
     }
@@ -739,7 +729,6 @@ proc ::main::stop {} {
     for {set voice 0} {$voice < $::main::data(voices)} {incr voice} {
 	stop_voice $voice
     }
-    rename pileup {}
 }
 
 ##
@@ -747,34 +736,11 @@ proc ::main::stop {} {
 ##
 proc ::main::close-window {w ew} {
     if {$w eq $ew} {
-	stop
+	foreach x $::main::data(on-exit) {
+	    catch $x
+	}
+	::main::stop
     }
-}
-
-proc ::main::menus-uncopy {} {
-    set ::main::data(menu-mode) [lindex $::main::data(menu-mode-list) $::main::data(mode)]
-    set ::main::data(menu-n-items) $::main::data(n_items)
-    set ::main::data(menu-wpm) $::main::data(base_speed)
-    set ::main::data(menu-wpm-range) $::main::data(speed_range)
-    set ::main::data(menu-tone) $::main::data(base_tone)
-    set ::main::data(menu-tone-range) $::main::data(tone_range)
-    set ::main::data(menu-gain) $::main::data(base_gain)
-    set ::main::data(menu-gain-range) $::main::data(gain_range)
-    set ::main::data(menu-noise) $::main::data(noise)
-    set ::main::data(menu-voices) $::main::data(voices)
-}
-
-proc ::main::menues-copy {} {
-    set ::main::data(mode) [lsearch $::main::data(menu-mode-list) $::main::data(menu-mode)]
-    set ::main::data(n_items) $::main::data(menu-n-items)
-    set ::main::data(base_speed) $::main::data(menu-wpm)
-    set ::main::data(speed_range) $::main::data(menu-wpm-range)
-    set ::main::data(base_tone) $::main::data(menu-tone)
-    set ::main::data(tone_range) $::main::data(menu-tone-range)
-    set ::main::data(base_gain) $::main::data(menu-gain)
-    set ::main::data(gain_range) $::main::data(menu-gain-range)
-    set ::main::data(noise) $::main::data(menu-noise)
-    set ::main::data(voices) $::main::data(menu-voices)
 }
 
 proc ::main::about-panel {w} {
@@ -820,15 +786,37 @@ proc ::main::rcvd-panel {w} {
     return $w
 }
 
+proc ::main::play-panel-window-configure {w cw wd ht} {
+    if {$w eq $cw} {
+	puts "configure $w $cw $wd $ht"
+    }
+}
+proc ::main::play-panel-window-destroy {w dw} {
+    puts "destroy $w ..."
+}
+proc ::main::play-panel-update {w xy} {
+    ::hurricane::update $w.hurricane $xy
+}
+
 proc ::main::play-panel {w} {
     ttk::frame $w
-    grid [hurricane $w.hurricane] -row 0 -column 0 -sticky nsew
+    lappend ::main::data(on-exit) {rename pileup {}} {rename noise {}}
+    set minf [expr {$::main::data(tone)-5}]
+    set maxf [expr {$::main::data(tone)+$::main::data(tone-range)+5}]
+    grid [hurricane $w.hurricane -min-f $minf -max-f $maxf] -row 0 -column 0 -sticky nsew
+    puts [hurricane::configure $w.hurricane]
     grid [ttk::frame $w.m] -row 1 -column 0
     grid rowconfigure $w 0 -weight 100
     grid columnconfigure $w 0 -weight 100
     pack [ttk::button $w.m.start -text start -command ::main::start -state normal] -side left
-    pack [ttk::button $w.m.pause -text start -command ::main::pause -state disabled] -side left
+    pack [ttk::button $w.m.pause -text pause -command ::main::pause -state disabled] -side left
     pack [ttk::button $w.m.stop -text stop -command ::main::stop -state disabled] -side left
+    # capturing -size sample_rate/1 would yield 1 Hz per bin,
+    # -size sample_rate/10, 10Hz per bin, and so on
+    ::capture::spectrum $w -period 50 -size [sdrkit::jack sample-rate] -client ::main::play-panel-update -connect pileup
+    bind . <Configure> [list ::main::play-panel-window-configure $w %W %w %h]
+    bind . <Destroy> [list ::main::play-panel-window-destroy $w %W]
+    after 100 [list ::capture::start $w]
     return $w
 }
 
@@ -837,16 +825,27 @@ proc ::main::game-panel {w} {
 
     # menu buttons
     set row 0
-    foreach {menu text unit} $::main::data(game-menues) {
-	grid [ttk::label $w.label-$menu -text $text -anchor e] -row $row -column 0 -sticky e
-	grid [ttk::menubutton $w.menu-$menu -textvariable ::main::data(menu-$menu) -menu $w.menu-$menu.m] -row $row -column 1 -sticky ew
-	grid [ttk::label $w.unit-$menu -text $unit -anchor w] -row $row -column 2 -sticky w
-	menu $w.menu-$menu.m -tearoff no
-	foreach item $::main::data(menu-$menu-list) {
-	    if {$item eq {-}} {
-		$w.menu-$menu.m add separator
-	    } else {
-		$w.menu-$menu.m add radiobutton -label $item -variable ::main::data(menu-$menu) -value $item
+    foreach {name text unit impl update} $::main::data(game-menues) {
+	grid [ttk::label $w.label-$name -text $text -anchor e] -row $row -column 0 -sticky e
+	set type [lindex $impl 0]
+	switch $type {
+	    scale {
+		foreach {type from to} $impl break
+		grid [ttk::scale $w.scale-$name -from $from -to $to -variable ::main::data($name) -command $update] -row $row -column 1
+		grid [ttk::label $w.value-$name -textvariable ::main::data($name) -width 6] -row $row -column 2
+		grid [ttk::label $w.unit-$name -text $unit -anchor w] -row $row -column 3 -sticky w
+	    }
+	    menu {
+		grid [ttk::menubutton $w.menu-$name -textvariable ::main::data($name) -menu $w.menu-$name.m] -row $row -column 1 -sticky ew
+		grid [ttk::label $w.unit-$name -text $unit -anchor w] -row $row -column 2 -sticky w
+		menu $w.menu-$name.m -tearoff no
+		foreach item [lrange $impl 1 end] {
+		    if {$item eq {-}} {
+			$w.menu-$name.m add separator
+		    } else {
+			$w.menu-$name.m add radiobutton -label $item -variable ::main::data($name) -value $item
+		    }
+		}
 	    }
 	}
 	incr row
@@ -881,6 +880,7 @@ proc ::main::keyer-panel {w} {
     keyer::iambic iambic
     keyer::tone iambic_tone
     keyer::detime iambic_detime
+    lappend ::main::data(on-exit) {rename iambic {}} {rename iambic_tone {}} {rename iambic_detime {}}
     sdrkit::jack connect system:midi_capture_1 iambic:midi_in
     sdrkit::jack connect iambic:midi_out iambic_tone:midi_in
     sdrkit::jack connect iambic:midi_out iambic_detime:midi_in
@@ -894,14 +894,21 @@ proc ::main::main {argv} {
     foreach {option value} $argv {
 	switch -- $option {
 	    --voices { set ::main::data(voices) $value }
-	    --wpm { set ::main::data(base_speed) $value }
+	    --wpm { set ::main::data(wpm) $value }
 	    --mode { set ::main::data(mode) $value }
 	}
     }
     
-    # initialize menu values
-    menus-uncopy
-    
+    # persistent jack modules
+    sdrkit::noise noise -gain $::main::data(noise)
+    puts "noise cget -gain: [noise cget -gain]"
+    sdrkit::gain pileup -gain $::main::data(output-gain)
+    puts "pileup cget -gain: [pileup cget -gain]"
+    sdrkit::jack connect noise:out_i pileup:in_i
+    sdrkit::jack connect noise:out_q pileup:in_q
+    sdrkit::jack connect pileup:out_i system:playback_1
+    sdrkit::jack connect pileup:out_q system:playback_2
+
     # basic layout
     grid [ttk::frame .m] -row 0 -column 0 -sticky ew
     grid [ttk::notebook .pileup] -row 1 -column 0 -sticky nsew
@@ -913,7 +920,7 @@ proc ::main::main {argv} {
     .pileup add [::main::rcvd-panel .rcvd] -text {Rcvd Text}
     
     # extra bindings
-    bind . <Destroy> [list close-window . %W]
+    bind . <Destroy> [list ::main::close-window . %W]
 }
 
 ::main::main $argv

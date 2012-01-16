@@ -92,8 +92,8 @@ static void *_init(void *arg) {
   if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.rise);
   if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.fall);
   if (dp->opts.verbose > 1) fprintf(stderr, "%s:%s:%d _init rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
-  dp->opts.chan = 1;
-  dp->opts.note = 0;
+  // dp->opts.chan = 1;
+  // dp->opts.note = 0;
   void *p = keyed_tone_init(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall, sdrkit_sample_rate(arg));
   if (p != &dp->tone) return p;
   return arg;

@@ -50,15 +50,18 @@ proc ::hurricane::update {w xy} {
     set i $data(line-number)
     set data(img-$i) [image create photo]
     $data(img-$i) put $scan
-    set data(item-$i) [$w create image [expr {[winfo width $w]-1}] 0 -anchor ne -image $data(img-$i) -tags item-$i]
+    #puts "creating image sized [image width $data(img-$i)] x [image height $data(img-$i)]"
+    set data(item-$i) [$w create image [expr {[winfo width $w]-1}] 0 -anchor ne -image $data(img-$i) -tags img-$i]
 
     # increment our scanline index
     incr data(line-number)
 
     # discard off screen images
     foreach i [$w find overlapping -10000 0 0 100] {
-	
-	puts "$i @ [$w coords $i] is offscreen"
+	# delete image
+	rename $data([$w gettags $i]) {}
+	# delete canvas item
+	$w delete $i
     }
 }
 
@@ -73,6 +76,9 @@ proc ::hurricane::destroy {w} {
 
 proc ::hurricane::configure {w args} {
     upvar #0 ::hurricane::$w data
+    if {$args eq {}} {
+	return [array get data]
+    }
     array set save [array get data]
     foreach {option value} $args {
 	switch -- $option {
@@ -86,6 +92,7 @@ proc ::hurricane::configure {w args} {
 	    -max-f -
 	    -reversed {
 		::persistent-spectrum::configure $w $option $value
+		set data($option) $value
 	    }
 	    default {
 		set data($option) $value
