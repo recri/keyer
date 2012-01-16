@@ -526,7 +526,7 @@ proc ::main::translate {dict call} {
 }
     
 proc ::main::draw_callsign {call speed tone gain code} {
-    puts "draw_callsign $call $speed $tone $gain $code"
+    #puts "draw_callsign $call $speed $tone $gain $code"
 }
 
 proc ::main::hear_callsign {call voice code continuation} {
