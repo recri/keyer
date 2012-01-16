@@ -21,6 +21,10 @@
     keyer_iambic implements an iambic keyer keyed by midi events
     and generating midi events.
 
+    the basic puzzle here is how to get the initial key event
+    out of the midi buffer on the frame it happens at.  I suppose
+    the call to the keyer tick could return an event.
+    
 */
 
 #include "../sdrkit/Iambic.hh"
@@ -46,6 +50,7 @@ extern "C" {
     int modified;
     options_t opts;
     options_t sent;
+    int key_out_event;
     midi_buffer_t midi;
   } _t;
 
@@ -92,10 +97,8 @@ extern "C" {
   static void _keyout(int key, void *arg) {
     _t *dp = (_t *)arg;
     // if (dp->opts.verbose) fprintf(stderr, "%s _keyout(%d)\n", PREFACE, key);
-    if (key)
-      midi_buffer_write_note_on(&dp->midi, 0, dp->opts.chan, dp->opts.note, 0);
-    else
-      midi_buffer_write_note_off(&dp->midi, 0, dp->opts.chan, dp->opts.note, 0);
+    if (key) dp->key_out_event = MIDI_NOTE_ON;
+    else dp->key_out_event = MIDI_NOTE_OFF;
   }
 
   static void *_init(void *arg) {
@@ -167,11 +170,11 @@ extern "C" {
     /* this is important, very strange if omitted */
     jack_midi_clear_buffer(midi_out);
     /* for all frames in the buffer */
-    for(int i = 0; i < nframes; i++) {
+    for (int i = 0; i < nframes; i++) {
       int look_for_more_events = 0;
       /* process all midi input events at this sample frame */
       while (in_event_time == i) {
-	_decode(dp, in_event.size, in_event.buffer);
+	_decode(dp, in_event.size, in_event.buffer); // this might trigger a keyout
 	if (in_event_index < in_event_count) {
 	  jack_midi_event_get(&in_event, midi_in, in_event_index++);
 	  in_event_time = in_event.time;
@@ -180,8 +183,20 @@ extern "C" {
 	}
 	look_for_more_events = 1;
       }
+      /* clock the iambic keyer */
+      dp->k.clock(1);		// this might trigger a keyout
+      /* look for an immediate event triggered by the input or the iambic clocking */
+      if (dp->key_out_event != 0) {
+	char midi_note_event[] = { dp->key_out_event | (dp->opts.chan-1), dp->opts.note, 0 };
+	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
+	if (buffer == NULL) {
+	  fprintf(stderr, "%ld: jack won't buffer %ld midi bytes!\n", dp->frames, 3);
+	} else {
+	  memcpy(buffer, midi_note_event, 3);
+	}
+	dp->key_out_event = 0;
+      }
       /* process all midi output events at this sample frame */
-      /* it's possible that input events generated more for us to do */
       while (buffer_event_time == i) {
 	if (buffer_event.size != 0) {
 	  unsigned char* buffer = jack_midi_event_reserve(midi_out, i, buffer_event.size);
@@ -198,8 +213,6 @@ extern "C" {
 	  buffer_event_time = nframes+1;
 	}
       }
-      /* clock the iambic keyer */
-      dp->k.clock(1);
       /* clock the frame counter */
       dp->frames += 1;
     }

@@ -38,17 +38,25 @@
 */
 
 #include "WProgram.h"
+#include "Debounce.h"
 
 const int channel = 1;      // the MIDI channel number to send messages
 const int base_note = 0;    // the base midi note
 
 const int ditPin = 0;       // the dit pin number, is B0
 const int dahPin = 1;       // the dah pin number, is B1
-const int btnPin = 2;		// button on B2
+const int btnPin = 2;	    // button on B2
 
 byte dit;                   // the current dit value
 byte dah;                   // the current dah value
 byte btn;                   // the current button value
+
+const int debounceFor = 20; // 20 trip debounce
+const int readPeriod = 50;  // microseconds per debounce trip
+
+Debounce ditFilter(debounceFor);	    
+Debounce dahFilter(debounceFor);
+Debounce btnFilter(debounceFor);
 
 const int rgtPin = 5;		// right on D0
 const int lftPin = 6;		// left on D1
@@ -115,30 +123,32 @@ void setup() {
 
 
 void loop() {
-  byte new_dit = digitalRead(ditPin);
-  if (new_dit != dit) {
-    if ((dit = new_dit) != 0) {
-      usbMIDI.sendNoteOff(base_note+0, 0, channel);
-    } else {
-      usbMIDI.sendNoteOn(base_note+0, 99, channel);
+  static long last_read;
+  if (micros()-last_read >= readPeriod) {
+    last_read = micros();
+    byte new_dit = ditFilter.debounce(digitalRead(ditPin));
+    if (new_dit != dit) {
+      if ((dit = new_dit) != 0) {
+        usbMIDI.sendNoteOff(base_note+0, 0, channel);
+      } else {
+        usbMIDI.sendNoteOn(base_note+0, 99, channel);
+      }
     }
-  }
-  byte new_dah = digitalRead(dahPin);
-  if (new_dah != dah) {
-    if ((dah = new_dah) != 0) {
-      usbMIDI.sendNoteOff(base_note+1, 0, channel);
-    } else {
-      usbMIDI.sendNoteOn(base_note+1, 99, channel);
+    byte new_dah = dahFilter.debounce(digitalRead(dahPin));
+    if (new_dah != dah) {
+      if ((dah = new_dah) != 0) {
+        usbMIDI.sendNoteOff(base_note+1, 0, channel);
+      } else {
+        usbMIDI.sendNoteOn(base_note+1, 99, channel);
+      }
     }
-  }
-  byte new_btn = digitalRead(btnPin);
-  if (new_btn != btn) {
-    if ((dah = new_dah) != 0) {
-      // released: disable watchdog timer
-      usbMIDI.sendNoteOff(base_note+2, 0, channel);
-    } else {
-      // pressed: enable watchdog timer for period of hold to cause reset
-      usbMIDI.sendNoteOn(base_note+2, 99, channel);
+    byte new_btn = btnFilter.debounce(digitalRead(btnPin));
+    if (new_btn != btn) {
+      if ((btn = new_btn) != 0) {
+        usbMIDI.sendNoteOff(base_note+2, 0, channel);
+      } else {
+        usbMIDI.sendNoteOn(base_note+2, 99, channel);
+      }
     }
   }
   int new_right_left = _right_left;

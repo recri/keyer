@@ -35,8 +35,8 @@ class Debounce {
   // debounce by recording a stream of bits which will be all zero
   // when the switch has settled into the other state
   byte debounce(byte input) {
-    _history = (_history << 1) | (input ^ _value ^ 1);
-    return _value = ((_history & _mask) == 0) ? input : _value;
+    _filter = (_filter << 1) | (input ^ _value ^ 1);
+    return _value = ((_filter & _mask) == 0) ? input : _value;
   }
 
  private:

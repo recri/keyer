@@ -38,12 +38,18 @@
 */
 
 #include "WProgram.h"
+#include "Debounce.h"
 
 const int channel = 1;      // the MIDI channel number to send messages
 const int base_note = 0;    // the base midi note
 
 const int ditPin = 0;       // the dit pin number, is B0
 const int dahPin = 1;       // the dah pin number, is B1
+
+const int debounceFor = 4;  // four clock debounce
+
+Debounce ditFilter(debounceFor);	    
+Debounce dahFilter(debounceFor);
 
 const int sample_period = 100;
 
@@ -59,21 +65,23 @@ void setup() {
 
 
 void loop() {
-  byte new_dit = digitalRead(ditPin);
+  byte new_dit = ditFilter.debounce(digitalRead(ditPin));
   if (new_dit != dit) {
     if ((dit = new_dit) != 0) {
       usbMIDI.sendNoteOff(base_note+0, 0, channel);
     } else {
       usbMIDI.sendNoteOn(base_note+0, 99, channel);
     }
+    usbMIDI.send_now();
   }
-  byte new_dah = digitalRead(dahPin);
+  byte new_dah = dahFilter.debounce(digitalRead(dahPin));
   if (new_dah != dah) {
     if ((dah = new_dah) != 0) {
       usbMIDI.sendNoteOff(base_note+1, 0, channel);
     } else {
       usbMIDI.sendNoteOn(base_note+1, 99, channel);
     }
+    usbMIDI.send_now();
   }
 }
 
