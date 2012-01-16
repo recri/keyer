@@ -1,0 +1,369 @@
+* dttsp
+  This outline summarizes the architecture of the dttsp software
+  defined radio from the dttsp-cgran-r624 sources.
+  
+  The radio is launched by [[sdr-main.c]], the main loop of computation is
+  performed in [[sdr.c]], and the control functions are executed in
+  [[update.c]].
+
+  The rest of the source defines functionality which may or may not be
+  actually used in the radio.  There seems to be a lot of stuff that
+  is here because it got written but no one knew what to do with it.
+
+** receiver
+   The architecture defines multiple receivers which get passed copies
+   of the input samples and then summed to produce the output samples.
+
+   The basic architecture is:
+   | input       |
+   | RF gain     |
+   | mix with LO |
+   | filter      |
+   | detect      |
+   | output      |
+   
+* am_demod.c
+* am_demod.h
+* banal.c
+* banal.h
+* bufvec.c
+* bufvec.h
+* common.h
+* complex.h
+* correctIQ.c
+* correctIQ.h
+* cwtones.c
+* cwtones.h
+* cxops.c
+* cxops.h
+* datatypes.h
+* dcblock.c
+* dcblock.h
+* defs.h
+* delay.c
+* delay.h
+* dttspagc.c
+* dttspagc.h
+* fastrig.c
+* fastrig.h
+* filterbank.c
+* filterbank.h
+* filter.c
+* filter.h
+* fm_demod.c
+* fm_demod.h
+* fromsys.h
+* graphiceq.c
+* graphiceq.h
+* halfband.c
+* halfband.h
+* hilbert.c
+* hilbert.h
+* iambic-keyer.c
+* iambic-keyer-e.c
+* isoband.c
+* isoband.h
+* keyboard-keyer.c
+* keyer.h
+* lmadf.c
+* lmadf.h
+* local.h
+* meter.c
+* meter.h
+* noiseblanker.c
+* noiseblanker.h
+* oscillator.c
+* oscillator.h
+* ovsv.c
+* ovsv.h
+* passport.c
+* port-clients.c
+* port-clients-demo.c
+* port-clients.h
+* remez.c
+* resample.c
+* resample.h
+* ringb.c
+* ringb.h
+* sdr.c
+  The setup and execution of the dttsp process loop is defined here.
+  [[process_samples]] copies jack buffers into dttsp, processes them, and copies them out.
+  [[do_rx]] describes the receive processing, [[do_tx]] describes the transmit processing.
+  In [[setup_all]] we see that the input and output buffers for the radio are the input
+  and output buffers for the overlap_save filter that defines our bandwidth.
+** reset_meters
+   for meter { meter = -KINDA }
+** reset_spectrum
+   [[reinit_spectrum]]
+** reset_counters
+   for k { rx[k]->tick = 0 }
+   tx->tick = 0
+** setup_all
+   sample_rate
+   buffer_length
+   mode_sdr
+   mode = RX
+   fftw_wisdom
+   if (meter) [[reset_meters]]
+   spec.rxk = 0
+   spec.buffer_length
+   spec.type
+   spec.size
+   spec.planbits
+   [[init_spectrum]]
+   multirx.lis
+   multirx.nrx
+   cpdlen
+   tick = 0
+** setup_rx
+   len
+   iqfix = newCorrectIQ
+   filt.coef = [[newFIR_Bandpass_COMPLEX]](-4800,4800,...)
+   filt.ovsv = [[newFiltOvSv]](FIRcoef(filt.coef), FIRsize(filt.coef), fftw_wisdom)
+   [[normalize_vec_COMPLEX]](filt.ovsv.zfvec, filt.ovsv.fftlen)
+   filt.save = [[newvec_COMPLEX]](filt.ovsv.fftlen)
+   *filt.save = *filt.ovsv.zfvec
+   buf.i
+   buf.o
+   osc = [[newOsc]]
+   dttspagc = [[newDttSPAgc]]
+   grapheq = [[new_EQ]]
+   am = [[newAMD]]
+   fm = [[newFMD]]
+   anf = [[new_lmsr]]
+   banf = [[new_blms]]
+   anr = [[new_lmsr]]
+   banr = [[new_blms]]
+   nb = [[new_noiseblanker]]
+   spot = [[newSpotToneGen]]
+   squelch = {...}
+   cpd = [[newWSCompander]]
+** setup_tx
+** setup_workspace
+** destroy_workspace
+** CXBscl
+** CXBnorm
+** CXBnormsqr
+** CXBpeak
+** CXBpealpwr
+** do_rx_meter
+*** one of
+**** RXMETER_PRE_CONV: meter = complex(dBP(max(fabs(real))), dBP(max(fabs(imag))))
+**** RXMETER_POST_FILT: meter = log10P(mean(squared(mag()))) and some
+**** RXMETER_POST_AGC: meter = dttspagc.gain.now
+
+** do_rx_spectrum
+*** if SPEC_POST_DET: accumulate complex(real*sqrt(2), 0)
+*** else accumulate samples
+** do_tx_spectrum
+** should_do_rx_squelch
+** should_do_tx_squelch
+** do_rx_squelch
+** do_tx_squelch
+** no_rx_squelch
+** no_tx_squelch
+** do_rx_pre
+   sig *= gain
+   [[do_rx_spectrum]] (SPEC_SEMI_RAW)
+   one of
+   if (nb) sig = [[noiseblanker]] (sig)
+   if (nb_sdrom) sig = [[SDROMnoiseblanker]] (sig)
+   [[do_rx_meter]] (RXMETER_PRE_CONV)
+   sig = [[correctIQ]] (sig)
+   sig  = mix(sig, osc)
+   [[do_rx_spectrum]] (SPEC_PRE_FILT)
+   if (!SPEC) sig = [[filter_OvSv]] (sig)
+   [[do_rxmeter]] (RXMETER_POST_FILT)
+   [[do_rx_spectrum]] (SPEC_POST_FILT)
+   if (cpd) sig = [[WSCompand]] (sig)
+   sig = [[DttSPAgc]] (sig)
+   [[do_rx_meter]] (RXMETER_POST_AGC)
+   [[do_rx_spectrum]] (SPEC_POST_AGC)
+** do_rx_post
+   if (squelch) sig = [[do_rx_squelch]] (sig)
+   else {
+     [[no_rx_squelch]]
+     if (spot) {
+       spot = [[SpotTone]]
+       sig += spot
+     }
+   }
+   if (grapheq) sig = [[graficeq]] (sig)
+   [[do_rx_spectrum]] (SPEC_POST_DET)
+   sig *= gain.o
+   if ( ! bin) sig = azim * sqrt(2) * creal(sig)
+** do_rx_SBCW
+*** if bin.flag # binaural
+**** if banr.flag && anr.flag
+***** blms_adapt banr.gen
+**** if banf.flag && anf.flag
+***** blms_adapt banf.gen
+*** else       # not binaural
+**** if anr.flag
+***** if banr.flag
+****** blms_adapt banr.gen
+***** else
+****** lmsr_adapt anr.gen
+**** if anf.flag
+***** if banf.flag
+****** blms_adapt banf.gen
+***** else
+****** lmsr_adapt anf.gen
+***** set sample.imag to sample.real for all
+** do_rx_AM
+*** [[AMDemod]]
+*** if anf.flag
+**** if ! banf.flag
+***** lmsr_adapt anf.gen
+**** else
+***** blms_adapt banf.gen
+** do_rx_FM
+*** FMDemod    
+** do_rx_DRM
+** do_rx_SPEC
+** do_rx_NIL
+** do_rx
+   [[do_rx_pre]]
+   if (DIGU|DIGL|USB|LSB|CWU|CWL|DSB) [[do_rx_SBCW]]
+   else if (AM|SAM) [[do_rx_AM]]
+   else if (FMN) [[do_rx_FM]]
+   else if (DRM) [[do_rx_DRM]]
+   else [[do_rx_SPEC]]
+   [[do_rx_post]]
+** do_tx_meter
+** do_tx_pre
+   sig *= gain		// this does 2 multiplies
+   sig = cimag(sig)	// this discards 1/2 of previous step
+   if (wvs) sig = WaveShape(sig)
+   do_tx_meter(WAVS)
+   if (dcb) sig = DCBlock(sig)
+   if (should_do_tx_squelch()) sig = do_tx_squelch(sig)
+   else {
+     if ( ! squelch) sig = no_tx_squelch(sig)
+     if ( !DIGU && !DIGL) {
+       if (grapheq) sig = graphic_eq(sig)
+       do_tx_meter(EQtap)
+       if (leveler) sig = DttSPAgc(sig)
+       do_tx_meter(LEVELER)
+       if (spr) sig = SpeechProcessor(sig)
+       do_tx_meter(COMP)
+     } else {
+       do_tx_meter(EQtap)
+       do_tx_meter(LEVELER)
+       do_tx_meter(LVL_G)
+       do_tx_meter(COMP)
+       do_tx_meter(CPDR)
+     }
+   }
+** do_tx_post
+   if (tick) reset_OvSv
+   sig = filter_OvSv(sig)
+   if (cpd) sig = WSCompand(sig)
+   do_tx_meter(CPDR)
+   if (spec) do_tx_spectrum(sig)
+   if (osc.Frequency) sig = mix(sig, osc)
+   sig = correctIQ(sig)
+   sig *= gain
+   do_tx_meter(PWR)
+** do_tx_SBCW
+   if ( !DSB) sig *= 2.0
+** do_tx_AM
+   sig = (carrier + (1-carrier) * creal(sig))
+** do_tx_FM
+   sig = osc(phase+=creal(sig)*cvtmod2freq) // cool, what freq?
+** do_tx_NIL
+   sig = 0
+** do_tx
+   [[do_tx_pre]]
+   if (USB|LSB|CWU|CWL|DIGU|DIGL|DSB) [[do_tx_SBCW]]
+   else if (AM|SAM) [[do_tx_AM]]
+   else if (FMN) [[do_tx_FM]]
+   else [[do_tx_NIL]]
+   [[do_tx_post]]
+** process_samples
+   if (RX) {
+     for k {
+       sig[k] = right + I * left
+       left,right += [[do_rx]] (sig[k])
+     }
+   } else if (TX) {
+     sig = right + I * left
+     norm = [[CXBpeak]] (sig)
+     [[do_tx]]
+     left,right = sig
+   }
+* sdrexport.c
+* sdrexport.h
+* sdr-main.c
+* spectrum.c
+* spectrum.h
+* speechproc.c
+* speechproc.h
+* splitfields.c
+* splitfields.h
+* spottone.c
+* spottone.h
+* stkstuff.c
+* stkstuff.h
+* thunk.c
+* thunk.h
+* update.c
+* update.h
+* waveshape.c
+* waveshape.h
+* window.c
+* window.h
+* wscompand.c
+* wscompand.h
+* misc
+** dttsp spectrum computation
+  reassembling dttsp spectrum computation
+
+  spectrum.h -
+	 constant definitions
+	 SpecBlock data structure
+  spectrum.c -
+	 snap_spectrum - fill timebuf from accumulator and window
+	 snap_scope - steal samples from accumulator for scope
+	 compute_spectrum - compute spectrum from timebuf
+	     convert result to Cmag() or Log10P(Csqrmag())
+	     reorder result
+	 init_spectrum - initialize
+	 reinit_spectrum - reinitialize
+	 finish_spectrum
+	 NB - nothing that puts data into the accumulator
+  sdr.c -
+	 do_rx_spectrum - copy samples into accumulator
+	     SPEC_POST_DET uses sqrt(2)*real, 0
+	     otherwise complex sample
+  update.c -
+	 reqSpectrum - snap_spectrum
+	 setSpectrumPolyphase -
+	     if polyphase newFIR_Lowpass_REAL.coeffs -> spec.window
+	     else makewindow
+	 setSpectrumWindow - if ! polyphase makewindow
+	 setSpectrumType type scale rxk
+       getSpectrumInfo
+  sdr-main.c -
+       spectrum_thread -
+	     compute_spectrum or copy spec.oscope
+
+  Basically:
+	 continuously feed samples into the accumulator
+	 on snap_spectrum set up the input
+	   either a simple windowed buffer full
+	   or a fancy polyphase low pass window
+	      over the past 8 buffers
+       on compute_spectrum do the fft and reformat
+	   the output
+
+	 the parameters are the size, and the window/polyphase setup
+* glossary
+** BANR - block automatic noise reduction?
+** BANF - block automatic noise filter
+** BLMS - block least mean square
+** FIR - finite impulse response
+** FFT - fast fourier transform
+** HB - half band
+** LMSR - least mean square R
+** OVSV - overlap save

@@ -66,8 +66,16 @@ proc ::sdrkit_ui::cleanup_after {w after} {
     cleanup_bind $w
 }
 
-proc ::sdrkit_ui::default_window {w} {
-    if { ! [winfo exists $w] } { ttk::frame $w }
+proc ::sdrkit_ui::default_window {w {title {}}} {
+    if { ! [winfo exists $w] } {
+	if {$title ne {}} {
+	    ttk::labelframe $w -text $title
+	} else {
+	    ttk::frame $w
+	}
+    } else {
+	catch {wm title $w $title}
+    }
 }
 
 #
