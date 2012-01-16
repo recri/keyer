@@ -3,10 +3,6 @@
   plugins, a hardware interface, and a variety of additional Tcl
   hosted SDR tools for testing and playing with them.
 
-  The keyer-control application launches iambic and ascii keyers with
-  independent tone generators, wires them up, and allows their
-  parameters to be fiddled with.
-
   The essential prerequisites for using this are a computer running
   Linux to build and to host the applications. With that you can run
   the ascii keyer, listen to the output, examine the waveforms, and
@@ -19,6 +15,12 @@
   them to the computer over USB.  With that you can fully exercise the
   iambic keyer and play with some of the games which require you to
   key in the answers.
+
+  The keyer-control application launches iambic and ascii keyers with
+  independent tone generators, wires them up, and allows their
+  parameters to be fiddled with.  The keyer-scope application attaches
+  to the iambic keyer midi input, midi output, and the iambic keyer
+  tone generator and allows the signals to be captured and displayed.
 * Prerequisites
   I've written these instructions as I use them on a laptop running
   Ubuntu 11.10, the Oneiric Ocelot release.  Most of it is generic
@@ -435,7 +437,6 @@
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
 * Things to Do
-** TODO - framework: figure out why create options are ineffective.
 ** TODO - keyer_tone.c: protect against 0 rise or fall
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
 ** TODO - keyer_ascii.c: to fix the timing glitches visible in scope
@@ -444,15 +445,20 @@
    Should only require a short memory of key states, make the next
    element decision at end of inter-element space based on key state
    at 1.5 dit clocks in the past.
+** TODO - MidiKey: to debounce with a period in microseconds.
+   Mangled the existing Bounce class, still not quite right.
+   Went back and implented a millisecond/20 step filter debouncer,
+   still getting some clicks.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract dttsp oscillator and cwtone class in a header.
-** TODO - rename sdrkit/keyed_tone.h to sdrkit/cwtone.h
+   Make it a dttsp::cwtone and dttsp::osc for comparison with the
+   filter based versions.
+** TODO - rename sdrkit/keyed_tone.h to sdrkit/cwtone.h, in general preserve
+   the dttsp names for the generic implementation, implement dttsp_name where
+   the dttsp implementation differs from the generic solution chosen.
 ** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
-** TODO - keyer_ascii: install more code points
-   There's more to Morse code than the basic US Ham usage, but I'm not
-   sure how to best internationalize the table.
 ** TODO - keyer_detone.c: to convert keyed cw into midi note on/off events.
 ** TODO - keyer-control: build, save, and restore custom configurations.
 ** TODO - keyer-control: ascii input/output window
@@ -473,8 +479,6 @@
 ** TODO - sdrkit/framework.h - command documentation strings
 ** TODO - sdrkit/framework.h - subcommand documentation strings
 * Things already done
-** DONE - MidiKey: to debounce with a period in microseconds.
-   Mangled the existing Bounce class, still not quite right.
 ** DONE - MidiKey: to use a less ad hoc debouncer.
    Gave up on debouncing altogether, works fine with my key.
 ** DONE - MidiKey: to use the LUFA library for USB.
@@ -527,6 +531,14 @@
    the command framework lives here
 ** DONE - general abstraction - jackit: sdrkit variation wrapped to jack process loop
    abandoned in favor of just keeping everything in jack-tcl-wrap.
+** DONE - framework: figure out why create options are ineffective.
+** DONE - keyer_ascii: install more code points
+   There's more to Morse code than the basic US Ham usage, but I'm not
+   sure how to best internationalize the table.
+   Ridiculously easy, simply use a Tcl dict with single character unicode
+   strings as keys.  Keyer_unicode, nee ascii, supplies the default dict with
+   cget -dict.  You can modify that dict or build your own and install it with
+   configure -dict new_dict.
 * Credits
   This code is derived from many sources.
 
