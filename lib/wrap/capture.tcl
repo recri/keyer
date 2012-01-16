@@ -135,8 +135,10 @@ proc ::capture::spectrum {w args} {
 proc ::capture::capture-iq {w} {
     upvar #0 ::capture::$w data
     if {$data(started)} {
-	# capture a buffer and send the result to the client
-	$data(-client) $w {*}[::$data(tap) get]
+	# capture buffers and send the results to the client
+	while {[llength [set capture [::$data(tap) get]]] > 0} {
+	    $data(-client) $w {*}$capture
+	}
 	# schedule next capture
 	after $data(-period) [list ::capture::capture-iq $w]
     }
@@ -149,7 +151,7 @@ proc ::capture::iq {w args} {
     set data(type) iq
     set data(tap) capture$::capture::ntap
     incr ::capture::ntap
-    ::sdrkit::audio-tap $data(tap) -log2n 2 -log2size [expr {int(log($data(-size))/log(2))}]
+    ::sdrkit::audio-tap $data(tap) -log2n 2 -log2size [expr {int(0.5+log($data(-size))/log(2))}]
     ::capture::configure $w {*}$args
 }
 
@@ -181,7 +183,7 @@ proc ::capture::start {w} {
 	set data(started) 1
 	switch $data(type) {
 	    spectrum { after 1 [list ::capture::capture-spectrum $w] }
-	    iq { after 1 [list ::capture::capture-iq $w] }
+	    iq { $data(tap) start; after 1 [list ::capture::capture-iq $w] }
 	    midi { $data(tap) start; after 1 [list ::capture::capture-midi $w] }
 	}
     }
@@ -193,7 +195,7 @@ proc ::capture::stop {w} {
 	set data(started) 0
 	switch $data(type) {
 	    spectrum { }
-	    iq { }
+	    iq { $data(tap) stop }
 	    midi { $data(tap) stop }
 	}
     }
