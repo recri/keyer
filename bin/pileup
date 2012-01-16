@@ -517,11 +517,23 @@ proc ::main::heard_callsign {call code} {
     .sent.sent see end
 }
     
-proc ::main::hear_callsign {call voice continuation} {
+proc ::main::translate {dict call} {
+    set code {}
+    foreach c [split $call {}] {
+	lappend code [dict get $dict $c]
+    }
+    return [join $code { }]
+}
+    
+proc ::main::draw_callsign {call speed tone gain code} {
+    puts "draw_callsign $call $speed $tone $gain $code"
+}
+
+proc ::main::hear_callsign {call voice code continuation} {
     if {[ascii$voice pending]} {
-	set ::main::data(after-$voice) [after 100 [list ::main::hear_callsign $call $voice $continuation]]
+	set ::main::data(after-$voice) [after 100 [list ::main::hear_callsign $call $voice $code $continuation]]
     } else {
-	heard_callsign $call [string trim [detime$voice gets]]
+	heard_callsign $call $code
 	set ::main::data(after-$voice) [eval $continuation]
     }
 }
@@ -531,7 +543,9 @@ proc ::main::send_callsign {call voice speed tone gain continuation} {
     tone$voice configure -freq $tone -gain $gain
     ascii$voice configure -wpm $speed
     ascii$voice puts $call
-    hear_callsign $call $voice $continuation
+    set code [translate [ascii$voice cget -dict] $call]
+    draw_callsign $call $speed $tone $gain $code
+    hear_callsign $call $voice $code $continuation
 }
 
 proc ::main::listen_for_echoes {echo} {
@@ -798,11 +812,15 @@ proc ::main::play-panel-update {w xy} {
     ::hurricane::update $w.hurricane $xy
 }
 
+proc ::main::play-panel-update-simulate {w} {
+}
+
 proc ::main::play-panel {w} {
     ttk::frame $w
     lappend ::main::data(on-exit) {rename pileup {}} {rename noise {}}
     set minf [expr {$::main::data(tone)-5}]
-    set maxf [expr {$::main::data(tone)+$::main::data(tone-range)+5}]
+    set midf [expr {$::main::data(tone)+$::main::data(tone-range)*0.5}]
+    set maxf [expr {$::main::data(tone)+$::main::data(tone-range)}]
     grid [hurricane $w.hurricane -min-f $minf -max-f $maxf] -row 0 -column 0 -sticky nsew
     puts [hurricane::configure $w.hurricane]
     grid [ttk::frame $w.m] -row 1 -column 0
@@ -813,10 +831,11 @@ proc ::main::play-panel {w} {
     pack [ttk::button $w.m.stop -text stop -command ::main::stop -state disabled] -side left
     # capturing -size sample_rate/1 would yield 1 Hz per bin,
     # -size sample_rate/10, 10Hz per bin, and so on
-    ::capture::spectrum $w -period 50 -size [sdrkit::jack sample-rate] -client ::main::play-panel-update -connect pileup
+    # ::capture::spectrum $w -period 50 -size [sdrkit::jack sample-rate] -client ::main::play-panel-update -connect pileup
     bind . <Configure> [list ::main::play-panel-window-configure $w %W %w %h]
     bind . <Destroy> [list ::main::play-panel-window-destroy $w %W]
-    after 100 [list ::capture::start $w]
+    #after 100 [list ::capture::start $w]
+    after 100 [list ::main::play-panel-update-simulate $w]
     return $w
 }
 

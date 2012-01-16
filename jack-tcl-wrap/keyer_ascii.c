@@ -51,7 +51,7 @@ typedef struct {
   int modified;
   options_t opts;
   options_t sent;
-  char prosign[16], n_prosign, n_slash;
+  Tcl_UniChar prosign[16], n_prosign, n_slash;
   unsigned long frames;
   midi_buffer_t midi;
 } _t;
@@ -92,6 +92,15 @@ static void *_init(void *arg) {
   dp->n_slash = 0;
   void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
   morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
+  if (dp->opts.dict == NULL) {
+    dp->opts.dict = Tcl_NewDictObj();
+    Tcl_IncrRefCount(dp->opts.dict);
+    for (int i = 0; i < 128; i += 1) 
+      if (morse_coding(i) != NULL) {
+	char c = i;
+	Tcl_DictObjPut(NULL, dp->opts.dict, Tcl_NewStringObj(&c, 1), Tcl_NewStringObj(morse_coding(i), -1));
+      }
+  }
   return arg;
 }
 
@@ -153,7 +162,7 @@ static void _flush_midi(_t *dp) {
 ** queue a string of . and - as midi events
 ** terminate with an inter letter space unless continues
 */
-static void _queue_midi(_t *dp, char c, char *p, int continues) {
+static void _queue_midi(_t *dp, Tcl_UniChar c, char *p, int continues) {
   /* normal send single character */
   if (p == NULL) {
     if (c == ' ')
@@ -180,11 +189,18 @@ static void _queue_midi(_t *dp, char c, char *p, int continues) {
   }
 }
 
+static char *morse_unicoding(_t *dp, Tcl_UniChar c) {
+  Tcl_Obj *value;
+  if (Tcl_DictObjGet(NULL, dp->opts.dict, Tcl_NewUnicodeObj(&c, 1), &value) == TCL_OK && value != NULL)
+    return Tcl_GetString(value);
+  return NULL;
+}
+
 /*
 ** translate a single character into morse code
 ** but implement an escape to allow prosign construction
 */
-static void _queue_char(char c, void *arg) {
+static void _queue_unichar(Tcl_UniChar c, void *arg) {
   _t *dp = (_t *)arg;
   if (dp->opts.verbose) fprintf(stderr, "%s _queue_char('%c')\n", PREFACE, c);
   if (dp->opts.verbose > 1) fprintf(stderr, "%s _queue_char n_slash %d, n_prosign %d\n", PREFACE, dp->n_slash, dp->n_prosign);
@@ -197,14 +213,14 @@ static void _queue_char(char c, void *arg) {
     dp->prosign[dp->n_prosign++] = c;
     if (dp->n_prosign == dp->n_slash+1) {
       for (int i = 0; i < dp->n_prosign; i += 1) {
-	_queue_midi(dp, dp->prosign[i], morse_coding(dp->prosign[i]), i != dp->n_prosign-1);
+	_queue_midi(dp, dp->prosign[i], morse_unicoding(dp, dp->prosign[i]), i != dp->n_prosign-1);
       }
       dp->n_prosign = 0;
       dp->n_slash = 0;
       _flush_midi(dp);
     }
   } else {
-    _queue_midi(dp, c, morse_coding(c), 0);
+    _queue_midi(dp, c, morse_unicoding(dp, c), 0);
     _flush_midi(dp);
   }
 }
@@ -213,10 +229,10 @@ static int _puts(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   _t *data = (_t *)clientData;
   // put the argument strings separated by spaces
   for (int i = 2; i < argc; i += 1) {
-    for (char *p = Tcl_GetString(objv[i]); *p != 0; p += 1)
-      _queue_char(*p, clientData);
+    for (Tcl_UniChar *p = Tcl_GetUnicode(objv[i]); *p != 0; p += 1)
+      _queue_unichar(*p, clientData);
     if (i != argc-1)
-      _queue_char(' ', clientData);
+      _queue_unichar(' ', clientData);
   }
   return TCL_OK;
 }
@@ -232,18 +248,6 @@ static int _available(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_O
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (data->opts.dict == NULL) {
-    fprintf(stderr, "initializing morse code dictionary\n");
-    data->opts.dict = Tcl_NewDictObj();
-    Tcl_IncrRefCount(data->opts.dict);
-    for (char i = 0; i < sizeof(morse_coding_table)/sizeof(morse_coding_table[0]); i += 1) 
-      if (morse_coding_table[i] != NULL)
-	if (Tcl_DictObjPut(interp, data->opts.dict, Tcl_NewStringObj(&i, 1), Tcl_NewStringObj(morse_coding_table[i], -1)) != TCL_OK) {
-	  fprintf(stderr, "error encoding %c -> %s into morse dictionary\n", i, morse_coding_table[i]);
-	  Tcl_DecrRefCount(data->opts.dict);
-	  data->opts.dict = NULL;
-	}
-  }
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
     data->opts = save;
