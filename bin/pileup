@@ -795,11 +795,19 @@ proc ::main::sent-panel {w} {
     return $w
 }
 
+proc ::main::rcvd-panel-trace-fired {w name1 name2 op} {
+    upvar #0 ${name1}($name2) input
+    # puts "trace-fired $input received"
+    $w.rcvd insert end $input
+    set input {}
+}
+
 proc ::main::rcvd-panel {w} {
     ttk::frame $w
     grid [text $w.rcvd -yscrollcommand [list $w.vrcvd set]] -row 0 -column 0 -sticky nsew
     grid [ttk::scrollbar $w.vrcvd -orient vertical -command [list $w.rcvd yview]] -row 0 -column 1 -sticky ns
     grid columnconfigure $w 0 -weight 100
+    trace add variable ::main::data(keyer-panel-rcvd) write [list ::main::rcvd-panel-trace-fired $w]
     return $w
 }
 
@@ -939,6 +947,14 @@ proc ::main::game-panel {w} {
     return $w
 }
 
+proc ::main::keyer-panel-listen {input} {
+    set rcvd [$input gets]
+    if {[string length $rcvd]} {
+	append ::main::data(keyer-panel-rcvd) $rcvd
+    }
+    after 200 [list ::main::keyer-panel-listen $input]
+}
+
 proc ::main::keyer-panel {w} {
     set opts {
 	ascii 0
@@ -972,6 +988,7 @@ proc ::main::keyer-panel {w} {
     sdrkit::jack connect iambic:midi_out iambic_detime:midi_in
     sdrkit::jack connect iambic_tone:out_i system:playback_1
     sdrkit::jack connect iambic_tone:out_q system:playback_2
+    after 1000 [list ::main::keyer-panel-listen iambic_detime]
     return [keyer-control $w {} {} iambic iambic_tone $opts]
 }
 

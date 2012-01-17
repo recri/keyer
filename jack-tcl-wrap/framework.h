@@ -430,6 +430,7 @@ static void framework_delete(void *arg) {
     // fprintf(stderr, "framework_delete(%p) client %p\n", _sdrkit, dsp->client);
     jack_deactivate(dsp->client);
     // fprintf(stderr, "framework_delete(%p) client deactivated\n", _sdrkit);
+    // NB - this cannot be safely called inside the jack shutdown callback
     jack_client_close(dsp->client);
     // fprintf(stderr, "framework_delete(%p) client closed\n", _sdrkit);
   }

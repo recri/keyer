@@ -183,6 +183,8 @@
    it does because it's usually buried inside some baroque mechanism
    for putting it together into the radio.  I can't see the parts
    because they've been potted in hot glue to stick them together.
+   And that's a pity, because the parts are really simple when you get
+   to see them clearly.
 
    I've extracted the bits that do the work into one library, and
    settled on using Tcl/Tk and Jack as the glue to put the parts
@@ -449,6 +451,14 @@
    Mangled the existing Bounce class, still not quite right.
    Went back and implented a millisecond/20 step filter debouncer,
    still getting some clicks.
+** TODO - ptt_delay - a plugin to take keyer output, send a ptt signal
+   immediately and pass through the keyer signal after a delay to let
+   the system activate.
+** TODO - ptt_mute - a gain plugin with a ptt input that mutes the
+   audio channel.
+** TODO - add activate/deactivate to the common subcommands for Jack
+   commands, so a collection of modules can be put into standby.  But
+   they lose all port connections when deactivated.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract dttsp oscillator and cwtone class in a header.
    Make it a dttsp::cwtone and dttsp::osc for comparison with the

@@ -150,6 +150,15 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_get_time()));
       return finished(client, TCL_OK);
     }
+    if (strcmp(cmd, "version") == 0) {
+      int major, minor, micro, proto;
+      jack_get_version(&major, &minor, &micro, &proto);
+      Tcl_Obj *result[] = {
+	Tcl_NewIntObj(major), Tcl_NewIntObj(minor), Tcl_NewIntObj(micro), Tcl_NewIntObj(proto), NULL
+      };
+      Tcl_SetObjResult(interp, Tcl_NewListObj(4, result));
+      return finished(client, TCL_OK);
+    }
     if (strcmp(cmd, "version-string") == 0) {
       Tcl_SetObjResult(interp, Tcl_NewStringObj(jack_get_version_string(), -1));
       return finished(client, TCL_OK);
@@ -198,6 +207,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 					 "is-realtime|"
 					 "frame-time|"
 					 "time|"
+					 "version|"
 					 "version-string|"
 					 "client-name-size|"
 					 "port-name-size|"
@@ -206,7 +216,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 					 "frames-to-time frame|"
 					 "list-ports|"
 					 "connect port1 port2 ...|"
-					 "disconnect port1 port2)",
+					 "disconnect port1 port2 ...)",
 					 Tcl_GetString(objv[0])));
   return finished(client, TCL_ERROR);
 }
