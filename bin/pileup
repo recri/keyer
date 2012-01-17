@@ -171,13 +171,17 @@ namespace eval ::main {
 	tone 500
 	tone-range 300
 	gain -30
-	gain-range -5
+	gain-range -10
 	noise -40
 	output-gain -30
 
 	number_session 0
 	sent {}
 	max_speed 0
+
+	play-panel-update-simulate-delay 25
+	play-codes-to-draw {}
+	drawn-items {}
 
 	calls {
 	    S51FA LY2FN EI7M RX3QX M6O DL9GOA OK1EW GM3PPE DF0HQ RX6AM
@@ -526,6 +530,7 @@ proc ::main::translate {dict call} {
 }
     
 proc ::main::draw_callsign {call speed tone gain code} {
+    lappend ::main::data(play-codes-to-draw) [list $call $speed $tone $gain $code]
     #puts "draw_callsign $call $speed $tone $gain $code"
 }
 
@@ -598,12 +603,12 @@ proc ::main::start_voice {voice} {
     # start keyer
     keyer::ascii ascii$voice
     keyer::tone tone$voice
-    keyer::detime detime$voice
+    # keyer::detime detime$voice
     # connect
     sdrkit::jack connect ascii$voice:midi_out tone$voice:midi_in
     sdrkit::jack connect tone$voice:out_i pileup:in_i
     sdrkit::jack connect tone$voice:out_q pileup:in_q
-    sdrkit::jack connect ascii$voice:midi_out detime$voice:midi_in
+    # sdrkit::jack connect ascii$voice:midi_out detime$voice:midi_in
     # start loop until all sent
     after [expr {int(rand () * 3000)}] [list ::main::sound_voice $voice]
 }
@@ -615,7 +620,7 @@ proc ::main::stop_voice {voice} {
 	catch {after cancel $::main::data(after-$voice)}
 	rename ascii$voice {}
 	rename tone$voice {}
-	rename detime$voice {}
+	# rename detime$voice {}
     }
 }
 
@@ -623,7 +628,6 @@ proc ::main::check_if_finished {} {
     if {$::main::data(number_session) > 0 || $::main::data(active-voices) > 0} {
 	after 100 ::main::check_if_finished
     } else {
-	puts "all signs sent"
 	stop
     }
 }
@@ -696,10 +700,11 @@ proc ::main::generate_items {n dits} {
     }
     return [choose_items $n $::main::data(generated-$dits)]
 }
+
 proc ::main::start {} {
     # change button state
     .play.m.start configure -state disabled
-    .play.m.pause configure -state normal
+    #.play.m.pause configure -state normal
     .play.m.stop  configure -state normal
     set ::main::data(state) 1
     # choose mode
@@ -707,12 +712,10 @@ proc ::main::start {} {
 	callsigns {
 	    set ::main::data(number_session) $::main::data(n-items)
 	    set ::main::data(items) [choose_items $::main::data(number_session) $::main::data(calls)]
-	    puts $::main::data(items)
 	}
 	default {
 	    set ::main::data(number_session) $::main::data(n-items)
 	    set ::main::data(items) [generate_items $::main::data(number_session) [lindex $::main::data(mode) 0]]
-	    puts $::main::data(items)
 	}
     }
     # start voices
@@ -729,7 +732,7 @@ proc ::main::start {} {
 proc ::main:pause {} {
     # change button state
     .play.m.start configure -state normal
-    .play.m.pause configure -state disabled
+    #.play.m.pause configure -state disabled
     .play.m.stop  configure -state normal
     set ::main::data(state) 2
 }
@@ -737,7 +740,7 @@ proc ::main:pause {} {
 proc ::main::stop {} {
     # change button state
     .play.m.start configure -state normal
-    .play.m.pause configure -state disabled
+    #.play.m.pause configure -state disabled
     .play.m.stop  configure -state disabled
     set ::main::data(state) 0
     for {set voice 0} {$voice < $::main::data(voices)} {incr voice} {
@@ -802,17 +805,82 @@ proc ::main::rcvd-panel {w} {
 
 proc ::main::play-panel-window-configure {w cw wd ht} {
     if {$w eq $cw} {
-	puts "configure $w $cw $wd $ht"
+	# puts "configure $w $cw $wd $ht"
     }
 }
 proc ::main::play-panel-window-destroy {w dw} {
-    puts "destroy $w ..."
+    # puts "destroy $w ..."
 }
+
+##
+## this is an {x y x y ...} list of
+## frequency vs magnitude in dB full scale
+##
 proc ::main::play-panel-update {w xy} {
     ::hurricane::update $w.hurricane $xy
 }
 
+proc ::main::play-panel-setup-drawing {w call speed tone gain code} {
+    ## pixels/second at play-panel-update-simulate update rate
+    set pps [expr {1000/$::main::data(play-panel-update-simulate-delay)}]
+    ## pixels/window width and height in waterfall
+    set wd [winfo width $w.hurricane]
+    set ht [winfo height $w.hurricane]
+    ## dits/second at call sending speed words/minute*dits/word*minute/second
+    set dps [expr {$speed*50.0*1/60.0}]
+    ## pixels/dit
+    set ppd [expr {$pps/$dps}]
+    ## y for tone
+    set y [expr {(($tone-$::main::data(tone))/$::main::data(tone-range))*$ht}]
+    ## pick a color
+    set color white;		# some function of gain
+    ## draw a series of lines
+    set c $code
+    set x $wd
+    ## remember where they are
+    set items {}
+    set nitem [llength $::main::data(drawn-items)]
+    while {[string length $c] > 0} {
+	switch -exact -- [string index $c 0] {
+	    . {
+		# draw a dit
+		lappend items [$w.hurricane create line $x $y [expr {$x+$ppd}] $y -fill $color -tags code-$nitem]
+		# skip to the end of the space after the dit
+		set x [expr {$x+$ppd+$ppd}]
+	    }
+	    - {
+		# draw a dah
+		lappend items [$w.hurricane create line $x $y [expr {$x+3*$ppd}] $y -fill $color -tags code-$nitem]
+		# skip to the end of the space after the dit
+		set x [expr {$x+3*$ppd+$ppd}]
+	    }
+	    { } {
+		# skip to the end of the space after the character
+		set x [expr {$x+3*$ppd-$ppd}]
+	    }
+	}
+	set c [string range $c 1 end]
+    }
+    lappend ::main::data(drawn-items) [list $call $speed $tone $gain $code $items]
+}
+
 proc ::main::play-panel-update-simulate {w} {
+    set drawings $::main::data(play-codes-to-draw)
+    set ::main::data(play-codes-to-draw) {}
+    foreach p $drawings {
+	play-panel-setup-drawing $w {*}$p
+    }
+    set height [winfo height $w.hurricane]
+    set min [expr {$::main::data(tone)}]
+    set range [expr {$::main::data(tone-range)}]
+    set dx [expr {double($range)/$height}]
+    for {set i 0} {$i < $height} {incr i} {
+	set x [expr {$min+$i*$dx}]
+	set y [expr {-100+rand()*-20}]
+	lappend xy $x $y
+    }
+    ::main::play-panel-update $w $xy
+    after $::main::data(play-panel-update-simulate-delay) [list ::main::play-panel-update-simulate $w]
 }
 
 proc ::main::play-panel {w} {
@@ -821,8 +889,7 @@ proc ::main::play-panel {w} {
     set minf [expr {$::main::data(tone)-5}]
     set midf [expr {$::main::data(tone)+$::main::data(tone-range)*0.5}]
     set maxf [expr {$::main::data(tone)+$::main::data(tone-range)}]
-    grid [hurricane $w.hurricane -min-f $minf -max-f $maxf] -row 0 -column 0 -sticky nsew
-    puts [hurricane::configure $w.hurricane]
+    grid [hurricane $w.hurricane -min-f $minf -max-f $maxf -pal 5] -row 0 -column 0 -sticky nsew
     grid [ttk::frame $w.m] -row 1 -column 0
     grid rowconfigure $w 0 -weight 100
     grid columnconfigure $w 0 -weight 100
@@ -920,9 +987,7 @@ proc ::main::main {argv} {
     
     # persistent jack modules
     sdrkit::noise noise -gain $::main::data(noise)
-    puts "noise cget -gain: [noise cget -gain]"
     sdrkit::gain pileup -gain $::main::data(output-gain)
-    puts "pileup cget -gain: [pileup cget -gain]"
     sdrkit::jack connect noise:out_i pileup:in_i
     sdrkit::jack connect noise:out_q pileup:in_q
     sdrkit::jack connect pileup:out_i system:playback_1

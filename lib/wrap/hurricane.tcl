@@ -41,7 +41,6 @@ proc ::hurricane::update {w xy} {
 
     # compute the scan line of pixels
     foreach {freq scan} [::persistent-spectrum::scan $w $xy] break
-    set y0 [lindex $freq 0]
 	
     # scroll all the images left by 1
     $w move all -1 0
@@ -50,8 +49,8 @@ proc ::hurricane::update {w xy} {
     set i $data(line-number)
     set data(img-$i) [image create photo]
     $data(img-$i) put $scan
-    #puts "creating image sized [image width $data(img-$i)] x [image height $data(img-$i)]"
     set data(item-$i) [$w create image [expr {[winfo width $w]-1}] 0 -anchor ne -image $data(img-$i) -tags img-$i]
+    $w lower $data(item-$i)
 
     # increment our scanline index
     incr data(line-number)
@@ -59,9 +58,9 @@ proc ::hurricane::update {w xy} {
     # discard off screen images
     foreach i [$w find overlapping -10000 0 0 100] {
 	# delete image
-	rename $data([$w gettags $i]) {}
+	catch {rename $data([$w gettags $i]) {}}
 	# delete canvas item
-	$w delete $i
+	catch {$w delete $i}
     }
 }
 
