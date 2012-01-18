@@ -107,6 +107,8 @@ static void *midi_buffer_get_buffer(midi_buffer_t *bp, jack_nframes_t nframes, j
 
     // use the event duration to update the head_frame
     // to set the sequence time of the next event
+    if (bp->head_frame == 0)
+      bp->head_frame = start_frame;
     bp->head_frame += e.duration;
 
     // increment the event counter for this chunk
@@ -159,6 +161,16 @@ static int midi_buffer_queue_drop(midi_buffer_t *bp) {
 
 /*
 ** queue events, deferred flush.
+**
+** oops, small problem when the head of the queue gets written
+** and it isn't an immediate event, ie a delay first:
+** the head_frame doesn't get written to now+duration.
+** and this code can't tell whether it's being called from background,
+** where now=jack_frame_time, or from inside the process callback,
+** where now=jack_last_frame+i.
+**
+** everything should be written with its time to fire, however determined,
+** meaning no pure delays, sequence it out.
 */
 static int midi_buffer_queue_command(midi_buffer_t *bp, unsigned duration, unsigned char *bytes, int size) {
   midi_buffer_event_t e;

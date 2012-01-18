@@ -157,8 +157,8 @@ proc ::keyer-control::midi-frame {w client row} {
 proc ::keyer-control::ptt-frame {w client row} {
     upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {
-	delay {ptt delay} 0.00 0.50 {seconds}
-	hang {ptt hang} 0.00 5.00 {seconds}
+	delay {ptt delay} 0.000 0.010 {seconds}
+	hang {ptt hang} 0.00 2.00 {seconds}
     } {
 	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row

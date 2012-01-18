@@ -113,7 +113,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
     midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
     buffer_event_time = buffer_event.time;
   } else {
-    buffer_event_time = nframes+1;
+    buffer_event_time = nframes;
   }
   /* this is important, very strange if omitted */
   jack_midi_clear_buffer(midi_out);
@@ -141,7 +141,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  } else if (command == MIDI_NOTE_OFF) {
 	    if (i+dp->ptt_delay_samples < nframes) {
 	      dp->key_on = 0;
-	      dp->ptt_hang_count = dp->ptt_hang_samples;
+	      dp->ptt_hang_count = dp->ptt_hang_samples+dp->ptt_delay_samples;
 	      _send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
 	    } else {
 	      midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
@@ -155,7 +155,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	jack_midi_event_get(&in_event, midi_in, in_event_index++);
 	in_event_time = in_event.time;
       } else {
-	in_event_time = nframes+1;
+	in_event_time = nframes;
       }
     }
     /* process all midi output events at this sample frame */
@@ -168,18 +168,13 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  dp->key_on = 0;
 	  dp->ptt_hang_count = dp->ptt_hang_samples;
 	}
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, buffer_event.size);
-	if (buffer == NULL) {
-	  fprintf(stderr, "jack won't buffer %ld midi bytes!\n", buffer_event.size);
-	} else {
-	  memcpy(buffer, buffer_event.buffer, buffer_event.size);
-	}
+	_send(dp, midi_out, i, command, dp->opts.note);
       }
       if (buffer_event_index < buffer_event_count) {
 	midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
 	buffer_event_time = buffer_event.time;
       } else {
-	buffer_event_time = nframes+1;
+	buffer_event_time = nframes;
       }
     }
     /* clock the ptt hang time counter */

@@ -23,13 +23,21 @@
 ** A morse code keyer reduced to a simple logic class.
 **
 ** // usage
-** Iambic k();	// to make a keyer
-** k.paddleDit(on);	// to set the dit paddle state
-** k.paddleDah(on);	// to set the dah paddle state
-** k.clock(ticks);	// to advance the clock by ticks
-** k.setKeyOut(func, arg);	// function to receive transitions
+**
+** // to make a keyer
+** Iambic k();
+**
+** // to specify the current paddle state,
+** // advance the keyer clock by ticks
+** // and receiver the current keyout state.
+** keyout = k.clock(dit, dah, ticks);	
+**
+** // the units of ticks is specified with
+** k.setTick(microseconds)
+**
 ** // parameter setting
 ** k.set*(param)
+**
 ** // parameter query
 ** k.get*(param)
 */
@@ -56,14 +64,11 @@ private:
 public:
   Iambic() {
     _update = true;
-    _rawDit = 0;
-    _rawDah = 0;
 
     _keyIn = KEYIN_OFF;
     _lastKeyIn = KEYIN_OFF;
     _prevKeyInPtr = 0;
 
-    setKeyOut((void (*)(int, void *))0, (void *)0);
     setTick(1);
     setSwapped(false);
     setMode('A');
@@ -78,23 +83,13 @@ public:
     update();
   }
 
-  // set the dit paddle state
-  void paddleDit(int on) {
-    _rawDit = on&1;
-    // if (_verbose) fprintf(stderr, "Iambic._rawDit = %x\n", _rawDit);
-  }
-  // set the dah paddle state
-  void paddleDah(int on) {
-    _rawDah = on&1;
-    // if (_verbose) fprintf(stderr, "Iambic._rawDah = %x\n", _rawDah);
-  }
   // clock ticks
-  void clock(int ticks) {
+  int clock(int raw_dit_on, int raw_dah_on, int ticks) {
     // update timings if necessary
     if (_update) update();
 
     // fetch input state
-    byte keyIn = _swapped ? KEYIN(_rawDah, _rawDit) : KEYIN(_rawDit, _rawDah);
+    byte keyIn = _swapped ? KEYIN(raw_dah_on&1, raw_dit_on&1) : KEYIN(raw_dit_on&1, raw_dah_on&1);
     if (_keyIn != keyIn) {
       _lastKeyIn = _keyIn;
       _memKeyIn |= keyIn;
@@ -106,7 +101,7 @@ public:
     if (_keyerState == KEYER_OFF) {
       _startSymbol();
       _restartHalfClock(keyIn);
-      return;
+      return _keyOut;
     }
 
     // reduce the half clock by the time elapsed
@@ -115,7 +110,7 @@ public:
 
     // reduce the duration by the time elapsed
     // if the duration has not elapsed, return
-    if ((_keyerDuration -= ticks) > 0) return;
+    if ((_keyerDuration -= ticks) > 0) return _keyOut;
 
     // determine the next element by the current paddle state
     switch (_keyerState) {
@@ -132,12 +127,12 @@ public:
     case KEYER_WORD_SPACE:  // start a new symbol or go to off
       _startSymbol() || _finish(); break;
     }
+    return _keyOut;
   }
 
-  // set the function to be called for key transitions
-  void setKeyOut(void (*keyOut)(int on, void *arg), void *arg) { _keyOutFunc = keyOut; _keyOutFuncArg = arg; }
   // set the microseconds in a tick
   void setTick(float tick) { _tick = tick; _update = true; }
+  float getTick() { return _tick; }
   // set the level of verbosity
   void setVerbose(int verbose) { _verbose = verbose; _update = true; }
   int getVerbose() { return _verbose; }
@@ -195,11 +190,6 @@ public:
     KEYER_OFF, KEYER_DIT, KEYER_DIT_SPACE, KEYER_DAH, KEYER_DAH_SPACE, KEYER_SYMBOL_SPACE, KEYER_WORD_SPACE,
   } keyerState;
 
-  byte _rawDit;			// input dit state, unswapped
-  byte _rawDah;			// input dah state, unswapped
-  void (*_keyOutFunc)(int on, void *arg);	// output key state function
-  void *_keyOutFuncArg;		// output key state function argument
-
   float _tick;			// microseconds per tick
   byte _verbose;		// chatter
   bool _swapped;		// true if paddles are swapped
@@ -215,6 +205,7 @@ public:
   
   bool _update;			// update computed values
   byte _keyIn;			// input didah state, swapped
+  byte _keyOut;			// output key state
   byte _lastKeyIn;		// previous didah state
   byte _memKeyIn;		// memory of states seen since element began
 #define PREV_KEY_SIZE 8
@@ -241,7 +232,7 @@ public:
   // with the specified duration
   // and set the key out state
   bool _transitionTo(keyerState newState, int newDuration, bool keyOut) {
-    if (_keyOutFunc) _keyOutFunc(keyOut ? 1 : 0, _keyOutFuncArg);
+    _keyOut = keyOut ? 1 : 0;
     if (keyOut) _memKeyIn = 0;
     return _transitionTo(newState, newDuration);
   }
