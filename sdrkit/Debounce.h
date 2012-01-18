@@ -21,15 +21,21 @@
 ** A switch debouncer class.
 **
 ** transition when the new value has been
-** stable for "steps" observations, "steps" <= 32.
+** stable for "steps" observations, "steps" <= bits in unsigned long.
 ** 
 */
 
 class Debounce {
  public:
-  Debounce(byte steps) : _mask((1L<<(steps-1))-1) {
+  Debounce() {
     _filter = 0L;
     _value = 0;
+    setSteps(8);
+  }
+  Debounce(byte steps) {
+    _filter = 0L;
+    _value = 0;
+    setSteps(steps);
   }
 
   // debounce by recording a stream of bits which will be all zero
@@ -39,11 +45,14 @@ class Debounce {
     return _value = ((_filter & _mask) == 0) ? input : _value;
   }
 
+  void setSteps(byte steps) {
+    _mask = (1L<<(steps-1))-1;
+  }
+
  private:
   byte _value;
   unsigned long _filter;
-  const unsigned long _mask;
-
+  unsigned long _mask;
 };
 
 #endif

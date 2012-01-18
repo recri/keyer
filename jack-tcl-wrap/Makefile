@@ -15,6 +15,7 @@ FFTW3_LIBS=$(shell pkg-config --libs fftw3f)
 LIBDIR=../lib/sdrkit
 
 KEYERS=$(LIBDIR)/keyer_ascii.so \
+	$(LIBDIR)/keyer_debounce.so \
 	$(LIBDIR)/keyer_detime.so \
 	$(LIBDIR)/keyer_iambic.so \
 	$(LIBDIR)/keyer_ptt.so \
@@ -128,6 +129,10 @@ $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_op
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 
+$(LIBDIR)/keyer_debounce.so: keyer_debounce.c framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h
+	@mkdir -p $(LIBDIR)
+	g++ -fPIC -shared -o $@ $(CPPFLAGS) $<  $(JACK_LIBS) $(LIBS) -lm
+
 $(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/ring_buffer.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS) -lm
@@ -136,7 +141,7 @@ $(LIBDIR)/keyer_iambic.so: keyer_iambic.cc framework.h keyer_options_def.h keyer
 	@mkdir -p $(LIBDIR)
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 
-$(LIBDIR)/keyer_ptt.so: keyer_ptt.c framework.h ../sdrkit/midi.h
+$(LIBDIR)/keyer_ptt.so: keyer_ptt.c framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 

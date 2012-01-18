@@ -18,41 +18,40 @@
 */
 /** 
 
-    keyer_ptt implements a push-to-talk switch on a keyer signal
-    it has a keyer input midi signal, a keyer output midi signal,
-    and a PTT output midi signal.
-
-    The PTT output on happens when the keyer input goes on.
-
-    The keyer output can be delayed by a specified period so the
-    PTT signal can lead the key.
-
-    The PTT off signal can be lagged behind the keyer off signal.
+    keyer_debounce implements a simple debouncing filter on the
+    incoming paddle or straight key midi signals.
     
 */
 
+typedef unsigned char byte;
+
+#include "../sdrkit/Debounce.h"
+
+extern "C" {
+
 #include "framework.h"
 #include "../sdrkit/midi.h"
-#include "../sdrkit/midi_buffer.h"
 
 typedef struct {
   int verbose;		       /*  */
   int chan;		       /* midi channel */
   int note;		       /* midi note for keyer, ptt = note+1 */
-  float ptt_delay;	       /* seconds ptt on leads keyer on */
-  float ptt_hang;	       /* seconds ptt off trails keyer off */
+  float period;		       /* period of input sampling, seconds */
+  int steps;		       /* number of periods of stability desired */
 } options_t;
 
 typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  int ptt_delay_samples;
-  int ptt_hang_samples;
-  int ptt_on;
-  int key_on;
-  int ptt_hang_count;
-  midi_buffer_t midi;
+  int period_samples;
+  int period_count;
+  byte current_dit;
+  byte current_dah;
+  byte stable_dit;
+  byte stable_dah;
+  Debounce d_dit;
+  Debounce d_dah;
 } _t;
 
 
@@ -61,17 +60,18 @@ static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
     /* ptt recomputation */
-    int sample_rate = sdrkit_sample_rate(dp);
-    dp->ptt_delay_samples = dp->opts.ptt_delay * sample_rate;
-    dp->ptt_hang_samples = dp->opts.ptt_hang * sample_rate;
+    dp->period_samples = dp->opts.period * sdrkit_sample_rate(dp);
+    dp->d_dit.setSteps(dp->opts.steps);
+    dp->d_dah.setSteps(dp->opts.steps);
   }
 }
 
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
-  void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
-  dp->ptt_on = 0;
-  dp->key_on = 0;
+  dp->current_dit = 0;
+  dp->current_dah = 0;
+  dp->stable_dit = 0;
+  dp->stable_dah = 0;
   dp->modified = 1;
   _update(dp);
   return arg;
@@ -94,10 +94,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
   void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-  void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, sdrkit_last_frame_time(dp));
   int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
-  int buffer_event_count = midi_buffer_get_event_count(buffer_in), buffer_event_index = 0, buffer_event_time = 0;
-  jack_midi_event_t in_event, buffer_event;
+  jack_midi_event_t in_event;
   // recompute timings if necessary
   _update(dp);
   // find out what input events we need to process
@@ -106,14 +104,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
     in_event_time = in_event.time;
   } else {
     in_event_time = nframes+1;
-  }
-  // find out what buffered events we need to process
-  if (buffer_event_index < buffer_event_count) {
-    // fprintf(stderr, "iambic received %d events\n", buffer_event_count);
-    midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-    buffer_event_time = buffer_event.time;
-  } else {
-    buffer_event_time = nframes+1;
   }
   /* this is important, very strange if omitted */
   jack_midi_clear_buffer(midi_out);
@@ -125,27 +115,18 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	const unsigned char channel = (in_event.buffer[0]&0xF)+1;
 	const unsigned char command = in_event.buffer[0]&0xF0;
 	const unsigned char note = in_event.buffer[1];
-	if (channel == dp->opts.chan && note == dp->opts.note) {
-	  if (command == MIDI_NOTE_ON) {
-	    if ( ! dp->ptt_on) {
-	      dp->ptt_on = 1;
-	      _send(dp, midi_out, i, command, dp->opts.note+1);
+	if (channel == dp->opts.chan) {
+	  if (note == dp->opts.note) {
+	    if (command == MIDI_NOTE_ON) {
+	      dp->current_dit = 1;
+	    } else if (command == MIDI_NOTE_OFF) {
+	      dp->current_dit = 0;
 	    }
-	    dp->key_on = 1;
-	    if (i+dp->ptt_delay_samples < nframes) {
-	      _send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
-	    } else {
-	      midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-	      midi_buffer_queue_note_on(&dp->midi, 0, channel, note, 0);
-	    }
-	  } else if (command == MIDI_NOTE_OFF) {
-	    if (i+dp->ptt_delay_samples < nframes) {
-	      dp->key_on = 0;
-	      dp->ptt_hang_count = dp->ptt_hang_samples;
-	      _send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
-	    } else {
-	      midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-	      midi_buffer_queue_note_off(&dp->midi, 0, channel, note, 0);
+	  } else if (note == dp->opts.note+1) {
+	    if (command == MIDI_NOTE_ON) {
+	      dp->current_dah = 1;
+	    } else if (command == MIDI_NOTE_OFF) {
+	      dp->current_dah = 0;
 	    }
 	  }
 	}
@@ -158,34 +139,17 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	in_event_time = nframes+1;
       }
     }
-    /* process all midi output events at this sample frame */
-    while (buffer_event_time == i) {
-      if (buffer_event.size != 0) {
-	const unsigned char command = buffer_event.buffer[0]&0xF0;
-	if (command == MIDI_NOTE_ON) {
-	  dp->key_on = 1;
-	} else if (command == MIDI_NOTE_OFF) {
-	  dp->key_on = 0;
-	  dp->ptt_hang_count = dp->ptt_hang_samples;
-	}
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, buffer_event.size);
-	if (buffer == NULL) {
-	  fprintf(stderr, "jack won't buffer %ld midi bytes!\n", buffer_event.size);
-	} else {
-	  memcpy(buffer, buffer_event.buffer, buffer_event.size);
-	}
+    /* clock the period counter */
+    if (--dp->period_count <= 0) {
+      dp->period_count = dp->period_samples;
+      if (dp->d_dit.debounce(dp->current_dit) != dp->stable_dit) {
+	dp->stable_dit ^= 1;
+	_send(dp, midi_out, i, dp->stable_dit ? MIDI_NOTE_ON : MIDI_NOTE_OFF, dp->opts.note);
       }
-      if (buffer_event_index < buffer_event_count) {
-	midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-	buffer_event_time = buffer_event.time;
-      } else {
-	buffer_event_time = nframes+1;
+      if (dp->d_dah.debounce(dp->current_dah) != dp->stable_dah) {
+	dp->stable_dah ^= 1;
+	_send(dp, midi_out, i, dp->stable_dah ? MIDI_NOTE_ON : MIDI_NOTE_OFF, dp->opts.note+1);
       }
-    }
-    /* clock the ptt hang time counter */
-    if (dp->key_on == 0 && dp->ptt_on != 0 && --dp->ptt_hang_count <= 0) {
-      dp->ptt_on = 0;
-      _send(dp, midi_out, i, MIDI_NOTE_OFF, dp->opts.note+1);
     }
   }
   return 0;
@@ -198,7 +162,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     dp->opts = save;
     return TCL_ERROR;
   }
-  dp->modified = (dp->opts.ptt_delay != save.ptt_delay || dp->opts.ptt_hang != save.ptt_hang);
+  dp->modified = (dp->opts.period != save.period || dp->opts.steps != save.steps);
+  if (dp->modified && dp->opts.steps > 8*sizeof(unsigned long)) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("steps %d is too large, must be <= %d", dp->opts.steps, 8*sizeof(unsigned long)));
+    dp->opts = save;
+    dp->modified = 0;
+    return TCL_ERROR;
+  }
   return TCL_OK;
 }
 
@@ -209,9 +179,9 @@ static const fw_option_table_t _options[] = {
   { "-verbose", "verbose", "Verbose", "0",	  fw_option_int,   offsetof(_t, opts.verbose),   "amount of diagnostic output" },
   { "-chan",    "channel", "Channel", "1",        fw_option_int,   offsetof(_t, opts.chan),	 "midi channel used for keyer" },
   { "-note",    "note",    "Note",    "0",	  fw_option_int,   offsetof(_t, opts.note),	 "base midi note used for keyer" },
-  // ptt options
-  { "-delay",   "delay",   "Delay",   "0.0",      fw_option_float, offsetof(_t, opts.ptt_delay), "delay of keyer on behind ptt on in seconds" },
-  { "-hang",    "hang",    "Hang",    "1.0",      fw_option_float, offsetof(_t, opts.ptt_hang),  "hang time of ptt off behind keyer off in seconds" },
+  // debounce options
+  { "-period",  "period",  "Period",   "0.005",   fw_option_float, offsetof(_t, opts.period),    "bouncy key sampling period in seconds" },
+  { "-steps",   "steps",   "Steps",    "32",      fw_option_int,   offsetof(_t, opts.steps),     "number of consistent samples define stability" },
   { NULL, NULL, NULL, NULL, fw_option_none, 0, NULL }
 };
 
@@ -237,7 +207,8 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
-int DLLEXPORT Keyer_ptt_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::ptt", "1.0.0", "keyer::ptt", _factory);
+int DLLEXPORT Keyer_debounce_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "keyer::debounce", "1.0.0", "keyer::debounce", _factory);
 }
 
+}

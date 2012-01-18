@@ -451,9 +451,6 @@
    Mangled the existing Bounce class, still not quite right.
    Went back and implented a millisecond/20 step filter debouncer,
    still getting some clicks.
-** TODO - ptt_delay - a plugin to take keyer output, send a ptt signal
-   immediately and pass through the keyer signal after a delay to let
-   the system activate.
 ** TODO - ptt_mute - a gain plugin with a ptt input that mutes the
    audio channel.
 ** TODO - add activate/deactivate to the common subcommands for Jack
@@ -474,13 +471,21 @@
 ** TODO - keyer-control: ascii input/output window
 ** TODO - keyer-control: jack launching panel.
 ** TODO - keyer-control: jack connection panel.
+** TODO - jack-control: jack connection panel with modular grouping
+   hide/show whole blocks of connections.
+** TODO - multi-channel midi-tap, transpose signals to non-overlapping
+   channel/note assignments.
+** TODO - multi-channel audio-tap
+** TODO - operational cartoon of keyer, layout the module connection
+   graph and animate the states of signals on the connections between
+   them.
 ** TODO - keyer-control: offer to launch mouse-key
 ** TODO - sdrkit_jack.c: provide missing jack status information.
 ** TODO - bin/invaders: callsign-invaders ear/key training game.
 ** TODO - bin/pileup: echo back callsigns in a pileup situation
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
    using DJ5IL's CodePhaser circuit.
-** TODO - sdrkit_binaural.c: to spread i/q binaurally according to dttsp
+** TODO - sdrkit_binaural.h: to spread i/q binaurally according to dttsp
    The binaural option in dttsp simply leaves the I/Q as it is, the
    monoaural option discards the Q and pans the result to a specified
    azimuth.
@@ -549,6 +554,11 @@
    strings as keys.  Keyer_unicode, nee ascii, supplies the default dict with
    cget -dict.  You can modify that dict or build your own and install it with
    configure -dict new_dict.
+** DONE - keyer_ptt - a plugin to take keyer output, send a ptt signal
+   immediately and pass through the keyer signal after a delay to let
+   the system activate.
+** DONE - keyer_debounce - debounce switches as midi signals
+   eliminate the debouncing on the MidiKeyer.
 * Credits
   This code is derived from many sources.
 

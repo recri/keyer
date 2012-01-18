@@ -22,11 +22,14 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
+
 package require keyer::ascii
+package require keyer::debounce
 package require keyer::iambic
 package require keyer::ptt
 package require keyer::tone
 package require sdrkit::jack
+
 package require keyer-control
 
 #
@@ -37,6 +40,7 @@ array set opts {
     ascii 1
     iambic 1
     ptt 0
+    debounce 0
 
     ascii-verbose 0
     ascii-chan 1
@@ -79,6 +83,12 @@ array set opts {
     ptt-note 0
     ptt-delay 0.0
     ptt-hang 1.0
+
+    debounce-verbose 0
+    debounce-chan 1
+    debounce-note 0
+    debounce-period 0.0002
+    debounce-steps 10
 }
 
 #
@@ -117,7 +127,8 @@ proc client-init {} {
 		ascii_tone:* -
 		iambic:* -
 		iambic_tone:* -
-		ptt:* {
+		ptt:* -
+		debounce:* {
 		    error "the [lindex [split $line :] 0] client is still running"
 		}
 	    }
@@ -175,7 +186,17 @@ proc client-init {} {
     } else {
 	lappend clients {}
     }
-
+    # make the debounce keyer
+    if {$opts(debounce)} {
+	keyer::debounce debounce {*}[client-opts debounce]
+	lappend clients debounce
+	lappend connects {sdrkit::jack disconnect system:midi_capture_1 iambic:midi_in}
+	lappend connects {sdrkit::jack connect system:midi_capture_1 debounce:midi_in}
+	lappend connects {sdrkit::jack connect debounce:midi_out iambic:midi_in}
+    } else {
+	lappend clients {}
+    }
+    
     # make the connections
     foreach cmd $connects {
 	if {[catch "eval $cmd" error]} {

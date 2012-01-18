@@ -32,6 +32,14 @@ proc ::keyer-control::client-config {w client opt scale value} {
 	set value [format %.2f [expr {double($value)/double($scale)}]]
     } elseif {$scale == 1000} {
 	set value [format %.3f [expr {double($value)/double($scale)}]]
+    } elseif {$scale == 10000} {
+	set value [format %.4f [expr {double($value)/double($scale)}]]
+    } elseif {$scale == 100000} {
+	set value [format %.5f [expr {double($value)/double($scale)}]]
+    } elseif {$scale == 1000000} {
+	set value [format %.6f [expr {double($value)/double($scale)}]]
+    } elseif {$scale == 10000000} {
+	set value [format %.7f [expr {double($value)/double($scale)}]]
     }
     set data($client-$opt-display) $value
     $client configure -$opt $value
@@ -52,9 +60,14 @@ proc ::keyer-control::panel-row {pw w client row opt label from to units} {
     } else {
 	set scale 1
 	switch -regexp $from {
-	    {^-?\d+$} { set scale 1 }
-	    {^-?\d+.\d$} { set scale 10 }
-	    {^-?\d+.\d\d$} { set scale 100 }
+	    {^-?\d+$}              { set scale 1 }
+	    {^-?\d+.\d$}	   { set scale 10 }
+	    {^-?\d+.\d\d$}	   { set scale 100 }
+	    {^-?\d+.\d\d\d$}       { set scale 1000 }
+	    {^-?\d+.\d\d\d\d$}     { set scale 10000 }
+	    {^-?\d+.\d\d\d\d\d$}   { set scale 100000 }
+	    {^-?\d+.\d\d\d\d\d\d$} { set scale 1000000 }
+	    default { error "missing case for computing scale of $from" }
 	}
 	grid [ttk::scale $w-s -orient horizontal -from [expr {$from*$scale}] -to [expr {$to*$scale}] -length 250 \
 		  -variable ::keyer-control::${pw}($client-$opt-scale) -command [list keyer-control::client-config $pw $client $opt $scale]] -row $row -column 2 -sticky ew
@@ -144,8 +157,20 @@ proc ::keyer-control::midi-frame {w client row} {
 proc ::keyer-control::ptt-frame {w client row} {
     upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {
-	delay {ptt delay} 0.0 0.5 {seconds}
-	hang {ptt hang} 0.0 5.0 {seconds}
+	delay {ptt delay} 0.00 0.50 {seconds}
+	hang {ptt hang} 0.00 5.00 {seconds}
+    } {
+	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
+	incr row
+    }
+    return $row
+}
+
+proc ::keyer-control::debounce-frame {w client row} {
+    upvar #0 ::keyer-control::$w data
+    foreach {opt label from to units} {
+	period {sampling period} 0.0001 0.0010 {seconds}
+	steps {sampling steps} 0 64 {periods}
     } {
 	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row
@@ -156,7 +181,7 @@ proc ::keyer-control::ptt-frame {w client row} {
 #
 # configure keyer options
 #
-proc ::keyer-control::panel {w ascii ascii_tone iambic iambic_tone ptt opts} {
+proc ::keyer-control::panel {w ascii ascii_tone iambic iambic_tone ptt debounce opts} {
     upvar #0 ::keyer-control::$w data
     array set data $opts
 
@@ -188,10 +213,17 @@ proc ::keyer-control::panel {w ascii ascii_tone iambic iambic_tone ptt opts} {
 	set row [keyer-control::midi-frame $w $ptt [incr row]]
     }
 
+    if {$debounce ne {}} {
+	grid [label $w.debounce -text {Key Debounce}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [keyer-control::debounce-frame $w $debounce [incr row]]
+	grid [label $w.debounce2 -text {Debounce Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [keyer-control::midi-frame $w $debounce [incr row]]
+    }
+
     return $w
 }
 
-proc ::keyer-control {w ascii ascii_tone iambic iambic_tone ptt opts} {
-    return [keyer-control::panel $w $ascii $ascii_tone $iambic $iambic_tone $ptt $opts]
+proc ::keyer-control {w ascii ascii_tone iambic iambic_tone ptt debounce opts} {
+    return [keyer-control::panel $w $ascii $ascii_tone $iambic $iambic_tone $ptt $debounce $opts]
 }
 
