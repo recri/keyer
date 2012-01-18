@@ -17,6 +17,7 @@ LIBDIR=../lib/sdrkit
 KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_detime.so \
 	$(LIBDIR)/keyer_iambic.so \
+	$(LIBDIR)/keyer_ptt.so \
 	$(LIBDIR)/keyer_tone.so
 
 ALL=$(LIBDIR)/agc.so \
@@ -123,19 +124,23 @@ $(LIBDIR)/oscillator.so: oscillator.c framework.h ../sdrkit/kit_math.h ../sdrkit
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/keyed_tone.h
+$(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/morse_timing.h ../sdrkit/morse_coding.h
 	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) keyer_tone.c $(JACK_LIBS) $(LIBS) -lm
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 
 $(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/ring_buffer.h
 	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) keyer_detime.c  $(JACK_LIBS) $(LIBS) -lm
-
-$(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/morse_timing.h ../sdrkit/morse_coding.h
-	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) keyer_ascii.c $(JACK_LIBS) $(LIBS) -lm
+	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS) -lm
 
 $(LIBDIR)/keyer_iambic.so: keyer_iambic.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h
 	@mkdir -p $(LIBDIR)
-	g++ -fPIC -shared -o $@ $(CPPFLAGS) keyer_iambic.cc $(JACK_LIBS) $(LIBS) -lm
+	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
+
+$(LIBDIR)/keyer_ptt.so: keyer_ptt.c framework.h ../sdrkit/midi.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
+
+$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/keyed_tone.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 

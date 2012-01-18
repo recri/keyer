@@ -23,6 +23,8 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require keyer::ascii
+package require keyer::iambic
+package require keyer::ptt
 package require keyer::tone
 package require sdrkit::jack
 package require keyer-control
@@ -34,6 +36,7 @@ package require keyer-control
 array set opts {
     ascii 1
     iambic 1
+    ptt 0
 
     ascii-verbose 0
     ascii-chan 1
@@ -70,6 +73,12 @@ array set opts {
     iambic_tone-gain -30
     iambic_tone-rise 5
     iambic_tone-fall 5
+
+    ptt-verbose 0
+    ptt-chan 1
+    ptt-note 0
+    ptt-delay 0.0
+    ptt-hang 1.0
 }
 
 #
@@ -105,9 +114,10 @@ proc client-init {} {
 	foreach conn [dict get $ports $port connections] {
 	    switch -glob $conn {
 		ascii:* -
-		iambic:* -
 		ascii_tone:* -
-		iambic_tone:* {
+		iambic:* -
+		iambic_tone:* -
+		ptt:* {
 		    error "the [lindex [split $line :] 0] client is still running"
 		}
 	    }
@@ -155,6 +165,17 @@ proc client-init {} {
     } else {
 	lappend clients {} {}
     }
+    # make the ptt keyer
+    if {$opts(ptt)} {
+	keyer::ptt ptt {*}[client-opts ptt]
+	lappend clients ptt
+	lappend connects {sdrkit::jack disconnect iambic:midi_out iambic_tone:midi_in}
+	lappend connects {sdrkit::jack connect iambic:midi_out ptt:midi_in}
+	lappend connects {sdrkit::jack connect ptt:midi_out iambic_tone:midi_in}
+    } else {
+	lappend clients {}
+    }
+
     # make the connections
     foreach cmd $connects {
 	if {[catch "eval $cmd" error]} {

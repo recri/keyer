@@ -27,7 +27,7 @@
     
 */
 
-#include "../sdrkit/Iambic.hh"
+#include "../sdrkit/Iambic.h"
 
 extern "C" {
 
@@ -171,7 +171,6 @@ extern "C" {
     jack_midi_clear_buffer(midi_out);
     /* for all frames in the buffer */
     for (int i = 0; i < nframes; i++) {
-      int look_for_more_events = 0;
       /* process all midi input events at this sample frame */
       while (in_event_time == i) {
 	_decode(dp, in_event.size, in_event.buffer); // this might trigger a keyout
@@ -181,7 +180,6 @@ extern "C" {
 	} else {
 	  in_event_time = nframes+1;
 	}
-	look_for_more_events = 1;
       }
       /* clock the iambic keyer */
       dp->k.clock(1);		// this might trigger a keyout

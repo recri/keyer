@@ -1,4 +1,4 @@
-SUBDIRS=jack-tcl-wrap lib/wrap
+SUBDIRS=jack-tcl-wrap lib/wrap lib/morse
 all::
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 

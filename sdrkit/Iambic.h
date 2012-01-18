@@ -1,3 +1,4 @@
+/* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
@@ -15,8 +16,8 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef Iambic_hh
-#define Iambic_hh
+#ifndef Iambic_h
+#define Iambic_h
 
 /*
 ** A morse code keyer reduced to a simple logic class.
@@ -27,10 +28,8 @@
 ** k.paddleDah(on);	// to set the dah paddle state
 ** k.clock(ticks);	// to advance the clock by ticks
 ** k.setKeyOut(func, arg);	// function to receive transitions
-**
 ** // parameter setting
 ** k.set*(param)
-**
 ** // parameter query
 ** k.get*(param)
 */
@@ -178,21 +177,20 @@ public:
     if (_update) {
       _update = false;
       // microsecond timing
-      _microsPerDit = 60000000.0 / (_wpm * _word);
-      _microsPerDah = _microsPerDit * _dahLen;
-      _microsPerIes = _microsPerDit * _iesLen;
-      _microsPerIls = _microsPerDit * _ilsLen;
-      _microsPerIws = _microsPerDit * _iwsLen;
+      float microsPerDit = 60000000.0 / (_wpm * _word);
       // tick timing
-      _ticksPerDit = _microsPerDit / _tick + 0.5;
-      _ticksPerDah = _microsPerDah / _tick + 0.5;
-      _ticksPerIes = _microsPerIes / _tick + 0.5;
-      _ticksPerIls = _microsPerIls / _tick + 0.5;
-      _ticksPerIws = _microsPerIws / _tick + 0.5;
+      _ticksPerDit = microsPerDit / _tick + 0.5;
+      _ticksPerDah = (microsPerDit * _dahLen) / _tick + 0.5;
+      _ticksPerIes = (microsPerDit * _iesLen) / _tick + 0.5;
+      _ticksPerIls = (microsPerDit * _ilsLen) / _tick + 0.5;
+      _ticksPerIws = (microsPerDit * _iwsLen) / _tick + 0.5;
     }
   }
 
  private:
+  typedef enum {
+    KEY_OFF, KEY_DIT, KEY_DAH, KEY_DIDAH
+  } keyState;
   typedef enum {
     KEYER_OFF, KEYER_DIT, KEYER_DIT_SPACE, KEYER_DAH, KEYER_DAH_SPACE, KEYER_SYMBOL_SPACE, KEYER_WORD_SPACE,
   } keyerState;
@@ -204,7 +202,7 @@ public:
 
   float _tick;			// microseconds per tick
   byte _verbose;		// chatter
-  bool _swapped;		// paddles are swapped
+  bool _swapped;		// true if paddles are swapped
   char _mode;			// mode B or mode A or ...
   float _word;			// dits per word, 50 or 60
   float _wpm;			// words per minute
@@ -218,22 +216,15 @@ public:
   bool _update;			// update computed values
   byte _keyIn;			// input didah state, swapped
   byte _lastKeyIn;		// previous didah state
-  byte _memKeyIn;		// memory of states seen
-#define PREV_KEY_SIZE 32
-#define PREV_KEY_MASK 31
-  byte _prevKeyIn[PREV_KEY_SIZE]; // previous didah state sampled 1/2 dit clock
-  byte _prevKeyInPtr;		// pointer to next slot in prevKey[]
+  byte _memKeyIn;		// memory of states seen since element began
+#define PREV_KEY_SIZE 8
+#define PREV_KEY_MASK 7
+  byte _prevKeyIn[PREV_KEY_SIZE]; // didah state sampled at 1/2 dit clock
+  byte _prevKeyInPtr;		// next slot in prevKey[]
   keyerState _keyerState;	// current keyer state
   int _halfClockDuration;	// ticks to next 1/2 dit clock transition
   int _keyerDuration;		// ticks to next keyer state transition
 
-  // microseconds per feature
-  float _microsPerDit;
-  float _microsPerDah;
-  float _microsPerIes;
-  float _microsPerIls;
-  float _microsPerIws;
-  
   // ticks per feature
   int _ticksPerDit;
   int _ticksPerDah;
@@ -273,21 +264,20 @@ public:
     else
       return _startDah() || _startDit();
   }
-  // start a dit if _dit is pressed
+  // start a dit if it should be
   bool _startDit() {
-    // if (_verbose && KEYIN_IS_DIT(_keyIn)) fprintf(stderr, "Iambic._startDit, _keyIn = %x, _ticksPerDit %d\n", _keyIn, _ticksPerDit);
-    if (_mode == 'B' && _keyIn == KEYIN_OFF && _prevKeyIn[(_prevKeyInPtr-5) & PREV_KEY_MASK] == KEYIN_DIDAH)
-      return _transitionTo(KEYER_DIT, _ticksPerDit, true);
+    if (_mode == 'B' &&							// mode B requested
+	_keyIn == KEYIN_OFF &&						// paddles are released
+	_prevKeyIn[(_prevKeyInPtr-5) & PREV_KEY_MASK] == KEYIN_DIDAH)	// and midway through the last dah the paddles were squeezed
+      return _transitionTo(KEYER_DIT, _ticksPerDit, true);		// make a dit
     return KEYIN_IS_DIT(_keyIn|_memKeyIn) && _transitionTo(KEYER_DIT, _ticksPerDit, true);
   }
-  // start a dah if _dah is pressed or
-  //   if _mode == KEYER_MODE_B and
-  //   squeeze was released after the last element started and
-  //   dah was next
+  // start a dah if it should be
   bool _startDah() {
-    // if (_verbose && KEYIN_IS_DAH(_keyIn)) fprintf(stderr, "Iambic._startDah, _keyIn = %x, _ticksPerDah %d\n", _keyIn, _ticksPerDah);
-    if (_mode == 'B' && _keyIn == KEYIN_OFF && _prevKeyIn[(_prevKeyInPtr-3) & PREV_KEY_MASK] == KEYIN_DIDAH)
-      return _transitionTo(KEYER_DAH, _ticksPerDah, true);
+    if (_mode == 'B' &&							// mode B requested
+	_keyIn == KEYIN_OFF &&						// paddles are released
+	_prevKeyIn[(_prevKeyInPtr-3) & PREV_KEY_MASK] == KEYIN_DIDAH)	// and midway through the last dit the paddles were squeezed
+      return _transitionTo(KEYER_DAH, _ticksPerDah, true);		// make a dah
     return KEYIN_IS_DAH(_keyIn|_memKeyIn) && _transitionTo(KEYER_DAH, _ticksPerDah, true);
   }
   // start an interelement space
@@ -307,7 +297,6 @@ public:
   bool _wordSpace() {
     return _autoIws && _continueSpace(KEYER_WORD_SPACE, _ticksPerIws-_ticksPerIls);
   }
-
   // return to keyer idle state
   bool _finish() {
     return _transitionTo(KEYER_OFF, 0);

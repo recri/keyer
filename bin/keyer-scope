@@ -223,6 +223,8 @@ proc ::keyer-scope::configure {w args} {
 		::scope::configure $w.keyer -x-scale $scale
 		::scope::configure $w.key1 -x-scale $scale
 		::scope::configure $w.key0 -x-scale $scale
+		::scope::configure $w.ptt1 -x-scale $scale
+		::scope::configure $w.ptt0 -x-scale $scale
 		::keyer-scope::scrollregion $w
 	    }
 	    default { set data($option) $value 	}
@@ -242,7 +244,6 @@ proc ::keyer-scope::update-iq {w frame binary} {
 }
 
 proc ::keyer-scope::update-midi {wkey events} {
-    # puts "keyer-scope update-midi $wkey [llength $events]"
     set w [winfo parent $wkey]
     upvar #0 ::keyer-scope::$w data
     foreach item $events {
@@ -254,7 +255,11 @@ proc ::keyer-scope::update-midi {wkey events} {
 		if {$note == $data(-note)} {
 		    ::scope::update-event $wkey [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
 		} elseif {$note == $data(-note)+1} {
-		    ::scope::update-event $w.key1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+		    if {$wkey eq "$w.key0"} {
+			::scope::update-event $w.key1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+		    } elseif {$wkey eq "$w.ptt0"} {
+			::scope::update-event $w.ptt1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+		    }
 		}
 	    }
 	}
@@ -272,6 +277,8 @@ proc ::keyer-scope::window-configure {w cw width height} {
     ::scope::configure $w.keyer -x-scale $scale
     ::scope::configure $w.key1 -x-scale $scale
     ::scope::configure $w.key0 -x-scale $scale
+    ::scope::configure $w.ptt1 -x-scale $scale
+    ::scope::configure $w.ptt0 -x-scale $scale
     ::keyer-scope::scrollregion $w
 }
 
@@ -283,6 +290,8 @@ proc ::keyer-scope::window-destroy {w cw} {
     ::scope::destroy $w.keyer
     ::scope::destroy $w.key1
     ::scope::destroy $w.key0
+    ::scope::destroy $w.ptt1
+    ::scope::destroy $w.ptt0
 }
 
 proc ::keyer-scope::defaults {} {
@@ -296,9 +305,12 @@ proc ::keyer-scope::start {w} {
     ::scope::start-event $w.keyer 0
     ::scope::start-event $w.key0 0
     ::scope::start-event $w.key1 0
+    ::scope::start-event $w.ptt0 0
+    ::scope::start-event $w.ptt1 0
     ::capture::start $w.iq
     ::capture::start $w.keyer
     ::capture::start $w.key0
+    ::capture::start $w.ptt0
 }
 
 proc ::keyer-scope::stop {w} {
@@ -312,6 +324,8 @@ proc ::keyer-scope::stop {w} {
     ::scope::stop-event $w.keyer $frames
     ::scope::stop-event $w.key0 $frames
     ::scope::stop-event $w.key1 $frames
+    ::scope::stop-event $w.ptt0 $frames
+    ::scope::stop-event $w.ptt1 $frames
     ::keyer-scope::scrollregion $w
 }
 
@@ -320,6 +334,8 @@ proc ::keyer-scope::xview {w args} {
     $w.keyer xview {*}$args
     $w.key0 xview {*}$args
     $w.key1 xview {*}$args
+    $w.ptt0 xview {*}$args
+    $w.ptt1 xview {*}$args
 }
 
 proc ::keyer-scope::xscrollcommand-set {w args} {
@@ -341,9 +357,11 @@ proc ::keyer-scope::keyer-scope {w args} {
     array set data $args
     ttk::panedwindow $w -orient vertical
     $w add [::scope $w.iq -height 50 -xscrollcommand [list ::keyer-scope::xscrollcommand-set $w]] -weight 1
-    $w add [::scope $w.keyer -height 50] -weight 1
-    $w add [::scope $w.key1 -height 50] -weight 1
-    $w add [::scope $w.key0 -height 50] -weight 1
+    $w add [::scope $w.ptt1 -height 20] -weight 0
+    $w add [::scope $w.ptt0 -height 20] -weight 0
+    $w add [::scope $w.keyer -height 20] -weight 0
+    $w add [::scope $w.key1 -height 20] -weight 0
+    $w add [::scope $w.key0 -height 20] -weight 0
     $w add [::time-scale $w.t -height 20] -weight 0
     $w add [ttk::scrollbar $w.x -orient horizontal -command [list ::keyer-scope::xview $w]] -weight 0
     # period and size must add up to most of the data
@@ -361,6 +379,7 @@ proc ::keyer-scope::keyer-scope {w args} {
     # puts "capture $data(capture-samples) samples every $data(capture-millis) ms => [expr {1000*$data(capture-samples)/$data(capture-millis)}] samples/second vs $data(sample-rate)"
     incr data(capture-samples) $data(capture-samples)
     ::capture::iq $w.iq -period $data(capture-millis) -size $data(capture-samples) -client ::keyer-scope::update-iq -connect iambic_tone
+    ::capture::midi $w.ptt0 -period 200 -client ::keyer-scope::update-midi -connect ptt:midi_out
     ::capture::midi $w.keyer -period 200 -client ::keyer-scope::update-midi -connect iambic:midi_out
     ::capture::midi $w.key0 -period 200 -client ::keyer-scope::update-midi -connect system:midi_capture_1
     bind . <Configure> [list ::keyer-scope::window-configure $w %W %w %h]

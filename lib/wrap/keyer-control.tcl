@@ -17,17 +17,13 @@
 # 
 package provide keyer-control 1.0.0
 
-package require keyer::ascii
-package require keyer::iambic
-package require keyer::tone
-
-namespace eval keyer-control {}
+namespace eval ::keyer-control {}
 
 #
 # update a variable and send it's value onward
 #
-proc keyer-control::client-config {client opt scale value} {
-    global data
+proc ::keyer-control::client-config {w client opt scale value} {
+    upvar #0 ::keyer-control::$w data
     if {$scale == 1} {
 	set value [format %.0f [expr {double($value)/double($scale)}]]
     } elseif {$scale == 10} {
@@ -44,14 +40,14 @@ proc keyer-control::client-config {client opt scale value} {
 #
 # generic control panel row
 #
-proc keyer-control::panel-row {w client row opt label from to units} {
-    global data
+proc ::keyer-control::panel-row {pw w client row opt label from to units} {
+    upvar #0 ::keyer-control::$pw data
     grid [ttk::label $w-o -text $opt] -row $row -column 0 -sticky w
     grid [ttk::label $w-l -text $label] -row $row -column 1
     if {[llength $from] > 1} {
 	grid [ttk::frame $w-s] -row $row -column 2 -sticky w
 	foreach x $from {
-	    pack [ttk::radiobutton $w-s.x$x -text $x -variable data($client-$opt) -value $x -command [list client-config $client $opt $x]] -side left -anchor w
+	    pack [ttk::radiobutton $w-s.x$x -text $x -variable ::keyer-control::${pw}($client-$opt) -value $x -command [list client-config $pw $client $opt $x]] -side left -anchor w
 	}
     } else {
 	set scale 1
@@ -61,10 +57,10 @@ proc keyer-control::panel-row {w client row opt label from to units} {
 	    {^-?\d+.\d\d$} { set scale 100 }
 	}
 	grid [ttk::scale $w-s -orient horizontal -from [expr {$from*$scale}] -to [expr {$to*$scale}] -length 250 \
-		  -variable data($client-$opt-scale) -command [list keyer-control::client-config $client $opt $scale]] -row $row -column 2 -sticky ew
+		  -variable ::keyer-control::${pw}($client-$opt-scale) -command [list keyer-control::client-config $pw $client $opt $scale]] -row $row -column 2 -sticky ew
 	set data($client-$opt-scale) [expr {$data($client-$opt)*$scale}]
-	keyer-control::client-config $client $opt $scale $data($client-$opt-scale)
-	grid [ttk::label $w-v -textvar data($client-$opt-display)] -row $row -column 3 -sticky e
+	keyer-control::client-config $pw $client $opt $scale $data($client-$opt-scale)
+	grid [ttk::label $w-v -textvar ::keyer-control::${pw}($client-$opt-display)] -row $row -column 3 -sticky e
 	if {$units ne {}} {
 	    grid [ttk::label $w-u -text $units] -row $row -column 4 -sticky w
 	}
@@ -74,8 +70,8 @@ proc keyer-control::panel-row {w client row opt label from to units} {
 #
 # configure ascii keyer options
 #
-proc keyer-control::ascii-frame {w client row} {
-    global data
+proc ::keyer-control::ascii-frame {w client row} {
+    upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {
 	wpm {words / minute} 5.0 60.0 {}
 	word {word length} 40 70 dits
@@ -84,7 +80,7 @@ proc keyer-control::ascii-frame {w client row} {
 	ils {inter-letter length} 2.5 3.5 dits
 	iws {inter-word length} 5 20 dits
     } {
-	keyer-control::panel-row $w.$client-$opt $client $row $opt $label $from $to $units
+	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row
     }
     return $row
@@ -93,8 +89,8 @@ proc keyer-control::ascii-frame {w client row} {
 #
 # configure iambic keyer options
 #
-proc keyer-control::iambic-frame {w client row} {
-    global data
+proc ::keyer-control::iambic-frame {w client row} {
+    upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {
 	wpm {words / minute} 5.0 60.0 {}
 	word {word length} 40 70 dits
@@ -107,7 +103,7 @@ proc keyer-control::iambic-frame {w client row} {
 	awsp {auto-word space} {0 1} {} {}
 	mode {iambic mode} {A B} {} {}
     } {
-	keyer-control::panel-row $w.$client-$opt $client $row $opt $label $from $to $units
+	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row
     }
     return $row
@@ -116,15 +112,15 @@ proc keyer-control::iambic-frame {w client row} {
 #
 # configure tone options
 #
-proc keyer-control::tone-frame {w client row} {
-    global data
+proc ::keyer-control::tone-frame {w client row} {
+    upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {
 	freq {tone frequency} 300.0 1000.0 Hz
 	gain {tone volume} 0.0 -80.0 dB
 	rise {key rise time} 0.1 50.0 ms
 	fall {key fall time} 0.1 50.0 ms
     } {
-	keyer-control::panel-row $w.$client-$opt $client $row $opt $label $from $to $units
+	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row
     }
     return $row
@@ -133,13 +129,25 @@ proc keyer-control::tone-frame {w client row} {
 #
 # configure MIDI options
 #
-proc keyer-control::midi-frame {w client row} {
-    global data
+proc ::keyer-control::midi-frame {w client row} {
+    upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {
 	chan {midi channel} 1 16 {}
 	note {midi note} 0 127 {}
     } {
-	keyer-control::panel-row $w.$client-$opt $client $row $opt $label $from $to $units
+	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
+	incr row
+    }
+    return $row
+}
+
+proc ::keyer-control::ptt-frame {w client row} {
+    upvar #0 ::keyer-control::$w data
+    foreach {opt label from to units} {
+	delay {ptt delay} 0.0 0.5 {seconds}
+	hang {ptt hang} 0.0 5.0 {seconds}
+    } {
+	keyer-control::panel-row $w $w.$client-$opt $client $row $opt $label $from $to $units
 	incr row
     }
     return $row
@@ -148,36 +156,42 @@ proc keyer-control::midi-frame {w client row} {
 #
 # configure keyer options
 #
-proc keyer-control::panel {w ascii ascii_tone iambic iambic_tone opts} {
-    global data
+proc ::keyer-control::panel {w ascii ascii_tone iambic iambic_tone ptt opts} {
+    upvar #0 ::keyer-control::$w data
     array set data $opts
-    # puts "initialized data with $opts"
 
     ttk::frame $w
     set row 0
 
-    if {$data(ascii)} {
+    if {$ascii ne {} && $ascii_tone ne {}} {
 	grid [label $w.ascii -text {Ascii Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::tone-frame $w ascii_tone [incr row]]
+	set row [keyer-control::tone-frame $w $ascii_tone [incr row]]
 	grid [label $w.ascii2 -text {Ascii Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::ascii-frame $w ascii [incr row]]
+	set row [keyer-control::ascii-frame $w $ascii [incr row]]
 	grid [label $w.ascii3 -text {Ascii Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::midi-frame $w ascii [incr row]]
+	set row [keyer-control::midi-frame $w $ascii [incr row]]
     }
 
-    if {$data(iambic)} {
+    if {$iambic ne {} && $iambic_tone ne {}} {
 	grid [label $w.iambic -text {Iambic Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::tone-frame $w iambic_tone [incr row]]
+	set row [keyer-control::tone-frame $w $iambic_tone [incr row]]
 	grid [label $w.iambic2 -text {Iambic Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::iambic-frame $w iambic [incr row]]
+	set row [keyer-control::iambic-frame $w $iambic [incr row]]
 	grid [label $w.iambic3 -text {Iambic Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::midi-frame $w iambic [incr row]]
+	set row [keyer-control::midi-frame $w $iambic [incr row]]
+    }
+
+    if {$ptt ne {}} {
+	grid [label $w.ptt -text {PTT Timing}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [keyer-control::ptt-frame $w $ptt [incr row]]
+	grid [label $w.ptt2 -text {PTT Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
+	set row [keyer-control::midi-frame $w $ptt [incr row]]
     }
 
     return $w
 }
 
-proc keyer-control {w ascii ascii_tone iambic iambic_tone opts} {
-    return [keyer-control::panel $w $ascii $ascii_tone $iambic $iambic_tone $opts]
+proc ::keyer-control {w ascii ascii_tone iambic iambic_tone ptt opts} {
+    return [keyer-control::panel $w $ascii $ascii_tone $iambic $iambic_tone $ptt $opts]
 }
 
