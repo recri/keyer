@@ -29,6 +29,10 @@
     Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
     Doxygen comments added by Dave Larsen, KV0S
 
+  Because this now uses a Tcl dict as its morse code table, this is now internationalized.
+  The input text strings are in unicode so any text in any language can be specified for
+  encoding.  See ~/keyer/lib/morse for morse code mappings for arabic, cyrillic, farsi,
+  greek, hebrew, and wabun (the japanese kana coding).
 */
 
 #define KEYER_OPTIONS_TIMING	1
@@ -51,24 +55,16 @@ typedef struct {
   int modified;
   options_t opts;
   options_t sent;
+  int abort;
   Tcl_UniChar prosign[16], n_prosign, n_slash;
-  unsigned long frames;
   midi_buffer_t midi;
 } _t;
-
-static char *preface(_t *dp, const char *file, int line) {
-  static char buff[256];
-  sprintf(buff, "%s:%s:%d@%ld", Tcl_GetString(dp->fw.client_name), file, line, dp->frames);
-  return buff;
-}
-  
-#define PREFACE	preface(dp, __FILE__, __LINE__)
 
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
 
-    if (dp->opts.verbose > 2) fprintf(stderr, "%s _update\n", PREFACE);
+    if (dp->opts.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
 
     /* update timing computations */
     // maybe this wasn't the best idea
@@ -90,6 +86,7 @@ static void *_init(void *arg) {
   _t *dp = (_t *)arg;
   dp->n_prosign = 0;
   dp->n_slash = 0;
+  dp->abort = 0;
   void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
   morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
   if (dp->opts.dict == NULL) {
@@ -129,6 +126,18 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // update our options
   _update(dp);
 
+  if (dp->abort) {
+    midi_buffer_init(&dp->midi);
+    unsigned char *buffer = jack_midi_event_reserve(midi_out, 0, 3);
+    unsigned char note_off[] = { MIDI_NOTE_OFF|(dp->opts.chan-1), dp->opts.note, 0 };
+    if (buffer == NULL) {
+      fprintf(stderr, "%s:%d: jack won't buffer %d midi bytes!\n", __FILE__, __LINE__, 3);
+    } else {
+      memcpy(buffer, note_off, 3);
+    }
+    dp->abort = 0;
+    return 0;
+  }
   // for each frame in this callback
   for(int i = 0; i < nframes; i += 1) {
     // process all midi output events at this sample frame
@@ -136,7 +145,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
       if (buffer_event.size != 0) {
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, buffer_event.size);
 	if (buffer == NULL) {
-	  fprintf(stderr, "%s:%d:%ld: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, dp->frames, buffer_event.size);
+	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, buffer_event.size);
 	} else {
 	  memcpy(buffer, buffer_event.buffer, buffer_event.size);
 	}
@@ -148,8 +157,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	buffer_event_time = nframes+1;
       }
     }
-    // bump the frame counter
-    dp->frames += 1;
   }
   return 0;
 }
@@ -166,22 +173,17 @@ static void _queue_midi(_t *dp, Tcl_UniChar c, char *p, int continues) {
   /* normal send single character */
   if (p == NULL) {
     if (c == ' ')
-      if (dp->opts.verbose > 2) fprintf(stderr, "%s _queue_midi delay %d\n", PREFACE, dp->samples_per.iws-dp->samples_per.ils);
-    midi_buffer_queue_delay(&dp->midi, dp->samples_per.iws-dp->samples_per.ils);
+      midi_buffer_queue_delay(&dp->midi, dp->samples_per.iws-dp->samples_per.ils);
   } else {
     while (*p != 0) {
       if (*p == '.') {
-	if (dp->opts.verbose > 2) fprintf(stderr, "%s _queue_midi dit %d\n", PREFACE, dp->samples_per.dit);
 	midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dit, dp->opts.chan, dp->opts.note, 0);
       } else if (*p == '-') {
-	if (dp->opts.verbose > 2) fprintf(stderr, "%s _queue_midi dah %d\n", PREFACE, dp->samples_per.dah);
 	midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dah, dp->opts.chan, dp->opts.note, 0);
       }
       if (p[1] != 0 || continues) {
-	if (dp->opts.verbose > 2) fprintf(stderr, "%s _queue_midi ies %d)\n", PREFACE, dp->samples_per.ies);
 	midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ies, dp->opts.chan, dp->opts.note, 0);
       } else {
-	if (dp->opts.verbose > 2) fprintf(stderr, "%s _queue_midi ils %d)\n", PREFACE, dp->samples_per.ils);
 	midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ils, dp->opts.chan, dp->opts.note, 0);
       }
       p += 1;
@@ -202,8 +204,6 @@ static char *morse_unicoding(_t *dp, Tcl_UniChar c) {
 */
 static void _queue_unichar(Tcl_UniChar c, void *arg) {
   _t *dp = (_t *)arg;
-  if (dp->opts.verbose) fprintf(stderr, "%s _queue_char('%c')\n", PREFACE, c);
-  if (dp->opts.verbose > 1) fprintf(stderr, "%s _queue_char n_slash %d, n_prosign %d\n", PREFACE, dp->n_slash, dp->n_prosign);
   
   if (c == '\\') {
     /* use \ab to send prosign of a concatenated to b with no inter-letter space */
@@ -236,13 +236,30 @@ static int _puts(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   }
   return TCL_OK;
 }
+static int _abort(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *data = (_t *)clientData;
+  if (argc != 2) {
+    Tcl_SetResult(interp, "usage: command abort", TCL_STATIC);
+    return TCL_ERROR;
+  }
+  data->abort = 1;
+  return TCL_OK;
+}
 static int _pending(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
+  if (argc != 2) {
+    Tcl_SetResult(interp, "usage: command pending", TCL_STATIC);
+    return TCL_ERROR;
+  }
   Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_buffer_readable(&data->midi)));
   return TCL_OK;
 }
 static int _available(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
+  if (argc != 2) {
+    Tcl_SetResult(interp, "usage: command available", TCL_STATIC);
+    return TCL_ERROR;
+  }
   Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_buffer_writeable(&data->midi)));
   return TCL_OK;
 }
@@ -279,6 +296,7 @@ static const fw_subcommand_table_t _subcommands[] = {
   { "puts",	 _puts },
   { "pending",   _pending },
   { "available", _available },
+  { "abort",     _abort },
   { NULL }
 };
 
