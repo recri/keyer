@@ -250,7 +250,7 @@ proc ::main::listen_for_echoes {echo} {
 	    set echo [lindex $echoes end]
 	    foreach item [lrange $echoes 0 end-1] {
 		set item [string trim $item]
-		set text [morse-to-text [heckler cget -dict] $echo]
+		set text [morse-to-text [heckler cget -dict] $item]
 		lappend ::main::data(rcvd) $item
 		.rcvd.rcvd insert end "$item $text"
 		set i [lsearch $::main::data(unmatched) $item]

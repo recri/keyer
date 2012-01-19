@@ -447,12 +447,6 @@
    Should only require a short memory of key states, make the next
    element decision at end of inter-element space based on key state
    at 1.5 dit clocks in the past.
-** TODO - MidiKey: to debounce with a period in microseconds.
-   Mangled the existing Bounce class, still not quite right.
-   Went back and implented a millisecond/20 step filter debouncer,
-   still getting some clicks.
-** TODO - ptt_mute - a gain plugin with a ptt input that mutes the
-   audio channel.
 ** TODO - add activate/deactivate to the common subcommands for Jack
    commands, so a collection of modules can be put into standby.  But
    they lose all port connections when deactivated.
@@ -473,6 +467,7 @@
 ** TODO - keyer-control: jack connection panel.
 ** TODO - jack-control: jack connection panel with modular grouping
    hide/show whole blocks of connections.
+** TODO - keyer_ptt: fix the missing events when the key signal is delayed
 ** TODO - multi-channel midi-tap, transpose signals to non-overlapping
    channel/note assignments.
 ** TODO - multi-channel audio-tap
@@ -483,6 +478,8 @@
 ** TODO - sdrkit_jack.c: provide missing jack status information.
 ** TODO - bin/invaders: callsign-invaders ear/key training game.
 ** TODO - bin/pileup: echo back callsigns in a pileup situation
+** TODO - bin/pileup: loop back PTT to suppress sending when op is sending.
+** TODO - keyer_ascii: abort sending
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
    using DJ5IL's CodePhaser circuit.
 ** TODO - sdrkit_binaural.h: to spread i/q binaurally according to dttsp
@@ -559,6 +556,15 @@
    the system activate.
 ** DONE - keyer_debounce - debounce switches as midi signals
    eliminate the debouncing on the MidiKeyer.
+** DONE - MidiKey: to debounce with a period in microseconds.
+   Mangled the existing Bounce class, still not quite right.
+   Went back and implented a millisecond/20 step filter debouncer,
+   still getting some clicks.  Went back and disabled debouncing
+   on the MCU, made it happen on the pc.
+** DONE - keyer_ptt_mute - a gain plugin with a ptt input that mutes the
+   audio channel.
+** DONE - keyer_debounce - do debouncing on MIDI signals on the PC where
+   the adjustments are easier to make.
 * Credits
   This code is derived from many sources.
 
