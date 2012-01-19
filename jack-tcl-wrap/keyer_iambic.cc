@@ -31,7 +31,6 @@
 
 extern "C" {
 
-#define KEYER_OPTIONS_TONE	1
 #define KEYER_OPTIONS_TIMING	1
 #define KEYER_OPTIONS_KEYER	1
 
@@ -85,20 +84,17 @@ extern "C" {
   }
 
   static void _decode(_t *dp, int count, unsigned char *p) {
-    // if (dp->opts.verbose) fprintf(stderr, "%s _decode %d bytes\n", PREFACE, count);
     if (count == 3) {
       unsigned char channel = (p[0]&0xF)+1;
       unsigned char command = p[0]&0xF0;
       unsigned char note = p[1];
       if (channel == dp->opts.chan) {
 	if (note == dp->opts.note) {
-	  // if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
 	  switch (command) {
 	  case MIDI_NOTE_OFF: dp->raw_dit = 0; break;
 	  case MIDI_NOTE_ON:  dp->raw_dit = 1; break;
 	  }
 	} else if (note == dp->opts.note+1) {
-	  // if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
 	  switch (command) {
 	  case MIDI_NOTE_OFF: dp->raw_dah = 0; break;
 	  case MIDI_NOTE_ON:  dp->raw_dah = 1; break;
@@ -117,6 +113,8 @@ extern "C" {
     void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
     int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
     jack_midi_event_t in_event;
+    // update our timings
+    _update(dp);
     // find out what input events we need to process
     if (in_event_index < in_event_count) {
       jack_midi_event_get(&in_event, midi_in, in_event_index++);
@@ -154,26 +152,16 @@ extern "C" {
   }
 
   static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-    _t *data = (_t *)clientData;
-    options_t save = data->opts;
+    _t *dp = (_t *)clientData;
+    options_t save = dp->opts;
     if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
-      data->opts = save;
+      dp->opts = save;
       return TCL_ERROR;
     }
-    data->modified = (data->opts.word != save.word ||
-		      data->opts.wpm != save.wpm ||
-		      data->opts.dah != save.dah ||
-		      data->opts.ies != save.ies ||
-		      data->opts.ils != save.ils ||
-		      data->opts.iws != save.iws ||
-		      data->opts.freq != save.freq ||
-		      data->opts.gain != save.gain ||
-		      data->opts.rise != save.rise ||
-		      data->opts.fall != save.fall ||
-		      data->opts.swap != save.swap ||
-		      data->opts.alsp != save.alsp ||
-		      data->opts.awsp != save.awsp ||
-		      data->opts.mode != save.mode);
+    dp->modified = (dp->opts.word != save.word || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
+		    dp->opts.ies != save.ies || dp->opts.ils != save.ils || dp->opts.iws != save.iws ||
+		    dp->opts.swap != save.swap || dp->opts.alsp != save.alsp || dp->opts.awsp != save.awsp ||
+		    dp->opts.mode != save.mode);
     return TCL_OK;
   }
 

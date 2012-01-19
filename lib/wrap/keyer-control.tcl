@@ -24,7 +24,9 @@ namespace eval ::keyer-control {}
 #
 proc ::keyer-control::client-config {w client opt scale value} {
     upvar #0 ::keyer-control::$w data
-    if {$scale == 1} {
+    if {$scale eq {x}} {
+	# no scaling, just use the value
+    } elseif {$scale == 1} {
 	set value [format %.0f [expr {double($value)/double($scale)}]]
     } elseif {$scale == 10} {
 	set value [format %.1f [expr {double($value)/double($scale)}]]
@@ -55,7 +57,8 @@ proc ::keyer-control::panel-row {pw w client row opt label from to units} {
     if {[llength $from] > 1} {
 	grid [ttk::frame $w-s] -row $row -column 2 -sticky w
 	foreach x $from {
-	    pack [ttk::radiobutton $w-s.x$x -text $x -variable ::keyer-control::${pw}($client-$opt) -value $x -command [list client-config $pw $client $opt $x]] -side left -anchor w
+	    pack [ttk::radiobutton $w-s.x$x -text $x -variable ::keyer-control::${pw}($client-$opt) -value $x \
+		      -command [list ::keyer-control::client-config $pw $client $opt x $x]] -side left -anchor w
 	}
     } else {
 	set scale 1
@@ -70,7 +73,8 @@ proc ::keyer-control::panel-row {pw w client row opt label from to units} {
 	    default { error "missing case for computing scale of $from" }
 	}
 	grid [ttk::scale $w-s -orient horizontal -from [expr {$from*$scale}] -to [expr {$to*$scale}] -length 250 \
-		  -variable ::keyer-control::${pw}($client-$opt-scale) -command [list keyer-control::client-config $pw $client $opt $scale]] -row $row -column 2 -sticky ew
+		  -variable ::keyer-control::${pw}($client-$opt-scale) \
+		  -command [list keyer-control::client-config $pw $client $opt $scale]] -row $row -column 2 -sticky ew
 	set data($client-$opt-scale) [expr {$data($client-$opt)*$scale}]
 	keyer-control::client-config $pw $client $opt $scale $data($client-$opt-scale)
 	grid [ttk::label $w-v -textvar ::keyer-control::${pw}($client-$opt-display)] -row $row -column 3 -sticky e
@@ -154,6 +158,9 @@ proc ::keyer-control::midi-frame {w client row} {
     return $row
 }
 
+#
+# configure PTT options
+#
 proc ::keyer-control::ptt-frame {w client row} {
     upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {
@@ -166,6 +173,9 @@ proc ::keyer-control::ptt-frame {w client row} {
     return $row
 }
 
+#
+# configure Debounce options
+#
 proc ::keyer-control::debounce-frame {w client row} {
     upvar #0 ::keyer-control::$w data
     foreach {opt label from to units} {

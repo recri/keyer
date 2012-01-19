@@ -23,7 +23,7 @@
 #   ::keyer::unicode foo -dict [morse-prosigns-dict]
 #
 
-package provide ::morse::prosigns 1.0.0
+package provide morse::prosigns 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::prosigns {

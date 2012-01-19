@@ -25,7 +25,7 @@
 #   ::keyer::unicode foo -dict [morse-greek-dict]
 #
 
-package provide ::morse::greek 1.0.0
+package provide morse::greek 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::greek {
@@ -68,7 +68,7 @@ namespace eval ::morse::greek {
 	}
 	#puts "table {$letter} {$roman} {$code} {$chars}"
 	dict set dict $letter $chars
-	dict set dict transliterate $letter $roman
+	dict set dict \#transliterate\# $letter $roman
     }
 }
 

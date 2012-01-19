@@ -25,7 +25,7 @@
 #   ::keyer::unicode foo -dict [morse-wabun-dict]
 #
 
-package provide ::morse::wabun 1.0.0
+package provide morse::wabun 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::wabun {
@@ -97,7 +97,7 @@ namespace eval ::morse::wabun {
 	}
 	# puts "table {$romanji} {$mora} {$wabun} {$chars}"
 	dict set dict $mora $chars
-	dict set dict transliterate $mora $romanji
+	dict set dict \#transliterate\# $mora $romanji
     }
 }
 

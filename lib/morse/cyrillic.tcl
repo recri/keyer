@@ -25,7 +25,7 @@
 #   ::keyer::unicode foo -dict [morse-cyrillic-dict]
 #
 
-package provide ::morse::cyrillic 1.0.0
+package provide morse::cyrillic 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::cyrillic {
@@ -76,9 +76,7 @@ namespace eval ::morse::cyrillic {
 	}
 	#puts "table {$letter} {$roman} {$code} {$chars}"
 	dict set dict $letter $chars
-	dict set dict transliterate $letter $roman
-    }
-}
+	dict set dict \#transliterate\# $letter $roman
 
 proc morse-cyrillic-dict {} {
     return $::morse::cyrillic::dict

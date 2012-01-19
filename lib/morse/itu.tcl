@@ -25,7 +25,7 @@
 #   ::keyer::unicode foo -dict [morse-itu-dict]
 #
 
-package provide ::morse::itu 1.0.0
+package provide morse::itu 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::itu {

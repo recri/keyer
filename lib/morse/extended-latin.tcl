@@ -25,7 +25,7 @@
 #   ::keyer::unicode foo -dict [morse-extended-latin-dict]
 #
 
-package provide ::morse::extended-latin 1.0.0
+package provide morse::extended-latin 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::extended-latin {

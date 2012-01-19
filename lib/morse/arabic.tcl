@@ -25,7 +25,7 @@
 #   ::keyer::unicode foo -dict [morse-arabic-dict]
 #
 
-package provide ::morse::arabic 1.0.0
+package provide morse::arabic 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::arabic {
@@ -73,7 +73,7 @@ namespace eval ::morse::arabic {
 	}
 	#puts "table {$letter} {$roman} {$code} {$chars}"
 	dict set dict $letter $chars
-	dict set dict transliterate $letter $roman
+	dict set dict \#transliterate\# $letter $roman
     }
 }
 

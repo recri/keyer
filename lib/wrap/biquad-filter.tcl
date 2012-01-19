@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide ::biquad-filter 1.0.0
+package provide biquad-filter 1.0.0
 package require sdrkit::biquad
 
 namespace eval ::biquad-filter {

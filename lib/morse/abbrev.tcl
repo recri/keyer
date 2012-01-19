@@ -20,7 +20,7 @@
 # miscellaneous abbreviations, unabbreviated words, used in morse code operation
 #
 
-package provide ::morse::abbrev 1.0.0
+package provide morse::abbrev 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::abbrev {

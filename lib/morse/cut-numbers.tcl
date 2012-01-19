@@ -28,7 +28,7 @@
 # merge it into another dict.
 #
 
-package provide ::morse::cut-numbers 1.0.0
+package provide morse::cut-numbers 1.0.0
 
 namespace eval ::morse {}
 namespace eval ::morse::cut-numbers {

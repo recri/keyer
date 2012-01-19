@@ -67,7 +67,7 @@ public:
 
     _keyIn = KEYIN_OFF;
     _lastKeyIn = KEYIN_OFF;
-    _prevKeyInPtr = 0;
+    _halfClockKeyIn = KEYIN_OFF;
 
     setTick(1);
     setSwapped(false);
@@ -100,13 +100,14 @@ public:
     // start a symbol if either paddle is pressed
     if (_keyerState == KEYER_OFF) {
       _startSymbol();
-      _restartHalfClock(keyIn);
       return _keyOut;
     }
 
-    // reduce the half clock by the time elapsed
-    // if the half clock duration elapsed, reset
-    if ((_halfClockDuration -= ticks) <= 0) _restartHalfClock(keyIn);
+    // if the half clock is running,
+    // reduce by the time elapsed;
+    // if the half clock duration elapsed;
+    // remember the current squeeze
+    if (_halfClockDuration > 0 && (_halfClockDuration -= ticks) == 0) _halfClockKeyIn = _keyIn;
 
     // reduce the duration by the time elapsed
     // if the duration has not elapsed, return
@@ -208,12 +209,9 @@ public:
   byte _keyOut;			// output key state
   byte _lastKeyIn;		// previous didah state
   byte _memKeyIn;		// memory of states seen since element began
-#define PREV_KEY_SIZE 8
-#define PREV_KEY_MASK 7
-  byte _prevKeyIn[PREV_KEY_SIZE]; // didah state sampled at 1/2 dit clock
-  byte _prevKeyInPtr;		// next slot in prevKey[]
+  byte _halfClockKeyIn;		// memory of key state halfway through element
   keyerState _keyerState;	// current keyer state
-  int _halfClockDuration;	// ticks to next 1/2 dit clock transition
+  int _halfClockDuration;	// ticks to next midelement transition
   int _keyerDuration;		// ticks to next keyer state transition
 
   // ticks per feature
@@ -223,17 +221,15 @@ public:
   int _ticksPerIls;
   int _ticksPerIws;
 
-  void _restartHalfClock(byte keyIn) {
-    _halfClockDuration = _ticksPerDit / 2;
-    _prevKeyIn[_prevKeyInPtr++ & PREV_KEY_MASK] = keyIn;
-  }
-
   // transition to the specified state
   // with the specified duration
   // and set the key out state
   bool _transitionTo(keyerState newState, int newDuration, bool keyOut) {
     _keyOut = keyOut ? 1 : 0;
-    if (keyOut) _memKeyIn = 0;
+    if (keyOut) {
+      _memKeyIn = 0;
+      _halfClockDuration = newDuration / 2;
+    }
     return _transitionTo(newState, newDuration);
   }
   
@@ -257,17 +253,17 @@ public:
   }
   // start a dit if it should be
   bool _startDit() {
-    if (_mode == 'B' &&							// mode B requested
-	_keyIn == KEYIN_OFF &&						// paddles are released
-	_prevKeyIn[(_prevKeyInPtr-5) & PREV_KEY_MASK] == KEYIN_DIDAH)	// and midway through the last dah the paddles were squeezed
+    if (_mode == 'B' &&			// mode B requested
+	_keyIn == KEYIN_OFF &&		// paddles are released
+	_halfClockKeyIn == KEYIN_DIDAH)	// and midway through the last dah the paddles were squeezed
       return _transitionTo(KEYER_DIT, _ticksPerDit, true);		// make a dit
     return KEYIN_IS_DIT(_keyIn|_memKeyIn) && _transitionTo(KEYER_DIT, _ticksPerDit, true);
   }
   // start a dah if it should be
   bool _startDah() {
-    if (_mode == 'B' &&							// mode B requested
-	_keyIn == KEYIN_OFF &&						// paddles are released
-	_prevKeyIn[(_prevKeyInPtr-3) & PREV_KEY_MASK] == KEYIN_DIDAH)	// and midway through the last dit the paddles were squeezed
+    if (_mode == 'B' &&			// mode B requested
+	_keyIn == KEYIN_OFF &&		// paddles are released
+	_halfClockKeyIn == KEYIN_DIDAH)	// and midway through the last dit the paddles were squeezed
       return _transitionTo(KEYER_DAH, _ticksPerDah, true);		// make a dah
     return KEYIN_IS_DAH(_keyIn|_memKeyIn) && _transitionTo(KEYER_DAH, _ticksPerDah, true);
   }

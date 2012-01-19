@@ -39,8 +39,8 @@ package require keyer-control
 array set opts {
     ascii 1
     iambic 1
-    ptt 0
-    debounce 0
+    ptt 1
+    debounce 1
 
     ascii-verbose 0
     ascii-chan 1
