@@ -170,8 +170,8 @@ namespace eval ::main {
 	mode {7 dit words}
 	voices 1
 	n-items 10
-	wpm 10
-	wpm-range 20
+	wpm 18
+	wpm-range 0
 	tone 500
 	tone-range 300
 	gain -10
@@ -186,20 +186,6 @@ namespace eval ::main {
 	play-panel-update-simulate-delay 25
 	play-codes-to-draw {}
 	drawn-items {}
-    }
-    # characters grouped by number of dit clocks
-    # excluding the inter-letter space that follows
-    array set dits {
-	1 "e"
-	3 "it"
-	5 "ans"
-	7 "dhmru"
-	9 "5bfgklvw"
-	11 "!%46copxz"
-	13 "+/37=jqy"
-	15 "\"(*-28?"
-	17 "\$.19:;@_"
-	19 "'),0"
     }
 }
 
@@ -245,30 +231,44 @@ proc ::main::send_callsign {call voice speed tone gain continuation} {
 }
 
 proc ::main::listen_clear {} {
+    set ::main::data(last_echo) {}
+    set ::main::data(keyer-panel-rcvd) {}
     set ::main::data(matched) {}
     .rcvd.rcvd delete 0.0 end
-    .rcvd.rcvd tag configure correct -foreground green
-    .rcvd.rcvd tag configure wrong -foreground red
 }
 
 proc ::main::listen_for_echoes {echo} {
-    append echo [iambic_detime gets]
-    set echoes [split $echo \n]
-    if {[llength $echoes] > 1} {
-	set echo [lindex $echoes end]
-	foreach item [lrange $echoes 0 end-1] {
-	    set item [string trim $item]
-	    lappend ::main::data(rcvd) $item
-	    set i [lsearch $::main::data(unmatched) $item]
-	    if {$i >= 0} {
-		set ::main::data(unmatched) [lreplace $::main::data(unmatched) $i $i]
-		lappend ::main::data(matched) $item
-		.rcvd.rcvd tag add correct end-1 end
-	    } else {
-		.rcvd.rcvd tag add wrong end-1 end
-	    }
-	    .rcvd.rcvd insert end $item\n
+    append echo $::main::data(keyer-panel-rcvd)
+    if {$echo ne {}} {
+	if {$echo ne $::main::data(last_echo)} {
+	    puts "listen_for_echoes heard $echo"
+	    set ::main::data(last_echo) $echo
 	}
+	set ::main::data(keyer-panel-rcvd) {}
+	set echoes [split $echo \n]
+	if {[llength $echoes] > 1} {
+	    set echo [lindex $echoes end]
+	    foreach item [lrange $echoes 0 end-1] {
+		set item [string trim $item]
+		set text [morse-to-text [heckler cget -dict] $echo]
+		lappend ::main::data(rcvd) $item
+		.rcvd.rcvd insert end "$item $text"
+		set i [lsearch $::main::data(unmatched) $item]
+		if {$i >= 0} {
+		    set ::main::data(unmatched) [lreplace $::main::data(unmatched) $i $i]
+		    lappend ::main::data(matched) $item
+		    set tag correct
+		    .rcvd.rcvd insert end " correct"
+		} else {
+		    .rcvd.rcvd insert end " wrong"
+		    set tag wrong
+		}
+		.rcvd.rcvd insert end \n
+		.rcvd.rcvd tag add $tag "end - 1 line linestart" "end - 1 line lineend"
+	    }
+	}
+	.rcvd.rcvd tag configure correct -foreground green
+	.rcvd.rcvd tag configure wrong -foreground red
     }
     after 250 [list ::main::listen_for_echoes $echo]
 }
@@ -287,8 +287,10 @@ proc ::main::sound_voice {voice} {
 	set gain [expr {(rand() * $::main::data(gain-range)) + $::main::data(gain)}]
 	# choose the timeout between the end of this call
 	# and the start of the next call on this voice
-	set timeout [expr {int(rand () * 3000)}]
+	set timeout [expr {2000+int(rand () * 1000)}]
 	# send the callsign and wait for it to finish
+	# senders need to back off if the operator is replying
+	# senders need to abort and retry if the operator is replying
 	send_callsign $call $voice $speed $tone $gain [list after $timeout [list ::main::sound_voice $voice]]
     } else {
 	stop_voice $voice
@@ -441,10 +443,10 @@ proc ::main::sent-panel {w} {
 }
 
 proc ::main::rcvd-panel-trace-fired {w name1 name2 op} {
-    upvar #0 ${name1}($name2) input
+    # upvar #0 ${name1}($name2) input
     # puts "trace-fired $input received"
-    $w.rcvd insert end $input
-    set input {}
+    # $w.rcvd insert end $input
+    # set input {}
 }
 
 proc ::main::rcvd-panel {w} {
@@ -611,7 +613,7 @@ proc ::main::keyer-panel {w} {
 	debounce-chan 1
 	debounce-note 0
 	debounce-period 0.0002
-	debounce-steps 10
+	debounce-steps 6
 
 	iambic-verbose 0
 	iambic-chan 1

@@ -32,12 +32,18 @@ extern "C" {
 #include "framework.h"
 #include "../sdrkit/midi.h"
 
+#ifndef DEBOUNCE_N_NOTES
+#define DEBOUNCE_N_NOTES 3
+#endif
+
   typedef struct {
-    int verbose;		       /*  */
-    int chan;		       /* midi channel */
-    int note;		       /* midi note for keyer, ptt = note+1 */
-    float period;		       /* period of input sampling, seconds */
-    int steps;		       /* number of periods of stability desired */
+    int verbose;	  /*  */
+    int chan;		  /* midi channel */
+    int note;		  /* midi note for dit */
+			  /* note+1 = dah */
+			  /* note+2 =  */
+    float period;	  /* period of input sampling, seconds */
+    int steps;		  /* number of periods of stability desired */
   } options_t;
 
   typedef struct {
@@ -46,12 +52,9 @@ extern "C" {
     options_t opts;
     int period_samples;
     int period_count;
-    byte current_dit;
-    byte current_dah;
-    byte stable_dit;
-    byte stable_dah;
-    Debounce d_dit;
-    Debounce d_dah;
+    byte current[DEBOUNCE_N_NOTES];
+    byte stable[DEBOUNCE_N_NOTES];
+    Debounce deb[DEBOUNCE_N_NOTES];
   } _t;
 
 
@@ -61,17 +64,15 @@ extern "C" {
       dp->modified = 0;
       /* ptt recomputation */
       dp->period_samples = dp->opts.period * sdrkit_sample_rate(dp);
-      dp->d_dit.setSteps(dp->opts.steps);
-      dp->d_dah.setSteps(dp->opts.steps);
+      for (int i = 0; i < DEBOUNCE_N_NOTES; i += 1)
+	dp->deb[i].setSteps(dp->opts.steps);
     }
   }
 
   static void *_init(void *arg) {
     _t *dp = (_t *)arg;
-    dp->current_dit = 0;
-    dp->current_dah = 0;
-    dp->stable_dit = 0;
-    dp->stable_dah = 0;
+    for (int i = 0; i < DEBOUNCE_N_NOTES; i += 1) 
+      dp->current[i] = dp->stable[i] = 0;
     dp->modified = 1;
     _update(dp);
     return arg;
@@ -116,17 +117,11 @@ extern "C" {
 	  const unsigned char command = in_event.buffer[0]&0xF0;
 	  const unsigned char note = in_event.buffer[1];
 	  if (channel == dp->opts.chan) {
-	    if (note == dp->opts.note) {
+	    if (note >= dp->opts.note && note < dp->opts.note+DEBOUNCE_N_NOTES) {
 	      if (command == MIDI_NOTE_ON) {
-		dp->current_dit = 1;
+		dp->current[note-dp->opts.note] = 1;
 	      } else if (command == MIDI_NOTE_OFF) {
-		dp->current_dit = 0;
-	      }
-	    } else if (note == dp->opts.note+1) {
-	      if (command == MIDI_NOTE_ON) {
-		dp->current_dah = 1;
-	      } else if (command == MIDI_NOTE_OFF) {
-		dp->current_dah = 0;
+		dp->current[note-dp->opts.note] = 0;
 	      }
 	    }
 	  }
@@ -142,13 +137,11 @@ extern "C" {
       /* clock the period counter */
       if (--dp->period_count <= 0) {
 	dp->period_count = dp->period_samples;
-	if (dp->d_dit.debounce(dp->current_dit) != dp->stable_dit) {
-	  dp->stable_dit ^= 1;
-	  _send(dp, midi_out, i, dp->stable_dit ? MIDI_NOTE_ON : MIDI_NOTE_OFF, dp->opts.note);
-	}
-	if (dp->d_dah.debounce(dp->current_dah) != dp->stable_dah) {
-	  dp->stable_dah ^= 1;
-	  _send(dp, midi_out, i, dp->stable_dah ? MIDI_NOTE_ON : MIDI_NOTE_OFF, dp->opts.note+1);
+	for (int j = 0; j < DEBOUNCE_N_NOTES; j += 1) {
+	  if (dp->deb[j].debounce(dp->current[j]) != dp->stable[j]) {
+	    dp->stable[j] ^= 1;
+	    _send(dp, midi_out, i, dp->stable[j] ? MIDI_NOTE_ON : MIDI_NOTE_OFF, dp->opts.note+j);
+	  }
 	}
       }
     }
@@ -176,12 +169,12 @@ extern "C" {
     // common options
     { "-server",  "server",  "Server",  "default",  fw_option_obj,   offsetof(_t, fw.server_name), "jack server name" },
     { "-client",  "client",  "Client",  NULL,       fw_option_obj,   offsetof(_t, fw.client_name), "jack client name" },
-    { "-verbose", "verbose", "Verbose", "0",	  fw_option_int,   offsetof(_t, opts.verbose),   "amount of diagnostic output" },
-    { "-chan",    "channel", "Channel", "1",        fw_option_int,   offsetof(_t, opts.chan),	 "midi channel used for keyer" },
-    { "-note",    "note",    "Note",    "0",	  fw_option_int,   offsetof(_t, opts.note),	 "base midi note used for keyer" },
+    { "-verbose", "verbose", "Verbose", "0",	    fw_option_int,   offsetof(_t, opts.verbose),   "amount of diagnostic output" },
+    { "-chan",    "channel", "Channel", "1",        fw_option_int,   offsetof(_t, opts.chan),	   "midi channel used for keyer" },
+    { "-note",    "note",    "Note",    "0",	    fw_option_int,   offsetof(_t, opts.note),	   "base midi note used for keyer" },
     // debounce options
-    { "-period",  "period",  "Period",   "0.005",   fw_option_float, offsetof(_t, opts.period),    "bouncy key sampling period in seconds" },
-    { "-steps",   "steps",   "Steps",    "32",      fw_option_int,   offsetof(_t, opts.steps),     "number of consistent samples define stability" },
+    { "-period",  "period",  "Period",   "0.0002",  fw_option_float, offsetof(_t, opts.period),	   "key sampling period in seconds" },
+    { "-steps",   "steps",   "Steps",    "6",       fw_option_int,   offsetof(_t, opts.steps),     "number of consistent samples define stability" },
     { NULL, NULL, NULL, NULL, fw_option_none, 0, NULL }
   };
 
@@ -193,14 +186,14 @@ extern "C" {
   };
 
   static const framework_t _template = {
-    _options,			// option table
-    _subcommands,			// subcommand table
-    _init,			// initialization function
-    _command,			// command function
-    NULL,				// delete function
-    NULL,				// sample rate function
-    _process,			// process callback
-    0, 0, 1, 1			// inputs,outputs,midi_inputs,midi_outputs
+    _options,		    // option table
+    _subcommands,	    // subcommand table
+    _init,		    // initialization function
+    _command,		    // command function
+    NULL,		    // delete function
+    NULL,		    // sample rate function
+    _process,		    // process callback
+    0, 0, 1, 1		    // inputs,outputs,midi_inputs,midi_outputs
   };
 
   static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

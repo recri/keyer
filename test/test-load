@@ -33,6 +33,9 @@ array set data {
     keyer_detime {keyer::detime norm}
     keyer_iambic {keyer::iambic norm}
     keyer_tone {keyer::tone norm}
+    keyer_ptt {keyer::ptt norm}
+    keyer_ptt_mute {keyer::ptt-mute norm}
+    keyer_debounce {keyer::debounce norm}
     agc {sdrkit::agc norm}
     atap {sdrkit::atap atap}
     audio_tap {sdrkit::audio-tap atap}

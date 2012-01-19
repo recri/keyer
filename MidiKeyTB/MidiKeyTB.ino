@@ -51,8 +51,9 @@ byte dit;                   // the current dit value
 byte dah;                   // the current dah value
 byte btn;                   // the current button value
 
-const int debounceFor = 20; // 20 trip debounce
-const int readPeriod = 50;  // microseconds per debounce trip
+// moved debouncing onto the PC, where it's easier to adjust
+const int debounceFor = 1;  // 1 step debounce 
+const int readPeriod = 50;  // microseconds per debounce step
 
 Debounce ditFilter(debounceFor);	    
 Debounce dahFilter(debounceFor);

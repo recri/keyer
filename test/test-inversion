@@ -1,0 +1,56 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+lappend auto_path  [file normalize [file join [file dirname [info script]] .. lib]]
+
+package require keyer::ascii
+package require morse::morse
+
+keyer::ascii ascii
+set dict [ascii cget -dict]
+
+dict for {key value} $dict {
+    set code [text-to-morse $dict $key]
+    set text [morse-to-text $dict $code]
+    if {$text eq $key} continue
+    if {$key in [split $text |]} {
+	dict unset dict $key
+	continue
+    }
+    puts "no round trip for {$key} -> {$code} -> {$text}"
+}
+dict for {key1 value1} $dict {
+    dict for {key2 value2} $dict {
+	set code [text-to-morse $dict $key1$key2]
+	set text [morse-to-text $dict $code]
+	if {$text ne "$key1$key2"} {
+	    puts "no round trip for {$key1$key2} -> {$code} -> {$text}"
+	}
+	dict for {key3 value3} $dict {
+	    set code [text-to-morse $dict $key1$key2$key3]
+	    set text [morse-to-text $dict $code]
+	    if {$text ne "$key1$key2$key3"} {
+		puts "no round trip for {$key1$key2$key3} -> {$code} -> {$text}"
+	    }
+	}
+    }
+}
+
+				  
