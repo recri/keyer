@@ -19,7 +19,7 @@
 # 
 
 ###
-### original readme file
+### part of the original readme file
 ###
 
 # pileup - CW pileup program for Linux
@@ -40,75 +40,7 @@
 # 
 # The callsigns sent are those worked by M6A in the 1996 CQ WW CW contest to
 # add some realism.
-# 
-# Build instructions:
-# 1. Type "make"  to produce the executable "pileup"
-# 2. As root type "make install". This makes "pileup" a setuid root program.
-#    This is required as low level code is used to address the SoundBlater 
-#    card requiring root privileges.
-# 
-# The program uses LinuxThreads by Xavier Leroy (Xavier.Leroy@inria.fr)
-# (a copy of which is provided with the pileup TAR file). The pileup program 
-# is by default statically linked with the libpthread.a library (a copy of 
-# which is provided with the pileup TAR file). The pileup program also requires 
-# pthread.h (also enclosed with the pileup TAR file).
-# 
-# As LinuxThreads uses the clone() system call a kernel 2.0+ is required.
-# Version 1.0 of the pileup program (which can be used with a 1.2.* kernel
-# is available from http://www.babbage.demon.co.uk/pileup.html).
-# 
-# -----------------------------------------------------------------------------
-# 
-# The program can be run in two modes - Competition or Practice. 
-# 
-# a. Competition mode sends 50 callsigns and you enter each callsign copied 
-# using the keyboard (pressing ENTER after each callsign). Partial callsigns 
-# are allowed. After the 50 callsigns are sent your score is determined and
-# the list of 50 sent callsigns displayed along with the received callsigns.
-# Please send your scores to richard@babbage.demon.co.uk to add to the
-# Pilup Score List!
-# 
-# b. Practice mode sends the whole contents of the calls.dat file displaying
-# each callsign as it is sent.
-# 
-# Use:
-# 1. Type "pileup" to run the program
-# 2. The program then prompts for the number of voices. Enter a number from
-#    1 to 9 inclusive. The higher the number of voices the greater the
-#    cacophony and the greater the difficulty. A value of 2 is a good starting
-#    point.
-# 3. The program then prompts for the CW speed. Enter a value in words per
-#    minutes (e.g 25). Note that this will be the *slowest* speed used!
-# 4. The program then prompts for Competition or Practice mode. Enter 'c'
-#    for competition mode, 'p' for practice mode.
-# 5. Start copying those callsigns (and typing them into the keyboard if
-#    you are in competition mode)!
-# 
-# -----------------------------------------------------------------------------
-# 
-# Features v1.0:
-# 1. Up to 9 voices can be sent (I find that 3 voices are enough!);
-# 2. Each voice is faster in speed and lower in volume than the previous to 
-#    simulate the "layering" of stations found in pileups;
-# 3. The tone of each call is different in the pileup to simulate the
-#    spread of stations in a pileup;
-# 
-# New Features v1.1:
-# 1. Added a competition mode. 50 callsigns are sent and your copying
-#    ability is scored. The greater the accuracy the greater the score. A
-#    list of high scores can be found at 
-#    http://www.babbage.demon.co.uk/pileup.html
-# 2. Multi-threaded using LinuxThreads.
-# 
-# -----------------------------------------------------------------------------
-# 
-# To do list:
-# 1. Add QRM/QRN noises
-# 2. Add a difficulty level
-# 3. Add curses interface 
-# 
-# Any bugs, suggestions etc to richard@babbage.demon.co.uk
-#
+# [ ... ]
 # ---------------------------------------------------------------------------
 # 
 # Richard Everitt G4ZFE
@@ -149,18 +81,19 @@ package require morse::morse
 
 #
 # default options
-# The callsigns worked by M6A in the 1996 CQ WW CW contest
 #
 namespace eval ::main {
     array set data {
 	state 0
 
 	game-menues {
-	    mode mode {} {menu {callsigns} {7 dit words} {9 dit words} {11 dit words} {13 dit} {15 dit} {17 dit} {19 dit} {21 dit} {23 dit} {25 dit} } {}
-	    voices {N voices} {} {menu 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30} {}
+	    mode mode {} {menu {callsigns} {7 dit words} {9 dit words} {11 dit words} {13 dit words} {15 dit words}
+		{17 dit words} {19 dit words} {21 dit words} {23 dit words} {25 dit words} } {}
+	    voices {N voices} {} {menu 1 2 3 4 5 6 7 8 9 10 15 20 25 30 35 40} {}
 	    n-items {N items} {} {menu 10 50 100 500 1000 5000 10000 50000} {}
 	    wpm {base speed} words/minute {scale 5 60} {}
 	    wpm-range {speed range} words/minute {scale 0 20} {}
+	    tone-range {tone range} Hz {scale 0 300} {}
 	    gain {base gain} dB {scale 0 -160} {}
 	    gain-range {gain range} dB {scale 160 -160} {}
 	    noise {noise level} dB {scale 0 -160} {noise configure -gain}
@@ -172,7 +105,7 @@ namespace eval ::main {
 	n-items 10
 	wpm 18
 	wpm-range 0
-	tone 500
+	tone 700
 	tone-range 300
 	gain -10
 	gain-range -10
@@ -183,9 +116,13 @@ namespace eval ::main {
 	sent {}
 	max_speed 0
 
-	play-panel-update-simulate-delay 25
+	last-echo {}
+	play-panel-update-simulate-delay 50
 	play-codes-to-draw {}
+	play-codes-to-undraw {}
 	drawn-items {}
+	unmatched {}
+	ptt 0
     }
 }
 
@@ -206,43 +143,68 @@ proc ::main::translate {dict call} {
     return [text-to-morse $dict $call]
 }
     
-proc ::main::draw_callsign {call speed tone gain code} {
-    lappend ::main::data(play-codes-to-draw) [list $call $speed $tone $gain $code]
-    #puts "draw_callsign $call $speed $tone $gain $code"
+proc ::main::draw_callsign {send} {
+    lappend ::main::data(play-codes-to-draw) $send
 }
 
-proc ::main::hear_callsign {call voice code continuation} {
-    if {[ascii$voice pending]} {
-	set ::main::data(after-$voice) [after 100 [list ::main::hear_callsign $call $voice $code $continuation]]
+proc ::main::undraw_callsign {send} {
+    lappend ::main::data(play-codes-to-undraw) $send
+}
+    
+proc ::main::hear_callsign {send} {
+    if {$::main::data(ptt)} {
+	foreach {send call voice speed tone gain code continuation} $::main::data(send-$send) break
+	ascii$voice abort
+	::main::undraw_callsign $send
+	::main::resend_callsign $send
     } else {
-	heard_callsign $call $code
-	set ::main::data(after-$voice) [eval $continuation]
+	foreach {send call voice speed tone gain code continuation} $::main::data(send-$send) break
+	if {[ascii$voice pending]} {
+	    set ::main::data(after-$voice) [after 100 [list ::main::hear_callsign $send]]
+	} else {
+	    heard_callsign $call $code
+	    set ::main::data(after-$voice) [eval $continuation]
+	}
     }
 }
 
-proc ::main::send_callsign {call voice speed tone gain continuation} {
-    set ::main::data(max_speed) [expr {max($::main::data(max_speed), $speed)}]
-    tone$voice configure -freq $tone -gain $gain
-    ascii$voice configure -wpm $speed
-    ascii$voice puts $call
-    set code [translate [ascii$voice cget -dict] $call]
-    draw_callsign $call $speed $tone $gain $code
-    hear_callsign $call $voice $code $continuation
+proc ::main::send_callsign {send} {
+    if {$::main::data(ptt)} {
+	::main::resend_callsign $send
+    } else {
+	foreach {send call voice speed tone gain code continuation} $::main::data(send-$send) break
+	set ::main::data(max_speed) [expr {max($::main::data(max_speed), $speed)}]
+	tone$voice configure -freq $tone -gain $gain
+	ascii$voice configure -wpm $speed
+	ascii$voice puts $call
+	draw_callsign $send
+	hear_callsign $send
+    }
+}
+
+proc ::main::resend_callsign {send} {
+    if {$::main::data(ptt)} {
+	after 100 [list ::main::resend_callsign $send]
+    } else {
+	after [expr {2000+int(rand () * 1000)}] [list ::main::send_callsign $send]
+    }
 }
 
 proc ::main::listen_clear {} {
-    set ::main::data(last_echo) {}
+    set ::main::data(last-echo) {}
     set ::main::data(keyer-panel-rcvd) {}
     set ::main::data(matched) {}
     .rcvd.rcvd delete 0.0 end
 }
 
-proc ::main::listen_for_echoes {echo} {
-    append echo $::main::data(keyer-panel-rcvd)
+proc ::main::listen_for_echoes {echo detime} {
+    set new [$detime gets]
+    append ::main::data(echoes-received) $new
+    append echo $new
     if {$echo ne {}} {
-	if {$echo ne $::main::data(last_echo)} {
-	    puts "listen_for_echoes heard $echo"
-	    set ::main::data(last_echo) $echo
+	if {$echo ne $::main::data(last-echo)} {
+	    #puts "listen_for_echoes heard $echo"
+	    set ::main::data(last-echo) $echo
 	}
 	set ::main::data(keyer-panel-rcvd) {}
 	set echoes [split $echo \n]
@@ -270,7 +232,7 @@ proc ::main::listen_for_echoes {echo} {
 	.rcvd.rcvd tag configure correct -foreground green
 	.rcvd.rcvd tag configure wrong -foreground red
     }
-    after 250 [list ::main::listen_for_echoes $echo]
+    after 100 [list ::main::listen_for_echoes $echo $detime]
 }
 
 proc ::main::sound_voice {voice} {
@@ -282,7 +244,7 @@ proc ::main::sound_voice {voice} {
 	# choose a random speed
 	set speed [expr {rand() * $::main::data(wpm-range) + $::main::data(wpm)}]
 	# choose a random tone
-	set tone [expr {(rand() * $::main::data(tone-range)) + $::main::data(tone)}]
+	set tone [expr {(rand() * $::main::data(tone-range)) - $::main::data(tone-range)/2 + $::main::data(tone)}]
 	# choose a random gain
 	set gain [expr {(rand() * $::main::data(gain-range)) + $::main::data(gain)}]
 	# choose the timeout between the end of this call
@@ -291,7 +253,9 @@ proc ::main::sound_voice {voice} {
 	# send the callsign and wait for it to finish
 	# senders need to back off if the operator is replying
 	# senders need to abort and retry if the operator is replying
-	send_callsign $call $voice $speed $tone $gain [list after $timeout [list ::main::sound_voice $voice]]
+	set send [incr ::main::data(sent-count)]
+	set ::main::data(send-$send) [list $send $call $voice $speed $tone $gain [translate [ascii$voice cget -dict] $call] [list after $timeout [list ::main::sound_voice $voice]]]
+	send_callsign $send
     } else {
 	stop_voice $voice
     }
@@ -329,7 +293,7 @@ proc ::main::check_if_finished {} {
     if {$::main::data(number_session) > 0 || $::main::data(active-voices) > 0} {
 	after 100 ::main::check_if_finished
     } else {
-	stop
+	::main::play-stop
     }
 }
 
@@ -342,7 +306,132 @@ proc ::main::choose_items {n list} {
     return $choices
 }
 
-proc ::main::start {} {
+####
+#### play panel animation
+####
+proc ::main::play-panel-window-configure {w cw wd ht} {
+    if {$w eq $cw} {
+	# puts "configure $w $cw $wd $ht"
+    }
+}
+
+proc ::main::play-panel-window-destroy {w dw} {
+    # puts "destroy $w ..."
+}
+
+##
+## this is an {x y x y ...} list of
+## frequency vs magnitude in dB full scale
+##
+proc ::main::play-panel-update {w xy} {
+    ::hurricane::update $w.hurricane $xy
+}
+
+proc ::main::play-panel-setup-drawing {w send call speed tone gain code} {
+    ## pixels/second at play-panel-update-simulate update rate
+    set pps [expr {1000/$::main::data(play-panel-update-simulate-delay)}]
+    ## pixels/window width and height in waterfall
+    set wd [winfo width $w.hurricane]
+    set ht [winfo height $w.hurricane]
+    ## dits/second at call sending speed words/minute*dits/word*minute/second
+    set dps [expr {$speed*50.0*1/60.0}]
+    ## pixels/dit
+    set ppd [expr {$pps/$dps}]
+    ## y for tone
+    set y [expr {(($tone-$::main::data(tone)+200.0)/400.0)*$ht}]
+    ## pick a color
+    set color white;		# some function of gain
+    ## draw a series of lines
+    set c $code
+    set x $wd
+    ## remember where they are
+    set items {}
+    while {[string length $c] > 0} {
+	switch -exact -- [string index $c 0] {
+	    . {
+		# draw a dit
+		lappend items [$w.hurricane create line $x $y [expr {$x+$ppd}] $y -fill $color -tags send-$send]
+		# skip to the end of the space after the dit
+		set x [expr {$x+$ppd+$ppd}]
+	    }
+	    - {
+		# draw a dah
+		lappend items [$w.hurricane create line $x $y [expr {$x+3*$ppd}] $y -fill $color -tags send-$send]
+		# skip to the end of the space after the dit
+		set x [expr {$x+3*$ppd+$ppd}]
+	    }
+	    { } {
+		# skip to the end of the space after the character
+		set x [expr {$x+3*$ppd-$ppd}]
+	    }
+	}
+	set c [string range $c 1 end]
+    }
+    lappend ::main::data(drawn-items) $send
+}
+
+proc ::main::play-panel-update-simulate {w} {
+    set sendings $::main::data(play-codes-to-draw)
+    set ::main::data(play-codes-to-draw) {}
+    foreach send $sendings {
+	foreach {send call voice speed tone gain code continuation} $::main::data(send-$send) break
+	play-panel-setup-drawing $w $send $call $speed $tone $gain $code
+    }
+    set height [winfo height $w.hurricane]
+    set min [expr {$::main::data(tone)}]
+    set range [expr {$::main::data(tone-range)}]
+    set dx [expr {double($range)/$height}]
+    for {set i 0} {$i < $height} {incr i} {
+	set x [expr {$min+$i*$dx}]
+	set y [expr {-100+rand()*-20}]
+	lappend xy $x $y
+    }
+    ::main::play-panel-update $w $xy
+    set unsendings $::main::data(play-codes-to-undraw)
+    set ::main::data(play-codes-to-undraw) {}
+    foreach unsend $unsendings {
+	$w.hurricane delete send-$unsend
+    }
+    after $::main::data(play-panel-update-simulate-delay) [list ::main::play-panel-update-simulate $w]
+}
+
+####
+#### user interface actions
+####
+
+##
+## close window handler
+##
+proc ::main::close-window {w ew} {
+    if {$w eq $ew} {
+	foreach x $::main::data(on-exit) {
+	    catch $x
+	}
+	::main::stop
+    }
+}
+
+##
+## ptt signal listener
+##
+proc ::main::ptt-signal-listener {mtap chan note} {
+    foreach item [$mtap gets] {
+	foreach {frame event} $item break
+	binary scan $event c* bytes
+	foreach {ecmd enote vel} $bytes break
+	if {($ecmd&0xff) == (0x90+($chan-1)) && $enote == $note+1} {
+	    set ::main::data(ptt)  1
+	} elseif {($ecmd&0xff) == (0x80+($chan-1)) && $enote == $note+1} {
+	    set ::main::data(ptt)  0
+	}
+    }
+    after 100 [list ::main::ptt-signal-listener $mtap $chan $note]
+}
+
+##
+## game play panel button actions
+##
+proc ::main::play-start {} {
     # change button state
     .play.m.start configure -state disabled
     #.play.m.pause configure -state normal
@@ -371,12 +460,12 @@ proc ::main::start {} {
 	start_voice $voice
     }
     # listen for echoes
-    ::main::listen_for_echoes {}
+    # ::main::listen_for_echoes_to_sent {}
     # wait for done
     ::main::check_if_finished
 }
 
-proc ::main:pause {} {
+proc ::main::play-pause {} {
     # change button state
     .play.m.start configure -state normal
     #.play.m.pause configure -state disabled
@@ -384,7 +473,7 @@ proc ::main:pause {} {
     set ::main::data(state) 2
 }
 
-proc ::main::stop {} {
+proc ::main::play-stop {} {
     # change button state
     .play.m.start configure -state normal
     #.play.m.pause configure -state disabled
@@ -395,149 +484,77 @@ proc ::main::stop {} {
     }
 }
 
-##
-## user interface
-##
-proc ::main::close-window {w ew} {
-    if {$w eq $ew} {
-	foreach x $::main::data(on-exit) {
-	    catch $x
-	}
-	::main::stop
-    }
-}
+####
+#### user interface panels
+####
 
+##
+## about panel
+##
 proc ::main::about-panel {w} {
     ttk::frame $w
     pack [text $w.t] -fill both -expand true
     $w.t insert end {
- Welcome to Pileup V 2011!  This is an update of:
+ Welcome to Pileup!  This is an update of:
 
      pileup - CW pileup program for Linux by Richard Everitt G4ZFE
  	
-     This program is based on sccw - Soundcard CW for Linux by Steven J. Merrifield
-     VK3ESM sjm@ee.latrobe.edu.au http://livewire.ee.latrobe.edu.au. I have modified
-     its use from a morse code tutor into a pileup program using multiple SoundBlaster
-     voices.
+     This program is based on sccw - Soundcard CW for Linux by Steven J.
+     Merrifield VK3ESM sjm@ee.latrobe.edu.au http://livewire.ee.latrobe.edu.au.
+     I have modified its use from a morse code tutor into a pileup program
+     using multiple SoundBlaster voices.
 
- The update involves replacing the SoundBlaster with the Jack Audio Connection Kit and
- using Tcl/Tk wrappers to assemble and control the signal processing graph.  The number
- of simultaneous voices is limited to around 18, at which point client creation starts
- failing.	
+This update involves replacing the SoundBlaster with the Jack Audio Connection
+Kit and using Tcl/Tk wrappers to assemble and control the signal processing
+graph.  The number of simultaneous voices is limited, but not very limited.  I
+have had 25 different voices running on my laptop and I was sufficiently
+overwhelmed that I didn't try larger numbers.
 
- Oh, your typing skills are of no use here, you need to key in the answers.
+Oh, your typing skills are of no use here, you need to key in the answers.
+The program includes a MIDI based iambic keyer.  The hardware interface to
+connect your paddle or straight key to this program is very simple and
+affordable.	
  
- In fact, stop trying to translate morse into characters at all for a while: just practice
- hearing the patterns and remembering them long enough to echo them back.  It may be that
- a little ear-hand practice will build up your ability to copy.
+The program runs in callsign mode, where the original pileup set of callsigns
+is sent, or in N dit word mode, where the combinations of characters with less
+than N dit clocks is sent.  In either case, your task is to copy and echo the
+callsigns or words back.  You can adjust the speed, the tone range, the gain
+range, and the level of the noise floor.
+
+The idea is that you should stop trying to translate morse into characters at
+all for a while, just practice hearing the patterns and remembering them long
+enough to echo them back.
 } 
     return $w
 }
 
+##
+## texts sent panel
+##
 proc ::main::sent-panel {w} {
     ttk::frame $w
     grid [text $w.sent -yscrollcommand [list $w.vsent set]] -row 0 -column 0 -sticky nsew
     grid [ttk::scrollbar $w.vsent -orient vertical -command [list $w.sent yview]] -row 0 -column 1 -sticky ns
     grid columnconfigure $w 0 -weight 100
+    grid rowconfigure $w 0 -weight 100
     return $w
 }
 
-proc ::main::rcvd-panel-trace-fired {w name1 name2 op} {
-    # upvar #0 ${name1}($name2) input
-    # puts "trace-fired $input received"
-    # $w.rcvd insert end $input
-    # set input {}
-}
-
+##
+## texts received panel
+##
 proc ::main::rcvd-panel {w} {
     ttk::frame $w
     grid [text $w.rcvd -yscrollcommand [list $w.vrcvd set]] -row 0 -column 0 -sticky nsew
     grid [ttk::scrollbar $w.vrcvd -orient vertical -command [list $w.rcvd yview]] -row 0 -column 1 -sticky ns
     grid columnconfigure $w 0 -weight 100
-    trace add variable ::main::data(keyer-panel-rcvd) write [list ::main::rcvd-panel-trace-fired $w]
+    grid rowconfigure $w 0 -weight 100
     return $w
 }
 
-proc ::main::play-panel-window-configure {w cw wd ht} {
-    if {$w eq $cw} {
-	# puts "configure $w $cw $wd $ht"
-    }
-}
-proc ::main::play-panel-window-destroy {w dw} {
-    # puts "destroy $w ..."
-}
-
 ##
-## this is an {x y x y ...} list of
-## frequency vs magnitude in dB full scale
+## game play panel
 ##
-proc ::main::play-panel-update {w xy} {
-    ::hurricane::update $w.hurricane $xy
-}
-
-proc ::main::play-panel-setup-drawing {w call speed tone gain code} {
-    ## pixels/second at play-panel-update-simulate update rate
-    set pps [expr {1000/$::main::data(play-panel-update-simulate-delay)}]
-    ## pixels/window width and height in waterfall
-    set wd [winfo width $w.hurricane]
-    set ht [winfo height $w.hurricane]
-    ## dits/second at call sending speed words/minute*dits/word*minute/second
-    set dps [expr {$speed*50.0*1/60.0}]
-    ## pixels/dit
-    set ppd [expr {$pps/$dps}]
-    ## y for tone
-    set y [expr {(($tone-$::main::data(tone))/$::main::data(tone-range))*$ht}]
-    ## pick a color
-    set color white;		# some function of gain
-    ## draw a series of lines
-    set c $code
-    set x $wd
-    ## remember where they are
-    set items {}
-    set nitem [llength $::main::data(drawn-items)]
-    while {[string length $c] > 0} {
-	switch -exact -- [string index $c 0] {
-	    . {
-		# draw a dit
-		lappend items [$w.hurricane create line $x $y [expr {$x+$ppd}] $y -fill $color -tags code-$nitem]
-		# skip to the end of the space after the dit
-		set x [expr {$x+$ppd+$ppd}]
-	    }
-	    - {
-		# draw a dah
-		lappend items [$w.hurricane create line $x $y [expr {$x+3*$ppd}] $y -fill $color -tags code-$nitem]
-		# skip to the end of the space after the dit
-		set x [expr {$x+3*$ppd+$ppd}]
-	    }
-	    { } {
-		# skip to the end of the space after the character
-		set x [expr {$x+3*$ppd-$ppd}]
-	    }
-	}
-	set c [string range $c 1 end]
-    }
-    lappend ::main::data(drawn-items) [list $call $speed $tone $gain $code $items]
-}
-
-proc ::main::play-panel-update-simulate {w} {
-    set drawings $::main::data(play-codes-to-draw)
-    set ::main::data(play-codes-to-draw) {}
-    foreach p $drawings {
-	play-panel-setup-drawing $w {*}$p
-    }
-    set height [winfo height $w.hurricane]
-    set min [expr {$::main::data(tone)}]
-    set range [expr {$::main::data(tone-range)}]
-    set dx [expr {double($range)/$height}]
-    for {set i 0} {$i < $height} {incr i} {
-	set x [expr {$min+$i*$dx}]
-	set y [expr {-100+rand()*-20}]
-	lappend xy $x $y
-    }
-    ::main::play-panel-update $w $xy
-    after $::main::data(play-panel-update-simulate-delay) [list ::main::play-panel-update-simulate $w]
-}
-
 proc ::main::play-panel {w} {
     ttk::frame $w
     lappend ::main::data(on-exit) {rename pileup {}} {rename noise {}}
@@ -548,19 +565,24 @@ proc ::main::play-panel {w} {
     grid [ttk::frame $w.m] -row 1 -column 0
     grid rowconfigure $w 0 -weight 100
     grid columnconfigure $w 0 -weight 100
-    pack [ttk::button $w.m.start -text start -command ::main::start -state normal] -side left
-    pack [ttk::button $w.m.pause -text pause -command ::main::pause -state disabled] -side left
-    pack [ttk::button $w.m.stop -text stop -command ::main::stop -state disabled] -side left
+    pack [ttk::button $w.m.start -text start -command ::main::play-start -state normal] -side left
+    pack [ttk::button $w.m.pause -text pause -command ::main::play-pause -state disabled] -side left
+    pack [ttk::button $w.m.stop -text stop -command ::main::play-stop -state disabled] -side left
+    bind . <Configure> [list ::main::play-panel-window-configure $w %W %w %h]
+    bind . <Destroy> [list ::main::play-panel-window-destroy $w %W]
+    ## first part concerning a real waterfall capture
     # capturing -size sample_rate/1 would yield 1 Hz per bin,
     # -size sample_rate/10, 10Hz per bin, and so on
     # ::capture::spectrum $w -period 50 -size [sdrkit::jack sample-rate] -client ::main::play-panel-update -connect pileup
-    bind . <Configure> [list ::main::play-panel-window-configure $w %W %w %h]
-    bind . <Destroy> [list ::main::play-panel-window-destroy $w %W]
     #after 100 [list ::capture::start $w]
+    ## second part concerning a simulated waterfall capture
     after 100 [list ::main::play-panel-update-simulate $w]
     return $w
 }
 
+##
+## game configuration panel
+##
 proc ::main::game-panel {w} {
     ttk::frame $w
 
@@ -594,14 +616,9 @@ proc ::main::game-panel {w} {
     return $w
 }
 
-proc ::main::keyer-panel-listen {input} {
-    set rcvd [$input gets]
-    if {[string length $rcvd]} {
-	append ::main::data(keyer-panel-rcvd) $rcvd
-    }
-    after 200 [list ::main::keyer-panel-listen $input]
-}
-
+##
+## keyer configuration panel
+##
 proc ::main::keyer-panel {w} {
     set opts {
 	ascii 0
@@ -641,11 +658,12 @@ proc ::main::keyer-panel {w} {
 	ptt-delay 0.0
 	ptt-hang 1.0
     }
-
-    after 1000 [list ::main::keyer-panel-listen iambic_detime]
     return [keyer-control $w {} {} iambic iambic_tone ptt debounce $opts]
 }
 
+##
+## process options, build interface, start background listeners
+##
 proc ::main::main {argv} {
     # process options
     foreach {option value} $argv {
@@ -659,7 +677,7 @@ proc ::main::main {argv} {
     # persistent jack/sdrkit modules
     sdrkit::jack-client jack;					# jack of all trades
     sdrkit::noise noise -gain $::main::data(noise);		# noise floor
-    sdrkit::mtap mtap;						# midi tap to receive ptt
+    sdrkit::mtap ptt_mtap;					# midi tap to receive ptt
     keyer::ptt-mute pileup -gain $::main::data(output-gain);	# mute receiver on transmit
     keyer::ascii heckler;					# will be commenting on your progress
     keyer::debounce debounce;					# key debouncer
@@ -686,17 +704,18 @@ proc ::main::main {argv} {
     jack connect iambic_tone:out_i system:playback_1;		# tone to system playbac
     jack connect iambic_tone:out_q system:playback_2
     jack connect ptt:midi_out pileup:midi_in;			# ptt mute line
-    jack connect ptt:midi_out mtap:midi_in;			# ptt feedback line
-
+    jack connect ptt:midi_out ptt_mtap:midi_in;			# ptt feedback line
 
     # cleanup - the after echoes are more pleasing if we shut down rather than just exiting.
-    foreach module {jack noise mtap pileup heckler debounce iambic iambic_tone iambic_detime ptt} {
+    foreach module {jack noise ptt_mtap pileup heckler debounce iambic iambic_tone iambic_detime ptt} {
 	lappend ::main::data(on-exit) [list rename $module {}]
     }
 
     # basic layout
     grid [ttk::frame .m] -row 0 -column 0 -sticky ew
     grid [ttk::notebook .pileup] -row 1 -column 0 -sticky nsew
+    grid columnconfigure . 0 -weight 100
+    grid rowconfigure . 1 -weight 100
     .pileup add [::main::play-panel .play] -text {Play}
     .pileup add [::main::game-panel .game] -text {Game Config}
     .pileup add [::main::keyer-panel .keyer] -text {Keyer Config}
@@ -706,6 +725,13 @@ proc ::main::main {argv} {
     
     # extra bindings
     bind . <Destroy> [list ::main::close-window . %W]
+
+    # configure listener to keyer input
+    after 100 [list ::main::listen_for_echoes {} iambic_detime]
+    
+    # configure listener to ptt signal, should have used capture
+    ptt_mtap start
+    after 100 [list ::main::ptt-signal-listener ptt_mtap [ptt cget -chan] [ptt cget -note]]
 }
 
 ::main::main $argv
