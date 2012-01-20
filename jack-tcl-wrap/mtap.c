@@ -101,18 +101,15 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+#include "framework_options.h"
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
-  { "gets",	 _gets },
-  { "start",	 _start },
-  { "stop",	 _stop },
+#include "framework_subcommands.h"
+  { "gets",	 _gets, "get the available midi events from Jack" },
+  { "start",	 _start, "start collecting events" },
+  { "stop",	 _stop, "stop collecting events" },
   { NULL }
 };
 
@@ -124,7 +121,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 1, 0			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 1, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "a component which taps into the MIDI events in Jack"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

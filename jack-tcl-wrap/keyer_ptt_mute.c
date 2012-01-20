@@ -137,19 +137,14 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  { "-verbose", "verbose", "Verbose", "0",       fw_option_int,   offsetof(_t, opts.verbose),   "amount of diagnostic output" },
-  { "-server", "server",   "Server",  "default", fw_option_obj,	  offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client",   "Client",  NULL,      fw_option_obj,	  offsetof(_t, fw.client_name), "jack client name" },
-  { "-chan",    "channel", "Channel", "1",       fw_option_int,   offsetof(_t, opts.chan),      "midi channel used for ptt" },
-  { "-note",    "note",    "Note",    "0",       fw_option_int,   offsetof(_t, opts.note),      "base midi note used for ptt" },
-  { "-gain",   "gain",     "Gain",    "-30.0",   fw_option_float, offsetof(_t, opts.dBgain),    "gain level in dB" },
+#include "framework_options.h"
+#include "framework_midi_options.h"
+  { "-gain",   "gain",     "Gain",    "-30.0",   fw_option_float, 0, offsetof(_t, opts.dBgain),    "gain level in dB" },
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
+#include "framework_subcommands.h"
   { NULL }
 };
 
@@ -161,7 +156,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 2, 1, 0			// inputs,outputs,midi_inputs,midi_outputs
+  2, 2, 1, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "a component that translates a MIDI ptt signal to mute an audio channel"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

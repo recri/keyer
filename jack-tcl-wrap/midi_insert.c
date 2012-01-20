@@ -101,16 +101,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+#include "framework_options.h"
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
-  { "puts",	 _puts },
+#include "framework_subcommands.h"
+  { "puts",	 _puts, "put a binary MIDI packet into Jack" },
   { NULL }
 };
 
@@ -122,7 +119,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 0, 1			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 0, 1,			// inputs,outputs,midi_inputs,midi_outputs
+  "a component to insert MIDI events into the Jack computational graph"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

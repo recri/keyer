@@ -182,31 +182,28 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+#include "framework_options.h"
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
-  { "sample-rate",_sample_rate },
-  { "buffer-size",_buffer_size },
-  { "cpu-load",   _cpu_load },
-  { "is-realtime",_is_realtime },
-  { "frame-time", _frame_time },
-  { "time",	  _time },
-  { "version",	  _version },
-  { "version-string", _version_string },
-  { "client-name-size", _client_name_size },
-  { "port-name-size", _port_name_size },
-  { "port-type-size", _port_type_size },
-  { "time-to-frames", _time_to_frames },
-  { "frames-to-time", _frames_to_time },
-  { "list-ports", _list_ports },
-  { "connect", _connect },
-  { "disconnect", _disconnect },
+#include "framework_subcommands.h"
+  { "sample-rate",_sample_rate, "get the jack server sample rate" },
+  { "buffer-size",_buffer_size, "get the jack server buffer size" },
+  { "cpu-load",   _cpu_load, "get the jack server cpu load percent" },
+  { "is-realtime",_is_realtime, "get the jack server realtime status" },
+  { "frame-time", _frame_time, "get the jack server approximate frame time" },
+  { "time",	  _time, "get the jack server time in microseconds?" },
+  { "version",	  _version, "get the jack server version" },
+  { "version-string", _version_string, "get the jack server version string" },
+  { "client-name-size", _client_name_size, "get the jack server client name size" },
+  { "port-name-size", _port_name_size, "get the jack server port name size" },
+  { "port-type-size", _port_type_size, "get the jack server port type size" },
+  { "time-to-frames", _time_to_frames, "ask the jack server to convert time to frames" },
+  { "frames-to-time", _frames_to_time, "ask the jack server to convert frames to time" },
+  { "list-ports", _list_ports, "get a list of the ports open on the jack server" },
+  { "connect", _connect, "connect ports on the jack server" },
+  { "disconnect", _disconnect, "disconnect ports on the jack server" },
   { NULL }
 };
 
@@ -218,7 +215,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   NULL,				// process callback
-  0, 0, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "a component that interacts with a Jack server"
 };
 
 

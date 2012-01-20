@@ -234,15 +234,14 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
+#include "framework_options.h"
 #include "keyer_options_def.h"
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
-  { "gets",	 _gets },
+#include "framework_subcommands.h"
+  { "gets",	 _gets, "get the currently converted string of dits and dahs" },
   { NULL }
 };
 
@@ -254,7 +253,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 1, 0			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 1, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "a component which converts midi key on/off events to dits and dahs"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

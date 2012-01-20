@@ -166,14 +166,13 @@ extern "C" {
   }
 
   static const fw_option_table_t _options[] = {
+#include "framework_options.h"
 #include "keyer_options_def.h"
-    { NULL, NULL, NULL, NULL, fw_option_none, 0, NULL }
+    { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 
   static const fw_subcommand_table_t _subcommands[] = {
-    { "configure", fw_subcommand_configure },
-    { "cget",      fw_subcommand_cget },
-    { "cdoc",      fw_subcommand_cdoc },
+#include "framework_subcommands.h"
     { NULL, NULL }
   };
 
@@ -185,7 +184,8 @@ extern "C" {
     NULL,				// delete function
     NULL,				// sample rate function
     _process,			// process callback
-    0, 0, 1, 1			// inputs,outputs,midi_inputs,midi_outputs
+    0, 0, 1, 1,			// inputs,outputs,midi_inputs,midi_outputs
+    (char *)"an iambic keyer component which translates MIDI input key events into an output MIDI key signal"
   };
 
   static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

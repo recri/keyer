@@ -58,21 +58,21 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 // w(0) = x - a1*w(1) + a2*w(2); y = b0*w(0) + b1*w(1) + b2*w(2)
 static const fw_option_table_t _options[] = {
-  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
-  { "-a1",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.a1),	      "coefficient a1" },
-  { "-a2",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.a2),	      "coefficient a2" },
-  { "-b0",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.b0),	      "coefficient b0" },
-  { "-b1",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.b1),	      "coefficient b1" },
-  { "-b2",     "tap",    "Tap",    "0.0",      fw_option_float,	offsetof(_t, bq.b2),	      "coefficient b2" },
+  { "-server", "server", "Server", "default",  fw_option_obj,	fw_flag_create_only, offsetof(_t, fw.server_name), "jack server name" },
+  { "-client", "client", "Client", NULL,       fw_option_obj,	fw_flag_create_only, offsetof(_t, fw.client_name), "jack client name" },
+  { "-a1",     "tap",    "Tap",    "0.0",      fw_option_float,	0,		     offsetof(_t, bq.a1),	      "coefficient a1" },
+  { "-a2",     "tap",    "Tap",    "0.0",      fw_option_float,	0,		     offsetof(_t, bq.a2),	      "coefficient a2" },
+  { "-b0",     "tap",    "Tap",    "0.0",      fw_option_float,	0,		     offsetof(_t, bq.b0),	      "coefficient b0" },
+  { "-b1",     "tap",    "Tap",    "0.0",      fw_option_float,	0,		     offsetof(_t, bq.b1),	      "coefficient b1" },
+  { "-b2",     "tap",    "Tap",    "0.0",      fw_option_float,	0,		     offsetof(_t, bq.b2),	      "coefficient b2" },
   { NULL }
 };
 
 // the subcommands implemented by this command
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
+  { "configure", fw_subcommand_configure, "configure option values, or get list of options" },
+  { "cget",      fw_subcommand_cget,      "get an option value" },
+  { "cdoc",      fw_subcommand_cdoc,      "get the doc string for a command, a subcommand, or an option" },
   { NULL }
 };
 
@@ -85,7 +85,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 2, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  2, 2, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "implement a biquad filter component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

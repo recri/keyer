@@ -284,19 +284,18 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
+#include "framework_options.h"
 #include "keyer_options_def.h"
-  { "-dict",	"dict",     "Morse",  NULL,	  fw_option_dict,  offsetof(_t, opts.dict),	 "morse code dictionary" },
+  { "-dict",	"dict",     "Morse",  NULL,	  fw_option_dict, 0,  offsetof(_t, opts.dict),	 "morse code dictionary" },
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
-  { "puts",	 _puts },
-  { "pending",   _pending },
-  { "available", _available },
-  { "abort",     _abort },
+#include "framework_subcommands.h"
+  { "puts",	 _puts, "write strings to the queue for conversion to morse code" },
+  { "pending",   _pending, "how many bytes are queued for conversion to morse"  },
+  { "available", _available, "how many bytes are available for queuing" },
+  { "abort",     _abort, "abort conversion and discard all queued strings" },
   { NULL }
 };
 
@@ -308,7 +307,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 0, 1			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 0, 1,			// inputs,outputs,midi_inputs,midi_outputs
+  "implement a keyboard keyer with a configurable morse code map"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

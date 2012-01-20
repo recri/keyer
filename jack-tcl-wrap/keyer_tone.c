@@ -167,14 +167,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
+#include "framework_options.h"
 #include "keyer_options_def.h"
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
+#include "framework_subcommands.h"
   { NULL }
 };
 
@@ -186,7 +185,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 2, 1, 0			// inputs,outputs,midi_inputs,midi_outputs
+  0, 2, 1, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "a component that translates a MIDI key signal into an I/Q oscillator audio signal"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

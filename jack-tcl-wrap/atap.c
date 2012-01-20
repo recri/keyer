@@ -177,8 +177,8 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
 }
 
 static const fw_option_table_t _options[] = {
-  { "-server", "server", "Server", "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client", "client", "Client", NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
+  { "-server", "server", "Server", "default",  fw_option_obj, fw_flag_create_only,	offsetof(_t, fw.server_name), "jack server name" },
+  { "-client", "client", "Client", NULL,       fw_option_obj, fw_flag_create_only,	offsetof(_t, fw.client_name), "jack client name" },
   { NULL }
 };
 
@@ -195,7 +195,8 @@ static const framework_t _template = {
   _delete,			// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 0, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  2, 0, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "implement an audio tap component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

@@ -18,32 +18,29 @@
 #ifndef KEYER_OPTIONS_DEF_H
 #define KEYER_OPTIONS_DEF_H
   // common options
-  { "-server",  "server",  "Server",  "default",  fw_option_obj,   offsetof(_t, fw.server_name), "jack server name" },
-  { "-client",  "client",  "Client",  NULL,       fw_option_obj,   offsetof(_t, fw.client_name), "jack client name" },
-  { "-verbose", "verbose", "Verbose", "0",	  fw_option_int,   offsetof(_t, opts.verbose),   "amount of diagnostic output" },
-  { "-chan",    "channel", "Channel", "1",        fw_option_int,   offsetof(_t, opts.chan),	 "midi channel used for keyer" },
-  { "-note",    "note",    "Note",    "0",	  fw_option_int,   offsetof(_t, opts.note),	 "base midi note used for keyer" },
+  { "-chan",    "channel", "Channel", "1",        fw_option_int,   fw_flag_none, offsetof(_t, opts.chan),	 "midi channel used for keyer" },
+  { "-note",    "note",    "Note",    "0",	  fw_option_int,   fw_flag_none, offsetof(_t, opts.note),	 "base midi note used for keyer" },
 #if KEYER_OPTIONS_TONE
   // tone options    
-  { "-freq",    "frequency","Hertz",  "700.0",	  fw_option_float, offsetof(_t, opts.freq),	 "frequency of tone in hertz" },
-  { "-gain",    "gain",     "Decibel","-30.0",    fw_option_float, offsetof(_t, opts.gain),	 "level of tone in decibels" },
-  { "-rise",    "rise",     "Ramp",   "5.0",      fw_option_float, offsetof(_t, opts.rise),	 "rise time in milliseconds" },
-  { "-fall",    "fall",     "Ramp",   "5.0",      fw_option_float, offsetof(_t, opts.fall),      "fall time in milliseconds" },
+  { "-freq",    "frequency","Hertz",  "700.0",	  fw_option_float, fw_flag_none, offsetof(_t, opts.freq),	 "frequency of tone in hertz" },
+  { "-gain",    "gain",     "Decibel","-30.0",    fw_option_float, fw_flag_none, offsetof(_t, opts.gain),	 "level of tone in decibels" },
+  { "-rise",    "rise",     "Ramp",   "5.0",      fw_option_float, fw_flag_none, offsetof(_t, opts.rise),	 "rise time in milliseconds" },
+  { "-fall",    "fall",     "Ramp",   "5.0",      fw_option_float, fw_flag_none, offsetof(_t, opts.fall),      "fall time in milliseconds" },
 #endif
 #if KEYER_OPTIONS_TIMING
   // timing options
-  { "-word",    "word",     "Dits",   "50.0",     fw_option_float, offsetof(_t, opts.word),      "dits in a word" },
-  { "-wpm",     "wpm",      "Words",  "18.0",     fw_option_float, offsetof(_t, opts.wpm),	 "words per minute" },
-  { "-dah",     "dah",      "Dits",   "3.0",      fw_option_float, offsetof(_t, opts.dah),	 "dah length in dits" },
-  { "-ies",	"ies",	    "Dits",   "1.0",      fw_option_float, offsetof(_t, opts.ies),	 "inter-element space in dits" },
-  { "-ils",	"ils",	    "Dits",   "3.0",	  fw_option_float, offsetof(_t, opts.ils),	 "inter-letter space in dits" },
-  { "-iws",	"iws",	    "Dits",   "7.0",      fw_option_float, offsetof(_t, opts.iws),	 "inter-word space in dits" },
+  { "-word",    "word",     "Dits",   "50.0",     fw_option_float, fw_flag_none, offsetof(_t, opts.word),      "dits in a word" },
+  { "-wpm",     "wpm",      "Words",  "18.0",     fw_option_float, fw_flag_none, offsetof(_t, opts.wpm),	 "words per minute" },
+  { "-dah",     "dah",      "Dits",   "3.0",      fw_option_float, fw_flag_none, offsetof(_t, opts.dah),	 "dah length in dits" },
+  { "-ies",	"ies",	    "Dits",   "1.0",      fw_option_float, fw_flag_none, offsetof(_t, opts.ies),	 "inter-element space in dits" },
+  { "-ils",	"ils",	    "Dits",   "3.0",	  fw_option_float, fw_flag_none, offsetof(_t, opts.ils),	 "inter-letter space in dits" },
+  { "-iws",	"iws",	    "Dits",   "7.0",      fw_option_float, fw_flag_none, offsetof(_t, opts.iws),	 "inter-word space in dits" },
 #endif
 #if KEYER_OPTIONS_KEYER
   // keyer options
-  { "-swap",	"swap",	    "Bool",   "0",	  fw_option_boolean,offsetof(_t, opts.swap),	 "swap the dit and dah paddles" },
-  { "-alsp",	"alsp",	    "Bool",   "0",	  fw_option_boolean,offsetof(_t, opts.alsp),	 "auto letter spacing" },
-  { "-awsp",	"awsp",	    "Bool",   "0",	  fw_option_boolean,offsetof(_t, opts.awsp),	 "auto word spacing" },
-  { "-mode",	"mode",	    "Char",   "A",	  fw_option_char,  offsetof(_t, opts.mode),	 "iambic keyer mode" },
+  { "-swap",	"swap",	    "Bool",   "0",	  fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap),	 "swap the dit and dah paddles" },
+  { "-alsp",	"alsp",	    "Bool",   "0",	  fw_option_boolean, fw_flag_none, offsetof(_t, opts.alsp),	 "auto letter spacing" },
+  { "-awsp",	"awsp",	    "Bool",   "0",	  fw_option_boolean, fw_flag_none, offsetof(_t, opts.awsp),	 "auto word spacing" },
+  { "-mode",	"mode",	    "Char",   "A",	  fw_option_char,    fw_flag_none, offsetof(_t, opts.mode),	 "iambic keyer mode" },
 #endif
 #endif

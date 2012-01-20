@@ -198,23 +198,17 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  // common options
-  { "-server",  "server",  "Server",  "default",  fw_option_obj,   offsetof(_t, fw.server_name), "jack server name" },
-  { "-client",  "client",  "Client",  NULL,       fw_option_obj,   offsetof(_t, fw.client_name), "jack client name" },
-  { "-verbose", "verbose", "Verbose", "0",	  fw_option_int,   offsetof(_t, opts.verbose),   "amount of diagnostic output" },
-  { "-chan",    "channel", "Channel", "1",        fw_option_int,   offsetof(_t, opts.chan),	 "midi channel used for keyer" },
-  { "-note",    "note",    "Note",    "0",	  fw_option_int,   offsetof(_t, opts.note),	 "base midi note used for keyer" },
+#include "framework_options.h"
+#include "framework_midi_options.h"
   // ptt options
-  { "-delay",   "delay",   "Delay",   "0.0",      fw_option_float, offsetof(_t, opts.ptt_delay), "delay of keyer on behind ptt on in seconds" },
-  { "-hang",    "hang",    "Hang",    "1.0",      fw_option_float, offsetof(_t, opts.ptt_hang),  "hang time of ptt off behind keyer off in seconds" },
-  { NULL, NULL, NULL, NULL, fw_option_none, 0, NULL }
+  { "-delay",   "delay",   "Delay",   "0.0",      fw_option_float, 0, offsetof(_t, opts.ptt_delay), "delay of keyer on behind ptt on in seconds" },
+  { "-hang",    "hang",    "Hang",    "1.0",      fw_option_float, 0, offsetof(_t, opts.ptt_hang),  "hang time of ptt off behind keyer off in seconds" },
+  { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
-  { NULL, NULL }
+#include "framework_subcommands.h"
+  { NULL }
 };
 
 static const framework_t _template = {
@@ -225,7 +219,8 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 1, 1			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 1, 1,			// inputs,outputs,midi_inputs,midi_outputs
+  "a component for splitting a MIDI keyer signal into a, possibly delayed, MIDI keyer signal and a separate MIDI push-to-talk signal"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

@@ -441,12 +441,6 @@
 * Things to Do
 ** TODO - keyer_tone.c: protect against 0 rise or fall
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
-** TODO - keyer_ascii.c: to fix the timing glitches visible in scope
-** TODO - keyer_iambic.c: to fix the timing glitces visible in scope
-** TODO - keyer_iambic.c: mode B
-   Should only require a short memory of key states, make the next
-   element decision at end of inter-element space based on key state
-   at 1.5 dit clocks in the past.
 ** TODO - add activate/deactivate to the common subcommands for Jack
    commands, so a collection of modules can be put into standby.  But
    they lose all port connections when deactivated.
@@ -487,7 +481,7 @@
    monoaural option discards the Q and pans the result to a specified
    azimuth.
 ** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
-** TODO - sdrkit/framework.h - readonly options
+** TODO - sdrkit/framework.h - create only options
 ** TODO - sdrkit/framework.h - command documentation strings
 ** TODO - sdrkit/framework.h - subcommand documentation strings
 * Things already done
@@ -565,6 +559,12 @@
    audio channel.
 ** DONE - keyer_debounce - do debouncing on MIDI signals on the PC where
    the adjustments are easier to make.
+** DONE - keyer_ascii.c: to fix the timing glitches visible in scope
+** DONE - keyer_iambic.c: to fix the timing glitces visible in scope
+** DONE - keyer_iambic.c: mode B
+   Should only require a short memory of key states, make the next
+   element decision at end of inter-element space based on key state
+   at 1.5 dit clocks in the past.
 * Credits
   This code is derived from many sources.
 

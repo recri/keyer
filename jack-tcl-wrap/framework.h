@@ -42,15 +42,20 @@
 ** option definitions
 */
 typedef enum {
-  fw_option_none,
-  fw_option_int,
-  fw_option_nframes,		/* jack_nframes_t */
-  fw_option_float,
-  fw_option_char,
-  fw_option_boolean,
-  fw_option_obj,		/* Tcl_Obj * */
-  fw_option_dict,		/* Tcl_Obj * which is a Tcl dict */
+  fw_option_none = 0,
+  fw_option_int = 1,
+  fw_option_nframes = 2,	/* jack_nframes_t */
+  fw_option_float = 3,
+  fw_option_char = 4,
+  fw_option_boolean = 5,
+  fw_option_obj = 6,		/* Tcl_Obj * */
+  fw_option_dict = 7,		/* Tcl_Obj * which is a Tcl dict */
 } fw_option_type_t;
+
+typedef enum {
+  fw_flag_none = 0,		/* no option for c++ */
+  fw_flag_create_only = 1	/* option can only be set at create time */
+} fw_option_flag_t;
 
 typedef struct {
   const char *name;			/* option name */
@@ -58,6 +63,7 @@ typedef struct {
   const char *class_name;		/* option class name */
   const char *default_value;		/* option default value */
   const fw_option_type_t type;		/* option type */
+  const fw_option_flag_t flag;		/* option flag */
   const size_t offset;			/* offset in clientData */
   const char *doc_string;		/* option documentation string */
 } fw_option_table_t;
@@ -69,6 +75,7 @@ typedef struct {
 typedef struct {
   const char *name;			/* subcommand name */
   int (*handler)(ClientData, Tcl_Interp *, int argc, Tcl_Obj* const *objv);
+  const char *doc_string;
 } fw_subcommand_table_t;
 
 /*
@@ -92,11 +99,13 @@ typedef struct {
   char n_outputs;
   char n_midi_inputs;
   char n_midi_outputs;
+  char *doc_string;
   Tcl_Obj *class_name;
   Tcl_Obj *command_name;
   Tcl_Obj *server_name;
   Tcl_Obj *client_name;
   Tcl_Obj *subcommands_string;
+  int verbose;
   jack_client_t *client;
   jack_port_t **port;
 } framework_t;
@@ -122,11 +131,15 @@ static int fw_option_unrecognized_option_name(Tcl_Interp *interp, char *option) 
 }
 
 static int fw_option_wrong_number_of_arguments(Tcl_Interp *interp) {
-  Tcl_SetObjResult(interp, Tcl_NewStringObj("invalid option list: each option should have a value", -1));
+  Tcl_SetResult(interp, (char *)"invalid option list: each option should have a value", TCL_STATIC);
   return TCL_ERROR;
 }
 
-static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp, Tcl_Obj *val, const fw_option_table_t *entry) {
+static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp, Tcl_Obj *val, const fw_option_table_t *entry, int create) {
+  if ((entry->flag & fw_flag_create_only) && ! create) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("option \"%s\" may only be set at creation", entry->name));
+    return TCL_ERROR;
+  }
   switch (entry->type) {
   case fw_option_int: {
     int ival;
@@ -203,14 +216,14 @@ static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *inter
 /*
 ** called by fw_option_create or fw_option_configure
 */
-static int fw_option_collect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int fw_option_collect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, int create) {
   framework_t *fp = (framework_t *)clientData;
   const fw_option_table_t *table = fp->options;
   if ((argc & 1) != 0) return fw_option_wrong_number_of_arguments(interp);
   for (int i = 2; i < argc; i += 2) {
     int j = fw_option_lookup(Tcl_GetString(objv[i]), table);
     if (j < 0) return fw_option_unrecognized_option_name(interp, Tcl_GetString(objv[i]));
-    if (fw_option_set_option_value(clientData, interp, objv[i+1], table+j) != TCL_OK) return TCL_ERROR;
+    if (fw_option_set_option_value(clientData, interp, objv[i+1], table+j, create) != TCL_OK) return TCL_ERROR;
   }
   return TCL_OK;
 }
@@ -224,12 +237,12 @@ static int fw_option_create(ClientData clientData, Tcl_Interp *interp, int argc,
   const fw_option_table_t *table = fp->options;
   for (int i = 0; table[i].name != NULL; i += 1) {
     if (table[i].default_value != NULL) {
-      if (fw_option_set_option_value(clientData, interp, Tcl_NewStringObj(table[i].default_value,-1), table+i) != TCL_OK) {
+      if (fw_option_set_option_value(clientData, interp, Tcl_NewStringObj(table[i].default_value,-1), table+i, 1) != TCL_OK) {
 	return TCL_ERROR;
       }
     }
   }
-  return fw_option_collect(clientData, interp, argc, objv);
+  return fw_option_collect(clientData, interp, argc, objv, 1);
 }
 
 /*
@@ -263,7 +276,7 @@ static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int ar
     return TCL_OK;
   } else {
     // the caller had better be prepared to restore clientData on error
-    return fw_option_collect(clientData, interp, argc, objv);
+    return fw_option_collect(clientData, interp, argc, objv, 0);
   }
 }
 
@@ -288,18 +301,34 @@ static int fw_option_cget(ClientData clientData, Tcl_Interp *interp, int argc, T
 
 /*
 ** called by cdoc subcommand to process option arguments starting at objv[2]
+** if no arguments, give doc_string for command
+** if option argument, give doc_string for option
+** if subcommand argument, give doc_string for subcommand
 */
 static int fw_option_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
-  const fw_option_table_t *table = fp->options;
+  if (argc == 2) {
+    Tcl_SetResult(interp, fp->doc_string, TCL_STATIC);
+    return TCL_OK;
+  }
   if (argc != 3) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s cdoc option", Tcl_GetString(objv[0])));
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s cdoc [option|subcommand]", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
-  int j = fw_option_lookup(Tcl_GetString(objv[2]), table);
-  if (j < 0) return fw_option_unrecognized_option_name(interp, Tcl_GetString(objv[2]));
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(table[j].doc_string, -1));
-  return TCL_OK;
+  char *arg = Tcl_GetString(objv[2]);
+  int j = fw_option_lookup(arg, fp->options);
+  if (j >= 0) {
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(fp->options[j].doc_string, -1));
+    return TCL_OK;
+  }
+  if (arg[0] == '-') return fw_option_unrecognized_option_name(interp, Tcl_GetString(objv[2]));
+  for (int i = 0; fp->subcommands[i].name != NULL; i += 1)
+    if (strcmp(arg, fp->subcommands[i].name) == 0) {
+      Tcl_SetResult(interp, (char *)fp->subcommands[i].doc_string, TCL_STATIC);
+      return TCL_OK;
+    }
+  Tcl_SetResult(interp, (char *)"unrecognized subcommand", TCL_STATIC);
+  return TCL_ERROR;
 }
 
 /*

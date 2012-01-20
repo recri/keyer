@@ -112,19 +112,16 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  { "-server",  "server",  "Server",  "default",  fw_option_obj,	offsetof(_t, fw.server_name), "jack server name" },
-  { "-client",  "client",  "Client",  NULL,       fw_option_obj,	offsetof(_t, fw.client_name), "jack client name" },
-  { "-size",    "size",    "Samples", "4096",     fw_option_int,	offsetof(_t, size),	      "size of fft computed" },
-  { "-planbits","planbits","Planbits","0",	  fw_option_int,	offsetof(_t, planbits),	      "fftw plan bits" },
-  { "-window",  "window",  "Window",  "11",       fw_option_int,	offsetof(_t, window_type),    "window used in fft" },
+#include "framework_options.h"
+  { "-size",    "size",    "Samples", "4096",     fw_option_int, 0,	offsetof(_t, size),	      "size of fft computed" },
+  { "-planbits","planbits","Planbits","0",	  fw_option_int, 0,	offsetof(_t, planbits),	      "fftw plan bits" },
+  { "-window",  "window",  "Window",  "11",       fw_option_int, 0,	offsetof(_t, window_type),    "window used in fft" },
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure },
-  { "cget",      fw_subcommand_cget },
-  { "cdoc",      fw_subcommand_cdoc },
-  { "exec",	 _exec },
+#include "framework_subcommands.h"
+  { "exec",	 _exec, "execute the fft on the supplied data" },
   { NULL }
 };
 
@@ -136,7 +133,8 @@ static const framework_t _template = {
   _delete,			// delete function
   NULL,				// sample rate function
   NULL,				// process callback
-  0, 0, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  "an fftw3 fast fourier transform component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
