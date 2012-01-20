@@ -29,11 +29,11 @@ typedef struct {
 } lo_mixer_t;
 
 static void lo_mixer_set_hertz(lo_mixer_t *p, float hertz, int samples_per_second, int init) {
-  oscillator_set_hertz(&p->lo, hertz, samples_per_second, init);
+  oscillator_set_hertz(&p->lo, hertz, samples_per_second);
 }
 
 static void lo_mixer_init(lo_mixer_t *p, float hertz, int samples_per_second) {
-  oscillator_init(&p->lo, hertz, samples_per_second);
+  oscillator_init(&p->lo, hertz, 0.0f, samples_per_second);
 }
 
 static void lo_mixer_update(lo_mixer_t *p, float hertz, int samples_per_second) {
@@ -44,7 +44,7 @@ static void lo_mixer_reset(lo_mixer_t *p) {
   oscillator_reset(&p->lo);
 }
 
-static float _Complex lo_mixer(lo_mixer_t *p, float _Complex a) {
-  return mixer(a, oscillator(&p->lo));
+static float _Complex lo_mixer_process(lo_mixer_t *p, float _Complex a) {
+  return mixer_process(a, oscillator_process(&p->lo));
 }
 #endif

@@ -62,7 +62,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   _update(data);
   for (int i = nframes; --i >= 0; ) {
-    float _Complex out = lo_mixer(&data->lo, *in0++ + I * *in1++);
+    float _Complex out = lo_mixer_process(&data->lo, *in0++ + I * *in1++);
     *out0++ = creal(out);
     *out1++ = cimag(out);
   }

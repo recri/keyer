@@ -24,6 +24,8 @@
 /*
 ** sine attack/decay ramp
 ** uses 1/4 of an oscillator period to generate a sine
+** from sin(0 .. pi/2) for ramp on
+** from sin(pi/2 .. pi) for ramp off
 */
 typedef struct {
   int target;			/* sample length of ramp */
@@ -34,7 +36,7 @@ typedef struct {
 static void sine_ramp_init(sine_ramp_t *r, float ms, int samples_per_second) {
   r->target = samples_per_second * (ms / 1000.0f);
   r->current = 0;
-  oscillator_init(&r->ramp, 1000.0f/(4.0f*ms), samples_per_second);
+  oscillator_init(&r->ramp, 1000.0f/(4.0f*ms), 0.0f, samples_per_second);
 }
 
 static void sine_ramp_update(sine_ramp_t *r, float ms, int samples_per_second) {
@@ -44,7 +46,7 @@ static void sine_ramp_update(sine_ramp_t *r, float ms, int samples_per_second) {
 
 static void sine_ramp_start_rise(sine_ramp_t *r) {
   r->current = 0;
-  oscillator_reset(&r->ramp);
+  oscillator_set_phase(&r->ramp, 0.0f);
 }
 
 static void sine_ramp_start_fall(sine_ramp_t *r) {
@@ -53,14 +55,12 @@ static void sine_ramp_start_fall(sine_ramp_t *r) {
 }
 
 static float sine_ramp_next(sine_ramp_t *r) {
-  float x, y;
   r->current += 1;
-  oscillator_next_xy(&r->ramp, &x, &y);
-  return y;
+  return cimag(oscillator_process(&r->ramp));
 }
 
 static int sine_ramp_done(sine_ramp_t *r) {
-  return r->current == r->target;
+  return r->current >= r->target;
 }
 
 #endif

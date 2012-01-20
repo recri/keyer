@@ -21,5 +21,5 @@
 
 #include <complex.h>
 
-static float _Complex mixer(const _Complex float a, const _Complex float b) { return a*b; }
+static float _Complex mixer_process(const _Complex float a, const _Complex float b) { return a*b; }
 #endif

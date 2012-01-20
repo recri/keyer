@@ -147,8 +147,10 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	event_time = nframes+1;
       }
     }
-    /* compute samples for all sounding notes at this sample time */
-    keyed_tone_xy(&dp->tone, out_i+i, out_q+i);
+    /* compute samples */
+    float _Complex z = keyed_tone_process(&dp->tone);
+    *out_i++ = creal(z);
+    *out_q++ = cimag(z);
 
     /* increment frame counter */
     dp->frame += 1;

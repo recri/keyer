@@ -641,21 +641,6 @@ proc ::main::keyer-panel {w} {
 	ptt-delay 0.0
 	ptt-hang 1.0
     }
-    keyer::debounce debounce
-    keyer::iambic iambic
-    keyer::tone iambic_tone
-    keyer::detime iambic_detime
-    keyer::ptt ptt
-    lappend ::main::data(on-exit) {rename debounce {}} {rename iambic {}} {rename iambic_tone {}} {rename iambic_detime {}} {rename ptt {}}
-    sdrkit::jack connect system:midi_capture_1 debounce:midi_in
-    sdrkit::jack connect debounce:midi_out iambic:midi_in
-    sdrkit::jack connect iambic:midi_out ptt:midi_in
-    sdrkit::jack connect ptt:midi_out iambic_tone:midi_in
-    sdrkit::jack connect iambic:midi_out iambic_detime:midi_in
-    sdrkit::jack connect iambic_tone:out_i system:playback_1
-    sdrkit::jack connect iambic_tone:out_q system:playback_2
-    
-    sdrkit::jack connect ptt:midi_out pileup:midi_in; # ptt mute
 
     after 1000 [list ::main::keyer-panel-listen iambic_detime]
     return [keyer-control $w {} {} iambic iambic_tone ptt debounce $opts]
@@ -671,16 +656,43 @@ proc ::main::main {argv} {
 	}
     }
     
-    # persistent jack modules
-    sdrkit::noise noise -gain $::main::data(noise)
-    keyer::ptt-mute pileup -gain $::main::data(output-gain)
-    keyer::ascii heckler
-    sdrkit::jack connect noise:out_i pileup:in_i
-    sdrkit::jack connect noise:out_q pileup:in_q
-    sdrkit::jack connect pileup:out_i system:playback_1
-    sdrkit::jack connect pileup:out_q system:playback_2
-    sdrkit::jack connect heckler:out_i system:playback_1
-    sdrkit::jack connect heckler:out_q system:playback_2
+    # persistent jack/sdrkit modules
+    sdrkit::jack-client jack;					# jack of all trades
+    sdrkit::noise noise -gain $::main::data(noise);		# noise floor
+    sdrkit::mtap mtap;						# midi tap to receive ptt
+    keyer::ptt-mute pileup -gain $::main::data(output-gain);	# mute receiver on transmit
+    keyer::ascii heckler;					# will be commenting on your progress
+    keyer::debounce debounce;					# key debouncer
+    keyer::iambic iambic;					# iambic keyer
+    keyer::tone iambic_tone;					# iambic tone
+    keyer::detime iambic_detime;				# iambic decoder to dits and dahs
+    keyer::ptt ptt;						# iambic ptt switch
+
+    # non-persistent are the ascii keyers and tone generators which generate the pileup
+    # they get built when the pileup starts and deleted as they finish their work
+
+    # persistent jack connections
+    jack connect noise:out_i pileup:in_i;			# noise to both channels of pileup
+    jack connect noise:out_q pileup:in_q
+    jack connect pileup:out_i system:playback_1;		# pileup to system playback
+    jack connect pileup:out_q system:playback_2
+    jack connect heckler:out_i system:playback_1;		# heckler to system playback
+    jack connect heckler:out_q system:playback_2
+    jack connect system:midi_capture_1 debounce:midi_in;	# system midi capture to debouncer
+    jack connect debounce:midi_out iambic:midi_in;		# debouncer to keyer
+    jack connect iambic:midi_out ptt:midi_in;			# keyer to ptt splitter
+    jack connect ptt:midi_out iambic_tone:midi_in;		# splitter to tone generator
+    jack connect ptt:midi_out iambic_detime:midi_in;		# splitter to detimer
+    jack connect iambic_tone:out_i system:playback_1;		# tone to system playbac
+    jack connect iambic_tone:out_q system:playback_2
+    jack connect ptt:midi_out pileup:midi_in;			# ptt mute line
+    jack connect ptt:midi_out mtap:midi_in;			# ptt feedback line
+
+
+    # cleanup - the after echoes are more pleasing if we shut down rather than just exiting.
+    foreach module {jack noise mtap pileup heckler debounce iambic iambic_tone iambic_detime ptt} {
+	lappend ::main::data(on-exit) [list rename $module {}]
+    }
 
     # basic layout
     grid [ttk::frame .m] -row 0 -column 0 -sticky ew

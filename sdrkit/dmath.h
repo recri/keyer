@@ -21,6 +21,8 @@
 #include <complex.h>
 #include <math.h>
 
+static float squaref(float x) { return x * x; }
+
 static const float pi = 3.14159265358979323846f;		/* pi */
 static const float half_pi = 1.57079632679489661923f;		/* pi/2 */
 static const float quarter_pi = 0.78539816339744830962f;	/* pi/4 */

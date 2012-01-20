@@ -57,7 +57,7 @@ static void *_init(void *arg) {
   // data->dBgain = -30;
   data->gain = powf(10, data->dBgain / 20);
   data->sample_rate = sdrkit_sample_rate(data);
-  void *p = oscillator_init(&data->o, data->hertz, data->sample_rate); if (p != &data->o) return p;
+  void *p = oscillator_init(&data->o, data->hertz, 0.0f, data->sample_rate); if (p != &data->o) return p;
   return arg;
 }
 
@@ -67,7 +67,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   for (int i = nframes; --i >= 0; ) {
     _update(data);
-    float _Complex z = data->gain * oscillator(&data->o);
+    float _Complex z = data->gain * oscillator_process(&data->o);
     *out0++ = creal(z);
     *out1++ = cimag(z);
   }
@@ -124,6 +124,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Oscillator_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::oscillator", "1.0.0", "sdrkit::oscillator", _factory);
+int DLLEXPORT OSCILLATOR_INIT_NAME(Tcl_Interp *interp) {
+  return framework_init(interp, OSCILLATOR_STRING_NAME, "1.0.0", OSCILLATOR_STRING_NAME, _factory);
 }

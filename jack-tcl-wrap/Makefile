@@ -6,6 +6,10 @@ JACK_CFLAGS=$(shell pkg-config --cflags jack)
 ALSA_CFLAGS=$(shell pkg-config --cflags alsa)
 LIBUSB_CFLAGS=$(shell pkg-config --cflags libusb-1.0)
 FFTW3_CFLAGS=$(shell pkg-config --cflags fftw3f)
+OSC_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator\"
+OSCF_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillatorf_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillatorf\"
+OSCT_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_INIT_NAME=Oscillatort_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillatort\"
+OSCZ_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_INIT_NAME=Oscillatorz_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillatorz\"
 
 JACK_LIBS=$(shell pkg-config --libs jack)
 ALSA_LIBS=$(shell pkg-config --libs alsa)
@@ -31,7 +35,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
 	$(LIBDIR)/iq_swap.so \
-	$(LIBDIR)/jack.so \
+	$(LIBDIR)/jack_client.so \
 	$(LIBDIR)/lo_mixer.so \
 	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/mixer.so \
@@ -39,6 +43,9 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/mtap.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
+	$(LIBDIR)/oscillatorf.so \
+	$(LIBDIR)/oscillatort.so \
+	$(LIBDIR)/oscillatorz.so \
 	$(KEYERS)
 
 all:: $(ALL) libdir-all
@@ -94,13 +101,13 @@ $(LIBDIR)/iq_swap.so: iq_swap.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/jack.so: jack.c
+$(LIBDIR)/jack_client.so: jack_client.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../sdrkit/lo_mixer.h
 	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../sdrkit/midi_buffer.h
 	@mkdir -p $(LIBDIR)
@@ -124,7 +131,19 @@ $(LIBDIR)/noise.so: noise.c framework.h ../sdrkit/avoid_denormals.h
 
 $(LIBDIR)/oscillator.so: oscillator.c framework.h ../sdrkit/kit_math.h ../sdrkit/oscillator.h
 	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/oscillatorf.so: oscillator.c framework.h ../sdrkit/kit_math.h ../sdrkit/oscillator.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(OSCF_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/oscillatort.so: oscillator.c framework.h ../sdrkit/kit_math.h ../sdrkit/oscillator.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(OSCT_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/oscillatorz.so: oscillator.c framework.h ../sdrkit/kit_math.h ../sdrkit/oscillator.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(OSCZ_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/morse_timing.h ../sdrkit/morse_coding.h
 	@mkdir -p $(LIBDIR)
@@ -152,5 +171,5 @@ $(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../sdrkit/midi.h ../sd
 
 $(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/keyed_tone.h
 	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
+	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 

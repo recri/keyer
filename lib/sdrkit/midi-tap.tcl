@@ -16,7 +16,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrkit
+package provide sdrkit::midi-tap 1.0.0
+
+package require sdrkit::mtap
 
 namespace eval ::sdrkit {}
+
+proc ::sdrkit::midi-tap {args} { return [::sdrkit::mtap {*}$args] }
 

@@ -18,6 +18,12 @@
 #ifndef OSCILLATOR_H
 #define OSCILLATOR_H
 
+#if ! defined(OSCILLATOR_F) && ! defined(OSCILLATOR_T) && ! defined(OSCILLATOR_Z)
+#error "oscillator.h has no implementation selected"
+#endif
+
+#ifdef OSCILLATOR_F
+
 #include "dmath.h"
 
 /*
@@ -28,21 +34,14 @@ typedef struct {
   float xi, c, x, y;
 } oscillator_t;
 
-static float squaref(float x) { return x * x; }
-
-static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_second, int init) {
+static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_second) {
   const float pi = 3.14159265358979323846;
   float current_xi = o->xi;
   float wps = hertz / samples_per_second;
   float rps = wps * 2 * pi;
   o->c = sqrtf(1.0 / (1.0 + squaref(tanf(rps))));
   o->xi = sqrtf((1.0 - o->c) / (1.0 + o->c));
-  if (init) {
-    o->x = o->xi;
-    o->y = 0;
-  } else {
-    o->x *=  o->xi / current_xi;
-  }
+  o->x *=  o->xi / current_xi;
 }
 
 static void oscillator_set_phase(oscillator_t *o, float radians) {
@@ -50,34 +49,89 @@ static void oscillator_set_phase(oscillator_t *o, float radians) {
   o->y = sinf(radians);
 }
 
-static void *oscillator_init(oscillator_t *o, float hertz, int samples_per_second) {
-  oscillator_set_hertz(o, hertz, samples_per_second, 1);
+static float _Complex oscillator_process(oscillator_t *o) {
+  float t = (o->x + o->y) * o->c;
+  float nx = t-o->y;
+  float ny = t+o->x;
+  float x = (o->x = nx) / o->xi; /* better as multiply by inverse? */
+  float y = o->y = ny;
+  return x + I * y;
+}
+
+#endif
+
+#ifdef OSCILLATOR_T
+
+#include "dmath.h"
+
+/*
+** oscillator.
+** uses a trigonometric functions
+*/
+typedef struct {
+  float phase, dphase;
+} oscillator_t;
+
+static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_second) {
+  o->dphase = 2.0f * pi * hertz / samples_per_second;
+}
+
+static void oscillator_set_phase(oscillator_t *o, float radians) {
+  o->phase = radians;
+}
+
+static float _Complex oscillator_process(oscillator_t *o) {
+  o->phase += o->dphase;
+  while (o->phase > two_pi) o->phase -= two_pi;
+  while (o->phase < -two_pi) o->phase += two_pi;
+  return cosf(o->phase) + I * sinf(o->phase);
+}
+#endif
+
+#if OSCILLATOR_Z
+
+
+#include "dmath.h"
+
+/*
+** oscillator.
+** a recursive complex mixer
+*/
+typedef struct {
+  float _Complex phase, dphase;
+} oscillator_t;
+
+static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_second) {
+  float dradians = 2.0f * pi * hertz / samples_per_second;
+  o->dphase = cosf(dradians) + I * sinf(dradians);
+}
+
+static void oscillator_set_phase(oscillator_t *o, float radians) {
+  o->phase = cosf(radians) + I * sinf(radians);
+}
+
+static float _Complex oscillator_process(oscillator_t *o) {
+  return o->phase *= o->dphase;
+}
+
+#endif
+
+/*
+** code common to all implementations.
+*/
+
+static void *oscillator_init(oscillator_t *o, float hertz, float radians, int samples_per_second) {
+  oscillator_set_hertz(o, hertz, samples_per_second);
+  oscillator_set_phase(o, radians);
   return o;
 }
 
 static void oscillator_update(oscillator_t *o, float hertz, int samples_per_second) {
-  oscillator_set_hertz(o, hertz, samples_per_second, 0);
+  oscillator_set_hertz(o, hertz, samples_per_second);
 }
 
 static void oscillator_reset(oscillator_t *o) {
-  o->x = o->xi;
-  o->y = 0;
+  oscillator_set_phase(o, 0.0f);
 }
 
-/*
-  check if keeping 1/xi is worth while, 
-*/
-static void oscillator_next_xy(oscillator_t *o, float *x, float *y) {
-  float t = (o->x + o->y) * o->c;
-  float nx = t-o->y;
-  float ny = t+o->x;
-  *x = (o->x = nx) / o->xi;
-  *y = o->y = ny;
-}
-
-static float _Complex oscillator(oscillator_t *o) {
-  float x, y;
-  oscillator_next_xy(o,&x,&y);
-  return x + I * y;
-}
 #endif
