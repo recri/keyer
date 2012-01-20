@@ -25,7 +25,7 @@
 */
 
 #include <math.h>
-#include "sdrkit_math.h"
+#include "dmath.h"
 
 typedef enum {
   WINDOW_RECTANGULAR = 0, 
@@ -42,6 +42,22 @@ typedef enum {
   WINDOW_BLACKMANHARRIS = 11,
   WINDOW_NUTTALL = 12,
 } window_type_t;
+
+static char *window_names[] = {
+  "rectangular", 
+  "hanning",
+  "welch",
+  "parzen",
+  "bartlett",
+  "hamming",
+  "blackman2",
+  "blackman3",
+  "blackman4",
+  "exponential",
+  "riemann",
+  "blackmanharris",
+  "nuttall",
+};
 
 /** 
 * @file window.c

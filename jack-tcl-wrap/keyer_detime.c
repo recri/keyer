@@ -71,7 +71,7 @@ typedef struct {
 */
 static void _detime(_t *dp, unsigned count, unsigned char *p) {
   /* detime note/channel based events */
-  if (dp->opts.verbose > 4)
+  if (dp->fw.verbose > 4)
     fprintf(stderr, "%d: midi_detime(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     char channel = (p[0]&0xF)+1;
@@ -140,19 +140,19 @@ static void _detime(_t *dp, unsigned count, unsigned char *p) {
 	  break;
 	}
       }
-      if (dp->opts.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->detime.estimate, p[0], 100*observation/dp->detime.estimate);
+      if (dp->fw.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->detime.estimate, p[0], 100*observation/dp->detime.estimate);
       if (ring_buffer_writeable(&dp->ring)) {
 	if (*out != 0)
 	  ring_buffer_put(&dp->ring, 1, out);
       } else {
 	fprintf(stderr, "keyer_detime: buffer overflow writing \"%s\"\n", out);
       }
-    } else if (dp->opts.verbose > 3)
+    } else if (dp->fw.verbose > 3)
       fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->opts.chan, dp->opts.note);
   } else if (count > 3 && p[0] == MIDI_SYSEX) {
     if (p[1] == MIDI_SYSEX_VENDOR) {
       // FIX.ME options_parse_command(&dp->opts, p+3);
-      if (dp->opts.verbose > 3)
+      if (dp->fw.verbose > 3)
 	fprintf(stderr, "sysex: %*s\n", count, p+2);
       dp->modified = 1;
     }

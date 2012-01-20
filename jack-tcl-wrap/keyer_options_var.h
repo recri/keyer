@@ -18,7 +18,7 @@
 #ifndef KEYER_OPTIONS_VAR_H
 #define KEYER_OPTIONS_VAR_H
 // common options
-int verbose, chan, note;
+int chan, note;
 #if KEYER_OPTIONS_TONE
 // tone options    
 float freq, gain, rise, fall;

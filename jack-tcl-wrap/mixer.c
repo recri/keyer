@@ -20,11 +20,8 @@
 /*
 */
 
-#include <complex.h>
-
 #include "framework.h"
-#include "../sdrkit/avoid_denormals.h"
-#include "../sdrkit/kit_math.h"
+#include "../sdrkit/dmath.h"
 
 /*
 ** create a mixer module which combines its inputs into an output

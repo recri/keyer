@@ -58,7 +58,7 @@ extern "C" {
       dp->modified = 0;
 
       /* keyer recomputation */
-      dp->k.setVerbose(dp->opts.verbose);
+      dp->k.setVerbose(dp->fw.verbose);
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
       dp->k.setWord(dp->opts.word);
       dp->k.setWpm(dp->opts.wpm);

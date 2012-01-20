@@ -50,10 +50,10 @@ typedef struct {
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
-    // if (dp->opts.verbose > 2) fprintf(stderr, "%s _update\n", PREFACE);
+    // if (dp->verbose > 2) fprintf(stderr, "%s _update\n", PREFACE);
 
     /* keyer recomputation */
-    dp->k.setVerbose(dp->opts.verbose);
+    dp->k.setVerbose(dp->verbose);
     dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
     dp->k.setWord(dp->opts.word);
     dp->k.setWpm(dp->opts.wpm);
@@ -80,7 +80,7 @@ static void _update(_t *dp) {
 
 static void _keyout(int key, void *arg) {
   _t *dp = (_t *)arg;
-  // if (dp->opts.verbose) fprintf(stderr, "%s _keyout(%d)\n", PREFACE, key);
+  // if (dp->verbose) fprintf(stderr, "%s _keyout(%d)\n", PREFACE, key);
   if (key) dp->key_out_event = MIDI_NOTE_ON;
   else dp->key_out_event = MIDI_NOTE_OFF;
 }
@@ -95,30 +95,30 @@ static void *_init(void *arg) {
 }
 
 static void _decode(_t *dp, int count, unsigned char *p) {
-  // if (dp->opts.verbose) fprintf(stderr, "%s _decode %d bytes\n", PREFACE, count);
+  // if (dp->verbose) fprintf(stderr, "%s _decode %d bytes\n", PREFACE, count);
   if (count == 3) {
     unsigned char channel = (p[0]&0xF)+1;
     unsigned char command = p[0]&0xF0;
     unsigned char note = p[1];
     if (channel != dp->opts.chan) {
-      // if (dp->opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mychan=0x%x\n", PREFACE, channel, note, dp->opts.chan, dp->opts.note);
+      // if (dp->verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mychan=0x%x\n", PREFACE, channel, note, dp->opts.chan, dp->opts.note);
     } else if (note == dp->opts.note) {
-      // if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
+      // if (dp->verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
       switch (command) {
       case MIDI_NOTE_OFF: dp->k.paddleDit(false); break;
       case MIDI_NOTE_ON:  dp->k.paddleDit(true); break;
       }
     } else if (note == dp->opts.note+1) {
-      // if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
+      // if (dp->verbose) fprintf(stderr, "%s _decode([%x, %x, ...])\n", PREFACE, p[0], p[1]);
       switch (command) {
       case MIDI_NOTE_OFF: dp->k.paddleDah(false); break;
       case MIDI_NOTE_ON:  dp->k.paddleDah(true); break;
       }
     } else {
-      // if (dp->opts.verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mynote=0x%x\n", PREFACE, channel, note, dp->opts.chan, dp->opts.note);
+      // if (dp->verbose) fprintf(stderr, "%s _decode discard chan=0x%x note=0x%x != mynote=0x%x\n", PREFACE, channel, note, dp->opts.chan, dp->opts.note);
     }
   } else if (count > 3 && p[0] == MIDI_SYSEX && p[1] == MIDI_SYSEX_VENDOR) {
-    // if (dp->opts.verbose) fprintf(stderr, "%s _decode([%x, %x, %x, ...])\n", PREFACE, p[0], p[1], p[2]);
+    // if (dp->verbose) fprintf(stderr, "%s _decode([%x, %x, %x, ...])\n", PREFACE, p[0], p[1], p[2]);
     // FIX.ME - options_parse_command(&dp->opts, (char *)p+3);
   }
 }

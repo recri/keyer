@@ -24,19 +24,19 @@
    Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
-#include <complex.h>
+#include "dmath.h"
 
 #define _mu 0.25f	/* fudge? const: 0.25 */
 
 typedef struct {
   float phase;			/* sin of phase correction */
   float gain;			/* linear gain correction to I */
-  _Complex float w;		/* memory? init: 0.00+0.00 * I */
+  _Complex float w;		/* memory init: 0.00+0.00 * I */
 } iq_balance_t;
 
 static void *iq_balance_init(iq_balance_t *p) {
-  p->phase = 0.0f;
-  p->gain = 1.0f;
+  // p->phase = 0.0f;
+  // p->gain = 1.0f;
   p->w = 0.0f;
   return p;
 }

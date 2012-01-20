@@ -31,12 +31,20 @@ typedef struct {
 } biquad_filter_t;
 
 static void *biquad_filter_init(biquad_filter_t *p) {
-  p->a1 = p->a2 = p->b0 = p->b1 = p->b2 = 0.0f;
+  // p->a1 = p->a2 = p->b0 = p->b1 = p->b2 = 0.0f;
   p->w11 = p->w12 = 0.0f;
   return p;
 }
 
-static float _Complex biquad_filter(biquad_filter_t *p, const float _Complex x) {
+static void biquad_filter_config(biquad_filter_t *p, float a1, float a2, float b0, float b1, float b2) {
+  p->a1 = a1;
+  p->a2 = a2;
+  p->b0 = b0;
+  p->b1 = b1;
+  p->b2 = b2;
+}
+
+static float _Complex biquad_filter_process(biquad_filter_t *p, const float _Complex x) {
   float _Complex w10 = x - p->a1 * p->w11 + p->a2 * p->w12;
   float _Complex y = p->b0 * w10 + p->b1 * p->w11 + p->b2 * p->w12;
   p->w12 = p->w11;

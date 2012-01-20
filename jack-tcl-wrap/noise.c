@@ -24,8 +24,7 @@
 #define _XOPEN_SOURCE 500
 #include <stdlib.h>
 
-#include <math.h>
-#include "../sdrkit/avoid_denormals.h"
+#include "../sdrkit/dmath.h"
 
 #include "framework.h"
 

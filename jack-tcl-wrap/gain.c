@@ -25,7 +25,7 @@
 #include <math.h>
 #include <complex.h>
 
-#include "../sdrkit/avoid_denormals.h"
+#include "../sdrkit/dmath.h"
 
 /*
 ** create a gain module which scales its inputs by a scalar

@@ -22,20 +22,33 @@
 ** 
 */
 
-#include <complex.h>
-
 #include "framework.h"
 
 #include "../sdrkit/iq_balance.h"
 
 typedef struct {
+  float sine_phase;
+  float linear_gain;
+} options_t;
+
+typedef struct {
   framework_t fw;
+  int modified;
+  options_t opts;
   iq_balance_t iqb;
 } _t;
+
+static void *_update(_t *data) {
+  data->modified = 0;
+  data->iqb.phase = data->opts.sine_phase;
+  data->iqb.gain = data->opts.linear_gain;
+}
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = iq_balance_init(&data->iqb); if (p != &data->iqb) return p;
+  data->modified = 1;
+  _update(data);
   return arg;
 }
 
@@ -45,6 +58,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
+  _update(data);
+  AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
     float _Complex y = iq_balance(&data->iqb, *in0++ + *in1++ * I);
     *out0++ = creal(y);
@@ -60,8 +75,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-gain",   "gain",   "Gain",   "1.0",      fw_option_float, 0,	offsetof(_t, iqb.gain),	      "linear gain to I signal" },
-  { "-phase",  "phase",  "Phase",  "0.0",      fw_option_float, 0,	offsetof(_t, iqb.phase),      "sine of phase adjustment" },
+  { "-linear-gain", "gain",   "Gain",   "1.0", fw_option_float, 0, offsetof(_t, opts.linear_gain), "linear gain to I signal" },
+  { "-sine-phase",  "phase",  "Phase",  "0.0", fw_option_float, 0, offsetof(_t, opts.sine_phase),  "sine of phase adjustment" },
   { NULL }
 };
 

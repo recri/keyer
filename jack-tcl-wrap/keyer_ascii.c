@@ -64,7 +64,7 @@ static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
 
-    if (dp->opts.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
+    if (dp->fw.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
 
     /* update timing computations */
     // maybe this wasn't the best idea

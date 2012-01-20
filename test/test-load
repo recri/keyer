@@ -23,7 +23,10 @@ set so [info sharedlibextension]
 
 #
 # verify that each loadable library loads
-# and try some other tricks
+# and see what else works
+#
+# you should start the default jack server with qjackctl
+# before running this test
 #
 
 #
@@ -39,13 +42,13 @@ array set data {
     agc {sdrkit::agc norm}
     atap {sdrkit::atap atap}
     audio_tap {sdrkit::audio-tap atap}
-    biquad {sdrkit::biquad norm}
+    biquad_filter {sdrkit::biquad-filter norm}
     constant {sdrkit::constant norm}
-    fftw {sdrkit::fftw fftw}
+    fftw {sdrkit::fftw norm}
     gain {sdrkit::gain norm}
     iq_balance {sdrkit::iq-balance norm}
     iq_swap {sdrkit::iq-swap norm}
-    jack {sdrkit::jack jack}
+    jack_client {sdrkit::jack-client norm}
     lo_mixer {sdrkit::lo-mixer norm}
     midi_insert {sdrkit::midi-insert norm}
     mixer {sdrkit::mixer norm}
@@ -57,10 +60,68 @@ array set data {
     oscillatorf {sdrkit::oscillatorf norm}
     oscillatort {sdrkit::oscillatort norm}
 }
+
+array set options {
+    -server {create-only 1 type string}
+    -client {create-only 1 type string}
+    -verbose {range {0 100} type integer}
+    -chan {range {1 16} type integer}
+    -note {range {0 127} type integer}
+    -freq {range {-10000 10000} type float}
+    -gain {range {0 -160} type float}
+    -rise {range {1 10} type float}
+    -fall {range {1 10} type float}
+    -word {range {50 60} type float}
+    -wpm {range {5 50} type float}
+    -dah {range {2.5 3.5} type float}
+    -ies {range {0.5 1.5} type float}
+    -ils {range {2.5 3.5} type float}
+    -iws {range {6 8} type float}
+    -dict {type dict}
+    -delay {range {0 5000} type integer}
+    -hang {range {0 10} type float}
+    -sine-phase {range {-1.0 1.0} type float}
+    -linear-gain {range {1e-6 1} type float}
+    -swap {values {0 1} type integer}
+    -alsp {values {0 1} type integer}
+    -awsp {values {0 1} type integer}
+    -mode {values {A B} type string}
+    -period {range {10 10000} type float}
+    -steps {values {1 64} type integer}
+    -a1 {type float}
+    -a2 {type float}
+    -b0 {type float}
+    -b1 {type float}
+    -b2 {type float}
+    -size {range {1 10000} type integer}
+    -planbits {type integer}
+    -window {range {0 12} type integer}
+    -real {type float}
+    -imag {type float}
+}
+
 array set results {
     load-succeeded 0
     load-failed 0
 }
+
+proc rand-int-in-range-not-equal-val {min max val} {
+    while {[set newval [expr {$min+int(rand()*($max-$min))}]] == $val} continue
+    return $newval
+}
+proc rand-int-in-list-not-equal-val {list val} {
+    while {[set newval [lindex $list [expr {int(rand()*[llength $list])}]]] == $val} continue
+    return $newval
+}
+proc rand-element-in-list-ne-val {list val} {
+    while {[set newval [lindex $list [expr {int(rand()*[llength $list])}]]] ne $val} continue
+    return $newval
+}
+proc rand-float-in-range-not-equal-val {min max val} {
+    while {[set newval [expr {$min+rand()*($max-$min)}]] == $val} continue
+    return $newval
+}
+
 foreach file [glob [file join $libdir *$so]] {
     set module [file root [file tail $file]]
     if {[catch {load $file} error]} {
@@ -83,22 +144,178 @@ foreach file [glob [file join $libdir *$so]] {
 		    puts "factory $factory configure failed -> $error"
 		    continue
 		}
-		foreach conf $error {
+		set opts $error
+		set create {}
+		foreach conf $opts {
+		    foreach {opt dbname clname defval curval} $conf break
 		    set opt [lindex $conf 0]
 		    if {[catch {foo cget $opt} error]} {
 			puts "factory $factory cget $opt failed -> $error"
+			continue
 		    }
+		    set val $error
 		    if {[catch {foo cdoc $opt} error]} {
 			puts "factory $factory cdoc $opt failed -> $error"
+		    } elseif {$error eq {}} {
+			puts "factory $factory cdoc $opt returned blank"
+		    }
+		    if { ! [info exists options($opt)]} {
+			puts "no info on option $opt"
+			set options($opt) 1
+			continue;
+		    }
+		    catch {array unset props}
+		    array set props $options($opt)
+		    switch $props(type) {
+			integer {
+			    if {$val != $defval} {
+				puts "factory $factory config $opt did not create with default value, $val != $defval"
+			    }
+			}
+			float {
+			    if {$defval != $val && abs($val-$defval)/$defval > 1e-6} {
+				puts "factory $factory config $opt did not create with default value, $val != $defval"
+			    }
+			}
+			string {
+			    if {$opt ne {-client} && $val ne $defval} {
+				puts "factory $factory config $opt did not create with default value, $val != $defval"
+			    }
+			}
+			dict {
+			}
+			default {
+			    puts "factory $factory config $opt has type $props(type)"
+			}
+		    }
+		    if {[info exists props(create-only)] && $props(create-only)} {
+			if { ! [catch {foo config $opt new-value} error]} {
+			    puts "factory $factory config $opt succeeded for create-only option? -> $error"
+			    continue
+			}
+		    } else {
+			switch $props(type) {
+			    integer {
+				if {[info exists props(range)]} {
+				    set newval [rand-int-in-range-not-equal-val {*}$props(range) $val]
+				} elseif {[info exists props(values)]} {
+				    set newval [rand-int-in-list-not-equal-val $props(values) $val]
+				} else {
+				    set newval [expr {$val+1}]
+				}
+			    }
+			    float {
+				if {[info exists props(range)]} {
+				    set newval [rand-float-in-range-not-equal-val {*}$props(range) $val]
+				} else {
+				    set newval [rand-float-in-range-not-equal-val -1e3 1e3 $val]
+				}
+			    }
+			    string {
+				if {[info exists props(values)]} {
+				    set newval [rand-element-in-list-ne-val $props(values) $val]
+				} else {
+				    set newval "value[expr {int(rand()*100)}]"
+				}
+			    }
+			    dict { continue }
+			    default {
+				puts "option type for $opt is type $props(type)"
+				continue
+			    }
+			}
+			if {[catch {foo configure $opt $newval} error]} {
+			    puts "factory $factory configure $opt $newval failed -> $error"
+			    continue
+			}
+			if {[catch {foo cget $opt} error]} {
+			    puts "factory $factory cget $opt failed -> $error"
+			    continue
+			}
+			switch $props(type) {
+			    integer {
+				if {$error != $newval} {
+				    puts "factory $factory cget $opt returned $error instead of $newval"
+				    continue
+				}
+			    }
+			    float {
+				if {abs($error-$newval)/$newval > 1e-6} {
+				    puts "factory $factory cget $opt returned $error instead of $newval"
+				    continue
+				}
+			    }
+			    string {
+				if {$error ne $newval} {
+				    puts "factory $factory cget $opt returned $error instead of $newval"
+				    continue
+				}
+			    }
+			    default {
+				puts "option type for $opt is type $props(type)"
+				continue
+			    }
+			}
+			# save non-default opt value pairs
+			# for the test of whether create honors
+			# option settings
+			if {$opt ne {-verbose}} {
+			    lappend create $opt $newval
+			}
+		    }
+		}
+		if {[catch {foo cdoc} error]} {
+		    puts "factory $factory cdoc for command failed -> $error"
+		} elseif {$error eq {}} {
+		    puts "factory $factory cdoc for command returned blank"
+		}
+		if {[catch {rename foo {}} error]} {
+		    puts "rename $factory {} failed -> $error"
+		}
+		#
+		# now create a new foo with specified option values
+		# and see if they're honored
+		# we omit the -server option for the moment
+		#
+		lappend create -client superfoo
+		if {[catch {$factory foo {*}$create} error]} {
+		    puts "factory $factory foo $create failed -> $error"
+		    continue
+		}
+		foreach {opt val} $create {
+		    if {[catch {foo cget $opt} error]} {
+			puts "factory $factory foo cget $opt failed -> $error"
+			continue
+		    }
+		    set getval $error
+		    catch {array unset props}
+		    array set props $options($opt)
+		    switch $props(type) {
+			integer {
+			    if {$val != $getval} {
+				puts "factory $factory config $opt did not create with specified value, $val != $getval"
+			    }
+			}
+			float {
+			    if {$getval != $val && abs($val-$getval)/$val > 1e-6} {
+				puts "factory $factory config $opt did not create with specified value, $val != $getval"
+			    }
+			}
+			string {
+			    if {$val ne $getval} {
+				puts "factory $factory config $opt did not create with specified value, $val != $getval"
+			    }
+			}
+			dict {
+			}
+			default {
+			    puts "factory $factory config $opt has type $props(type)"
+			}
 		    }
 		}
 		if {[catch {rename foo {}} error]} {
 		    puts "rename $factory {} failed -> $error"
 		}
-	    }
-	    jack {
-	    }
-	    fftw {
 	    }
 	}
     }
