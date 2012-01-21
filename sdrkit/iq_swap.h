@@ -23,9 +23,24 @@
 ** I/Q channel swap 
 */
 
-#include <complex.h>
+#include "dmath.h"
 
-static float _Complex iq_swap(const float _Complex in) {
+typedef struct {
+} iq_swap_t;
+typedef struct {
+} iq_swap_options_t;
+
+void iq_swap_configure(iq_swap_t *p, iq_swap_options_t *q) {
+}
+
+void *iq_swap_init(iq_swap_t *p, iq_swap_options_t *q) {
+  return p;
+}
+
+void iq_swap_preconfigure(iq_swap_t *p, iq_swap_options_t *q) {
+}
+
+static float _Complex iq_swap_process(const float _Complex in) {
   return cimag(in) + creal(in) * I;
 }
 #endif

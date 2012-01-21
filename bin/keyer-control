@@ -28,6 +28,7 @@ package require keyer::debounce
 package require keyer::iambic
 package require keyer::ptt
 package require keyer::tone
+package require dttsp::iambic
 package require sdrkit::jack
 
 package require keyer-control
@@ -41,9 +42,9 @@ array set opts {
     iambic 1
     ptt 1
     debounce 1
+    dttsp_iambic 0
 
-    a 1
-    m 0
+    layout 1
 
     ascii-verbose 0
     ascii-chan 1
@@ -74,6 +75,19 @@ array set opts {
     iambic-alsp 0
     iambic-awsp 0
     iambic-swap 0
+
+    dttsp_iambic-verbose 0
+    dttsp_iambic-chan 1
+    dttsp_iambic-note 0
+    dttsp_iambic-wpm 15
+    dttsp_iambic-mdit 1
+    dttsp_iambic-mdah 1
+    dttsp_iambic-mide 1
+    dttsp_iambic-mode B
+    dttsp_iambic-alsp 0
+    dttsp_iambic-awsp 0
+    dttsp_iambic-swap 0
+    dttsp_iambic-weight 50 
 
     iambic_tone-verbose 0
     iambic_tone-freq 750
@@ -130,6 +144,7 @@ proc client-init {} {
 		ascii_tone:* -
 		iambic:* -
 		iambic_tone:* -
+		dttsp_iambic:* -
 		ptt:* -
 		debounce:* {
 		    error "the [lindex [split $line :] 0] client is still running"
@@ -161,13 +176,20 @@ proc client-init {} {
 	set clients(ascii) {}
 	set clients(ascii_tone) {}
     }
+    # make the iambic tone keyer
+    if {$opts(iambic) || $opts(dttsp_iambic)} {
+	keyer::tone iambic_tone {*}[client-opts iambic_tone]
+	set clients(iambic_tone) iambic_tone
+	lappend connects {sdrkit::jack connect iambic_tone:out_i system:playback_1}
+	lappend connects {sdrkit::jack connect iambic_tone:out_q system:playback_2}
+    } else {
+	set clients(iambic_tone) {}
+    }
     # make the iambic keyer
     if {$opts(iambic)} {
 	# plug-open keyer::iambic iambic
 	keyer::iambic iambic {*}[client-opts iambic]
-	keyer::tone iambic_tone {*}[client-opts iambic_tone]
 	set clients(iambic) iambic
-	set clients(iambic_tone) iambic_tone
 	if {[info exists midi_capture]} {
 	    lappend connects [list sdrkit::jack connect $midi_capture iambic:midi_in]
 	}
@@ -175,11 +197,23 @@ proc client-init {} {
 	    lappend connects [list sdrkit::jack connect $mouse_key iambic:midi_in]
 	}
 	lappend connects {sdrkit::jack connect iambic:midi_out iambic_tone:midi_in}
-	lappend connects {sdrkit::jack connect iambic_tone:out_i system:playback_1}
-	lappend connects {sdrkit::jack connect iambic_tone:out_q system:playback_2}
     } else {
 	set clients(iambic) {}
-	set clients(iambic_tone) {}
+    }
+    # make the iambic keyer
+    if {$opts(dttsp_iambic)} {
+	# plug-open keyer::iambic iambic
+	dttsp::iambic dttsp_iambic {*}[client-opts dttsp_iambic]
+	set clients(dttsp_iambic) dttsp_iambic
+	if {[info exists midi_capture]} {
+	    lappend connects [list sdrkit::jack connect $midi_capture dttsp_iambic:midi_in]
+	}
+	if {[info exists mouse_key]} {
+	    lappend connects [list sdrkit::jack connect $mouse_key dttsp_iambic:midi_in]
+	}
+	lappend connects {sdrkit::jack connect dttsp_iambic:midi_out iambic_tone:midi_in}
+    } else {
+	set clients(dttsp_iambic) {}
     }
     # make the ptt keyer
     if {$opts(ptt)} {
@@ -195,9 +229,14 @@ proc client-init {} {
     if {$opts(debounce)} {
 	keyer::debounce debounce {*}[client-opts debounce]
 	set clients(debounce) debounce
-	lappend connects {sdrkit::jack disconnect system:midi_capture_1 iambic:midi_in}
+	if {$opts(iambic)} {
+	    lappend connects {sdrkit::jack disconnect system:midi_capture_1 iambic:midi_in}
+	    lappend connects {sdrkit::jack connect debounce:midi_out iambic:midi_in}
+	} elseif {$opts(dttsp_iambic)} {
+	    lappend connects {sdrkit::jack disconnect system:midi_capture_1 dttsp_iambic:midi_in}
+	    lappend connects {sdrkit::jack connect debounce:midi_out dttsp_iambic:midi_in}
+	}
 	lappend connects {sdrkit::jack connect system:midi_capture_1 debounce:midi_in}
-	lappend connects {sdrkit::jack connect debounce:midi_out iambic:midi_in}
     } else {
 	set clients(debounce) {}
     }
@@ -208,7 +247,7 @@ proc client-init {} {
 	    puts "$cmd: yielded $error"
 	}
     }
-    # returnn the assignments
+    # return the assignments
     return [array get clients]
 }
 
@@ -232,7 +271,7 @@ proc main {argv} {
 	    error "unknown option: \"$opt\""
 	}
     }
-    if {$opts(ascii) || $opts(iambic)} {
+    if {$opts(ascii) || $opts(iambic) || $opts(dttsp_iambic)} {
 	foreach {opt value}  [client-init] {
 	    set opts(client-$opt) $value
 	}

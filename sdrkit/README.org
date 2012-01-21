@@ -1,0 +1,35 @@
+* Issues
+  This collection has several goals in mind.  Some of them are
+  still coming into view, so this description covers what is here and
+  what ought to be here.
+** Collect useful computations.
+** Keep the glue out of sight.
+** Update parameters cleanly.
+   These computations run in real time on a stream of samples,
+   if the parameter updates are glitchy, then the stream will
+   sound glitchy.
+** The base type for floating point numbers is float
+** Each module should supply:
+*** a typedef struct { } module_t definition.
+    This defines the storage area required to implement the module
+    and to implement any preconfiguration computation staging.  It's
+    contents are private to the module.
+*** a typedef struct { } module_options_t definition.
+    This defines the configurable parameters of the module which the
+    user may alter.
+*** a void *module_init(module_t *p, module_options_t *q) function.
+    This initializes the module in *p, configures its parameters according
+    to *q, and returns the argument p on success, or a or a static
+    string error message on failure. 
+*** a void module_preconfigure(module_t *p, module_options_t *q) function.
+    This specifies changes to parameters that will be made at the next
+    opportunity, but we are outside the computation loop at the moment
+    so we can perform expensive computations without degrading the
+    performance of the computation loop.
+*** a void module_configure(module_t *p, module_options_t *q) function.
+    This performs the parameter changes which were prepared for in the
+    preconfigure function.  This function is run inside the
+    computation loop and should finish its business as efficiently as
+    possible.
+
+    

@@ -683,7 +683,7 @@ void DttSPAgc(DTTSPAGC a, int tick) {
   int fasthangtime = (int) (a->samprate * a->fasthangtime);
   REAL hangthresh;
 
-  // compute these on every buffer?  really?
+  // compute these on every sample?  really?
   if (a->hangthresh > 0)
     hangthresh = a->gain.top * a->hangthresh + a->gain.bottom * (REAL) (1.0 - a->hangthresh);
   else
@@ -711,7 +711,6 @@ void DttSPAgc(DTTSPAGC a, int tick) {
     // this section almost computes a new value for a->gain.now
     // it doesn't if hangindex <= hangtime
     tmp = 1.1 * Cmag(a->circ[a->indx]);
-
     if (tmp != 0.0)
       tmp = a->gain.limit / tmp;	// if not zero sample, calculate gain
     else
@@ -748,10 +747,10 @@ void DttSPAgc(DTTSPAGC a, int tick) {
       a->gain.fastnow = max(a->one_m_fastattack * a->gain.fastnow + a->fastattack * max(tmp, a->gain.bottom), a->gain.bottom);
     }
 
-    // threshold gain.fastnow to top and bottom
+    // clamp gain.fastnow to top and bottom
     a->gain.fastnow = max(min(a->gain.fastnow, a->gain.top), a->gain.bottom);
 
-    // threshold gain.now to top and bottom
+    // clamp gain.now to top and bottom
     a->gain.now = max(min(a->gain.now, a->gain.top), a->gain.bottom);
 
     // scale the output sample by the minimum
@@ -763,43 +762,6 @@ void DttSPAgc(DTTSPAGC a, int tick) {
     a->fastindx = (a->fastindx + a->mask) & a->mask;
   }
 }
-
-/* -------------------------------------------------------------------------- */
-/** @brief delDttSPAgc 
-* 
-* @param a 
-*/
-/* ---------------------------------------------------------------------------- */
-void
-delDttSPAgc(DTTSPAGC a) {
-  if (a) {
-    delCXB(a->buff);
-    delvec_COMPLEX(a->circ);
-    safefree((char *) a);
-  }
-}
-
-#if 0
-gain = 1e-3;
-spoint = 1.0;
-for (;;) {
-  /* Voltage controlled amplifier is just a multiplier here */
-  yout = yin * iout;
-
-  /* error */
-  err = spoint - abs(yout);
-
-  /* Integrate */
-  iout1 = iout;
-  iout = iout1 + gain * err;
-}
-
-if (signal_too_big())
-  decrease_gain_quickly();
-else if (signal_below_threshold() && gain_not_too_high_already())
-  increase_gain_slowly();
-
-#endif
 
 #endif 
 #ifndef AGC_H
@@ -815,15 +777,19 @@ typedef struct {
   float minGain;
   float curGain;
 } agc_t;
+typedef struct {
+} agc_options_t;
 
-#include <complex.h>
+#include "dmath.h"
+static void agc_configure(agc_t *p, agc_options_t *q) {
+}
 
 static void *agc_init(agc_t *p, int sample_rate) {
   return p;
 }
 
-static float _Complex agc(agc_t *p, float _Complex x) {
-  return x;
+static float _Complex agc_process(agc_t *p, float _Complex z) {
+  return z;
 }
 #endif
 

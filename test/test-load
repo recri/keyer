@@ -32,6 +32,7 @@ set so [info sharedlibextension]
 #
 # array to identify which other tricks to try
 array set data {
+    dttsp_iambic {dttsp::iambic norm}
     keyer_ascii {keyer::ascii norm}
     keyer_detime {keyer::detime norm}
     keyer_iambic {keyer::iambic norm}
@@ -62,42 +63,47 @@ array set data {
 }
 
 array set options {
-    -server {create-only 1 type string}
-    -client {create-only 1 type string}
-    -verbose {range {0 100} type integer}
-    -chan {range {1 16} type integer}
-    -note {range {0 127} type integer}
-    -freq {range {-10000 10000} type float}
-    -gain {range {0 -160} type float}
-    -rise {range {1 10} type float}
-    -fall {range {1 10} type float}
-    -word {range {50 60} type float}
-    -wpm {range {5 50} type float}
-    -dah {range {2.5 3.5} type float}
-    -ies {range {0.5 1.5} type float}
-    -ils {range {2.5 3.5} type float}
-    -iws {range {6 8} type float}
-    -dict {type dict}
-    -delay {range {0 5000} type integer}
-    -hang {range {0 10} type float}
-    -sine-phase {range {-1.0 1.0} type float}
-    -linear-gain {range {1e-6 1} type float}
-    -swap {values {0 1} type integer}
-    -alsp {values {0 1} type integer}
-    -awsp {values {0 1} type integer}
-    -mode {values {A B} type string}
-    -period {range {10 10000} type float}
-    -steps {values {1 64} type integer}
     -a1 {type float}
     -a2 {type float}
+    -alsp {values {0 1} type integer}
+    -awsp {values {0 1} type integer}
     -b0 {type float}
     -b1 {type float}
     -b2 {type float}
-    -size {range {1 10000} type integer}
-    -planbits {type integer}
-    -window {range {0 12} type integer}
-    -real {type float}
+    -chan {range {1 16} type integer}
+    -client {create-only 1 type string}
+    -dah {range {2.5 3.5} type float}
+    -delay {range {0 5000} type integer}
+    -dict {type dict}
+    -fall {range {1 10} type float}
+    -freq {range {-10000 10000} type float}
+    -gain {range {0 -160} type float}
+    -hang {range {0 10} type float}
+    -ies {range {0.5 1.5} type float}
+    -ils {range {2.5 3.5} type float}
     -imag {type float}
+    -iws {range {6 8} type float}
+    -level {range {0 -160} type float}
+    -linear-gain {range {1e-6 1} type float}
+    -mdit {values {0 1} type integer} 
+    -mdah {values {0 1} type integer}
+    -mide {values {0 1} type integer}
+    -mode {values {A B} type string}
+    -note {range {0 127} type integer}
+    -period {range {10 10000} type float}
+    -planbits {type integer}
+    -real {type float}
+    -rise {range {1 10} type float}
+    -seed {create-only 1 type integer range {1 2147483648}}
+    -server {create-only 1 type string}
+    -sine-phase {range {-1.0 1.0} type float}
+    -size {range {1 10000} type integer}
+    -steps {values {1 64} type integer}
+    -swap {values {0 1} type integer}
+    -verbose {range {0 100} type integer}
+    -window {range {0 12} type integer}
+    -word {range {50 60} type float}
+    -wpm {range {5 50} type float}
 }
 
 array set results {

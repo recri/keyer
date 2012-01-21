@@ -26,23 +26,34 @@
 
 #include "dmath.h"
 
-#define _mu 0.25f	/* fudge? const: 0.25 */
-
 typedef struct {
-  float phase;			/* sin of phase correction */
-  float gain;			/* linear gain correction to I */
-  _Complex float w;		/* memory init: 0.00+0.00 * I */
+  float sine_phase;			/* sine of phase correction */
+  float linear_gain;			/* linear gain correction to I */
+  _Complex float w;			/* memory init: 0.00+0.00 * I */
 } iq_balance_t;
 
-static void *iq_balance_init(iq_balance_t *p) {
-  // p->phase = 0.0f;
-  // p->gain = 1.0f;
+typedef struct {
+  float sine_phase;
+  float linear_gain;
+} iq_balance_options_t;
+
+static void iq_balance_configure(iq_balance_t *p, iq_balance_options_t *q) {
+  p->sine_phase = q->sine_phase;
+  p->linear_gain = q->linear_gain;
+}
+
+static void *iq_balance_init(iq_balance_t *p, iq_balance_options_t *q) {
   p->w = 0.0f;
+  iq_balance_configure(p, q);
   return p;
 }
 
-static float _Complex iq_balance(iq_balance_t *p, const float _Complex in) {
-  float _Complex adj_in = creal(in) * p->gain + (cimag(in) + p->phase * creal(in)) * I;
+static void iq_balance_preconfigure(iq_balance_t *p, iq_balance_options_t *q) {
+}
+
+static float _Complex iq_balance_process(iq_balance_t *p, const float _Complex in) {
+  const float _mu = 0.25f;	/* fudge? const: 0.25 */
+  float _Complex adj_in = creal(in) * p->linear_gain + (cimag(in) + p->sine_phase * creal(in)) * I;
   float _Complex y = adj_in + p->w * conj(adj_in);
   p->w = (1.0 - _mu * 0.000001f) * p->w - _mu * y * y;
   return y;

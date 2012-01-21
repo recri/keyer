@@ -40,8 +40,6 @@
 #endif
 
 
-static float squaref(float x) { return x * x; }
-
 static const float pi = 3.14159265358979323846f;		/* pi */
 static const float half_pi = 1.57079632679489661923f;		/* pi/2 */
 static const float quarter_pi = 0.78539816339744830962f;	/* pi/4 */
@@ -60,6 +58,26 @@ static float Log10P(float x) { return +10.0 * log10(x + BITSY); }
 static float Log10Q(float x) { return -10.0 * log10(x + BITSY); }
 static float dBP(float x) { return 20.0 * log10(x + BITSY); }
 static float DamPlus(float x0, float x1) { return 0.9995 * x0 + 0.0005 * x1; }
+
+/*
+** these are banal
+*/
+static float minf(float a, float b) { return a < b ? a : b; }
+static float maxf(float a, float b) { return a > b ? a : b; }
+static float squaref(float x) { return x * x; }
+
+/*
+** these are functions you learn in computer graphics
+*/
+/* clamp a value between a max and min value */
+static float clampf(float a, float a_min, float a_max) {
+  return minf(maxf(a, a_min), a_max);
+}
+
+/* linearly interpolate between two extremes */
+static float interpf(float p, float v0, float v1) {
+  return (1.0f-p)*v0 + p*v1;
+}
 
 #endif
 

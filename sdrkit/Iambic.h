@@ -290,4 +290,12 @@ public:
   }
 };
 
+extern "C" {
+  typedef struct {
+    Iambic k;
+  } iambic_t;
+  typedef struct {
+  } iambic_options_t;
+}
+
 #endif // Iambic_hh

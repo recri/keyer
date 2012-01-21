@@ -26,6 +26,7 @@ package require keyer::ascii
 package require keyer::detime
 package require keyer::iambic
 package require keyer::tone
+package require dttsp::iambic
 
 # set the common options which all apps implement
 array set opts {
@@ -72,6 +73,15 @@ switch -glob [info script] {
 	}
 	# command to implement tone keyer
 	set command keyer::tone
+    }
+    *dttsp-iambic {
+	# default option values for dttsp iambic keyer
+	array set opts {
+	    -client iambic
+	    -wpm 18 -mode B -mdit 1 -mdah 1 -mide 1 -alsp 0 -awsp 0 -swap 0 -weight 50
+	}
+	# command to implement dttsp iambic
+	set command dttsp::iambic
     }
     default {
 	error "unimplemented keyer command [file tail [info script]]"
@@ -137,5 +147,8 @@ switch $command {
 	    after 250
 	    if {[string length [set line [$opts(-client) gets]]]} { puts -nonewline $line }
 	}
-   }
+    }
+    dttsp::iambic {
+	vwait done
+    }
 }

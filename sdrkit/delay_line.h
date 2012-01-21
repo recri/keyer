@@ -27,22 +27,35 @@ typedef struct {
   ring_buffer_t ring;
   float *buff;
 } delay_line_t;
+typedef struct {
+  int delay;
+  int max_delay;
+  float *buff;
+} delay_line_options_t;
 
-static void *delay_line_init(delay_line_t *p, int delay, int max_delay, float *buff) {
-    p->max_delay = max_delay;
-    p->delay = delay;
-    p->buff = buff;
-    return float_ring_buffer_init(&p->ring, max_delay, buff);
+static void *delay_line_init(delay_line_t *dlp, delay_line_options_t *q) {
+  dlp->max_delay = q->max_delay;
+  dlp->delay = q->delay;
+  dlp->buff = q->buff;
+  float_ring_buffer_options_t opt = { q->max_delay, q->buff };
+  void *p = float_ring_buffer_init(&dlp->ring, &opt); if (p != &p->ring) return p;
+  return dlp;
 }
 
-static void delay_line_set_delay(delay_line_t *p, int delay) {
-  if (delay <= max_delay)
-    p->delay = delay;
-    p->ring.rptr = float_ring_buffer_index(&p->ring, p->ring.wptr-p->delay);
+static void delay_line_configure(delay_line_t *dlp, delay_line_options_t *q) {
+  int d = q->delay-dlp->delay;
+  dlp->delay = q->delay;
+  p->ring.rptr = float_ring_buffer_index(&p->ring, p->ring.rptr+d);
+}
+
+static void *delay_line_preconfigure(delay_line_t *dlp, delay_line_options_t *q) {
+  if (q->delay > dlp->max_delay) {
+    return "delay exceeds max_delay"
   }
+  return dlp;
 }
-
-static float delay_line(delay_line_t *p, float sample) {
+  
+static float delay_line_process(delay_line_t *p, float sample) {
   float delayed_sample;
   float_ring_buffer_get(&p->ring, 1, &delayed_sample);
   float_ring_buffer_put(&p->ring, 1, &sample);

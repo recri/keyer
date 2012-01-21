@@ -26,10 +26,7 @@
 
 #include "../sdrkit/iq_balance.h"
 
-typedef struct {
-  float sine_phase;
-  float linear_gain;
-} options_t;
+typedef iq_balance_options_t options_t;
 
 typedef struct {
   framework_t fw;
@@ -40,13 +37,12 @@ typedef struct {
 
 static void *_update(_t *data) {
   data->modified = 0;
-  data->iqb.phase = data->opts.sine_phase;
-  data->iqb.gain = data->opts.linear_gain;
+  iq_balance_configure(&data->iqb, &data->opts);
 }
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *p = iq_balance_init(&data->iqb); if (p != &data->iqb) return p;
+  void *p = iq_balance_init(&data->iqb, &data->opts); if (p != &data->iqb) return p;
   data->modified = 1;
   _update(data);
   return arg;
@@ -61,7 +57,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _update(data);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = iq_balance(&data->iqb, *in0++ + *in1++ * I);
+    float _Complex y = iq_balance_process(&data->iqb, *in0++ + *in1++ * I);
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }

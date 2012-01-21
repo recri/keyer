@@ -64,7 +64,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = agc(&data->agc, *in0++ + *in1++ * I);
+    float _Complex y = agc_process(&data->agc, *in0++ + *in1++ * I);
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }

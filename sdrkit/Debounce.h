@@ -55,4 +55,23 @@ class Debounce {
   unsigned long _mask;
 };
 
+extern "C" {
+  typedef struct {
+    Debounce debounce;
+  } debounce_t;
+  typedef struct {
+    int steps;
+  } debounce_options_t;
+  void *debounce_init(debounce_t *p, debounce_options_t *q) {
+    return p;
+  }
+  void debounce_configure(debounce_t *p, debounce_options_t *q) {
+    p->debounce.setSteps(q->steps);
+  }
+  void debounce_preconfigure(debounce_t *p, debounce_options_t *q) {
+  }
+  int debounce_process(debounce_t *p, int input) {
+    return p->debounce.debounce(input);
+  }
+}
 #endif

@@ -32,14 +32,23 @@ typedef struct {
   float smooth;
 } am_demod_t;
 
-static void am_demod_init(am_demod_t *p) {
+typedef struct {
+} am_demod_options_t;
+
+static void *am_demod_init(am_demod_t *p) {
   p->val = 0.0f;
   p->dc = 0.0f;
   p->smooth = 0.0f;
   return p;
 }
 
-static float _Complex am_demod(am_demod_t *p, const float _Complex in) {
+static void am_demod_configure(am_demod_t *p, am_demod_options_t *q) {
+}
+
+static void am_demod_preconfigure(am_demod_t *p, am_demod_options_t *q) {
+}
+
+static float _Complex am_demod_process(am_demod_t *p, const float _Complex in) {
   p->val = cabs(in);
   p->dc = 0.9999f * p->dc + 0.0001f * p->val;
   p->smooth = 0.5f * p->smooth + 0.5f * (p->val - p->dc);

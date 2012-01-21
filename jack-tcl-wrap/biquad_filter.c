@@ -24,9 +24,7 @@
 #include "../sdrkit/dmath.h"
 #include "../sdrkit/biquad_filter.h"
 
-typedef struct {
-  float a1, a2, b0, b1, b2;
-} options_t;
+typedef biquad_filter_options_t options_t;
 
 typedef struct {
   framework_t fw;
@@ -37,7 +35,7 @@ typedef struct {
 
 static void _update(_t *data) {
   data->modified = 0;
-  biquad_filter_config(&data->bq, data->opts.a1, data->opts.a2, data->opts.b0, data->opts.b1, data->opts.b2);
+  biquad_filter_config(&data->bq, &data->opts);
 }
 
 static void *_init(void *arg) {

@@ -191,46 +191,51 @@ proc ::main::resend_callsign {send} {
 }
 
 proc ::main::listen_clear {} {
-    set ::main::data(last-echo) {}
-    set ::main::data(keyer-panel-rcvd) {}
-    set ::main::data(matched) {}
+    array set ::main::data {listen-last-echo {} listen-last-echo-repeat 0 listen-matched {} listen-echoes-received {} listen-rcvd {}}
     .rcvd.rcvd delete 0.0 end
+}
+
+proc ::main::listen_score_echo {item} {
+    set item [string trim $item]
+    if {$item eq {}} return
+    lappend ::main::data(listen-rcvd) $item
+    set i [lsearch $::main::data(unmatched) $item]
+    if {$i >= 0} {
+	set ::main::data(unmatched) [lreplace $::main::data(unmatched) $i $i]
+	lappend ::main::data(matched) $item
+	.rcvd.rcvd insert end "$item [morse-to-text [heckler cget -dict] $item] correct\n"
+	::main::play-score correct [morse-dit-length $item]
+    } else {
+	.rcvd.rcvd insert end "$item [morse-to-text [heckler cget -dict] $item] wrong\n"
+	::main::play-score wrong [morse-dit-length $item]
+    }
 }
 
 proc ::main::listen_for_echoes {echo detime} {
     set new [$detime gets]
-    append ::main::data(echoes-received) $new
+    append ::main::data(listen-echoes-received) $new
     append echo $new
     if {$echo ne {}} {
-	if {$echo ne $::main::data(last-echo)} {
-	    #puts "listen_for_echoes heard $echo"
-	    set ::main::data(last-echo) $echo
+	if {$echo ne $::main::data(listen-last-echo)} {
+	    puts "listen_for_echoes heard {$echo} this time"
+	    set ::main::data(listen-last-echo-repeat) 0
+	    set ::main::data(listen-last-echo) $echo
+	} else {
+	    incr ::main::data(listen-last-echo-repeat)
 	}
-	set ::main::data(keyer-panel-rcvd) {}
 	set echoes [split $echo \n]
-	if {[llength $echoes] > 1} {
-	    set echo [lindex $echoes end]
-	    foreach item [lrange $echoes 0 end-1] {
-		set item [string trim $item]
-		set text [morse-to-text [heckler cget -dict] $item]
-		lappend ::main::data(rcvd) $item
-		.rcvd.rcvd insert end "$item $text"
-		set i [lsearch $::main::data(unmatched) $item]
-		if {$i >= 0} {
-		    set ::main::data(unmatched) [lreplace $::main::data(unmatched) $i $i]
-		    lappend ::main::data(matched) $item
-		    set tag correct
-		    .rcvd.rcvd insert end " correct"
-		} else {
-		    .rcvd.rcvd insert end " wrong"
-		    set tag wrong
-		}
-		.rcvd.rcvd insert end \n
-		.rcvd.rcvd tag add $tag "end - 1 line linestart" "end - 1 line lineend"
-	    }
+	puts "[llength $echoes] echoes to match, [llength $::main::data(unmatched)] unmatched, $::main::data(listen-last-echo-repeat) repeats"
+	foreach item [lrange $echoes 0 end-1] {
+	    ::main::listen_score_echo $item
 	}
-	.rcvd.rcvd tag configure correct -foreground green
-	.rcvd.rcvd tag configure wrong -foreground red
+	set echo [lindex $echoes end]
+	if {$::main::data(active-voices) == 0 && $::main::data(listen-last-echo-repeat) > 10} {
+	    ::main::listen_score_echo $echo
+	    foreach item $::main::data(unmatched) {
+		::main::play-score missed [morse-dit-length $item]
+	    }
+	    set echo {}
+	}
     }
     after 100 [list ::main::listen_for_echoes $echo $detime]
 }
@@ -395,6 +400,19 @@ proc ::main::play-panel-update-simulate {w} {
     after $::main::data(play-panel-update-simulate-delay) [list ::main::play-panel-update-simulate $w]
 }
 
+proc ::main::play-score {category points} {
+    incr ::main::data(play-dits-$category) $points
+    set y1 [winfo height .play.score]
+    set y0 [expr {$y1-$::main::data(play-dits-$category)}]
+    switch $category {
+	wrong { set x0 0; set x1 10 }
+	correct { set x0 10; set x1 20 }
+	missed { set x0 20; set x1 30 }
+	default { error "unknown score category $category" }
+    }
+    .play.score coords $category $x0 $y0 $x1 $y1
+}
+
 ####
 #### user interface actions
 ####
@@ -454,6 +472,14 @@ proc ::main::play-start {} {
     ::main::heard_clear
     # clear received
     ::main::listen_clear
+    # clear score
+    array set ::main::data {play-dits-correct 0 play-dits-wrong 0 play-dits-missed 0}
+    # clear score bar graph
+    catch {.play.score delete all}
+    set ht [winfo height .play.score]
+    .play.score create rectangle 0 $ht 10 $ht -fill red -tag wrong
+    .play.score create rectangle 10 $ht 20 $ht -fill green -tag correct
+    .play.score create rectangle 20 $ht 30 $ht -fill blue -tag missed
     # start voices
     set ::main::data(active-voices) 0
     for {set voice 0} {$voice < $::main::data(voices)} {incr voice} {
@@ -561,13 +587,21 @@ proc ::main::play-panel {w} {
     set minf [expr {$::main::data(tone)-5}]
     set midf [expr {$::main::data(tone)+$::main::data(tone-range)*0.5}]
     set maxf [expr {$::main::data(tone)+$::main::data(tone-range)}]
-    grid [hurricane $w.hurricane -min-f $minf -max-f $maxf -pal 5] -row 0 -column 0 -sticky nsew
-    grid [ttk::frame $w.m] -row 1 -column 0
+    grid [canvas $w.score -width 30] -row 0 -column 0 -sticky ns
+    grid [hurricane $w.hurricane -min-f $minf -max-f $maxf -pal 5] -row 0 -column 1 -sticky nsew
+    grid [ttk::frame $w.m] -row 1 -column 0 -columnspan 2
     grid rowconfigure $w 0 -weight 100
-    grid columnconfigure $w 0 -weight 100
+    grid columnconfigure $w 1 -weight 100
     pack [ttk::button $w.m.start -text start -command ::main::play-start -state normal] -side left
     pack [ttk::button $w.m.pause -text pause -command ::main::play-pause -state disabled] -side left
     pack [ttk::button $w.m.stop -text stop -command ::main::play-stop -state disabled] -side left
+    array set ::main::data {play-dits-correct 0 play-dits-wrong 0 play-dits-missed 0}
+    pack [ttk::label $w.m.correct-l -text Correct:] -side left
+    pack [ttk::label $w.m.correct -textvar ::main::data(play-dits-correct) -width 4] -side left
+    pack [ttk::label $w.m.wrong-l -text Wrong:] -side left
+    pack [ttk::label $w.m.wrong -textvar ::main::data(play-dits-wrong) -width 4] -side left
+    pack [ttk::label $w.m.missed-l -text Missed:] -side left
+    pack [ttk::label $w.m.missed -textvar ::main::data(play-dits-missed) -width 4] -side left
     bind . <Configure> [list ::main::play-panel-window-configure $w %W %w %h]
     bind . <Destroy> [list ::main::play-panel-window-destroy $w %W]
     ## first part concerning a real waterfall capture
@@ -625,6 +659,8 @@ proc ::main::keyer-panel {w} {
 	debounce 1
 	iambic 1
 	ptt 1
+
+	layout 1
 
 	client-ascii {}
 	client-ascii_tone {}
@@ -708,7 +744,7 @@ proc ::main::main {argv} {
     jack connect iambic:midi_out ptt:midi_in;			# keyer to ptt splitter
     jack connect ptt:midi_out iambic_tone:midi_in;		# splitter to tone generator
     jack connect ptt:midi_out iambic_detime:midi_in;		# splitter to detimer
-    jack connect iambic_tone:out_i system:playback_1;		# tone to system playbac
+    jack connect iambic_tone:out_i system:playback_1;		# tone to system playback
     jack connect iambic_tone:out_q system:playback_2
     jack connect ptt:midi_out pileup:midi_in;			# ptt mute line
     jack connect ptt:midi_out ptt_mtap:midi_in;			# ptt feedback line

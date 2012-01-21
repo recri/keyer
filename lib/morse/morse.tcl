@@ -400,17 +400,31 @@ proc morse-to-text {dict morse} {
 #
 proc morse-character-length {dict character} {
     # subtract trailing inter-element space 
+    return [morse-dit-length [dict get $dict $character]]
+}
+
+#
+# compute the length in dit clocks
+# of a given string of dits and dahs and spaces and newlines
+#
+proc morse-dit-length {code} {
     set length -1
-    foreach e [split [dict get $dict $character] {}] {
+    foreach e [split [string trim $code] {}] {
 	if {$e eq {.}} {
-	    incr length 2
+	    incr length 2;	# dit + ies
 	} elseif {$e eq {-}} {
-	    incr length 4
+	    incr length 4;	# dah + ies
+	} elseif {$e eq { }} {
+	    incr length 2;	# - ies + ils
+	} elseif {$e eq "\n"} {
+	    incr length 6;	# - ies + iws
+	} else {
+	    error "bad code string $code"
 	}
     }
     return $length
 }
-
+    
 #
 # generate the length classes of a dictionary
 #

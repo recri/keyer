@@ -31,6 +31,10 @@ typedef struct {
   unsigned mask;		/* buffer index mask */
   float *buff;			/* buffer of stuff */
 } float_ring_buffer_t;
+typedef struct {
+  unsigned size;
+  float *buff;
+} float_ring_buffer_options_t;
 
 // returns p on success, otherwise an error string
 static void *float_ring_buffer_init(float_ring_buffer_t *p, unsigned size, float *buff) {

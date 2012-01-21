@@ -16,67 +16,46 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-/** 
-
-    keyer_iambic implements an iambic keyer keyed by midi events
-    and generating midi events.
-
-    the basic puzzle here is how to get the initial key event
-    out of the midi buffer on the frame it happens at.  I suppose
-    the call to the keyer tick could return an event.
-    
+/* 
+embed the dttsp_keyer, more work to do.    
 */
 
-#include "../sdrkit/Iambic.h"
+#include "../sdrkit/dttsp_iambic.h"
 
 extern "C" {
-
-#define KEYER_OPTIONS_TIMING	1
-#define KEYER_OPTIONS_KEYER	1
-
 #include "framework.h"
 #include "../sdrkit/midi.h"
+#include "../sdrkit/midi_buffer.h"
 
   typedef struct {
-#include "keyer_options_var.h"
+    int chan, note;
+    int swap;
+    dttsp_iambic_options_t key_opts;
   } options_t;
 
   typedef struct {
     framework_t fw;
+    dttsp_iambic_t key;
     int modified;
     options_t opts;
-    Iambic k;
-    int raw_dit;
-    int raw_dah;
-    int key_out;
+    midi_buffer_t midi;
+    int raw_dit, raw_dah, key_out;
+    float millis_per_frame;
   } _t;
 
   // update the computed parameters
   static void _update(_t *dp) {
     if (dp->modified) {
       dp->modified = 0;
-
-      /* keyer recomputation */
-      dp->k.setVerbose(dp->fw.verbose);
-      dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
-      dp->k.setWord(dp->opts.word);
-      dp->k.setWpm(dp->opts.wpm);
-      dp->k.setDah(dp->opts.dah);
-      dp->k.setIes(dp->opts.ies);
-      dp->k.setIls(dp->opts.ils);
-      dp->k.setIws(dp->opts.iws);
-      dp->k.setAutoIls(dp->opts.alsp != 0);
-      dp->k.setAutoIws(dp->opts.awsp != 0);
-      dp->k.setSwapped(dp->opts.swap != 0);
-      dp->k.setMode(dp->opts.mode);
+      dttsp_iambic_configure(&dp->key, &dp->opts.key_opts);
     }
   }
 
   static void *_init(void *arg) {
     _t *dp = (_t *)arg;
-    dp->raw_dit = 0;
-    dp->raw_dah = 0;
-    dp->key_out = 0;
+    void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
+    p = dttsp_iambic_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
+    dp->millis_per_frame = jack_frames_to_time(dp->fw.client, 1) / 1000.0f;
     dp->modified = 1;
     _update(dp);
     return arg;
@@ -106,14 +85,14 @@ extern "C" {
   /*
   ** jack process callback
   */
+
   static int _process(jack_nframes_t nframes, void *arg) {
     _t *dp = (_t *)arg;
     void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
     void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
+    void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, sdrkit_last_frame_time(dp));
     int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
     jack_midi_event_t in_event;
-    // update our timings
-    _update(dp);
     // find out what input events we need to process
     if (in_event_index < in_event_count) {
       jack_midi_event_get(&in_event, midi_in, in_event_index++);
@@ -125,18 +104,20 @@ extern "C" {
     jack_midi_clear_buffer(midi_out);
     /* for all frames in the buffer */
     for (int i = 0; i < nframes; i++) {
+      int look_for_more_events = 0;
       /* process all midi input events at this sample frame */
       while (in_event_time == i) {
-	_decode(dp, in_event.size, in_event.buffer);
+	_decode(dp, in_event.size, in_event.buffer); // this might trigger a keyout
 	if (in_event_index < in_event_count) {
 	  jack_midi_event_get(&in_event, midi_in, in_event_index++);
 	  in_event_time = in_event.time;
 	} else {
 	  in_event_time = nframes+1;
 	}
+	look_for_more_events = 1;
       }
       /* clock the iambic keyer */
-      if (dp->k.clock(dp->raw_dit, dp->raw_dah, 1) != dp->key_out) {
+      if (dttsp_iambic_process(&dp->key, dp->raw_dit, dp->raw_dah, dp->millis_per_frame) != dp->key_out) {
 	dp->key_out ^= 1;
 	char midi_note_event[] = { (dp->key_out ? MIDI_NOTE_ON : MIDI_NOTE_OFF) | (dp->opts.chan-1), dp->opts.note, 0 };
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
@@ -151,22 +132,36 @@ extern "C" {
   }
 
   static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-    _t *dp = (_t *)clientData;
-    options_t save = dp->opts;
+    _t *data = (_t *)clientData;
+    options_t save = data->opts;
     if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
-      dp->opts = save;
+      data->opts = save;
       return TCL_ERROR;
     }
-    dp->modified = (dp->opts.word != save.word || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
-		    dp->opts.ies != save.ies || dp->opts.ils != save.ils || dp->opts.iws != save.iws ||
-		    dp->opts.swap != save.swap || dp->opts.alsp != save.alsp || dp->opts.awsp != save.awsp ||
-		    dp->opts.mode != save.mode);
+    data->modified = (data->opts.key_opts.wpm != save.key_opts.wpm ||
+		      data->opts.key_opts.mode != save.key_opts.mode ||
+		      data->opts.key_opts.want_dit_mem != save.key_opts.want_dit_mem ||
+		      data->opts.key_opts.want_dah_mem != save.key_opts.want_dah_mem ||
+		      data->opts.key_opts.need_midelemodeB != save.key_opts.need_midelemodeB ||
+		      data->opts.key_opts.autocharspacing != save.key_opts.autocharspacing ||
+		      data->opts.key_opts.autowordspacing != save.key_opts.autowordspacing ||
+		      data->opts.key_opts.weight != save.key_opts.weight);
     return TCL_OK;
   }
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-#include "keyer_options_def.h"
+    { "-chan", "channel", "Channel", "1",    fw_option_int,     fw_flag_none, offsetof(_t, opts.chan), "midi channel used for keyer" },
+    { "-note", "note",    "Note",    "0",    fw_option_int,     fw_flag_none, offsetof(_t, opts.note), "base midi note used for keyer" },
+    { "-swap", "swap",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap), "swap the dit and dah paddles" },
+    { "-wpm",  "wpm",     "Words",   "18.0", fw_option_float,   fw_flag_none, offsetof(_t, opts.key_opts.wpm), "words per minute" },
+    { "-mode", "mode",    "Mode",    "A",    fw_option_char,    fw_flag_none, offsetof(_t, opts.key_opts.mode), "iambic mode A or B" },
+    { "-mdit", "mdit",    "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.want_dit_mem), "keep a dit memory" },
+    { "-mdah", "mdah",	  "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.want_dah_mem), "keep a dah memory" },
+    { "-mide", "mide",    "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.need_midelemodeB), "remember key state at mid-element" },
+    { "-alsp", "alsp",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.autocharspacing), "auto letter spacing" },
+    { "-awsp", "awsp",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.autowordspacing), "auto word spacing" },
+    { "-weight","weight", "Bool",    "50",   fw_option_int,     fw_flag_none, offsetof(_t, opts.key_opts.weight), "adjust relative weight of dit and dah" },
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 
@@ -184,15 +179,15 @@ extern "C" {
     NULL,				// sample rate function
     _process,			// process callback
     0, 0, 1, 1,			// inputs,outputs,midi_inputs,midi_outputs
-    (char *)"an iambic keyer component which translates MIDI input key events into an output MIDI key signal"
+    (char *)"an iambic keyer component based on the dttsp iambic keyer"
   };
 
   static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
     return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
   }
 
-  int DLLEXPORT Keyer_iambic_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "keyer::iambic", "1.0.0", "keyer::iambic", _factory);
+  int DLLEXPORT Dttsp_iambic_Init(Tcl_Interp *interp) {
+    return framework_init(interp, "dttsp::iambic", "1.0.0", "dttsp::iambic", _factory);
   }
 
 }

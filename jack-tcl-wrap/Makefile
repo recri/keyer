@@ -26,6 +26,8 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_ptt_mute.so \
 	$(LIBDIR)/keyer_tone.so
 
+DTTSP=$(LIBDIR)/dttsp_iambic.so
+
 ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/atap.so \
 	$(LIBDIR)/audio_tap.so \
@@ -46,7 +48,8 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/oscillatorf.so \
 	$(LIBDIR)/oscillatort.so \
 	$(LIBDIR)/oscillatorz.so \
-	$(KEYERS)
+	$(KEYERS) \
+	$(DTTSP)
 
 all:: $(ALL) libdir-all
 
@@ -149,7 +152,7 @@ $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_op
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 
-$(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h
+$(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../sdrkit/midi.h ../sdrkit/Debounce.h
 	@mkdir -p $(LIBDIR)
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $<  $(JACK_LIBS) $(LIBS) -lm
 
@@ -172,4 +175,8 @@ $(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../sdrkit/midi.h ../sd
 $(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/keyed_tone.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
+
+$(LIBDIR)/dttsp_iambic.so: dttsp_iambic.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/dttsp_iambic.h
+	@mkdir -p $(LIBDIR)
+	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 
