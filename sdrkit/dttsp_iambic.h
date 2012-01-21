@@ -1,6 +1,39 @@
+/* -*- mode: c++; tab-width: 8 -*- */
+/*
+  Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+*/
 
 #ifndef DTTSP_IAMBIC_H
 #define DTTSP_IAMBIC_H
+
+/*
+** This is the core of iambic-keyer.c from dttsp.
+**
+** The code in this file is derived from routines originally written by
+** Pierre-Philippe Coupard for his CWirc X-chat program. That program
+** is issued under the GPL and is
+** Copyright (C) Pierre-Philippe Coupard - 18/06/2003
+**
+** This derived version is
+** Copyright (C) 2004-2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
+** Doxygen comments added by Dave Larsen, KV0S
+*/
+
+// #include <stdio.h>
 
 class dttsp_iambic {
  private:
@@ -25,7 +58,7 @@ class dttsp_iambic {
     } prev;
   } flag;
   struct {
-    int altrn,	      // insert alternate element
+    int altrn,		      // insert alternate element
       psqam;		      // paddles squeezed after mid-element
     int curr,		      // -1 = nothing, 0 = dit, 1 = dah
       iamb,		      //  0 = none, 1 = squeezed, 2 = released
@@ -36,7 +69,7 @@ class dttsp_iambic {
   } time_left;
   int dlay_type;	     // 0 = none, 1 = interchar, 2 = interword
   // klogic parameters
-  double wpm;
+  float wpm;
   int iambicmode;
   int need_midelemodeB;
   int want_dit_mem;
@@ -45,7 +78,7 @@ class dttsp_iambic {
   int autowordspacing;
   int weight;
   // computed parameters
-  double ditlen;
+  float ditlen;
   
  public:
   dttsp_iambic() {
@@ -60,7 +93,7 @@ class dttsp_iambic {
     dlay_type = NO_DELAY;
   }
 
-  void set_wpm(double _wpm) { ditlen = 1200 / (wpm = _wpm); }
+  void set_wpm(float _wpm) { ditlen = 1200.0f / (wpm = _wpm); }
   void set_iambicmode_b() { iambicmode = MODE_B; }
   void set_iambicmode_a() { iambicmode = MODE_A; }
   void set_need_midelemodeB(int on) { need_midelemodeB = on; }
@@ -83,7 +116,7 @@ class dttsp_iambic {
   // ditlen in ms/dit = 1000 * seconds/dit = 1200 / wpm
   //
 
-  int clock(int dit, int dah, double ticklen) {
+  int clock(int dit, int dah, float ticklen) {
     int set_which_ele_time_left = NO_TIME_LEFTS_SCHED;
     /** Decrement the time_lefts */
     time_left.dlay -= time_left.dlay > 0 ? ticklen : 0;

@@ -55,7 +55,7 @@ extern "C" {
     _t *dp = (_t *)arg;
     void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
     p = dttsp_iambic_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
-    dp->millis_per_frame = jack_frames_to_time(dp->fw.client, 1) / 1000.0f;
+    dp->millis_per_frame = 1000.0f / jack_get_sample_rate(dp->fw.client);
     dp->modified = 1;
     _update(dp);
     return arg;
@@ -93,6 +93,8 @@ extern "C" {
     void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, sdrkit_last_frame_time(dp));
     int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
     jack_midi_event_t in_event;
+    // fetch options if necessary
+    _update(dp);
     // find out what input events we need to process
     if (in_event_index < in_event_count) {
       jack_midi_event_get(&in_event, midi_in, in_event_index++);

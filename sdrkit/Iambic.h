@@ -47,7 +47,7 @@
 ** in case the int is too small on an microprocessor
 */
 
-#include <stdio.h>
+// #include <stdio.h>
 
 class Iambic {
 private:
