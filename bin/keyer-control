@@ -42,6 +42,9 @@ array set opts {
     ptt 1
     debounce 1
 
+    a 1
+    m 0
+
     ascii-verbose 0
     ascii-chan 1
     ascii-note 0
@@ -143,27 +146,28 @@ proc client-init {} {
 	}
     }
     # make helpers
-    set clients {}
+    array set clients {}
     set connects {}
     # make the ascii keyer
     if {$opts(ascii)} {
         keyer::ascii ascii {*}[client-opts ascii]
-	lappend clients ascii
 	keyer::tone ascii_tone {*}[client-opts ascii_tone]
-	lappend clients ascii_tone
+	set clients(ascii) ascii
+	set clients(ascii_tone) ascii_tone
 	lappend connects {sdrkit::jack connect ascii:midi_out ascii_tone:midi_in}
 	lappend connects {sdrkit::jack connect ascii_tone:out_i system:playback_1}
 	lappend connects {sdrkit::jack connect ascii_tone:out_q system:playback_2}
     } else {
-	lappend clients {} {}
+	set clients(ascii) {}
+	set clients(ascii_tone) {}
     }
     # make the iambic keyer
     if {$opts(iambic)} {
 	# plug-open keyer::iambic iambic
 	keyer::iambic iambic {*}[client-opts iambic]
-	lappend clients iambic
 	keyer::tone iambic_tone {*}[client-opts iambic_tone]
-	lappend clients iambic_tone
+	set clients(iambic) iambic
+	set clients(iambic_tone) iambic_tone
 	if {[info exists midi_capture]} {
 	    lappend connects [list sdrkit::jack connect $midi_capture iambic:midi_in]
 	}
@@ -174,27 +178,28 @@ proc client-init {} {
 	lappend connects {sdrkit::jack connect iambic_tone:out_i system:playback_1}
 	lappend connects {sdrkit::jack connect iambic_tone:out_q system:playback_2}
     } else {
-	lappend clients {} {}
+	set clients(iambic) {}
+	set clients(iambic_tone) {}
     }
     # make the ptt keyer
     if {$opts(ptt)} {
 	keyer::ptt ptt {*}[client-opts ptt]
-	lappend clients ptt
+	set clients(ptt) ptt
 	lappend connects {sdrkit::jack disconnect iambic:midi_out iambic_tone:midi_in}
 	lappend connects {sdrkit::jack connect iambic:midi_out ptt:midi_in}
 	lappend connects {sdrkit::jack connect ptt:midi_out iambic_tone:midi_in}
     } else {
-	lappend clients {}
+	set clients(ptt) {}
     }
     # make the debounce keyer
     if {$opts(debounce)} {
 	keyer::debounce debounce {*}[client-opts debounce]
-	lappend clients debounce
+	set clients(debounce) debounce
 	lappend connects {sdrkit::jack disconnect system:midi_capture_1 iambic:midi_in}
 	lappend connects {sdrkit::jack connect system:midi_capture_1 debounce:midi_in}
 	lappend connects {sdrkit::jack connect debounce:midi_out iambic:midi_in}
     } else {
-	lappend clients {}
+	set clients(debounce) {}
     }
     
     # make the connections
@@ -203,7 +208,13 @@ proc client-init {} {
 	    puts "$cmd: yielded $error"
 	}
     }
-    return $clients
+    # returnn the assignments
+    return [array get clients]
+}
+
+proc send {msg} {
+    ascii puts [string toupper $msg]
+    # puts "send $msg, [ascii pending] bytes pending"
 }
 
 #
@@ -222,10 +233,13 @@ proc main {argv} {
 	}
     }
     if {$opts(ascii) || $opts(iambic)} {
-	pack [keyer-control .ctl {*}[client-init] [array get opts]]
+	foreach {opt value}  [client-init] {
+	    set opts(client-$opt) $value
+	}
+	pack [keyer-control .ctl [array get opts]]
 	bind . <Destroy> [list ui-close %W]
 	if {$opts(ascii)} {
-	    bind . <KeyPress> [list ascii puts %A]
+	    bind . <KeyPress> [list send %A]
 	}
     } else {
 	error "no keyers to control"

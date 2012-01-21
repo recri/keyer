@@ -443,7 +443,8 @@
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
 ** TODO - add activate/deactivate to the common subcommands for Jack
    commands, so a collection of modules can be put into standby.  But
-   they lose all port connections when deactivated.
+   they lose all port connections when deactivated.  For the moment,
+   just delete them if they aren't needed.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - abstract dttsp oscillator and cwtone class in a header.
    Make it a dttsp::cwtone and dttsp::osc for comparison with the
@@ -472,8 +473,6 @@
 ** TODO - sdrkit_jack.c: provide missing jack status information.
 ** TODO - bin/invaders: callsign-invaders ear/key training game.
 ** TODO - bin/pileup: echo back callsigns in a pileup situation
-** TODO - bin/pileup: loop back PTT to suppress sending when op is sending.
-** TODO - keyer_ascii: abort sending
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
    using DJ5IL's CodePhaser circuit.
 ** TODO - sdrkit_binaural.h: to spread i/q binaurally according to dttsp
@@ -565,6 +564,8 @@
    Should only require a short memory of key states, make the next
    element decision at end of inter-element space based on key state
    at 1.5 dit clocks in the past.
+** DONE - bin/pileup: loop back PTT to suppress sending when op is sending.
+** DONE - keyer_ascii: abort sending
 * Credits
   This code is derived from many sources.
 

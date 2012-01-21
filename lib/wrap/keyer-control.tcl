@@ -191,49 +191,49 @@ proc ::keyer-control::debounce-frame {w client row} {
 #
 # configure keyer options
 #
-proc ::keyer-control::panel {w ascii ascii_tone iambic iambic_tone ptt debounce opts} {
+proc ::keyer-control::panel {w opts} {
     upvar #0 ::keyer-control::$w data
     array set data $opts
 
     ttk::frame $w
     set row 0
 
-    if {$ascii ne {} && $ascii_tone ne {}} {
+    if {$data(client-ascii) ne {} && $data(client-ascii_tone) ne {}} {
 	grid [label $w.ascii -text {Ascii Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::tone-frame $w $ascii_tone [incr row]]
+	set row [keyer-control::tone-frame $w $data(client-ascii_tone) [incr row]]
 	grid [label $w.ascii2 -text {Ascii Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::ascii-frame $w $ascii [incr row]]
+	set row [keyer-control::ascii-frame $w $data(client-ascii) [incr row]]
 	grid [label $w.ascii3 -text {Ascii Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::midi-frame $w $ascii [incr row]]
+	set row [keyer-control::midi-frame $w $data(client-ascii) [incr row]]
     }
 
-    if {$iambic ne {} && $iambic_tone ne {}} {
+    if {$data(client-iambic) ne {} && $data(client-iambic_tone) ne {}} {
 	grid [label $w.iambic -text {Iambic Keyer Tone}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::tone-frame $w $iambic_tone [incr row]]
+	set row [keyer-control::tone-frame $w $data(client-iambic_tone) [incr row]]
 	grid [label $w.iambic2 -text {Iambic Keyer Timing}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::iambic-frame $w $iambic [incr row]]
+	set row [keyer-control::iambic-frame $w $data(client-iambic) [incr row]]
 	grid [label $w.iambic3 -text {Iambic Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::midi-frame $w $iambic [incr row]]
+	set row [keyer-control::midi-frame $w $data(client-iambic) [incr row]]
     }
 
-    if {$ptt ne {}} {
+    if {$data(client-ptt) ne {}} {
 	grid [label $w.ptt -text {PTT Timing}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::ptt-frame $w $ptt [incr row]]
+	set row [keyer-control::ptt-frame $w $data(client-ptt) [incr row]]
 	grid [label $w.ptt2 -text {PTT Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::midi-frame $w $ptt [incr row]]
+	set row [keyer-control::midi-frame $w $data(client-ptt) [incr row]]
     }
 
-    if {$debounce ne {}} {
+    if {$data(client-debounce) ne {}} {
 	grid [label $w.debounce -text {Key Debounce}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::debounce-frame $w $debounce [incr row]]
+	set row [keyer-control::debounce-frame $w $data(client-debounce) [incr row]]
 	grid [label $w.debounce2 -text {Debounce Midi Options}] -row $row -column 0 -columnspan 5 -sticky w
-	set row [keyer-control::midi-frame $w $debounce [incr row]]
+	set row [keyer-control::midi-frame $w $data(client-debounce) [incr row]]
     }
 
     return $w
 }
 
-proc ::keyer-control {w ascii ascii_tone iambic iambic_tone ptt debounce opts} {
-    return [keyer-control::panel $w $ascii $ascii_tone $iambic $iambic_tone $ptt $debounce $opts]
+proc ::keyer-control {w opts} {
+    return [keyer-control::panel $w $opts]
 }
 
