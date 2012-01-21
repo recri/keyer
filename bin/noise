@@ -31,14 +31,14 @@ array set data {
     server default
     name noise
     length 320
-    gain -30.0
-    max-gain 0.0
-    min-gain -160.0
+    level -30.0
+    max-level 0.0
+    min-level -160.0
 }
 
-proc set-gain {v} {
-    $::data(name) configure -gain $v
-    set ::data(gain-label) [format %.1f $v]
+proc set-level {v} {
+    $::data(name) configure -level $v
+    set ::data(level-label) [format %.1f $v]
 }
 
 proc shutdown {w} {
@@ -52,21 +52,20 @@ proc main {argv} {
 	switch -- $option {
 	    -n - -name - --name { set ::data(name) $value }
 	    -s - -server - --server { set ::data(server) $value }
-	    -l - -length - --length { set ::data(length) $value }
-	    -g - -gain - --gain { set ::data(gain) $value }
-	    -min-gain - --min-gain { set ::data(min-gain) $value }
-	    -max-gain - --max-gain { set ::data(max-gain) $value }
+	    -l - -level - --level { set ::data(level) $value }
+	    -min-level - --min-level { set ::data(min-level) $value }
+	    -max-level - --max-level { set ::data(max-level) $value }
 	    default { error "unknown option \"$option\"" }
 	}
     }
 
     sdrkit::noise $::data(name)
     wm title . $::data(name)
-    set-gain $::data(gain)
+    set-level $::data(level)
 
-    grid [ttk::label .gain-l -textvar ::data(gain-label) -width 10 -anchor e] -row 0 -column 0
-    grid [ttk::label .gain-u -text dB] -row 0 -column 1
-    grid [ttk::scale .gain-s -from $::data(max-gain) -to $::data(min-gain) -command set-gain -variable ::data(gain) -length $::data(length)] -row 0 -column 2 -sticky ew
+    grid [ttk::label .level-l -textvar ::data(level-label) -width 10 -anchor e] -row 0 -column 0
+    grid [ttk::label .level-u -text dB] -row 0 -column 1
+    grid [ttk::scale .level-s -from $::data(max-level) -to $::data(min-level) -command set-level -variable ::data(level) -length $::data(length)] -row 0 -column 2 -sticky ew
     grid columnconfigure . 2 -weight 100
     bind . <Destroy> [list shutdown %W]
 }

@@ -1,0 +1,76 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+set libdir [file normalize [file join [file dirname [info script]] .. lib sdrkit]]
+set so [info sharedlibextension]
+
+#
+# load each loadable library,
+# extract the configuration options and documents
+#
+
+proc list-diff {list1 list2} {
+    array set a {}
+    foreach i $list1 { set a($i) {} }
+    foreach i $list2 { unset a($i) }
+    return [array names a]
+}
+
+set modules [dict create]
+set commands [dict create]
+set options [dict create]
+set dbnames [dict create]
+set dbclasses [dict create]
+
+set clist [concat [info commands] [info commands ::sdrkit::*] [info commands ::keyer::*]]
+
+foreach file [glob [file join $libdir *$so]] {
+    set module [file root [file tail $file]]
+    if {[catch {load $file} error]} {
+	puts "load $file -> $error"
+	incr results(load-failed)
+    }
+    set nclist [concat [info commands] [info commands ::sdrkit::*] [info commands ::keyer::*]]
+    set cmds [list-diff $nclist $clist]
+    set clist $nclist
+    dict set modules $module commands $cmds
+    foreach c $cmds {
+	dict set commands $c module $module
+    }
+}
+
+# puts "[array names modules] defined [array names commands]"
+foreach cmd [dict keys $commands] {
+    $cmd foo
+    if {[catch {foo configure} error]} {
+	puts "$cmd doesn't configure: $error"
+	rename foo {}
+	continue
+    }
+    set options $error
+    foreach option $options {
+	foreach {oname dname cname dvalue value} $option break
+	dict set commands $cmd option $oname $option
+    }
+    rename foo {}
+}

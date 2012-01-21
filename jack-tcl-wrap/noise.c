@@ -20,28 +20,40 @@
 /*
 */
 
-// must precede
-#define _XOPEN_SOURCE 500
-#include <stdlib.h>
-
-#include "../sdrkit/dmath.h"
-
+#include "../sdrkit/noise.h"
 #include "framework.h"
-
 
 /*
 ** make noise, specified dB level
 */
 typedef struct {
-  framework_t fw;
-  float gain;
   float dBgain;
+  float gain;
+  unsigned int seed;
+} options_t;
+
+typedef struct {
+  framework_t fw;
+  int modified;
+  options_t opts;
+  noise_t noise;
+  float gain;
 } _t;
 
+static void _update(_t *data) {
+  if (data->modified) {
+    data->modified = 0;
+    // noise_configure(&data->noise, data->opts.seed);
+    data->gain = powf(10.0f, data->opts.dBgain / 20.0f);
+  }
+}
+  
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  // data->dBgain = -30.0f;
-  data->gain = powf(10.0f, data->dBgain / 20.0f);
+  void *p = noise_init(&data->noise); if (p != &data->noise) return p;
+  noise_configure(&data->noise, data->opts.seed);
+  data->modified = 1;
+  _update(data);
   return arg;
 }
 
@@ -50,24 +62,27 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   AVOID_DENORMALS;
+  _update(data);
   for (int i = nframes; --i >= 0; ) {
-    *out0++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
-    *out1++ = data->gain * 4 * (0.5 - (random() / (float)RAND_MAX));
+    float _Complex z = data->gain * noise_process(&data->noise);
+    *out0++ = creal(z);
+    *out1++ = cimag(z);
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  float dBgain = data->dBgain;
+  options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (data->dBgain != dBgain) data->gain = powf(10.0f, dBgain / 20.0f);
+  data->modified = data->opts.dBgain != save.dBgain || data->opts.seed != save.seed;
   return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-gain",   "gain",   "Gain",   "-100.0",   fw_option_float, 0,	offsetof(_t, dBgain),	      "noise level in dB" },
+  { "-level", "level", "Decibels", "-100.0", fw_option_float, 0,		   offsetof(_t, opts.dBgain), "average noise level in dB full scale" },
+  { "-seed",  "seed",  "Seed",     "123456", fw_option_int,   fw_flag_create_only, offsetof(_t, opts.seed),   "random number seed" },
   { NULL }
 };
 

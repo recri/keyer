@@ -96,7 +96,7 @@ namespace eval ::main {
 	    tone-range {tone range} Hz {scale 0 300} {}
 	    gain {base gain} dB {scale 0 -160} {}
 	    gain-range {gain range} dB {scale 160 -160} {}
-	    noise {noise level} dB {scale 0 -160} {noise configure -gain}
+	    noise {noise level} dB {scale 0 -160} {noise configure -level}
 	    output-gain {output gain} dB {scale 0 -160} {pileup configure -gain}
 	}
 
@@ -683,7 +683,7 @@ proc ::main::main {argv} {
     
     # persistent jack/sdrkit modules
     sdrkit::jack-client jack;					# jack of all trades
-    sdrkit::noise noise -gain $::main::data(noise);		# noise floor
+    sdrkit::noise noise -level $::main::data(noise);		# noise floor
     sdrkit::mtap ptt_mtap;					# midi tap to receive ptt
     keyer::ptt-mute pileup -gain $::main::data(output-gain);	# mute receiver on transmit
     keyer::ascii heckler;					# will be commenting on your progress
