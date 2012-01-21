@@ -626,6 +626,13 @@ proc ::main::keyer-panel {w} {
 	iambic 1
 	ptt 1
 
+	client-ascii {}
+	client-ascii_tone {}
+	client-iambic iambic
+	client-iambic_tone iambic_tone
+	client-ptt ptt
+	client-debounce debounce
+
 	debounce-verbose 0
 	debounce-chan 1
 	debounce-note 0
@@ -658,7 +665,7 @@ proc ::main::keyer-panel {w} {
 	ptt-delay 0.0
 	ptt-hang 1.0
     }
-    return [keyer-control $w {} {} iambic iambic_tone ptt debounce $opts]
+    return [keyer-control $w $opts]
 }
 
 ##
