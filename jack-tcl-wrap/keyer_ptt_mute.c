@@ -152,7 +152,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 2, 1, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  2, 2, 1, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component that translates a MIDI ptt signal to mute an audio channel"
 };
 

@@ -25,7 +25,6 @@ embed the dttsp_keyer, more work to do.
 extern "C" {
 #include "framework.h"
 #include "../sdrkit/midi.h"
-#include "../sdrkit/midi_buffer.h"
 
   typedef struct {
     int chan, note;
@@ -38,7 +37,6 @@ extern "C" {
     dttsp_iambic_t key;
     int modified;
     options_t opts;
-    midi_buffer_t midi;
     int raw_dit, raw_dah, key_out;
     float millis_per_frame;
   } _t;
@@ -53,8 +51,7 @@ extern "C" {
 
   static void *_init(void *arg) {
     _t *dp = (_t *)arg;
-    void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
-    p = dttsp_iambic_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
+    void *p = dttsp_iambic_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
     dp->millis_per_frame = 1000.0f / jack_get_sample_rate(dp->fw.client);
     dp->modified = 1;
     _update(dp);
@@ -90,7 +87,6 @@ extern "C" {
     _t *dp = (_t *)arg;
     void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
     void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-    void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, sdrkit_last_frame_time(dp));
     int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
     jack_midi_event_t in_event;
     // fetch options if necessary
@@ -174,13 +170,13 @@ extern "C" {
 
   static const framework_t _template = {
     _options,			// option table
-    _subcommands,			// subcommand table
+    _subcommands,		// subcommand table
     _init,			// initialization function
     _command,			// command function
-    NULL,				// delete function
-    NULL,				// sample rate function
+    NULL,			// delete function
+    NULL,			// sample rate function
     _process,			// process callback
-    0, 0, 1, 1,			// inputs,outputs,midi_inputs,midi_outputs
+    0, 0, 1, 1, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
     (char *)"an iambic keyer component based on the dttsp iambic keyer"
   };
 

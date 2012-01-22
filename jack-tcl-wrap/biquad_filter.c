@@ -100,7 +100,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 2, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "biquad filter component: w(0) = input - a1*w(1) + a2*w(2); output = b0*w(0) + b1*w(1) + b2*w(2)"
 };
 

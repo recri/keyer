@@ -101,6 +101,7 @@ array set options {
     -steps {values {1 64} type integer}
     -swap {values {0 1} type integer}
     -verbose {range {0 100} type integer}
+    -weight {range {25 75} type integer}
     -window {range {0 12} type integer}
     -word {range {50 60} type float}
     -wpm {range {5 50} type float}

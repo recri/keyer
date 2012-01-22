@@ -103,7 +103,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 2, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component which combines an oscillator and a mixer to convert a basebane I/Q signal to a new IF"
 };
 

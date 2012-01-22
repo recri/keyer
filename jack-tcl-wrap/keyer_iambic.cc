@@ -177,13 +177,13 @@ extern "C" {
 
   static const framework_t _template = {
     _options,			// option table
-    _subcommands,			// subcommand table
+    _subcommands,		// subcommand table
     _init,			// initialization function
     _command,			// command function
-    NULL,				// delete function
-    NULL,				// sample rate function
+    NULL,			// delete function
+    NULL,			// sample rate function
     _process,			// process callback
-    0, 0, 1, 1,			// inputs,outputs,midi_inputs,midi_outputs
+    0, 0, 1, 1, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
     (char *)"an iambic keyer component which translates MIDI input key events into an output MIDI key signal"
   };
 

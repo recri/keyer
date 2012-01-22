@@ -38,6 +38,8 @@
 #include <jack/midiport.h>
 #include <tcl.h>
 
+#include "../sdrkit/midi_buffer.h"
+
 /*
 ** option definitions
 */
@@ -79,6 +81,17 @@ typedef struct {
 } fw_subcommand_table_t;
 
 /*
+** midi port and buffer input handling
+*/
+typedef struct {
+  void *handle;			/* the jack midi input buffer handle returned by jack_port_get_buffer */
+				/* or the midi buff input pointer returned by midi_buffer_get_buffer */
+  int n;			/* the number of input events on this callback */
+  int i;			/* the next input event index on this callback */
+  jack_midi_event_t e;		/* the next input event, if any */
+} framework_midi_t;
+
+/*
 ** the framework client declares its own
 ** client data as a structure which contains
 ** this as the first element.
@@ -99,6 +112,7 @@ typedef struct {
   char n_outputs;
   char n_midi_inputs;
   char n_midi_outputs;
+  char n_midi_buffers;
   char *doc_string;
   Tcl_Obj *class_name;
   Tcl_Obj *command_name;
@@ -108,7 +122,9 @@ typedef struct {
   int verbose;
   jack_client_t *client;
   jack_port_t **port;
+  framework_midi_t *midi;
 } framework_t;
+
 
 /*
 ** provide common option processing command creation, configure, and cget.
@@ -116,7 +132,6 @@ typedef struct {
 ** allows commands to simply tabulate their options in an option_t array
 ** and get them handled in a consistent manner.
 */
-
 
 static int fw_option_lookup(char *string, const fw_option_table_t *table) {
   for (int i = 0; table[i].name != NULL; i += 1)
@@ -451,25 +466,66 @@ static int framework_command(ClientData clientData, Tcl_Interp *interp, int argc
   return fw_subcommand_dispatch(clientData, interp, argc, objv);
 }
 
+/*
+** get the counts for both input queues
+*/
+static void framework_midi_event_init(framework_t *fp, midi_buffer_t *bp, jack_nframes_t nframes) {
+  for (int i = 0; i < fp->n_midi_inputs; i += 1) {
+    framework_midi_t *mp = &fp->midi[i];
+    mp->handle = jack_port_get_buffer(framework_midi_input(fp,0), nframes);
+    mp->n = jack_midi_get_event_count(mp->handle);
+    mp->i = 0;
+    if (mp->i < mp->n)
+      jack_midi_event_get(&mp->e, mp->handle, mp->i);
+  }
+  if (fp->n_midi_buffers == 1) {
+    framework_midi_t *mp = &fp->midi[fp->n_midi_inputs];
+    mp->handle = NULL;
+    mp->n = 0;
+    mp->i = 0;
+    if (bp != NULL) {
+      mp->handle = midi_buffer_get_buffer(bp, nframes, sdrkit_last_frame_time(fp));
+      mp->n = midi_buffer_get_event_count(mp->handle);
+      if (mp->i < mp->n)
+	midi_buffer_event_get(&mp->e, mp->handle, mp->i);
+    }
+  }
+}
+
+static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_midi_event_t *eventp) {
+  for (int i = 0; i < fp->n_midi_inputs+fp->n_midi_buffers; i += 1) {
+    framework_midi_t *mp = &fp->midi[i];
+    if (mp->i < mp->n && mp->e.time <= frame) {
+      *eventp = mp->e;
+      if (++mp->i < mp->n) {
+	if (i < fp->n_midi_inputs)
+	  jack_midi_event_get(&mp->e, mp->handle, mp->i);
+	else
+	  midi_buffer_event_get(&mp->e, mp->handle, mp->i);
+      }
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
 /* delete a dsp module cleanly */
 static void framework_delete(void *arg) {
   framework_t *dsp = (framework_t *)arg;
-  // fprintf(stderr, "framework_delete(%p)\n", dsp);
   if (dsp->client) {
-    // fprintf(stderr, "framework_delete(%p) client %p\n", _sdrkit, dsp->client);
     jack_deactivate(dsp->client);
-    // fprintf(stderr, "framework_delete(%p) client deactivated\n", _sdrkit);
     // NB - this cannot be safely called inside the jack shutdown callback
     jack_client_close(dsp->client);
-    // fprintf(stderr, "framework_delete(%p) client closed\n", _sdrkit);
   }
   if (dsp->cdelete) {
     dsp->cdelete(arg);
   }
-  // fprintf(stderr, "framework_delete(%p) command deleted\n", _sdrkit);
   if (dsp->port) {
     Tcl_Free((char *)(void *)dsp->port);
-    // fprintf(stderr, "framework_delete(%p) port freed\n", _sdrkit);
+  }
+  if (dsp->midi) {
+    Tcl_Free((char *)(void *)dsp->midi);
   }
 
   if (dsp->class_name != NULL) Tcl_DecrRefCount(dsp->class_name);
@@ -479,7 +535,6 @@ static void framework_delete(void *arg) {
   if (dsp->subcommands_string != NULL) Tcl_DecrRefCount(dsp->subcommands_string);
 
   Tcl_Free((char *)(void *)dsp);
-  // fprintf(stderr, "framework_delete(%p) dsp freed\n", _sdrkit);
 }
 
 /* report jack status in strings */
@@ -599,13 +654,13 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   int n = data->n_inputs+data->n_outputs+data->n_midi_inputs+data->n_midi_outputs;
   if (n > 0) {
     data->port = (jack_port_t **)Tcl_Alloc(n*sizeof(jack_port_t *));
-    memset(data->port, 0, n*sizeof(jack_port_t *));
-    // fprintf(stderr, "framework_factory: port %p\n", data->port);  
     if (data->port == NULL) {
       framework_delete(data);
       Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
       return TCL_ERROR;
     }
+    memset(data->port, 0, n*sizeof(jack_port_t *));
+    // fprintf(stderr, "framework_factory: port %p\n", data->port);  
     char buf[256];
     for (int i = 0; i < data->n_inputs; i++) {
       if (data->n_inputs > 2) snprintf(buf, sizeof(buf), "in_%d_%c", i/2, i&1 ? 'q' : 'i');
@@ -627,6 +682,23 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
       else snprintf(buf, sizeof(buf), "midi_out");
       data->port[i+data->n_midi_inputs+data->n_inputs+data->n_outputs] = jack_port_register(data->client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
     }
+  }
+
+  // create midi event merge
+  if (data->n_midi_inputs+data->n_midi_buffers) {
+    int n = data->n_midi_inputs+data->n_midi_buffers;
+    if (data->n_midi_buffers > 1) {
+      Tcl_SetResult(interp, (char *)"only one midi_buffer is supported", TCL_STATIC);
+      framework_delete(data);
+      return TCL_ERROR;
+    }
+    data->midi = (framework_midi_t *)Tcl_Alloc(n*sizeof(framework_midi_t));
+    if (data->midi == NULL) {
+      framework_delete(data);
+      Tcl_SetResult(interp, (char *)"memory allocation failure", TCL_STATIC);
+      return TCL_ERROR;
+    }
+    memset(data->midi, 0, n*sizeof(framework_midi_t));
   }
 
   // finish initialization the object data

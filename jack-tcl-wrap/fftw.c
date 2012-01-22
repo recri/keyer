@@ -133,7 +133,7 @@ static const framework_t _template = {
   _delete,			// delete function
   NULL,				// sample rate function
   NULL,				// process callback
-  0, 0, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "an fftw3 fast fourier transform component"
 };
 

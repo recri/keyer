@@ -71,7 +71,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  1, 2, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs
   "a component which swaps the I/Q channels"
 };
 

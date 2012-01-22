@@ -219,7 +219,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 1, 1,			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 1, 1, 1,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component for splitting a MIDI keyer signal into a, possibly delayed, MIDI keyer signal and a separate MIDI push-to-talk signal"
 };
 

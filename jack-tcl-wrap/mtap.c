@@ -121,7 +121,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 0, 1, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 1, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component which taps into the MIDI events in Jack"
 };
 

@@ -195,7 +195,7 @@ static const framework_t _template = {
   _delete,			// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 0, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  2, 0, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "implement an audio tap component"
 };
 

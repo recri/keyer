@@ -209,7 +209,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   NULL,				// process callback
-  0, 0, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  0, 0, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component that interacts with a Jack server"
 };
 

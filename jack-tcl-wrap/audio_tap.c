@@ -286,7 +286,8 @@ static const framework_t _template = {
   _delete,			// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 0, 0, 0			// inputs,outputs,midi_inputs,midi_outputs
+  2, 0, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  "a component which taps audio signals from Jack to Tcl"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

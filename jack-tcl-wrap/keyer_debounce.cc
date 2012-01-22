@@ -192,7 +192,7 @@ extern "C" {
     NULL,		    // delete function
     NULL,		    // sample rate function
     _process,		    // process callback
-    0, 0, 1, 1,		    // inputs,outputs,midi_inputs,midi_outputs
+    0, 0, 1, 1, 0,	    // inputs,outputs,midi_inputs,midi_outputs
     (char *)"a component which filters MIDI inputs to provide debounced MIDI outputs"
   };
 

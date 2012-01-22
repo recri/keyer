@@ -72,7 +72,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  1, 2, 0, 0,			// inputs,outputs,midi_inputs,midi_outputs
+  1, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component which converts a monoaural audio channel into an I/Q audio channel pair"
 };
 
