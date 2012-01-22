@@ -42,9 +42,17 @@ proc ::scope::configure {w args} {
     foreach {option value} $args {
 	switch -- $option {
 	    -height {
+		# unscale current
+		catch {$w move all 0 [expr {-$data(-y-origin)}]}
+		catch {$w scale all 0 0 1 [expr {1/$data(-y-scale)}]}
+		# reset for new height
 		$w configure -height $value
 		set data(-y-scale) [expr {-0.75*$value/2.0}]
 		set data(-y-origin) [expr {$value/2.0}]
+		# rescale for new height
+		$w scale all 0 0 1 $data(-y-scale)
+		$w move all 0 $data(-y-origin)
+		$w configure -scrollregion [$w bbox all]
 	    }
 	    -width {
 		$w configure -height $value
@@ -77,7 +85,7 @@ proc ::scope::start-iq {w sx} {
     set data(i-xy) {}
     set data(q-xy) {}
     catch {$w delete all}
-    update-iq $w 0 [binary format f* [lrepeat 1024 0.0]]
+    update-iq $w $sx [binary format f* [lrepeat 1024 0.0]]
 }
 
 proc ::scope::stop-iq {w ex} {
@@ -124,14 +132,6 @@ proc ::scope::update-iq {w frame iq} {
     #puts "update-iq $w $frame [string length $iq]"
 }
 
-proc ::scope::start-event {w sx} {
-    upvar #0 ::scope::$w data
-    set data(frame) 0
-    set data(midi-xy) {0 -1}
-    catch {$w delete all}
-    $w create line 0 0 0 0 -fill white -tags capture-midi
-}
-
 proc ::scope::update-event {w frame y {end 0}} {
     upvar #0 ::scope::$w data
     if { ! $end} {
@@ -142,6 +142,15 @@ proc ::scope::update-event {w frame y {end 0}} {
     $w scale all 0 0 $data(-x-scale) $data(-y-scale)
     $w move all 0 $data(-y-origin)
     $w configure -scrollregion [$w bbox all]
+}
+
+proc ::scope::start-event {w sx} {
+    upvar #0 ::scope::$w data
+    set data(frame) $sx
+    set data(midi-xy) [list $sx -1]
+    catch {$w delete all}
+    $w create line 0 0 0 0 -fill white -tags capture-midi
+    ::scope::update-event $w $sx -1 1
 }
 
 proc ::scope::stop-event {w ex} {
@@ -219,12 +228,9 @@ proc ::keyer-scope::configure {w args} {
 		set data(-zoom) $value
 		set srate [sdrkit::jack sample-rate]
 		set scale [expr {$data(-zoom)/$srate}]
-		::scope::configure $w.iq -x-scale $scale
-		::scope::configure $w.keyer -x-scale $scale
-		::scope::configure $w.key1 -x-scale $scale
-		::scope::configure $w.key0 -x-scale $scale
-		::scope::configure $w.ptt1 -x-scale $scale
-		::scope::configure $w.ptt0 -x-scale $scale
+		foreach scope {iq keyer key1 key0 ptt0 ptt1 raw0 raw1} {
+		    ::scope::configure $w.$scope -x-scale $scale
+		}
 		::keyer-scope::scrollregion $w
 	    }
 	    default { set data($option) $value 	}
@@ -255,10 +261,19 @@ proc ::keyer-scope::update-midi {wkey events} {
 		if {$note == $data(-note)} {
 		    ::scope::update-event $wkey [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
 		} elseif {$note == $data(-note)+1} {
-		    if {$wkey eq "$w.key0"} {
-			::scope::update-event $w.key1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
-		    } elseif {$wkey eq "$w.ptt0"} {
-			::scope::update-event $w.ptt1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+		    switch -glob $wkey {
+			*key0 {
+			    ::scope::update-event $w.key1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+			}
+			*ptt0 {
+			    ::scope::update-event $w.ptt1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+			}
+			*raw0 {
+			    ::scope::update-event $w.raw1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+			}
+			default {
+			    error "unknown keyer channel $wkey"
+			}
 		    }
 		}
 	    }
@@ -273,12 +288,9 @@ proc ::keyer-scope::window-configure {w cw width height} {
     # ::capture::configure $w -size $width
     set srate [sdrkit::jack sample-rate]
     set scale [expr {$data(-zoom)/$srate}]
-    ::scope::configure $w.iq -x-scale $scale
-    ::scope::configure $w.keyer -x-scale $scale
-    ::scope::configure $w.key1 -x-scale $scale
-    ::scope::configure $w.key0 -x-scale $scale
-    ::scope::configure $w.ptt1 -x-scale $scale
-    ::scope::configure $w.ptt0 -x-scale $scale
+    foreach scope {iq keyer key0 key1 ptt0 ptt1 raw0 raw1} {
+	::scope::configure $w.$scope -x-scale $scale -height [winfo height $w.$scope]
+    }
     ::keyer-scope::scrollregion $w
 }
 
@@ -286,12 +298,9 @@ proc ::keyer-scope::window-destroy {w cw} {
     if {$w ne $cw} return
     upvar #0 ::keyer-scope::$w data
     ::capture::destroy $w
-    ::scope::destroy $w.iq
-    ::scope::destroy $w.keyer
-    ::scope::destroy $w.key1
-    ::scope::destroy $w.key0
-    ::scope::destroy $w.ptt1
-    ::scope::destroy $w.ptt0
+    foreach scope {iq keyer key0 key1 ptt0 ptt1 raw0 raw1} {
+	::scope::destroy $w.$scope
+    }
 }
 
 proc ::keyer-scope::defaults {} {
@@ -302,40 +311,32 @@ proc ::keyer-scope::start {w} {
     upvar #0 ::keyer-scope::$w data
     set data(start-frame) [sdrkit::jack frame-time]
     ::scope::start-iq $w.iq 0
-    ::scope::start-event $w.keyer 0
-    ::scope::start-event $w.key0 0
-    ::scope::start-event $w.key1 0
-    ::scope::start-event $w.ptt0 0
-    ::scope::start-event $w.ptt1 0
-    ::capture::start $w.iq
-    ::capture::start $w.keyer
-    ::capture::start $w.key0
-    ::capture::start $w.ptt0
+    foreach scope {keyer key0 key1 ptt0 ptt1 raw0 raw1} {
+	::scope::start-event $w.$scope 0
+    }
+    foreach capture {iq keyer key0 ptt0 raw0} {
+	::capture::start $w.$capture
+    }
 }
 
 proc ::keyer-scope::stop {w} {
     upvar #0 ::keyer-scope::$w data
     set data(last-frame) [sdrkit::jack frame-time]
     set frames [expr {$data(last-frame)-$data(start-frame)}]
-    ::capture::stop $w.iq
-    ::capture::stop $w.keyer
-    ::capture::stop $w.key0
+    foreach capture {iq keyer key0 ptt0 raw0} {
+	::capture::stop $w.$capture
+    }
     ::scope::stop-iq $w.iq $frames
-    ::scope::stop-event $w.keyer $frames
-    ::scope::stop-event $w.key0 $frames
-    ::scope::stop-event $w.key1 $frames
-    ::scope::stop-event $w.ptt0 $frames
-    ::scope::stop-event $w.ptt1 $frames
+    foreach scope {keyer key0 key1 ptt0 ptt1 raw0 raw1} {
+	::scope::stop-event $w.$scope $frames
+    }
     ::keyer-scope::scrollregion $w
 }
 
 proc ::keyer-scope::xview {w args} {
-    $w.iq xview {*}$args
-    $w.keyer xview {*}$args
-    $w.key0 xview {*}$args
-    $w.key1 xview {*}$args
-    $w.ptt0 xview {*}$args
-    $w.ptt1 xview {*}$args
+    foreach view {iq keyer key0 key1 ptt0 ptt1 raw0 raw1} {
+	$w.$view xview {*}$args
+    }
 }
 
 proc ::keyer-scope::xscrollcommand-set {w args} {
@@ -357,18 +358,15 @@ proc ::keyer-scope::keyer-scope {w args} {
     array set data $args
     ttk::panedwindow $w -orient vertical
     $w add [::scope $w.iq -height 50 -xscrollcommand [list ::keyer-scope::xscrollcommand-set $w]] -weight 1
-    $w add [::scope $w.ptt1 -height 20] -weight 0
-    $w add [::scope $w.ptt0 -height 20] -weight 0
-    $w add [::scope $w.keyer -height 20] -weight 0
-    $w add [::scope $w.key1 -height 20] -weight 0
-    $w add [::scope $w.key0 -height 20] -weight 0
+    foreach scope {ptt1 ptt0 keyer key1 key0 raw1 raw0} {
+	$w add [::scope $w.$scope -height 20] -weight 1
+    }
     $w add [::time-scale $w.t -height 20] -weight 0
     $w add [ttk::scrollbar $w.x -orient horizontal -command [list ::keyer-scope::xview $w]] -weight 0
     # period and size must add up to most of the data
     set data(sample-rate) [sdrkit::jack sample-rate]
     set data(buffer-size) [sdrkit::jack buffer-size]
-    # whatever rate I capture at, I should capture
-    # a little sooner and expect to get overlaps
+    # whatever rate I capture at, I should capture a little sooner and expect to get overlaps
     for {set n 1} {1} {set n [expr {$n+$n}]} {
 	set ns [expr {$n*$data(buffer-size)}]
 	set nms [expr {1000*$ns/$data(sample-rate)}]
@@ -379,9 +377,9 @@ proc ::keyer-scope::keyer-scope {w args} {
     # puts "capture $data(capture-samples) samples every $data(capture-millis) ms => [expr {1000*$data(capture-samples)/$data(capture-millis)}] samples/second vs $data(sample-rate)"
     incr data(capture-samples) $data(capture-samples)
     ::capture::iq $w.iq -period $data(capture-millis) -size $data(capture-samples) -client ::keyer-scope::update-iq -connect iambic_tone
-    ::capture::midi $w.ptt0 -period 200 -client ::keyer-scope::update-midi -connect ptt:midi_out
-    ::capture::midi $w.keyer -period 200 -client ::keyer-scope::update-midi -connect iambic:midi_out
-    ::capture::midi $w.key0 -period 200 -client ::keyer-scope::update-midi -connect system:midi_capture_1
+    foreach {capture connect} {ptt0 ptt:midi_out keyer iambic:midi_out key0 debounce:midi_out raw0 system:midi_capture_1} {
+	::capture::midi $w.$capture -period 200 -client ::keyer-scope::update-midi -connect $connect
+    }
     bind . <Configure> [list ::keyer-scope::window-configure $w %W %w %h]
     bind . <Destroy> [list ::keyer-scope::window-destroy $w %W]
     return $w

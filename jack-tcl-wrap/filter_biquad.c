@@ -22,25 +22,25 @@
 
 #include "framework.h"
 #include "../sdrkit/dmath.h"
-#include "../sdrkit/biquad_filter.h"
+#include "../sdrkit/filter_biquad.h"
 
-typedef biquad_filter_options_t options_t;
+typedef filter_biquad_options_t options_t;
 
 typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  biquad_filter_t bq;
+  filter_biquad_t bq;
 } _t;
 
 static void _update(_t *data) {
   data->modified = 0;
-  biquad_filter_config(&data->bq, &data->opts);
+  filter_biquad_config(&data->bq, &data->opts);
 }
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *p = biquad_filter_init(&data->bq); if (p != &data->bq) return p;
+  void *p = filter_biquad_init(&data->bq); if (p != &data->bq) return p;
   data->modified = 1;
   _update(data);
   return arg;
@@ -55,7 +55,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   AVOID_DENORMALS;
   _update(data);
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = biquad_filter_process(&data->bq, *in0++ + I * *in1++);
+    float _Complex y = filter_biquad_process(&data->bq, *in0++ + I * *in1++);
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }
@@ -109,6 +109,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Biquad_filter_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::biquad-filter", "1.0.0", "sdrkit::biquad-filter", _factory);
+int DLLEXPORT Filter_biquad_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::filter-biquad", "1.0.0", "sdrkit::filter-biquad", _factory);
 }

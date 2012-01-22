@@ -16,31 +16,31 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef BIQUAD_FILTER_H
-#define BIQUAD_FILTER_H
+#ifndef FILTER_BIQUAD_H
+#define FILTER_BIQUAD_H
 
 /*
 ** Biquad filter - rewritten from everywhere
 */
 
-#include <complex.h>
+#include "dmath.h"
 
 typedef struct {
   float a1, a2, b0, b1, b2;
   float _Complex w11, w12;
-} biquad_filter_t;
+} filter_biquad_t;
 
 typedef struct {
   float a1, a2, b0, b1, b2;
-} biquad_filter_options_t;
+} filter_biquad_options_t;
   
-static void *biquad_filter_init(biquad_filter_t *p) {
+static void *filter_biquad_init(filter_biquad_t *p) {
   // p->a1 = p->a2 = p->b0 = p->b1 = p->b2 = 0.0f;
   p->w11 = p->w12 = 0.0f;
   return p;
 }
 
-static void biquad_filter_config(biquad_filter_t *p, biquad_filter_options_t *q) {
+static void filter_biquad_config(filter_biquad_t *p, filter_biquad_options_t *q) {
   p->a1 = q->a1;
   p->a2 = q->a2;
   p->b0 = q->b0;
@@ -48,10 +48,10 @@ static void biquad_filter_config(biquad_filter_t *p, biquad_filter_options_t *q)
   p->b2 = q->b2;
 }
 
-static void biquad_filter_preconfig(biquad_filter_t *p, biquad_filter_options_t *q) {
+static void filter_biquad_preconfig(filter_biquad_t *p, filter_biquad_options_t *q) {
 }
 
-static float _Complex biquad_filter_process(biquad_filter_t *p, const float _Complex x) {
+static float _Complex filter_biquad_process(filter_biquad_t *p, const float _Complex x) {
   float _Complex w10 = x - p->a1 * p->w11 + p->a2 * p->w12;
   float _Complex y = p->b0 * w10 + p->b1 * p->w11 + p->b2 * p->w12;
   p->w12 = p->w11;

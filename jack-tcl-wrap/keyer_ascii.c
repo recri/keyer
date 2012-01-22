@@ -95,8 +95,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
   jack_midi_event_t event;
+  
+  // find out what there is to do
   framework_midi_event_init(&dp->fw, &dp->midi, nframes);
-
   // clear the jack output buffer
   jack_midi_clear_buffer(midi_out);
 

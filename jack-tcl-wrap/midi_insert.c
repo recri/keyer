@@ -41,18 +41,10 @@ static void *_init(void *arg) {
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-  void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, jack_last_frame_time(dp->fw.client));
-  int buffer_event_index = 0, buffer_event_time = 0;
-  int buffer_event_count = midi_buffer_get_event_count(buffer_in);
-  jack_midi_event_t buffer_event;
+  jack_midi_event_t event;
 
-  // find out what the midi_buffer has for us to do
-  if (buffer_event_index < buffer_event_count) {
-    midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-    buffer_event_time = buffer_event.time;
-  } else {
-    buffer_event_time = nframes+1;
-  }
+  // find out what there is to do
+  framework_midi_event_init(&dp->fw, &dp->midi, nframes);
 
   // clear the jack output buffer
   jack_midi_clear_buffer(midi_out);
@@ -60,20 +52,15 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // for each frame in this callback
   for(int i = 0; i < nframes; i += 1) {
     // process all midi output events at this sample frame
-    while (buffer_event_time == i) {
-      if (buffer_event.size != 0) {
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, buffer_event.size);
+    int port;
+    while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
+      if (event.size != 0) {
+	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, event.size);
 	if (buffer == NULL) {
-	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, buffer_event.size);
+	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, event.size);
 	} else {
-	  memcpy(buffer, buffer_event.buffer, buffer_event.size);
+	  memcpy(buffer, event.buffer, event.size);
 	}
-      }
-      if (buffer_event_index < buffer_event_count) {
-	midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-	buffer_event_time = buffer_event.time;
-      } else {
-	buffer_event_time = nframes+1;
       }
     }
   }

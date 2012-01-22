@@ -21,18 +21,17 @@ LIBDIR=../lib/sdrkit
 KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_debounce.so \
 	$(LIBDIR)/keyer_detime.so \
+	$(LIBDIR)/keyer_dttsp_iambic.so \
 	$(LIBDIR)/keyer_iambic.so \
 	$(LIBDIR)/keyer_ptt.so \
 	$(LIBDIR)/keyer_ptt_mute.so \
 	$(LIBDIR)/keyer_tone.so
 
-DTTSP=$(LIBDIR)/dttsp_iambic.so
-
 ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/atap.so \
 	$(LIBDIR)/audio_tap.so \
-	$(LIBDIR)/biquad_filter.so \
 	$(LIBDIR)/constant.so \
+	$(LIBDIR)/filter_biquad.so \
 	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
@@ -48,8 +47,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/oscillatorf.so \
 	$(LIBDIR)/oscillatort.so \
 	$(LIBDIR)/oscillatorz.so \
-	$(KEYERS) \
-	$(DTTSP)
+	$(KEYERS)
 
 all:: $(ALL) libdir-all
 
@@ -80,7 +78,7 @@ $(LIBDIR)/audio_tap.so: audio_tap.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/biquad_filter.so: biquad_filter.c framework.h ../sdrkit/biquad_filter.h
+$(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../sdrkit/filter_biquad.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -176,7 +174,7 @@ $(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_opti
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 
-$(LIBDIR)/dttsp_iambic.so: dttsp_iambic.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/dttsp_iambic.h
+$(LIBDIR)/keyer_dttsp_iambic.so: keyer_dttsp_iambic.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/dttsp_iambic.h
 	@mkdir -p $(LIBDIR)
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
 
