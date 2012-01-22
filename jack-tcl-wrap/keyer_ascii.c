@@ -54,7 +54,6 @@ typedef struct {
   morse_timing_t samples_per;
   int modified;
   options_t opts;
-  options_t sent;
   int abort;
   Tcl_UniChar prosign[16], n_prosign, n_slash;
   midi_buffer_t midi;
@@ -63,22 +62,10 @@ typedef struct {
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
-
     if (dp->fw.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
-
     /* update timing computations */
     // maybe this wasn't the best idea
     morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
-
-    /* pass on parameters to tone keyer */
-    char buffer[128];
-    if (dp->sent.rise != dp->opts.rise) { sprintf(buffer, "<rise%.1f>", dp->sent.rise = dp->opts.rise); midi_buffer_write_sysex(&dp->midi, buffer); }
-    if (dp->sent.fall != dp->opts.fall) { sprintf(buffer, "<fall%.1f>", dp->sent.fall = dp->opts.fall); midi_buffer_write_sysex(&dp->midi, buffer); }
-    if (dp->sent.freq != dp->opts.freq) { sprintf(buffer, "<freq%.1f>", dp->sent.freq = dp->opts.freq); midi_buffer_write_sysex(&dp->midi, buffer); }
-    if (dp->sent.gain != dp->opts.gain) { sprintf(buffer, "<gain%.1f>", dp->sent.gain = dp->opts.gain); midi_buffer_write_sysex(&dp->midi, buffer); }
-    /* or to decoder */
-    if (dp->sent.word != dp->opts.word) { sprintf(buffer, "<word%.1f>", dp->sent.word = dp->opts.word); midi_buffer_write_sysex(&dp->midi, buffer); }
-    if (dp->sent.wpm != dp->opts.wpm) { sprintf(buffer, "<wpm%.1f>", dp->sent.wpm = dp->opts.wpm); midi_buffer_write_sysex(&dp->midi, buffer); }
   }
 }
 
@@ -107,18 +94,8 @@ static void *_init(void *arg) {
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-  void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, jack_last_frame_time(dp->fw.client));
-  int buffer_event_index = 0, buffer_event_time = 0;
-  int buffer_event_count = midi_buffer_get_event_count(buffer_in);
-  jack_midi_event_t buffer_event;
-
-  // find out what the midi_buffer has for us to do
-  if (buffer_event_index < buffer_event_count) {
-    midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-    buffer_event_time = buffer_event.time;
-  } else {
-    buffer_event_time = nframes+1;
-  }
+  jack_midi_event_t event;
+  framework_midi_event_init(&dp->fw, &dp->midi, nframes);
 
   // clear the jack output buffer
   jack_midi_clear_buffer(midi_out);
@@ -126,6 +103,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // update our options
   _update(dp);
 
+  // handle an abort signal
   if (dp->abort) {
     midi_buffer_init(&dp->midi);
     unsigned char *buffer = jack_midi_event_reserve(midi_out, 0, 3);
@@ -138,23 +116,19 @@ static int _process(jack_nframes_t nframes, void *arg) {
     dp->abort = 0;
     return 0;
   }
+
   // for each frame in this callback
   for(int i = 0; i < nframes; i += 1) {
     // process all midi output events at this sample frame
-    while (buffer_event_time == i) {
-      if (buffer_event.size != 0) {
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, buffer_event.size);
+    int port;
+    while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
+      if (event.size != 0) {
+	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, event.size);
 	if (buffer == NULL) {
-	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, buffer_event.size);
+	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, event.size);
 	} else {
-	  memcpy(buffer, buffer_event.buffer, buffer_event.size);
+	  memcpy(buffer, event.buffer, event.size);
 	}
-      }
-      if (buffer_event_index < buffer_event_count) {
-	midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-	buffer_event_time = buffer_event.time;
-      } else {
-	buffer_event_time = nframes+1;
       }
     }
   }

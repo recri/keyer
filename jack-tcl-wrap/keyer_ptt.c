@@ -92,89 +92,62 @@ static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, u
 */
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
-  void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
   void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-  void* buffer_in = midi_buffer_get_buffer(&dp->midi, nframes, sdrkit_last_frame_time(dp));
-  int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
-  int buffer_event_count = midi_buffer_get_event_count(buffer_in), buffer_event_index = 0, buffer_event_time = 0;
-  jack_midi_event_t in_event, buffer_event;
+  jack_midi_event_t event;
+  // initialize input event queue
+  framework_midi_event_init(&dp->fw, &dp->midi, nframes);
   // recompute timings if necessary
   _update(dp);
-  // find out what input events we need to process
-  if (in_event_index < in_event_count) {
-    jack_midi_event_get(&in_event, midi_in, in_event_index++);
-    in_event_time = in_event.time;
-  } else {
-    in_event_time = nframes+1;
-  }
-  // find out what buffered events we need to process
-  if (buffer_event_index < buffer_event_count) {
-    // fprintf(stderr, "iambic received %d events\n", buffer_event_count);
-    midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-    buffer_event_time = buffer_event.time;
-  } else {
-    buffer_event_time = nframes;
-  }
   /* this is important, very strange if omitted */
   jack_midi_clear_buffer(midi_out);
   /* for all frames in the buffer */
   for (int i = 0; i < nframes; i++) {
-    /* process all midi input events at this sample frame */
-    while (in_event_time == i) {
-      if (in_event.size == 3) {
-	const unsigned char channel = (in_event.buffer[0]&0xF)+1;
-	const unsigned char command = in_event.buffer[0]&0xF0;
-	const unsigned char note = in_event.buffer[1];
-	if (channel == dp->opts.chan && note == dp->opts.note) {
-	  if (command == MIDI_NOTE_ON) {
-	    if ( ! dp->ptt_on) {
-	      dp->ptt_on = 1;
-	      _send(dp, midi_out, i, command, dp->opts.note+1);
-	    }
-	    dp->key_on = 1;
-	    if (i+dp->ptt_delay_samples < nframes) {
-	      _send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
-	    } else {
-	      midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-	      midi_buffer_queue_note_on(&dp->midi, 0, channel, note, 0);
-	    }
-	  } else if (command == MIDI_NOTE_OFF) {
-	    if (i+dp->ptt_delay_samples < nframes) {
-	      dp->key_on = 0;
-	      dp->ptt_hang_count = dp->ptt_hang_samples+dp->ptt_delay_samples;
-	      _send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
-	    } else {
-	      midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-	      midi_buffer_queue_note_off(&dp->midi, 0, channel, note, 0);
+    /* read all events for this frame */
+    int port;
+    while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
+      if (port < dp->fw.n_midi_inputs) {
+	/* it is a midi_input event */
+	if (event.size == 3) {
+	  const unsigned char channel = (event.buffer[0]&0xF)+1;
+	  const unsigned char command = event.buffer[0]&0xF0;
+	  const unsigned char note = event.buffer[1];
+	  if (channel == dp->opts.chan && note == dp->opts.note) {
+	    if (command == MIDI_NOTE_ON) {
+	      if ( ! dp->ptt_on) {
+		dp->ptt_on = 1;
+		_send(dp, midi_out, i, command, dp->opts.note+1);
+	      }
+	      dp->key_on = 1;
+	      if (i+dp->ptt_delay_samples < nframes) {
+		_send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
+	      } else {
+		midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
+		midi_buffer_queue_note_on(&dp->midi, 0, channel, note, 0);
+	      }
+	    } else if (command == MIDI_NOTE_OFF) {
+	      if (i+dp->ptt_delay_samples < nframes) {
+		dp->key_on = 0;
+		dp->ptt_hang_count = dp->ptt_hang_samples+dp->ptt_delay_samples;
+		_send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
+	      } else {
+		midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
+		midi_buffer_queue_note_off(&dp->midi, 0, channel, note, 0);
+	      }
 	    }
 	  }
 	}
-      }
-      // look for another event
-      if (in_event_index < in_event_count) {
-	jack_midi_event_get(&in_event, midi_in, in_event_index++);
-	in_event_time = in_event.time;
       } else {
-	in_event_time = nframes;
-      }
-    }
-    /* process all midi output events at this sample frame */
-    while (buffer_event_time == i) {
-      if (buffer_event.size != 0) {
-	const unsigned char command = buffer_event.buffer[0]&0xF0;
-	if (command == MIDI_NOTE_ON) {
-	  dp->key_on = 1;
-	} else if (command == MIDI_NOTE_OFF) {
-	  dp->key_on = 0;
-	  dp->ptt_hang_count = dp->ptt_hang_samples;
+	/* it is a midi buffer event */
+	if (event.size != 0) {
+	  const unsigned char command = event.buffer[0]&0xF0;
+	  if (command == MIDI_NOTE_ON) {
+	    dp->key_on = 1;
+	  } else if (command == MIDI_NOTE_OFF) {
+	    dp->key_on = 0;
+	    dp->ptt_hang_count = dp->ptt_hang_samples;
+	  }
+	  _send(dp, midi_out, i, command, dp->opts.note);
 	}
-	_send(dp, midi_out, i, command, dp->opts.note);
-      }
-      if (buffer_event_index < buffer_event_count) {
-	midi_buffer_event_get(&buffer_event, buffer_in, buffer_event_index++);
-	buffer_event_time = buffer_event.time;
-      } else {
-	buffer_event_time = nframes;
       }
     }
     /* clock the ptt hang time counter */

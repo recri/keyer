@@ -492,7 +492,7 @@ static void framework_midi_event_init(framework_t *fp, midi_buffer_t *bp, jack_n
   }
 }
 
-static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_midi_event_t *eventp) {
+static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_midi_event_t *eventp, int *port) {
   for (int i = 0; i < fp->n_midi_inputs+fp->n_midi_buffers; i += 1) {
     framework_midi_t *mp = &fp->midi[i];
     if (mp->i < mp->n && mp->e.time <= frame) {
@@ -503,6 +503,7 @@ static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_
 	else
 	  midi_buffer_event_get(&mp->e, mp->handle, mp->i);
       }
+      *port = i;
       return 1;
     }
   }
