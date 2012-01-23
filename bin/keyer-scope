@@ -18,6 +18,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+# [ ] - let the view scroll to follow the input
+# [ ] - display the time scale with tick labels
+# [ ] - display a cursor that covers all the displays
+# [ ] - make the tone scope the same width as the other displays
+
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
@@ -34,6 +39,7 @@ namespace eval ::scope {
 	-y-origin 1.0
 	-x-scale 1.0
 	-x-origin 0.0
+	-text {}
     }
 }
 
@@ -55,7 +61,7 @@ proc ::scope::configure {w args} {
 		$w configure -scrollregion [$w bbox all]
 	    }
 	    -width {
-		$w configure -height $value
+		$w configure -width $value
 	    }
 	    -x-scale {
 		if {[info exists data(-x-scale)]} {
@@ -85,14 +91,15 @@ proc ::scope::start-iq {w sx} {
     set data(i-xy) {}
     set data(q-xy) {}
     catch {$w delete all}
-    update-iq $w $sx [binary format f* [lrepeat 1024 0.0]]
+    #$w create text 0 0 -text $data(-text) -fill white -tags text -anchor nw
+    update-iq $w $sx [binary format f* [lrepeat 1024 0.0]] 1
 }
 
 proc ::scope::stop-iq {w ex} {
-    ::scope::update-iq $w $ex [binary format f* {0.0 0.0 0.0 0.0}]
+    ::scope::update-iq $w $ex [binary format f* {0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0}]
 }
 
-proc ::scope::update-iq {w frame iq} {
+proc ::scope::update-iq {w frame iq {end 0}} {
     upvar #0 ::scope::$w data
 
     set skip 0
@@ -102,7 +109,7 @@ proc ::scope::update-iq {w frame iq} {
     } elseif {$frame < $data(frame)} {
 	set skip [expr {$data(frame)-$frame}]
 	# puts "overlapped $skip samples"
-    } elseif {$frame > $data(frame)} {
+    } elseif {$frame > $data(frame) && ! $end} {
 	puts "missed [expr {$frame-$data(frame)}] samples"
     }
 
@@ -129,6 +136,7 @@ proc ::scope::update-iq {w frame iq} {
     $w scale chunk-$chunk 0 0 $data(-x-scale) $data(-y-scale)
     $w move chunk-$chunk 0 $data(-y-origin)
     $w configure -scrollregion [$w bbox all]
+    #$w coords text [$w canvasx 1] [$w canvasy 1]
     #puts "update-iq $w $frame [string length $iq]"
 }
 
@@ -142,6 +150,7 @@ proc ::scope::update-event {w frame y {end 0}} {
     $w scale all 0 0 $data(-x-scale) $data(-y-scale)
     $w move all 0 $data(-y-origin)
     $w configure -scrollregion [$w bbox all]
+    $w coords text [$w canvasx 1] [$w canvasy 1]
 }
 
 proc ::scope::start-event {w sx} {
@@ -150,6 +159,7 @@ proc ::scope::start-event {w sx} {
     set data(midi-xy) [list $sx -1]
     catch {$w delete all}
     $w create line 0 0 0 0 -fill white -tags capture-midi
+    $w create text 0 0 -text $data(-text) -fill white -tags text -anchor nw
     ::scope::update-event $w $sx -1 1
 }
 
@@ -166,6 +176,9 @@ proc ::scope::scope {w args} {
     canvas $w -bg black
     ::scope::configure $w {*}[::scope::defaults]
     ::scope::configure $w {*}$args
+    if {[info exists data(-text)] && $data(-text) ne {}} { 
+	$w create text 0 0 -anchor nw -text $data(-text) -fill white -tags text
+    }
     return $w
 }
 
@@ -177,15 +190,101 @@ proc ::scope {w args} {
 namespace eval ::time-scale {
     array set default_data {
 	-height 20
-	-scale 1.0
-	-offset 0.0
+	-x-scale 1.0
+	-x-offset 0.0
+	-x-start 0
+	-x-finish 0
     }
 }
 
-proc ::time-scale::update {w args} {
+proc ::time-scale::update-scale {w} {
+    upvar #0 ::time-scale::$w data
+    ## okay, the scale should cover the max(visible, drawn)
+    ## drawn is ($data(-x-start) .. $data(-x-finish))
+    ## visible is (0 width)/$data(-x-scale)
+    ## in units of frames
+    set ht [winfo height $w]
+    set wd [winfo width $w]
+    # puts "ht $ht wd $wd"
+    if {$ht < 5 || $wd < 5} return
+    set y [expr {$ht/2.0}]
+    set yp [expr {$y+$ht/4.0}]
+    set yn [expr {$y-$ht/4.0}]
+    set x0 0
+    set x1 [expr {max(($data(-x-finish)-$data(-x-start)), $wd/$data(-x-scale))}]
+
+    # now the width of the scale is ($x1-$x0) in frames, so ($x1-$x0)/sample-rate in seconds
+    set sr [sdrkit::jack sample-rate]
+    set tx [expr {double($x1-$x0)/$sr}]
+    set tw [expr {$wd/$data(-x-scale)/$sr}]
+    # choose the unit for tick marks
+    set unit 1.0
+    while {1} {
+	if {$tw/$unit < 5.0} {
+	    set unit [expr {$unit/10.0}]
+	} elseif {$tw/$unit >= 50.0} {
+	    set unit [expr {$unit*10.0}]
+	} else {
+	    break
+	}
+    }
+    # puts "unit $unit seconds"
+    if {$tw/$unit < 20} {
+	set sub 1
+    } else {
+	set sub 0
+    }
+    # convert that into frames
+    set funit [expr {int($sr*$unit)}]
+    # make the tick mark coordinates
+    set xy {}
+    for {set f 0} {$f < $x1+$funit} {incr f $funit} {
+	lappend xy $f $y $f $yp $f $yn $f $y
+    }
+    # draw the lines
+    $w coords line $xy
+    $w scale all 0 0 $data(-x-scale) 1
+    $w configure -scrollregion [$w bbox all]
+    # puts "update-scale unit $unit seconds displayed line is $tx seconds, window width is $tw seconds"
+    # puts "update-scale display [expr {$data(-x-scale)*$data(-x-start)}] finish [expr {$data(-x-scale)*$data(-x-finish)}] width [winfo width $w] xview [$w xview]"
+}
+
+proc ::time-scale::update {w frame} {
+    upvar #0 ::time-scale::$w data
+    set data(-x-finish) $frame
+    ::time-scale::update-scale $w
+}
+
+proc ::time-scale::start {w frame} {
+    upvar #0 ::time-scale::$w data
+    set data(-x-start) $frame
+    set data(-x-finish) $frame
+    catch {$w delete all}
+    $w create line 0 0 0 0 -fill white -tags line
+    ::time-scale::update-scale $w
+}
+
+proc ::time-scale::stop {w frame} {
+    upvar #0 ::time-scale::$w data
+    set data(-x-finish) $frame
+    ::time-scale::update-scale $w
 }
 
 proc ::time-scale::configure {w args} {
+    upvar #0 ::time-scale::$w data
+    foreach {option value} $args {
+	switch -- $option {
+	    -x-scale {
+		$w scale all 0 0 [expr {$value/$data(-x-scale)}] 1
+		::time-scale::update-scale $w
+	    }
+	}
+	set data($option) $value
+    }
+    catch {$w configure -scrollregion [$w bbox all]}
+}
+
+proc ::time-scale::destroy {w} {
 }
 
 proc ::time-scale::defaults {} {
@@ -231,6 +330,7 @@ proc ::keyer-scope::configure {w args} {
 		foreach scope {iq keyer key1 key0 ptt0 ptt1 raw0 raw1} {
 		    ::scope::configure $w.$scope -x-scale $scale
 		}
+		::time-scale::configure $w.t -x-scale $scale
 		::keyer-scope::scrollregion $w
 	    }
 	    default { set data($option) $value 	}
@@ -247,6 +347,7 @@ proc ::keyer-scope::update-iq {w frame binary} {
 	::scope::update-iq $w.iq $frame $binary
 	::keyer-scope::scrollregion $w
     }
+    ::time-scale::update $w.t [expr {$frame+[string length $binary]/4/2}]
 }
 
 proc ::keyer-scope::update-midi {wkey events} {
@@ -258,24 +359,26 @@ proc ::keyer-scope::update-midi {wkey events} {
 	    set chan [expr {($cmd&0xF)+1}]
 	    set cmd [expr {($cmd>>4)&0xF}]
 	    if {$chan == $data(-chan) && ($cmd == 8 || $cmd == 9)} {
+		set frame [expr {$frame-$data(start-frame)}]
 		if {$note == $data(-note)} {
-		    ::scope::update-event $wkey [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+		    ::scope::update-event $wkey $frame [expr {2*($cmd-8)-1}]
 		} elseif {$note == $data(-note)+1} {
 		    switch -glob $wkey {
 			*key0 {
-			    ::scope::update-event $w.key1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+			    ::scope::update-event $w.key1 $frame [expr {2*($cmd-8)-1}]
 			}
 			*ptt0 {
-			    ::scope::update-event $w.ptt1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+			    ::scope::update-event $w.ptt1 $frame [expr {2*($cmd-8)-1}]
 			}
 			*raw0 {
-			    ::scope::update-event $w.raw1 [expr {$frame-$data(start-frame)}] [expr {2*($cmd-8)-1}]
+			    ::scope::update-event $w.raw1 $frame [expr {2*($cmd-8)-1}]
 			}
 			default {
 			    error "unknown keyer channel $wkey"
 			}
 		    }
 		}
+		::time-scale::update $w.t $frame
 	    }
 	}
     }
@@ -291,6 +394,7 @@ proc ::keyer-scope::window-configure {w cw width height} {
     foreach scope {iq keyer key0 key1 ptt0 ptt1 raw0 raw1} {
 	::scope::configure $w.$scope -x-scale $scale -height [winfo height $w.$scope]
     }
+    ::time-scale::configure $w.t -x-scale $scale
     ::keyer-scope::scrollregion $w
 }
 
@@ -301,6 +405,7 @@ proc ::keyer-scope::window-destroy {w cw} {
     foreach scope {iq keyer key0 key1 ptt0 ptt1 raw0 raw1} {
 	::scope::destroy $w.$scope
     }
+    ::time-scale::destroy $w.t
 }
 
 proc ::keyer-scope::defaults {} {
@@ -317,6 +422,7 @@ proc ::keyer-scope::start {w} {
     foreach capture {iq keyer key0 ptt0 raw0} {
 	::capture::start $w.$capture
     }
+    ::time-scale::start $w.t 0
 }
 
 proc ::keyer-scope::stop {w} {
@@ -330,6 +436,7 @@ proc ::keyer-scope::stop {w} {
     foreach scope {keyer key0 key1 ptt0 ptt1 raw0 raw1} {
 	::scope::stop-event $w.$scope $frames
     }
+    ::time-scale::stop $w.t $frames
     ::keyer-scope::scrollregion $w
 }
 
@@ -337,6 +444,7 @@ proc ::keyer-scope::xview {w args} {
     foreach view {iq keyer key0 key1 ptt0 ptt1 raw0 raw1} {
 	$w.$view xview {*}$args
     }
+    $w.t xview {*}$args
 }
 
 proc ::keyer-scope::xscrollcommand-set {w args} {
@@ -352,16 +460,45 @@ proc ::keyer-scope::scrollregion {w} {
     }
 }
 
+proc ::keyer-scope::motion {w w2 x y} {
+    upvar #0 ::keyer-scope::$w data
+    foreach {c i} $data(graticule) {
+	$c coords $i $x 0 $x [winfo height $c]
+    }
+}
+
+proc ::keyer-scope::enter {w w2} {
+    upvar #0 ::keyer-scope::$w data
+    set data(graticule) {}
+    foreach c {iq ptt1 ptt0 keyer key1 key0 raw1 raw0 t} {
+	lappend data(graticule) $w.$c [$w.$c create line 0 0 0 0 -fill grey -tags graticule]
+    }
+    bind $w2 <Motion> [list ::keyer-scope::motion $w $w2 %x %y]
+}
+
+proc ::keyer-scope::leave {w w2} {
+    upvar #0 ::keyer-scope::$w data
+    bind $w2 <Motion> {}
+    foreach {c i} $data(graticule) { $c delete $i }
+    set data(graticule) {}
+}
+
 proc ::keyer-scope::keyer-scope {w args} {
     upvar #0 ::keyer-scope::$w data
     array set data [::keyer-scope::defaults]
     array set data $args
     ttk::panedwindow $w -orient vertical
-    $w add [::scope $w.iq -height 50 -xscrollcommand [list ::keyer-scope::xscrollcommand-set $w]] -weight 1
+    $w add [::scope $w.iq -height 50 -text audio -xscrollcommand [list ::keyer-scope::xscrollcommand-set $w]] -weight 1
+    bind $w.iq <Enter> [list ::keyer-scope::enter $w $w.iq]
+    bind $w.iq <Leave> [list ::keyer-scope::leave $w $w.iq]
     foreach scope {ptt1 ptt0 keyer key1 key0 raw1 raw0} {
-	$w add [::scope $w.$scope -height 20] -weight 1
+	$w add [::scope $w.$scope -height 20 -text $scope] -weight 1
+	bind $w.$scope <Enter> [list ::keyer-scope::enter $w $w.$scope]
+	bind $w.$scope <Leave> [list ::keyer-scope::leave $w $w.$scope]
     }
     $w add [::time-scale $w.t -height 20] -weight 0
+    bind $w.t <Enter> [list ::keyer-scope::enter $w $w.t]
+    bind $w.t <Leave> [list ::keyer-scope::leave $w $w.t]
     $w add [ttk::scrollbar $w.x -orient horizontal -command [list ::keyer-scope::xview $w]] -weight 0
     # period and size must add up to most of the data
     set data(sample-rate) [sdrkit::jack sample-rate]
@@ -392,9 +529,9 @@ proc keyer-scope {w args} {
 array set data {
     state 0
     state-text {capture start}
-    log-zoom 0
-    zoom 1
-    zoom-label 1.0
+    log-zoom 5
+    zoom 50
+    zoom-label 5.0e+01
 }
 
 proc swap-state {} {

@@ -123,6 +123,12 @@ namespace eval ::main {
 	drawn-items {}
 	unmatched {}
 	ptt 0
+	listen-last-echo {}
+	listen-last-echo-repeat 0
+	listen-matched {}
+	listen-echoes-received {}
+	listen-rcvd {}
+	active-voices 0
     }
 }
 
@@ -204,10 +210,10 @@ proc ::main::listen_score_echo {item} {
 	set ::main::data(unmatched) [lreplace $::main::data(unmatched) $i $i]
 	lappend ::main::data(matched) $item
 	.rcvd.rcvd insert end "$item [morse-to-text [heckler cget -dict] $item] correct\n"
-	::main::play-score correct [morse-dit-length $item]
+	::main::play-score correct 1
     } else {
 	.rcvd.rcvd insert end "$item [morse-to-text [heckler cget -dict] $item] wrong\n"
-	::main::play-score wrong [morse-dit-length $item]
+	::main::play-score wrong 1
     }
 }
 
@@ -217,14 +223,14 @@ proc ::main::listen_for_echoes {echo detime} {
     append echo $new
     if {$echo ne {}} {
 	if {$echo ne $::main::data(listen-last-echo)} {
-	    puts "listen_for_echoes heard {$echo} this time"
+	    # puts "listen_for_echoes heard {$echo} this time"
 	    set ::main::data(listen-last-echo-repeat) 0
 	    set ::main::data(listen-last-echo) $echo
 	} else {
 	    incr ::main::data(listen-last-echo-repeat)
 	}
 	set echoes [split $echo \n]
-	puts "[llength $echoes] echoes to match, [llength $::main::data(unmatched)] unmatched, $::main::data(listen-last-echo-repeat) repeats"
+	# puts "[llength $echoes] echoes to match, [llength $::main::data(unmatched)] unmatched, $::main::data(listen-last-echo-repeat) repeats"
 	foreach item [lrange $echoes 0 end-1] {
 	    ::main::listen_score_echo $item
 	}
@@ -232,7 +238,7 @@ proc ::main::listen_for_echoes {echo detime} {
 	if {$::main::data(active-voices) == 0 && $::main::data(listen-last-echo-repeat) > 10} {
 	    ::main::listen_score_echo $echo
 	    foreach item $::main::data(unmatched) {
-		::main::play-score missed [morse-dit-length $item]
+		::main::play-score missed 1
 	    }
 	    set echo {}
 	}
@@ -668,6 +674,7 @@ proc ::main::keyer-panel {w} {
 	client-iambic_tone iambic_tone
 	client-ptt ptt
 	client-debounce debounce
+	client-dttsp_iambic {}
 
 	debounce-verbose 0
 	debounce-chan 1

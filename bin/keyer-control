@@ -28,7 +28,7 @@ package require keyer::debounce
 package require keyer::iambic
 package require keyer::ptt
 package require keyer::tone
-package require dttsp::iambic
+package require keyer::dttsp-iambic
 package require sdrkit::jack
 
 package require keyer-control

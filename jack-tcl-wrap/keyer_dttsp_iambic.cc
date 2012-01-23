@@ -184,8 +184,8 @@ extern "C" {
     return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
   }
 
-  int DLLEXPORT Dttsp_iambic_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "dttsp::iambic", "1.0.0", "dttsp::iambic", _factory);
+  int DLLEXPORT Keyer_dttsp_iambic_Init(Tcl_Interp *interp) {
+    return framework_init(interp, "keyer::dttsp-iambic", "1.0.0", "keyer::dttsp-iambic", _factory);
   }
 
 }

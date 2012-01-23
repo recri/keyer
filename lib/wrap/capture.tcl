@@ -60,6 +60,10 @@ proc ::capture::configure {w args} {
 		    if {$data(type) eq {iq} && [info exists data(tap)]} {
 			$data(tap) configure -log2size [expr {int(log($data(-size))/log(2))}]
 		    }
+		} else {
+		    if {$data(type) eq {spectrum} && [info commands data(fft)] eq {}} {
+			::sdrkit::fftw $data(fft) -size $value
+		    }
 		}
 		set data($option) $value
 	    }

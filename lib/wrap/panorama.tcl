@@ -35,6 +35,7 @@ namespace eval ::panorama {
 	-connect {}
 	-period 50
 	-size 4096
+	-update {}
     }
 }
 
@@ -44,6 +45,11 @@ proc ::panorama::update {w xy} {
     ::spectrum::update $w.s $xy
     ::waterfall::update $w.w $xy
     ::frequency::update $w.f $xy
+    if {$data(-update) ne {}} {
+	set cmd [lindex $data(-update) 0]
+	set rest [lrange $data(-update) 1 end]
+	$cmd {*}$rest $xy
+    }
 }
 
 proc ::panorama::configure {w args} {
@@ -88,6 +94,7 @@ proc ::panorama::panorama {w args} {
     #rename $w ::panorama::$w
     #proc $w {args} [list return [list panorama::command $w \$args]]
     ::capture::spectrum $w -period $data(-period) -size $data(-size) -client ::panorama::update
+    ::capture::start $w
     bind . <Configure> [list ::panorama::window-configure $w %W %w %h]
     bind . <Destroy> [list ::panorama::window-destroy $w %W]
     return $w
