@@ -58,8 +58,10 @@ private:
   static const int KEYIN_DIT = KEYIN(1,0);
   static const int KEYIN_DAH = KEYIN(0,1);
   static const int KEYIN_DIDAH = KEYIN(1,1);
+  static bool KEYIN_IS_OFF(int keyIn) { return keyIn == KEYIN_OFF; }
   static bool KEYIN_IS_DIT(int keyIn) { return (keyIn&KEYIN_DIT)!=0; }
   static bool KEYIN_IS_DAH(int keyIn) { return (keyIn&KEYIN_DAH)!=0; }
+  static bool KEYIN_IS_DIDAH(int keyIn) { return keyIn == KEYIN_DIDAH; }
   
 public:
   Iambic() {
@@ -67,6 +69,7 @@ public:
 
     _keyIn = KEYIN_OFF;
     _lastKeyIn = KEYIN_OFF;
+    _startKeyIn = KEYIN_OFF;
     _halfClockKeyIn = KEYIN_OFF;
 
     setTick(1);
@@ -92,7 +95,7 @@ public:
     byte keyIn = _swapped ? KEYIN(raw_dah_on&1, raw_dit_on&1) : KEYIN(raw_dit_on&1, raw_dah_on&1);
     if (_keyIn != keyIn) {
       _lastKeyIn = _keyIn;
-      _memKeyIn |= keyIn;
+      _memKeyIn |= keyIn & ~_startKeyIn;
       _keyIn = keyIn;
       // if (_verbose) fprintf(stderr, "Iambic._keyIn = %x\n", _keyIn);
     }
@@ -205,9 +208,10 @@ public:
   bool _autoIws;		// automatically time space between words
   
   bool _update;			// update computed values
-  byte _keyIn;			// input didah state, swapped
   byte _keyOut;			// output key state
-  byte _lastKeyIn;		// previous didah state
+  byte _keyIn;			// input key didah state, swapped
+  byte _lastKeyIn;		// previous input key didah state
+  byte _startKeyIn;		// key state at beginning of current element
   byte _memKeyIn;		// memory of states seen since element began
   byte _halfClockKeyIn;		// memory of key state halfway through element
   keyerState _keyerState;	// current keyer state
@@ -228,6 +232,7 @@ public:
     _keyOut = keyOut ? 1 : 0;
     if (keyOut) {
       _memKeyIn = 0;
+      _startKeyIn = _keyIn;
       _halfClockDuration = newDuration / 2;
     }
     return _transitionTo(newState, newDuration);
@@ -253,19 +258,15 @@ public:
   }
   // start a dit if it should be
   bool _startDit() {
-    if (_mode == 'B' &&			// mode B requested
-	_keyIn == KEYIN_OFF &&		// paddles are released
-	_halfClockKeyIn == KEYIN_DIDAH)	// and midway through the last dah the paddles were squeezed
-      return _transitionTo(KEYER_DIT, _ticksPerDit, true);		// make a dit
-    return KEYIN_IS_DIT(_keyIn|_memKeyIn) && _transitionTo(KEYER_DIT, _ticksPerDit, true);
+    return ((KEYIN_IS_OFF(_keyIn) && _mode == 'B' && KEYIN_IS_DIDAH(_halfClockKeyIn)) ||
+	    KEYIN_IS_DIT(_keyIn|_memKeyIn)) &&
+      _transitionTo(KEYER_DIT, _ticksPerDit, true);
   }
   // start a dah if it should be
   bool _startDah() {
-    if (_mode == 'B' &&			// mode B requested
-	_keyIn == KEYIN_OFF &&		// paddles are released
-	_halfClockKeyIn == KEYIN_DIDAH)	// and midway through the last dit the paddles were squeezed
-      return _transitionTo(KEYER_DAH, _ticksPerDah, true);		// make a dah
-    return KEYIN_IS_DAH(_keyIn|_memKeyIn) && _transitionTo(KEYER_DAH, _ticksPerDah, true);
+    return ((KEYIN_IS_OFF(_keyIn) && _mode == 'B' && KEYIN_IS_DIDAH(_halfClockKeyIn)) ||
+	    KEYIN_IS_DAH(_keyIn|_memKeyIn)) &&
+      _transitionTo(KEYER_DAH, _ticksPerDah, true);
   }
   // start an interelement space
   bool _startSpace(keyerState newState) {
