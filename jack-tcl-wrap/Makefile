@@ -35,6 +35,8 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
+	$(LIBDIR)/iq_correct.so \
+	$(LIBDIR)/iq_noise.so \
 	$(LIBDIR)/iq_swap.so \
 	$(LIBDIR)/jack_client.so \
 	$(LIBDIR)/lo_mixer.so \
@@ -94,7 +96,15 @@ $(LIBDIR)/gain.so: gain.c framework.h ../sdrkit/dmath.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/iq_balance.so: iq_balance.c framework.h ../sdrkit/dmath.h
+$(LIBDIR)/iq_balance.so: iq_balance.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_balance.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/iq_correct.so: iq_correct.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_correct.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/iq_noise.so: iq_noise.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_noise.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -126,7 +136,7 @@ $(LIBDIR)/mtap.so: mtap.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/noise.so: noise.c framework.h ../sdrkit/dmath.h
+$(LIBDIR)/noise.so: noise.c framework.h ../sdrkit/dmath.h ../sdrkit/noise.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

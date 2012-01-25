@@ -23,44 +23,8 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require panorama
 
-namespace eval ::meters {}
-
-proc ::meters::update {w xy} {
-    upvar #0 ::meters::$w data
-    if {$data(llength) != [llength $xy]} {
-	set data(llength) [llength $xy]
-	puts "meters::update $w [llength $xy]"
-	puts [lrange $xy 0 10]
-    }
-    array set vals $xy
-    set i 0
-    foreach {name val} $xy {
-	set ivals($i) $val
-	incr i
-    }
-    set n [array size ivals]
-    set poscor 0
-    set negcor 0
-    foreach i [array names ivals] {
-	set posval $ivals($i)
-	set negval $ivals([expr {$n-$i-1}])
-	set poscor [expr {$poscor+$posval*$posval}]
-	set negcor [expr {$negcor+$posval*$negval}]
-    }
-    puts "+ $poscor - $negcor / [expr {$negcor/$poscor}]"
-}
-
-proc ::meters {w args} {
-    upvar #0 ::meters::$w data
-    ttk::frame $w
-    set data(llength) 0
-    return $w
-}
-
 proc main {argv} {
     pack [panorama .p] -side top -fill both -expand true
-    pack [meters .m] -side top -fill x
-    panorama::configure .p -update [list ::meters::update .m]
 }
 
 main $argv

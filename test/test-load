@@ -32,7 +32,7 @@ set so [info sharedlibextension]
 #
 # array to identify which other tricks to try
 array set data {
-    dttsp_iambic {dttsp::iambic norm}
+    keyer_dttsp_iambic {keyer::dttsp-iambic norm}
     keyer_ascii {keyer::ascii norm}
     keyer_detime {keyer::detime norm}
     keyer_iambic {keyer::iambic norm}
@@ -43,11 +43,13 @@ array set data {
     agc {sdrkit::agc norm}
     atap {sdrkit::atap atap}
     audio_tap {sdrkit::audio-tap atap}
-    biquad_filter {sdrkit::biquad-filter norm}
+    filter_biquad {sdrkit::filter-biquad norm}
     constant {sdrkit::constant norm}
     fftw {sdrkit::fftw norm}
     gain {sdrkit::gain norm}
     iq_balance {sdrkit::iq-balance norm}
+    iq_correct {sdrkit::iq-correct norm}
+    iq_noise {sdrkit::iq-noise norm}
     iq_swap {sdrkit::iq-swap norm}
     jack_client {sdrkit::jack-client norm}
     lo_mixer {sdrkit::lo-mixer norm}
@@ -89,6 +91,7 @@ array set options {
     -mdah {values {0 1} type integer}
     -mide {values {0 1} type integer}
     -mode {values {A B} type string}
+    -mu {range {0 1} type float}
     -note {range {0 127} type integer}
     -period {range {10 10000} type float}
     -planbits {type integer}
@@ -105,6 +108,80 @@ array set options {
     -window {range {0 12} type integer}
     -word {range {50 60} type float}
     -wpm {range {5 50} type float}
+}
+
+array set dbnames {
+    alsp {}
+    awsp {}
+    channel {}
+    client {}
+    dah {}
+    delay {}
+    dict {}
+    fall {}
+    frequency {}
+    gain {}
+    hang {}
+    ies {}
+    ils {}
+    imag {}
+    iws {}
+    level {}
+    mdah {}
+    mdit {}
+    mide {}
+    mode {}
+    mu {}
+    note {}
+    period {}
+    phase {}
+    planbits {}
+    real {}
+    rise {}
+    seed {}
+    server {}
+    size {}
+    steps {}
+    swap {}
+    tap {}
+    verbose {}
+    weight {}
+    window {}
+    word {}
+    wpm {}
+}
+
+array set clnames {
+    Bool {}
+    Channel {}
+    Char {}
+    Client {}
+    Decibel {}
+    Decibels {}
+    Delay {}
+    Dits {}
+    Gain {}
+    Hang {}
+    Hertz {}
+    Imag {}
+    Memo {}
+    Mode {}
+    Morse {}
+    Mu {}
+    Note {}
+    Period {}
+    Phase {}
+    Planbits {}
+    Ramp {}
+    Real {}
+    Samples {}
+    Seed {}
+    Server {}
+    Steps {}
+    Tap {}
+    Verbose {}
+    Window {}
+    Words {}
 }
 
 array set results {
@@ -171,6 +248,15 @@ foreach file [glob [file join $libdir *$so]] {
 			set options($opt) 1
 			continue;
 		    }
+		    if { ! [info exists dbnames($dbname)]} {
+			puts "no info on option dbname $dbname"
+			set dbnames($dbname) 1
+		    }
+		    if { ! [info exists clnames($clname)]} {
+			puts "no info on option clname $clname"
+			set clnames($clname) 1
+		    }
+			
 		    catch {array unset props}
 		    array set props $options($opt)
 		    switch $props(type) {

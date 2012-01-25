@@ -1,0 +1,275 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require panorama
+package require sdrkit::jack
+package require sdrkit::oscillator
+package require sdrkit::noise
+package require sdrkit::iq-noise
+package require sdrkit::iq-balance
+package require sdrkit::iq-correct
+
+
+#
+# just make an oscillator and some noise
+# an iq-balance to unbalance the oscillator
+# and an iq-correct to rebalance the oscillator
+#
+
+array set data {
+    server default
+    name osc
+    length 320
+    freq 600.0
+    min-freq 1.0
+    max-freq 23500
+    gain -100.0
+    min-gain -200.0
+    max-gain 0.0
+    iq-sine 0.0
+    iq-gain 0.0
+    noise -120.0
+    iq-noise -120.0
+    corrector-onoff 0
+    corrector-mu 0.25
+    corrector-wi 0.00
+    corrector-wq 0.00
+}
+
+namespace eval ::meters {}
+
+##
+## meter the possible iq balancing signals
+##
+proc ::meters::update {w xy} {
+    upvar #0 ::meters::$w data
+    set vals {}
+    foreach {f v} [lrange $xy 2 end] {
+	lappend vals [dB2linear $v]
+    }
+    set n [llength vals]
+    set poscor 0
+    set negcor 0
+    foreach posval $vals negval [lreverse $vals] {
+	set poscor [expr {$poscor+$posval*$posval}]
+	set negcor [expr {$negcor+$posval*$negval}]
+    }
+    set data(poscor) [expr {sqrt($poscor/$n)}]
+    set data(negcor) [expr {sqrt($negcor/$n)}]
+    set data(ratcor) [expr {$data(negcor)/$data(poscor)}]
+}
+
+proc ::meters {w args} {
+    upvar #0 ::meters::$w data
+    ttk::frame $w
+    foreach x {poscor negcor ratcor} t {Positive Negative Ratio} {
+	pack [ttk::labelframe $w.$x -text $t] -side left
+	pack [ttk::label $w.$x.l -textvar ::meters::${w}($x) -width 20]
+    }
+    set data(llength) 0
+    return $w
+}
+
+##
+## controllers for the input signal, unbalancing, and rebalancing components
+##
+proc dB2linear {dB} { return [expr {pow(10, $dB/20)}] }
+
+proc set-gain {v} {
+    osc configure -gain $v
+    set ::data(gain-label) [format %.1f $v]
+}
+
+proc set-freq {v} {
+    osc configure -freq $v
+    set ::data(freq-label) [format %.1f $v]
+}
+
+proc set-noise {v} {
+    noise configure -level $v
+    set ::data(noise-label) [format %.1f $v]
+}
+
+proc set-iq-noise {v} {
+    iq-noise configure -level $v
+    set ::data(iq-noise-label) [format %.1f $v]
+}
+
+proc set-iq-sine-phase {v} {
+    iq-balance configure -sine-phase $v
+}
+proc set-iq-gain {v} {
+    iq-balance configure -linear-gain [dB2linear $v]
+}
+
+proc more-mu {} {
+    set ::data(corrector-mu) [expr {2*$::data(corrector-mu)}]
+    iq-correct configure -mu $::data(corrector-mu)
+}
+proc less-mu {} {
+    set ::data(corrector-mu) [expr {$::data(corrector-mu)/2}]
+    iq-correct configure -mu $::data(corrector-mu)
+}
+proc reset-ws {} {
+    iq-correct set 0 0
+}
+proc update-ws {} {
+    foreach {wi wq} [iq-correct get] break
+    if {[catch {
+	set ::data(corrector-wi) [format %.10f $wi]
+	set ::data(corrector-wq) [format %.10f $wq]
+    } error]} {
+	puts "$error"
+    }
+    after 20 [list update-ws]
+}
+proc corrector-onoff {} {
+    if {$::data(corrector-onoff)} {
+	iq-correct set 0 0
+	iq-correct configure -mu $::data(corrector-mu)
+    } else {
+	iq-correct configure -mu 0
+	iq-correct set 0 0
+    }
+}
+
+proc shutdown {w} {
+    if {$w eq {.}} {
+	rename osc {}
+	rename noise {}
+	rename iq-noise {}
+	rename iq-balance {}
+	rename iq-correct {}
+    }
+}
+
+proc main {argv} {
+    if {$::data(max-freq) > [sdrkit::jack sample-rate]/4} {
+	set ::data(max-freq) [expr {[sdrkit::jack sample-rate]/4.01}]
+    }
+    foreach {option value} $argv {
+	switch -- $option {
+	    -n - -name - --name { set ::data(name) $value }
+	    -s - -server - --server { set ::data(server) $value }
+	    -l - -length - --length { set ::data(length) $value }
+	    -f - -freq - --freq - -frequency - --frequency { set ::data(freq) $value }
+	    -min-freq - --min-freq { set ::data(min-freq) $value }
+	    -max-freq - --max-freq { set ::data(max-freq) $value }
+	    -g - -gain - --gain { set ::data(gain) $value }
+	    -min-gain - --min-gain { set ::data(min-gain) $value }
+	    -max-gain - --max-gain { set ::data(max-gain) $value }
+	    default { error "unknown option \"$option\"" }
+	}
+    }
+
+    sdrkit::oscillator osc
+    sdrkit::noise noise
+    sdrkit::iq-noise iq-noise
+    sdrkit::iq-balance iq-balance
+    sdrkit::iq-correct iq-correct
+    
+    wm title . sdrkit:balancer
+    set-gain $::data(gain)
+    set-freq $::data(freq)
+    set-noise $::data(noise)
+    set-iq-noise $::data(iq-noise)
+
+    set row 0
+    grid [panorama .pan] -row $row -column 0 -columnspan 3 -sticky nsew
+    incr row
+    grid [ttk::label .b$row -text {Oscillator}] -row $row -column 0 -columnspan 3
+    incr row
+    grid [ttk::label .gain-l -textvar ::data(gain-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .gain-u -text dB] -row $row -column 1
+    grid [ttk::scale .gain-s -from $::data(max-gain) -to $::data(min-gain) -command set-gain -variable ::data(gain) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .freq-l -textvar ::data(freq-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .freq-u -text Hz] -row $row -column 1
+    grid [ttk::scale .freq-s -from $::data(min-freq) -to $::data(max-freq) -command set-freq -variable ::data(freq) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .b$row -text {Noise}] -row $row -column 0 -columnspan 3
+    incr row
+    grid [ttk::label .noise-l -textvar ::data(noise-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .noise-u -text dB] -row $row -column 1
+    grid [ttk::scale .noise-s -from $::data(max-gain) -to $::data(min-gain) -command set-noise -variable ::data(noise) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .b$row -text {IQ Noise}] -row $row -column 0 -columnspan 3
+    incr row
+    grid [ttk::label .iq-noise-l -textvar ::data(iq-noise-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .iq-noise-u -text dB] -row $row -column 1
+    grid [ttk::scale .iq-noise-s -from $::data(max-gain) -to $::data(min-gain) -command set-iq-noise -variable ::data(iq-noise) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .b$row -text {Unbalancer}] -row $row -column 0 -columnspan 3
+    incr row
+    grid [ttk::label .sine$row-l -textvar ::data(iq-sine) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .sine$row-u -text {}] -row $row -column 1
+    grid [ttk::scale .sine$row-s -from -1.000 -to 1.000 -command set-iq-sine-phase -variable ::data(iq-sine) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .gain$row-l -textvar ::data(iq-gain) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .gain$row-u -text {dB}] -row $row -column 1
+    grid [ttk::scale .gain$row-s -from -30.00 -to 30.00 -command set-iq-gain -variable ::data(iq-gain) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .blk$row -text {Corrector}] -row $row -column 0 -columnspan 3
+    incr row
+    grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
+    pack [ttk::label .blk$row.l-mu -text mu] -side left
+    pack [ttk::label .blk$row.v-mu -textvariable ::data(corrector-mu) -width 15] -side left
+    pack [ttk::label .blk$row.l-wi -text wi] -side left
+    pack [ttk::label .blk$row.v-wi -textvariable ::data(corrector-wi) -width 15] -side left
+    pack [ttk::label .blk$row.l-wq -text wq] -side left
+    pack [ttk::label .blk$row.v-wq -textvariable ::data(corrector-wq) -width 15] -side left
+    incr row
+    grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
+    pack [ttk::checkbutton .blk$row.onoff -text {Enable} -variable ::data(corrector-on) -onvalue 1 -offvalue 0 -command [list corrector-onoff]] -side left
+    pack [ttk::button .blk$row.more-mu -text {Less mu} -command [list less-mu]] -side left
+    pack [ttk::button .blk$row.less-mu -text {More mu} -command [list more-mu]] -side left
+    pack [ttk::button .blk$row.reset-ws -text {Reset wi/wq} -command [list reset-ws]] -side left
+    if {0} {
+	grid [ttk::label .blk$row -text {Meters}] -row $row -column 0 -columnspan 3
+	incr row
+	grid [meters .meters] -row $row -column 0 -columnspan 3
+    }
+    grid columnconfigure . 2 -weight 100
+    grid rowconfigure . 0 -weight 100
+
+    panorama::configure .pan -update [list ::meters::update .meters]
+
+    sdrkit::jack connect osc:out_i iq-balance:in_i
+    sdrkit::jack connect osc:out_q iq-balance:in_q
+    sdrkit::jack connect noise:out_i iq-balance:in_i
+    sdrkit::jack connect noise:out_q iq-balance:in_q
+    sdrkit::jack connect iq-noise:out_i iq-balance:in_i
+    sdrkit::jack connect iq-noise:out_q iq-balance:in_q
+    sdrkit::jack connect iq-balance:out_i iq-correct:in_i
+    sdrkit::jack connect iq-balance:out_q iq-correct:in_q
+    sdrkit::jack connect iq-correct:out_i capture0:in_i
+    sdrkit::jack connect iq-correct:out_q capture0:in_q
+    sdrkit::jack connect iq-correct:out_i system:playback_1
+    sdrkit::jack connect iq-correct:out_q system:playback_2
+    corrector-onoff
+    update-ws
+    bind . <Destroy> [list shutdown %W]
+}
+
+main $argv

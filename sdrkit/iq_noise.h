@@ -17,8 +17,14 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef NOISE_H
-#define NOISE_H
+#ifndef IQ_NOISE_H
+#define IQ_NOISE_H
+
+/*
+** The goal here is to simulate noise that originated at the antenna connection
+** and went through the QSD, so the Q signal is 90 degrees from the I signal.
+** And do it without calling any transcendental functions.
+*/
 
 // if this isn't the first thing included, then all bets are off
 // feature macros are extremely weird, since anyone can include the
@@ -29,33 +35,33 @@
 
 #include "dmath.h"
 
-#ifndef NOISE_RANDOM_STATE_SIZE
-#define NOISE_RANDOM_STATE_SIZE 32
+#ifndef IQ_NOISE_RANDOM_STATE_SIZE
+#define IQ_NOISE_RANDOM_STATE_SIZE 32
 #endif
 
-#if NOISE_RANDOM_STATE_SIZE < 8
+#if IQ_NOISE_RANDOM_STATE_SIZE < 8
 #error "random_r state buffer size must be 8 or greater"
 #endif
 
 typedef struct {
   struct random_data data;
-  char state[NOISE_RANDOM_STATE_SIZE];
-} noise_t;
+  char state[IQ_NOISE_RANDOM_STATE_SIZE];
+} iq_noise_t;
 
-static void *noise_init(void *p) {
-  noise_t *noise = (noise_t *)p;
-  if (initstate_r(12345678, noise->state, sizeof(noise->state), &noise->data) != 0) return "initstate_r failed";
+static void *iq_noise_init(void *p) {
+  iq_noise_t *iq_noise = (iq_noise_t *)p;
+  if (initstate_r(12345678, iq_noise->state, sizeof(iq_noise->state), &iq_noise->data) != 0) return "initstate_r failed";
   return p;
 }
 
-static void noise_configure(noise_t *p, unsigned int seed) {
+static void iq_noise_configure(iq_noise_t *p, unsigned int seed) {
   srandom_r(seed, &p->data);
 }
 
-static float _Complex noise_process(noise_t *p) {
-  int32_t i, q;
-  random_r(&p->data, &i);
-  random_r(&p->data, &q);
-  return ((i - (RAND_MAX/2)) / (float)(RAND_MAX/2)) + I * ((q - (RAND_MAX/2)) / (float)(RAND_MAX/2));
+static float _Complex iq_noise_process(iq_noise_t *p) {
+  int32_t d;
+  random_r(&p->data, &d);
+  float phase = (two_pi * d) / RAND_MAX;
+  return cosf(phase) + I * sinf(phase);
 }
 #endif

@@ -18,33 +18,26 @@
 */
 
 /*
-** create an IQ balancer module which adjusts the phase and relative magnitude of an IQ channel
-** 
+** create an IQ corrector module which adaptively adjusts the phase and
+** relative magnitudes of the I and Q channels to balance.
 */
 
 #include "framework.h"
 
-#include "../sdrkit/iq_balance.h"
+#include "../sdrkit/iq_correct.h"
 
-typedef iq_balance_options_t options_t;
+typedef iq_correct_options_t options_t;
 
 typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  iq_balance_t iqb;
+  iq_correct_t iqb;
 } _t;
-
-static void *_update(_t *data) {
-  data->modified = 0;
-  iq_balance_configure(&data->iqb, &data->opts);
-}
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *e = iq_balance_init(&data->iqb, &data->opts); if (e != &data->iqb) return e;
-  data->modified = 1;
-  _update(data);
+  void *e = iq_correct_init(&data->iqb, &data->opts); if (e != &data->iqb) return e;
   return arg;
 }
 
@@ -54,16 +47,49 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
-  _update(data);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = iq_balance_process(&data->iqb, *in0++ + *in1++ * I);
+    float _Complex y = iq_correct_process(&data->iqb, *in0++ + *in1++ * I);
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }
   return 0;
 }
 
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+  _t *data = (_t *)clientData;
+  Tcl_Obj *result[] = {
+#if GNURADIO_VERSION
+    Tcl_NewDoubleObj(data->iqb.wi), Tcl_NewDoubleObj(data->iqb.wq), NULL
+#else
+    Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)), NULL
+#endif
+  };
+  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
+  return TCL_OK;
+}
+static int _set(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 4) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s set wi wq", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+  double wi, wq;
+  if (Tcl_GetDoubleFromObj(interp, objv[2], &wi) != TCL_OK ||
+      Tcl_GetDoubleFromObj(interp, objv[3], &wq) != TCL_OK)
+    return TCL_ERROR;
+  // this may not be atomic, but it will work itself out
+  _t *data = (_t *)clientData;
+#if GNURADIO_VERSION
+  data->iqb.wi = wi; data->iqb.wq = wq;
+#else
+  data->iqb.w = wi + I * wq;
+#endif
+  return TCL_OK;
+}
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
@@ -71,15 +97,15 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = save.sine_phase != data->opts.sine_phase ||
-    save.linear_gain != data->opts.linear_gain;
+  data->modified = save.mu != data->opts.mu;
   if (data->modified) {
-    void *e = iq_balance_preconfigure(&data->iqb, &data->opts);
+    void *e = iq_correct_preconfigure(&data->iqb, &data->opts);
     if (e != &data->iqb) {
       Tcl_SetResult(interp, e, TCL_STATIC);
       data->opts = save;
       return TCL_ERROR;
     }
+    iq_correct_configure(&data->iqb, &data->opts);
   }
   return TCL_OK;
 }
@@ -87,14 +113,15 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-linear-gain", "gain",   "Gain",   "1.0", fw_option_float, 0, offsetof(_t, opts.linear_gain), "linear gain to I signal" },
-  { "-sine-phase",  "phase",  "Phase",  "0.0", fw_option_float, 0, offsetof(_t, opts.sine_phase),  "sine of phase adjustment" },
+  { "-mu", "mu", "Mu", "0.25", fw_option_float, 0, offsetof(_t, opts.mu), "adaptation factor, larger is faster" },
   { NULL }
 };
 
 // the subcommands implemented by this command
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
+  { "get",   _get,   "fetch the current adaptive filter coefficients" },
+  { "set",   _set,   "set the current adaptive filter coefficients" },
   { NULL }
 };
 
@@ -117,6 +144,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Iq_balance_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::iq-balance", "1.0.0", "sdrkit::iq-balance", _factory);
+int DLLEXPORT Iq_correct_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::iq-correct", "1.0.0", "sdrkit::iq-correct", _factory);
 }

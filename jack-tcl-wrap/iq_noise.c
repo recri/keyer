@@ -20,12 +20,11 @@
 /*
 */
 
-#include "../sdrkit/noise.h"
+#include "../sdrkit/iq_noise.h"
 #include "framework.h"
 
 /*
 ** make noise, specified dB level
-** this is uncorrelated noise, I and Q are different streams
 ** use iq_noise for correlated noise where Q is quadrature to I.
 */
 typedef struct {
@@ -38,24 +37,23 @@ typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  noise_t noise;
+  iq_noise_t iq_noise;
   float gain;
 } _t;
 
 static void _update(_t *data) {
   if (data->modified) {
     data->modified = 0;
-    // noise_configure(&data->noise, data->opts.seed);
-    data->gain = powf(10.0f, data->opts.dBgain / 20.0f);
+    data->gain = data->opts.gain;
   }
 }
   
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *p = noise_init(&data->noise); if (p != &data->noise) return p;
-  noise_configure(&data->noise, data->opts.seed);
-  data->modified = 1;
-  _update(data);
+  void *p = iq_noise_init(&data->iq_noise); if (p != &data->iq_noise) return p;
+  iq_noise_configure(&data->iq_noise, data->opts.seed);
+  data->opts.gain = powf(10.0f, data->opts.dBgain / 20.0f);
+  data->gain = data->opts.gain;
   return arg;
 }
 
@@ -66,7 +64,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   AVOID_DENORMALS;
   _update(data);
   for (int i = nframes; --i >= 0; ) {
-    float _Complex z = data->gain * noise_process(&data->noise);
+    float _Complex z = data->gain * iq_noise_process(&data->iq_noise);
     *out0++ = creal(z);
     *out1++ = cimag(z);
   }
@@ -77,7 +75,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   _t *data = (_t *)clientData;
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  data->modified = data->opts.dBgain != save.dBgain || data->opts.seed != save.seed;
+  data->modified = data->opts.dBgain != save.dBgain;
+  if (data->modified) {
+    data->opts.gain = powf(10.0f, data->opts.dBgain / 20.0f);
+  }
   return TCL_OK;
 }
 
@@ -102,7 +103,7 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process,			// process callback
   0, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "a component which generates noise"
+  "a component which generates iq noise"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -110,6 +111,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Noise_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::noise", "1.0.0", "sdrkit::noise", _factory);
+int DLLEXPORT Iq_noise_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::iq-noise", "1.0.0", "sdrkit::iq-noise", _factory);
 }

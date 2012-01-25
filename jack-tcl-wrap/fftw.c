@@ -115,7 +115,7 @@ static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-size",    "size",    "Samples", "4096",     fw_option_int, 0,	offsetof(_t, size),	      "size of fft computed" },
   { "-planbits","planbits","Planbits","0",	  fw_option_int, 0,	offsetof(_t, planbits),	      "fftw plan bits" },
-  { "-window",  "window",  "Window",  "11",       fw_option_int, 0,	offsetof(_t, window_type),    "window used in fft" },
+  { "-window",  "window",  "Window",  "11",       fw_option_int, 0,	offsetof(_t, window_type),    "window used in fft, integer from sdrkit/window.h" },
   { NULL }
 };
 

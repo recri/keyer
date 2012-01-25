@@ -203,7 +203,7 @@ proc client-init {} {
     # make the iambic keyer
     if {$opts(dttsp_iambic)} {
 	# plug-open keyer::iambic iambic
-	dttsp::iambic dttsp_iambic {*}[client-opts dttsp_iambic]
+	keyer::dttsp-iambic dttsp_iambic {*}[client-opts dttsp_iambic]
 	set clients(dttsp_iambic) dttsp_iambic
 	if {[info exists midi_capture]} {
 	    lappend connects [list sdrkit::jack connect $midi_capture dttsp_iambic:midi_in]
