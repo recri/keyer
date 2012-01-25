@@ -264,7 +264,7 @@ static const fw_option_table_t _options[] = {
   { "-log2n",    "log2n",    "Log2n",    "8",	    fw_option_int, 0,			offsetof(_t, opts.log2_buff_n),    "log base 2 of the number of buffers to allocate" },
   { "-log2size", "log2size", "Log2size", "12",	    fw_option_int, 0,			offsetof(_t, opts.log2_buff_size), "log base 2 of the number of samples per buffer" },
   { "-complex",  "complex",  "Complex",  "0",	    fw_option_boolean, 0,		offsetof(_t, opts.as_complex),     "should the samples be returned as an array of complex values"
-  " or as an array of i samples concatenated with an array of q samples."},
+  " or as an array of i samples concatenated to an array of q samples."},
   { NULL }
 };
 

@@ -145,7 +145,7 @@ switch $command {
 	fconfigure stdout -buffering none
 	while {1} {
 	    after 250
-	    if {[string length [set line [$opts(-client) gets]]]} { puts -nonewline $line }
+	    if {[string length [set line [$opts(-client) get]]]} { puts -nonewline $line }
 	}
     }
     keyer::dttsp-iambic {

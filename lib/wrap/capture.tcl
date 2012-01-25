@@ -25,7 +25,7 @@ package provide capture 1.0.0
 
 package require sdrkit::atap
 package require sdrkit::audio-tap
-package require sdrkit::mtap
+package require sdrkit::midi-tap
 package require sdrkit::fftw
 package require sdrkit::jack
 
@@ -163,7 +163,7 @@ proc ::capture::capture-midi {w} {
     upvar #0 ::capture::$w data
     if {$data(started)} {
 	# capture a buffer and send the result to the client
-	set midi [::$data(tap) gets]
+	set midi [::$data(tap) get]
 	if {[llength $midi] > 0} { $data(-client) $w $midi }
 	# schedule next capture
 	after $data(-period) [list ::capture::capture-midi $w]
@@ -177,7 +177,7 @@ proc ::capture::midi {w args} {
     set data(type) midi
     set data(tap) capture$::capture::ntap
     incr ::capture::ntap
-    ::sdrkit::mtap $data(tap)
+    ::sdrkit::midi-tap $data(tap)
     ::capture::configure $w {*}$args
 }
 

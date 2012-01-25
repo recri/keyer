@@ -33,6 +33,12 @@
 ** a circular buffer of midi events
 ** recording event durations and event contents
 ** intended for use by a single writer and single reader.
+**
+** A bit awkward because some users, like the ascii keyer, care only
+** about the duration of the pause after the event queued, while other
+** users, like the midi-tap or the ptt delay, are more interested in
+** the absolute frame time of the event.  We support both, but the
+** result of mixing the two in a single queue will be a mess. 
 */
 
 typedef struct {

@@ -72,6 +72,7 @@ package require keyer::ptt-mute
 package require keyer::debounce
 package require sdrkit::jack
 package require sdrkit::gain
+package require sdrkit::midi-tap
 package require sdrkit::noise
 
 package require keyer-control
@@ -218,7 +219,7 @@ proc ::main::listen_score_echo {item} {
 }
 
 proc ::main::listen_for_echoes {echo detime} {
-    set new [$detime gets]
+    set new [$detime get]
     append ::main::data(listen-echoes-received) $new
     append echo $new
     if {$echo ne {}} {
@@ -439,7 +440,7 @@ proc ::main::close-window {w ew} {
 ## ptt signal listener
 ##
 proc ::main::ptt-signal-listener {mtap chan note} {
-    foreach item [$mtap gets] {
+    foreach item [$mtap get] {
 	foreach {frame event} $item break
 	binary scan $event c* bytes
 	foreach {ecmd enote vel} $bytes break
@@ -727,7 +728,7 @@ proc ::main::main {argv} {
     # persistent jack/sdrkit modules
     sdrkit::jack-client jack;					# jack of all trades
     sdrkit::noise noise -level $::main::data(noise);		# noise floor
-    sdrkit::mtap ptt_mtap;					# midi tap to receive ptt
+    sdrkit::midi-tap ptt_mtap;					# midi tap to receive ptt
     keyer::ptt-mute pileup -gain $::main::data(output-gain);	# mute receiver on transmit
     keyer::ascii heckler;					# will be commenting on your progress
     keyer::debounce debounce;					# key debouncer

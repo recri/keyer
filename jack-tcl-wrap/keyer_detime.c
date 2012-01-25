@@ -210,7 +210,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
-static int _gets(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   // return the current detimed string
   _t *dp = (_t *)clientData;
   // hmm, how to avoid the buffer here, allocate a byte array?
@@ -241,7 +241,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "gets",	 _gets, "get the currently converted string of dits and dahs" },
+  { "get",	 _get, "get the currently converted string of dits and dahs" },
   { NULL }
 };
 

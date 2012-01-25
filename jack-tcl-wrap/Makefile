@@ -43,7 +43,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/mixer.so \
 	$(LIBDIR)/mono_to_iq.so \
-	$(LIBDIR)/mtap.so \
+	$(LIBDIR)/midi_tap.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
 	$(LIBDIR)/oscillatorf.so \
@@ -132,7 +132,7 @@ $(LIBDIR)/mono_to_iq.so: mono_to_iq.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/mtap.so: mtap.c framework.h
+$(LIBDIR)/midi_tap.so: midi_tap.c framework.h ../sdrkit/ring_buffer.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

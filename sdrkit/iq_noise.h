@@ -24,9 +24,12 @@
 ** The goal here is to simulate noise that originated at the antenna connection
 ** and went through the QSD, so the Q signal is 90 degrees from the I signal.
 ** And do it without calling any transcendental functions.
+**
+** This might be excessively perfect IQ noise, probably want to simulate a
+** QSD with plain noise as input.
 */
 
-// if this isn't the first thing included, then all bets are off
+// if this isn't the first thing included, then random_r may end up undefined
 // feature macros are extremely weird, since anyone can include the
 // same file with the defines off
 #define _SVID_SOURCE 

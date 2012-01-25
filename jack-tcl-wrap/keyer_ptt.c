@@ -121,8 +121,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	      if (i+dp->ptt_delay_samples < nframes) {
 		_send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
 	      } else {
-		midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-		midi_buffer_queue_note_on(&dp->midi, 0, channel, note, 0);
+		midi_buffer_write_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
+		midi_buffer_write_note_on(&dp->midi, 0, channel, note, 0);
 	      }
 	    } else if (command == MIDI_NOTE_OFF) {
 	      if (i+dp->ptt_delay_samples < nframes) {
@@ -130,8 +130,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 		dp->ptt_hang_count = dp->ptt_hang_samples+dp->ptt_delay_samples;
 		_send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
 	      } else {
-		midi_buffer_queue_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-		midi_buffer_queue_note_off(&dp->midi, 0, channel, note, 0);
+		midi_buffer_write_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
+		midi_buffer_write_note_off(&dp->midi, 0, channel, note, 0);
 	      }
 	    }
 	  }

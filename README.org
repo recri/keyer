@@ -459,11 +459,15 @@
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
 * Things to Do
-** TODO - update README.org so it's current with the code
-** TODO - keyer_ptt: fix the missing events when the key signal is delayed
+** TODO - update README.org so it's current with the code.
+** TODO - make all the components consistent with evolving conventions.
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
    using DJ5IL's CodePhaser circuit.
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
+** TODO - keyer-scope: graticule doesn't track scrolling
+** TODO - keyer-scope: time-scale and audio track canvases don't track
+   the coordinates with the midi signal canvases after zoom and scroll.
+** TODO - convert the remaining users of atap to audio-tap.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
@@ -474,7 +478,6 @@
 ** TODO - keyer-control: jack connection panel.
 ** TODO - jack-control: jack connection panel with modular grouping
    hide/show whole blocks of connections.
-** TODO - midi tap: use the sdrkit midi buffer.
 ** TODO - multi-channel midi-tap, transpose signals to non-overlapping
    channel/note assignments.
 ** TODO - multi-channel audio-tap
@@ -594,6 +597,9 @@
    and available space.
 ** DONE - keyer_tone.c: protect against 0 rise or fall
 ** DONE - update README.org so it's current with the code
+** DONE - keyer_ptt: fix the missing events when the key signal is delayed
+** DONE - midi tap: use the sdrkit midi buffer.
+   Well, used the sdrkit ring buffer.
 * Credits
   This code is derived from many sources.
 

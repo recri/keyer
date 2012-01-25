@@ -20,7 +20,7 @@
 #ifndef NOISE_H
 #define NOISE_H
 
-// if this isn't the first thing included, then all bets are off
+// if this isn't the first thing included, then random_r may end up undefineda
 // feature macros are extremely weird, since anyone can include the
 // same file with the defines off
 #define _SVID_SOURCE 

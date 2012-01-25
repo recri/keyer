@@ -21,65 +21,72 @@
 */
 
 #include "framework.h"
-#include "sdrkit_midi_queue.h"
+#include "../sdrkit/ring_buffer.h"
+
 /*
 ** Create a tap to buffer midi events.
 */
 
 typedef struct {
   framework_t fw;
-  midi_queue_t mq;
+  ring_buffer_t rb;
+  unsigned char buff[8192];
   int started;
 } _t;
 
+static int _writeable(_t *data, size_t bytes) {
+  return ring_buffer_items_available_to_write(&data->rb) >= bytes+sizeof(jack_nframes_t)+sizeof(size_t);
+}
+
+static void _write(_t *data, jack_nframes_t frame, size_t size, unsigned char *buff) {
+  ring_buffer_put(&data->rb, sizeof(frame), (unsigned char *)&frame);
+  ring_buffer_put(&data->rb, sizeof(size), (unsigned char *)&size);
+  ring_buffer_put(&data->rb, size, buff);
+}
+
+static int _read(_t *data, jack_nframes_t *framep, Tcl_Obj **bytes) {
+  if (ring_buffer_items_available_to_read(&data->rb) < 3+sizeof(jack_nframes_t)+sizeof(size_t))
+    return 0;
+  int n = ring_buffer_get(&data->rb, sizeof(*framep), (unsigned char *)framep);
+  size_t size;
+  n += ring_buffer_get(&data->rb, sizeof(size), (unsigned char *)&size);
+  *bytes = Tcl_NewObj();
+  n += ring_buffer_get(&data->rb, size, Tcl_SetByteArrayLength(*bytes, size));
+  return n;
+}
+
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  midi_queue_init(&data->mq);
+  void *e = ring_buffer_init(&data->rb, sizeof(data->buff), data->buff); if (e != &data->rb) return e;
   data->started = 0;
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
-  void* midi_in = jack_port_get_buffer(framework_midi_input(data,0), nframes);
-  jack_midi_event_t in_event;
-  jack_nframes_t event_count = jack_midi_get_event_count(midi_in), event_index = 0, event_time = 0;
-  jack_nframes_t last_frame = sdrkit_last_frame_time(arg);
-  if (event_index < event_count) {
-    jack_midi_event_get(&in_event, midi_in, event_index++);
-    // event_time += in_event.time;
-    event_time = in_event.time;
-  } else {
-    event_time = nframes+1;
-  }
+  framework_midi_event_init(&data->fw, NULL, nframes);
   /* for all frames in the buffer */
   for(int i = 0; i < nframes; i++) {
     /* process all midi events at this sample time */
-    while (event_time == i) {
-      if (data->started)
-	midi_write(&data->mq, last_frame+i, in_event.size, in_event.buffer);
-      if (event_index < event_count) {
-	jack_midi_event_get(&in_event, midi_in, event_index++);
-	// event_time += in_event.time;
-	event_time = in_event.time;
-      } else {
-	event_time = nframes+1;
-      }
+    jack_midi_event_t event;
+    int port;
+    while (framework_midi_event_get(&data->fw, i, &event, &port)) {
+      if (data->started && _writeable(data, event.size))
+	_write(data, sdrkit_last_frame_time(arg)+i, event.size, event.buffer);
     }
   }
   return 0;
 }
 
-static int _gets(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   /* return the collected events */
   _t *data = (_t *)clientData;
   Tcl_Obj *list = Tcl_NewListObj(0, NULL);
-  while (midi_readable(&data->mq)) {
-    Tcl_Obj *item = Tcl_NewListObj(0, NULL);
-    Tcl_ListObjAppendElement(interp, item, Tcl_NewIntObj(midi_read_time(&data->mq)));
-    Tcl_ListObjAppendElement(interp, item, Tcl_NewByteArrayObj(midi_read_bytes_ptr(&data->mq, midi_read_size(&data->mq)), midi_read_size(&data->mq)));
-    Tcl_ListObjAppendElement(interp, list, item);
-    midi_read_next(&data->mq);
+  jack_nframes_t frame;
+  Tcl_Obj *bytes;
+  while (_read(data, &frame, &bytes)) {
+    Tcl_Obj *element[] = { Tcl_NewIntObj(frame), bytes, NULL };
+    Tcl_ListObjAppendElement(interp, list, Tcl_NewListObj(2, element));
   }
   Tcl_SetObjResult(interp, list);
   return TCL_OK;
@@ -107,7 +114,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "gets",	 _gets, "get the available midi events from Jack" },
+  { "get",	 _get, "get the available midi events from Jack" },
   { "start",	 _start, "start collecting events" },
   { "stop",	 _stop, "stop collecting events" },
   { NULL }
@@ -130,6 +137,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Mtap_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::mtap", "1.0.0", "sdrkit::mtap", _factory);
+int DLLEXPORT Midi_tap_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::midi-tap", "1.0.0", "sdrkit::midi-tap", _factory);
 }

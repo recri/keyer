@@ -56,7 +56,6 @@ array set data {
     midi_insert {sdrkit::midi-insert norm}
     mixer {sdrkit::mixer norm}
     mono_to_iq {sdrkit::mono-to-iq norm}
-    mtap {sdrkit::mtap norm}
     noise {sdrkit::noise norm}
     oscillator {sdrkit::oscillator norm}
     oscillatorz {sdrkit::oscillatorz norm}
