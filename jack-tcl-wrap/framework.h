@@ -469,11 +469,12 @@ static int framework_command(ClientData clientData, Tcl_Interp *interp, int argc
 /*
 ** get the counts for both input queues
 */
-static void framework_midi_event_init(framework_t *fp, midi_buffer_t *bp, jack_nframes_t nframes) {
+static int framework_midi_event_init(framework_t *fp, midi_buffer_t *bp, jack_nframes_t nframes) {
+  int n;
   for (int i = 0; i < fp->n_midi_inputs; i += 1) {
     framework_midi_t *mp = &fp->midi[i];
     mp->handle = jack_port_get_buffer(framework_midi_input(fp,0), nframes);
-    mp->n = jack_midi_get_event_count(mp->handle);
+    n += mp->n = jack_midi_get_event_count(mp->handle);
     mp->i = 0;
     if (mp->i < mp->n)
       jack_midi_event_get(&mp->e, mp->handle, mp->i);
@@ -485,11 +486,12 @@ static void framework_midi_event_init(framework_t *fp, midi_buffer_t *bp, jack_n
     mp->i = 0;
     if (bp != NULL) {
       mp->handle = midi_buffer_get_buffer(bp, nframes, sdrkit_last_frame_time(fp));
-      mp->n = midi_buffer_get_event_count(mp->handle);
+      n += mp->n = midi_buffer_get_event_count(mp->handle);
       if (mp->i < mp->n)
 	midi_buffer_event_get(&mp->e, mp->handle, mp->i);
     }
   }
+  return n;
 }
 
 static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_midi_event_t *eventp, int *port) {

@@ -459,15 +459,14 @@
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
 * Things to Do
+** TODO - update README.org so it's current with the code
 ** TODO - keyer_ptt: fix the missing events when the key signal is delayed
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
    using DJ5IL's CodePhaser circuit.
-** TODO - keyer_tone.c: protect against 0 rise or fall
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
-** TODO - keyer_ascii.c: to throttle input down to the output rate.
 ** TODO - keyer_detone.c: to convert keyed cw into midi note on/off events.
 ** TODO - keyer-control: build, save, and restore custom configurations.
 ** TODO - keyer-control: ascii input/output window
@@ -590,6 +589,11 @@
 ** DONE - bin/pileup: echo back callsigns in a pileup situation
    Don't know how the echo back works in a pileup, but it's fun in single
    voice response mode.
+** DONE - keyer_ascii.c: to throttle input down to the output rate.
+   Now throws an error if you flood the queue, so pay attention to the pending
+   and available space.
+** DONE - keyer_tone.c: protect against 0 rise or fall
+** DONE - update README.org so it's current with the code
 * Credits
   This code is derived from many sources.
 

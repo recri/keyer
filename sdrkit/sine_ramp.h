@@ -35,12 +35,14 @@ typedef struct {
 
 static void sine_ramp_init(sine_ramp_t *r, float ms, int samples_per_second) {
   r->target = samples_per_second * (ms / 1000.0f);
+  if (r->target < 1) r->target = 1;
   r->current = 0;
   oscillator_init(&r->ramp, 1000.0f/(4.0f*ms), 0.0f, samples_per_second);
 }
 
 static void sine_ramp_update(sine_ramp_t *r, float ms, int samples_per_second) {
   r->target = samples_per_second * (ms / 1000.0f);
+  if (r->target < 1) r->target = 1;
   oscillator_update(&r->ramp, 1000.0f/(4.0f*ms), samples_per_second);
 }
 

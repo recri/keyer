@@ -58,32 +58,6 @@ typedef struct {
   options_t opts;
 } _t;
 
-/*
-** decode midi commands
-*/
-static void _decode(_t *dp, unsigned count, unsigned char *p) {
-  /* decode note/channel based events */
-  if (dp->fw.verbose > 4)
-    fprintf(stderr, "%s:%s:%d @%ld _decode(%x, [%x, %x, %x, ...]\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->frame, count, p[0], p[1], p[2]);
-  if (count == 3) {
-    char channel = (p[0]&0xF)+1;
-    char note = p[1];
-    if (channel == dp->opts.chan && note == dp->opts.note)
-      switch (p[0]&0xF0) {
-      case MIDI_NOTE_OFF: keyed_tone_off(&dp->tone); break;
-      case MIDI_NOTE_ON:  keyed_tone_on(&dp->tone); break;
-      }
-    else if (dp->fw.verbose > 3)
-      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->opts.chan, dp->opts.note);
-  } else if (count > 3 && p[0] == MIDI_SYSEX) {
-    if (p[1] == MIDI_SYSEX_VENDOR) {
-      // FIX.ME - options_parse_command(&dp->fw.opts, p+3);
-      if (dp->fw.verbose > 3)
-	fprintf(stderr, "%s:%s:%d sysex: %*s\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, count, p+2);
-    }
-  }
-}
-
 static void *_init(void *arg) {
   _t *dp = (_t *) arg;
   if (dp->fw.verbose) fprintf(stderr, "%s:%s:%d init\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
@@ -118,18 +92,9 @@ static void _update(void *arg) {
 */
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
-  void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
   float *out_i = jack_port_get_buffer(framework_output(dp,0), nframes);
   float *out_q = jack_port_get_buffer(framework_output(dp,1), nframes);
-  jack_midi_event_t in_event;
-  jack_nframes_t event_count = jack_midi_get_event_count(midi_in), event_index = 0, event_time = 0;
-  if (event_index < event_count) {
-    jack_midi_event_get(&in_event, midi_in, event_index++);
-    // event_time += in_event.time;
-    event_time = in_event.time;
-  } else {
-    event_time = nframes+1;
-  }
+  framework_midi_event_init(&dp->fw, NULL, nframes);
   /* possibly implement updated options */
   _update(dp);
   /* avoid denormalized numbers */
@@ -137,14 +102,18 @@ static int _process(jack_nframes_t nframes, void *arg) {
   /* for all frames in the buffer */
   for(int i = 0; i < nframes; i++) {
     /* process all midi events at this sample time */
-    while (event_time == i) {
-      _decode(dp, in_event.size, in_event.buffer);
-      if (event_index < event_count) {
-	jack_midi_event_get(&in_event, midi_in, event_index++);
-	// event_time += in_event.time;
-	event_time = in_event.time;
-      } else {
-	event_time = nframes+1;
+    jack_midi_event_t event;
+    int port;
+    while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
+      if (event.size == 3) {
+	char channel = (event.buffer[0]&0xF)+1;
+	char note = event.buffer[1];
+	if (channel == dp->opts.chan && note == dp->opts.note) {
+	  switch (event.buffer[0]&0xF0) {
+	  case MIDI_NOTE_OFF: keyed_tone_off(&dp->tone); break;
+	  case MIDI_NOTE_ON:  keyed_tone_on(&dp->tone); break;
+	  }
+	}
       }
     }
     /* compute samples */
