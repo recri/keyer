@@ -32,35 +32,38 @@ set so [info sharedlibextension]
 #
 # array to identify which other tricks to try
 array set data {
-    keyer_dttsp_iambic {keyer::dttsp-iambic norm}
-    keyer_ascii {keyer::ascii norm}
-    keyer_detime {keyer::detime norm}
-    keyer_iambic {keyer::iambic norm}
-    keyer_tone {keyer::tone norm}
-    keyer_ptt {keyer::ptt norm}
-    keyer_ptt_mute {keyer::ptt-mute norm}
-    keyer_debounce {keyer::debounce norm}
     agc {sdrkit::agc norm}
-    atap {sdrkit::atap atap}
     audio_tap {sdrkit::audio-tap atap}
-    filter_biquad {sdrkit::filter-biquad norm}
     constant {sdrkit::constant norm}
     fftw {sdrkit::fftw norm}
+    filter_biquad {sdrkit::filter-biquad norm}
     gain {sdrkit::gain norm}
     iq_balance {sdrkit::iq-balance norm}
     iq_correct {sdrkit::iq-correct norm}
     iq_noise {sdrkit::iq-noise norm}
     iq_swap {sdrkit::iq-swap norm}
     jack_client {sdrkit::jack-client norm}
+    keyer_ascii {keyer::ascii norm}
+    keyer_debounce {keyer::debounce norm}
+    keyer_detime {keyer::detime norm}
+    keyer_dttsp_iambic {keyer::dttsp-iambic norm}
+    keyer_iambic {keyer::iambic norm}
+    keyer_ptt {keyer::ptt norm}
+    keyer_ptt_mute {keyer::ptt-mute norm}
+    keyer_tone {keyer::tone norm}
     lo_mixer {sdrkit::lo-mixer norm}
     midi_insert {sdrkit::midi-insert norm}
+    midi_tap {sdrkit::midi-tap norm}
     mixer {sdrkit::mixer norm}
     mono_to_iq {sdrkit::mono-to-iq norm}
     noise {sdrkit::noise norm}
     oscillator {sdrkit::oscillator norm}
-    oscillatorz {sdrkit::oscillatorz norm}
-    oscillatorf {sdrkit::oscillatorf norm}
-    oscillatort {sdrkit::oscillatort norm}
+    oscillator_f {sdrkit::oscillator-f norm}
+    oscillator_fd {sdrkit::oscillator-fd norm}
+    oscillator_t {sdrkit::oscillator-t norm}
+    oscillator_td {sdrkit::oscillator-td norm}
+    oscillator_z {sdrkit::oscillator-z norm}
+    oscillator_zd {sdrkit::oscillator-zd norm}
 }
 
 array set options {

@@ -45,6 +45,11 @@ static const float half_pi = 1.57079632679489661923f;		/* pi/2 */
 static const float quarter_pi = 0.78539816339744830962f;	/* pi/4 */
 static const float two_pi = 2*3.14159265358979323846f;		/* 2*pi */
 
+static const double dpi = 3.14159265358979323846;		/* pi */
+static const double dhalf_pi = 1.57079632679489661923;		/* pi/2 */
+static const double dquarter_pi = 0.78539816339744830962;	/* pi/4 */
+static const double dtwo_pi = 2*3.14159265358979323846;		/* 2*pi */
+
 /*
 ** these functions are from dttsp/banal.h
 */
@@ -59,6 +64,7 @@ static float Log10Q(float x) { return -10.0 * log10(x + BITSY); }
 static float dBP(float x) { return 20.0 * log10(x + BITSY); }
 static float DamPlus(float x0, float x1) { return 0.9995 * x0 + 0.0005 * x1; }
 
+static double sqr(double x) { return (x * x); }
 /*
 ** these are banal
 */
@@ -66,8 +72,10 @@ static float minf(float a, float b) { return a < b ? a : b; }
 static float maxf(float a, float b) { return a > b ? a : b; }
 static float squaref(float x) { return x * x; }
 
+static double square(double x) { return x * x; }
+
 /*
-** these are functions you learn in computer graphics
+** these are functions you learn to use in computer graphics
 */
 /* clamp a value between a max and min value */
 static float clampf(float a, float a_min, float a_max) {

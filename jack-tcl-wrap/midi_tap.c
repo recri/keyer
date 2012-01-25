@@ -79,8 +79,17 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  /* return the collected events */
+  if (argc != 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
   _t *data = (_t *)clientData;
+  if ( ! data->started) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("midi-tap %s is not running", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+
+  /* return the collected events */
   Tcl_Obj *list = Tcl_NewListObj(0, NULL);
   jack_nframes_t frame;
   Tcl_Obj *bytes;
@@ -92,14 +101,29 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   return TCL_OK;
 }
 static int _start(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  /* start collecting events */
   _t *data = (_t *)clientData;
+  if (argc != 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s start", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
   data->started = 1;
   return TCL_OK;
 }
-static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  /* stop collecting events */
+static int _state(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
+  if (argc != 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s state", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(data->started));
+  return TCL_OK;
+}
+static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *data = (_t *)clientData;
+  if (argc != 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s stop", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
   data->started = 0;
   return TCL_OK;
 }
@@ -116,6 +140,7 @@ static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get",	 _get, "get the available midi events from Jack" },
   { "start",	 _start, "start collecting events" },
+  { "state",     _state, "are we collecting events" },
   { "stop",	 _stop, "stop collecting events" },
   { NULL }
 };

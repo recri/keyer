@@ -34,7 +34,7 @@ namespace eval ::wrap {}
 proc ::wrap::iq-balance {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::atap ::wrap::cmd::$w]
+    cleanup_func $w [::sdrkit::audio-tap ::wrap::cmd::$w -complex 1]
     pack [ttk::label $w.l0 -textvar ${w}(l0)] -side top 
     pack [ttk::label $w.l1 -textvar ${w}(l1)] -side top
     pack [ttk::label $w.l2 -textvar ${w}(l2)] -side top

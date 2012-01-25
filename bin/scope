@@ -24,7 +24,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 # package provide scope 1.0.0
 
 package require Tk
-package require sdrkit::atap
+package require sdrkit::audio-tap
 package require sdrkit::jack
 
 namespace eval ::scope {
@@ -45,14 +45,14 @@ proc scope::start-taps {w} {
     upvar #0 ::scope::$w data
     set data(tap) $data(name)_tap
     if {$data(taps) == 1} {
-	::sdrkit::atap $data(tap)
+	::sdrkit::audio-tap $data(tap) -complex 1
 	if {$data(connect) ne {}} {
 	    ::sdrkit::jack connect $data(connect):out_i $data(tap):in_i
 	    ::sdrkit::jack connect $data(connect):out_q $data(tap):in_q
 	}
     } else {
 	for {set i 1} {$i <= $data(taps)} {incr i} {
-	    ::sdrkit::atap $data(tap)$i
+
 	}
     }
 }

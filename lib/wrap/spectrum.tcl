@@ -129,7 +129,7 @@ if {0} {
 	set data(tap) spectrum_tap_$::spectrum::n
 	set data(fft) spectrum_fft_$::spectrum::n
 	incr ::spectrum::n
-	::sdrkit::atap $data(tap)
+	::sdrkit::audio-tap $data(tap) -complex 1
 	::sdrkit::fftw $data(fft) $data(n)
 	pack [canvas $w.c -width 512 -height 128] -side top -fill both -expand true
 	$w.c create line 0 0 0 0 -tag spectrum

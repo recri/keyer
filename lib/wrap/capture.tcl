@@ -23,7 +23,7 @@
 
 package provide capture 1.0.0
 
-package require sdrkit::atap
+package require sdrkit
 package require sdrkit::audio-tap
 package require sdrkit::midi-tap
 package require sdrkit::fftw
@@ -38,31 +38,26 @@ namespace eval ::capture {
     }
 }
 
-proc ::capture::destroy {w} {
-    upvar #0 ::capture::$w data
-    catch {rename $data(tap) {}}
-    catch {rename $data(fft) {}}
-    catch {rename $data(iq) {}}
-    catch {rename $data(midi) {}}
+proc ::capture::log2-size {n} {
+    #puts "::capture::log2-size $n -> max([::sdrkit::log2-size $n],[::sdrkit::log2-size [::sdrkit::jack buffer-size]])"
+    return [expr {max([::sdrkit::log2-size $n],[::sdrkit::log2-size [::sdrkit::jack buffer-size]])}]
 }
 
 proc ::capture::configure {w args} {
     upvar #0 ::capture::$w data
+    #puts "::capture::configure $w {$args} with data {[array get data]}"
+    #puts "$w state  [::capture::state $w]"
     foreach {option value} $args {
 	switch -- $option {
 	    -size {
 		if {$value != $data(-size)} {
 		    set data(-size) $value
-		    if {$data(type) eq {spectrum} && [info exists data(fft)]} {
-			catch {rename $data(fft) {}}
-			::sdrkit::fftw $data(fft) -size $value
+		    if {$data(type) eq {spectrum}} {
+			$data(fft) configure -size $value
+			$data(tap) configure -log2n 4 -log2size [::capture::log2-size $value]
 		    }
 		    if {$data(type) eq {iq} && [info exists data(tap)]} {
-			$data(tap) configure -log2size [expr {int(log($data(-size))/log(2))}]
-		    }
-		} else {
-		    if {$data(type) eq {spectrum} && [info commands data(fft)] eq {}} {
-			::sdrkit::fftw $data(fft) -size $value
+			$data(tap) configure -log2size [::capture::log2size $value]
 		    }
 		}
 		set data($option) $value
@@ -97,43 +92,38 @@ proc ::capture::capture-spectrum {w} {
     upvar #0 ::capture::$w data
     if {$data(started)} {
 	# cache a number
-	set n  $data(-size)
+	set n $data(-size)
 	# capture a buffer
-	foreach {f b} [::$data(tap) get $n] break
-	# compute the fft
-	set l [::$data(fft) exec $b]
-	# convert the coefficients to a list
-	binary scan $l f* levels
-	# reorder the results from most negative frequency to most positive
-	# compute the power, and convert to pixels
-	## they're ordered from 0 .. most positive, most negative .. just < 0
-	## k/T, T = total sample time, n * 1/sample_rate
-	set xy {}
-	set x [expr {-[sdrkit::jack sample-rate]/2.0}]
-	set dx [expr {[sdrkit::jack sample-rate]/double($n)}]
-	foreach {re im} [concat [lrange $levels [expr {1+$n}] end] [lrange $levels 0 $n]] {
-	    # squared magnitude means 10*log10 dB
-	    lappend xy $x [expr {10*log10($re*$re+$im*$im+1e-64)}]
-	    set x [expr {$x+$dx}]
+	lassign [::$data(tap) get] f b
+	# don't pass it on if its short
+	if {[string length $b]/8 >= $n} {
+	    # compute the fft
+	    set l [::$data(fft) exec $b]
+	    # free the capture buffer
+	    set b {}
+	    # convert the coefficients to a list
+	    binary scan $l f* levels
+	    # reorder the results from most negative frequency to most positive
+	    # compute the power, and convert to pixels
+	    ## they're ordered from 0 .. most positive, most negative .. just < 0
+	    ## k/T, T = total sample time, n * 1/sample_rate
+	    set xy {}
+	    set x [expr {-[sdrkit::jack sample-rate]/2.0}]
+	    set dx [expr {[sdrkit::jack sample-rate]/double($n)}]
+	    foreach {re im} [concat [lrange $levels [expr {1+$n}] end] [lrange $levels 0 $n]] {
+		# squared magnitude means 10*log10 dB
+		lappend xy $x [expr {10*log10($re*$re+$im*$im+1e-64)}]
+		set x [expr {$x+$dx}]
+	    }
+	    # send the result to the client
+	    $data(-client) $w $xy
+	} else {
+	    # free the capture buffer
+	    set b {}
 	}
-	# send the result to the client
-	$data(-client) $w $xy
 	# schedule next capture
 	after $data(-period) [list ::capture::capture-spectrum $w]
     }
-}
-
-proc ::capture::spectrum {w args} {
-    upvar #0 ::capture::$w data
-    array set data [array get ::capture::default_data]
-    set data(started) 0
-    set data(type) spectrum
-    set data(tap) capture$::capture::ntap
-    set data(fft) capture_fft_$::capture::ntap
-    incr ::capture::ntap
-    ::sdrkit::atap $data(tap)
-    ::capture::configure $w {*}$args
-    #after 500 [list ::capture::capture-spectrum $w]
 }
 
 proc ::capture::capture-iq {w} {
@@ -148,17 +138,6 @@ proc ::capture::capture-iq {w} {
     }
 }
 
-proc ::capture::iq {w args} {
-    upvar #0 ::capture::$w data
-    array set data [array get ::capture::default_data]
-    set data(started) 0
-    set data(type) iq
-    set data(tap) capture$::capture::ntap
-    incr ::capture::ntap
-    ::sdrkit::audio-tap $data(tap) -log2n 2 -log2size [expr {int(0.5+log($data(-size))/log(2))}]
-    ::capture::configure $w {*}$args
-}
-
 proc ::capture::capture-midi {w} {
     upvar #0 ::capture::$w data
     if {$data(started)} {
@@ -170,26 +149,34 @@ proc ::capture::capture-midi {w} {
     }
 }
 
-proc ::capture::midi {w args} {
+proc ::capture::destroy {w} {
     upvar #0 ::capture::$w data
-    array set data [array get ::capture::default_data]
-    set data(started) 0
-    set data(type) midi
-    set data(tap) capture$::capture::ntap
-    incr ::capture::ntap
-    ::sdrkit::midi-tap $data(tap)
-    ::capture::configure $w {*}$args
+    catch {rename $data(tap) {}}
+    catch {rename $data(fft) {}}
+    catch {rename $data(iq) {}}
+    catch {rename $data(midi) {}}
+}
+
+proc ::capture::state {w} {
+    upvar #0 ::capture::$w data
+    #puts "state $w has data {[array get data]}"
+    if {[catch {$data(tap) state} result]} {
+	#puts "$data(tap) state returned $result"
+	return {nonexistent}
+    }
+    return $result
 }
 
 proc ::capture::start {w} {
     upvar #0 ::capture::$w data
+    #puts "::capture::start $w has data {[array get data]}"
+    #puts "$w state  [state $w]"
     if { ! $data(started)} {
+	#puts "start $data(tap) of $data(type)"
+	$data(tap) start
+	#puts "::capture::start $w has state [state $w]"
 	set data(started) 1
-	switch $data(type) {
-	    spectrum { after 1 [list ::capture::capture-spectrum $w] }
-	    iq { $data(tap) start; after 1 [list ::capture::capture-iq $w] }
-	    midi { $data(tap) start; after 1 [list ::capture::capture-midi $w] }
-	}
+	after 100 [list ::capture::capture-$data(type) $w]
     }
 }
 
@@ -197,10 +184,43 @@ proc ::capture::stop {w} {
     upvar #0 ::capture::$w data
     if {$data(started)} {
 	set data(started) 0
-	switch $data(type) {
-	    spectrum { }
-	    iq { $data(tap) stop }
-	    midi { $data(tap) stop }
-	}
+	$data(tap) stop
     }
 }
+
+proc ::capture::spectrum {w args} {
+    #puts "::capture::spectrum $w {$args}"
+    upvar #0 ::capture::$w data
+    array set data [array get ::capture::default_data]
+    set data(started) 0
+    set data(type) spectrum
+    set data(tap) "capture_spectrum_[incr ::capture::ntap]"
+    set data(fft) "capture_fft_[incr ::capture::ntap]"
+    #puts "creating $data(fft)"
+    ::sdrkit::fftw $data(fft) -size $data(-size)
+    #puts "creating $data(tap)"
+    ::sdrkit::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 1
+    #puts "configuring $data(tap)"
+    ::capture::configure $w {*}$args
+}
+
+proc ::capture::iq {w args} {
+    upvar #0 ::capture::$w data
+    array set data [array get ::capture::default_data]
+    set data(started) 0
+    set data(type) iq
+    set data(tap) "capture_iq_[incr ::capture::ntap]"
+    ::sdrkit::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 0
+    ::capture::configure $w {*}$args
+}
+
+proc ::capture::midi {w args} {
+    upvar #0 ::capture::$w data
+    array set data [array get ::capture::default_data]
+    set data(started) 0
+    set data(type) midi
+    set data(tap) "capture_midi_[incr ::capture::ntap]"
+    ::sdrkit::midi-tap $data(tap)
+    ::capture::configure $w {*}$args
+}
+

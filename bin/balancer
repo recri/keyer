@@ -25,6 +25,7 @@ package require Tk
 package require panorama
 package require sdrkit::jack
 package require sdrkit::oscillator
+## package require sdrkit::oscillator-zd
 package require sdrkit::noise
 package require sdrkit::iq-noise
 package require sdrkit::iq-balance
@@ -146,9 +147,11 @@ proc update-ws {} {
 }
 proc corrector-onoff {} {
     if {$::data(corrector-onoff)} {
+	puts "iq-correct reset to -mu $::data(corrector-mu)"
 	iq-correct set 0 0
-	iq-correct configure -mu $::data(corrector-mu)
+	iq-correct configure -mu $::data(corrector-mu)p
     } else {
+	puts "iq-correct muted to 0"
 	iq-correct configure -mu 0
 	iq-correct set 0 0
     }
@@ -184,6 +187,7 @@ proc main {argv} {
     }
 
     sdrkit::oscillator osc
+    ## sdrkit::oscillator-zd osc
     sdrkit::noise noise
     sdrkit::iq-noise iq-noise
     sdrkit::iq-balance iq-balance
@@ -263,8 +267,8 @@ proc main {argv} {
     sdrkit::jack connect iq-noise:out_q iq-balance:in_q
     sdrkit::jack connect iq-balance:out_i iq-correct:in_i
     sdrkit::jack connect iq-balance:out_q iq-correct:in_q
-    sdrkit::jack connect iq-correct:out_i capture0:in_i
-    sdrkit::jack connect iq-correct:out_q capture0:in_q
+    sdrkit::jack connect iq-correct:out_i capture_spectrum_1:in_i
+    sdrkit::jack connect iq-correct:out_q capture_spectrum_1:in_q
     sdrkit::jack connect iq-correct:out_i system:playback_1
     sdrkit::jack connect iq-correct:out_q system:playback_2
     corrector-onoff

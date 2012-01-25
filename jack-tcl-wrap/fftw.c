@@ -33,10 +33,15 @@
 ** size of fft as parameter to factory
 */
 typedef struct {
-  framework_t fw;
-  int size;			/* number of complex floats */
+  int size;
   int planbits;
-  int window_type;
+  int window_type;		// should be a Tcl_Obj *
+  int direction;
+} options_t;
+
+typedef struct {
+  framework_t fw;
+  options_t opts;
   fftwf_complex *inout;		/* input/output array */
   fftwf_plan plan;		/* fftw plan */
   float *window;		/* window */
@@ -53,10 +58,15 @@ static void _delete(void *arg) {
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  if ((data->inout = (fftwf_complex *)fftwf_malloc(data->size*sizeof(fftwf_complex))) &&
-      (data->window = (float *)fftwf_malloc(data->size*sizeof(float))) &&
-      (data->plan = fftwf_plan_dft_1d(data->size,  data->inout, data->inout, FFTW_FORWARD, data->planbits))) {
-    window_make(data->window_type, data->size, data->window);
+  if (data->opts.size <= 16) return (void *)"size is too small";
+  if (data->opts.direction != FFTW_FORWARD && data->opts.direction != FFTW_BACKWARD)
+    return (void *)"direction must be -1 (forward) or +1 (backward)";
+  if (data->opts.window_type < WINDOW_RECTANGULAR || data->opts.window_type > WINDOW_NUTTALL)
+    return (void *)"window_type is invalid";
+  if ((data->inout = (fftwf_complex *)fftwf_malloc(data->opts.size*sizeof(fftwf_complex))) &&
+      (data->window = (float *)fftwf_malloc(data->opts.size*sizeof(float))) &&
+      (data->plan = fftwf_plan_dft_1d(data->opts.size,  data->inout, data->inout, data->opts.direction, data->opts.planbits))) {
+    window_make(data->opts.window_type, data->opts.size, data->window);
     return data;
   }
   _delete(data);
@@ -85,12 +95,12 @@ static int _exec(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
     return TCL_ERROR;
   }
   // check the input byte array
-  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[2], &n)) == NULL || n < data->size*2*sizeof(float)) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("byte_array argument does have not %d samples", data->size));
+  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[2], &n)) == NULL || n < data->opts.size*2*sizeof(float)) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("byte_array argument does have not %d samples", data->opts.size));
     return TCL_ERROR;
   }
   // copy the input into the input buffer, applying the window
-  for (int i = 0; i < data->size; i += 1) {
+  for (int i = 0; i < data->opts.size; i += 1) {
     data->inout[i] = data->window[i] * *input++;
   }
   // compute the fft
@@ -98,9 +108,9 @@ static int _exec(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   // create the result
   Tcl_Obj *result;
   if (argc == 3) {
-    result = Tcl_NewByteArrayObj((unsigned char *)data->inout, data->size*2*sizeof(float));
+    result = Tcl_NewByteArrayObj((unsigned char *)data->inout, data->opts.size*2*sizeof(float));
   } else {
-    Tcl_SetByteArrayObj(result = objv[3], (unsigned char *)data->inout, data->size*2*sizeof(float));
+    Tcl_SetByteArrayObj(result = objv[3], (unsigned char *)data->inout, data->opts.size*2*sizeof(float));
   }
   // set the result
   Tcl_SetObjResult(interp,result);
@@ -108,14 +118,31 @@ static int _exec(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   return TCL_OK;
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_command(clientData, interp, argc, objv);
+  _t *data = (_t *)clientData;
+  options_t save = data->opts;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    data->opts = save;
+    return TCL_ERROR;
+  }
+  if (save.size != data->opts.size ||
+      save.planbits != data->opts.planbits ||
+      save.direction != data->opts.direction ||
+      save.window_type != data->opts.window_type) {
+    _delete(data);
+    void *p = _init(data); if (p != data) {
+      Tcl_SetResult(interp, (char *)p, TCL_STATIC);
+      return TCL_ERROR;
+    }
+  }
+  return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-size",    "size",    "Samples", "4096",     fw_option_int, 0,	offsetof(_t, size),	      "size of fft computed" },
-  { "-planbits","planbits","Planbits","0",	  fw_option_int, 0,	offsetof(_t, planbits),	      "fftw plan bits" },
-  { "-window",  "window",  "Window",  "11",       fw_option_int, 0,	offsetof(_t, window_type),    "window used in fft, integer from sdrkit/window.h" },
+  { "-size",     "size",     "Samples",   "4096", fw_option_int, 0,	offsetof(_t, opts.size),        "size of fft computed" },
+  { "-planbits", "planbits", "Planbits",  "0",	  fw_option_int, 0,	offsetof(_t, opts.planbits),    "fftw plan bits" },
+  { "-window",   "window",   "Window",    "11",   fw_option_int, 0,	offsetof(_t, opts.window_type), "window used in fft, integer from sdrkit/window.h" },
+  { "-direction","direction","Direction", "-1",	  fw_option_int, 0,     offsetof(_t, opts.direction),	"fft direction, 1 or -1" },
   { NULL }
 };
 

@@ -57,12 +57,17 @@ static void iq_correct_configure(iq_correct_t *p, iq_correct_options_t *q) {
 }
 
 static void *iq_correct_preconfigure(iq_correct_t *p, iq_correct_options_t *q) {
-  if (q->mu < 0 || q->mu > 1) return (void *)"mu must be between 0 and 1";
+  if (q->mu < 0) return (void *)"mu must be non-negative";
   return p;
 }
 
 static void *iq_correct_init(iq_correct_t *p, iq_correct_options_t *q) {
+#if GNURADIO_VERSION
+  p->wi = 0.0f;
+  p->wq = 0.0f;
+#else
   p->w = 0.0f;
+#endif
   void *e = iq_correct_preconfigure(p, q); if (e != p) return e;
   iq_correct_configure(p, q);
   return p;
@@ -73,8 +78,8 @@ static float _Complex iq_correct_process(iq_correct_t *p, const float _Complex x
   // this is the gnuradio routine
   float yi = crealf(x) - p->wi * cimagf(x);
   float yq = cimagf(x) - p->wq * crealf(x);
-  p->wi += p->mu * yq * crealf(x);
-  p->wq += p->mu * yi * cimagf(x); 
+  p->wi += p->mu * cimagf(y) * crealf(x);
+  p->wq += p->mu * crealf(y) * cimagf(x); 
   return yi + I * yq;
 #else
   // this is the streamlined dttsp routine

@@ -46,7 +46,6 @@ static void _update(_t *data) {
   if (data->modified) {
     data->modified = 0;
     oscillator_update(&data->o, data->hertz, data->sample_rate);
-    data->gain = powf(10, data->dBgain / 20);
   }
 }
   
@@ -65,9 +64,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
+  _update(data);
   for (int i = nframes; --i >= 0; ) {
-    _update(data);
-    float _Complex z = data->gain * oscillator_process(&data->o);
+    float complex z = data->gain * oscillator_process(&data->o);
     *out0++ = creal(z);
     *out1++ = cimag(z);
   }
@@ -79,7 +78,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   float dBgain = data->dBgain, hertz = data->hertz;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
   if (data->dBgain != dBgain) {
-    data->modified = 1;
+    data->gain = powf(10, data->dBgain / 20);
   }
   if (data->hertz != hertz) {
     if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {

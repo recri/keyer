@@ -18,7 +18,7 @@
 package provide scope 1.0.0
 
 package require wrap
-package require sdrkit::atap
+package require sdrkit::audio-tap
 package require sdrkit::jack
 
 namespace eval ::scope {}
@@ -123,7 +123,7 @@ proc ::scope::configure {bw w width height} {
 proc ::scope::scope {w} {
     upvar #0 $w data
     ::wrap::default_window $w
-    ::wrap::cleanup_func $w [::sdrkit::atap ::scope::cmd::$w]
+    ::wrap::cleanup_func $w [::sdrkit::audio-tap ::scope::cmd::$w -complex 1]
     
     bind $w <Configure> [list ::scope::configure %W $w %w %h]
     grid [canvas $w.c -width 400 -height 320] -row 0 -column 0 -sticky nsew

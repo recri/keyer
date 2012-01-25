@@ -95,7 +95,7 @@ static void _delete_impl(_t *data) {
 ** configure a new audio tap
 */
 static void *_configure_impl(_t *data) {
-  int b_size = sdrkit_buffer_size(data);	/* size of jack buffer (samples) */
+  int b_size = sdrkit_buffer_size(data); /* size of jack buffer (samples) */
   data->buff_n = 1<<data->opts.log2_buff_n;	/* number of buffers (n) */
   data->buff_size = 1<<data->opts.log2_buff_size;	/* number of sample pairs in each buffer (samples) */
   if (data->buff_size < b_size)
@@ -167,8 +167,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
       }
       // check for end of current buffer
       if (offset+nframes == data->buff_size) {
-	data->current->bread = 0;
 	data->current->bframe = wframe - offset;
+	data->current->bread = 0;
 	for (int i = 0; i < data->buff_n; i += 1)
 	  if (data->buffs[i].bframe < data->current->bframe && ! Tcl_IsShared(data->buffs[i].buff))
 	    data->current = &data->buffs[i];
@@ -180,18 +180,15 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  _t *data = (_t *)clientData;
-
   if (argc != 2) {
-    Tcl_SetResult(interp, "usage: command get", TCL_STATIC);
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
-
+  _t *data = (_t *)clientData;
   if ( ! data->started) {
-    Tcl_SetResult(interp, "audio-tap is not running, try starting it", TCL_STATIC);
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("audio-tap %s is not running", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
-
   // figure out where to read from
   while (1) {
     // start with no choice
@@ -202,7 +199,8 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
 	choice = &data->buffs[i];
     // if nothing was found, return an empty string
     if (choice == NULL) {
-      Tcl_SetResult(interp, "", TCL_STATIC);
+      Tcl_Obj *result[] = { Tcl_NewLongObj(0), Tcl_NewStringObj("", -1), NULL };
+      Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
       return TCL_OK;
     }
     // attempt to grab the choice
@@ -213,12 +211,8 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
       Tcl_DecrRefCount(choice->buff);
       continue;
     }
-    // it's ours now
-    Tcl_Obj *result[] = {
-      Tcl_NewLongObj(choice->bframe),
-      choice->buff,
-      NULL
-    };
+    // it's ours now that the ref count incremented
+    Tcl_Obj *result[] = { Tcl_NewLongObj(choice->bframe), choice->buff, NULL };
     Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
     Tcl_DecrRefCount(choice->buff);
     choice->bread = 1;
@@ -234,6 +228,15 @@ static int _start(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* 
   data->started = 1;
   return TCL_OK;
 }
+static int _state(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *data = (_t *)clientData;
+  if (argc != 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s state", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(data->started));
+  return TCL_OK;
+}
 static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   if (argc != 2) {
@@ -247,7 +250,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   _t *data = (_t *)clientData;
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (save.log2_buff_n != data->opts.log2_buff_n || save.log2_buff_size != data->opts.log2_buff_size) {
+  if (save.log2_buff_n < data->opts.log2_buff_n || save.log2_buff_size < data->opts.log2_buff_size) {
     void *p = _configure(data);
     if (p != data) {
       Tcl_SetResult(interp, p, TCL_STATIC);
@@ -274,6 +277,7 @@ static const fw_subcommand_table_t _subcommands[] = {
   { "cdoc",      fw_subcommand_cdoc,      "get the doc string for a command, a subcommand, or an option" },
   { "get",	 _get,                    "get an audio buffer" },
   { "start",	 _start,		  "start collecting audio" },
+  { "state",     _state,		  "are we started?" },
   { "stop",	 _stop,			  "stop collecting audio" },
   { NULL }
 };

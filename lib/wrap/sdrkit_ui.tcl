@@ -380,7 +380,7 @@ if {0} {
 proc ::sdrkit_ui::meter {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::atap ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     return $w
 }
 
@@ -392,7 +392,7 @@ proc ::sdrkit_ui::meter {w} {
 proc ::sdrkit_ui::scope {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::atap ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     
     bind $w <Configure> [list ::sdrkit_ui::scope_configure %W $w %w %h]
     grid [canvas $w.c -width 400 -height 320] -row 0 -column 0 -sticky nsew
@@ -559,7 +559,7 @@ proc ::sdrkit_ui::scope_configure {bw w width height} {
 proc ::sdrkit_ui::spectrogram {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::atap ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     return $w
 }
 
@@ -569,7 +569,7 @@ proc ::sdrkit_ui::spectrogram {w} {
 proc ::sdrkit_ui::waterfall {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::atap ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     return $w
 }
 
@@ -586,7 +586,7 @@ proc ::sdrkit_ui::waterfall {w} {
 proc ::sdrkit_ui::iqbalance {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::atap ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     pack [ttk::label $w.l0 -textvar ${w}(l0)] -side top 
     pack [ttk::label $w.l1 -textvar ${w}(l1)] -side top
     pack [ttk::label $w.l2 -textvar ${w}(l2)] -side top

@@ -7,9 +7,12 @@ ALSA_CFLAGS=$(shell pkg-config --cflags alsa)
 LIBUSB_CFLAGS=$(shell pkg-config --cflags libusb-1.0)
 FFTW3_CFLAGS=$(shell pkg-config --cflags fftw3f)
 OSC_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator\"
-OSCF_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillatorf_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillatorf\"
-OSCT_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_INIT_NAME=Oscillatort_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillatort\"
-OSCZ_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_INIT_NAME=Oscillatorz_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillatorz\"
+OSCF_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_f_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-f\"
+OSCT_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_INIT_NAME=Oscillator_t_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-t\"
+OSCZ_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_INIT_NAME=Oscillator_z_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-z\"
+OSCFD_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_fd_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-fd\"
+OSCTD_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_td_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-td\"
+OSCZD_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_zd_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-zd\"
 
 JACK_LIBS=$(shell pkg-config --libs jack)
 ALSA_LIBS=$(shell pkg-config --libs alsa)
@@ -28,7 +31,6 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_tone.so
 
 ALL=$(LIBDIR)/agc.so \
-	$(LIBDIR)/atap.so \
 	$(LIBDIR)/audio_tap.so \
 	$(LIBDIR)/constant.so \
 	$(LIBDIR)/filter_biquad.so \
@@ -46,9 +48,12 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/midi_tap.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
-	$(LIBDIR)/oscillatorf.so \
-	$(LIBDIR)/oscillatort.so \
-	$(LIBDIR)/oscillatorz.so \
+	$(LIBDIR)/oscillator_f.so \
+	$(LIBDIR)/oscillator_t.so \
+	$(LIBDIR)/oscillator_z.so \
+	$(LIBDIR)/oscillator_fd.so \
+	$(LIBDIR)/oscillator_td.so \
+	$(LIBDIR)/oscillator_zd.so \
 	$(KEYERS)
 
 all:: $(ALL) libdir-all
@@ -69,10 +74,6 @@ libdir-all-clean::
 	cd $(LIBDIR) && make all-clean
 
 $(LIBDIR)/agc.so: agc.c framework.h ../sdrkit/dmath.h
-	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
-
-$(LIBDIR)/atap.so: atap.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -144,17 +145,29 @@ $(LIBDIR)/oscillator.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/os
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillatorf.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_f.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(OSCF_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillatort.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_t.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(OSCT_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillatorz.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_z.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(OSCZ_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/oscillator_fd.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(OSCFD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/oscillator_td.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(OSCTD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(OSCZD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/morse_timing.h ../sdrkit/morse_coding.h
 	@mkdir -p $(LIBDIR)

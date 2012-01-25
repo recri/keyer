@@ -24,7 +24,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 #package provide spectrum 1.0.0
 
 package require Tk
-package require sdrkit::atap
+package require sdrkit::audio-tap
 package require sdrkit::fftw
 package require sdrkit::jack
 
@@ -119,7 +119,7 @@ proc spectrum::spectrum {w n p} {
     set data(tap) spectrum_tap_$::spectrum::n
     set data(fft) spectrum_fft_$::spectrum::n
     incr ::spectrum::n
-    ::sdrkit::atap $data(tap)
+    ::sdrkit::audio-tap $data(tap) -complex 1
     ::sdrkit::fftw $data(fft) -size $data(n)
     grid [ttk::frame $w.m] -row 0 -column 0 -columnspan 2 -sticky ew
     pack [ttk::menubutton $w.m.type -textvariable ${w}(type) -menu $w.m.type.m] -side left
