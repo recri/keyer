@@ -20,8 +20,9 @@
 
 # [ ] - let the view scroll to follow the input
 # [ ] - display the time scale with tick labels
-# [ ] - display a cursor that covers all the displays
-# [ ] - make the tone scope the same width as the other displays
+# [x] - display a cursor that covers all the displays
+# [x] - make the tone scope the same width as the other displays
+# [ ] - autoscale the vertical on the tone scope
 
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
@@ -238,9 +239,10 @@ proc ::time-scale::update-scale {w} {
     set funit [expr {int($sr*$unit)}]
     # make the tick mark coordinates
     set xy {}
-    for {set f 0} {$f < $x1+$funit} {incr f $funit} {
+    for {set f 0} {$f < $x1} {incr f $funit} {
 	lappend xy $f $y $f $yp $f $yn $f $y
     }
+    lappend xy $x1 $y
     # draw the lines
     $w coords line $xy
     $w scale all 0 0 $data(-x-scale) 1

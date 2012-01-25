@@ -155,7 +155,7 @@ static int midi_buffer_queue_flush(midi_buffer_t *bp) {
   return ring_buffer_put_from_ring(&bp->ring, size, &bp->wring);
 }
 
-static int midi_buffer_queue_drop(midi_buffer_t *bp) {
+static void midi_buffer_queue_drop(midi_buffer_t *bp) {
   ring_buffer_reset(&bp->wring);
 }
 

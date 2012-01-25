@@ -36,7 +36,6 @@
 */
 
 #define KEYER_OPTIONS_TIMING	1
-#define KEYER_OPTIONS_TONE		1
 
 #include "framework.h"
 #include "../sdrkit/midi.h"
@@ -136,34 +135,40 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
-static void _flush_midi(_t *dp) {
-  midi_buffer_queue_flush(&dp->midi);
+static int _flush_midi(_t *dp) {
+  return midi_buffer_queue_flush(&dp->midi) >= 0;
+}
+
+static void _unflush_midi(_t *dp) {
+  midi_buffer_queue_drop(&dp->midi);
 }
 
 /*
 ** queue a string of . and - as midi events
 ** terminate with an inter letter space unless continues
 */
-static void _queue_midi(_t *dp, Tcl_UniChar c, char *p, int continues) {
+static int _queue_midi(_t *dp, Tcl_UniChar c, char *p, int continues) {
   /* normal send single character */
   if (p == NULL) {
-    if (c == ' ')
-      midi_buffer_queue_delay(&dp->midi, dp->samples_per.iws-dp->samples_per.ils);
+    if (c == ' ') {
+      if (midi_buffer_queue_delay(&dp->midi, dp->samples_per.iws-dp->samples_per.ils) < 0) return 0;
+    }
   } else {
     while (*p != 0) {
       if (*p == '.') {
-	midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dit, dp->opts.chan, dp->opts.note, 0);
+	if (midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dit, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
       } else if (*p == '-') {
-	midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dah, dp->opts.chan, dp->opts.note, 0);
+	if (midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dah, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
       }
       if (p[1] != 0 || continues) {
-	midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ies, dp->opts.chan, dp->opts.note, 0);
+	if (midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ies, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
       } else {
-	midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ils, dp->opts.chan, dp->opts.note, 0);
+	if (midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ils, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
       }
       p += 1;
     }
   }
+  return 1;
 }
 
 static char *morse_unicoding(_t *dp, Tcl_UniChar c) {
@@ -177,7 +182,7 @@ static char *morse_unicoding(_t *dp, Tcl_UniChar c) {
 ** translate a single character into morse code
 ** but implement an escape to allow prosign construction
 */
-static void _queue_unichar(Tcl_UniChar c, void *arg) {
+static int _queue_unichar(Tcl_UniChar c, void *arg) {
   _t *dp = (_t *)arg;
   
   if (c == '\\') {
@@ -188,26 +193,41 @@ static void _queue_unichar(Tcl_UniChar c, void *arg) {
     dp->prosign[dp->n_prosign++] = c;
     if (dp->n_prosign == dp->n_slash+1) {
       for (int i = 0; i < dp->n_prosign; i += 1) {
-	_queue_midi(dp, dp->prosign[i], morse_unicoding(dp, dp->prosign[i]), i != dp->n_prosign-1);
+	if ( ! _queue_midi(dp, dp->prosign[i], morse_unicoding(dp, dp->prosign[i]), i != dp->n_prosign-1)) return 0;
       }
       dp->n_prosign = 0;
       dp->n_slash = 0;
       _flush_midi(dp);
     }
   } else {
-    _queue_midi(dp, c, morse_unicoding(dp, c), 0);
-    _flush_midi(dp);
+    if ( ! _queue_midi(dp, c, morse_unicoding(dp, c), 0)) return 0;
   }
+  return 1;
 }
 
 static int _puts(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   // put the argument strings separated by spaces
   for (int i = 2; i < argc; i += 1) {
-    for (Tcl_UniChar *p = Tcl_GetUnicode(objv[i]); *p != 0; p += 1)
-      _queue_unichar(*p, clientData);
-    if (i != argc-1)
-      _queue_unichar(' ', clientData);
+    for (Tcl_UniChar *p = Tcl_GetUnicode(objv[i]); *p != 0; p += 1) {
+      if ( ! _queue_unichar(*p, clientData)) {
+	_unflush_midi(clientData);
+	Tcl_SetResult(interp, "buffer overflow", TCL_STATIC);
+	return TCL_ERROR;
+      }
+    }
+    if (i != argc-1) {
+      if ( ! _queue_unichar(' ', clientData)) {
+	_unflush_midi(clientData);
+	Tcl_SetResult(interp, "buffer overflow", TCL_STATIC);
+	return TCL_ERROR;
+      }
+    }
+  }
+  if ( ! _flush_midi(clientData)) {
+    _unflush_midi(clientData);
+    Tcl_SetResult(interp, "buffer overflow", TCL_STATIC);
+    return TCL_ERROR;
   }
   return TCL_OK;
 }
@@ -250,11 +270,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 		    data->opts.dah != save.dah ||
 		    data->opts.ies != save.ies ||
 		    data->opts.ils != save.ils ||
-		    data->opts.iws != save.iws ||
-		    data->opts.freq != save.freq ||
-		    data->opts.gain != save.gain ||
-		    data->opts.rise != save.rise ||
-		    data->opts.fall != save.fall);
+		    data->opts.iws != save.iws);
   return TCL_OK;
 }
 

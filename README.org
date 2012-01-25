@@ -459,19 +459,12 @@
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
 * Things to Do
+** TODO - keyer_ptt: fix the missing events when the key signal is delayed
+** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
+   using DJ5IL's CodePhaser circuit.
 ** TODO - keyer_tone.c: protect against 0 rise or fall
 ** TODO - keyer timing: protect against 0 clocks in all possibilities
-** TODO - add activate/deactivate to the common subcommands for Jack
-   commands, so a collection of modules can be put into standby.  But
-   they lose all port connections when deactivated.  For the moment,
-   just delete them if they aren't needed.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
-** TODO - abstract dttsp oscillator and cwtone class in a header.
-   Make it a dttsp::cwtone and dttsp::osc for comparison with the
-   filter based versions.
-** TODO - rename sdrkit/keyed_tone.h to sdrkit/cwtone.h, in general preserve
-   the dttsp names for the generic implementation, implement dttsp_name where
-   the dttsp implementation differs from the generic solution chosen.
 ** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
 ** TODO - keyer_ascii.c: to throttle input down to the output rate.
@@ -482,7 +475,7 @@
 ** TODO - keyer-control: jack connection panel.
 ** TODO - jack-control: jack connection panel with modular grouping
    hide/show whole blocks of connections.
-** TODO - keyer_ptt: fix the missing events when the key signal is delayed
+** TODO - midi tap: use the sdrkit midi buffer.
 ** TODO - multi-channel midi-tap, transpose signals to non-overlapping
    channel/note assignments.
 ** TODO - multi-channel audio-tap
@@ -492,18 +485,12 @@
 ** TODO - keyer-control: offer to launch mouse-key
 ** TODO - sdrkit_jack.c: provide missing jack status information.
 ** TODO - bin/invaders: callsign-invaders ear/key training game.
-** TODO - bin/pileup: echo back callsigns in a pileup situation
-** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
-   using DJ5IL's CodePhaser circuit.
-** TODO - sdrkit_binaural.h: to spread i/q binaurally according to dttsp
-   The binaural option in dttsp simply leaves the I/Q as it is, the
-   monoaural option discards the Q and pans the result to a specified
-   azimuth.
 ** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
-** TODO - sdrkit/framework.h - create only options
-** TODO - sdrkit/framework.h - command documentation strings
-** TODO - sdrkit/framework.h - subcommand documentation strings
-* Things already done
+** TODO - add activate/deactivate to the common subcommands for Jack
+   commands, so a collection of modules can be put into standby.  But
+   they lose all port connections when deactivated.  For the moment,
+   just delete them if they aren't needed.
+* Things already done or discarded as bad ideas
 ** DONE - MidiKey: to use a less ad hoc debouncer.
    Gave up on debouncing altogether, works fine with my key.
 ** DONE - MidiKey: to use the LUFA library for USB.
@@ -586,6 +573,23 @@
    at 1.5 dit clocks in the past.
 ** DONE - bin/pileup: loop back PTT to suppress sending when op is sending.
 ** DONE - keyer_ascii: abort sending
+** DONE - sdrkit/framework.h - create only options
+** DONE - sdrkit/framework.h - command documentation strings
+** DONE - sdrkit/framework.h - subcommand documentation strings
+** DONE - rename sdrkit/keyed_tone.h to sdrkit/cwtone.h, in general preserve
+   the dttsp names for the generic implementation, implement dttsp_name where
+   the dttsp implementation differs from the generic solution chosen.
+** DONE - sdrkit_binaural.h: to spread i/q binaurally according to dttsp
+   The binaural option in dttsp simply leaves the I/Q as it is, the
+   monoaural option discards the Q and pans the result to a specified
+   azimuth.
+** DONE - abstract dttsp oscillator and cwtone class in a header.
+   Make it a dttsp::cwtone and dttsp::osc for comparison with the
+   filter based versions.  Skipped the cwtone, but oscillator is
+   sdrkit::oscillatort
+** DONE - bin/pileup: echo back callsigns in a pileup situation
+   Don't know how the echo back works in a pileup, but it's fun in single
+   voice response mode.
 * Credits
   This code is derived from many sources.
 
