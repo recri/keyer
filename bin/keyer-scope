@@ -93,7 +93,8 @@ proc ::scope::start-iq {w sx} {
     set data(q-xy) {}
     catch {$w delete all}
     #$w create text 0 0 -text $data(-text) -fill white -tags text -anchor nw
-    update-iq $w $sx [binary format f* [lrepeat 1024 0.0]] 1
+    set data(last-frame) 0
+    update-iq $w $sx [binary format f* [lrepeat 4 0.0]] 1
 }
 
 proc ::scope::stop-iq {w ex} {
@@ -102,7 +103,7 @@ proc ::scope::stop-iq {w ex} {
 
 proc ::scope::update-iq {w frame iq {end 0}} {
     upvar #0 ::scope::$w data
-
+    set data(last-frame) $frame
     set skip 0
     if { ! [info exists data(frame)]} {
 	set data(frame) $frame
@@ -138,7 +139,6 @@ proc ::scope::update-iq {w frame iq {end 0}} {
     $w move chunk-$chunk 0 $data(-y-origin)
     $w configure -scrollregion [$w bbox all]
     #$w coords text [$w canvasx 1] [$w canvasy 1]
-    #puts "update-iq $w $frame [string length $iq]"
 }
 
 proc ::scope::update-event {w frame y {end 0}} {
@@ -513,7 +513,7 @@ proc ::keyer-scope::keyer-scope {w args} {
 	set data(capture-samples) $ns
 	set data(capture-millis) $nms
     }
-    # puts "capture $data(capture-samples) samples every $data(capture-millis) ms => [expr {1000*$data(capture-samples)/$data(capture-millis)}] samples/second vs $data(sample-rate)"
+    puts "capture $data(capture-samples) samples every $data(capture-millis) ms => [expr {1000*$data(capture-samples)/$data(capture-millis)}] samples/second vs $data(sample-rate)"
     incr data(capture-samples) $data(capture-samples)
     ::capture::iq $w.iq -period $data(capture-millis) -size $data(capture-samples) -client ::keyer-scope::update-iq -connect iambic_tone
     foreach {capture connect} {ptt0 ptt:midi_out keyer iambic:midi_out key0 debounce:midi_out raw0 system:midi_capture_1} {

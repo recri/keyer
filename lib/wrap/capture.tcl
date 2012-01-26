@@ -57,7 +57,7 @@ proc ::capture::configure {w args} {
 			$data(tap) configure -log2n 4 -log2size [::capture::log2-size $value]
 		    }
 		    if {$data(type) eq {iq} && [info exists data(tap)]} {
-			$data(tap) configure -log2size [::capture::log2size $value]
+			$data(tap) configure -log2size [::capture::log2-size $value]
 		    }
 		}
 		set data($option) $value
@@ -122,6 +122,7 @@ proc ::capture::capture-spectrum {w} {
 	    set b {}
 	}
 	# schedule next capture
+	puts "after $data(-period) [list ::capture::capture-spectrum $w]"
 	after $data(-period) [list ::capture::capture-spectrum $w]
     }
 }
@@ -130,9 +131,7 @@ proc ::capture::capture-iq {w} {
     upvar #0 ::capture::$w data
     if {$data(started)} {
 	# capture buffers and send the results to the client
-	while {[llength [set capture [::$data(tap) get]]] > 0} {
-	    $data(-client) $w {*}$capture
-	}
+	$data(-client) $w {*}[::$data(tap) get]
 	# schedule next capture
 	after $data(-period) [list ::capture::capture-iq $w]
     }
