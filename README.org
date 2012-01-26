@@ -219,6 +219,13 @@ exit 0
 
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
+* Links
+  I threw a bunch of stuff out of this README so it would be less
+  of a mess.  There's the [[https://github.com/recri/keyer/blob/master/Notes/todo.org][ToDo]] list, the [[https://github.com/recri/keyer/blob/master/Notes/done.org][Done]] list, and a short
+  [[https://github.com/recri/keyer/blob/master/Notes/tutorial.org][Tutorial on Tcl]] for the adventurous.  Then there are the
+  [[https://github.com/recri/keyer/blob/master/Notes/dttsp.org][DttSP Notes]] and [[https://github.com/recri/keyer/blob/master/Notes/softrock.org][Softrock Notes]] that were never in the README. I'm
+  wondering whether github will apply the markdown filter to them if I
+  link them like this.
 * Credits
   This code is derived from many sources.
 

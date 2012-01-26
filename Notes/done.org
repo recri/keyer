@@ -1,0 +1,108 @@
+* Things already done or discarded as bad ideas
+** DONE - MidiKey: to use a less ad hoc debouncer.
+   Gave up on debouncing altogether, works fine with my key.
+** DONE - MidiKey: to use the LUFA library for USB.
+   Glen Overby's sources use LUFA, the LufaMidiKey here needs revision.
+** DONE - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
+   Won't fit in an Altoids Smalls box.
+   and doesn't scare me as bad as the current interface.
+** DONE - abstract Oscillator class in a header.
+** DONE - users of keyer_midi.c: to use the new queuing api.
+** DONE - keyer-control: to use a dedicated keyer_tone for each keyer.
+** DONE - keyer-control: to use expect to manage plugins.
+   Didn't work out as I hoped.
+** DONE - keyer_iambic - Rewrite the process loop -> iambic_transition
+    Make it call iambic_transition at a specified granularity
+    irrespective of the jack buffer size, like twice per dit clock.
+** DONE - keyer-control: don't die when midi_capture device is missing
+** DONE - insert license information.
+** DONE - keyer_*.c: distinguish stdout and stderr better.
+** DONE - keyer_framework.c: implement a tcl command framework.
+** DONE - sdrkit_mtap.c: Should add MIDI input to receive the iambic shaped keying.
+   That could be used to key a transmitter, play a sidetone, wiggle a
+   PTT line, or flash some LED's. 
+** DONE - bin/*: follow symlinked scripts back to the source directory
+** DONE - bin/midiscope: display logic transitions of midi events.
+** DONE - bin/scope: display audio baseband waveforms
+** DONE - bin/spectrum: spectrogram display
+** DONE - keyer_decode.c: rename to keyer_detime.c
+** DONE - keyer-control: examine output of lsp to determine connection possibilities.
+** DONE - keyer_framework.c: allow jack thread to buffer output to memory for the main thread to print. Hence input cannot block.
+** DONE - bin/waterfall: persistent spectrogram display
+** DONE - keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
+   Does a gain block do that all by itself when jack routes multiple
+   inputs?  Yes.  The problem would be in mixing multiple I/Q channels
+   together. 
+** DONE - sdrkit_mono_to_iq.c: convert an monoaural signal to i/q by up-sampling and shifting.
+   I've thought this out.  It appears that simply taking the mono
+   channel as I and the mono channel delayed by one sample as Q is
+   equivalent to doing quadrature detection at samplerate/4.
+** DONE - keyer_tone.c: to fix the ramping glitches visible in scope
+** DONE - midiscope: reorganize into three digital panes and an audio
+   pane so all aspects of keying can be compared.
+** DONE - major renaming 
+   Rename 'sdrkit' to 'tjwrap' because it's a Tcl/Jack wrapper around the around the real 'sdrkit'.
+   Rename 'dspkit' to 'sdrkit' because it's the real kit for SDR.
+   Retain the 'sdrkit::foo' name space because they're wrapped sdrkit modules.
+   Opens the possibility of wrappers using alternate script and audio glue.
+** DONE - general abstraction - sdrkit: c and c++ modules in headers for pure computation.
+   oscillators, mixers, filters, modulators, demodulators.
+** DONE - general abstraction - jack-tcl-wrap: sdrkit wrapped as Tcl extensions with consistent options handling
+   the command framework lives here
+** DONE - general abstraction - jackit: sdrkit variation wrapped to jack process loop
+   abandoned in favor of just keeping everything in jack-tcl-wrap.
+** DONE - framework: figure out why create options are ineffective.
+** DONE - keyer_ascii: install more code points
+   There's more to Morse code than the basic US Ham usage, but I'm not
+   sure how to best internationalize the table.
+   Ridiculously easy, simply use a Tcl dict with single character unicode
+   strings as keys.  Keyer_unicode, nee ascii, supplies the default dict with
+   cget -dict.  You can modify that dict or build your own and install it with
+   configure -dict new_dict.
+** DONE - keyer_ptt - a plugin to take keyer output, send a ptt signal
+   immediately and pass through the keyer signal after a delay to let
+   the system activate.
+** DONE - keyer_debounce - debounce switches as midi signals
+   eliminate the debouncing on the MidiKeyer.
+** DONE - MidiKey: to debounce with a period in microseconds.
+   Mangled the existing Bounce class, still not quite right.
+   Went back and implented a millisecond/20 step filter debouncer,
+   still getting some clicks.  Went back and disabled debouncing
+   on the MCU, made it happen on the pc.
+** DONE - keyer_ptt_mute - a gain plugin with a ptt input that mutes the
+   audio channel.
+** DONE - keyer_debounce - do debouncing on MIDI signals on the PC where
+   the adjustments are easier to make.
+** DONE - keyer_ascii.c: to fix the timing glitches visible in scope
+** DONE - keyer_iambic.c: to fix the timing glitces visible in scope
+** DONE - keyer_iambic.c: mode B
+   Should only require a short memory of key states, make the next
+   element decision at end of inter-element space based on key state
+   at 1.5 dit clocks in the past.
+** DONE - bin/pileup: loop back PTT to suppress sending when op is sending.
+** DONE - keyer_ascii: abort sending
+** DONE - sdrkit/framework.h - create only options
+** DONE - sdrkit/framework.h - command documentation strings
+** DONE - sdrkit/framework.h - subcommand documentation strings
+** DONE - rename sdrkit/keyed_tone.h to sdrkit/cwtone.h, in general preserve
+   the dttsp names for the generic implementation, implement dttsp_name where
+   the dttsp implementation differs from the generic solution chosen.
+** DONE - sdrkit_binaural.h: to spread i/q binaurally according to dttsp
+   The binaural option in dttsp simply leaves the I/Q as it is, the
+   monoaural option discards the Q and pans the result to a specified
+   azimuth.
+** DONE - abstract dttsp oscillator and cwtone class in a header.
+   Make it a dttsp::cwtone and dttsp::osc for comparison with the
+   filter based versions.  Skipped the cwtone, but oscillator is
+   sdrkit::oscillatort
+** DONE - bin/pileup: echo back callsigns in a pileup situation
+   Don't know how the echo back works in a pileup, but it's fun in single
+   voice response mode.
+** DONE - keyer_ascii.c: to throttle input down to the output rate.
+   Now throws an error if you flood the queue, so pay attention to the pending
+   and available space.
+** DONE - keyer_tone.c: protect against 0 rise or fall
+** DONE - update README.org so it's current with the code
+** DONE - keyer_ptt: fix the missing events when the key signal is delayed
+** DONE - midi tap: use the sdrkit midi buffer.
+   Well, used the sdrkit ring buffer.

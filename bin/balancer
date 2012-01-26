@@ -23,6 +23,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require panorama
+package require sdrkit
 package require sdrkit::jack
 package require sdrkit::oscillator
 ## package require sdrkit::oscillator-zd
@@ -118,10 +119,10 @@ proc set-iq-noise {v} {
 }
 
 proc set-iq-sine-phase {v} {
-    iq-balance configure -sine-phase $v
+    iq-balance configure -sine-phase [expr {sin([sdrkit::radians $v])}]
 }
 proc set-iq-gain {v} {
-    iq-balance configure -linear-gain [dB2linear $v]
+    iq-balance configure -linear-gain [sdrkit::dB-to-linear $v]
 }
 
 proc more-mu {} {
@@ -200,7 +201,7 @@ proc main {argv} {
     set-iq-noise $::data(iq-noise)
 
     set row 0
-    grid [panorama .pan] -row $row -column 0 -columnspan 3 -sticky nsew
+    grid [panorama .pan -width 1024] -row $row -column 0 -columnspan 3 -sticky nsew
     incr row
     grid [ttk::label .b$row -text {Oscillator}] -row $row -column 0 -columnspan 3
     incr row
@@ -228,7 +229,7 @@ proc main {argv} {
     incr row
     grid [ttk::label .sine$row-l -textvar ::data(iq-sine) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .sine$row-u -text {}] -row $row -column 1
-    grid [ttk::scale .sine$row-s -from -1.000 -to 1.000 -command set-iq-sine-phase -variable ::data(iq-sine) -length $::data(length)] -row $row -column 2 -sticky ew
+    grid [ttk::scale .sine$row-s -from -15.000 -to 15.000 -command set-iq-sine-phase -variable ::data(iq-sine) -length $::data(length)] -row $row -column 2 -sticky ew
     incr row
     grid [ttk::label .gain$row-l -textvar ::data(iq-gain) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .gain$row-u -text {dB}] -row $row -column 1
@@ -257,7 +258,7 @@ proc main {argv} {
     grid columnconfigure . 2 -weight 100
     grid rowconfigure . 0 -weight 100
 
-    panorama::configure .pan -update [list ::meters::update .meters]
+    # panorama::configure .pan -update [list ::meters::update .meters]
 
     sdrkit::jack connect osc:out_i iq-balance:in_i
     sdrkit::jack connect osc:out_q iq-balance:in_q

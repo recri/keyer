@@ -122,7 +122,7 @@ proc ::capture::capture-spectrum {w} {
 	    set b {}
 	}
 	# schedule next capture
-	puts "after $data(-period) [list ::capture::capture-spectrum $w]"
+	# puts "after $data(-period) [list ::capture::capture-spectrum $w]"
 	after $data(-period) [list ::capture::capture-spectrum $w]
     }
 }
