@@ -26,7 +26,7 @@ set so [info sharedlibextension]
 
 #
 # load each loadable library,
-# extract the configuration options and documents
+# extract the configuration options and documentation strings
 #
 
 proc list-diff {list1 list2} {
