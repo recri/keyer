@@ -1,0 +1,65 @@
+* Abstraction
+   The code is evolving toward a really nice set of abstractions and
+   implementations, but it's a bit of a mess at the moment and will
+   continue to be a mess until I get it right.
+
+   My basic gripe with existing SDR code is that it's hard to see what
+   it does because it's usually buried inside some baroque mechanism
+   for putting it together into the radio.  I can't see the parts
+   because they've been potted in hot glue to stick them together.
+   And that's a pity, because the parts are really simple when you get
+   to see them clearly.
+
+   I've extracted the bits that do the work into one library, and
+   settled on using Tcl/Tk and Jack as the glue to put the parts
+   together.  So you can see the computations without the glue, and
+   then glue them together in a script to see how they work.
+** sdrkit - just the bits
+    Sdrkit is plain SDR implementations in c and c++ without
+    any distracting details.  Oscillators, filters, mixers,
+    demodulation, modulation, keyers, debouncers, and so on.
+    I'll include as many alternate implementations as I find the time
+    to excavate for comparison. This is where you go to figure out how
+    a particular computation is performed or to steal code for your
+    own use.
+
+    I'm doing sdrkit entirely as header files.  This is a bit
+    different from the usual hide the implementation one place and
+    expose an interface someplace else, but I've got nothing to hide
+    and I get tired of groveling all over the place trying to figure
+    out how things work.  It may not work out in the end, but it's
+    worked so far for me.  You include the header which defines an
+    interface and an implementation, define an instance, initialize,
+    and use it. The code is all static to the file that includes it,
+    so the unused parts can be optimized to nothing and the used parts
+    can be inlined.
+** jack-tcl-wrap - the bits wrapped for use
+    This code is my own baroque implementation of software hot glue.
+    It wraps sdrkit components into Tcl so they can be loaded and
+    executed within a Tcl/Tk application. This covers mostly boring
+    stuff like command creation and deletion, options handling,
+    subcommand processing, and the gory details of being a Jack
+    component.  And it's all done through an evolving framework that
+    abstracts out the common code, making it very terse and cryptic.
+** lib/* - tcl code and compiled loadable modules
+    The lib directory is structured as a collection of sub-directories
+    which could be safely installed into a system lib directory.
+*** lib/sdrkit - where sdrkit installs loadable modules
+    The lib/sdrkit directory contains, after you make them, a
+    collection of shared object files.  The lib/sdrkit/pkgIndex.tcl
+    file contains a catalog of the packages.
+*** lib/wrap - Tcl code for wrapping up loadable modules
+    The commands implemented by sdrkit are barebones computational
+    modules.  The code in lib/wrap makes larger functional units.
+*** lib/morse - Tcl code for morse code dictionaries
+    I made a simple change to the interface for the ascii keyer, and
+    it magically became a unicode enabled keyer.  So I copied the
+    morse code tables for arabic, cyrillic, farsi, greek, hebrew and
+    wabun and converted them into Tcl dicts which can be used to
+    configure the ascii keyer.  There are also dicts for the ITU
+    standard code, latin extensions, punctuation, and prosigns.
+** bin/* - tcl scripts implementing full applications.
+    These are a mixed bag of Tcl/Tk applications which work pretty
+    well in some cases and not at all in others.  The collection will
+    evolve, I'll describe the ones I'm happiest with when I get around
+    to it.

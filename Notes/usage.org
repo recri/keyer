@@ -1,0 +1,95 @@
+* usage summary
+  Some of this is obsolete.
+* Options
+   Most of the lib/sdrkit packages install a command factory which
+   allows you to create as many instances of a module as an
+   application requires.  Each module usually implements a series of
+   sub-commands, including sub-commands for configuring, querying, and
+   documenting the options implemented.
+
+   Most of the lib/wrap packages inherit the options of the components
+   they wrap, inherit the options of the Tk widgets which they use for
+   the wrapping, and implement further options for convenience.
+
+   And the applications in bin/* expose some or all of the options
+   that their lib/sdrkit, lib/wrap, or Tk components implement.
+* common options for all apps
+** verbose - generates output to standard error.
+     Will slow down the jack process callback if set high enough, but
+     most widgets aren't implementing it.
+** server - specifies the jack server name to connect to.
+** client - specifies the jack client name to connect as.
+* common options for MIDI keyer apps
+** chan - specifies which midi channel the communication runs on.
+     Note that midi channel 1 is encoded as 0 in midi events.
+** note - specifies which midi note is used for communication. In the
+     case of keyer_iambic, "note" specifies the dit and the dah is found
+     one higher.  Note that midi note 0 is encoded as 0 in midi events.
+* common options for morse code timing
+** word - specifies the number of dit clocks in a word.
+     Use 50 for PARIS and 60 for CODEX.
+** wpm - specifies the words per minute.
+     Used with "word" to compute the dit clocks per minute.
+** dah - specifies the number of dit clocks in a dah.
+     Default value is 3.0.
+** ies - specifies the number of dit clocks in an inter-element space.
+     Defaults value is 1.0.
+** ils - specifies the number of dit clocks in an inter-letter space.
+     Defaults value is 3.0.
+** iws - specifies the number of dit clocks in an inter-word space.
+     Defaults value is 7.0. You can jack this up get Farnsworth word 
+     spacing where strings of letters are sent fast with large gaps
+     between the words.
+* keyer-ascii - ascii to midi morse keyer
+   keyer_ascii implements the common options and the common timing
+   options.
+
+   You type to the program's standard input to supply the characters
+   to be sent.  Anything it knows will be encoded, that which it
+   doesn't know gets silently ignored.
+
+   You can send prosigns by using the backslash.  The input sequence
+   \sk will send ...-.-, and \\sos will send ...---...
+
+   And you can insert option queries and settings inline with the <>
+   syntax, so <wpm?> to query words per minute and <wpm22.5> to set
+   "wpm" to 22.5.
+* keyer-detime - midi to dit-dah-space decoder
+   keyer-detime implements the common options and the timing options.
+   It infers the dit clock rate from midi note on and off events and
+   writes a stream of decoded '.',  '-', and ' ' to its standard
+   output.  
+* keyer-iambic - iambic paddle midi to midi morse keyer
+   The iambic keyer implements the common options and the common
+   timing options.  In addition it implements.
+
+   "swap" reverses the sense of dit and dah.  Normally dit comes in on
+   the "chan" channel at "note" and dah one note higher.  Default 0.
+
+   "alsp" specifies if the keyer does automatic letter spacing or
+   simply turns off.  Default 0.
+
+   "awsp" specifies if the keyer does automatic word spacing or simply
+   turns off.  Default 0.
+
+   "mode" should specify if the keyer implements iambic mode A or mode
+   B, but the keyer only does what it does at the moment.
+* keyer-straight - using a straight key
+   There isn't any app for this, you wire the MIDI system device
+   directly to keyer_tone input, and make sure that your MidiKey
+   is sending note 0 for the key, or reconfigure keyer_tone to listen
+   to the channel and note your key is sending.
+* keyer-tone - midi to i/q tone generator
+   It uses a filter based I/Q oscillator which requires a couple of
+   multiplies and adds for each step, and the steps are configured to
+   be exactly the desired phase difference for each sample.
+
+   It uses the same oscillator to generate a sine ramp for key on and
+   key off.  The "rise" and "fall" times can be independently set to the
+   desired number of milliseconds.
+
+   The "ramp" option sets "rise" and "fall" to the same number of
+   milliseconds.
+
+   The other parameters to keyer_tone are "gain" in decibels and
+   "freq" in hertz.

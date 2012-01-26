@@ -1,7 +1,11 @@
 * Ascii/Iambic morse keyer (and more) using Jack audio connection kit.
   This is a morse code keyer consisting of Jack Audio Connection Kit
-  plugins, a hardware interface, and a variety of additional Tcl
-  hosted SDR tools for testing and playing with them.
+  plugins, a Teensyduino hardware interface, and a variety of
+  additional Tcl hosted SDR tools for testing and playing with them.
+
+  The larger project growing here is a kit for building building
+  software defined radios which uses Jack and Tcl to solder the pieces
+  together. 
 * Prerequisites
   I've written these instructions as I use them on a laptop running
   Ubuntu 11.10, the Oneiric Ocelot release.  Most of it is generic
@@ -9,12 +13,12 @@
   translations of package management tools and package names. It's
   also generic enough to port to MacOS or Windows.  But I don't run
   other Linux systems, MacOS, or Windows so asking me to help you make
-  it work is a lost cause, unless you want moral support.
+  it work may be a lost cause, unless you want moral support.
 
   I will be assuming that you have installed the keyer sources in your
   home directory, which I abbreviate as "~".  So I will refer to the
   keyer source directory as "~/keyer" in all that follows.   It
-  doesn't depend on being there.  You can install it anywhere, and that
+  doesn't depend on being there.  You can install it anywhere. That
   isn't where I install it.  But these instructions will depend on you
   making the necessary translation if you install the sources
   someplace else.
@@ -101,7 +105,7 @@ exit 0
 ** Installing
    I don't do any install. I usually run the scripts from ~/keyer
    manually prefixing bin/ to get the commands I want to run.
-** MidiKey
+** MidiKey hardware interface
   The whole point is to get CW keying information into the computer
   with the lowest latency possible.  To do that you'll need a
   MIDI-USB-Keyer dongle to hookup your straight key or paddle.
@@ -145,13 +149,24 @@ exit 0
 * Usage
   My basic usage pattern is to use qjackctl to configure my jack
   server, start the server, control the server, and manually make
-  connections between modules.
+  connections between modules. 
+
+  On the qjackctl Setup>Settings panel, I have:
+  | on             |  Realtime |
+  | MIDI Driver    |       raw |
+  | Priority       | (default) |
+  | Frames/Period  |      1024 |
+  | Sample Rate    |     96000 |
+  | Periods/Buffer |         2 |
+  | Port Maximum   |       512 |
 
   Some of the commands will automatically make connections to a
   default set of ports, if the port names match with their
   expectations.  You can view what happens and what fails to happen
-  with qjackctl.  The most usual problem is that the MidiKey hiccupped
-  and moved from system:capture_1 to system:capture_2.
+  with qjackctl.  The most usual problems are that the MidiKey
+  hiccupped and moved from system:capture_1 to system:capture_2, or
+  that you already have another keyer widget running which has claimed
+  the Jack client names.
   
   bin/keyer-control, bin/keyer-scope, and bin/pileup are written to
   automatically hook themselves up in a useful way, and they are
@@ -178,54 +193,91 @@ exit 0
   either in the script file, or part of standard Tcl/Tk, or it's in
   ~/keyer/lib.
 ** keyer-control - launch and control ascii and iambic midi keyers
-*** --ascii 0 - turns off the ascii keyer and controls
-    which default on.
-*** --debounce 0 - turns off the switch debouncing    
-*** --dttsp_iambic 1 - turns on the dttsp derived iambic keyer
-    and controls, which default off.
-*** --iambic 0 - turns off the iambic keyer and controls
-    which default on.
-*** --ptt 0 - turns off the ptt switch and controls
-*** --ascii-* - applies option * to ascii keyer
-*** --ascii_tone-* - applies option * to ascii tone generator    
-*** --dttsp_iambic-* - applies option * to dttsp iambic keyer
-*** --iambic-* - applies option * to iambic keyer
-*** --iambic_tone-* - applies option * to iambic tone generator    
-** keyer-scope - watch the keyer mess up
-   This is a work in progress designed to debug keyer timing and tone
-   generation. It connects to the system midi capture device to get
+   By default, keyer-control starts a complete iambic keyer and a
+   complete ascii keyer.  It implements the following command line
+   options to customize its operation.  These are all option names
+   preceded by two hyphens.
+   
+   |------------------+----------------------------------------|
+   | --ascii 0        | turns off the ascii keyer module       |
+   | --debounce 0     | turns off the debounce module          |
+   | --dttsp_iambic 1 | turns on the dttsp keyer               |
+   | --iambic 0       | turns off the iambic keyer             |
+   | --ptt 0          | turns off the ptt module               |
+   |------------------+----------------------------------------|
+   | --ascii-*        | passes -* to the ascii keyer           |
+   | --ascii_tone-*   | passes -* to the ascii tone generator  |
+   | --debounce-*     | passes -* to the switch debouncer      |
+   | --dttsp_iambic-* | passes -* to the dttsp keyer           |
+   | --iambic-*       | passes -* to the iambic keyer          |
+   | --iambic_tone-*  | passes -* to the iambic tone generator |
+   |------------------+----------------------------------------|
+
+   I'm not going to enumerate all the suboptions that can be passed on
+   to the submodules because they're all exposed on the keyer-control
+   panel, even the ones that you shouldn't change.  The panel
+   remembers nothing, so if you get wedged, just quit and start over
+   again.
+
+   The iambic tone generator gets shared between the iambic and the
+   dttsp_iambic keyers.  I haven't tried running both at once -- the
+   control panel gets too tall for my laptop screen.
+** keyer-scope - watch keyer glitches
+   This is a work in progress for debugging keyer timing and tone
+   generation.  It connects to the system midi capture device to get
    paddle input events, to the debouncer to get deglitched input
-   events, to the iambic keyer output to get the key logic output,
-   to the PTT outputs to get the final ptt and key outputs, and to the
-   iambic keyer tone generator to get wave forms.  The vertical scale
-   control for the wave form display is the output gain on iambic tone
-   control.  It's rough.
+   events, to the iambic keyer output to get the key logic output, to 
+   the PTT outputs to get the final ptt and key outputs, and to the
+   iambic keyer tone generator to get wave forms, and displays all the
+   signals on a multi-panel oscilloscope.
+
+   It also demonstrates the advantage of building software components
+   soldered together in Jack.  All the traces supplied by Jack are
+   available as test points without any modifications to the
+   underlying computation.  You can attach a meter, a scope, a
+   spectrum analyzer, or whatever to any Jack port and watch what its
+   doing.
+
+   But it's sort of rough.  The vertical scale control for the wave
+   form display, for instance, is the output gain on iambic tone
+   control.  Turn it up before you start recording.
 ** pileup - morse code training
    Pileup sends morse code for you to echo back with your keyer.
 
-   The words sent are either chosen from a set of callsigns from the
-   original pileup program or they are random words with up to N dit
-   clocks from the start of the first element to the end of the last
-   element.
+   The words sent are either callsigns from the original pileup
+   program or words with up to N dit clocks from the start of the
+   first element to the end of the last element.
 
-   There is a limit on how many simultaneous voices can run, but I'm
-   not sure what it is.
+   There is a limit on how many simultaneous voices can run.  It used
+   to be around 20, but I'm not sure what it is now.  The voices all
+   pileup on each other using random frequencies in a specified band,
+   using random speeds in a specified range, using random power levels
+   in a specified range.  They all break to hear what you're keying,
+   then start up again.  And the audio mutes the received voices to
+   echo your sidetone according to the ptt settings.
 
-   There is a simulated sideways waterfall display, but you shouldn't
-   look at it, you should work to hear the code and echo it back.
+   There is a simulated sideways waterfall display, which will become
+   a real waterfall eventually.   But you shouldn't look at it, you
+   should work to hear the code and echo it back. Play with your eyes
+   closed.
+
+   I'm doing 11 dit words at 18 wpm with a single voice.  I think the
+   judge is corrupt, but I haven't had time to investigate.
 ** MidiKey - Teesyduino application
-   There's very little to this, the steps should be listed in the
-   comment at the head of MidiKey/MidiKey.ino.
+   The necessary steps should be listed in the comment at the head of
+   MidiKey/MidiKey.ino.
 
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
-* Links
+* More details, too much information
   I threw a bunch of stuff out of this README so it would be less
-  of a mess.  There's the [[https://github.com/recri/keyer/blob/master/Notes/todo.org][ToDo]] list, the [[https://github.com/recri/keyer/blob/master/Notes/done.org][Done]] list, and a short
-  [[https://github.com/recri/keyer/blob/master/Notes/tutorial.org][Tutorial on Tcl]] for the adventurous.  Then there are the
-  [[https://github.com/recri/keyer/blob/master/Notes/dttsp.org][DttSP Notes]] and [[https://github.com/recri/keyer/blob/master/Notes/softrock.org][Softrock Notes]] that were never in the README. I'm
-  wondering whether github will apply the markdown filter to them if I
-  link them like this.
+  of a mess.  They're all in the Notes directory of the project, and
+  if you navigate there in the github web interface then github will
+  open files and mark them down for you.  This README and all the
+  files in the Notes directory are written in org-mode using emacs, an
+  outline mode.  The github markdown processor does a good job of
+  converting them to web pages, but some things get lost or mangled in
+  the translation, like internal links.
 * Credits
   This code is derived from many sources.
 

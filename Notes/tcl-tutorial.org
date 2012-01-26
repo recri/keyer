@@ -1,0 +1,83 @@
+* A very brief introduction to Tcl
+    All of the library Tcl scripts and Tcl application scripts build
+    on these basics.
+
+    The end result of jack-tcl-wrap is a collection of Tcl packages,
+    which are located in "~/keyer/lib/sdrkit" and indexed in
+    "~/keyer/lib/sdrkit/pkgIndex.tcl".  You use them by running Tcl,
+    and you run Tcl by executing the Tcl shell command, tclsh:
+   #+BEGIN_EXAMPLE
+     $ tclsh
+     % 
+   #+END_EXAMPLE
+    You load packages by telling Tcl where to look:
+   #+BEGIN_EXAMPLE
+     % lappend auto_path ~/keyer/lib
+     /usr/share/tcltk/tcl8.5 /usr/lib /usr/local/lib/tcltk /usr/local/share/tcltk /usr/lib/tcltk /usr/share/tcltk ~/keyer/lib
+     %
+   #+END_EXAMPLE
+     and then telling Tcl what you need, say an oscillator:
+   #+BEGIN_EXAMPLE
+     % package require sdrkit::oscillator
+     1.0.0
+     %
+   #+END_EXAMPLE
+     Loading an sdrkit package usually creates a Tcl command factory
+     with the same name as the package.  You use the factory command
+     to create SDR modules.  So: 
+   #+BEGIN_EXAMPLE
+    % sdrkit::oscillator lo -freq 10000 -gain 0
+    lo
+    %
+   #+END_EXAMPLE
+    creates an oscillator named "lo" which oscillates at 10000 Hertz
+    and has 0 decibels gain relative to full scale.  If you say:
+   #+BEGIN_EXAMPLE
+    % lo help
+    unrecognized subcommand "help", should one of configure, cget, or cdoc
+    %
+   #+END_EXAMPLE
+    then you get the list of recognized subcommands as an error.  If you say:
+   #+BEGIN_EXAMPLE
+    % join [lo configure] \n
+    -server server Server default default
+    -client client Client {} lo
+    -gain gain Gain -30.0 -30.0
+    -freq frequency Hertz 700.0 440.0
+    %
+   #+END_EXAMPLE
+    then you get the list of (potentially) configurable options for
+    "lo": the option names, some other names, a default value and the
+    current value.  Which, in this case, shows a bug, that the -freq
+    and -gain options to the command creation weren't effective,
+    because the gain is -30dB and the frequency is 440Hz.  We can
+    fix that with: 
+   #+BEGIN_EXAMPLE
+    % lo configure -freq 10000 -gain 0
+    % 
+   #+END_EXAMPLE
+    and check the result with:
+   #+BEGIN_EXAMPLE
+    % lo cget -freq
+    10000.0
+    % lo cget -gain
+    0.0
+    % 
+   #+END_EXAMPLE
+   The -server and -client options tell us the Jack server and client
+   name the module registered as.  These options are only configurable
+   at creation. We can use:
+   #+BEGIN_EXAMPLE
+    % package require sdrkit::jack
+    1.0.0
+    % sdrkit::jack connect lo:out_i system:playback_1
+    % sdrkit::jack connect lo:out_q system:playback_2
+    %
+   #+END_EXAMPLE
+    to connect our complex local oscillator to the system audio
+    out.
+    
+    Note that the sdrkit::jack package is a Tcl wrapper around
+    the sdrkit::jack-client package.  It implements an exception
+    to the rule given above, it creates a simple command rather
+    than a command factory.
