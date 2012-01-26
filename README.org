@@ -1,26 +1,7 @@
 * Ascii/Iambic morse keyer (and more) using Jack audio connection kit.
-  This is a morse code keyer consisting of jack audio connection kit
+  This is a morse code keyer consisting of Jack Audio Connection Kit
   plugins, a hardware interface, and a variety of additional Tcl
   hosted SDR tools for testing and playing with them.
-
-  The essential prerequisites for using this are a computer running
-  Linux to build and to host the applications. With that you can run
-  the ascii keyer, listen to the output, examine the waveforms, and
-  see how the system works.  You can also launch the mouse key
-  application and hook it up to the iambic keyer, though mouse buttons
-  or key board keys do not make for a great telegraphy experience.
-
-  Adding a MidiKeyer USB dongle will allow you to translate your
-  paddle or straight key switch closures into MIDI events and transmit
-  them to the computer over USB.  With that you can fully exercise the
-  iambic keyer and play with some of the games which require you to
-  key in the answers.
-
-  The keyer-control application launches iambic and ascii keyers with
-  independent tone generators, wires them up, and allows their
-  parameters to be fiddled with.  The keyer-scope application attaches
-  to the iambic keyer midi input, midi output, and the iambic keyer
-  tone generator and allows the signals to be captured and displayed.
 * Prerequisites
   I've written these instructions as I use them on a laptop running
   Ubuntu 11.10, the Oneiric Ocelot release.  Most of it is generic
@@ -33,7 +14,7 @@
   I will be assuming that you have installed the keyer sources in your
   home directory, which I abbreviate as "~".  So I will refer to the
   keyer source directory as "~/keyer" in all that follows.   It
-  doesn't depend on being there, you can install it anywhere, and that
+  doesn't depend on being there.  You can install it anywhere, and that
   isn't where I install it.  But these instructions will depend on you
   making the necessary translation if you install the sources
   someplace else.
@@ -61,9 +42,22 @@
    jackd agnostic package, so some audio libraries will force
    installation  of the old jackd version 1 package.  I force jackd2
    because it's what I use.  I don't know if jackd1 will work.
+
+   Also, there is a bug in qjackctl that unnecessarily disables PulseAudio.
+   Edit /usr/bin/qjackctl and make the non-comment part look like this:
+   #+BEGIN_EXAMPLE
+#!/bin/sh
+PROGRAM="/usr/lib/qjackctl/qjackctl.real"
+#PASUSPENDER="`whereis -b pasuspender | cut -d ':' -f 2 | tr -d ' '`"
+#( [ -x "${PASUSPENDER}" ] && ${PASUSPENDER} -- ${PROGRAM} ${@} ) || ${PROGRAM} ${@}
+${PROGRAM} ${@}
+exit 0
+   #+END_EXAMPLE
+   to avoid the problem.
 ** Getting the source
    The sources are archived at https://github.com/recri/keyer.
-   Assuming that you want the sources to be in ~/keyer,
+   Assuming that you installed the git packages and want the
+   sources to be in ~/keyer,
    #+BEGIN_EXAMPLE
    cd ~ && git clone https://github.com/recri/keyer
    #+END_EXAMPLE
@@ -155,11 +149,13 @@
 
   Some of the commands will automatically make connections to a
   default set of ports, if the port names match with their
-  expectations.  You can view what happens with qjackctl.
+  expectations.  You can view what happens and what fails to happen
+  with qjackctl.  The most usual problem is that the MidiKey hiccupped
+  and moved from system:capture_1 to system:capture_2.
   
-  In particular, bin/keyer-control, bin/keyer-scope, and bin/pileup
-  are written to automatically hook themselves up in a useful way, and
-  they are the applications which I test to make sure they work before
+  bin/keyer-control, bin/keyer-scope, and bin/pileup are written to
+  automatically hook themselves up in a useful way, and they are
+  the applications which I try to test to make sure they work before
   each push back to github.
 
   You can configure your jack server to "autolaunch" whenever an
@@ -171,435 +167,58 @@
   autolaunch feature and use qjackctl so you can see what's
   happening.
 
-  All of the commands in ~/keyer/bin are now Tcl/Tk scripts. I may or
-  may not describe what they do.  Some of them may go away or change
-  drastically as I figure out what I'm doing.  So for the fullest
-  documentation of the options each script implements, you should open
-  the script file in a text editor and scroll to the end of the file.
-  Each application should define a "main" procedure which parses
-  command line options, and you should be able to figure out what the
-  options do.
-** Abstraction
-   The code is evolving toward a really nice set of abstractions and
-   implementations, but it's a bit of a mess at the moment and will
-   continue to be a mess until I get it right.
-
-   My basic gripe with existing SDR code is that it's hard to see what
-   it does because it's usually buried inside some baroque mechanism
-   for putting it together into the radio.  I can't see the parts
-   because they've been potted in hot glue to stick them together.
-   And that's a pity, because the parts are really simple when you get
-   to see them clearly.
-
-   I've extracted the bits that do the work into one library, and
-   settled on using Tcl/Tk and Jack as the glue to put the parts
-   together.  So you can see the computations without the glue, and
-   then glue them together in a script to see how they work.
-*** sdrkit - just the bits
-    Sdrkit is plain SDR implementations in c and c++ without
-    any distracting details.  Oscillators, filters, mixers,
-    demodulation, modulation, keyers, debouncers, and so on.
-    I'll include as many alternate implementations as I find the time
-    to excavate for comparison. This is where you go to figure out how
-    a particular computation is performed or to steal code for your
-    own use.
-
-    I'm doing sdrkit entirely as header files.  This is a bit
-    different from the usual hide the implementation one place and
-    expose an interface someplace else, but I've got nothing to hide
-    and I get tired of groveling all over the place trying to figure
-    out how things work.  It may not work out in the end, but it's
-    worked so far for me.  You include the header which defines an
-    interface and an implementation, define an instance, initialize,
-    and use it. The code is all static to the file that includes it,
-    so the unused parts can be optimized to nothing and the used parts
-    can be inlined.
-*** jack-tcl-wrap - the bits wrapped for use
-    This code is my own baroque implementation of software hot glue.
-    It wraps sdrkit components into Tcl so they can be loaded and
-    executed within a Tcl/Tk application. This covers mostly boring
-    stuff like command creation and deletion, options handling,
-    subcommand processing, and the gory details of being a Jack
-    component.  And it's all done through an evolving framework that
-    abstracts out the common code, making it very terse and cryptic.
-*** lib/* - tcl code and compiled loadable modules
-    The lib directory is structured as a collection of sub-directories
-    which could be safely installed into a system lib directory.
-*** lib/sdrkit - where sdrkit installs loadable modules
-    The lib/sdrkit directory contains, after you make them, a
-    collection of shared object files.  The lib/sdrkit/pkgIndex.tcl
-    file contains a catalog of the packages.
-*** lib/wrap - Tcl code for wrapping up loadable modules
-    The commands implemented by sdrkit are barebones computational
-    modules.  The code in lib/wrap makes larger functional units.
-*** lib/morse - Tcl code for morse code dictionaries
-    I made a simple change to the interface for the ascii keyer, and
-    it magically became a unicode enabled keyer.  So I copied the
-    morse code tables for arabic, cyrillic, farsi, greek, hebrew and
-    wabun and converted them into Tcl dicts which can be used to
-    configure the ascii keyer.  There are also dicts for the ITU
-    standard code, latin extensions, punctuation, and prosigns.
-*** bin/* - tcl scripts implementing full applications.
-    These are a mixed bag of Tcl/Tk applications which work pretty
-    well in some cases and not at all in others.  The collection will
-    evolve, I'll describe the ones I'm happiest with.
-** A brief introduction to Tcl
-    All of the library Tcl scripts and Tcl application scripts build
-    on these basics.
-
-    The end result of jack-tcl-wrap is a collection of Tcl packages,
-    which are located in "~/keyer/lib/sdrkit" and indexed in
-    "~/keyer/lib/sdrkit/pkgIndex.tcl".  You use them by running Tcl,
-    and you run Tcl by executing the Tcl shell command, tclsh:
-   #+BEGIN_EXAMPLE
-     $ tclsh
-     % 
-   #+END_EXAMPLE
-    You load packages by telling Tcl where to look:
-   #+BEGIN_EXAMPLE
-     % lappend auto_path ~/keyer/lib
-     /usr/share/tcltk/tcl8.5 /usr/lib /usr/local/lib/tcltk /usr/local/share/tcltk /usr/lib/tcltk /usr/share/tcltk ~/keyer/lib
-     %
-   #+END_EXAMPLE
-     and then telling Tcl what you need, say an oscillator:
-   #+BEGIN_EXAMPLE
-     % package require sdrkit::oscillator
-     1.0.0
-     %
-   #+END_EXAMPLE
-     Loading an sdrkit package usually creates a Tcl command factory
-     with the same name as the package.  You use the factory command
-     to create SDR modules.  So: 
-   #+BEGIN_EXAMPLE
-    % sdrkit::oscillator lo -freq 10000 -gain 0
-    lo
-    %
-   #+END_EXAMPLE
-    creates an oscillator named "lo" which oscillates at 10000 Hertz
-    and has 0 decibels gain relative to full scale.  If you say:
-   #+BEGIN_EXAMPLE
-    % lo help
-    unrecognized subcommand "help", should one of configure, cget, or cdoc
-    %
-   #+END_EXAMPLE
-    then you get the list of recognized subcommands as an error.  If you say:
-   #+BEGIN_EXAMPLE
-    % join [lo configure] \n
-    -server server Server default default
-    -client client Client {} lo
-    -gain gain Gain -30.0 -30.0
-    -freq frequency Hertz 700.0 440.0
-    %
-   #+END_EXAMPLE
-    then you get the list of (potentially) configurable options for
-    "lo": the option names, some other names, a default value and the
-    current value.  Which, in this case, shows a bug, that the -freq
-    and -gain options to the command creation weren't effective,
-    because the gain is -30dB and the frequency is 440Hz.  We can
-    fix that with: 
-   #+BEGIN_EXAMPLE
-    % lo configure -freq 10000 -gain 0
-    % 
-   #+END_EXAMPLE
-    and check the result with:
-   #+BEGIN_EXAMPLE
-    % lo cget -freq
-    10000.0
-    % lo cget -gain
-    0.0
-    % 
-   #+END_EXAMPLE
-   The -server and -client options tell us the Jack server and client
-   name the module registered as.  These options are only configurable
-   at creation. We can use:
-   #+BEGIN_EXAMPLE
-    % package require sdrkit::jack
-    1.0.0
-    % sdrkit::jack connect lo:out_i system:playback_1
-    % sdrkit::jack connect lo:out_q system:playback_2
-    %
-   #+END_EXAMPLE
-    to connect our complex local oscillator to the system audio
-    out. Note that the sdrkit::jack package is an exception to the
-    rule given above, it creates a simple command rather than a
-    command factory.
-** Options
-   Most of the lib/sdrkit packages install a command factory which
-   allows you to create as many instances of a module as an
-   application requires.  Each module usually implements a series of
-   sub-commands, including sub-commands for configuring, querying, and
-   documenting the options implemented.
-
-   Most of the lib/wrap packages inherit the options of the components
-   they wrap, inherit the options of the Tk widgets which they use for
-   the wrapping, and implement further options for convenience.
-
-   And the applications in bin/* expose some or all of the options
-   that their lib/sdrkit, lib/wrap, or Tk components implement.
-
-*** common options for all apps
-**** verbose - generates output to standard error.
-     Will slow down the jack process callback if set high enough, but
-     most widgets aren't implementing it.
-**** server - specifies the jack server name to connect to.
-**** client - specifies the jack client name to connect as.
-*** common options for MIDI keyer apps
-**** chan - specifies which midi channel the communication runs on.
-     Note that midi channel 1 is encoded as 0 in midi events.
-**** note - specifies which midi note is used for communication. In the
-     case of keyer_iambic, "note" specifies the dit and the dah is found
-     one higher.  Note that midi note 0 is encoded as 0 in midi events.
-*** common options for morse code timing
-**** word - specifies the number of dit clocks in a word.
-     Use 50 for PARIS and 60 for CODEX.
-**** wpm - specifies the words per minute.
-     Used with "word" to compute the dit clocks per minute.
-**** dah - specifies the number of dit clocks in a dah.
-     Default value is 3.0.
-**** ies - specifies the number of dit clocks in an inter-element space.
-     Defaults value is 1.0.
-**** ils - specifies the number of dit clocks in an inter-letter space.
-     Defaults value is 3.0.
-**** iws - specifies the number of dit clocks in an inter-word space.
-     Defaults value is 7.0. You can jack this up get Farnsworth word 
-     spacing where strings of letters are sent fast with large gaps
-     between the words.
+  All of the commands in ~/keyer/bin are Tcl/Tk scripts. I'm only
+  going to talk about the ones that make the keyer work.  The rest
+  of it is other parts of a software defined radio software kit that
+  gets soldered together with Jack and Tcl. Some of it may work, some
+  of it used to work, some of it never worked, some of it has been
+  abandoned, some of it is experimental code that may yet be abandoned
+  or changed beyond recognition.  So, if you're curious, try it.  If
+  you're still curious, open it in a text editor.  All the code is
+  either in the script file, or part of standard Tcl/Tk, or it's in
+  ~/keyer/lib.
 ** keyer-control - launch and control ascii and iambic midi keyers
-*** --iambic 0 - turns off the iambic keyer and controls
 *** --ascii 0 - turns off the ascii keyer and controls
-*** --ptt 0 - turns off the ptt switch and controls
+    which default on.
 *** --debounce 0 - turns off the switch debouncing    
+*** --dttsp_iambic 1 - turns on the dttsp derived iambic keyer
+    and controls, which default off.
+*** --iambic 0 - turns off the iambic keyer and controls
+    which default on.
+*** --ptt 0 - turns off the ptt switch and controls
 *** --ascii-* - applies option * to ascii keyer
-*** --iambic-* - applies option * to iambic keyer
 *** --ascii_tone-* - applies option * to ascii tone generator    
+*** --dttsp_iambic-* - applies option * to dttsp iambic keyer
+*** --iambic-* - applies option * to iambic keyer
 *** --iambic_tone-* - applies option * to iambic tone generator    
 ** keyer-scope - watch the keyer mess up
    This is a work in progress designed to debug keyer timing and tone
-   generation.  It starts losing sync with the sample source after a
-   while but it works, after a fashion.  It connects to the system
-   midi capture device to get paddle input events, to the iambic keyer
-   output to get the key logic output, and to the iambic keyer tone
-   generator to get wave forms.  It expects the keyer-control app to
-   be already running.
+   generation. It connects to the system midi capture device to get
+   paddle input events, to the debouncer to get deglitched input
+   events, to the iambic keyer output to get the key logic output,
+   to the PTT outputs to get the final ptt and key outputs, and to the
+   iambic keyer tone generator to get wave forms.  The vertical scale
+   control for the wave form display is the output gain on iambic tone
+   control.  It's rough.
 ** pileup - morse code training
    Pileup sends morse code for you to echo back with your keyer.
 
    The words sent are either chosen from a set of callsigns from the
-   original pileup program or they are words with up to N dit clocks
-   from the start of the first element to the end of the last
+   original pileup program or they are random words with up to N dit
+   clocks from the start of the first element to the end of the last
    element.
+
+   There is a limit on how many simultaneous voices can run, but I'm
+   not sure what it is.
 
    There is a simulated sideways waterfall display, but you shouldn't
    look at it, you should work to hear the code and echo it back.
-** keyer-ascii - ascii to midi morse keyer
-   keyer_ascii implements the common options and the common timing
-   options.
-
-   You type to the program's standard input to supply the characters
-   to be sent.  Anything it knows will be encoded, that which it
-   doesn't know gets silently ignored.
-
-   You can send prosigns by using the backslash.  The input sequence
-   \sk will send ...-.-, and \\sos will send ...---...
-
-   And you can insert option queries and settings inline with the <>
-   syntax, so <wpm?> to query words per minute and <wpm22.5> to set
-   "wpm" to 22.5.
-** keyer-detime - midi to dit-dah-space decoder
-   keyer-detime implements the common options and the timing options.
-   It infers the dit clock rate from midi note on and off events and
-   writes a stream of decoded '.',  '-', and ' ' to its standard
-   output.  
-** keyer-iambic - iambic paddle midi to midi morse keyer
-   The iambic keyer implements the common options and the common
-   timing options.  In addition it implements.
-
-   "swap" reverses the sense of dit and dah.  Normally dit comes in on
-   the "chan" channel at "note" and dah one note higher.  Default 0.
-
-   "alsp" specifies if the keyer does automatic letter spacing or
-   simply turns off.  Default 0.
-
-   "awsp" specifies if the keyer does automatic word spacing or simply
-   turns off.  Default 0.
-
-   "mode" should specify if the keyer implements iambic mode A or mode
-   B, but the keyer only does what it does at the moment.
-** keyer-straight - using a straight key
-   There isn't any app for this, you wire the MIDI system device
-   directly to keyer_tone input, and make sure that your MidiKey
-   is sending note 0 for the key, or reconfigure keyer_tone to listen
-   to the channel and note your key is sending.
-** keyer-tone - midi to i/q tone generator
-   It uses a filter based I/Q oscillator which requires a couple of
-   multiplies and adds for each step, and the steps are configured to
-   be exactly the desired phase difference for each sample.
-
-   It uses the same oscillator to generate a sine ramp for key on and
-   key off.  The "rise" and "fall" times can be independently set to the
-   desired number of milliseconds.
-
-   The "ramp" option sets "rise" and "fall" to the same number of
-   milliseconds.
-
-   The other parameters to keyer_tone are "gain" in decibels and
-   "freq" in hertz.
 ** MidiKey - Teesyduino application
-   There's very little to this, you compile in the Teensyduino
-   augmented Arduino environment.
-
-   Be sure to specify your board on the Tools > Board menu, and be
-   sure to specify MIDI on the Tools > USB Type menu.
-   
-   Once you've downloaded the compiled sketch, you should see "ID
-   16c0:0485 VOTI" listed by lsusb, "USB-Audio - Teensy MIDI" listed
-   in /proc/asound/cards, and the same should show up in Qjackctl on
-   the ALSA panel.
+   There's very little to this, the steps should be listed in the
+   comment at the head of MidiKey/MidiKey.ino.
 
    Don't forget to install the /etc/udev/rules.d rules file for the
    Teensy.
-* Things to Do
-** TODO - update README.org so it's current with the code.
-** TODO - make all the components consistent with evolving conventions.
-** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
-   using DJ5IL's CodePhaser circuit.
-** TODO - keyer timing: protect against 0 clocks in all possibilities
-** TODO - keyer-scope: graticule doesn't track scrolling
-** TODO - keyer-scope: time-scale and audio track canvases don't track
-   the coordinates with the midi signal canvases after zoom and scroll.
-** TODO - convert the remaining users of atap to audio-tap.
-** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
-** TODO - convert all jack SDR modules to take parameters via MIDI sysex
-** TODO - build a character trie to decode sysex parameter settings.
-** TODO - keyer_detone.c: to convert keyed cw into midi note on/off events.
-** TODO - keyer-control: build, save, and restore custom configurations.
-** TODO - keyer-control: ascii input/output window
-** TODO - keyer-control: jack launching panel.
-** TODO - keyer-control: jack connection panel.
-** TODO - jack-control: jack connection panel with modular grouping
-   hide/show whole blocks of connections.
-** TODO - multi-channel midi-tap, transpose signals to non-overlapping
-   channel/note assignments.
-** TODO - multi-channel audio-tap
-** TODO - operational cartoon of keyer, layout the module connection
-   graph and animate the states of signals on the connections between
-   them.
-** TODO - keyer-control: offer to launch mouse-key
-** TODO - sdrkit_jack.c: provide missing jack status information.
-** TODO - bin/invaders: callsign-invaders ear/key training game.
-** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
-** TODO - add activate/deactivate to the common subcommands for Jack
-   commands, so a collection of modules can be put into standby.  But
-   they lose all port connections when deactivated.  For the moment,
-   just delete them if they aren't needed.
-* Things already done or discarded as bad ideas
-** DONE - MidiKey: to use a less ad hoc debouncer.
-   Gave up on debouncing altogether, works fine with my key.
-** DONE - MidiKey: to use the LUFA library for USB.
-   Glen Overby's sources use LUFA, the LufaMidiKey here needs revision.
-** DONE - keyer_midi.c:  to use a queuing api that looks like jack's event_in queuing. 
-   Won't fit in an Altoids Smalls box.
-   and doesn't scare me as bad as the current interface.
-** DONE - abstract Oscillator class in a header.
-** DONE - users of keyer_midi.c: to use the new queuing api.
-** DONE - keyer-control: to use a dedicated keyer_tone for each keyer.
-** DONE - keyer-control: to use expect to manage plugins.
-   Didn't work out as I hoped.
-** DONE - keyer_iambic - Rewrite the process loop -> iambic_transition
-    Make it call iambic_transition at a specified granularity
-    irrespective of the jack buffer size, like twice per dit clock.
-** DONE - keyer-control: don't die when midi_capture device is missing
-** DONE - insert license information.
-** DONE - keyer_*.c: distinguish stdout and stderr better.
-** DONE - keyer_framework.c: implement a tcl command framework.
-** DONE - sdrkit_mtap.c: Should add MIDI input to receive the iambic shaped keying.
-   That could be used to key a transmitter, play a sidetone, wiggle a
-   PTT line, or flash some LED's. 
-** DONE - bin/*: follow symlinked scripts back to the source directory
-** DONE - bin/midiscope: display logic transitions of midi events.
-** DONE - bin/scope: display audio baseband waveforms
-** DONE - bin/spectrum: spectrogram display
-** DONE - keyer_decode.c: rename to keyer_detime.c
-** DONE - keyer-control: examine output of lsp to determine connection possibilities.
-** DONE - keyer_framework.c: allow jack thread to buffer output to memory for the main thread to print. Hence input cannot block.
-** DONE - bin/waterfall: persistent spectrogram display
-** DONE - keyer_mix.c: to mix multiple keyer_tone channels down to a single channel.
-   Does a gain block do that all by itself when jack routes multiple
-   inputs?  Yes.  The problem would be in mixing multiple I/Q channels
-   together. 
-** DONE - sdrkit_mono_to_iq.c: convert an monoaural signal to i/q by up-sampling and shifting.
-   I've thought this out.  It appears that simply taking the mono
-   channel as I and the mono channel delayed by one sample as Q is
-   equivalent to doing quadrature detection at samplerate/4.
-** DONE - keyer_tone.c: to fix the ramping glitches visible in scope
-** DONE - midiscope: reorganize into three digital panes and an audio
-   pane so all aspects of keying can be compared.
-** DONE - major renaming 
-   Rename 'sdrkit' to 'tjwrap' because it's a Tcl/Jack wrapper around the around the real 'sdrkit'.
-   Rename 'dspkit' to 'sdrkit' because it's the real kit for SDR.
-   Retain the 'sdrkit::foo' name space because they're wrapped sdrkit modules.
-   Opens the possibility of wrappers using alternate script and audio glue.
-** DONE - general abstraction - sdrkit: c and c++ modules in headers for pure computation.
-   oscillators, mixers, filters, modulators, demodulators.
-** DONE - general abstraction - jack-tcl-wrap: sdrkit wrapped as Tcl extensions with consistent options handling
-   the command framework lives here
-** DONE - general abstraction - jackit: sdrkit variation wrapped to jack process loop
-   abandoned in favor of just keeping everything in jack-tcl-wrap.
-** DONE - framework: figure out why create options are ineffective.
-** DONE - keyer_ascii: install more code points
-   There's more to Morse code than the basic US Ham usage, but I'm not
-   sure how to best internationalize the table.
-   Ridiculously easy, simply use a Tcl dict with single character unicode
-   strings as keys.  Keyer_unicode, nee ascii, supplies the default dict with
-   cget -dict.  You can modify that dict or build your own and install it with
-   configure -dict new_dict.
-** DONE - keyer_ptt - a plugin to take keyer output, send a ptt signal
-   immediately and pass through the keyer signal after a delay to let
-   the system activate.
-** DONE - keyer_debounce - debounce switches as midi signals
-   eliminate the debouncing on the MidiKeyer.
-** DONE - MidiKey: to debounce with a period in microseconds.
-   Mangled the existing Bounce class, still not quite right.
-   Went back and implented a millisecond/20 step filter debouncer,
-   still getting some clicks.  Went back and disabled debouncing
-   on the MCU, made it happen on the pc.
-** DONE - keyer_ptt_mute - a gain plugin with a ptt input that mutes the
-   audio channel.
-** DONE - keyer_debounce - do debouncing on MIDI signals on the PC where
-   the adjustments are easier to make.
-** DONE - keyer_ascii.c: to fix the timing glitches visible in scope
-** DONE - keyer_iambic.c: to fix the timing glitces visible in scope
-** DONE - keyer_iambic.c: mode B
-   Should only require a short memory of key states, make the next
-   element decision at end of inter-element space based on key state
-   at 1.5 dit clocks in the past.
-** DONE - bin/pileup: loop back PTT to suppress sending when op is sending.
-** DONE - keyer_ascii: abort sending
-** DONE - sdrkit/framework.h - create only options
-** DONE - sdrkit/framework.h - command documentation strings
-** DONE - sdrkit/framework.h - subcommand documentation strings
-** DONE - rename sdrkit/keyed_tone.h to sdrkit/cwtone.h, in general preserve
-   the dttsp names for the generic implementation, implement dttsp_name where
-   the dttsp implementation differs from the generic solution chosen.
-** DONE - sdrkit_binaural.h: to spread i/q binaurally according to dttsp
-   The binaural option in dttsp simply leaves the I/Q as it is, the
-   monoaural option discards the Q and pans the result to a specified
-   azimuth.
-** DONE - abstract dttsp oscillator and cwtone class in a header.
-   Make it a dttsp::cwtone and dttsp::osc for comparison with the
-   filter based versions.  Skipped the cwtone, but oscillator is
-   sdrkit::oscillatort
-** DONE - bin/pileup: echo back callsigns in a pileup situation
-   Don't know how the echo back works in a pileup, but it's fun in single
-   voice response mode.
-** DONE - keyer_ascii.c: to throttle input down to the output rate.
-   Now throws an error if you flood the queue, so pay attention to the pending
-   and available space.
-** DONE - keyer_tone.c: protect against 0 rise or fall
-** DONE - update README.org so it's current with the code
-** DONE - keyer_ptt: fix the missing events when the key signal is delayed
-** DONE - midi tap: use the sdrkit midi buffer.
-   Well, used the sdrkit ring buffer.
 * Credits
   This code is derived from many sources.
 
