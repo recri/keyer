@@ -18,70 +18,276 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+##
+## this program compares the performance of different oscillator
+## implementations.
+##
+## at the moment its throwing exceptions that make no sense, all
+## the implementations are varying in their precision and getting
+## domain errors from acos and asin because some results are larger
+## than 1 in absolute value.
+##
+
 # set the tcl package search path to look in ../lib from the script
 lappend auto_path [file join [file dirname [info script]] .. lib]
 
-# require the oscillator packages and jack
+#package require Tk
 
-package require sdrkit::oscillatorf
-package require sdrkit::oscillatort
-package require sdrkit::oscillatorz
+package require sdrkit::oscillator-f
+package require sdrkit::oscillator-t
+package require sdrkit::oscillator-z
+package require sdrkit::oscillator-fd
+package require sdrkit::oscillator-td
+package require sdrkit::oscillator-zd
+package require sdrkit::audio-tap
 package require sdrkit::jack
 
-proc average {list} {
-    set sum 0
-    foreach item $list {
-	set sum [expr {$sum+$item}]
-    }
-    return [expr {$sum/double([llength $list])}]
-}
-    
-##
-## the jack cpu-load only gets computed once a second
-##
-proc accumulate-load {} {
-    set n 0
-    set loads {}
-    while {[llength $loads] < 30} {
-	lappend loads [sdrkit::jack cpu-load]
-	after 500
-    }
-    return [average [lrange $loads 20 end]]
+array set oscillators {
+    oscillator-f {filter based, internal float}
+    oscillator-fd {filter based, internal double}
+    oscillator-t {trig based, internal float}
+    oscillator-td {trig based, internal double}
+    oscillator-z {complex rotor, internal float}
+    oscillator-zd {complex rotor, internal double}
 }
 
 ##
-## okay, we're going to race three complex oscillators
-## against each other by loading them into Jack, letting
-## them run for a while, and then recording the jack
-## reported cpu-load percentage averaged over the last five
-## seconds of the run.
+## compute the number of items, their mean, and their standard deviation
+## and the sum of squares so we can merge standard deviations
 ##
-## we intersperse each oscillator run with baseline runs
-## where we record the same cpu-load percentage average
-## for jack with nothing loaded.
+proc n-mu-and-sigma {list} {
+    set n 0
+    set sum 0
+    set sum2 0
+    foreach item $list {
+	incr n
+	set sum [expr {$sum+$item}]
+	set sum2 [expr {$sum2+$item*$item}]
+    }
+    if {$n < 1} {
+	return [list 0 0 0 0]
+    }
+    set mu [expr {$sum/double($n)}]
+    if {$n < 2} {
+	return [list 1 $mu 0 $sum2]
+    }
+    if {[catch {
+	set sigma [expr {sqrt($sum2/double($n)-$mu*$mu)}]
+    } error]} {
+	puts "error evaluating: sqrt($sum2/double($n)-$mu*$mu): $error"
+	set sigma 0
+    }
+    return [list $n $mu $sigma $sum2]
+}
+
+proc merge-n-mu-and-sigma {nms1 nms2} {
+    lassign $nms1 n1 m1 s1 ss1 err1
+    lassign $nms2 n2 m2 s2 ss2 err2
+    set n [expr {$n1+$n2}]
+    set m [expr {($n1*$m1+$n2*$m2)/$n}]
+    set ss [expr {$ss1+$ss2}]
+    if {[catch {
+	set s [expr {sqrt($ss/double($n)-$m*$m)}]
+    } error]} {
+	puts "error evaluating: sqrt($ss/double($n)-$m*$m): $error"
+	set s 0
+    }
+    return [list $n $m $s $ss [expr {$err1+$err2}]]
+}
+
 ##
-## the results are:
+## get the average of the list
 ##
-## baseline: 0.45
-## oscillatorf: 1.14	funky filter based oscillator
-## baseline: 0.42
-## oscillatort: 2.24	oscillator using math.h sin() and cos()
-## baseline: 0.39	
-## oscillatorz: 1.43	complex phase[t+1] = phase[t] * dphase
-## baseline: 0.44
+proc average {list} {
+    return [lindex [n-mu-and-sigma $list] 1]
+}
+
 ##
+## get the running average of a list
 ##
-foreach f {b f b t b z b} {
-    switch $f {
-	b {
-	    puts [format "baseline: %.2f" [accumulate-load]]
+proc running-average {list} {
+    set avg [lindex $list 0]
+    foreach i [lrange $list 1 end] {
+	set avg [expr {($avg+$i)/2.0}]
+    }
+    return $avg
+}
+
+##
+## shuffle a list
+##
+proc shuffle {list} {
+    set nlist {}
+    for {set n [llength $list]} {$n > 0} {incr n -1} {
+	set i [expr {int(rand()*$n)}]
+	lappend nlist [lindex $list $i]
+	set list [lreplace $list $i $i]
+    }
+    return $nlist
+}
+
+##
+## accuracy, these should all be zero
+## m - mean and standard deviation of (i^2+q^2)-1
+## p - mean and standard deviation of acos(i)-asin(q)
+##     wait, do arccosine and arcsine have different ranges?
+##     yes, acos -> [0..pi], asin -> [-pi/2 .. pi/2]
+## dp - mean and standard deviation of atan2(q[t],i[t])-atan2(q[t-1],i[t-1])-(2 pi hertz / sample-rate)
+##
+set pi [expr {atan2(0,-1)}]
+proc test-m {frame iq hertz} {
+    set m {}
+    foreach {i q} $iq {
+	lappend m [expr {($i*$i + $q*$q) - 1.0} ]
+    }
+    return [concat [n-mu-and-sigma $m] [list 0]]
+}
+proc test-p {frame iq hertz} {
+    set p {}
+    set domain_error 0
+    foreach {i q} $iq {
+	if {[catch {
+	    set p0 [expr {atan2($q,$i)}]
+	    set p1 [expr {acos($i)}]
+	    set p2 [expr {asin($q)}]
+	    if {$p0 <= -$::pi/2} {		  # third quadrant
+		set p1 [expr {-$p1}];		  # flip acos($i)
+		set p2 [expr {-$::pi-$p2}];	  # flip asin($q)
+	    } elseif {$p0 <= 0} {		  # fourth quadrant
+		set p1 [expr {-$p1}];		  # flip acos($i)
+	    } elseif {$p0 <= $::pi/2} {		  # first quadrant
+		# everything agrees here 
+	    } elseif {$p0 <= $::pi} {		  # second quadrant
+		set p2 [expr {$::pi-$p2}];	  # flip asin($q)
+	    } else {				  # end of the world
+		puts "atan2($q,$i) -> $p0 radians is in no quadrant?"
+		continue
+	    }
+	    lappend p [expr {$p1-$p2}]
+	} error]} {
+	    switch $error {
+		{domain error: argument not in valid range} {
+		    incr domain_error
+		}
+		default {
+		    puts "error evaluating test-p for $i $q: $error"
+		}
+	    }
 	}
-	f -
-	t -
-	z {
-	    sdrkit::oscillator$f foo
-	    puts [format "oscillator$f: %.2f" [accumulate-load]]
-	    rename foo {}
+    }
+    return [concat [n-mu-and-sigma $p] [list $domain_error]]
+}
+proc test-dp {frame iq hertz} {
+    set expect [expr {2*$::pi*$hertz/[sdrkit::jack sample-rate]}]
+    set dp {}
+    foreach {i1 q1} [lrange $iq 0 end-2] {i2 q2} [lrange $iq 2 end] {
+	set dp [expr {atan2($q2,$i2)-atan2($q1,$i1)}]
+	if {$hertz > 0 && $dp < 0} {
+	    set dp [expr {$dp+2*$::pi}]
+	} elseif {$hertz < 0 && $dp > 0} {
+	    set dp [expr {$dp-2*$::pi}]
+	}
+	lappend dpi [expr {$dp-$expect}]
+    }
+    return [concat [n-mu-and-sigma $dpi] [list 0]]
+}
+##
+## test oscillator $osc for $term milliseconds
+##
+proc run-test {osc term hertz} {
+    if {$osc ne {baseline}} {
+	# start the oscillator
+	#sdrkit::$osc foo -freq $hertz -gain 0.0
+	sdrkit::$osc foo -freq $hertz
+	# start the audio tap
+	tap start
+	# connect it to the audio tap
+	sdrkit::jack connect foo:out_i tap:in_i foo:out_q tap:in_q
+    }
+    # get the start time
+    set start [clock milliseconds]
+    # initialize the elapsed time
+    set t 0
+    # initialize the load list
+    set load {}
+    # initialize the samples list
+    set samp {}
+    # loop until term has elapsed
+    while {1} {
+	# jack only updates once per second
+	if {[llength $load] <= $t/1000} {
+	    lappend load [sdrkit::jack cpu-load]
+	}
+	if {$osc ne {baseline}} {
+	    # grab a buffer of samples
+	    lassign [tap get] frame iq
+	    # convert to list of floats
+	    binary scan $iq f* tmp
+	    set iq $tmp
+	    # save for later analysis
+	    if {$frame != 0} {
+		lappend samp $frame $iq
+	    }
+	}
+	# see if we're finished
+	if {$t >= $term} break
+	# take a random timeout
+	after [expr {int(rand()*100+100)}]
+	# find out what time it is
+	set t [expr {[clock milliseconds]-$start}]
+    }
+    if {$osc ne {baseline}} {
+	# delete the oscillator
+	rename foo {}
+	# stop the tap
+	tap stop
+    }
+    # process the results
+    array set result {}
+    set result(load) [list [lindex $load end] [running-average [lrange $load end-1 end]] [running-average [lrange $load end-3 end]] [running-average [lrange $load end-7 end]]]
+    if {$osc ne {baseline}} {
+	foreach test {m p dp} {
+	    catch {unset result($test)}
+	    foreach {frame iq} $samp {
+		# puts "retrieved frame $frame with [llength $iq] floats"
+		if { ! [info exists result($test)]} {
+		    set result($test) [test-$test $frame $iq $hertz]
+		} else {
+		    set  result($test) [merge-n-mu-and-sigma $result($test) [test-$test $frame $iq $hertz]]
+		}
+	    }
+	}
+    }
+    return [array get result]
+}
+
+proc run-base {term} {
+    return [run-test baseline $term 0]
+}
+
+proc main {argv} {
+    set row 0
+    set width 1 
+    # pack user interface here
+    # setup
+    sdrkit::audio-tap tap -complex 1
+    while {1} {
+	set sr [sdrkit::jack sample-rate]
+	set work [shuffle [array names ::oscillators]]
+	set hertz [expr {(rand()-0.5)*$sr*0.5}]
+	set time 10000
+	puts "test run $time ms $hertz Hz $sr samples/second"
+	foreach o $work {
+	    puts "$o {$::oscillators($o)}"
+	    foreach {tag value} [run-test $o $time $hertz] {
+		puts "\t$tag\t$value"
+	    }
+	    puts "baseline"
+	    foreach {tag value} [run-test baseline $time $hertz] {
+		puts "\t$tag\t$value"
+	    }
 	}
     }
 }
+
+main $argv

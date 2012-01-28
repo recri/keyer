@@ -16,8 +16,8 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef FILTER_FIR_KERNEL_H
-#define FILTER_FIR_KERNEL_H
+#ifndef FILTER_FIR_H
+#define FILTER_FIR_H
 
 #include "dmath.h"
 

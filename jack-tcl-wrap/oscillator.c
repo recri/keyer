@@ -35,11 +35,13 @@
 typedef struct {
   framework_t fw;
   oscillator_t o;
+  int sample_rate;
   int modified;
   float hertz;
+#ifndef NO_GAIN
   float dBgain;
   float gain;
-  int sample_rate;
+#endif
 } _t;
 
 static void _update(_t *data) {
@@ -54,7 +56,9 @@ static void *_init(void *arg) {
   data->modified = 0;
   // data->hertz = 440.0f;
   // data->dBgain = -30;
+#ifndef NO_GAIN
   data->gain = powf(10, data->dBgain / 20);
+#endif
   data->sample_rate = sdrkit_sample_rate(data);
   void *p = oscillator_init(&data->o, data->hertz, 0.0f, data->sample_rate); if (p != &data->o) return p;
   return arg;
@@ -66,7 +70,10 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   _update(data);
   for (int i = nframes; --i >= 0; ) {
-    float complex z = data->gain * oscillator_process(&data->o);
+    float complex z = oscillator_process(&data->o);
+#ifndef NO_GAIN
+    z *= data->gain;
+#endif
     *out0++ = creal(z);
     *out1++ = cimag(z);
   }
@@ -75,16 +82,23 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  float dBgain = data->dBgain, hertz = data->hertz;
+  float hertz = data->hertz;
+#ifndef NO_GAIN
+  float dBgain = data->dBgain;
+#endif
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+#ifndef NO_GAIN
   if (data->dBgain != dBgain) {
     data->gain = powf(10, data->dBgain / 20);
   }
+#endif
   if (data->hertz != hertz) {
     if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
       Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz is more than samplerate/4", data->hertz));
       data->hertz = hertz;
+#ifndef NO_GAIN
       data->dBgain = dBgain;
+#endif
       return TCL_ERROR;
     }
     data->modified = 1;
@@ -94,8 +108,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-gain",   "gain",   "Gain",   "-30.0",    fw_option_float, 0,	offsetof(_t, dBgain),	      "gain in dB" },
   { "-freq",   "frequency","Hertz","700.0",    fw_option_float, 0,	offsetof(_t, hertz),	      "frequency of oscillator in Hertz" },
+#ifndef NO_GAIN
+  { "-gain",   "gain",   "Gain",   "-30.0",    fw_option_float, 0,	offsetof(_t, dBgain),	      "gain in dB" },
+#endif
   { NULL }
 };
 

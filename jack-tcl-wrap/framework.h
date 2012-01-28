@@ -196,14 +196,19 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
       Tcl_SetResult(interp, (char *)"argument is not a dict", TCL_STATIC);
       return TCL_ERROR;
     }
+    Tcl_Obj *old_value = *(Tcl_Obj **)((char *)clientData+entry->offset);
+    if (old_value != NULL) Tcl_DecrRefCount(old_value);
     Tcl_IncrRefCount(val);
     *(Tcl_Obj **)((char *)clientData+entry->offset) = val;
     return TCL_OK;
   }
-  case fw_option_obj: 
+  case fw_option_obj: {
+    Tcl_Obj *old_value = *(Tcl_Obj **)((char *)clientData+entry->offset);
+    if (old_value != NULL) Tcl_DecrRefCount(old_value);
     Tcl_IncrRefCount(val);
     *(Tcl_Obj **)((char *)clientData+entry->offset) = val;
     return TCL_OK;
+  }
   default:
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
     return TCL_ERROR;
@@ -570,27 +575,29 @@ static void framework_dump_template(const framework_t *atemplate) {
 /* keyer module factory command */
 /* usage: keyer_module_type_name command_name [options] */
 static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const framework_t *atemplate, size_t data_size) {
-
   // test for insufficient arguments
   if (argc < 2) {
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s name [option value ...]", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
   // framework_dump_template(template);
+  // decide if this wants to open as a jack client
+  int wants_jack = fw_option_lookup((char *)"-server", atemplate->options) >= 0;
   // check for some sanity
   if (atemplate->command == NULL) {
     Tcl_SetObjResult(interp, Tcl_NewStringObj("command pointer?", -1));
     return TCL_ERROR;
   }
-  if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs != 0 && atemplate->process == NULL) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj("jack ports but no jack process callback?", -1));
-    return TCL_ERROR;
+  if (wants_jack) {
+    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs != 0 && atemplate->process == NULL) {
+      Tcl_SetObjResult(interp, Tcl_NewStringObj("jack ports but no jack process callback?", -1));
+      return TCL_ERROR;
+    }
+    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs == 0 && atemplate->process != NULL) {
+      Tcl_SetObjResult(interp, Tcl_NewStringObj("no jack ports for jack process callback?", -1));
+      return TCL_ERROR;
+    }
   }
-  if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs == 0 && atemplate->process != NULL) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj("no jack ports for jack process callback?", -1));
-    return TCL_ERROR;
-  }
-
   // get class and command name
   char *class_name = Tcl_GetString(objv[0]);
   char *command_name = Tcl_GetString(objv[1]);
@@ -618,92 +625,95 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     return TCL_ERROR;
   }
 
-  // get jack server and client names
-  char *server_name = data->server_name != NULL ? Tcl_GetString(data->server_name) :
-    getenv("JACK_DEFAULT_SERVER") != NULL ? getenv("JACK_DEFAULT_SERVER") : (char *)"default";
-  char *client_name = data->client_name != NULL ? Tcl_GetString(data->client_name) : command_name;
+  jack_status_t status = (jack_status_t)0;
+  char *server_name = NULL;
+  char *client_name = NULL;
+  if (wants_jack) {
+    // get jack server and client names
+    server_name = data->server_name != NULL ? Tcl_GetString(data->server_name) :
+      getenv("JACK_DEFAULT_SERVER") != NULL ? getenv("JACK_DEFAULT_SERVER") : (char *)"default";
+    client_name = data->client_name != NULL ? Tcl_GetString(data->client_name) : command_name;
 
-  // remove namespaces from client name
-  if (strrchr(client_name, ':') != NULL) {
-    client_name = strrchr(client_name, ':')+1;
-    if (data->client_name != NULL) {
-      Tcl_DecrRefCount(data->client_name);
-      data->client_name = NULL;
+    // remove namespaces from client name
+    if (strrchr(client_name, ':') != NULL) {
+      client_name = strrchr(client_name, ':')+1;
+      if (data->client_name != NULL) {
+	Tcl_DecrRefCount(data->client_name);
+	data->client_name = NULL;
+      }
     }
-  }
-  // fprintf(stderr, "framework_factory: cmd_name %s, client_name %s\n", cmd_name, client_name);
+    // fprintf(stderr, "framework_factory: cmd_name %s, client_name %s\n", cmd_name, client_name);
 
-  if (data->server_name == NULL) {
-    data->server_name = Tcl_NewStringObj(server_name, -1);
-    Tcl_IncrRefCount(data->server_name);
-  }
-  if (data->client_name == NULL) {
-    data->client_name = Tcl_NewStringObj(client_name, -1);
-    Tcl_IncrRefCount(data->client_name);
-  }
+    if (data->server_name == NULL) {
+      data->server_name = Tcl_NewStringObj(server_name, -1);
+      Tcl_IncrRefCount(data->server_name);
+    }
+    if (data->client_name == NULL) {
+      data->client_name = Tcl_NewStringObj(client_name, -1);
+      Tcl_IncrRefCount(data->client_name);
+    }
 
-  // create jack client
-  jack_status_t status;
-  data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
-  // fprintf(stderr, "framework_factory: client %p\n", client);  
-  if (data->client == NULL) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
-    framework_jack_status_report(interp, status);
-    framework_delete(data);
-    return TCL_ERROR;
-  }
-
-  // create jack ports
-  int n = data->n_inputs+data->n_outputs+data->n_midi_inputs+data->n_midi_outputs;
-  if (n > 0) {
-    data->port = (jack_port_t **)Tcl_Alloc(n*sizeof(jack_port_t *));
-    if (data->port == NULL) {
-      framework_delete(data);
-      Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
-      return TCL_ERROR;
-    }
-    memset(data->port, 0, n*sizeof(jack_port_t *));
-    // fprintf(stderr, "framework_factory: port %p\n", data->port);  
-    char buf[256];
-    for (int i = 0; i < data->n_inputs; i++) {
-      if (data->n_inputs > 2) snprintf(buf, sizeof(buf), "in_%d_%c", i/2, i&1 ? 'q' : 'i');
-      else snprintf(buf, sizeof(buf), "in_%c", i&1 ? 'q' : 'i');
-      data->port[i] = jack_port_register(data->client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-    }
-    for (int i = 0; i < data->n_outputs; i++) {
-      if (data->n_outputs > 2) snprintf(buf, sizeof(buf), "out_%d_%c", i/2, i&1 ? 'q' : 'i');
-      else snprintf(buf, sizeof(buf), "out_%c", i&1 ? 'q' : 'i');
-      data->port[i+data->n_inputs] = jack_port_register(data->client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-    }
-    for (int i = 0; i < data->n_midi_inputs; i++) {
-      if (data->n_midi_inputs > 1) snprintf(buf, sizeof(buf), "midi_in_%d", i);
-      else snprintf(buf, sizeof(buf), "midi_in");
-      data->port[i+data->n_inputs+data->n_outputs] = jack_port_register(data->client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
-    }
-    for (int i = 0; i < data->n_midi_outputs; i++) {
-      if (data->n_midi_inputs > 1) snprintf(buf, sizeof(buf), "midi_out_%d", i);
-      else snprintf(buf, sizeof(buf), "midi_out");
-      data->port[i+data->n_midi_inputs+data->n_inputs+data->n_outputs] = jack_port_register(data->client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
-    }
-  }
-
-  // create midi event merge
-  if (data->n_midi_inputs+data->n_midi_buffers) {
-    int n = data->n_midi_inputs+data->n_midi_buffers;
-    if (data->n_midi_buffers > 1) {
-      Tcl_SetResult(interp, (char *)"only one midi_buffer is supported", TCL_STATIC);
+    // create jack client
+    data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
+    // fprintf(stderr, "framework_factory: client %p\n", client);  
+    if (data->client == NULL) {
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
+      framework_jack_status_report(interp, status);
       framework_delete(data);
       return TCL_ERROR;
     }
-    data->midi = (framework_midi_t *)Tcl_Alloc(n*sizeof(framework_midi_t));
-    if (data->midi == NULL) {
-      framework_delete(data);
-      Tcl_SetResult(interp, (char *)"memory allocation failure", TCL_STATIC);
-      return TCL_ERROR;
-    }
-    memset(data->midi, 0, n*sizeof(framework_midi_t));
-  }
 
+    // create jack ports
+    int n = data->n_inputs+data->n_outputs+data->n_midi_inputs+data->n_midi_outputs;
+    if (n > 0) {
+      data->port = (jack_port_t **)Tcl_Alloc(n*sizeof(jack_port_t *));
+      if (data->port == NULL) {
+	framework_delete(data);
+	Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
+	return TCL_ERROR;
+      }
+      memset(data->port, 0, n*sizeof(jack_port_t *));
+      // fprintf(stderr, "framework_factory: port %p\n", data->port);  
+      char buf[256];
+      for (int i = 0; i < data->n_inputs; i++) {
+	if (data->n_inputs > 2) snprintf(buf, sizeof(buf), "in_%d_%c", i/2, i&1 ? 'q' : 'i');
+	else snprintf(buf, sizeof(buf), "in_%c", i&1 ? 'q' : 'i');
+	data->port[i] = jack_port_register(data->client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+      }
+      for (int i = 0; i < data->n_outputs; i++) {
+	if (data->n_outputs > 2) snprintf(buf, sizeof(buf), "out_%d_%c", i/2, i&1 ? 'q' : 'i');
+	else snprintf(buf, sizeof(buf), "out_%c", i&1 ? 'q' : 'i');
+	data->port[i+data->n_inputs] = jack_port_register(data->client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+      }
+      for (int i = 0; i < data->n_midi_inputs; i++) {
+	if (data->n_midi_inputs > 1) snprintf(buf, sizeof(buf), "midi_in_%d", i);
+	else snprintf(buf, sizeof(buf), "midi_in");
+	data->port[i+data->n_inputs+data->n_outputs] = jack_port_register(data->client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+      }
+      for (int i = 0; i < data->n_midi_outputs; i++) {
+	if (data->n_midi_inputs > 1) snprintf(buf, sizeof(buf), "midi_out_%d", i);
+	else snprintf(buf, sizeof(buf), "midi_out");
+	data->port[i+data->n_midi_inputs+data->n_inputs+data->n_outputs] = jack_port_register(data->client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+      }
+    }
+
+    // create midi event merge
+    if (data->n_midi_inputs+data->n_midi_buffers) {
+      int n = data->n_midi_inputs+data->n_midi_buffers;
+      if (data->n_midi_buffers > 1) {
+	Tcl_SetResult(interp, (char *)"only one midi_buffer is supported", TCL_STATIC);
+	framework_delete(data);
+	return TCL_ERROR;
+      }
+      data->midi = (framework_midi_t *)Tcl_Alloc(n*sizeof(framework_midi_t));
+      if (data->midi == NULL) {
+	framework_delete(data);
+	Tcl_SetResult(interp, (char *)"memory allocation failure", TCL_STATIC);
+	return TCL_ERROR;
+      }
+      memset(data->midi, 0, n*sizeof(framework_midi_t));
+    }
+  }
   // finish initialization the object data
   // returns data pointer on success, error string on failure
   // failure does not leave command specific stuff to be cleaned up
@@ -720,17 +730,18 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
 
   // create server_name, client_name, class_name, and command_name objects
 
-  // set callbacks
-  jack_on_shutdown(data->client, framework_delete, data);
-  if (data->process) jack_set_process_callback(data->client, data->process, data);
-  if (data->sample_rate) jack_set_sample_rate_callback(data->client, data->sample_rate, data);
-  // if (data->buffer_size) jack_set_buffer_size_callback(data->client, data->buffer_size, data);
-  // if (data->xrun) jack_set_xrun_callback(data->client, data->xrun, data);
-  // client registration
-  // port registration
-  // graph reordering
-  // port connect
-
+  if (wants_jack) {
+    // set callbacks
+    jack_on_shutdown(data->client, framework_delete, data);
+    if (data->process) jack_set_process_callback(data->client, data->process, data);
+    if (data->sample_rate) jack_set_sample_rate_callback(data->client, data->sample_rate, data);
+    // if (data->buffer_size) jack_set_buffer_size_callback(data->client, data->buffer_size, data);
+    // if (data->xrun) jack_set_xrun_callback(data->client, data->xrun, data);
+    // client registration
+    // port registration
+    // graph reordering
+    // port connect
+  }
   // create Tcl command
   // fprintf(stderr, "create command %s at %lx\n", command_name, (long)data->command);
   Tcl_CreateObjCommand(interp, command_name, data->command, (ClientData)data, framework_delete);

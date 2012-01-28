@@ -8,12 +8,12 @@ LIBUSB_CFLAGS=$(shell pkg-config --cflags libusb-1.0)
 FFTW3_CFLAGS=$(shell pkg-config --cflags fftw3f)
 
 OSC_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator\"
-OSCF_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_f_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-f\"
-OSCT_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_INIT_NAME=Oscillator_t_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-t\"
-OSCZ_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_INIT_NAME=Oscillator_z_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-z\"
-OSCFD_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_fd_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-fd\"
-OSCTD_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_td_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-td\"
-OSCZD_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_zd_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-zd\"
+OSCF_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_f_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-f\" -DNO_GAIN
+OSCT_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_INIT_NAME=Oscillator_t_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-t\" -DNO_GAIN
+OSCZ_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_INIT_NAME=Oscillator_z_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-z\" -DNO_GAIN
+OSCFD_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_fd_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-fd\" -DNO_GAIN
+OSCTD_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_td_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-td\" -DNO_GAIN
+OSCZD_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_zd_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-zd\" -DNO_GAIN
 
 JACK_LIBS=$(shell pkg-config --libs jack)
 ALSA_LIBS=$(shell pkg-config --libs alsa)
@@ -25,6 +25,7 @@ LIBDIR=../lib/sdrkit
 KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_debounce.so \
 	$(LIBDIR)/keyer_detime.so \
+	$(LIBDIR)/keyer_detone.so \
 	$(LIBDIR)/keyer_dttsp_iambic.so \
 	$(LIBDIR)/keyer_iambic.so \
 	$(LIBDIR)/keyer_ptt.so \
@@ -55,6 +56,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/oscillator_fd.so \
 	$(LIBDIR)/oscillator_td.so \
 	$(LIBDIR)/oscillator_zd.so \
+	$(LIBDIR)/window.so \
 	$(KEYERS)
 
 all:: $(ALL) libdir-all
@@ -170,6 +172,10 @@ $(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(OSCZD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
+$(LIBDIR)/window.so: window.c framework.h ../sdrkit/window.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
+
 $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/morse_timing.h ../sdrkit/morse_coding.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS) -lm
@@ -179,6 +185,10 @@ $(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../sdrkit/midi.h ../s
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $<  $(JACK_LIBS) $(LIBS) -lm
 
 $(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/ring_buffer.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS) -lm
+
+$(LIBDIR)/keyer_detone.so: keyer_detone.c framework.h ../sdrkit/midi.h ../sdrkit/filter_goertzel.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS) -lm
 

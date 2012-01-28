@@ -106,3 +106,5 @@
 ** DONE - keyer_ptt: fix the missing events when the key signal is delayed
 ** DONE - midi tap: use the sdrkit midi buffer.
    Well, used the sdrkit ring buffer.
+** DONE - check for existing value when setting fw_option_dict and fw_option_obj
+   options and decrement the reference counts.

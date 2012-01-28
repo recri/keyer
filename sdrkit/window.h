@@ -57,6 +57,7 @@ static char *window_names[] = {
   "riemann",
   "blackmanharris",
   "nuttall",
+  NULL
 };
 
 /** 
@@ -131,7 +132,6 @@ static void window_make(const window_type_t type, const int size, float *window)
   }
   case WINDOW_HANNING: {	/* Hann would be more accurate */
     const int midn = size >> 1;
-    const float two_pi = 2 * M_PI;
     const float freq = two_pi / size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq)
@@ -165,7 +165,6 @@ static void window_make(const window_type_t type, const int size, float *window)
   }
   case WINDOW_HAMMING: {
     const int midn = size >> 1;
-    const float two_pi = 2 * M_PI;
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq)
@@ -174,7 +173,6 @@ static void window_make(const window_type_t type, const int size, float *window)
   }
   case WINDOW_BLACKMAN2: {	/* using Chebyshev polynomial equivalents here */
     const int midn = size >> 1;
-    const float two_pi = 2 * M_PI;
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
@@ -185,7 +183,6 @@ static void window_make(const window_type_t type, const int size, float *window)
   }
   case WINDOW_BLACKMAN3: {
     const int midn = size >> 1;
-    const float two_pi = 2 * M_PI;
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
@@ -199,7 +196,6 @@ static void window_make(const window_type_t type, const int size, float *window)
   }
   case WINDOW_BLACKMAN4: {
     const int midn = size >> 1;
-    const float two_pi = 2 * M_PI;
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
@@ -225,7 +221,6 @@ static void window_make(const window_type_t type, const int size, float *window)
   }
   case WINDOW_RIEMANN: {
     const int midn = size >> 1;
-    const float two_pi = 2 * M_PI;
     const float sr1 = two_pi / size;
     for (int i = 0, j = size - 1; i <= midn; i++, j--) {
       if (i == midn)
@@ -239,7 +234,6 @@ static void window_make(const window_type_t type, const int size, float *window)
     break;
   }
   case WINDOW_BLACKMANHARRIS: {
-    const float two_pi = 2 * M_PI;
     const float a0 = 0.35875f, a1 = 0.48829f, a2 = 0.14128f, a3 = 0.01168f;
     for (int i = 0; i < size; i++) {
       const float arg = two_pi * (i + 0.5f) / (size - 1);
@@ -248,7 +242,6 @@ static void window_make(const window_type_t type, const int size, float *window)
     break;
   }
   case WINDOW_NUTTALL: {
-    const float two_pi = 2 * M_PI;
     const float a0 = 0.3635819f, a1 = 0.4891775f, a2 = 0.1365995f, a3 = 0.0106411f;
     for (int i = 0; i < size; i++) {
       const float arg = two_pi * (i + 0.5f) / (size - 1);

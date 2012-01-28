@@ -138,7 +138,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-#include "framework_options.h"
+  /* no -server or -client, not a jack client */
+  { "-verbose", "verbose", "Verbose", "0",     fw_option_int,   fw_flag_none,	     offsetof(_t, fw.verbose),   "amount of diagnostic output" },
   { "-size",     "size",     "Samples",   "4096", fw_option_int, 0,	offsetof(_t, opts.size),        "size of fft computed" },
   { "-planbits", "planbits", "Planbits",  "0",	  fw_option_int, 0,	offsetof(_t, opts.planbits),    "fftw plan bits" },
   { "-window",   "window",   "Window",    "11",   fw_option_int, 0,	offsetof(_t, opts.window_type), "window used in fft, integer from sdrkit/window.h" },

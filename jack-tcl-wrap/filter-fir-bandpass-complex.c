@@ -25,41 +25,52 @@
 #include <math.h>
 #include <complex.h>
 
-#include "../sdrkit/window.h"
+#include "../sdrkit/filter-fir.h"
 
 /*
-** create a window module which generates
-** fft and filter windows.
+** create a FIR filter module
 */
 typedef struct {
-  Tcl_Obj *type;		/* one of the window types */
-  int size;			/* window size in floats */
+  int size;			/* size of window in floats */
+  int sample_rate
+  Tcl_Obj *window;
+#if LOW_PASS
+  float cutoff;
+#endif
+#if BAND_PASS
+  float lo, hi;
+#endif
 } options_t;
 
 typedef struct {
   framework_t fw;
   options_t opts;
-  int itype;
-  Tcl_Obj *window;		/* window as byte array */
+  Tcl_Obj *filter;		/* window as byte array */
 } _t;
 
+static size_t byte_size(int size) {
+#if COMPLEX
+  return size;
+#else
+  return size*sizeof(float);
+#endif
+}  
+
 static void *_configure(_t *data) {
-  char *type_name = Tcl_GetString(data->opts.type);
-  int itype = -1;
-  for (int i = 0; window_names[i] != NULL; i += 1)
-    if (strcmp(window_names[i], type_name) == 0) {
-      itype = i;
-      break;
-    }
-  if (itype < 0) return "unknown window type";
-  data->itype = itype;
-  if (data->window != NULL) {
-    Tcl_DecrRefCount(data->window);
+  if (data->filter != NULL) {
+    Tcl_DecrRefCount(data->filter);
   }
-  data->window = Tcl_NewObj();
-  Tcl_IncrRefCount(data->window);
-  float *window = (float *)Tcl_SetByteArrayLength(data->window, data->opts.size*sizeof(float));
-  window_make(data->itype, data->opts.size, window);
+  data->filter = Tcl_NewObj();
+  Tcl_IncrRefCount(data->filter);
+#if COMPLEX
+  float *filter = (float *)Tcl_SetByteArrayLength(data->window, data->opts.size*2*sizeof(float));
+#if BAND_PASS
+#else
+#error "unimplemented filter FIR variation"
+#endif
+#else
+  float *filter = (float *)Tcl_SetByteArrayLength(data->window, data->opts.size*sizeof(float));
+#endif
   return data;
 }
 static void *_init(void *arg) {

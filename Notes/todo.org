@@ -12,8 +12,25 @@
    Increases mu to increase convergence when the filter is adapting, then
    decreases mu to refine convergence when the filter has found the vicinity
    of the solution.
+** TODO - figure out how to share a jack client connection among the
+   commands that aren't jack clients but sometimes need to find a jack
+   data item?  NO!  Make them require the sample rate as a parameter,
+   so they don't use the wrong one in multi-rate setup.
 ** TODO - make all the components consistent with evolving conventions.
    This is a tough one since I haven't finished evolving the conventions.
+** TODO - polyphase fft for spectrum
+** TODO - check that command deletion cleans up object valued options
+   or make a framework function to deal with it.
+** TODO - check that failed configure doesn't lose object valued options
+   The save = opts; if fail then opts = save pattern doesn't deal with
+   ref counts; the options handler may have decr'ed the saved option
+   that we're trying to restore.
+** TODO - fft/filter windows are tricky
+   the fftw holds a window type and rebuilds the window to the new size, but
+   it should take a window as parameter to the fftw exec.  A FIR needs a window
+   to build, and would need one to resize.
+   Maybe fftw/filter size/window should be create only?
+** TODO - test for memory leaks.
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
    using DJ5IL's CodePhaser circuit.
 ** TODO - keyer timing: protect against 0 clocks in all possibilities

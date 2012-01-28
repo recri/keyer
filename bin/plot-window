@@ -1,0 +1,86 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require sdrkit::window
+
+proc draw {w} {
+    set ::data(xoff) 0
+    set ::data(yoff) [expr {[winfo height $w]/2}]
+    set ::data(xscale) [expr {[winfo width $w]/double([llength $::data(xy)]/2)}]
+    set ::data(yscale) [expr {-(0.75*[winfo height $w]/2)/max(abs($::data(miny)),$::data(maxy))}]
+    #puts $xy
+    $w coords window $::data(xy)
+    puts ".c scale all 0 0 $::data(xscale) $::data(yscale)"
+    $w scale all 0 0 $::data(xscale) $::data(yscale)
+    puts ".c move all $::data(xoff) $::data(yoff)"
+    $w move all $::data(xoff) $::data(yoff)
+}
+
+proc replot {} {
+    win configure -type $::data(type) -size $::data(size)
+    binary scan [win get] f* ys
+    puts "scanned [llength $ys] items"
+    set ::data(xy) {}
+    set x 0
+    set ::data(miny) +1e9
+    set ::data(maxy) -1e9
+    foreach y $ys {
+	lappend ::data(xy) $x $y
+	incr x
+	set ::data(miny) [expr {min($y,$::data(miny))}]
+	set ::data(maxy) [expr {max($y,$::data(maxy))}]
+    }
+    puts "$x points, min $::data(miny) max $::data(maxy)"
+    draw .c
+}
+
+proc validate-size {} {
+    if {[regexp {^\d*$} $::data(size)]} {
+	return 1
+    } else {
+	return 0
+    }
+}
+
+proc main {argv} {
+    sdrkit::window win
+    pack [canvas .c -background black] -side top -fill both -expand true
+    .c create line 0 0 0 0 -fill white -tags window
+    pack [ttk::frame .m] -side top -fill x
+    pack [ttk::label .m.wl -text {window type: }] -side left
+    pack [ttk::menubutton .m.w -textvar ::data(type) -menu .m.w.m] -side left
+    menu .m.w.m -tearoff no
+    foreach t [lsort [win types]] {
+	.m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot
+    }
+    set ::data(type) [win cget -type]
+    pack [ttk::label .m.el -text {window size}] -side left
+    pack [ttk::entry .m.e -textvar ::data(size) -validate all -validatecommand validate-size] -side left
+    set ::data(size) [win cget -size]
+    pack [ttk::button .m.p -text plot -command replot]
+    bind .c <Configure> [list draw %W]
+    replot
+}
+
+main $argv
