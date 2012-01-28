@@ -35,27 +35,22 @@ typedef struct {
   float dc;
 } sam_demod_t;
 
-static void *sam_demod_init(const sam_demod_t *p, const int sample_rate) {
+static void *sam_demod_init(sam_demod_t *p, const int sample_rate) {
   const float f_initial = 0.0f;
   const float f_lobound = -2000.0f;
   const float f_hibound =  2000.0f;
   const float f_bandwid =   300.0f;
-  void *ep = pll_init(&p->pll, sample_rate, f_initial, f_lobound, f_hibound, f_bandwid);
-  if (ep != &p->pll) return ep;
-
+  void *e = pll_init(&p->pll, sample_rate, f_initial, f_lobound, f_hibound, f_bandwid); if (e != &p->pll) return e;
   p->lock = 0.5;
   p->dc = 0.0;
-
   return p;
 }
 
-static float _Complex sam_demod(sam_demod_t *p, float _Complex sig) {
+static float _Complex sam_demod_process(sam_demod_t *p, float _Complex sig) {
   pll(&p->pll, sig, cabs(sig));
-
   p->lock = 0.999f * p->lock + 0.001f * fabsf(cimag(p->pll.delay));
   p->dc = 0.9999f * p->dc + 0.0001f * creal(p->pll.delay);
   float demout =  creal(p->pll.delay) - p->dc;
-
   return demout + I * demout;
 }
 #endif

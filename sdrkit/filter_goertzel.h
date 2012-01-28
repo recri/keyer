@@ -19,6 +19,8 @@
 #ifndef FILTER_GOERTZEL_H
 #define FILTER_GOERTZEL_H
 
+#include "dmath.h"
+
 /*
 ** The Goertzel filter detects the power of a specified frequency
 ** very efficiently.
@@ -28,9 +30,9 @@
 ** at TAPR DCC 2011 by George Heron N2APB and Dave Collins AD7JT.
 */
 typedef struct {
-  float hertz;
-  float bandwidth;
-  int sample_rate;
+  float hertz;			// frequency to track
+  float bandwidth;		// bandwidth of sampling
+  int sample_rate;		// sample rate of input stream
 } filter_goertzel_options_t;
 
 typedef struct {
@@ -44,7 +46,7 @@ typedef struct {
 static void filter_goertzel_configure(filter_goertzel_t *p, filter_goertzel_options_t *q) {
   p->coeff = 2.0f * cosf(two_pi * q->hertz / q->sample_rate);
   p->block_size = (int) (q->sample_rate / q->bandwidth);
-  p->block_remaining = p->block_size;
+  p->i = p->block_size;
   p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
 }
 
@@ -63,14 +65,16 @@ static void *filter_goertzel_init(filter_goertzel_t *p, filter_goertzel_options_
   return p;
 }
 
-static float filter_goertzel_process(filter_goertzel_t *p, const float x) {
+static int filter_goertzel_process(filter_goertzel_t *p, const float x) {
   p->s[(p->i)&3] = x + p->coeff * p->s[(p->i+1)&3] - p->s[(p->i+2)&3];
   if (--p->i < 0) {
     p->power = p->s[1]*p->s[1] + p->s[0]*p->s[0] - p->coeff*p->s[0]*p->s[1];
     p->i = p->block_size;
     p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
+    return 1;
+  } else {
+    return 0;
   }
-  return p->power;
 }
 
 #endif

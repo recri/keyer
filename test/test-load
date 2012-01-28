@@ -28,6 +28,15 @@ set so [info sharedlibextension]
 # you should start the default jack server with qjackctl
 # before running this test
 #
+catch {exec jack_control status} result
+switch -glob $result {
+    *stopped* {
+	puts "jackd is stopped, starting with defaults"
+	exec jack_control start
+    }
+    *started {}
+    default { error "unknown jackd status: $result" }
+}
 
 #
 # array to identify which other tricks to try
@@ -35,7 +44,10 @@ array set data {
     agc {sdrkit::agc norm}
     audio_tap {sdrkit::audio-tap atap}
     constant {sdrkit::constant norm}
-    fftw {sdrkit::fftw norm}
+    demod_am {sdrkit::demod-am norm}
+    demod_fm {sdrkit::demod-fm norm}
+    demod_sam {sdrkit::demod-sam norm}
+    fftw {sdrkit::fftw no-jack}
     filter_biquad {sdrkit::filter-biquad norm}
     gain {sdrkit::gain norm}
     iq_balance {sdrkit::iq-balance norm}
@@ -46,6 +58,7 @@ array set data {
     keyer_ascii {keyer::ascii norm}
     keyer_debounce {keyer::debounce norm}
     keyer_detime {keyer::detime norm}
+    keyer_detone {keyer::detone norm}
     keyer_dttsp_iambic {keyer::dttsp-iambic norm}
     keyer_iambic {keyer::iambic norm}
     keyer_ptt {keyer::ptt norm}
@@ -64,6 +77,7 @@ array set data {
     oscillator_td {sdrkit::oscillator-td norm}
     oscillator_z {sdrkit::oscillator-z norm}
     oscillator_zd {sdrkit::oscillator-zd norm}
+    window {sdrkit::window no-jack}
 }
 
 array set options {

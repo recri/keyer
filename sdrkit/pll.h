@@ -23,12 +23,7 @@
 #ifndef PLL_H
 #define PLL_H
 
-#include <complex.h>
-#include <math.h>
-
-#ifndef TWOPI
-#define TWOPI (2.0*M_PI)
-#endif
+#include "dmath.h"
 
 typedef struct {
     float alpha, beta;
@@ -38,8 +33,8 @@ typedef struct {
     float _Complex delay;
 } pll_t;
 
-static void *pll_init(const pll_t *p, const int sample_rate, const float f_initial, const float f_lobound, const float f_hibound, const float f_bandwid) {
-  float fac = (TWOPI / sample_rate);
+static void *pll_init(pll_t *p, const int sample_rate, const float f_initial, const float f_lobound, const float f_hibound, const float f_bandwid) {
+  float fac = (two_pi / sample_rate);
   p->freq.f = f_initial * fac;
   p->freq.l = f_lobound * fac;
   p->freq.h = f_hibound * fac;
@@ -67,6 +62,7 @@ static void pll(pll_t *p, float _Complex sig, float wgt) {
 
   p->phs += p->freq.f + p->alpha * diff;
 
-  while (p->phs >= TWOPI) p->phs -= TWOPI;
-  while (p->phs < 0) p->phs += TWOPI;
+  while (p->phs >= two_pi) p->phs -= two_pi;
+  while (p->phs < 0) p->phs += two_pi;
 }
+#endif

@@ -35,6 +35,9 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/audio_tap.so \
 	$(LIBDIR)/constant.so \
+	$(LIBDIR)/demod_am.so \
+	$(LIBDIR)/demod_fm.so \
+	$(LIBDIR)/demod_sam.so \
 	$(LIBDIR)/filter_biquad.so \
 	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
@@ -84,11 +87,23 @@ $(LIBDIR)/audio_tap.so: audio_tap.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../sdrkit/filter_biquad.h
+$(LIBDIR)/constant.so: constant.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/constant.so: constant.c framework.h
+$(LIBDIR)/demod_am.so: demod_am.c framework.h ../sdrkit/am_demod.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/demod_fm.so: demod_fm.c framework.h ../sdrkit/fm_demod.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/demod_sam.so: demod_sam.c framework.h ../sdrkit/sam_demod.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../sdrkit/filter_biquad.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

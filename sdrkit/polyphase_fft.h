@@ -20,7 +20,33 @@
 #define POLYPHASE_H
 /*
 ** Implement the polyphase spectrum pre-fft filtering
+**
+** Some notes.
+**
+** There was a discussion of polyphase fft at http://www.dsprelated.com/showmessage/45449/1.php
+** Unfortunately, most of the links mentioned are dead.
+**
+** This is based on the dttsp-cgran-r624 sources.
+**
+** The implementation happens entirely in the fftw and in the choice of window function passed to it.
+** A normal fft has a window the same size as the fft.  A polyphase fft has a window which is some
+** integral multiple > 1 in size.
+**
+** The input samples to a fft are always convolved with the window, so
+**    for i in 0 .. size-1
+**	fft.input[i] = fft.input_sample[i] * fft.window[i]
+** is what happens with a normal window.
+**
+** In a polyphase fft, we get:
+**    for i in 0 .. size-1
+**	fft.input[i] = fft.input_sample[i] * fft.window[i] + fft.input_sample[i+size] * fft.window[i+size]
+** where the [i+size] gets replicated as often as necessary to consume the input samples and window.
+**
+** The window to a polyphase fft is a FIR low pass filter kernel.  It's referred to as the WOLAfir,
+** for Weighted OverLap Add.
+**
 */
+
 
 #endif
 

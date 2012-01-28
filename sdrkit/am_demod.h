@@ -24,7 +24,7 @@
    Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
-#include <complex.h>
+#include "dmath.h"
 
 typedef struct {
   float val;
@@ -40,12 +40,6 @@ static void *am_demod_init(am_demod_t *p) {
   p->dc = 0.0f;
   p->smooth = 0.0f;
   return p;
-}
-
-static void am_demod_configure(am_demod_t *p, am_demod_options_t *q) {
-}
-
-static void am_demod_preconfigure(am_demod_t *p, am_demod_options_t *q) {
 }
 
 static float _Complex am_demod_process(am_demod_t *p, const float _Complex in) {

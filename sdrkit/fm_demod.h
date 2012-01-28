@@ -23,9 +23,7 @@
 ** Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
-#include <complex.h>
-#include <math.h>
-
+#include "dmath.h"
 #include "pll.h"
 
 typedef struct {
@@ -41,7 +39,7 @@ void *fm_demod_init(fm_demod_t *p, const int sample_rate) {
   void *ep = pll_init(&p->pll, sample_rate, f_initial, f_lobound, f_hibound, f_bandwid);
   if (ep != &p->pll) return ep;
   p->afc = 0.0;
-  p->cvt = 0.45f * sample_rate / (M_PI * f_bandwid);
+  p->cvt = 0.45f * sample_rate / (pi * f_bandwid);
   return p;
 }  
 

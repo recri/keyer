@@ -29,8 +29,12 @@
 
 #include "framework.h"
 #include "../sdrkit/midi.h"
+#include "../sdrkit/filter_goertzel.h"
 
-typedef filter_goertzel_options_t options_t;
+typedef struct {
+  int chan, note;
+  filter_goertzel_options_t fg;
+} options_t;
   
 typedef struct {
   framework_t fw;
@@ -43,14 +47,16 @@ typedef struct {
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
-    filter_goertzel_configure(&dp->fg, &dp->opts);
+    filter_goertzel_configure(&dp->fg, &dp->opts.fg);
   }
 }
 
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
-  void *p = ring_buffer_init(&dp->ring, RING_SIZE, dp->buff); if (p != &dp->ring) return p;
-  dp->detone = (detone_t){ 0, 6000, 1, 1, 1, 1, 1 };
+  dp->opts.fg.sample_rate = sdrkit_sample_rate(&dp->fw);
+  void *p = filter_goertzel_preconfigure(&dp->fg, &dp->opts.fg); if (p != &dp->fg) return p;
+  filter_goertzel_configure(&dp->fg, &dp->opts.fg);
+  dp->power = 0.0f;
   return arg;
 }
 
@@ -67,16 +73,24 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _update(dp);
   // for all frames in the buffer
   for(int i = 0; i < nframes; i++) {
-    float x = filter_goertzel_process(&dp->fg, *in++);
-    if (x != dp->power) {
-      // this may happen at dp->opts.bandwidth or at lower frequency
+    if (filter_goertzel_process(&dp->fg, *in++)) {
+      // this may happen at dp->opts.fg.bandwidth or at lower frequency
       // need to decide whether this warrants a midi transition on output
-      dp->power = x;
+      dp->power = dp->fg.power;
     }
   }
   return 0;
 }
 
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2) {
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+    return TCL_ERROR;
+  }
+  _t *data = (_t *)clientData;
+  Tcl_SetObjResult(interp, Tcl_NewDoubleObj(data->power));
+  return TCL_OK;
+}
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
@@ -84,9 +98,9 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = (data->opts.hertz != save.hertz || data->opts.bandwidth != save.bandwidth);
+  data->modified = (data->opts.fg.hertz != save.fg.hertz || data->opts.fg.bandwidth != save.fg.bandwidth);
   if (data->modified) {
-    void *e = filter_goertzel_preconfigure(&data->fg, &data->opts); if (e != &data->fg) {
+    void *e = filter_goertzel_preconfigure(&data->fg, &data->opts.fg); if (e != &data->fg) {
       data->opts = save;
       data->modified = 0;
       Tcl_SetResult(interp, (char *)e, TCL_STATIC);
@@ -100,13 +114,14 @@ static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-chan",      "channel",   "Channel", "1",     fw_option_int,   fw_flag_none, offsetof(_t, opts.chan),      "midi channel used for keyer" },
   { "-note",      "note",      "Note",    "0",	   fw_option_int,   fw_flag_none, offsetof(_t, opts.note),      "base midi note used for keyer" },
-  { "-freq",      "freq",      "AFHertz", "800.0", fw_option_float, fw_flag_none, offsetof(_t, opts.hertz),     "frequency to tune in Hz"  },
-  { "-bandwidth", "bandwidth", "BWHertz", "100.0", fw_option_float, fw_flag_none, offsetof(_t, opts.bandwidth), "bandwidth of output signal in Hz" },
+  { "-freq",      "freq",      "AFHertz", "800.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
+  { "-bandwidth", "bandwidth", "BWHertz", "100.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
+  { "get",   _get,   "fetch the current detected power of the filter" },
   { NULL }
 };
 
