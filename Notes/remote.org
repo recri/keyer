@@ -1,0 +1,32 @@
+* How to connect remote hardware and clients?
+  So, the future of sdr is to distribute functionality over multiple
+  machines wired together over the network.  So rather than writing a
+  bespoke interface to my sound card and usbsoftrock controller, I'd
+  rather pick a nice common interface and plug into that.
+
+  So, the QtRadio/ghpsdr project seems like a good candidate.  I'm
+  looking at ~/Sources/ghpsdr3-alex/trunk/src/dspserver/ozy.c and
+  thinking of whether I want to figure it out to write a jack audio
+  adapter device to interface that into my radio functions, and I'm
+  not feeling like the code in there is what I want to deal with.
+
+  There's an iq thread that receives samples from the remote, passes
+  them into an audio callback, and sends the (possibly resampled)
+  response samples back to the remote.  Simple enough.  But there's
+  also an command port that's sending strings back and forth.  Also
+  simple enough.  But then there's also some other audio processing
+  going on.  And all the variables are global, so don't even think of
+  trying to run more than one.  Maybe I'll feel more comfortable with
+  it next week.
+
+  On the other hand, when I go to
+  ~/Sources/jack-1.9.8/jack-1.9.8/common/JackNet* I find a collection
+  of files which implement networked Jack connections. These can
+  contain audio and midi channels. So all I need to do is invent some
+  midi sysex conventions for passing control information back and
+  forth (probably just steal the hamlib-tcl interface) and run a jack
+  midi-hamlib bridge on the hardware server.
+
+  So convert all this ghpsdr3 code, which gets me the various hardware
+  interfaces for free, or use jack, stick with sound cards, and make a
+  hamlib bridge.

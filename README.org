@@ -25,7 +25,7 @@
 ** Required packages
    Using your preferred Ubuntu package manager, you want to install
    the following packages:
-   | build-essentials   |
+   | build-essential    |
    | git-core           |
    | jackd2             |
    | libfftw3-dev       |
@@ -38,7 +38,7 @@
 
    The "apt-get" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt-get install build-essentials git-core jackd2 libfftw3-dev libjack-jackd2-dev qjackctl tk-dev
+   sudo apt-get install build-essential git-core jackd2 libfftw3-dev libjack-jackd2-dev qjackctl tk-dev
    #+END_EXAMPLE
 
    Note that Ubuntu 11.10 has some confusion in the packaging of jackd.
