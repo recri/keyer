@@ -18,6 +18,8 @@
 #ifndef OSCILLATOR_H
 #define OSCILLATOR_H
 
+#include "dmath.h"
+
 #if ! defined(OSCILLATOR_F) && ! defined(OSCILLATOR_T) && ! defined(OSCILLATOR_Z)
 #error "oscillator.h has no implementation selected"
 #endif
@@ -47,9 +49,6 @@ static const float oone = 1.0f;
 #endif
 
 #ifdef OSCILLATOR_F
-
-#include "dmath.h"
-
 /*
 ** oscillator - a recursive filter
 */
@@ -83,9 +82,6 @@ static float complex oscillator_process(oscillator_t *o) {
 #endif
 
 #ifdef OSCILLATOR_T
-
-#include "dmath.h"
-
 /*
 ** oscillator - a trigonometric function
 */
@@ -109,10 +105,7 @@ static float complex oscillator_process(oscillator_t *o) {
 }
 #endif
 
-#if OSCILLATOR_Z
-
-#include "dmath.h"
-
+#ifdef OSCILLATOR_Z
 /*
 ** oscillator - a complex rotor
 */

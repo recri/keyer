@@ -46,11 +46,11 @@ static void *sam_demod_init(sam_demod_t *p, const int sample_rate) {
   return p;
 }
 
-static float _Complex sam_demod_process(sam_demod_t *p, float _Complex sig) {
-  pll(&p->pll, sig, cabs(sig));
+static float sam_demod_process(sam_demod_t *p, float _Complex sig) {
+  pll(&p->pll, sig, cabsf(sig));
   p->lock = 0.999f * p->lock + 0.001f * fabsf(cimag(p->pll.delay));
-  p->dc = 0.9999f * p->dc + 0.0001f * creal(p->pll.delay);
-  float demout =  creal(p->pll.delay) - p->dc;
-  return demout + I * demout;
+  p->dc = 0.9999f * p->dc + 0.0001f * crealf(p->pll.delay);
+  float demout =  crealf(p->pll.delay) - p->dc;
+  return demout;
 }
 #endif

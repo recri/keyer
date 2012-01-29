@@ -31,7 +31,7 @@ typedef struct {
   float afc, cvt;
 } fm_demod_t;
 
-void *fm_demod_init(fm_demod_t *p, const int sample_rate) {
+static void *fm_demod_init(fm_demod_t *p, const int sample_rate) {
   const float f_initial = 0.0f;
   const float f_lobound = -6000.0f;
   const float f_hibound =  6000.0f;
@@ -43,11 +43,10 @@ void *fm_demod_init(fm_demod_t *p, const int sample_rate) {
   return p;
 }  
 
-float _Complex fm_demod_process(fm_demod_t *p, const float _Complex sig) {
+static float fm_demod_process(fm_demod_t *p, const float _Complex sig) {
   pll(&p->pll, sig, 1.0f);
   p->afc = 0.9999f * p->afc + 0.0001f * p->pll.freq.f;
-  float demout = (p->pll.freq.f - p->afc) * p->cvt;
-  return demout + I * demout;
+  return (p->pll.freq.f - p->afc) * p->cvt;
 }
 
 #endif

@@ -20,6 +20,8 @@
 /*
 */
 
+#define FRAMEWORK_USES_JACK 1
+
 #include "../sdrkit/am_demod.h"
 #include "framework.h"
 
@@ -42,12 +44,10 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
   float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
   float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
-  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float _Complex z = am_demod_process(&data->am, *in0++ + I * *in1++);
-    *out0++ = crealf(z);
-    *out1++ = cimagf(z);
+    float y = am_demod_process(&data->am, *in0++ + I * *in1++);
+    *out0++ = y;
   }
   return 0;
 }
@@ -74,7 +74,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  2, 1, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "an AM demodulation component"
 };
 

@@ -20,12 +20,11 @@
 /*
 */
 
-#include "framework.h"
+#define FRAMEWORK_USES_JACK 0
 
-#include <math.h>
-#include <complex.h>
-
+#include "../sdrkit/dmath.h"
 #include "../sdrkit/window.h"
+#include "framework.h"
 
 /*
 ** create a window module which generates
@@ -114,8 +113,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  /* no -server or -client, not a jack client */
-  { "-verbose", "verbose", "Verbose", "0",     fw_option_int,   fw_flag_none,	     offsetof(_t, fw.verbose),   "amount of diagnostic output" },
+#include "framework_options.h"
   { "-type", "type", "Type", "blackmanharris", fw_option_obj, 0, offsetof(_t, opts.type), "window type name" },
   { "-size", "size", "Size", "1024",	       fw_option_int, 0, offsetof(_t, opts.size), "window size" },
   { NULL }

@@ -15,24 +15,22 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
+
 /*
-
-  keyer_decode reads midi note on and note off, infers a dit clock,
-  and produces a string of dits, dahs, and spaces.
-    
-  It currently gets confused if it starts on something that's all
-  dah's and spaces, so I'm cheating and sending the wpm from the
-  keyers.  It should wait until it's seen both dits and dahs before
-  making its first guesses.
-
+** keyer_detone uses a Goertzel filter to track the power on a specific tone
+**
+** a version with 128 stacked filters (one per MIDI note) might be nice once
+** I understand how to decide what's on and what's off.
 */
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI 1
 
-#include "framework.h"
-#include "../sdrkit/midi.h"
 #include "../sdrkit/filter_goertzel.h"
+#include "../sdrkit/midi.h"
+#include "framework.h"
 
 typedef struct {
-  int chan, note;
+#include "framework_options_vars.h"
   filter_goertzel_options_t fg;
 } options_t;
   
@@ -112,9 +110,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-chan",      "channel",   "Channel", "1",     fw_option_int,   fw_flag_none, offsetof(_t, opts.chan),      "midi channel used for keyer" },
-  { "-note",      "note",      "Note",    "0",	   fw_option_int,   fw_flag_none, offsetof(_t, opts.note),      "base midi note used for keyer" },
-  { "-freq",      "freq",      "AFHertz", "800.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
+  { "-freq",      "frequency", "AFHertz", "800.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
   { "-bandwidth", "bandwidth", "BWHertz", "100.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
   { NULL }
 };

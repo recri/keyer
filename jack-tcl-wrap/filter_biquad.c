@@ -19,10 +19,11 @@
 
 /*
 */
+#define FRAMEWORK_USES_JACK 1
 
-#include "framework.h"
 #include "../sdrkit/dmath.h"
 #include "../sdrkit/filter_biquad.h"
+#include "framework.h"
 
 typedef filter_biquad_options_t options_t;
 

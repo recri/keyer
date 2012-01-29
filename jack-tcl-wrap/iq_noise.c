@@ -19,6 +19,7 @@
 
 /*
 */
+#define FRAMEWORK_USES_JACK 1
 
 #include "../sdrkit/iq_noise.h"
 #include "framework.h"

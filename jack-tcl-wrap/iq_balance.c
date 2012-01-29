@@ -21,10 +21,10 @@
 ** create an IQ balancer module which adjusts the phase and relative magnitude of an IQ channel
 ** 
 */
-
-#include "framework.h"
+#define FRAMEWORK_USES_JACK 1
 
 #include "../sdrkit/iq_balance.h"
+#include "framework.h"
 
 typedef iq_balance_options_t options_t;
 

@@ -1,0 +1,106 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set libdir [file normalize [file join [file dirname [info script]] .. lib sdrkit]]
+set so [info sharedlibextension]
+
+#
+# examine the global names defined and undefined in each loadable library
+#
+
+set nfiles 0
+foreach file [glob [file join $libdir *$so]] {
+    set basefile [file tail $file]
+    incr nfiles
+    foreach symbol [split [exec nm -g $file] \n] {
+	set symbol [string trim $symbol]
+	switch [llength $symbol] {
+	    2 {
+		# undefined
+		lassign $symbol tag name
+		lappend undefined($name) [list $basefile $tag]
+	    }
+	    3 {
+		# defined
+		lassign $symbol value tag name
+		lappend defined($name) [list $basefile $tag]
+	    }
+	}
+    }
+}
+
+puts "$nfiles files examined"
+puts "[array size undefined] undefined global symbols"
+foreach name [lsort [array names undefined]] {
+    switch -glob $name {
+	_Jv_RegisterClasses -
+	__cxa_finalize@@* -
+	__fprintf_chk@@* -
+	__gmon_start__ -
+	__snprintf_chk@@* -
+	__stack_chk_fail@@* -
+	cosf@@* -
+	fftwf_* -
+	fwrite@@* -
+	getenv@@* -
+	initstate_r@@* -
+	jack_* -
+	memcpy@@* -
+	memset@@* -
+	random_r@@* -
+	snprintf@@* -
+	srandom_r@@* -
+	stderr@@* -
+	strcmp@@* -
+	strrchr@@* {
+	    continue
+	}
+    }
+    puts "$name $undefined($name)"
+}
+
+puts "[array size defined] defined global symbols"
+foreach name [lsort [array names defined]] {
+    if {[regexp {^.*_Init} $name]} {
+	if {[llength $defined($name)] == 1} {
+	    incr initfunc
+	    continue
+	}
+    }
+    switch -glob $name {
+	tclIntPlatStubsPtr -
+	tclIntStubsPtr -
+	tclPlatStubsPtr -
+	tclStubsPtr -
+	tclTomMathStubsPtr -
+	TclTomMathInitializeStubs -
+	Tcl_InitStubs -
+	__bss_start -
+	_edata -
+	_end -
+	_fini -
+	_init {
+	    continue
+	}
+    }
+    puts "$name [llength $defined($name)] appearances"
+}
+
+puts "$initfunc Tcl initialization functions singly defined"

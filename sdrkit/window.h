@@ -135,7 +135,7 @@ static void window_make(const window_type_t type, const int size, float *window)
     const float freq = two_pi / size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq)
-      window[j] = (window[i] = (float) (0.5 - 0.5 * cos(angle)));
+      window[j] = (window[i] = (float) (0.5 - 0.5 * cosf(angle)));
     break;
   }
   case WINDOW_WELCH: {
@@ -168,7 +168,7 @@ static void window_make(const window_type_t type, const int size, float *window)
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq)
-      window[j] = (window[i] = (float) (0.54 - 0.46 * cos(angle)));
+      window[j] = (window[i] = (float) (0.54 - 0.46 * cosf(angle)));
     break;
   }
   case WINDOW_BLACKMAN2: {	/* using Chebyshev polynomial equivalents here */
@@ -176,7 +176,7 @@ static void window_make(const window_type_t type, const int size, float *window)
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
-      float cx = (float) cos(angle);
+      float cx = (float) cosf(angle);
       window[j] = window[i] = (.34401 + (cx * (-.49755 + (cx * .15844))));
     }
     break;
@@ -186,7 +186,7 @@ static void window_make(const window_type_t type, const int size, float *window)
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
-      float cx = (float) cos(angle);
+      float cx = (float) cosf(angle);
       window[j] = window[i] = (float)
 	(.21747 +
 	 (cx *
@@ -199,7 +199,7 @@ static void window_make(const window_type_t type, const int size, float *window)
     const float freq = two_pi / (float) size;
     float angle = 0.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
-      float cx = (float) cos(angle);
+      float cx = (float) cosf(angle);
       window[j] = (window[i] = (float)
 		   (.084037 +
 		    (cx *

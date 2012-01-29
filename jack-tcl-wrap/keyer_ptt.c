@@ -31,14 +31,15 @@
     
 */
 
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI 1
+
 #include "framework.h"
 #include "../sdrkit/midi.h"
 #include "../sdrkit/midi_buffer.h"
 
 typedef struct {
-  int verbose;		       /*  */
-  int chan;		       /* midi channel */
-  int note;		       /* midi note for keyer, ptt = note+1 */
+#include "framework_options_vars.h"
   float ptt_delay;	       /* seconds ptt on leads keyer on */
   float ptt_hang;	       /* seconds ptt off trails keyer off */
 } options_t;
@@ -172,7 +173,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-#include "framework_midi_options.h"
   // ptt options
   { "-delay",   "delay",   "Delay",   "0.0",      fw_option_float, 0, offsetof(_t, opts.ptt_delay), "delay of keyer on behind ptt on in seconds" },
   { "-hang",    "hang",    "Hang",    "1.0",      fw_option_float, 0, offsetof(_t, opts.ptt_hang),  "hang time of ptt off behind keyer off in seconds" },

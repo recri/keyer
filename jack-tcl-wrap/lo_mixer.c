@@ -21,6 +21,8 @@
 ** a local oscillator-mixer combination
 */
 
+#define FRAMEWORK_USES_JACK 1
+
 #include "framework.h"
 #include "../sdrkit/lo_mixer.h"
 

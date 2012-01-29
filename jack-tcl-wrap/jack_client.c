@@ -17,6 +17,8 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
+#define FRAMEWORK_USES_JACK 1
+
 #include "framework.h"
 
 typedef struct {

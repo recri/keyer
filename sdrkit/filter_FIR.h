@@ -35,42 +35,36 @@
 /*
 ** a lowpass real filter is used to implement polyphase spectra
 */
-static float *lowpass_real(float cutoff, float sr, int size, float *coeff, float *window) {
+static void *lowpass_real(float cutoff, float sr, int size, float *coeff, float *window) {
   if ((cutoff < 0.0) || (cutoff > (sr / 2.0)))
-    return "cutoff out of range";
+    return (void *)"cutoff out of range";
   if (size < 1)
-    return "size too small";
+    return (void *)"size too small";
   if ((size & 1) == 0)
-    return "size not odd";
-  float *h = coeff;
-  float *w = window;
+    return (void *)"size not odd";
   float fc = cutoff / sr;
   int midpoint = (size >> 01) | 01;
-  // do this outside this call
-  // (void) makewindow(BLACKMANHARRIS_WINDOW, size, w);
   for (int i = 1; i <= size; i++) {
     int j = i - 1;
     if (i != midpoint)
-      h[j] = (sinf(twopi * (i - midpoint) * fc) / (pi * (i - midpoint))) * w[j];
+      coeff[j] = (sinf(two_pi * (i - midpoint) * fc) / (pi * (i - midpoint))) * window[j];
     else
-      h[midpoint - 1] = 2.0f * fc;
+      coeff[midpoint - 1] = 2.0f * fc;
   }
-  return coeff;
+  return (void *)coeff;
 }
 
 /*
 ** a complex bandpass filter is used to implement the radio bandpass
 */
-static float _Complex *bandpass_complex(float lo, float hi, float sr, int size, float _Complex *coeff, float *window) {
+static void *bandpass_complex(float lo, float hi, float sr, int size, float _Complex *coeff, float *window) {
   if ((lo < -(sr / 2.0)) || (hi > (sr / 2.0)) || (hi <= lo))
-    return "lo frequency and/or hi frequency out of bounds";
+    return (void *)"lo frequency and/or hi frequency out of bounds";
   if (size < 1)
-    return "size too small";
+    return (void *)"size too small";
   if ((size&1) != 0)
-    return "size not odd";
+    return (void *)"size not odd";
 
-  float _Complex *h = coeff;
-  float *w = window;
   float fc;
   float ff;
   int midpoint = (size >> 01) | 01;
@@ -82,13 +76,13 @@ static float _Complex *bandpass_complex(float lo, float hi, float sr, int size, 
     int j = i - 1, k = i - midpoint;
     float tmp, phs = ff * k;
     if (i != midpoint)
-      tmp = (sinf(twopi * k * fc) / (pi * k)) * w[j];
+      tmp = (sinf(two_pi * k * fc) / (pi * k)) * window[j];
     else
       tmp = 2.0f * fc;
     tmp *= 2.0f;
-    h[j] = tmp * (cosf(phs) + I * sinf(phs));
+    coeff[j] = tmp * (cosf(phs) + I * sinf(phs));
   }
-  return coeff;
+  return (void *)coeff;
 }
 
 #endif

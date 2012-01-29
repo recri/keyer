@@ -35,16 +35,18 @@
   greek, hebrew, and wabun (the japanese kana coding).
 */
 
-#define KEYER_OPTIONS_TIMING	1
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI	1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING	1
 
-#include "framework.h"
 #include "../sdrkit/midi.h"
 #include "../sdrkit/midi_buffer.h"
 #include "../sdrkit/morse_timing.h"
 #include "../sdrkit/morse_coding.h"
+#include "framework.h"
 
 typedef struct {
-  #include "keyer_options_var.h"
+  #include "framework_options_vars.h"
   Tcl_Obj *dict;
 } options_t;
 
@@ -276,7 +278,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-#include "keyer_options_def.h"
   { "-dict",	"dict",     "Morse",  NULL,	  fw_option_dict, 0,  offsetof(_t, opts.dict),	 "morse code dictionary" },
   { NULL }
 };

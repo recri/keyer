@@ -23,7 +23,7 @@
 ** with sine ramped attack and decay
 */
 
-#include <math.h>
+#include "dmath.h"
 #include "oscillator.h"
 #include "sine_ramp.h"
 

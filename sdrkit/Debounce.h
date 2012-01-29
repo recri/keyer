@@ -62,15 +62,15 @@ extern "C" {
   typedef struct {
     int steps;
   } debounce_options_t;
-  void *debounce_init(debounce_t *p, debounce_options_t *q) {
+  static void *debounce_init(debounce_t *p, debounce_options_t *q) {
     return p;
   }
-  void debounce_configure(debounce_t *p, debounce_options_t *q) {
+  static void debounce_configure(debounce_t *p, debounce_options_t *q) {
     p->debounce.setSteps(q->steps);
   }
-  void debounce_preconfigure(debounce_t *p, debounce_options_t *q) {
+  static void debounce_preconfigure(debounce_t *p, debounce_options_t *q) {
   }
-  int debounce_process(debounce_t *p, int input) {
+  static int debounce_process(debounce_t *p, int input) {
     return p->debounce.debounce(input);
   }
 }

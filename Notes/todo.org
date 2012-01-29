@@ -5,9 +5,14 @@
    the linear magnitude of voltage signals.  Absolute levels
    should be referenced dBFS, full scale, so to the power of a sine
    wave that touches +1 and -1 peak-to-peak, 0.775 RMS.
+** TODO - figure out where the bad values in duelling oscillators come from
 ** TODO - normalize the output of spectrum to the size of the fft
    The fft spectrum output taken from dttsp is unnormalized, it should
    be weighted by 1/sqrt(size-of-fft) somewhere.
+** TODO - get networked audio from the softrock
+** TODO - build the input stage for the radio
+   iq correct with visual metering and adaptive mu, panoramic display,
+** TODO - interface with hamlib for rig control
 ** TODO - build an adaptive adaptive filter IQ corrector
    Increases mu to increase convergence when the filter is adapting, then
    decreases mu to refine convergence when the filter has found the vicinity
@@ -19,6 +24,8 @@
 ** TODO - make all the components consistent with evolving conventions.
    This is a tough one since I haven't finished evolving the conventions.
 ** TODO - polyphase fft for spectrum
+** TODO - factor pileup so it can be used as a signal generator
+** TODO - reexamine iq_noise to see if it's correct
 ** TODO - check that command deletion cleans up object valued options
    or make a framework function to deal with it.
 ** TODO - check that failed configure doesn't lose object valued options

@@ -20,6 +20,8 @@
 /*
 */
 
+#define FRAMEWORK_USES_JACK 1
+
 #include "framework.h"
 #include "../sdrkit/midi_buffer.h"
 

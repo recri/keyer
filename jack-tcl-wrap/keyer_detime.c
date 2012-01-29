@@ -27,14 +27,16 @@
 
 */
 
-#define KEYER_OPTIONS_TIMING	1
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI	1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING	1
 
 #include "framework.h"
 #include "../sdrkit/midi.h"
 #include "../sdrkit/ring_buffer.h"
 
 typedef struct {
-#include "keyer_options_var.h"
+#include "framework_options_vars.h"
 } options_t;
   
 typedef struct {
@@ -235,7 +237,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-#include "keyer_options_def.h"
   { NULL }
 };
 

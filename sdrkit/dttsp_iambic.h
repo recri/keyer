@@ -257,11 +257,11 @@ extern "C" {
     int weight;
   } dttsp_iambic_options_t;
 
-  void *dttsp_iambic_init(dttsp_iambic_t *p, dttsp_iambic_options_t *q) {
+  static void *dttsp_iambic_init(dttsp_iambic_t *p, dttsp_iambic_options_t *q) {
     return p;
   }
 
-  void dttsp_iambic_configure(dttsp_iambic_t *p, dttsp_iambic_options_t *q) {
+  static void dttsp_iambic_configure(dttsp_iambic_t *p, dttsp_iambic_options_t *q) {
     p->k.set_wpm(q->wpm);
     if (q->mode == 'A')
       p->k.set_iambicmode_a();
@@ -274,7 +274,7 @@ extern "C" {
     p->k.set_weight(q->weight);
   }
 
-  int dttsp_iambic_process(dttsp_iambic_t *p, int dit, int dah, float tick_ms) {
+  static int dttsp_iambic_process(dttsp_iambic_t *p, int dit, int dah, float tick_ms) {
     return p->k.clock(dit, dah, tick_ms);
   }
 }

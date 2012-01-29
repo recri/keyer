@@ -15,38 +15,21 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-
-#ifndef AM_DEMOD_H
-#define AM_DEMOD_H
-
-/*
-** AM demodulation - rewritten from dttsp
-   Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
-*/
-
-#include "dmath.h"
-
-typedef struct {
-  float val;
-  float dc;
-  float smooth;
-} am_demod_t;
-
-typedef struct {
-} am_demod_options_t;
-
-static void *am_demod_init(am_demod_t *p) {
-  p->val = 0.0f;
-  p->dc = 0.0f;
-  p->smooth = 0.0f;
-  return p;
-}
-
-static float am_demod_process(am_demod_t *p, const float _Complex in) {
-  p->val = cabsf(in);
-  p->dc = 0.9999f * p->dc + 0.0001f * p->val;
-  p->smooth = 0.5f * p->smooth + 0.5f * (p->val - p->dc);
-  return p->smooth;
-}
-
+#ifndef FRAMEWORK_OPTIONS_VARS_H
+#define FRAMEWORK_OPTIONS_VARS_H
+#if FRAMEWORK_OPTIONS_MIDI
+// midi options
+int chan, note;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_TONE
+// tone options    
+float freq, gain, rise, fall;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_TIMING
+// timing options
+float word, wpm, dah, ies, ils, iws;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS
+int swap, alsp, awsp, mode;
+#endif
 #endif

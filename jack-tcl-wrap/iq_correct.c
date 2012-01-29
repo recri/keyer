@@ -21,10 +21,10 @@
 ** create an IQ corrector module which adaptively adjusts the phase and
 ** relative magnitudes of the I and Q channels to balance.
 */
-
-#include "framework.h"
+#define FRAMEWORK_USES_JACK 1
 
 #include "../sdrkit/iq_correct.h"
+#include "framework.h"
 
 typedef iq_correct_options_t options_t;
 

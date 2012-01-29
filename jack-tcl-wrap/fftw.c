@@ -20,13 +20,12 @@
 /*
 */
 
-#include <complex.h>
-#define __USE_XOPEN
-#include <math.h>
-#include <fftw3.h>
+#define FRAMEWORK_USES_JACK 0
 
-#include "framework.h"
+#include "../sdrkit/dmath.h"
 #include "../sdrkit/window.h"
+#include "framework.h"
+#include <fftw3.h>
 
 /*
 ** create a complex 1d fft
@@ -138,8 +137,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  /* no -server or -client, not a jack client */
-  { "-verbose", "verbose", "Verbose", "0",     fw_option_int,   fw_flag_none,	     offsetof(_t, fw.verbose),   "amount of diagnostic output" },
+#include "framework_options.h"
   { "-size",     "size",     "Samples",   "4096", fw_option_int, 0,	offsetof(_t, opts.size),        "size of fft computed" },
   { "-planbits", "planbits", "Planbits",  "0",	  fw_option_int, 0,	offsetof(_t, opts.planbits),    "fftw plan bits" },
   { "-window",   "window",   "Window",    "11",   fw_option_int, 0,	offsetof(_t, opts.window_type), "window used in fft, integer from sdrkit/window.h" },

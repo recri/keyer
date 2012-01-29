@@ -21,7 +21,6 @@
 #include <complex.h>
 #include <math.h>
 
-
 /*
 ** this comes from http://faust.grame.fr/
 */
@@ -38,7 +37,6 @@
 #else
     #define AVOID_DENORMALS 
 #endif
-
 
 static const float pi = 3.14159265358979323846f;		/* pi */
 static const float half_pi = 1.57079632679489661923f;		/* pi/2 */

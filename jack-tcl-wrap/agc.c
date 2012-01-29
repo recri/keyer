@@ -38,8 +38,10 @@
 ** some tests to see what it does and doesn't do.
 */
 
-#include "framework.h"
+#define FRAMEWORK_USES_JACK 1
+
 #include "../sdrkit/agc.h"
+#include "framework.h"
 /*
 ** create an automatic gain control module
 ** many scalar parameters

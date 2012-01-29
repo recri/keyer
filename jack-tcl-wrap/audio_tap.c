@@ -20,9 +20,9 @@
 /*
 */
 
-#include <complex.h>
-#include <math.h>
+#define FRAMEWORK_USES_JACK 1
 
+#include "../sdrkit/dmath.h"
 #include "framework.h"
 
 /*

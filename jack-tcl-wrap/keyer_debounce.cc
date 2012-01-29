@@ -25,23 +25,22 @@
 
 typedef unsigned char byte;
 
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI 1
+
 #include "../sdrkit/Debounce.h"
 
 extern "C" {
 
-#include "framework.h"
 #include "../sdrkit/midi.h"
+#include "framework.h"
 
 #ifndef DEBOUNCE_N_NOTES
 #define DEBOUNCE_N_NOTES 3
 #endif
 
   typedef struct {
-    int verbose;	  /*  */
-    int chan;		  /* midi channel */
-    int note;		  /* midi note for dit */
-			  /* note+1 = dah */
-			  /* note+2 =  */
+#include "framework_options_vars.h"    
     float period;	  /* period of input sampling, seconds */
     int steps;		  /* number of periods of stability desired */
   } options_t;
@@ -172,7 +171,6 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-#include "framework_midi_options.h"    
     // debounce options
     { "-period",  "period",  "Period",   "0.0002",  fw_option_float, fw_flag_none, offsetof(_t, opts.period), "key sampling period in seconds" },
     { "-steps",   "steps",   "Steps",    "6",       fw_option_int,   fw_flag_none, offsetof(_t, opts.steps),  "number of consistent samples define stability" },

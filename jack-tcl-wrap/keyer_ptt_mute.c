@@ -19,19 +19,18 @@
 
 /*
 */
-
-#include "framework.h"
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI 1
 #include "../sdrkit/dmath.h"
 #include "../sdrkit/midi.h"
+#include "framework.h"
 
 /*
 ** a gain module which listens for a midi ptt signal
 ** and mutes the audio until the ptt goes low
 */
 typedef struct {
-  int verbose;
-  int chan;
-  int note;
+#include "framework_options_vars.h"
   float dBgain;
 } options_t;
 
@@ -134,7 +133,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-#include "framework_midi_options.h"
   { "-gain",   "gain",     "Gain",    "-30.0",   fw_option_float, 0, offsetof(_t, opts.dBgain),    "gain level in dB" },
   { NULL }
 };

@@ -20,17 +20,10 @@
 /*
 */
 
-/*
-** This should be widget configure|cget|start|stop
-** options: -frequency hertz -phase angle -gain dB
-** actually, phase doesn't work as an option
-*/
+#define FRAMEWORK_USES_JACK 1
 
-#include <math.h>
-#include <complex.h>
-
-#include "framework.h"
 #include "../sdrkit/oscillator.h"
+#include "framework.h"
 
 typedef struct {
   framework_t fw;

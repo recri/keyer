@@ -51,9 +51,9 @@ static void pll(pll_t *p, float _Complex sig, float wgt) {
   float _Complex z = cosf(p->phs) + I * sinf(p->phs);
   float diff;
 
-  p->delay = (creal(z) * creal(sig) + cimag(z) * cimag(sig)) +
-    I * (-cimag(z) * creal(sig) + creal(z) * cimag(sig));
-  diff = wgt * carg(p->delay);
+  p->delay = (crealf(z) * crealf(sig) + cimagf(z) * cimagf(sig)) +
+    I * (-cimagf(z) * crealf(sig) + crealf(z) * cimagf(sig));
+  diff = wgt * cargf(p->delay);
 
   p->freq.f += p->beta * diff;
 

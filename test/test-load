@@ -21,6 +21,8 @@
 set libdir [file normalize [file join [file dirname [info script]] .. lib sdrkit]]
 set so [info sharedlibextension]
 
+source [file join $libdir options.tcl]
+
 #
 # verify that each loadable library loads
 # and see what else works
@@ -36,171 +38,6 @@ switch -glob $result {
     }
     *started {}
     default { error "unknown jackd status: $result" }
-}
-
-#
-# array to identify which other tricks to try
-array set data {
-    agc {sdrkit::agc norm}
-    audio_tap {sdrkit::audio-tap atap}
-    constant {sdrkit::constant norm}
-    demod_am {sdrkit::demod-am norm}
-    demod_fm {sdrkit::demod-fm norm}
-    demod_sam {sdrkit::demod-sam norm}
-    fftw {sdrkit::fftw no-jack}
-    filter_biquad {sdrkit::filter-biquad norm}
-    gain {sdrkit::gain norm}
-    iq_balance {sdrkit::iq-balance norm}
-    iq_correct {sdrkit::iq-correct norm}
-    iq_noise {sdrkit::iq-noise norm}
-    iq_swap {sdrkit::iq-swap norm}
-    jack_client {sdrkit::jack-client norm}
-    keyer_ascii {keyer::ascii norm}
-    keyer_debounce {keyer::debounce norm}
-    keyer_detime {keyer::detime norm}
-    keyer_detone {keyer::detone norm}
-    keyer_dttsp_iambic {keyer::dttsp-iambic norm}
-    keyer_iambic {keyer::iambic norm}
-    keyer_ptt {keyer::ptt norm}
-    keyer_ptt_mute {keyer::ptt-mute norm}
-    keyer_tone {keyer::tone norm}
-    lo_mixer {sdrkit::lo-mixer norm}
-    midi_insert {sdrkit::midi-insert norm}
-    midi_tap {sdrkit::midi-tap norm}
-    mixer {sdrkit::mixer norm}
-    mono_to_iq {sdrkit::mono-to-iq norm}
-    noise {sdrkit::noise norm}
-    oscillator {sdrkit::oscillator norm}
-    oscillator_f {sdrkit::oscillator-f norm}
-    oscillator_fd {sdrkit::oscillator-fd norm}
-    oscillator_t {sdrkit::oscillator-t norm}
-    oscillator_td {sdrkit::oscillator-td norm}
-    oscillator_z {sdrkit::oscillator-z norm}
-    oscillator_zd {sdrkit::oscillator-zd norm}
-    window {sdrkit::window no-jack}
-}
-
-array set options {
-    -a1 {type float}
-    -a2 {type float}
-    -alsp {values {0 1} type integer}
-    -awsp {values {0 1} type integer}
-    -b0 {type float}
-    -b1 {type float}
-    -b2 {type float}
-    -chan {range {1 16} type integer}
-    -client {create-only 1 type string}
-    -dah {range {2.5 3.5} type float}
-    -delay {range {0 5000} type integer}
-    -dict {type dict}
-    -direction {values {-1 1} type integer}
-    -fall {range {1 10} type float}
-    -freq {range {-10000 10000} type float}
-    -gain {range {0 -160} type float}
-    -hang {range {0 10} type float}
-    -ies {range {0.5 1.5} type float}
-    -ils {range {2.5 3.5} type float}
-    -imag {type float}
-    -iws {range {6 8} type float}
-    -level {range {0 -160} type float}
-    -linear-gain {range {1e-6 1} type float}
-    -mdit {values {0 1} type integer} 
-    -mdah {values {0 1} type integer}
-    -mide {values {0 1} type integer}
-    -mode {values {A B} type string}
-    -mu {range {0 1} type float}
-    -note {range {0 127} type integer}
-    -period {range {10 10000} type float}
-    -planbits {type integer}
-    -real {type float}
-    -rise {range {1 10} type float}
-    -seed {create-only 1 type integer range {1 2147483648}}
-    -server {create-only 1 type string}
-    -sine-phase {range {-1.0 1.0} type float}
-    -size {range {1 10000} type integer}
-    -steps {values {1 64} type integer}
-    -swap {values {0 1} type integer}
-    -verbose {range {0 100} type integer}
-    -weight {range {25 75} type integer}
-    -window {range {0 12} type integer}
-    -word {range {50 60} type float}
-    -wpm {range {5 50} type float}
-}
-
-array set dbnames {
-    alsp {}
-    awsp {}
-    channel {}
-    client {}
-    dah {}
-    delay {}
-    dict {}
-    direction {}
-    fall {}
-    frequency {}
-    gain {}
-    hang {}
-    ies {}
-    ils {}
-    imag {}
-    iws {}
-    level {}
-    mdah {}
-    mdit {}
-    mide {}
-    mode {}
-    mu {}
-    note {}
-    period {}
-    phase {}
-    planbits {}
-    real {}
-    rise {}
-    seed {}
-    server {}
-    size {}
-    steps {}
-    swap {}
-    tap {}
-    verbose {}
-    weight {}
-    window {}
-    word {}
-    wpm {}
-}
-
-array set clnames {
-    Bool {}
-    Channel {}
-    Char {}
-    Client {}
-    Decibel {}
-    Decibels {}
-    Delay {}
-    Direction {}
-    Dits {}
-    Gain {}
-    Hang {}
-    Hertz {}
-    Imag {}
-    Memo {}
-    Mode {}
-    Morse {}
-    Mu {}
-    Note {}
-    Period {}
-    Phase {}
-    Planbits {}
-    Ramp {}
-    Real {}
-    Samples {}
-    Seed {}
-    Server {}
-    Steps {}
-    Tap {}
-    Verbose {}
-    Window {}
-    Words {}
 }
 
 array set results {
@@ -225,6 +62,7 @@ proc rand-float-in-range-not-equal-val {min max val} {
     return $newval
 }
 
+
 foreach file [glob [file join $libdir *$so]] {
     set module [file root [file tail $file]]
     if {[catch {load $file} error]} {
@@ -233,11 +71,12 @@ foreach file [glob [file join $libdir *$so]] {
     } else {
 	if {[catch {
 	    incr results(load-succeeded)
-	    if { ! [info exist data($module)]} {
+	    if { ! [sdrkit-module-has-info $module]} {
 		puts "no module data for $module"
 		continue
 	    } 
-	    lassign $data($module) factory type
+	    set factory [sdrkit-module-factory $module]
+	    set type [sdrkit-module-type $module]
 	    switch $type {
 		norm {
 		    if {[catch {$factory foo} error]} {
@@ -249,6 +88,7 @@ foreach file [glob [file join $libdir *$so]] {
 			continue
 		    }
 		    set opts $error
+		    sdrkit-option-note-configure $factory $opts
 		    set create {}
 		    foreach conf $opts {
 			foreach {opt dbname clname defval curval} $conf break
@@ -263,22 +103,22 @@ foreach file [glob [file join $libdir *$so]] {
 			} elseif {$error eq {}} {
 			    puts "factory $factory cdoc $opt returned blank"
 			}
-			if { ! [info exists options($opt)]} {
+			if { ! [sdrkit-option-has-info $opt]} {
 			    puts "no info on option $opt"
-			    set options($opt) 1
+			    sdrkit-option-mark-seen $opt
 			    continue;
 			}
-			if { ! [info exists dbnames($dbname)]} {
+			if { ! [sdrkit-dbname-has-info $dbname]} {
 			    puts "no info on option dbname $dbname"
-			    set dbnames($dbname) 1
+			    sdrkit-dbname-mark-seen $dbname
 			}
-			if { ! [info exists clnames($clname)]} {
+			if { ! [sdrkit-clname-has-info $clname]} {
 			    puts "no info on option clname $clname"
-			    set clnames($clname) 1
+			    sdrkit-clname-mark-seen $clname
 			}
 			
 			catch {array unset props}
-			array set props $options($opt)
+			array set props [sdrkit-get-props $factory $opt $dbname $clname]
 			switch $props(type) {
 			    integer {
 				if {$val != $defval} {
@@ -402,7 +242,7 @@ foreach file [glob [file join $libdir *$so]] {
 			}
 			set getval $error
 			catch {array unset props}
-			array set props $options($opt)
+			array set props [sdrkit-get-props $factory $opt $dbname $clname]
 			switch $props(type) {
 			    integer {
 				if {$val != $getval} {

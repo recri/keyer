@@ -20,14 +20,19 @@
 embed the dttsp_keyer, more work to do.    
 */
 
+
 #include "../sdrkit/dttsp_iambic.h"
 
 extern "C" {
+
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI 1
+
 #include "framework.h"
 #include "../sdrkit/midi.h"
 
   typedef struct {
-    int chan, note;
+#include "framework_options_vars.h"
     int swap;
     dttsp_iambic_options_t key_opts;
   } options_t;
@@ -149,8 +154,6 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-    { "-chan", "channel", "Channel", "1",    fw_option_int,     fw_flag_none, offsetof(_t, opts.chan), "midi channel used for keyer" },
-    { "-note", "note",    "Note",    "0",    fw_option_int,     fw_flag_none, offsetof(_t, opts.note), "base midi note used for keyer" },
     { "-swap", "swap",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap), "swap the dit and dah paddles" },
     { "-wpm",  "wpm",     "Words",   "18.0", fw_option_float,   fw_flag_none, offsetof(_t, opts.key_opts.wpm), "words per minute" },
     { "-mode", "mode",    "Mode",    "A",    fw_option_char,    fw_flag_none, offsetof(_t, opts.key_opts.mode), "iambic mode A or B" },

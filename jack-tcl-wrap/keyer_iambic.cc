@@ -31,14 +31,16 @@
 
 extern "C" {
 
-#define KEYER_OPTIONS_TIMING	1
-#define KEYER_OPTIONS_KEYER	1
+#define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI	1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING	1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS	1
 
 #include "framework.h"
 #include "../sdrkit/midi.h"
 
   typedef struct {
-#include "keyer_options_var.h"
+#include "framework_options_vars.h"
   } options_t;
 
   typedef struct {
@@ -166,7 +168,6 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-#include "keyer_options_def.h"
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 

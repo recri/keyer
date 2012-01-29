@@ -47,6 +47,41 @@
 **
 */
 
+static void *polyphase_fft_window(float sr, int size, int polys, float *coeff, float *window) {
+  void *e = lowpass_real(1.0, size, polys*size -1, coeff, window); if (e != coeff) return e;
+  coeff[polys*size-1] = 0.0f;
+  float maxTap = 0.0f;
+  for (int i = 0; i < polys*size-1; i += 1)
+    maxTap = maxf(maxTap, coeff[i]);
+  float normTap = 1.0f/maxTap;
+  for (int i = 0; i < polys*size-1; i += 1)
+    coeff[i] *= normTap;
+  return (void *)coeff;
+}
+
+#define COMPLEX_INTERLEAVED 1
+
+#if COMPLEX_INTERLEAVED
+static void *polyphase_fft_convolve(int size, int polys, float *coeff, float complex *inputs, float complex *outputs) {
+  for (int i = 0; i < size; i += 1) {
+    output[i] = coeff[i] * input[i];
+    for (int j = size; j < polys*size; j += size)
+      output[i] += coeff[j+i] * inputs[j+i];
+  }
+  return (void *)coeff;
+}
+#else
+static void *polyphase_fft_convolve(int size, int polys, float *coeff, float *ireal, float *iimag, float *oreal, float *oimag) {
+  for (int i = 0; i < size; i += 1) {
+    oreal[i] = coeff[i] * ireal[i];
+    oimag[i] = coeff[i] * iimag[i];
+    for (int j = size; j < polys*size; j += size) {
+      oreal[i] += coeff[j+i] * ireal[j+i];
+      oimag[i] += coeff[j+i] * iimag[j+i];
+    }
+  }
+  return (void *)coeff;
+}
 
 #endif
 
