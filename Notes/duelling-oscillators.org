@@ -1,0 +1,140 @@
+* Hams do it with oscillations
+  It's a fact, wouldn't get very far with CW or any kind of radio
+  without some kind of oscillator.  So how do we make a digital
+  oscillator?  I considered eight choices and implemented six of
+  them.  Then I tried to test the choices and ran into a snarl of
+  interesting problems.  I finally settled on a higher precision
+  version of the oscillator I was using from the start.
+** Use trig
+   The dttsp oscillators in cgran-r624 use the obvious solution:
+   #+BEGIN_EXAMPLE
+   float theta, dtheta;
+   void oscillator_init(float theta0, float hertz, float srate) {
+     theta = theta0;
+     dtheta = two_pi*hertz/srate;
+   }
+   float complex oscillator() {
+     theta += dtheta;
+     return cos(theta)+I*sin(theta);
+   }
+   #+END_EXAMPLE
+   This is the very definition of a complex valued sine wave.
+   It's unsatisfactory for two reasons.
+
+   First, the value of theta keeps growing and eventually it will
+   become large enough that the incremental theta change per sample
+   will become too small to make any change.  There are various ways
+   to fix that, but you end up needing:
+   #+BEGIN_EXAMPLE
+   while (theta > two_pi) theta -= two_pi;
+   while (theta < -two_pi) theta += two_pi;
+   #+END_EXAMPLE
+   inserted after each increment to phase.  Remember that this is a 
+   complex oscillator, so hertz could be negative.  Putting a decision 
+   in the DSP chain is expensive, you would rather just compute 
+   samples without introducing tests and branches. 
+
+   Second, the transcendental math functions are relatively expensive 
+   operations, and you'd rather not use expensive operations in a DSP 
+   function.
+   
+   The trig based oscillator is implemented as sdrkit::oscillator-t
+   and as sdrkit::oscillator-td.  The first one uses float's for its
+   internal computations, the second one uses double's.
+** Interpolate a table
+   The usual solution to expensive functions in audio processing is to
+   make a table and interpolate.  Rather than using radians as your
+   phase measure you use an unsigned integer which represents
+   radians/two_pi very neatly and wraps back on positive or negative
+   overflow.
+
+   I didn't implement this because I've been there, and done that.
+   When making a complex oscillator I would need to do two
+   interpolations per sample, one for cosine and one for sine.
+   My feeling is that while it might be cheap enough if you only do 
+   linear interpolation, as soon as you up the ante and evaluate a
+   quadratic term, your interpolation is getting more expensive than
+   the alternatives.
+** Use a clever formula
+   My preferred oscillator at the moment is a recursive filter
+   computation which I found in one of Julius Orion Smith III's papers
+   at https://ccrma.stanford.edu/~jos/.  I'm not going to insert its
+   definition here until I figure out why it works so well.
+
+   It's implemented as sdrkit::oscillator-f and sdrkit::oscillator-fd,
+   and all the oscillator based sdrkit modules use this oscillator
+   with double precision internals.
+** Use complex multiplication
+   The true way to make a complex oscillator is quite simple:
+   #+BEGIN_EXAMPLE
+   float complex phase, dphase;
+   void oscillator_init(float theta0, float hertz, float srate) {
+     phase = cos(theta0)+I*sin(theta0);
+     float dtheta = two_pi*hertz/srate;
+     dphase = cos(dtheta)+I*sin(dtheta);
+   }
+   float complex oscillator() {
+     return phase *= dphase;
+   }
+   #+END_EXAMPLE
+   This is also the very definition of a complex valued sine
+   wave.  It uses complex numbers with unit magnitude to represent
+   angles.  One is the increment in angle per sample computation, the
+   other is the accumulated angle.  The accumulated angle is value of
+   the oscillator.
+
+   It's very efficient, only requiring four multiplies and two
+   additions per sample.  All the transcendental evaluations have been
+   banished to the setup.
+
+   It's also very interesting as a radio module, because the complex
+   multiplication operation is the implementation of a mixer, so an
+   oscillator is a mixer which mixes a constant, dphase, with the
+   previous value of the mixer, phase.  It's a recursive mixer
+   circuit.
+ 
+   It's implemented as sdrkit::oscillator-z and sdrkit::oscillator-zd.
+* Off to the races
+  I first implemented bin/duelling-oscillators to simply see how
+  expensive the trig and filter based oscillators were.  So I would
+  make an oscillator:
+   #+BEGIN_EXAMPLE
+  package require sdrkit::oscillator-f
+  package require sdrkit::oscillator-t
+  if {$test eq {f}} {
+    sdrkit::oscillator-f foo
+  } else {
+    sdrkit::oscillator-t foo
+  }
+   #+END_EXAMPLE
+  and watch the cpu load:
+   #+BEGIN_EXAMPLE
+  package require sdrkit::jack
+  sdrkit::jack cpu-load
+   #+END_EXAMPLE
+  until it stabilized.  The Jack cpu-load is a running average that
+  only gets updated once per second, so you need to run a while to
+  get a true estimate.
+
+  These tests confirmed that the filter based oscillator was a cheaper
+  computation than the trig based oscillator.  But the next question
+  was how good of an oscillator was it?  Did it wobble in phase?  Did
+  it vary in magnitude?
+
+  At this point the fun really began.  Tcl does all floating point
+  computations in doubles.  The Jack modules all produce streams of
+  floats.  Floats are 32 bit floating point numbers and doubles are 64
+  bit floating point numbers.  What could go wrong?
+
+  Well, lots can go wrong.  The 32 bit value of pi = atan2f(0, -1) is
+  larger than the 64 bit value of pi = atan2(0, -1).  So if you're
+  range checking the angle computed by atan2f against a double
+  precision value of pi, you'll find angles that are outside the
+  allowed range.
+
+  I'm not sure that I've accounted for all the problems I've
+  encountered, but I've settled the questions of timing and precision
+  in test/test-osc.c where I implement the 6 variations of oscillator
+  and precision of internal computations, check their results in
+  parallel, and time their performance.
+

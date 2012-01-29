@@ -24,6 +24,16 @@ lappend auto_path [file join [file dirname $script] .. lib]
 #
 # a simple program to play with the blackberry trackball in the midi keyer
 #
+# we use a midi-tap connected to system:midi_capture_1 to listen to keyer
+# events, and a midi-insert connected to system:midi_playback_1 to echo
+# events back to the keyer.
+# The paddle and button signals are marked by lighting up colored patches
+# of window and to enable the leds on the keyer with the same color.
+# Trackball motion controls a cross hair on another patch of window.
+#
+# the midi-insert is also looped back to the midi-tap so we can monitor
+# the events sent to the keyer.
+#
 package require Tk
 
 package require sdrkit::midi-tap
@@ -78,6 +88,10 @@ proc midi-receiver {events} {
 			    }
 			    4 { # track ball
 			    }
+			    5 - 6 - 7 - 8 {
+				# led loop back
+				.mon.n$note configure -bg black
+			    }
 			    default {
 			    }
 			}
@@ -96,6 +110,25 @@ proc midi-receiver {events} {
 				set ::data(track-x-offset) [expr {$::data(track-x-offset)+[expr {$vel-64}]}]
 				set x [expr {$::data(track-x-offset)+$::data(track-x-origin)}]
 				.track coords vertical $x 0 $x [winfo height .track]
+			    }
+			    5 - 6 - 7 - 8 {
+				# led loop back
+				set lev [expr {($vel*2)&255}]
+				foreach pat [array names ::data *-note] {
+				    if {$::data($pat) == $note} {
+					switch $pat {
+					    white-note { set color \#[format {%02x%02x%02x} $lev $lev $lev] }
+					    red-note   { set color \#[format {%02x0000} $lev] }
+					    green-note { set color \#[format {00%02x00} $lev] }
+					    blue-note  { set color \#[format {0000%02x} $lev] }
+					    default {
+						error "$pat didn't match a switch case"
+					    }
+					}
+					break
+				    }
+				}
+				.mon.n$note configure -bg $color
 			    }
 			    default {
 			    }
