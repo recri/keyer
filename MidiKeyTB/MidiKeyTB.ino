@@ -111,6 +111,14 @@ void setup() {
   pinMode(ditPin, INPUT_PULLUP);
   pinMode(dahPin, INPUT_PULLUP);
   pinMode(btnPin, INPUT_PULLUP);
+  pinMode(whtPin, OUTPUT);
+  pinMode(redPin, OUTPUT);
+  pinMode(grnPin, OUTPUT);
+  pinMode(bluPin, OUTPUT);
+  analogWrite(whtPin, 0);
+  analogWrite(redPin, 0);
+  analogWrite(grnPin, 0);
+  analogWrite(bluPin, 0);
   dit = digitalRead(ditPin);
   dah = digitalRead(dahPin);
   btn = digitalRead(btnPin);
@@ -119,11 +127,12 @@ void setup() {
   attachInterrupt(dwnInterrupt, incrementDown, CHANGE);
   attachInterrupt(upInterrupt, incrementUp, CHANGE);
   usbMIDI.setHandleNoteOn(note_on);
-  usbMIDI.setHandleNoteOn(note_off);
+  usbMIDI.setHandleNoteOff(note_off);
 }
 
 
 void loop() {
+  usbMIDI.read();
   static long last_read;
   if (micros()-last_read >= readPeriod) {
     last_read = micros();
@@ -165,6 +174,5 @@ void loop() {
     down_up = new_down_up;
   }
   usbMIDI.send_now();
-  usbMIDI.read();
 }
 

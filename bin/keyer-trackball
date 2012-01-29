@@ -42,19 +42,15 @@ package require sdrkit::midi-insert
 package require sdrkit::jack
 
 array set data {
-    track-x-origin 64
-    track-y-origin 64
-    track-x-offset 0
-    track-y-offset 0
+    track-x-origin 64 track-y-origin 64
+    track-x-offset 0 track-y-offset 0
     red-state 0 red-after {} red-level 0 red-target 0 red-note 7
     green-state 0 green-after {} green-level 0 green-target 0 green-note 6
     blue-state 0 blue-after {} blue-level 0 blue-target 0 blue-note 8
     white-state 0 white-after {} white-level 0 white-target 0 white-note 5
 }
 
-proc midi-transmit {cmd note vel} {
-    midi-out puts [binary format ccc $cmd $note $vel]
-}
+proc midi-transmit {cmd note vel} { midi-out puts [binary format ccc $cmd $note $vel] }
 
 #
 # poll input and deliver to receiver
@@ -100,7 +96,7 @@ proc midi-receiver {events} {
 			switch $note {
 			    0 { dit-on }
 			    1 { dah-on }
-			    2 { .but configure -bg green }
+			    2 { but-on }
 			    3 { # track ball
 				set ::data(track-y-offset) [expr {$::data(track-y-offset)-[expr {$vel-64}]}]
 				set y [expr {$::data(track-y-offset)+$::data(track-y-origin)}]
@@ -142,56 +138,37 @@ proc midi-receiver {events} {
     }
 }
 
-proc dit-off {} {
-    .dit configure -bg grey
-    led-off red
-}
-proc dah-off {} {
-    .dah configure -bg grey
-    led-off blue
-}
-proc but-off {} {
-    .but configure -bg grey
-    led-off green
-}
-proc dit-on {} {
-    .dit configure -bg red
-    led-on red
-}
-proc dah-on {} {
-    .dah configure -bg blue
-    led-on blue
-}
-proc but-on {} {
-    .but configure -bg green
-    led-on green
-}
+proc dit-off {} { .dit configure -bg grey; led-off red }
+proc dah-off {} { .dah configure -bg grey; led-off blue }
+proc but-off {} { .but configure -bg grey; led-off white }
+proc dit-on {} { .dit configure -bg red; led-on red }
+proc dah-on {} { .dah configure -bg blue; led-on blue }
+proc but-on {} { .but configure -bg white; led-on white }
 
 proc led-run {note} {
     switch $::data($note-state) {
-	1 { # rising
-	    midi-transmit 0x90 $::data($note-note) $::data($note-level)
-	    if {[incr ::data($note-level) 1] == $::data($note-target)} {
-		set ::data($note-state) 2
-	    }
-	}
-	2 { # settled high
-	    set ::data($note-after) {}
-	    return
-	}
 	0 { # falling
 	    midi-transmit 0x90 $::data($note-note) $::data($note-level)
 	    if {[incr ::data($note-level) -1] == $::data($note-target)} {
+		set ::data($note-state) 2
+	    }
+	    set ::data($note-after) [after 10 [list led-run $note]]
+	}
+	1 { # rising
+	    midi-transmit 0x90 $::data($note-note) $::data($note-level)
+	    if {[incr ::data($note-level) 1] == $::data($note-target)} {
 		set ::data($note-state) 3
 	    }
+	    set ::data($note-after) [after 10 [list led-run $note]]
 	}
-	3 { # settled low
+	2 { # settled low
 	    midi-transmit 0x80 $::data($note-note) 0
 	    set ::data($note-after) {}
-	    return
+	}
+	3 { # settled high
+	    set ::data($note-after) {}
 	}
     }
-    set ::data($note-after) [after 10 [list led-run $note]]
 }
 
 proc led-start {note onoff} {
@@ -204,11 +181,16 @@ proc led-start {note onoff} {
 	}
     }
     if {$::data($note-after) eq {}} {
-	set ::data($note-after) [after 10 [list led-run $note]]
+	led-run $note
     }
 }
+
 proc led-on {note} { led-start $note 1 }
 proc led-off {note} { led-start $note 0 }
+
+proc green-led-off {} { led-off green; after 2000 green-led-on }
+proc green-led-on {} { led-on green; after 2000 green-led-off }
+proc green-led-pulse {} { green-led-on }
 
 proc draw-lines {w wd ht} {
     set ::data(track-x-origin) [expr {$wd/2}]
@@ -249,6 +231,7 @@ proc main {argv} {
     sdrkit::jack connect midi-out:midi_out midi-in:midi_in
     midi-in start
     midi-poll midi-in midi-receiver
+    green-led-pulse
 }
 
 main $argv
