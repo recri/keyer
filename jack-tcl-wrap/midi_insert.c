@@ -62,6 +62,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, event.size);
 	} else {
 	  memcpy(buffer, event.buffer, event.size);
+	  //fprintf(stderr, "midi_insert sent %x %x %x\n", buffer[0], buffer[1], buffer[2]);
 	}
       }
     }
