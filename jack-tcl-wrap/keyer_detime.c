@@ -29,26 +29,18 @@
 
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
-#define FRAMEWORK_OPTIONS_KEYER_TIMING	1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED	1
 
 #include "framework.h"
 #include "../sdrkit/midi.h"
 #include "../sdrkit/ring_buffer.h"
+#include "../sdrkit/detime.h"
 
 typedef struct {
 #include "framework_options_vars.h"
+  detime_options_t detime;
 } options_t;
   
-typedef struct {
-  unsigned last_frame;	/* frame of last event */
-  int estimate;		/* estimated dot clock period */
-  unsigned n_dit;	/* number of dits estimated */
-  unsigned n_dah;	/* number of dahs estimated */
-  unsigned n_ies;	/* number of inter-element spaces estimated */
-  unsigned n_ils;	/* number of inter-letter spaces estimated */
-  unsigned n_iws;	/* number of inter-word spaces estimated */
-} detime_t;
-
 typedef struct {
   framework_t fw;
   int modified;
@@ -60,119 +52,53 @@ typedef struct {
   unsigned char buff[RING_SIZE];
 } _t;
 
-/*
-** The basic problem is to infer the dit clock rate from observations of dits, dahs, inter-element spaces,
-** inter-letter spaces, and maybe inter-word spaces.
-**
-** Assume that each element observed is either a dit or a dah and record its contribution to the estimated
-** dot clock as if it were both T and 3*T in length. Similarly, take each space observed as potentially
-** T, 3*T, and 7*T in length.
-**
-** But weight the T, 3*T, and 7*T observations by the inverse of their squared distance from the current
-** estimate, and weight the T, 3*T, and 7*T observations by their observed frequency in morse code.
-*/
-static void _detime(_t *dp, unsigned count, unsigned char *p) {
-  /* detime note/channel based events */
-  if (dp->fw.verbose > 4)
-    fprintf(stderr, "%d: midi_detime(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
-  if (count == 3) {
-    char channel = (p[0]&0xF)+1;
-    char note = p[1];
-    if (channel == dp->opts.chan && note == dp->opts.note) {
-      int observation = dp->frame - dp->detime.last_frame; /* length of observed element or space */
-      char *out;				   /* detimed element */
-      dp->detime.last_frame = dp->frame;
-      switch (p[0]&0xF0) {
-      case MIDI_NOTE_OFF: /* the end of a dit or a dah */
-	{
-	  int o_dit = observation;			/* if it's a dit, then the length is the dit clock observation */
-	  int o_dah = observation / 3;			/* if it's a dah, then the length/3 is the dit clock observation */
-	  int d_dit = o_dit - dp->detime.estimate;	/* the dit distance from the current estimate */
-	  int d_dah = o_dah - dp->detime.estimate;	/* the dah distance from the current estimate */
-	  int guess = 100 * observation / dp->detime.estimate;
-	  if (d_dit == 0 || d_dah == 0) {
-	    /* if one of the observations is spot on, then 1/(d*d) will be infinite and the estimate is unchanged */
-	  } else {
-	    /* the weight of an observation is
-	     * the observed frequency of the element
-	     * scaled by inverse of distance from our current estimate
-	     * normalized to one over the observations made
-	     */
-	    float w_dit = 1.0 * dp->detime.n_dit / (d_dit*d_dit); /* raw weight of dit observation */
-	    float w_dah = 1.0 * dp->detime.n_dah / (d_dah*d_dah); /* raw weight of dah observation */
-	    float wt = w_dit + w_dah;				  /* weight normalization */
-	    int update = (o_dit * w_dit + o_dah * w_dah) / wt;
-	    dp->detime.estimate += update;
-	    dp->detime.estimate /= 2;
-	    guess = 100*observation / dp->detime.estimate;	  /* revise our guess */
-	  }
-	  if (guess < 200) {
-	    out = "."; dp->detime.n_dit += 1;
-	  } else {
-	    out = "-"; dp->detime.n_dah += 1;
-	  }
-	  break;
-	}
-      case MIDI_NOTE_ON: /* the end of an inter-element, inter-letter, or a longer space */
-	{
-	  int o_ies = observation;
-	  int o_ils = observation / 3;
-	  int d_ies = o_ies - dp->detime.estimate;
-	  int d_ils = o_ils - dp->detime.estimate;
-	  int guess = 100 * observation / dp->detime.estimate;
-	  if (d_ies == 0 || d_ils == 0) {
-	    /* if one of the observations is spot on, then 1/(d*d) will be infinite and the estimate is unchanged */	    
-	  } else if (guess > 500) {
-	    /* if it looks like a word space, it could be any length, don't worry about how long it is */
-	  } else {
-	    float w_ies = 1.0 * dp->detime.n_ies / (d_ies*d_ies), w_ils = 1.0 * dp->detime.n_ils / (d_ils*d_ils);
-	    float wt = w_ies + w_ils;
-	    int update = (o_ies * w_ies + o_ils * w_ils) / wt;
-	    dp->detime.estimate += update;
-	    dp->detime.estimate /= 2;
-	    guess = 100 * observation / dp->detime.estimate;
-	  }
-	  if (guess < 200) {
-	    out = ""; dp->detime.n_ies += 1;
-	  } else if (guess < 500) {
-	    out = " "; dp->detime.n_ils += 1;
-	  } else {
-	    out = "\n"; dp->detime.n_iws += 1;
-	  }
-	  break;
-	}
-      }
-      if (dp->fw.verbose > 6) fprintf(stderr, "T=%d, M=%x, 100*O/T=%d\n", dp->detime.estimate, p[0], 100*observation/dp->detime.estimate);
-      if (ring_buffer_writeable(&dp->ring)) {
-	if (*out != 0)
-	  ring_buffer_put(&dp->ring, 1, out);
-      } else {
-	fprintf(stderr, "keyer_detime: buffer overflow writing \"%s\"\n", out);
-      }
-    } else if (dp->fw.verbose > 3)
-      fprintf(stderr, "discarded midi chan=0x%x note=0x%x != mychan=0x%x mynote=0x%x\n", channel, note, dp->opts.chan, dp->opts.note);
-  } else if (count > 3 && p[0] == MIDI_SYSEX) {
-    if (p[1] == MIDI_SYSEX_VENDOR) {
-      // FIX.ME options_parse_command(&dp->opts, p+3);
-      if (dp->fw.verbose > 3)
-	fprintf(stderr, "sysex: %*s\n", count, p+2);
-      dp->modified = 1;
-    }
-  }
-}
-
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = 0;
-    dp->detime.estimate = (sdrkit_sample_rate(dp) * 60) / (dp->opts.wpm * dp->opts.word);
+    dp->opts.detime.word = dp->opts.word;
+    dp->opts.detime.wpm = dp->opts.wpm;
+    detime_configure(&dp->detime, &dp->opts.detime);
   }
 }
 
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
-  void *p = ring_buffer_init(&dp->ring, RING_SIZE, dp->buff); if (p != &dp->ring) return p;
-  dp->detime = (detime_t){ 0, 6000, 1, 1, 1, 1, 1 };
+  dp->opts.detime.sample_rate = sdrkit_sample_rate(&dp->fw);
+  dp->opts.detime.word = dp->opts.word;
+  dp->opts.detime.wpm = dp->opts.wpm;
+  void *p = detime_preconfigure(&dp->detime, &dp->opts.detime); if (p != &dp->detime) return p;
+  detime_configure(&dp->detime, &dp->opts.detime);
+  ring_buffer_init(&dp->ring, RING_SIZE, dp->buff);
   return arg;
+}
+
+static void _detime(_t *dp, unsigned count, unsigned char *p) {
+  /* detime note/channel based events */
+  if (dp->fw.verbose > 4)
+    fprintf(stderr, "%d: _detime(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
+  if (count == 3) {
+    unsigned char cmd = p[0]&0xF0; 
+    unsigned char channel = (p[0]&0xF)+1;
+    unsigned char note = p[1];
+    if (channel == dp->opts.chan && note == dp->opts.note) {
+      char out;
+      if (dp->fw.verbose > 4)
+	fprintf(stderr, "%d: _detime(%x)\n", dp->frame, cmd);
+      if (cmd == MIDI_NOTE_OFF)		/* the end of a dit or a dah */
+	out = detime_process(&dp->detime, 0, dp->frame);
+      else if (cmd == MIDI_NOTE_ON)	/* the end of an inter-element, inter-letter, or a longer space */
+	out = detime_process(&dp->detime, 1, dp->frame);
+      else
+	return;
+      if (out != 0) {
+	if (ring_buffer_writeable(&dp->ring)) {
+	  ring_buffer_put(&dp->ring, 1, &out);
+	} else {
+	  fprintf(stderr, "keyer_detime: buffer overflow writing \"%c\"\n", out);
+	}
+      }
+    }
+  }
 }
 
 /*
@@ -181,33 +107,20 @@ static void *_init(void *arg) {
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
-  void* midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
-  jack_midi_event_t in_event;
-  jack_nframes_t event_count = jack_midi_get_event_count(midi_in), event_index = 0, event_time = 0;
-  /* initialize */
-  if (event_index < event_count) {
-    jack_midi_event_get(&in_event, midi_in, event_index++);
-    // event_time += in_event.time;
-    event_time = in_event.time;
-  } else {
-    event_time = nframes+1;
-  }
-  _update(dp);
-  /* for all frames in the buffer */
-  for(int i = 0; i < nframes; i++) {
-    /* process all midi events at this sample time */
-    while (event_time == i) {
-      _detime(dp, in_event.size, in_event.buffer);
-      if (event_index < event_count) {
-	jack_midi_event_get(&in_event, midi_in, event_index++);
-	// event_time += in_event.time;
-	event_time = in_event.time;
-      } else {
-	event_time = nframes+1;
-      }
+  // find out what there is to do
+  if (framework_midi_event_init(&dp->fw, NULL, nframes)) {
+    /* possibly update the timing parameters */
+    _update(dp);
+    /* for all frames in the buffer */
+    for(int i = 0; i < nframes; i++) {
+      /* process all midi events at this sample time */
+      jack_midi_event_t event;
+      int port;
+      while (framework_midi_event_get(&dp->fw, i, &event, &port))
+	_detime(dp, event.size, event.buffer);
+      /* increment the frame counter */
+      dp->frame += 1;
     }
-    /* increment the frame counter */
-    dp->frame += 1;
   }
   return 0;
 }

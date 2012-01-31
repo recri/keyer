@@ -142,13 +142,13 @@ static void _delete(void *arg) {
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
   if (data->started) {
-    // this will work funny if there are xruns happening
+    // this will work funny if there are xruns happening, as when we try to use --driver netone 
     jack_nframes_t wframe = sdrkit_last_frame_time(arg);
     size_t offset = (wframe&(data->buff_size-1));
     if (offset + nframes > data->buff_size) {
       fprintf(stderr, "offset = %ld + nframes = %ld > size = %d\n", offset, (long)nframes, data->buff_size);
       // need to implement a misaligned copy/set, but I'm betting that jacks frame time is buffer aligned
-      // and I'm winning the bet
+      // and I was winning the bet until I tried to use --driver netone
     } else {
       float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
       float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);

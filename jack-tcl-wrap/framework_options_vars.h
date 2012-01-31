@@ -25,9 +25,13 @@ int chan, note;
 // tone options    
 float freq, gain, rise, fall;
 #endif
+#if FRAMEWORK_OPTIONS_KEYER_SPEED
+// speed options
+float word, wpm;
+#endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING
-// timing options
-float word, wpm, dah, ies, ils, iws;
+// element timing options
+float  dah, ies, ils, iws;
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS
 int swap, alsp, awsp, mode;

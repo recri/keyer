@@ -1,0 +1,59 @@
+* A little thought about what to do
+  This will be a lot of different projects dealing with different
+  aspects of software defined radio and amateur radio operation
+* The MidiKey interface
+   Translating paddle or straight key switch closures into MIDI events
+   so they can be transferred over USB without no special drivers
+   required.
+* Extended MidiKey interface
+   Implementing the key switches consumes a very small fraction of the 
+   microcontroller or the MIDI encoding capacity.
+** Other input events
+    could be encoded as MIDI events to send to the computer.
+*** Trackballs
+*** Rotary encoders
+*** Other switches
+*** Potentiometers
+** Output events
+    could be sent to the MidiKey as MIDI events, too.
+*** Transmitter keying
+*** push-to-talk signals
+*** Frequency setting
+*** Filter bank switching
+*** Preselector tuning
+*** Antenna tuning
+*** LEDs
+*** LCDs
+* The keyer
+   An electronic keyer that translates straight key or paddle switch
+   events into a keyed complex oscillator suitable for injection into
+   an SDR CW transmitter.
+   This includes switch debouncing, iambic keyer, push-to-talk
+   generation, and keying the complex oscillator.
+   There are alternative electronic keyers that should be explored,
+   too, the Iambic A/B is but a small corner of the possibilities.
+* CW decoding
+   The modules for decoding morse code from the received tones are
+   built but not completely tested.
+   This includes Goertzal filtering to detect CW power, switch timing
+   detection to translate into groups of dits and dahs, and final
+   translation of the decoded didahs into characters.
+* Bandpass waterfall and spectrum display
+   A band filled with CW signals needs a display that spreads the
+   signals out in the frequency domain.
+* CW band skimming
+   Given a working decoder, it's straight forward to implmenent enough
+   of them to cover all the CW signals in a bandpass.
+* CW bandpass binaural processing
+   The natural landscape of a bandpass filled with CW signals is to
+   spread their sound out in space the same way the spectrum display
+   does.
+* Fist and ear training
+   Morse code tutoring and games.  So we had the invaders clone, then
+   the pileup makeover, now I'm looking at flash card review
+   algorithms for perfect learning.
+* The keyer as control input
+   Having a keyer that simply runs a radio is normal, I'd like to
+   provide the ability to control the software from the key, too.
+
+* Receiver

@@ -1,0 +1,57 @@
+* Running a multirate SDR application
+  SDR apps would be much happier if they could run at the sample rate
+  appropriate to the computations they're doing.
+
+  The RF input stages need to run at the rate the samples arrive from
+  the radio interface.  48000, 96000, 192000, or even more samples per
+  second.  This allows the broadest panoramic display of bandwidth and
+  gets the most out of the hardware.
+
+  But post bandpass filtering, when the bandwidth has been reduced to
+  the width of an RF communication channel, there's no reason to carry
+  the full RF sample rate anymore.  There's no reason to carry much
+  more than twice the width of the bandpass filter.
+
+  So how to do it?  Most radios that use Jack are running Jack full
+  tilt at the hardware sample rate from start to finish.
+
+** Multiple Jack servers
+   With jack2 it's possible to start multiple jack servers
+   distinguished by server names.  They can each be running at
+   the samplerate that is appropriate to its function, and they can
+   all be running different samplerates.
+
+** alsa_in, alsa_out
+   These Jack plugins allow one to connect alsa devices to a jack
+   server with resampling to match the sample rates of the jack
+   server.
+
+** ALSA loopback device
+   The ALSA loopback driver provides a virtual soundcard which simply
+   loops its input channel back to its output channel.
+
+** a2jmidid
+   This daemon allows automatic bridging of alsa midi devices and alsa
+   sequencer devices into a jack server.  So even though the jack
+   server starts with the dummy device, it can still see the midi
+   devices.
+
+** Putting it together
+   So one jack2 server can be started with connections to the radio
+   sampling hardware running at the sample rate that makes best use of
+   the hardware.  It will then use the alsa_in and alsa_out jack
+   clients to create input and output connections to the ALSA loopback
+   device, one to receive I/Q for transmit and one to deliver
+   bandlimited I/Q from the filter for demodulation and display.
+
+   A second jack2 server can be started with no connections to any
+   audio hardware, using the jack dummy device, running at the sample
+   rate appropriate to its function.  This jack2 server will use
+   alsa_out and alsa_in to connect to the audio outputs and inputs
+   used implement the user side of the radio.  And it will use
+   alsa_in and alsa_out to connect to the ALSA loopback device to
+   communicate with the RF backend.
+
+** Starting small
+   So, as a test case, just start the keyer in a low sample rate jack
+   server.  Should be able to get a decent waterfall from it then.

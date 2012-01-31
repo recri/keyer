@@ -37,6 +37,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED	1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING	1
 
 #include "../sdrkit/midi.h"
@@ -101,10 +102,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
   framework_midi_event_init(&dp->fw, &dp->midi, nframes);
   // clear the jack output buffer
   jack_midi_clear_buffer(midi_out);
-
   // update our options
   _update(dp);
-
   // handle an abort signal
   if (dp->abort) {
     midi_buffer_init(&dp->midi);

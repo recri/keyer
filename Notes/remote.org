@@ -30,3 +30,49 @@
   So convert all this ghpsdr3 code, which gets me the various hardware
   interfaces for free, or use jack, stick with sound cards, and make a
   hamlib bridge.
+** Using Jack Net
+   Oh, all the instructions for using jack on the network are wrong.
+
+   The issue is that there are two, actually three, versions of jack:
+   jack1, jack2, and tschak.  The versions have been sapping each
+   others energies for a few years, now, and the developers appear to
+   have found a new common ground in the past two months.  So things
+   may be moving forward, now, but in the meantime, all the
+   instructions for using jack on the network are probably wrong.
+
+   The latest releases of jack2 are probably the base for future
+   development.  The original developer of jack1 wants them to learn
+   how to write better c++, so he's asked that they use the boost
+   libraries.  They're moving the source to a git repository.  They're
+   using a common source for headers and utilities.  It's all going to
+   be better, we can hope.
+
+*** Start the master
+   This uses the real soundcard and sets the sample rate for the networked
+   connection to the slave
+   #+BEGIN_EXAMPLE
+   jackd --realtime --driver alsa --device hw:1 --rate 48000
+   #+END_EXAMPLE
+*** Load the net connection manager on the master
+   #+BEGIN_EXAMPLE
+    jack_load netmanager
+   #+END_EXAMPLE
+*** Start the slave
+   This is going to be connected up to the master
+   #+BEGIN_EXAMPLE
+   jackd --realtime --driver net
+   #+END_EXAMPLE
+*** qjackctl has wrong parameters for net
+    Trying to start a net backend from qjackctl gets the error that
+    the netone backend doesn't have inchannels and outchannels parameters
+    that qjackctl tries to set.  The parameters have different names
+    as can be verified with jack_control.
+
+    So you may need to start jack from the command line.
+*** Doesn't work very well over the wifi
+    It wants a wired connection to be useful.  May need to steal back
+    my ethernet switch.
+*** Breaks my audio_tap
+    The lack of a wired connection renders my audio_tap deaf.  The
+    start frames for buffers are no longer neatly aligned with the
+    buffer sizes.

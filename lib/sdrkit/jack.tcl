@@ -21,7 +21,11 @@ package provide sdrkit::jack 1.0.0
 package require sdrkit::jack-client
 
 namespace eval ::sdrkit {
-    set jack(default) [sdrkit::jack-client jack-default-[pid]]
+    if {[info exists ::env(JACK_SERVER)]} {
+	set jack(default) [sdrkit::jack-client jack-$::env(JACK_SERVER)-[pid] -server $::env(JACK_SERVER)]
+    } else {
+	set jack(default) [sdrkit::jack-client jack-default-[pid]]
+    }
 }
 
 proc ::sdrkit::jack {args} {
