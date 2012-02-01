@@ -32,7 +32,6 @@
    | libjack-jackd2-dev |
    | qjackctl           |
    | tk-dev             |
-   | libhamlib2-tcl     |
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
    listed.

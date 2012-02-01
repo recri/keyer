@@ -1,0 +1,18 @@
+* OpenGL has direct rendering access to the screen framebuffer
+  so if you draw a waterfall with opengl, you can skip a lot of the
+  buffer to buffer to buffer copying that happens with higher level
+  windowing systems.
+** Need to set up a 2D projection
+   This one, which is typical, sets the OpenGL coordinate system so 1
+   unit in OpenGL world coordinates corresponds to one pixel on the
+   screen.
+   #+BEGIN_EXAMPLE
+   glMatrixMode (GL_PROJECTION);
+   glLoadIdentity ();
+   gluOrtho2D (0, windowWidth, 0, windowHeight);
+   #+END_EXAMPLE
+** Then draw a row (or column) of pixels for the waterfall
+   A collection of points, drawn at pixel centers, i+0.5,j+0.5.
+** When it's time to draw the next row (or column)
+   translate the existing image, all of it, one row down (column left)
+   and then delete the row (or column) that scrolled off the window.
