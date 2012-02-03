@@ -54,10 +54,16 @@ proc ::capture::configure {w args} {
 		    set data(-size) $value
 		    if {$data(type) eq {spectrum}} {
 			$data(fft) configure -size $value
-			$data(tap) configure -log2n 4 -log2size [::capture::log2-size $value]
+			set newlog2size [::capture::log2-size $value]
+			if {[$data(tap) cget -log2size] < $newlog2size} {
+			    $data(tap) configure -log2size $newlog2size
+			}
 		    }
 		    if {$data(type) eq {iq} && [info exists data(tap)]} {
-			$data(tap) configure -log2size [::capture::log2-size $value]
+			set newlog2size [::capture::log2-size $value]
+			if {[$data(tap) cget -log2size] < $newlog2size} {
+			    $data(tap) configure -log2size $newlog2size
+			}
 		    }
 		}
 		set data($option) $value
@@ -110,15 +116,27 @@ proc ::capture::capture-spectrum {w} {
 	    set xy {}
 	    set x [expr {-[sdrkit::jack sample-rate]/2.0}]
 	    set dx [expr {[sdrkit::jack sample-rate]/double($n)}]
+	    set minp 1000
+	    set maxp -1000
+	    set avgp 0.0
+	    # all the coefficients coming out of the fft are multiplied by sqrt(n)
+	    # so 10*log10(coeff^2) is 10*log10(sqrt(n)^2) too big
+	    set norm [expr {10*log10($n)}]
 	    foreach {re im} [concat [lrange $levels [expr {1+$n}] end] [lrange $levels 0 $n]] {
 		# squared magnitude means 10*log10 dB
-		lappend xy $x [expr {10*log10($re*$re+$im*$im+1e-64)}]
+		set p [expr {10*log10($re*$re+$im*$im+1e-64)-$norm}]
+		set maxp [expr {max($p,$maxp)}]
+		set avgp [expr {$avgp+$p/$n}]
+		set minp [expr {min($p,$minp)}]
+		lappend xy $x $p
 		set x [expr {$x+$dx}]
 	    }
+	    puts "minp $minp, avgp $avgp, maxp $maxp"
 	    # send the result to the client
 	    $data(-client) $w $xy
 	} else {
 	    # free the capture buffer
+	    puts "capture buffer too small [expr {[string length $b]/8}] < $n"
 	    set b {}
 	}
 	# schedule next capture

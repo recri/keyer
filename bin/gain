@@ -29,7 +29,7 @@ array set data {
     name gain
     length 320
     gain -30.0
-    max-gain 0.0
+    max-gain 60.0
     min-gain -160.0
 }
 

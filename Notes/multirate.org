@@ -25,6 +25,14 @@
    These Jack plugins allow one to connect alsa devices to a jack
    server with resampling to match the sample rates of the jack
    server.
+*** The -q quality option varies from 0 .. 4
+    The default -q is 2, and the values map backwards to the
+    libsamplerate qualities.
+    | -q 4 | SRC_SINC_BEST_QUALITY   |
+    | -q 3 | SRC_SINC_MEDIUM_QUALITY |
+    | -q 2 | SRC_SINC_FASTEST        |
+    | -q 1 | SRC_ZERO_ORDER_HOLD     |
+    | -q 0 | SRC_LINEAR              |
 
 ** ALSA loopback device
    The ALSA loopback driver provides a virtual soundcard which simply

@@ -57,3 +57,43 @@
    provide the ability to control the software from the key, too.
 
 * Receiver
+* Switch to LV2 plugin architecture
+  I looked at this and I see a lot of work to generate the LV2 plugin
+  descriptors in the Turtle RDF format.
+
+  None of that work benefits me because I'll just need to translate it
+  back into Tcl to use it.
+
+  More problematic, I don't see a model for how the plugins actually
+  execute as LV2 plugins.  When I create Jack Clients and hook them up
+  through Jack, I know how the execution model will go.  When I load
+  them up as LV2 plugins in some plugin host, I have no idea how the
+  execution will be scheduled.  I see them opening one Jack client,
+  declaring a Jack port for each plugin port, and then running with
+  the result that stacks of plugins generate a buffer worth of delay
+  for each.
+
+  It's actually even messier than that.  zynjacku only takes one MIDI
+  in which gets distributed to all plugins in the rack, and expects
+  them all to be synths, so there isn't any audio input, just outputs,
+  one per racked synth, or two if their stereo.  An effects plugin
+  rack will probably make a completely different set of assumptions.
+
+  I also don't see the distinction between slow/fast control
+  parameters. The examples all compute parameters on every buffer.
+  And I don't see the possibility to pass parameters back to the
+  control side from the DSP side.
+
+  That said, there are attractions in a plugin style of structuring
+  the DSP modules and in separating the metadata from the
+  implementation of the module.  But, I would do it by embedding the
+  code in a tcl script that could generate code or tcl metadata and
+  keep the linkage between the two in sync.  And I would add the
+  preconfigure step to the setting of parameters so the cheap and
+  expensive parts of parameter computation could be partitioned
+  between the process loop and the outside.
+
+
+  There is, however, a sense in which the plugin style architecture
+  could help me simplify my framework.  Rather than implementing all
+  of the Tcl command framework for DSP modules, 

@@ -1,10 +1,7 @@
-keyer_ascii
-keyer_iambic
-keyer_iambicpp
-keyer_tone
-keyer_decode
-keyer_detone
+alsa_in
+alsa_out
 pkgIndex.tcl
 *.o
 *.so
 *~
+*.log

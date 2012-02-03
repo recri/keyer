@@ -20,42 +20,22 @@
 #ifndef NOISE_H
 #define NOISE_H
 
-// if this isn't the first thing included, then random_r may end up undefineda
-// feature macros are extremely weird, since anyone can include the
-// same file with the defines off
-#define _SVID_SOURCE 
-#define _BSD_SOURCE
-#include <stdlib.h>
-
+#include "random_uniform.h"
 #include "dmath.h"
 
-#ifndef NOISE_RANDOM_STATE_SIZE
-#define NOISE_RANDOM_STATE_SIZE 32
-#endif
+typedef random_uniform_options_t noise_options_t;
 
-#if NOISE_RANDOM_STATE_SIZE < 8
-#error "random_r state buffer size must be 8 or greater"
-#endif
-
-typedef struct {
-  struct random_data data;
-  char state[NOISE_RANDOM_STATE_SIZE];
-} noise_t;
+typedef random_uniform_t noise_t;
 
 static void *noise_init(void *p) {
-  noise_t *noise = (noise_t *)p;
-  if (initstate_r(12345678, noise->state, sizeof(noise->state), &noise->data) != 0) return "initstate_r failed";
-  return p;
+  return random_uniform_init(p);
 }
 
-static void noise_configure(noise_t *p, unsigned int seed) {
-  srandom_r(seed, &p->data);
+static void noise_configure(noise_t *p, noise_options_t *q) {
+  random_uniform_configure((random_uniform_t *)p, (random_uniform_options_t *)q);
 }
 
 static float _Complex noise_process(noise_t *p) {
-  int32_t i, q;
-  random_r(&p->data, &i);
-  random_r(&p->data, &q);
-  return ((i - (RAND_MAX/2)) / (float)(RAND_MAX/2)) + I * ((q - (RAND_MAX/2)) / (float)(RAND_MAX/2));
+  return (2 * random_uniform_float(p) - 1) + I * (2 * random_uniform_float(p) - 1);
 }
 #endif

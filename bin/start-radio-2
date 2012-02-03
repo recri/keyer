@@ -1,0 +1,73 @@
+#!/bin/sh
+##
+## this script launches a simple SDR radio receiver
+##
+
+
+##
+## the first assumption is that you want to listen to the radio through
+## the onboard soundcard attached as hw:0
+##
+AFDEV=hw:0			# the AF soundcard
+
+##
+## the second assumption is that you've started the alsa loopback device
+## by adding snd-aloop to /etc/modules, so it's hw:1
+##
+LPDEV=hw:1
+
+##
+## the third assumption is that you've attached your Softrock to a usb
+## soundcard which is at hw:2
+##
+RFDEV=hw:2			# the RF soundcard
+
+##
+## the rate at which the usb soundcard operates
+## which sets the rate of the RF jack server
+##
+RFRATE=48000			# the RF sample rate
+RFBUFFER=512			# the RF jack buffer size
+
+##
+## the rate at which the AF processing will occur
+## which sets the rate of the AF jack server
+##
+AFRATE=8000			# the AF sample rate, not for the card, for jackd 
+AFBUFFER=128			# the AF jack buffer size
+
+##
+## the quality of samplerate conversion we request from the alsa_in/alsa_out
+## converters
+##
+QUAL=4				# the quality of samplerate conversion
+
+##
+## launch the RF jackd
+## this jackd runs at the incoming sample rate
+##
+jackd -nrfjack -T -dalsa -Xraw -C$RFDEV -P$LPDEV,0 -r$RFRATE -p$RFBUFFER -n3 > rfjackd.log 2>&1 &
+
+##
+## launch the AF jackd
+## this jackd runs at a communications audio sample rate
+##
+jackd -nafjack -T -ddummy -r$AFRATE -p$AFBUFFER > afjackd.log 2>&1 &
+
+##
+## connect afjack to the hardware and loopback ports
+##
+bin/alsa_in -Safjack -d$LPDEV,1 -q$QUAL > rfin.log 2>&1 &
+bin/alsa_out -Safjack -d$AFDEV -q$QUAL > afout.log 2>&1 &
+
+##
+## we could simply connect the rf input to the af output, but the signals
+## are at -100 dB, so you won't hear much, so we'll add a gain widget to
+## boost the signals up
+##
+#bin/gain --server afjack --min-gain -30 --max-gain 100 > gain.log 2>&1 &
+
+##
+## and we add a panadapter display
+##
+#bin/panorama --server rfjack > panorama.log 2>&1 &

@@ -1,0 +1,5 @@
+#!/bin/sh
+DEV=hw:1
+RATE=192000
+BUFFER=1024
+jackd -T -s -dalsa -C$DEV -P$DEV -r$RATE -p$BUFFER -n3 > jackd.log 2>&1 &

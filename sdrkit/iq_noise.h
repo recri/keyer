@@ -29,42 +29,23 @@
 ** QSD with plain noise as input.
 */
 
-// if this isn't the first thing included, then random_r may end up undefined
-// feature macros are extremely weird, since anyone can include the
-// same file with the defines off
-#define _SVID_SOURCE 
-#define _BSD_SOURCE
-#include <stdlib.h>
-
+#include "random_uniform.h"
 #include "dmath.h"
 
-#ifndef IQ_NOISE_RANDOM_STATE_SIZE
-#define IQ_NOISE_RANDOM_STATE_SIZE 32
-#endif
+typedef random_uniform_options_t iq_noise_options_t;
 
-#if IQ_NOISE_RANDOM_STATE_SIZE < 8
-#error "random_r state buffer size must be 8 or greater"
-#endif
-
-typedef struct {
-  struct random_data data;
-  char state[IQ_NOISE_RANDOM_STATE_SIZE];
-} iq_noise_t;
+typedef random_uniform_t iq_noise_t;
 
 static void *iq_noise_init(void *p) {
-  iq_noise_t *iq_noise = (iq_noise_t *)p;
-  if (initstate_r(12345678, iq_noise->state, sizeof(iq_noise->state), &iq_noise->data) != 0) return "initstate_r failed";
-  return p;
+  return random_uniform_init(p);
 }
 
-static void iq_noise_configure(iq_noise_t *p, unsigned int seed) {
-  srandom_r(seed, &p->data);
+static void iq_noise_configure(iq_noise_t *p, iq_noise_options_t *q) {
+  random_uniform_configure((random_uniform_t *)p, (random_uniform_options_t *)q);
 }
 
 static float _Complex iq_noise_process(iq_noise_t *p) {
-  int32_t d;
-  random_r(&p->data, &d);
-  float phase = (two_pi * d) / RAND_MAX;
+  float phase = two_pi * random_uniform_float(p);
   return cosf(phase) + I * sinf(phase);
 }
 #endif

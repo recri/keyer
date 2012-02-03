@@ -65,6 +65,7 @@ proc ::panorama::window-configure {w cw width height} {
     if {$w ne $cw} return
     # puts "panorama::window-configure $w $cw $width $height"
     upvar #0 ::panorama::$w data
+    puts "::capture::configure $w -size $width"
     ::capture::configure $w -size $width
     set srate [sdrkit::jack sample-rate]
     set scale [expr {$data(-zoom)*double($width)/$srate}]
@@ -83,6 +84,10 @@ proc ::panorama::window-destroy {w cw} {
     ::frequency::destroy $w.f
 }
 
+proc ::panorama::defaults {} {
+    return [array get ::panorama::default_data]
+}
+
 proc ::panorama::panorama {w args} {
     upvar #0 ::panorama::$w data
     array set data [array get ::panorama::default_data]
@@ -98,10 +103,6 @@ proc ::panorama::panorama {w args} {
     bind . <Configure> [list ::panorama::window-configure $w %W %w %h]
     bind . <Destroy> [list ::panorama::window-destroy $w %W]
     return $w
-}
-
-proc ::panorama::defaults {} {
-    return [array get ::panorama::default_data]
 }
 
 proc ::panorama {w args} {

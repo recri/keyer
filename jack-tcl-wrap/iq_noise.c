@@ -31,7 +31,7 @@
 typedef struct {
   float dBgain;
   float gain;
-  unsigned int seed;
+  iq_noise_options_t n;
 } options_t;
 
 typedef struct {
@@ -48,11 +48,11 @@ static void _update(_t *data) {
     data->gain = data->opts.gain;
   }
 }
-  
+
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = iq_noise_init(&data->iq_noise); if (p != &data->iq_noise) return p;
-  iq_noise_configure(&data->iq_noise, data->opts.seed);
+  iq_noise_configure(&data->iq_noise, &data->opts.n);
   data->opts.gain = powf(10.0f, data->opts.dBgain / 20.0f);
   data->gain = data->opts.gain;
   return arg;
@@ -86,7 +86,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-level", "level", "Decibels", "-100.0", fw_option_float, 0,		   offsetof(_t, opts.dBgain), "average noise level in dB full scale" },
-  { "-seed",  "seed",  "Seed",     "123456", fw_option_int,   fw_flag_create_only, offsetof(_t, opts.seed),   "random number seed" },
+  { "-seed",  "seed",  "Seed",     "123456", fw_option_int,   fw_flag_create_only, offsetof(_t, opts.n.seed), "random number seed" },
   { NULL }
 };
 
