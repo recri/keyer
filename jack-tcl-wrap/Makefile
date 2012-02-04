@@ -43,19 +43,19 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/demod_fm.so \
 	$(LIBDIR)/demod_sam.so \
 	$(LIBDIR)/filter_biquad.so \
-	$(LIBDIR)/filter_FIR_band_pass_complex.so \
-	$(LIBDIR)/filter_FIR_low_pass_real.so \
+	$(LIBDIR)/filter_fir.so \
 	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
-	$(LIBDIR)/iq_correct.so \
+	$(LIBDIR)/iq_correct_dttsp.so \
+	$(LIBDIR)/iq_correct_gr.so \
+	$(LIBDIR)/iq_delay.so \
 	$(LIBDIR)/iq_noise.so \
 	$(LIBDIR)/iq_swap.so \
 	$(LIBDIR)/jack_client.so \
 	$(LIBDIR)/lo_mixer.so \
 	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/mixer.so \
-	$(LIBDIR)/mono_to_iq.so \
 	$(LIBDIR)/midi_tap.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
@@ -66,6 +66,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/oscillator_td.so \
 	$(LIBDIR)/oscillator_zd.so \
 	$(LIBDIR)/window.so \
+	$(LIBDIR)/window_polyphase.so \
 	$(KEYERS)
 
 all:: $(ALL) libdir-all
@@ -113,15 +114,11 @@ $(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../sdrkit/filter_biquad.
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_FIR_band_pass_complex.so: filter_FIR.c framework.h ../sdrkit/filter_biquad.h
+$(LIBDIR)/filter_fir.so: filter_FIR.c framework.h ../sdrkit/filter_FIR.h
 	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(FIR_BPF_C_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_FIR_low_pass_real.so: filter_FIR.c framework.h ../sdrkit/filter_biquad.h
-	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(FIR_LPF_R_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
-
-$(LIBDIR)/fftw.so: fftw.c framework.h ../sdrkit/window.h ../sdrkit/dmath.h
+$(LIBDIR)/fftw.so: fftw.c framework.h ../sdrkit/dmath.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
@@ -133,7 +130,15 @@ $(LIBDIR)/iq_balance.so: iq_balance.c framework.h ../sdrkit/dmath.h ../sdrkit/iq
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/iq_correct.so: iq_correct.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_correct.h
+$(LIBDIR)/iq_correct_dttsp.so: iq_correct.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_correct.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ -DGNURADIO_VERSION=0 $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/iq_correct_gr.so: iq_correct.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_correct.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ -DGNURADIO_VERSION=1 $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/iq_delay.so: iq_delay.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -158,10 +163,6 @@ $(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../sdrkit/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/mixer.so: mixer.c framework.h ../sdrkit/dmath.h
-	@mkdir -p $(LIBDIR)
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
-
-$(LIBDIR)/mono_to_iq.so: mono_to_iq.c framework.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
@@ -202,6 +203,10 @@ $(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit
 	gcc -fPIC -shared -o $@ $(OSCZD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/window.so: window.c framework.h ../sdrkit/window.h
+	@mkdir -p $(LIBDIR)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/window_polyphase.so: window_polyphase.c framework.h ../sdrkit/polyphase_fft.h
 	@mkdir -p $(LIBDIR)
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

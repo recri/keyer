@@ -44,16 +44,16 @@ array set data {
     name osc
     length 320
     freq 600.0
-    min-freq 1.0
+    min-freq -23500
     max-freq 23500
-    gain -100.0
-    min-gain -200.0
-    max-gain 0.0
+    gain -75.0
+    min-gain -130.0
+    max-gain -50.0
     iq-sine 0.0
     iq-gain 0.0
-    noise -120.0
-    iq-noise -120.0
-    corrector-onoff 0
+    noise -100.0
+    iq-noise -100.0
+    corrector-on 0
     corrector-mu 0.25
     corrector-wi 0.00
     corrector-wq 0.00
@@ -63,33 +63,38 @@ namespace eval ::meters {}
 
 ##
 ## meter the possible iq balancing signals
+## this is plotting the transform applied
+## to incoming iq signals
 ##
-proc ::meters::update {w xy} {
+proc ::meters::update {w} {
     upvar #0 ::meters::$w data
-    set vals {}
-    foreach {f v} [lrange $xy 2 end] {
-	lappend vals [dB2linear $v]
+    foreach {wi wq} [iq-correct get] break
+    set xy {}
+    foreach {t ct st} $data(theta-cos-sin) {
+	lappend xy [expr {$ct - $wi * $st}] [expr {$st - $wq * $ct}]
     }
-    set n [llength vals]
-    set poscor 0
-    set negcor 0
-    foreach posval $vals negval [lreverse $vals] {
-	set poscor [expr {$poscor+$posval*$posval}]
-	set negcor [expr {$negcor+$posval*$negval}]
-    }
-    set data(poscor) [expr {sqrt($poscor/$n)}]
-    set data(negcor) [expr {sqrt($negcor/$n)}]
-    set data(ratcor) [expr {$data(negcor)/$data(poscor)}]
+    $w coords xyplot $xy
+    $w scale xyplot 0 0 75 -75
+    $w move xyplot 125 125
+    after 10 [list ::meters::update $w]
 }
 
+proc ::meters::setup {w n} {
+    upvar #0 ::meters::$w data
+    set data(n-theta) $n
+    set data(theta-cos-sin) {}
+    set pi [expr {atan2(0,-1)}]
+    for {set i 0} {$i <= $n} {incr i} {
+	set theta [expr {2*$pi*$i/$n}]
+	lappend data(theta-cos-sin) $theta [expr {cos($theta)}] [expr {sin($theta)}]
+    }
+    catch {$w delete all}
+    $w create line {0 0 0 0} -fill white -tags xyplot
+}
 proc ::meters {w args} {
     upvar #0 ::meters::$w data
-    ttk::frame $w
-    foreach x {poscor negcor ratcor} t {Positive Negative Ratio} {
-	pack [ttk::labelframe $w.$x -text $t] -side left
-	pack [ttk::label $w.$x.l -textvar ::meters::${w}($x) -width 20]
-    }
-    set data(llength) 0
+    canvas $w -bg black -width 250 -height 250
+    ::meters::setup $w 32
     return $w
 }
 
@@ -104,6 +109,7 @@ proc set-gain {v} {
 }
 
 proc set-freq {v} {
+    if {$v == 0} { set v 10 }
     osc configure -freq $v
     set ::data(freq-label) [format %.1f $v]
 }
@@ -120,9 +126,11 @@ proc set-iq-noise {v} {
 
 proc set-iq-sine-phase {v} {
     iq-balance configure -sine-phase [expr {sin([sdrkit::radians $v])}]
+    set ::data(iq-sine-label) [format %6.2f $v]
 }
 proc set-iq-gain {v} {
     iq-balance configure -linear-gain [sdrkit::dB-to-linear $v]
+    set ::data(iq-gain-label) [format %6.2f $v]
 }
 
 proc more-mu {} {
@@ -147,12 +155,12 @@ proc update-ws {} {
     after 20 [list update-ws]
 }
 proc corrector-onoff {} {
-    if {$::data(corrector-onoff)} {
-	puts "iq-correct reset to -mu $::data(corrector-mu)"
+    if {$::data(corrector-on)} {
+	#puts "iq-correct reset to -mu $::data(corrector-mu)"
 	iq-correct set 0 0
-	iq-correct configure -mu $::data(corrector-mu)p
+	iq-correct configure -mu $::data(corrector-mu)
     } else {
-	puts "iq-correct muted to 0"
+	#puts "iq-correct muted to 0"
 	iq-correct configure -mu 0
 	iq-correct set 0 0
     }
@@ -201,7 +209,7 @@ proc main {argv} {
     set-iq-noise $::data(iq-noise)
 
     set row 0
-    grid [panorama .pan -width 1024] -row $row -column 0 -columnspan 3 -sticky nsew
+    grid [panorama .pan -width 1024] -row $row -column 0 -columnspan 6 -sticky nsew
     incr row
     grid [ttk::label .b$row -text {Oscillator}] -row $row -column 0 -columnspan 3
     incr row
@@ -227,11 +235,11 @@ proc main {argv} {
     incr row
     grid [ttk::label .b$row -text {Unbalancer}] -row $row -column 0 -columnspan 3
     incr row
-    grid [ttk::label .sine$row-l -textvar ::data(iq-sine) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .sine$row-u -text {}] -row $row -column 1
-    grid [ttk::scale .sine$row-s -from -15.000 -to 15.000 -command set-iq-sine-phase -variable ::data(iq-sine) -length $::data(length)] -row $row -column 2 -sticky ew
+    grid [ttk::label .sine$row-l -textvar ::data(iq-sine-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .sine$row-u -text {deg}] -row $row -column 1
+    grid [ttk::scale .sine$row-s -from -45.0 -to 45.0 -command set-iq-sine-phase -variable ::data(iq-sine) -length $::data(length)] -row $row -column 2 -sticky ew
     incr row
-    grid [ttk::label .gain$row-l -textvar ::data(iq-gain) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .gain$row-l -textvar ::data(iq-gain-label) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .gain$row-u -text {dB}] -row $row -column 1
     grid [ttk::scale .gain$row-s -from -30.00 -to 30.00 -command set-iq-gain -variable ::data(iq-gain) -length $::data(length)] -row $row -column 2 -sticky ew
     incr row
@@ -246,19 +254,16 @@ proc main {argv} {
     pack [ttk::label .blk$row.v-wq -textvariable ::data(corrector-wq) -width 15] -side left
     incr row
     grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
-    pack [ttk::checkbutton .blk$row.onoff -text {Enable} -variable ::data(corrector-on) -onvalue 1 -offvalue 0 -command [list corrector-onoff]] -side left
+    pack [ttk::checkbutton .blk$row.onoff -text {Enable} -variable ::data(corrector-on) -onvalue 1 -offvalue 0 -command corrector-onoff] -side left
     pack [ttk::button .blk$row.more-mu -text {Less mu} -command [list less-mu]] -side left
     pack [ttk::button .blk$row.less-mu -text {More mu} -command [list more-mu]] -side left
     pack [ttk::button .blk$row.reset-ws -text {Reset wi/wq} -command [list reset-ws]] -side left
-    if {0} {
-	grid [ttk::label .blk$row -text {Meters}] -row $row -column 0 -columnspan 3
-	incr row
-	grid [meters .meters] -row $row -column 0 -columnspan 3
-    }
+    set row 1
+    grid [meters .blk$row] -row $row -column 3 -columnspan 3 -rowspan 10
+    ::meters::update .blk$row
     grid columnconfigure . 2 -weight 100
+    grid columnconfigure . 5 -weight 100
     grid rowconfigure . 0 -weight 100
-
-    # panorama::configure .pan -update [list ::meters::update .meters]
 
     sdrkit::jack connect osc:out_i iq-balance:in_i
     sdrkit::jack connect osc:out_q iq-balance:in_q

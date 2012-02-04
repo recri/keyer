@@ -23,7 +23,6 @@
 #define FRAMEWORK_USES_JACK 0
 
 #include "../sdrkit/dmath.h"
-#include "../sdrkit/window.h"
 #include "framework.h"
 #include <fftw3.h>
 
@@ -34,7 +33,6 @@
 typedef struct {
   int size;
   int planbits;
-  int window_type;		// should be a Tcl_Obj *
   int direction;
 } options_t;
 
@@ -43,7 +41,6 @@ typedef struct {
   options_t opts;
   fftwf_complex *inout;		/* input/output array */
   fftwf_plan plan;		/* fftw plan */
-  float *window;		/* window */
 } _t;
 
 static void _delete(void *arg) {
@@ -51,7 +48,6 @@ static void _delete(void *arg) {
   if (data != NULL) {
     if (data->plan != NULL) fftwf_destroy_plan(data->plan);
     if (data->inout != NULL) fftwf_free(data->inout);
-    if (data->window != NULL) fftwf_free(data->window);
   }
 }
 
@@ -60,12 +56,8 @@ static void *_init(void *arg) {
   if (data->opts.size <= 16) return (void *)"size is too small";
   if (data->opts.direction != FFTW_FORWARD && data->opts.direction != FFTW_BACKWARD)
     return (void *)"direction must be -1 (forward) or +1 (backward)";
-  if (data->opts.window_type < WINDOW_RECTANGULAR || data->opts.window_type > WINDOW_NUTTALL)
-    return (void *)"window_type is invalid";
   if ((data->inout = (fftwf_complex *)fftwf_malloc(data->opts.size*sizeof(fftwf_complex))) &&
-      (data->window = (float *)fftwf_malloc(data->opts.size*sizeof(float))) &&
       (data->plan = fftwf_plan_dft_1d(data->opts.size,  data->inout, data->inout, data->opts.direction, data->opts.planbits))) {
-    window_make(data->opts.window_type, data->opts.size, data->window);
     return data;
   }
   _delete(data);
@@ -74,48 +66,84 @@ static void *_init(void *arg) {
 
 /*
 ** The command executes a complex fft given an input byte array
-** of interleaved i/q of the correct size.
+** of interleaved i/q of the correct size, and a window which is
+** an integral multiple of the fft size.
 **
 ** The result is returned as a byte array of complex coefficients
 ** in the fftw standard order.
 **
-** The result is stored into a new byte array or into the optional
-** second output byte array argument, which may be the same as the
-** input byte array.
+** The result is stored into a new byte array.
 */
 static int _exec(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  int n;
+  int ninput;
   float _Complex *input;
-  Tcl_Obj *output = NULL;
   // check the argument count
   if (argc < 3 || argc > 4) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s exec input_byte_array [ output_byte_array ]", Tcl_GetString(objv[0])));
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s exec input_byte_array [window_byte_array]", Tcl_GetString(objv[0])));
     return TCL_ERROR;
   }
   // check the input byte array
-  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[2], &n)) == NULL || n < data->opts.size*2*sizeof(float)) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("byte_array argument does have not %d samples", data->opts.size));
+  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[2], &ninput)) == NULL) {
+    Tcl_SetResult(interp, "failed to get input byte array", TCL_STATIC);
     return TCL_ERROR;
   }
-  // copy the input into the input buffer, applying the window
-  for (int i = 0; i < data->opts.size; i += 1) {
-    data->inout[i] = data->window[i] * *input++;
+  // convert bytes to number of input samples
+  ninput /= sizeof(float complex);
+  // check for a window
+  int nwindow;
+  float *window;
+  if (argc == 4) {
+    if ((window = (float *)Tcl_GetByteArrayFromObj(objv[3], &nwindow)) == NULL) {
+      Tcl_SetResult(interp, "failed to get window byte array", TCL_STATIC);
+      return TCL_ERROR;
+    }
+    // convert bytes to size of window
+    nwindow /= sizeof(float);
+    // check that window size makes sense
+    if (nwindow < data->opts.size) {
+      Tcl_SetResult(interp, "window is not large enough for fft", TCL_STATIC);
+      return TCL_ERROR;
+    }
+    if ((nwindow % data->opts.size) != 0) {
+      Tcl_SetResult(interp, "window is not an integral multiple of fft size", TCL_STATIC);
+      return TCL_ERROR;
+    }
+    // check that input size is agreeable
+    if (ninput < nwindow) {
+      Tcl_SetResult(interp, "not enough input samples for fft window", TCL_STATIC);
+      return TCL_ERROR;
+    }
+    int polyphase = nwindow / data->opts.size;
+    // make windowed input
+    for (int i = 0; i < data->opts.size; i += 1) {
+      data->inout[i] = *window++ * *input++;
+    }
+    // implement polyphase window
+    for (int j = 1; j < polyphase; j += 1) {
+      for (int i = 0; i < data->opts.size; i += 1) {
+	data->inout[i] += *window++ * *input++;
+      }
+    }
+  } else {
+    // check that input size is agreeable
+    if (ninput < data->opts.size) {
+      Tcl_SetResult(interp, "not enough input samples for fft window", TCL_STATIC);
+      return TCL_ERROR;
+    }
+    // make square windowed input
+    memcpy(data->inout, input, data->opts.size*sizeof(float complex));
   }
   // compute the fft
   fftwf_execute(data->plan);
   // create the result
-  Tcl_Obj *result;
-  if (argc == 3) {
-    result = Tcl_NewByteArrayObj((unsigned char *)data->inout, data->opts.size*2*sizeof(float));
-  } else {
-    Tcl_SetByteArrayObj(result = objv[3], (unsigned char *)data->inout, data->opts.size*2*sizeof(float));
-  }
+  Tcl_Obj *result = Tcl_NewByteArrayObj((unsigned char *)data->inout, data->opts.size*sizeof(float complex));
   // set the result
   Tcl_SetObjResult(interp,result);
   // return success
   return TCL_OK;
 }
+
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
@@ -125,8 +153,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   }
   if (save.size != data->opts.size ||
       save.planbits != data->opts.planbits ||
-      save.direction != data->opts.direction ||
-      save.window_type != data->opts.window_type) {
+      save.direction != data->opts.direction) {
     _delete(data);
     void *p = _init(data); if (p != data) {
       Tcl_SetResult(interp, (char *)p, TCL_STATIC);
@@ -140,7 +167,6 @@ static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-size",     "size",     "Samples",   "4096", fw_option_int, 0,	offsetof(_t, opts.size),        "size of fft computed" },
   { "-planbits", "planbits", "Planbits",  "0",	  fw_option_int, 0,	offsetof(_t, opts.planbits),    "fftw plan bits" },
-  { "-window",   "window",   "Window",    "11",   fw_option_int, 0,	offsetof(_t, opts.window_type), "window used in fft, integer from sdrkit/window.h" },
   { "-direction","direction","Direction", "-1",	  fw_option_int, 0,     offsetof(_t, opts.direction),	"fft direction, 1 or -1" },
   { NULL }
 };

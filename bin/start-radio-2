@@ -57,8 +57,8 @@ jackd -nafjack -T -ddummy -r$AFRATE -p$AFBUFFER > afjackd.log 2>&1 &
 ##
 ## connect afjack to the hardware and loopback ports
 ##
-bin/alsa_in -Safjack -d$LPDEV,1 -q$QUAL > rfin.log 2>&1 &
-bin/alsa_out -Safjack -d$AFDEV -q$QUAL > afout.log 2>&1 &
+bin/alsa_in -Safjack -jrfin -d$LPDEV,1 -q$QUAL > rfin.log 2>&1 &
+bin/alsa_out -Safjack -jafout -d$AFDEV -q$QUAL > afout.log 2>&1 &
 
 ##
 ## we could simply connect the rf input to the af output, but the signals

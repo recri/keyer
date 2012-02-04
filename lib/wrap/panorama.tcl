@@ -39,7 +39,7 @@ namespace eval ::panorama {
     }
 }
 
-proc ::panorama::update {w xy} {
+proc ::panorama::update {w xy args} {
     upvar #0 ::panorama::$w data
     # update spectrum and waterfall
     ::spectrum::update $w.s $xy
@@ -56,6 +56,10 @@ proc ::panorama::configure {w args} {
     upvar #0 ::panorama::$w data
     foreach {option value} $args {
 	switch -- $option {
+	    -polyphase {
+		::capture::configure $w $option $value
+		set data($option) $value
+	    }
 	    default { set data($option) $value 	}
 	}
     }
@@ -65,7 +69,7 @@ proc ::panorama::window-configure {w cw width height} {
     if {$w ne $cw} return
     # puts "panorama::window-configure $w $cw $width $height"
     upvar #0 ::panorama::$w data
-    puts "::capture::configure $w -size $width"
+    # puts "::capture::configure $w -size $width"
     ::capture::configure $w -size $width
     set srate [sdrkit::jack sample-rate]
     set scale [expr {$data(-zoom)*double($width)/$srate}]

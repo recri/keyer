@@ -63,6 +63,12 @@ static float dBP(float x) { return 20.0 * log10(x + BITSY); }
 static float DamPlus(float x0, float x1) { return 0.9995 * x0 + 0.0005 * x1; }
 
 static double sqr(double x) { return (x * x); }
+
+// round log2(n) up to integer
+static int npoof2(int n) { int i; for (i = 0, n -= 1; n > 0; i += 1, n >>= 1); return i; }
+// exp2(log2(n)) rounded up to a block.
+static int nblock2(int n) { return 1 << npoof2(n); }
+
 /*
 ** these are banal
 */

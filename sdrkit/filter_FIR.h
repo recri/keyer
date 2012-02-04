@@ -20,6 +20,7 @@
 #define FILTER_FIR_H
 
 #include "dmath.h"
+#include "window.h"
 
 /*
 ** construct the coefficients for a FIR filter
@@ -32,10 +33,20 @@
 ** namely bandpass_complex and lowpass_real
 */
 
+static void *bandpass_real(float lo, float hi, float sr, int size, float *coeff) {
+  return (void *)"real bandstop filter not implemented";
+}
+
+static void *bandstop_real(float lo, float hi, float sr, int size, float *coeff) {
+  return (void *)"real bandstop filter not implemented";
+}  
+static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) {
+  return (void *)"real hilbert filter not implemented";
+}  
 /*
 ** a lowpass real filter is used to implement polyphase spectra
 */
-static void *lowpass_real(float cutoff, float sr, int size, float *coeff, float *window) {
+static void *lowpass_real(float cutoff, float sr, int size, float *coeff) {
   if ((cutoff < 0.0) || (cutoff > (sr / 2.0)))
     return (void *)"cutoff out of range";
   if (size < 1)
@@ -47,17 +58,21 @@ static void *lowpass_real(float cutoff, float sr, int size, float *coeff, float 
   for (int i = 1; i <= size; i++) {
     int j = i - 1;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * (i - midpoint) * fc) / (pi * (i - midpoint))) * window[j];
+      coeff[j] = (sinf(two_pi * (i - midpoint) * fc) / (pi * (i - midpoint))) * window_get(WINDOW_BLACKMANHARRIS, size, j);
     else
       coeff[midpoint - 1] = 2.0f * fc;
   }
   return (void *)coeff;
 }
 
+static void *highpass_real(float cutoff, float sr, int size, float *coeff) {
+  return (void *)"real highpass filter not implemented";
+}
+
 /*
 ** a complex bandpass filter is used to implement the radio bandpass
 */
-static void *bandpass_complex(float lo, float hi, float sr, int size, float _Complex *coeff, float *window) {
+static void *bandpass_complex(float lo, float hi, float sr, int size, float complex *coeff) {
   if ((lo < -(sr / 2.0)) || (hi > (sr / 2.0)) || (hi <= lo))
     return (void *)"lo frequency and/or hi frequency out of bounds";
   if (size < 1)
@@ -76,7 +91,7 @@ static void *bandpass_complex(float lo, float hi, float sr, int size, float _Com
     int j = i - 1, k = i - midpoint;
     float tmp, phs = ff * k;
     if (i != midpoint)
-      tmp = (sinf(two_pi * k * fc) / (pi * k)) * window[j];
+      tmp = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMANHARRIS, size, j);
     else
       tmp = 2.0f * fc;
     tmp *= 2.0f;
@@ -85,4 +100,16 @@ static void *bandpass_complex(float lo, float hi, float sr, int size, float _Com
   return (void *)coeff;
 }
 
+static void *bandstop_complex(float lo, float hi, float sr, int size, float complex *coeff) {
+  return (void *)"complex bandstop filter not implemented";
+}  
+static void *hilbert_complex(float lo, float hi, float sr, int size, float complex *coeff) {
+  return (void *)"complex hilbert filter not implemented";
+}  
+static void *lowpass_complex(float cutoff, float sr, int size, float complex *coeff) {
+  return (void *)"complex lowpass filter not implemented";
+}
+static void *highpass_complex(float cutoff, float sr, int size, float complex *coeff) {
+  return (void *)"complex highpass filter not implemented";
+}
 #endif

@@ -26,48 +26,33 @@
 #define FRAMEWORK_USES_SUBCOMMANDS 0
 
 #include "../sdrkit/dmath.h"
-#include "../sdrkit/window.h"
+#include "../sdrkit/polyphase_fft.h"
 #include "framework.h"
 
 /*
-** create fft and filter windows.
+** create a polyphase fft weighted overlap window
 */
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  // check for usage
   if (argc != 3) {
-    Tcl_SetResult(interp, "usage: sdrkit::window type size", TCL_STATIC);
+    Tcl_SetResult(interp, "usage: sdrkit::window-polyphase polyphase size", TCL_STATIC);
     return TCL_ERROR;
   }
-  char *type_name = Tcl_GetString(objv[1]);
-  int itype = -1;
-  for (int i = 0; window_names[i] != NULL; i += 1)
-    if (strcmp(window_names[i], type_name) == 0) {
-      itype = i;
-      break;
-    }
-  if (itype < 0) {
-    Tcl_AppendResult(interp, "unknown window type, should be one of ", NULL);
-    for (int i = 0; window_names[i] != NULL; i += 1) {
-      if (i > 0) {
-	Tcl_AppendResult(interp, ", ", NULL);
-	if (window_names[i+1] == NULL)
-	  Tcl_AppendResult(interp, "or ", NULL);
-      }
-      Tcl_AppendResult(interp, window_names[i], NULL);
-    }
+  int polyphase, size;
+  if (Tcl_GetIntFromObj(interp, objv[1], &polyphase) != TCL_OK ||
+      Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK)
     return TCL_ERROR;
-  }
-  int size;
-  if (Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK) return TCL_ERROR;
   Tcl_Obj *result = Tcl_NewObj();
-  float *window = (float *)Tcl_SetByteArrayLength(result, size*sizeof(float));
-  window_make(itype, size, window);
+  float *coeffs = (float *)Tcl_SetByteArrayLength(result, polyphase*size*sizeof(float));
+  void *e = polyphase_fft_window(polyphase, size, coeffs); if (e != coeffs) {
+    Tcl_SetResult(interp, e, TCL_STATIC);
+    return TCL_ERROR;
+  }
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Window_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::window", "1.0.0", "sdrkit::window", _command);
+int DLLEXPORT Window_polyphase_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::window-polyphase", "1.0.0", "sdrkit::window-polyphase", _command);
 }
 

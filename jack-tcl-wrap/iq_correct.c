@@ -63,11 +63,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   }
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
-#if GNURADIO_VERSION
     Tcl_NewDoubleObj(data->iqb.wi), Tcl_NewDoubleObj(data->iqb.wq), NULL
-#else
-    Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)), NULL
-#endif
   };
   Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
   return TCL_OK;
@@ -83,11 +79,7 @@ static int _set(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return TCL_ERROR;
   // this may not be atomic, but it will work itself out
   _t *data = (_t *)clientData;
-#if GNURADIO_VERSION
   data->iqb.wi = wi; data->iqb.wq = wq;
-#else
-  data->iqb.w = wi + I * wq;
-#endif
   return TCL_OK;
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

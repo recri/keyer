@@ -37,7 +37,9 @@
 
 #include "dmath.h"
 
+#ifndef GNURADIO_VERSION
 #define GNURADIO_VERSION 0
+#endif
 
 typedef struct {
   float mu;			/* update factor, a time constant */
@@ -45,11 +47,7 @@ typedef struct {
 
 typedef struct {
   float mu;
-#if GNURADIO_VERSION
   float wi, wq;
-#else
-  float complex w;
-#endif
 } iq_correct_t;
 
 static void iq_correct_configure(iq_correct_t *p, iq_correct_options_t *q) {
@@ -62,30 +60,28 @@ static void *iq_correct_preconfigure(iq_correct_t *p, iq_correct_options_t *q) {
 }
 
 static void *iq_correct_init(iq_correct_t *p, iq_correct_options_t *q) {
-#if GNURADIO_VERSION
   p->wi = 0.0f;
   p->wq = 0.0f;
-#else
-  p->w = 0.0f;
-#endif
   void *e = iq_correct_preconfigure(p, q); if (e != p) return e;
   iq_correct_configure(p, q);
   return p;
 }
 
-static float _Complex iq_correct_process(iq_correct_t *p, const float _Complex x) {
+static float complex iq_correct_process(iq_correct_t *p, const float complex z0) {
 #if GNURADIO_VERSION
   // this is the gnuradio routine
-  float yi = crealf(x) - p->wi * cimagf(x);
-  float yq = cimagf(x) - p->wq * crealf(x);
-  p->wi += p->mu * cimagf(y) * crealf(x);
-  p->wq += p->mu * crealf(y) * cimagf(x); 
-  return yi + I * yq;
+  float zi = crealf(z0) - p->wi * cimagf(z0);
+  float zq = cimagf(z0) - p->wq * crealf(z0);
+  p->wi += p->mu * zq * crealf(z0);
+  p->wq += p->mu * zi * cimagf(z0); 
+  return zi + I * zq;
 #else
-  // this is the streamlined dttsp routine
-  float complex y = x + p->w * conjf(x);
-  p->w -= p->mu * y * y;
-  return y;
+  // this is the dttsp routine
+  float complex z1 = z0 + (p->wi+I*p->wq) * conjf(z0);
+  float complex dw = p->mu * z1 * z1;
+  p->wi -= crealf(dw);
+  p->wq -= cimagf(dw);
+  return z1;
 #endif
 }
 #endif

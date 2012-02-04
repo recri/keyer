@@ -25,10 +25,13 @@
 #include "framework.h"
 
 /*
-** convert a mono audio channel to i/q.
+** delay i or q or neither samples by 1 sample time.
+** useful for correcting input from Creative X-Fi
+** or for converting a mono channel to iq.
 */
 typedef struct {
   framework_t fw;
+  int who_delay;
   float delayed_sample;
 } _t;
 
@@ -41,12 +44,29 @@ static void *_init(void *arg) {
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
   float *in0 = jack_port_get_buffer(framework_input(data,0), nframes);
+  float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   float delayed_sample = data->delayed_sample;
-  for (int i = nframes; --i >= 0; ) {
-    *out0++ = delayed_sample;
-    delayed_sample = *out1++ = *in0++;
+  switch (data->who_delay) {
+  case 0:			// no delay
+    for (int i = nframes; --i >= 0; ) {
+      *out0++ = *in0++;
+      *out1++ = *in1++;
+    }
+    break;
+  case 1:			// delay i
+    for (int i = nframes; --i >= 0; ) {
+      *out0++ = delayed_sample; delayed_sample = *in0++;
+      *out1++ = *in1++;
+    }
+    break;
+  case -1:			// delay q
+    for (int i = nframes; --i >= 0; ) {
+      *out0++ = *in0++;
+      *out1++ = delayed_sample; delayed_sample = *in1++;
+    }
+    break;
   }
   data->delayed_sample = delayed_sample;
   return 0;
@@ -58,6 +78,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+  { "-delay", "delay", "Delay", "0", fw_option_int, fw_flag_none, offsetof(_t,who_delay), "delay i (1), q (-1), or neither (0) by one sample" },
   { NULL }
 };
 
@@ -74,7 +95,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  1, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component which converts a monoaural audio channel into an I/Q audio channel pair"
 };
 
@@ -83,6 +104,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Mono_to_iq_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::mono-to-iq", "1.0.0", "sdrkit::mono-to-iq", _factory);
+int DLLEXPORT Iq_delay_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::iq-delay", "1.0.0", "sdrkit::iq-delay", _factory);
 }

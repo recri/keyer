@@ -46,12 +46,16 @@
 ** for Weighted OverLap Add.
 **
 */
+#include "filter_FIR.h"
 
-static void *polyphase_fft_window(float sr, int size, int polys, float *coeff, float *window) {
-  void *e = lowpass_real(1.0, size, polys*size -1, coeff, window); if (e != coeff) return e;
-  coeff[polys*size-1] = 0.0f;
+static void *polyphase_fft_window(int polys, int size, float *coeff) {
+  int fsize = polys*size;
+  int adjust = (fsize&1)==0 ? -1 : 0;
+  void *e = lowpass_real(1.0, size, fsize+adjust, coeff); if (e != coeff) return e;
+  if (adjust != 0)
+  coeff[fsize+adjust] = 0.0f;
   float maxTap = 0.0f;
-  for (int i = 0; i < polys*size-1; i += 1)
+  for (int i = 0; i < fsize+adjust; i += 1)
     maxTap = maxf(maxTap, coeff[i]);
   float normTap = 1.0f/maxTap;
   for (int i = 0; i < polys*size-1; i += 1)
@@ -62,16 +66,15 @@ static void *polyphase_fft_window(float sr, int size, int polys, float *coeff, f
 #define COMPLEX_INTERLEAVED 1
 
 #if COMPLEX_INTERLEAVED
-static void *polyphase_fft_convolve(int size, int polys, float *coeff, float complex *inputs, float complex *outputs) {
-  for (int i = 0; i < size; i += 1) {
-    output[i] = coeff[i] * input[i];
-    for (int j = size; j < polys*size; j += size)
-      output[i] += coeff[j+i] * inputs[j+i];
-  }
-  return (void *)coeff;
+static void polyphase_fft_convolve(int polys, int size, float *coeff, float complex *input, float complex *output) {
+  for (int i = 0; i < size; i += 1)
+    output[i] = *coeff++ * *input++;
+  for (int j = 1; j < polys; j += 1)
+    for (int i = 0; i < size; i += 1)
+      output[i] += *coeff++ * *input++;
 }
 #else
-static void *polyphase_fft_convolve(int size, int polys, float *coeff, float *ireal, float *iimag, float *oreal, float *oimag) {
+static void polyphase_fft_convolve(int size, int polys, float *coeff, float *ireal, float *iimag, float *oreal, float *oimag) {
   for (int i = 0; i < size; i += 1) {
     oreal[i] = coeff[i] * ireal[i];
     oimag[i] = coeff[i] * iimag[i];
@@ -80,9 +83,8 @@ static void *polyphase_fft_convolve(int size, int polys, float *coeff, float *ir
       oimag[i] += coeff[j+i] * iimag[j+i];
     }
   }
-  return (void *)coeff;
 }
-
+#endif
 #endif
 
 #if 0

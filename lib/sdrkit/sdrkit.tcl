@@ -24,7 +24,7 @@ namespace eval ::sdrkit {}
 # compute the power of 2 size larger than or equal to n
 #
 proc sdrkit::log2-size {n} {
-    return [expr {int(0.5+log($n)/log(2))}]
+    return [expr {round(0.5+log($n)/log(2))}]
 }
 
 #
@@ -64,4 +64,21 @@ proc sdrkit::radians {degrees} {
 
 proc sdrkit::degrees {radians} {
     return [expr {360.0*$radians/$::sdrkit::two_pi}]
+}
+
+#
+# s meter equivalents
+#
+set sdrkit::smeter {
+    {{S reading} {uV into 50ohm} dBm {dB above 1uV}}
+    {S9+10dB	160.0		-63	44}
+    {S9		50.2		-73	34}
+    {S8		25.1		-79	28}
+    {S7		12.6		-85	22}
+    {S6		6.3		-91	16}
+    {S5		3.2		-97	10}
+    {S4		1.6		-103	4}
+    {S3		0.8		-109	-2}
+    {S2		0.4		-115	-8}
+    {S1		0.2		-121	-14}
 }

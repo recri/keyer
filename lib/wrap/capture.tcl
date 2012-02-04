@@ -27,6 +27,8 @@ package require sdrkit
 package require sdrkit::audio-tap
 package require sdrkit::midi-tap
 package require sdrkit::fftw
+package require sdrkit::window
+package require sdrkit::window-polyphase
 package require sdrkit::jack
 
 namespace eval ::capture {
@@ -35,6 +37,7 @@ namespace eval ::capture {
 	-connect {}
 	-period 50
 	-size 4096
+	-polyphase 0
     }
 }
 
@@ -50,22 +53,15 @@ proc ::capture::configure {w args} {
     foreach {option value} $args {
 	switch -- $option {
 	    -size {
-		if {$value != $data(-size)} {
-		    set data(-size) $value
-		    if {$data(type) eq {spectrum}} {
-			$data(fft) configure -size $value
-			set newlog2size [::capture::log2-size $value]
-			if {[$data(tap) cget -log2size] < $newlog2size} {
-			    $data(tap) configure -log2size $newlog2size
-			}
-		    }
-		    if {$data(type) eq {iq} && [info exists data(tap)]} {
-			set newlog2size [::capture::log2-size $value]
-			if {[$data(tap) cget -log2size] < $newlog2size} {
-			    $data(tap) configure -log2size $newlog2size
-			}
+		if {$data(type) eq {iq} && [info exists data(tap)]} {
+		    set log2size [::capture::log2-size $value]
+		    if {[$data(tap) cget -log2size] < $log2size} {
+			$data(tap) configure -log2size $log2size
 		    }
 		}
+		set data($option) $value
+	    }
+	    -polyphase {
 		set data($option) $value
 	    }
 	    -period {
@@ -99,12 +95,44 @@ proc ::capture::capture-spectrum {w} {
     if {$data(started)} {
 	# cache a number
 	set n $data(-size)
+	# make sure the fft is configured
+	if {[$data(fft) cget -size] != $data(-size)} {
+	    $data(fft) configure -size $data(-size)
+	}
+	# make sure the window is configured,
+	# and find out how many samples we need
+	if {$data(-polyphase)} {
+	    set ns [expr {$data(-size)*$data(-polyphase)}]
+	    set log2size [::capture::log2-size $ns]
+	    if {[$data(tap) cget -log2size] != $log2size} {
+		$data(tap) configure -log2size $log2size
+	    }
+	    if { ! [info exists data(fft-window)] ||
+		 [string length $data(fft-window)] != $ns*4} {
+		set data(fft-window) [sdrkit::window-polyphase $data(-polyphase) $data(-size)]
+	    }
+	} else {
+	    set ns $data(-size)
+	    set log2size [::capture::log2-size $ns]
+	    if {[$data(tap) cget -log2size] != $log2size} {
+		$data(tap) configure -log2size $log2size
+	    }
+	    if { ! [info exists data(fft-window)] ||
+		 [string length $data(fft-window)] != $ns*4} {
+		set data(fft-window) [sdrkit::window blackmanharris $data(-size)]
+	    }
+	}
 	# capture a buffer
 	lassign [::$data(tap) get] f b
 	# don't pass it on if its short
-	if {[string length $b]/8 >= $n} {
+	set ni [expr {[string length $b]/8}]
+	if {$ni < $ns} {
+	    # puts "capture buffer too small $ni < $ns (-log2size is [$data(tap) cget -log2size], [::capture::log2-size $ns])"
+	    # free the capture buffer
+	    set b {}
+	} else {
 	    # compute the fft
-	    set l [::$data(fft) exec $b]
+	    set l [$data(fft) exec $b $data(fft-window)]
 	    # free the capture buffer
 	    set b {}
 	    # convert the coefficients to a list
@@ -131,13 +159,8 @@ proc ::capture::capture-spectrum {w} {
 		lappend xy $x $p
 		set x [expr {$x+$dx}]
 	    }
-	    puts "minp $minp, avgp $avgp, maxp $maxp"
 	    # send the result to the client
-	    $data(-client) $w $xy
-	} else {
-	    # free the capture buffer
-	    puts "capture buffer too small [expr {[string length $b]/8}] < $n"
-	    set b {}
+	    $data(-client) $w $xy minp $minp avgp $avgp maxp $maxp
 	}
 	# schedule next capture
 	# puts "after $data(-period) [list ::capture::capture-spectrum $w]"

@@ -23,8 +23,23 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require panorama
 
+proc polyphase {args} {
+    switch -glob $::pan(polyphase) {
+	plain { ::panorama::configure .p -polyphase 0 }
+	polyphase-* { ::panorama::configure .p -polyphase [lindex [split $::pan(polyphase) -] 1] }
+    }
+}
+
+
 proc main {argv} {
     pack [panorama .p] -side top -fill both -expand true
+    pack [ttk::frame .m] -side top
+    pack [ttk::menubutton .m.s -textvar ::pan(polyphase) -menu .m.s.m]
+    menu .m.s.m -tearoff no
+    foreach x {plain polyphase-2 polyphase-3 polyphase-4 polyphase-5 polyphase-6 polyphase-7 polyphase-8} {
+	.m.s.m add radiobutton -label $x -variable ::pan(polyphase) -value $x -command polyphase
+    }
+    set ::pan(polyphase) plain
 }
 
 main $argv
