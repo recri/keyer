@@ -38,7 +38,7 @@ typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  float _Complex gain;
+  float gain;
   int mute;
   int transition;
   float ramp;
@@ -46,16 +46,11 @@ typedef struct {
 } _t;
 
 static void _update(_t *dp) {
-  if (dp->modified) {
-    dp->modified = 0;
-    dp->gain = powf(10.0f, dp->opts.dBgain / 20.0f);
-  }
 }
 
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
-  dp->modified = 1;
-  _update(dp);
+  dp->gain = dB_to_linear(dp->opts.dBgain);
   dp->mute = 0;
   dp->transition = 0;
   return arg;
@@ -127,7 +122,9 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   _t *dp = (_t *)clientData;
   float dBgain = dp->opts.dBgain;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (dp->opts.dBgain != dBgain) dp->modified = 1;
+  if (dp->opts.dBgain != dBgain) {
+    dp->gain = dB_to_linear(dp->opts.dBgain);
+  }
   return TCL_OK;
 }
 

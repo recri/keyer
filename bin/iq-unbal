@@ -1,0 +1,149 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require sdrkit
+package require sdrkit::jack
+package require sdrkit::iq-balance
+package require sdrkit::iq-delay
+package require sdrkit::gain
+
+#
+# just take input iq through a gain block
+# conditionally swap i and q
+# conditionally delay i or q by one sample
+# conditionally unbalance the iq gain and/or phase
+# and put it out another gain block
+#
+
+array set data {
+    server default
+    length 320
+    iq-swap 0
+    iq-delay 0
+    iq-sine 0.0
+    iq-gain 0.0
+}
+
+proc set-iq-swap {} {
+    if {$::data(iq-swap)} {
+	jack disconnect iq-unbal-in:out_i iq-delay:in_i
+	jack disconnect iq-unbal-in:out_q iq-delay:in_q
+	jack connect iq-unbal-in:out_i iq-delay:in_q
+	jack connect iq-unbal-in:out_q iq-delay:in_i
+    } else {
+	jack disconnect iq-unbal-in:out_i iq-delay:in_q
+	jack disconnect iq-unbal-in:out_q iq-delay:in_i
+	jack connect iq-unbal-in:out_i iq-delay:in_i
+	jack connect iq-unbal-in:out_q iq-delay:in_q
+    }
+}
+
+proc set-iq-delay {} {
+    iq-delay configure -delay $::data(iq-delay)
+}
+
+proc set-iq-phase {v} {
+    iq-balance configure -sine-phase [expr {sin([sdrkit::radians $v])}]
+    set ::data(iq-phase-label) [format %6.2f $v]
+}
+
+proc set-iq-gain {v} {
+    iq-balance configure -linear-gain [sdrkit::dB-to-linear $v]
+    set ::data(iq-gain-label) [format %6.2f $v]
+}
+
+proc shutdown {w} {
+    if {$w eq {.}} {
+	foreach client $::data(clients-to-cleanup) {
+	    rename $client {}
+	}
+    }
+}
+
+proc start-client {module name args} {
+    $module $name -server $::data(server) {*}$args
+    lappend ::data(clients-to-cleanup) $name
+}
+
+proc main {argv} {
+
+    foreach {option value} $argv {
+	switch -- $option {
+	    -s - -server - --server { set ::data(server) $value }
+	    -l - -length - --length { set ::data(length) $value }
+	    default { error "unknown option \"$option\"" }
+	}
+    }
+
+    start-client sdrkit::jack-client jack -client jack[pid]
+
+    start-client sdrkit::gain iq-unbal-in
+    iq-unbal-in configure -gain 0.0
+    start-client sdrkit::iq-delay iq-delay
+    start-client sdrkit::iq-balance iq-balance
+    start-client sdrkit::gain iq-unbal-out
+    iq-unbal-out configure -gain 0.0
+    
+    wm title . sdrkit:iq-unbal
+
+    set row 0
+    grid [ttk::frame .b$row] -row $row -column 0 -columnspan 3
+    pack [ttk::label .b$row.l -text {IQ Swap}] -side left
+    pack [ttk::checkbutton .b$row.e -text {enable} -variable ::data(iq-swap) -command set-iq-swap] -side left
+    set ::data(iq-swap) 0
+    incr row
+
+    grid [ttk::frame .b$row] -row $row -column 0 -columnspan 3
+    pack [ttk::label .b$row.l -text {IQ Delay}] -side left
+    pack [ttk::radiobutton .b$row.e1 -text {none} -variable ::data(iq-delay) -value 0 -command set-iq-delay] -side left
+    pack [ttk::radiobutton .b$row.e2 -text {delay I} -variable ::data(iq-delay) -value 1 -command set-iq-delay] -side left
+    pack [ttk::radiobutton .b$row.e3 -text {delay Q} -variable ::data(iq-delay) -value -1 -command set-iq-delay] -side left
+    set ::data(iq-delay) 0
+    incr row
+
+    grid [ttk::label .b$row -text {IQ Balance}] -row $row -column 0 -columnspan 3
+    incr row
+    grid [ttk::label .sine$row-l -textvar ::data(iq-phase-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .sine$row-u -text {deg}] -row $row -column 1
+    grid [ttk::scale .sine$row-s -from -45.0 -to 45.0 -command set-iq-phase -variable ::data(iq-phase) -length $::data(length)] -row $row -column 2 -sticky ew
+    set-iq-phase 0.0
+    incr row
+    grid [ttk::label .gain$row-l -textvar ::data(iq-gain-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .gain$row-u -text {dB}] -row $row -column 1
+    grid [ttk::scale .gain$row-s -from -30.00 -to 30.00 -command set-iq-gain -variable ::data(iq-gain) -length $::data(length)] -row $row -column 2 -sticky ew
+    set-iq-gain 0.0
+    incr row
+    grid columnconfigure . 2 -weight 100
+    grid rowconfigure . 0 -weight 100
+
+    foreach out {iq-unbal-in iq-delay iq-balance} in {iq-delay iq-balance iq-unbal-out} {
+	foreach iq {i q} {
+	    jack connect $out:out_$iq $in:in_$iq
+	}
+    }
+
+    bind . <Destroy> [list shutdown %W]
+}
+
+main $argv

@@ -53,7 +53,7 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = iq_noise_init(&data->iq_noise); if (p != &data->iq_noise) return p;
   iq_noise_configure(&data->iq_noise, &data->opts.n);
-  data->opts.gain = powf(10.0f, data->opts.dBgain / 20.0f);
+  data->opts.gain = dB_to_linear(data->opts.dBgain);
   data->gain = data->opts.gain;
   return arg;
 }
@@ -75,10 +75,12 @@ static int _process(jack_nframes_t nframes, void *arg) {
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  data->modified = data->opts.dBgain != save.dBgain;
-  if (data->modified) {
-    data->opts.gain = powf(10.0f, data->opts.dBgain / 20.0f);
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    data->opts = save;
+    return TCL_ERROR;
+  }
+  if(data->opts.dBgain != save.dBgain) {
+    data->opts.gain = dB_to_linear(data->opts.dBgain);
   }
   return TCL_OK;
 }

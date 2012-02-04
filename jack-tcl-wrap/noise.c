@@ -32,7 +32,6 @@
 */
 typedef struct {
   float dBgain;
-  float gain;
   noise_options_t n;
 } options_t;
 
@@ -45,19 +44,13 @@ typedef struct {
 } _t;
 
 static void _update(_t *data) {
-  if (data->modified) {
-    data->modified = 0;
-    // noise_configure(&data->noise, &data->opts.n);
-    data->gain = powf(10.0f, data->opts.dBgain / 20.0f);
-  }
 }
   
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = noise_init(&data->noise); if (p != &data->noise) return p;
   noise_configure(&data->noise, &data->opts.n);
-  data->modified = 1;
-  _update(data);
+  data->gain = dB_to_linear(data->opts.dBgain);
   return arg;
 }
 
@@ -78,8 +71,13 @@ static int _process(jack_nframes_t nframes, void *arg) {
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  data->modified = data->opts.dBgain != save.dBgain;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    data->opts = save;
+    return TCL_ERROR;
+  }
+  if (data->opts.dBgain != save.dBgain) {
+    data->gain = dB_to_linear(data->opts.dBgain);
+  }
   return TCL_OK;
 }
 

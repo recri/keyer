@@ -31,11 +31,8 @@
 */
 typedef struct {
   framework_t fw;
+  int swap;
 } _t;
-
-static void *_init(void *arg) {
-  return arg;
-}
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
@@ -43,9 +40,16 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
-  for (int i = nframes; --i >= 0; ) {
-    *out0++ = *in1++;
-    *out1++ = *in0++;
+  if (data->swap) {
+    for (int i = nframes; --i >= 0; ) {
+      *out0++ = *in1++;
+      *out1++ = *in0++;
+    }
+  } else {
+    for (int i = nframes; --i >= 0; ) {
+      *out0++ = *in0++;
+      *out1++ = *in1++;
+    }
   }
   return 0;
 }
@@ -56,6 +60,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+  { "-swap", "swap", "Swap", "0", fw_option_int, fw_flag_none, offsetof(_t,swap), "swap i and q or leave them alone" },
   { NULL }
 };
 
@@ -67,7 +72,7 @@ static const fw_subcommand_table_t _subcommands[] = {
 static const framework_t _template = {
   _options,			// option table
   _subcommands,			// subcommand table
-  _init,			// initialization function
+  NULL,				// initialization function
   _command,			// command function
   NULL,				// delete function
   NULL,				// sample rate function

@@ -81,14 +81,19 @@ static double square(double x) { return x * x; }
 /*
 ** these are functions you learn to use in computer graphics
 */
-/* clamp a value between a max and min value */
+/* clamp a value between extremes */
 static float clampf(float a, float a_min, float a_max) {
   return minf(maxf(a, a_min), a_max);
 }
 
-/* linearly interpolate between two extremes */
+/* linearly interpolate between two extremes, and beyond */
 static float interpf(float p, float v0, float v1) {
   return (1.0f-p)*v0 + p*v1;
+}
+
+/* convert a dB gain to a linear voltage gain */
+static float dB_to_linear(float dBgain) {
+  return powf(10.0f, dBgain / 20.0f);
 }
 
 #endif

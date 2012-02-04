@@ -35,12 +35,6 @@ typedef struct {
   float delayed_sample;
 } _t;
 
-static void *_init(void *arg) {
-  _t *data = (_t *)arg;
-  data->delayed_sample = 0;
-  return arg;
-}
-
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
   float *in0 = jack_port_get_buffer(framework_input(data,0), nframes);
@@ -90,7 +84,7 @@ static const fw_subcommand_table_t _subcommands[] = {
 static const framework_t _template = {
   _options,			// option table
   _subcommands,			// subcommand table
-  _init,			// initialization function
+  NULL,				// initialization function
   _command,			// command function
   NULL,				// delete function
   NULL,				// sample rate function

@@ -39,8 +39,7 @@ typedef struct {
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  // data->dBgain = -30.0f;
-  data->gain = powf(10.0f, data->dBgain / 20.0f);
+  data->gain = dB_to_linear(data->dBgain);
   return arg;
 }
 
@@ -62,8 +61,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   float dBgain = data->dBgain;
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (data->dBgain != dBgain) data->gain = powf(10.0f, dBgain / 20.0f);
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    data->dBgain = dBgain;
+    return TCL_ERROR;
+  }
+  if (data->dBgain != dBgain) data->gain = dB_to_linear(data->dBgain);
   return TCL_OK;
 }
 

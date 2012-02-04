@@ -150,17 +150,20 @@ proc ::capture::capture-spectrum {w} {
 	    # all the coefficients coming out of the fft are multiplied by sqrt(n)
 	    # so 10*log10(coeff^2) is 10*log10(sqrt(n)^2) too big
 	    set norm [expr {10*log10($n)}]
-	    foreach {re im} [concat [lrange $levels [expr {1+$n}] end] [lrange $levels 0 $n]] {
-		# squared magnitude means 10*log10 dB
-		set p [expr {10*log10($re*$re+$im*$im+1e-64)-$norm}]
-		set maxp [expr {max($p,$maxp)}]
-		set avgp [expr {$avgp+$p/$n}]
-		set minp [expr {min($p,$minp)}]
-		lappend xy $x $p
-		set x [expr {$x+$dx}]
+	    if { ! [catch {
+		foreach {re im} [concat [lrange $levels [expr {1+$n}] end] [lrange $levels 0 $n]] {
+		    # squared magnitude means 10*log10 dB
+		    set p [expr {10*log10($re*$re+$im*$im+1e-64)-$norm}]
+		    set maxp [expr {max($p,$maxp)}]
+		    set avgp [expr {$avgp+$p/$n}]
+		    set minp [expr {min($p,$minp)}]
+		    lappend xy $x $p
+		    set x [expr {$x+$dx}]
+		}
+	    }]} {
+		# send the result to the client
+		$data(-client) $w $xy minp $minp avgp $avgp maxp $maxp
 	    }
-	    # send the result to the client
-	    $data(-client) $w $xy minp $minp avgp $avgp maxp $maxp
 	}
 	# schedule next capture
 	# puts "after $data(-period) [list ::capture::capture-spectrum $w]"

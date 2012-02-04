@@ -50,7 +50,7 @@ static void *_init(void *arg) {
   // data->hertz = 440.0f;
   // data->dBgain = -30;
 #ifndef NO_GAIN
-  data->gain = powf(10, data->dBgain / 20);
+  data->gain = dB_to_linear(data->dBgain);
 #endif
   data->sample_rate = sdrkit_sample_rate(data);
   void *p = oscillator_init(&data->o, data->hertz, 0.0f, data->sample_rate); if (p != &data->o) return p;
@@ -80,11 +80,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   float dBgain = data->dBgain;
 #endif
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-#ifndef NO_GAIN
-  if (data->dBgain != dBgain) {
-    data->gain = powf(10, data->dBgain / 20);
-  }
-#endif
   if (data->hertz != hertz) {
     if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
       Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz is more than samplerate/4", data->hertz));
@@ -96,6 +91,11 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     }
     data->modified = 1;
   }
+#ifndef NO_GAIN
+  if (data->dBgain != dBgain) {
+    data->gain = dB_to_linear(data->dBgain);
+  }
+#endif
   return TCL_OK;
 }
 
