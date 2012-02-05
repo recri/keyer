@@ -33,10 +33,8 @@
 ** create a polyphase fft weighted overlap window
 */
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 3) {
-    Tcl_SetResult(interp, "usage: sdrkit::window-polyphase polyphase size", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (argc != 3)
+    return fw_error_str(interp, "usage: sdrkit::window-polyphase polyphase size");
   int polyphase, size;
   if (Tcl_GetIntFromObj(interp, objv[1], &polyphase) != TCL_OK ||
       Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK)
@@ -44,8 +42,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   Tcl_Obj *result = Tcl_NewObj();
   float *coeffs = (float *)Tcl_SetByteArrayLength(result, polyphase*size*sizeof(float));
   void *e = polyphase_fft_window(polyphase, size, coeffs); if (e != coeffs) {
-    Tcl_SetResult(interp, e, TCL_STATIC);
-    return TCL_ERROR;
+    return fw_error_str(interp, e);
   }
   Tcl_SetObjResult(interp, result);
   return TCL_OK;

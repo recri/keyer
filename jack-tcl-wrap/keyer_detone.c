@@ -81,10 +81,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_SetObjResult(interp, Tcl_NewDoubleObj(data->power));
   return TCL_OK;
@@ -101,8 +99,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     void *e = filter_goertzel_preconfigure(&data->fg, &data->opts.fg); if (e != &data->fg) {
       data->opts = save;
       data->modified = 0;
-      Tcl_SetResult(interp, (char *)e, TCL_STATIC);
-      return TCL_ERROR;
+      return fw_error_str(interp, e);
     }
   }
   return TCL_OK;

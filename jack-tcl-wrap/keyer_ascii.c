@@ -213,49 +213,40 @@ static int _puts(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
     for (Tcl_UniChar *p = Tcl_GetUnicode(objv[i]); *p != 0; p += 1) {
       if ( ! _queue_unichar(*p, clientData)) {
 	_unflush_midi(clientData);
-	Tcl_SetResult(interp, "buffer overflow", TCL_STATIC);
-	return TCL_ERROR;
+	return fw_error_str(interp, "buffer overflow");
       }
     }
     if (i != argc-1) {
       if ( ! _queue_unichar(' ', clientData)) {
 	_unflush_midi(clientData);
-	Tcl_SetResult(interp, "buffer overflow", TCL_STATIC);
-	return TCL_ERROR;
+	return fw_error_str(interp, "buffer overflow");
       }
     }
   }
   if ( ! _flush_midi(clientData)) {
     _unflush_midi(clientData);
-    Tcl_SetResult(interp, "buffer overflow", TCL_STATIC);
-    return TCL_ERROR;
+    return fw_error_str(interp, "buffer overflow");
   }
   return TCL_OK;
 }
 static int _abort(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 2) {
-    Tcl_SetResult(interp, "usage: command abort", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (argc != 2)
+    return fw_error_str(interp, "usage: command abort");
   data->abort = 1;
   return TCL_OK;
 }
 static int _pending(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 2) {
-    Tcl_SetResult(interp, "usage: command pending", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (argc != 2)
+    return fw_error_str(interp, "usage: command pending");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_buffer_readable(&data->midi)));
   return TCL_OK;
 }
 static int _available(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 2) {
-    Tcl_SetResult(interp, "usage: command available", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (argc != 2)
+    return fw_error_str(interp, "usage: command available");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(midi_buffer_writeable(&data->midi)));
   return TCL_OK;
 }

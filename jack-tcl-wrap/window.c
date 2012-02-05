@@ -34,10 +34,7 @@
 */
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   // check for usage
-  if (argc != 3) {
-    Tcl_SetResult(interp, "usage: sdrkit::window type size", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (argc != 3) return fw_error_str(interp, "usage: sdrkit::window type size");
   char *type_name = Tcl_GetString(objv[1]);
   int itype = -1;
   for (int i = 0; window_names[i] != NULL; i += 1)

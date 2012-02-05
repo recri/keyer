@@ -180,15 +180,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  if ( ! data->started) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("audio-tap %s is not running", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if ( ! data->started)
+    return fw_error_obj(interp, Tcl_ObjPrintf("audio-tap %s is not running", Tcl_GetString(objv[0])));
   // figure out where to read from
   while (1) {
     // start with no choice
@@ -221,28 +217,19 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
 }
 static int _start(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s start", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s start", Tcl_GetString(objv[0])));
   data->started = 1;
   return TCL_OK;
 }
 static int _state(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s state", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s state", Tcl_GetString(objv[0])));
   Tcl_SetObjResult(interp, Tcl_NewIntObj(data->started));
   return TCL_OK;
 }
 static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s stop", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s stop", Tcl_GetString(objv[0])));
   data->started = 0;
   return TCL_OK;
 }
@@ -252,11 +239,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
   if (save.log2_buff_n < data->opts.log2_buff_n || save.log2_buff_size < data->opts.log2_buff_size) {
     void *p = _configure(data);
-    if (p != data) {
-      Tcl_SetResult(interp, p, TCL_STATIC);
-      // it might be safer to delete our self at this point
-      return TCL_ERROR;
-    }
+    if (p != data) return fw_error_str(interp, p);
   }
   return TCL_OK;
 }

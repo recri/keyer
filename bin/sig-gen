@@ -18,6 +18,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+##
+## this script implements a bunch of oscillators and some noise
+## generators.
+## use qjackctl to connect to sig-gen: to route the test signals
+## into some other application.
+##
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
@@ -54,15 +60,14 @@ proc set-mute {mod out args} {
     #puts "set-mute $mod {$args}"
     if {$::data($mod-unmute)} {
 	foreach iq {i q} {
-	    jack connect $out:out_$iq test-signals:in_$iq
+	    jack connect $out:out_$iq sig-gen:in_$iq
 	}
     } else {
 	foreach iq {i q} {
-	    jack disconnect $out:out_$iq test-signals:in_$iq
+	    jack disconnect $out:out_$iq sig-gen:in_$iq
 	}
     }
 }
-
 proc set-gain {osc v} {
     $osc-gain configure -gain $v
     set ::data($osc-gain-label) [format %.2f $v]
@@ -80,7 +85,7 @@ proc set-noise {noise v} {
 }
 
 proc set-master-gain {v} {
-    test-signals configure -gain $v
+    sig-gen configure -gain $v
     set ::data(master-gain-label) [format %.2f $v]
 }
 
@@ -118,11 +123,11 @@ proc main {argv} {
 	set ::data(min-freq) [expr {-$::data(max-freq)}]
     }
 
-    wm title . sdrkit:test-signals
+    wm title . sdrkit:sig-gen
 
-    start-client sdrkit::gain test-signals
-    test-signals configure -gain 0.0
-    puts "test-signals configured -gain 0.0"
+    start-client sdrkit::gain sig-gen
+    sig-gen configure -gain 0.0
+
     set row 0
     foreach i {0 1 2 3} {
 	start-client sdrkit::oscillator-zd osc$i

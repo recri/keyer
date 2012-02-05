@@ -22,9 +22,6 @@
 /*
 ** I/Q channel balance correction - rewritten from dttsp cgran-r624
 ** Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
-** Actually rewritten to be a pure adaptive filter ala gnuradio 3.5.1
-** gnuradio-3.5.1/gnuradio-core/src/lib/general/gr_iqcomp_cc.cc
-** Copyright 2008,2010 Free Software Foundation, Inc.
 **
 ** What's going on here is that we are training an adaptive filter, with coefficients wi and wq,
 ** to purify our I/Q stream of any gain or phase imperfections introduced by the hardware.  The
@@ -37,17 +34,13 @@
 
 #include "dmath.h"
 
-#ifndef GNURADIO_VERSION
-#define GNURADIO_VERSION 0
-#endif
-
 typedef struct {
   float mu;			/* update factor, a time constant */
 } iq_correct_options_t;
 
 typedef struct {
   float mu;
-  float wi, wq;
+  float complex w;
 } iq_correct_t;
 
 static void iq_correct_configure(iq_correct_t *p, iq_correct_options_t *q) {
@@ -60,28 +53,31 @@ static void *iq_correct_preconfigure(iq_correct_t *p, iq_correct_options_t *q) {
 }
 
 static void *iq_correct_init(iq_correct_t *p, iq_correct_options_t *q) {
-  p->wi = 0.0f;
-  p->wq = 0.0f;
+  p->w = 0.0f;
   void *e = iq_correct_preconfigure(p, q); if (e != p) return e;
   iq_correct_configure(p, q);
   return p;
 }
 
 static float complex iq_correct_process(iq_correct_t *p, const float complex z0) {
-#if GNURADIO_VERSION
+#if 1
+  float complex z1 = z0 + p->w * conjf(z0);
+  p->w -= p->mu * z1 * z1;
+  return z1;
+#endif
+#if 0
   // this is the gnuradio routine
-  float zi = crealf(z0) - p->wi * cimagf(z0);
-  float zq = cimagf(z0) - p->wq * crealf(z0);
-  p->wi += p->mu * zq * crealf(z0);
-  p->wq += p->mu * zi * cimagf(z0); 
+  // now I'm confused which one works
+  float zi = crealf(z0) - crealf(p->w) * cimagf(z0);
+  float zq = cimagf(z0) - cimagf(p->w) * crealf(z0);
+  p->w += p->mu * (zq * crealf(z0) + I * zi * cimagf(z0));
   return zi + I * zq;
-#else
-  // this is the dttsp routine
+#endif
+#if 0
   float complex z1 = z0 + (p->wi+I*p->wq) * conjf(z0);
   float complex dw = p->mu * z1 * z1;
   p->wi -= crealf(dw);
   p->wq -= cimagf(dw);
-  return z1;
 #endif
 }
 #endif

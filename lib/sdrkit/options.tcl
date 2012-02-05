@@ -29,13 +29,14 @@ namespace eval ::sdrkit::options {
 	demod_fm {sdrkit::demod-fm norm}
 	demod_sam {sdrkit::demod-sam norm}
 	fftw {sdrkit::fftw no-jack}
-	filter_FIR_band_pass_complex {sdrkit::filter-FIR-band-pass-complex needs-window}
-	filter_FIR_low_pass_real {sdrkit::filter-FIR-low-pass-real needs-window}
+	filter_fir {sdrkit::filter-fir filter}
 	filter_biquad {sdrkit::filter-biquad norm}
 	gain {sdrkit::gain norm}
 	iq_balance {sdrkit::iq-balance norm}
 	iq_correct {sdrkit::iq-correct norm}
+	iq_delay {sdrkit::iq-delay norm}
 	iq_noise {sdrkit::iq-noise norm}
+	iq_rotation {sdrkit::iq-rotation norm}
 	iq_swap {sdrkit::iq-swap norm}
 	jack_client {sdrkit::jack-client norm}
 	keyer_ascii {keyer::ascii norm}
@@ -60,7 +61,8 @@ namespace eval ::sdrkit::options {
 	oscillator_td {sdrkit::oscillator-td norm}
 	oscillator_z {sdrkit::oscillator-z norm}
 	oscillator_zd {sdrkit::oscillator-zd norm}
-	window {sdrkit::window no-jack}
+	window {sdrkit::window window}
+	window_polyphase {sdrkit::window-polyphase window}
     }
 
     array set factories {
@@ -161,6 +163,7 @@ namespace eval ::sdrkit::options {
 	AFBandwidth {}
 	AFHertz {type float range {200.0 1600.0}}
 	Bool {}
+	BWHertz {}
 	Channel {}
 	Char {}
 	Client {}
@@ -187,6 +190,7 @@ namespace eval ::sdrkit::options {
 	Seed {}
 	Server {}
 	Steps {}
+	Swap {}
 	Tap {}
 	Verbose {}
 	Window {}

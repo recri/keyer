@@ -27,10 +27,10 @@
 /*
 ** create FIR filter coefficients
 */
-enum { COMPLEX, REAL } ctype_t;
-char *ctypes[] = { "complex", "real", NULL };
-enum { BANDPASS, LOWPASS, HIGHPASS, BANDSTOP, HILBERT } ftype_t;
-char *ftypes[] = { "bandpass", "lowpass", "highpass", "bandstop", "hilbert", NULL };
+static enum { COMPLEX, REAL } ctype_t;
+static char *ctypes[] = { "complex", "real", NULL };
+static enum { BANDPASS, LOWPASS, HIGHPASS, BANDSTOP, HILBERT } ftype_t;
+static char *ftypes[] = { "bandpass", "lowpass", "highpass", "bandstop", "hilbert", NULL };
   
 static int _find_string_index(Tcl_Interp *interp, char *type, char **types, int *match) {
   for (int i = 0; types[i] != NULL; i += 1)
@@ -51,10 +51,8 @@ static int _find_string_index(Tcl_Interp *interp, char *type, char **types, int 
 }
   
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc < 6) {
-    Tcl_SetResult(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size ...", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (argc < 6)
+    return fw_error_str(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size ...");
   int ctype, ftype, sample_rate, size;
   if (_find_string_index(interp, Tcl_GetString(objv[1]), ctypes, &ctype) != TCL_OK ||
       _find_string_index(interp, Tcl_GetString(objv[2]), ftypes, &ftype) != TCL_OK ||
@@ -66,10 +64,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   case BANDPASS:
   case BANDSTOP:
   case HILBERT:
-    if (argc != 7) {
-      Tcl_SetResult(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size low high", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if (argc != 7)
+      return fw_error_str(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size low high");
 
     if (Tcl_GetDoubleFromObj(interp, objv[5], &lo) != TCL_OK ||
 	Tcl_GetDoubleFromObj(interp, objv[6], &hi) != TCL_OK)
@@ -77,16 +73,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     break;
   case LOWPASS:
   case HIGHPASS:
-    if (argc != 6) {
-      Tcl_SetResult(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size cutoff", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if (argc != 6)
+      return fw_error_str(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size cutoff");
     if (Tcl_GetDoubleFromObj(interp, objv[5], &cutoff) != TCL_OK)
       return TCL_ERROR;
     break;
   default:
-    Tcl_SetResult(interp, "unknown filter type!", TCL_STATIC);
-    return TCL_ERROR;
+    return fw_error_str(interp, "unknown filter type!");
   }
   Tcl_Obj *result = Tcl_NewObj();
   if (ctype == REAL) {
@@ -101,8 +94,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     }
     if (e != coeff) {
       Tcl_DecrRefCount(result);
-      Tcl_SetResult(interp, e, TCL_STATIC);
-      return TCL_ERROR;
+      return fw_error_str(interp, e);
     }
   } else if (ctype == COMPLEX) {
     float complex *coeff = (float complex *)Tcl_SetByteArrayLength(result, size*sizeof(float complex));
@@ -116,13 +108,11 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     }
     if (e != coeff) {
       Tcl_DecrRefCount(result);
-      Tcl_SetResult(interp, e, TCL_STATIC);
-      return TCL_ERROR;
+      return fw_error_str(interp, e);
     }
   } else {
     Tcl_DecrRefCount(result);
-    Tcl_SetResult(interp, "unknown coefficient type!", TCL_STATIC);
-    return TCL_ERROR;
+    return fw_error_str(interp, "unknown coefficient type!");
   }
   Tcl_SetObjResult(interp, result);
   return TCL_OK;

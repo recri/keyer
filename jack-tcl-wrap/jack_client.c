@@ -25,13 +25,8 @@ typedef struct {
   framework_t fw;
 } _t;
 
-static int _usage(Tcl_Interp *interp, char *string) {
-  Tcl_SetResult(interp, string, TCL_STATIC);
-  return TCL_ERROR;
-}
-
 static int _list_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2) return _usage(interp, "jack-client list-ports");
+  if (argc != 2) return fw_error_str(interp, "jack-client list-ports");
   _t *dp = (_t *)clientData;
   Tcl_Obj *dict = Tcl_NewDictObj();
   Tcl_Obj *direction = Tcl_NewStringObj("direction", -1);
@@ -70,43 +65,43 @@ static int _list_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
 }
 static int _sample_rate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client sample-rate");
+  if (argc != 2) return fw_error_str(interp, "jack-client sample-rate");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_get_sample_rate(dp->fw.client)));
   return TCL_OK;
 }
 static int _buffer_size(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client buffer-size");
+  if (argc != 2) return fw_error_str(interp, "jack-client buffer-size");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_get_buffer_size(dp->fw.client)));
   return TCL_OK;
 }
 static int _cpu_load(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client cpu-load");
+  if (argc != 2) return fw_error_str(interp, "jack-client cpu-load");
   Tcl_SetObjResult(interp, Tcl_NewDoubleObj(jack_cpu_load(dp->fw.client)));
   return TCL_OK;
 }
 static int _is_realtime(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client is-realtime");
+  if (argc != 2) return fw_error_str(interp, "jack-client is-realtime");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_is_realtime(dp->fw.client)));
   return TCL_OK;
 }
 static int _frame_time(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client frame-time");
+  if (argc != 2) return fw_error_str(interp, "jack-client frame-time");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_frame_time(dp->fw.client)));
   return TCL_OK;
 }
 static int _time(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client time");
+  if (argc != 2) return fw_error_str(interp, "jack-client time");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_get_time()));
   return TCL_OK;
 }
 static int _version(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client version");
+  if (argc != 2) return fw_error_str(interp, "jack-client version");
   int major, minor, micro, proto;
   jack_get_version(&major, &minor, &micro, &proto);
   Tcl_Obj *result[] = {
@@ -117,31 +112,31 @@ static int _version(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 static int _version_string(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client version-string");
+  if (argc != 2) return fw_error_str(interp, "jack-client version-string");
   Tcl_SetObjResult(interp, Tcl_NewStringObj(jack_get_version_string(), -1));
   return TCL_OK;
 }
 static int _client_name_size(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client client-name-size");
+  if (argc != 2) return fw_error_str(interp, "jack-client client-name-size");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_client_name_size()));
   return TCL_OK;
 }
 static int _port_name_size(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client port-name-size");
+  if (argc != 2) return fw_error_str(interp, "jack-client port-name-size");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_port_name_size()));
   return TCL_OK;
 }
 static int _port_type_size(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 2) return _usage(interp, "jack-client port-type-size");
+  if (argc != 2) return fw_error_str(interp, "jack-client port-type-size");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_port_type_size()));
   return TCL_OK;
 }
 static int _time_to_frames(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 3) return _usage(interp, "jack-client time-to-frames time");
+  if (argc != 3) return fw_error_str(interp, "jack-client time-to-frames time");
   jack_time_t time;
   if (Tcl_GetLongFromObj(interp, objv[2], &time) != TCL_OK) return  TCL_ERROR;
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_time_to_frames(dp->fw.client, time)));
@@ -149,14 +144,14 @@ static int _time_to_frames(ClientData clientData, Tcl_Interp *interp, int argc, 
 }
 static int _frames_to_time(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
-  if (argc != 3) return _usage(interp, "jack-client frames-to-time frames");
+  if (argc != 3) return fw_error_str(interp, "jack-client frames-to-time frames");
   jack_nframes_t frames;
   if (Tcl_GetIntFromObj(interp, objv[2], &frames) != TCL_OK) return TCL_ERROR;
   Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_frames_to_time(dp->fw.client, frames)));
   return TCL_OK;
 }
 static int _connect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc-2 < 0 || ((argc-2)&1) != 0) return _usage(interp, "jack-client connect from to [...]");
+  if (argc-2 < 0 || ((argc-2)&1) != 0) return fw_error_str(interp, "jack-client connect from to [...]");
   _t *dp = (_t *)clientData;
   for (int i = 2; i+1 < argc; i += 2) {
     int err = jack_connect(dp->fw.client, Tcl_GetString(objv[i]), Tcl_GetString(objv[i+1]));
@@ -165,7 +160,7 @@ static int _connect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   return TCL_OK;
 }
 static int _disconnect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc-2 < 0 || ((argc-2)&1) != 0) return _usage(interp, "jack-client disconnect from to [...]");
+  if (argc-2 < 0 || ((argc-2)&1) != 0) return fw_error_str(interp, "jack-client disconnect from to [...]");
   _t *dp = (_t *)clientData;
   for (int i = 2; i+1 < argc; i += 2) {
     int err = jack_disconnect(dp->fw.client, Tcl_GetString(objv[i]), Tcl_GetString(objv[i+1]));

@@ -18,6 +18,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+##
+## this script implements a variety of IQ unbalancing operations
+## suitable for testing their effect on a test signal or for feeding
+## into a IQ balance correction module
+##
+
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
@@ -30,7 +36,7 @@ package require sdrkit::gain
 
 #
 # just take input iq through a gain block
-# conditionally swap i and q
+# conditionally swap i and q or convert to mono
 # conditionally delay i or q by one sample
 # conditionally unbalance the iq gain and/or phase
 # and put it out another gain block
@@ -46,17 +52,26 @@ array set data {
 }
 
 proc set-iq-swap {} {
-    if {$::data(iq-swap)} {
-	jack disconnect iq-unbal-in:out_i iq-delay:in_i
-	jack disconnect iq-unbal-in:out_q iq-delay:in_q
-	jack connect iq-unbal-in:out_i iq-delay:in_q
-	jack connect iq-unbal-in:out_q iq-delay:in_i
-    } else {
-	jack disconnect iq-unbal-in:out_i iq-delay:in_q
-	jack disconnect iq-unbal-in:out_q iq-delay:in_i
-	jack connect iq-unbal-in:out_i iq-delay:in_i
-	jack connect iq-unbal-in:out_q iq-delay:in_q
+    set disconnect {}
+    switch $::data(iq-swap-prev) {
+	none { }
+	iq { lappend disconnect out_i in_i out_q in_q } 
+	qi { lappend disconnect out_i in_q out_q in_i }
+	ii { lappend disconnect out_i in_q out_i in_i }
+	qq { lappend disconnect out_q in_q out_q in_i }
+	default { error "iq-swap-prev eq {$::data(iq-swap-prev)}" }
     }
+    set connect {}
+    switch $::data(iq-swap) {
+	iq { lappend connect out_i in_i out_q in_q }
+	qi { lappend connect out_q in_i out_i in_q }
+	ii { lappend connect out_i in_i out_i in_q }
+	qq { lappend connect out_q in_i out_q in_q }
+	default { error "iq-swap eq {$::data(iq-swap)}" }
+    }
+    foreach {o i} $disconnect { jack disconnect iq-unbal-in:$o iq-delay:$i }
+    foreach {o i} $connect { jack connect iq-unbal-in:$o iq-delay:$i }
+    set ::data(iq-swap-prev) $::data(iq-swap)
 }
 
 proc set-iq-delay {} {
@@ -109,13 +124,17 @@ proc main {argv} {
 
     set row 0
     grid [ttk::frame .b$row] -row $row -column 0 -columnspan 3
-    pack [ttk::label .b$row.l -text {IQ Swap}] -side left
-    pack [ttk::checkbutton .b$row.e -text {enable} -variable ::data(iq-swap) -command set-iq-swap] -side left
-    set ::data(iq-swap) 0
+    pack [ttk::label .b$row.l -text {IQ Route: }] -side left
+    pack [ttk::radiobutton .b$row.e1 -text {to IQ} -variable ::data(iq-swap) -value iq -command set-iq-swap] -side left
+    pack [ttk::radiobutton .b$row.e2 -text {to QI} -variable ::data(iq-swap) -value qi -command set-iq-swap] -side left
+    pack [ttk::radiobutton .b$row.e3 -text {to II} -variable ::data(iq-swap) -value ii -command set-iq-swap] -side left
+    pack [ttk::radiobutton .b$row.e4 -text {to QQ} -variable ::data(iq-swap) -value qq -command set-iq-swap] -side left
+    set ::data(iq-swap) iq
+    set ::data(iq-swap-prev) iq
     incr row
 
     grid [ttk::frame .b$row] -row $row -column 0 -columnspan 3
-    pack [ttk::label .b$row.l -text {IQ Delay}] -side left
+    pack [ttk::label .b$row.l -text {IQ Delay: }] -side left
     pack [ttk::radiobutton .b$row.e1 -text {none} -variable ::data(iq-delay) -value 0 -command set-iq-delay] -side left
     pack [ttk::radiobutton .b$row.e2 -text {delay I} -variable ::data(iq-delay) -value 1 -command set-iq-delay] -side left
     pack [ttk::radiobutton .b$row.e3 -text {delay Q} -variable ::data(iq-delay) -value -1 -command set-iq-delay] -side left
@@ -126,12 +145,12 @@ proc main {argv} {
     incr row
     grid [ttk::label .sine$row-l -textvar ::data(iq-phase-label) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .sine$row-u -text {deg}] -row $row -column 1
-    grid [ttk::scale .sine$row-s -from -45.0 -to 45.0 -command set-iq-phase -variable ::data(iq-phase) -length $::data(length)] -row $row -column 2 -sticky ew
+    grid [ttk::scale .sine$row-s -from -60.0 -to 60.0 -command set-iq-phase -variable ::data(iq-phase) -length $::data(length)] -row $row -column 2 -sticky ew
     set-iq-phase 0.0
     incr row
     grid [ttk::label .gain$row-l -textvar ::data(iq-gain-label) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .gain$row-u -text {dB}] -row $row -column 1
-    grid [ttk::scale .gain$row-s -from -30.00 -to 30.00 -command set-iq-gain -variable ::data(iq-gain) -length $::data(length)] -row $row -column 2 -sticky ew
+    grid [ttk::scale .gain$row-s -from -6.00 -to 6.00 -command set-iq-gain -variable ::data(iq-gain) -length $::data(length)] -row $row -column 2 -sticky ew
     set-iq-gain 0.0
     incr row
     grid columnconfigure . 2 -weight 100

@@ -25,6 +25,7 @@ package require Tk
 package require sdrkit
 package require sdrkit::jack
 package require sdrkit::iq-correct
+package require sdrkit::iq-rotation
 
 #
 # and an iq-correct to rebalance the oscillator
@@ -33,15 +34,16 @@ array set data {
     server default
     length 320
     corrector-on 0
-    corrector-mu 0.25
+    corrector-log2-mu -2
     corrector-wi 0.00
     corrector-wq 0.00
+    algorithm 0
 }
 
 namespace eval ::meters {}
 
 ##
-## meter the possible iq balancing signals
+## meter the effect of iq rebalancing
 ## this is plotting the transform applied
 ## to incoming iq signals
 ##
@@ -49,15 +51,52 @@ proc ::meters::update {w} {
     upvar #0 ::meters::$w data
     foreach {wi wq} [iq-correct get] break
     set xy {}
+    # float complex z1 = z0 + (p->wi+I*p->wq) * conjf(z0);
+    set maxr2 0
+    set minr2 100
     foreach {t ct st} $data(theta-cos-sin) {
-	lappend xy [expr {$ct - $wi * $st}] [expr {$st - $wq * $ct}]
+	set x [expr {$ct + $wi*$ct + $wq*$st}]
+	set y [expr {$st - $wi*$st + $wq*$ct}]
+	set r2 [expr {$x*$x+$y*$y}]
+	set maxr2 [expr {max($r2,$maxr2)}]
+	set minr2 [expr {min($r2,$minr2)}]
+	lappend xy $x $y
     }
     $w coords xyplot $xy
     $w scale xyplot 0 0 75 -75
     $w move xyplot 125 125
+    
+    set ::data(corrector-dB) [format %.4f [expr {10*log10($maxr2/$minr2)}]]
+    foreach {t ct st} $data(theta-cos-sin) break    
+    set x [expr {$ct + $wi*$ct + $wq*$st}]
+    set y [expr {$st - $wi*$st + $wq*$ct}]
+    set ::data(corrector-deg) [format %.4f [expr {180.0*atan2($y,$x)/atan2(0,-1)}]]
+
     after 10 [list ::meters::update $w]
 }
+proc ::meters::autotune-setup {w} {
+    upvar #0 ::meters::$w data
+    array set data {autotune 0 last-wi 0 last-wq 0 last-dwi 0 last-dwq 0}
+    ::meters::autotune $w
+}
 
+proc ::meters::autotune {w} {
+    upvar #0 ::meters::$w data
+    if {$data(autotune)} {
+	# keep the average direction and distance made good
+	# that the filter has achieved over the past few steps
+	# if this direction and distance looks like the average
+	# then increase mu, otherwise 
+	foreach {wi wq} [iq-correct get] break
+	set dwi [expr {$wi-$data(last-wi)}]; # distance in wi
+	set dwq [expr {$wq-$data(last-wq)}]; # distance in wq
+	set d2 [expr {$dwi*$dwi+$dwq*$dwq}]; # net distance squared
+	set 
+	array set data [list last-wi $wi last-wq $wq last-wv $wv]
+	puts $wv
+    }
+    after 2 [list ::meters::autotune $w]
+}
 proc ::meters::setup {w n} {
     upvar #0 ::meters::$w data
     set data(n-theta) $n
@@ -81,16 +120,23 @@ proc ::meters {w args} {
 ## controllers for the input signal, unbalancing, and rebalancing components
 ##
 proc more-mu {} {
-    set ::data(corrector-mu) [expr {2*$::data(corrector-mu)}]
-    iq-correct configure -mu $::data(corrector-mu)
+    incr ::data(corrector-log2-mu) 1
+    if {$::data(corrector-on)} {
+	iq-correct configure -mu [expr {pow(2,$::data(corrector-log2-mu))}]
+    }
 }
+
 proc less-mu {} {
-    set ::data(corrector-mu) [expr {$::data(corrector-mu)/2}]
-    iq-correct configure -mu $::data(corrector-mu)
+    incr ::data(corrector-log2-mu) -1
+    if {$::data(corrector-on)} {
+	iq-correct configure -mu [expr {pow(2,$::data(corrector-log2-mu))}]
+    }
 }
+
 proc reset-ws {} {
     iq-correct set 0 0
 }
+
 proc update-ws {} {
     foreach {wi wq} [iq-correct get] break
     if {[catch {
@@ -101,16 +147,22 @@ proc update-ws {} {
     }
     after 20 [list update-ws]
 }
+
 proc corrector-onoff {} {
     if {$::data(corrector-on)} {
 	#puts "iq-correct reset to -mu $::data(corrector-mu)"
 	iq-correct set 0 0
-	iq-correct configure -mu $::data(corrector-mu)
+	iq-correct configure -mu [expr {pow(2,$::data(corrector-log2-mu))}]
     } else {
 	#puts "iq-correct muted to 0"
 	iq-correct configure -mu 0
 	iq-correct set 0 0
     }
+}
+
+proc update-rotation {} {
+    set ::data(rotation) [expr {0.99*$::data(rotation)+0.01*[iq-rotation get]}]
+    after 20 [list update-rotation]
 }
 
 proc shutdown {w} {
@@ -126,11 +178,7 @@ proc start-client {module name args} {
     lappend ::data(clients-to-cleanup) $name
 }
 
-
 proc main {argv} {
-    if {$::data(max-freq) > [sdrkit::jack sample-rate]/4} {
-	set ::data(max-freq) [expr {[sdrkit::jack sample-rate]/4.01}]
-    }
     foreach {option value} $argv {
 	switch -- $option {
 	    -n - -name - --name { set ::data(name) $value }
@@ -141,18 +189,24 @@ proc main {argv} {
     }
 
     sdrkit::iq-correct iq-correct
-    
+    sdrkit::iq-rotation iq-rotation
+
     wm title . sdrkit:rebal
 
     set row 0
     grid [ttk::label .blk$row -text {Corrector}] -row $row -column 0 -columnspan 3
     incr row
     grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
-    pack [ttk::label .blk$row.l-mu -text mu] -side left
-    pack [ttk::label .blk$row.v-mu -textvariable ::data(corrector-mu) -width 15] -side left
-    pack [ttk::label .blk$row.l-wi -text wi] -side left
+    pack [ttk::label .blk$row.l -text {rotation: }] -side left
+    pack [ttk::label .blk$row.v -textvariable ::data(rotation) -width 15] -side left
+    set ::data(rotation) 0
+    incr row
+    grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
+    pack [ttk::label .blk$row.l-mu -text {log2(mu): }] -side left
+    pack [ttk::label .blk$row.v-mu -textvariable ::data(corrector-log2-mu) -width 15] -side left
+    pack [ttk::label .blk$row.l-wi -text {wi: }] -side left
     pack [ttk::label .blk$row.v-wi -textvariable ::data(corrector-wi) -width 15] -side left
-    pack [ttk::label .blk$row.l-wq -text wq] -side left
+    pack [ttk::label .blk$row.l-wq -text {wq: }] -side left
     pack [ttk::label .blk$row.v-wq -textvariable ::data(corrector-wq) -width 15] -side left
     incr row
     grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
@@ -161,23 +215,22 @@ proc main {argv} {
     pack [ttk::button .blk$row.less-mu -text {More mu} -command [list more-mu]] -side left
     pack [ttk::button .blk$row.reset-ws -text {Reset wi/wq} -command [list reset-ws]] -side left
     incr row
+    grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
+    pack [ttk::label .blk$row.db1 -text dB] -side left
+    pack [ttk::label .blk$row.db2 -textvar ::data(corrector-dB) -width 15] -side left
+    pack [ttk::label .blk$row.deg1 -text deg] -side left
+    pack [ttk::label .blk$row.deg2 -textvar ::data(corrector-deg) -width 15] -side left
+    incr row
+    set meters .blk$row 
     grid [meters .blk$row] -row $row -column 0 -columnspan 3
-    ::meters::update .blk$row
+    incr row
+    grid [ttk::checkbutton .blk$row -text {Autotune} -variable ::meters::${meters}(autotune) -onvalue 1 -offvalue 0] -row $row -column 0 -columnspan 3
+    ::meters::update $meters
+    ::meters::autotune-setup $meters
     grid columnconfigure . 2 -weight 100
 
-    sdrkit::jack connect osc:out_i iq-balance:in_i
-    sdrkit::jack connect osc:out_q iq-balance:in_q
-    sdrkit::jack connect noise:out_i iq-balance:in_i
-    sdrkit::jack connect noise:out_q iq-balance:in_q
-    sdrkit::jack connect iq-noise:out_i iq-balance:in_i
-    sdrkit::jack connect iq-noise:out_q iq-balance:in_q
-    sdrkit::jack connect iq-balance:out_i iq-correct:in_i
-    sdrkit::jack connect iq-balance:out_q iq-correct:in_q
-    sdrkit::jack connect iq-correct:out_i capture_spectrum_1:in_i
-    sdrkit::jack connect iq-correct:out_q capture_spectrum_1:in_q
-    sdrkit::jack connect iq-correct:out_i system:playback_1
-    sdrkit::jack connect iq-correct:out_q system:playback_2
     corrector-onoff
+    update-rotation
     update-ws
     bind . <Destroy> [list shutdown %W]
 }

@@ -18,82 +18,52 @@
 */
 
 /*
-** create an IQ balancer module which adjusts the phase and relative magnitude of an IQ channel
-** 
+** accumulate the average rotation of an IQ sample stream
+** this will be positive if IQ are I and Q, and negative if
+** IQ are Q and I.
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/iq_balance.h"
+#include "../sdrkit/iq_rotation.h"
 #include "framework.h"
-
-typedef iq_balance_options_t options_t;
 
 typedef struct {
   framework_t fw;
-  int modified;
-  options_t opts;
-  iq_balance_t iqb;
+  iq_rotation_t r;
 } _t;
-
-static void *_update(_t *data) {
-  data->modified = 0;
-  iq_balance_configure(&data->iqb, &data->opts);
-}
-
-static void *_init(void *arg) {
-  _t *data = (_t *)arg;
-  void *e = iq_balance_init(&data->iqb, &data->opts); if (e != &data->iqb) return e;
-  data->modified = 1;
-  _update(data);
-  return arg;
-}
 
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
   float *in0 = jack_port_get_buffer(framework_input(data,0), nframes);
   float *in1 = jack_port_get_buffer(framework_input(data,1), nframes);
-  float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
-  float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
-  _update(data);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = iq_balance_process(&data->iqb, *in0++ + *in1++ * I);
-    *out0++ = creal(y);
-    *out1++ = cimag(y);
+    iq_rotation_process(&data->r, *in0++ + *in1++ * I);
   }
   return 0;
 }
 
-static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  options_t save = data->opts;
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
-    data->opts = save;
-    return TCL_ERROR;
-  }
-  data->modified = save.sine_phase != data->opts.sine_phase ||
-    save.linear_gain != data->opts.linear_gain;
-  if (data->modified) {
-    void *e = iq_balance_preconfigure(&data->iqb, &data->opts);
-    if (e != &data->iqb) {
-      data->opts = save;
-      return fw_error_str(interp, e);
-    }
-  }
+  Tcl_SetObjResult(interp, Tcl_NewDoubleObj(crealf(data->r.r)));
   return TCL_OK;
+}
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return framework_command(clientData, interp, argc, objv);
 }
 
 // the options that the command implements
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-linear-gain", "gain",   "Gain",   "1.0", fw_option_float, 0, offsetof(_t, opts.linear_gain), "linear gain to I signal" },
-  { "-sine-phase",  "phase",  "Phase",  "0.0", fw_option_float, 0, offsetof(_t, opts.sine_phase),  "sine of phase adjustment" },
   { NULL }
 };
 
 // the subcommands implemented by this command
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
+  { "get",   _get,   "fetch the current average rotation" },
   { NULL }
 };
 
@@ -101,21 +71,21 @@ static const fw_subcommand_table_t _subcommands[] = {
 static const framework_t _template = {
   _options,			// option table
   _subcommands,			// subcommand table
-  _init,			// initialization function
+  NULL,				// initialization function
   _command,			// command function
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "a component to adjust the I/Q channel balance"
+  2, 0, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  "a component to compute the I/Q channel rotation"
 };
 
-// the factory command which creates iq balance commands
+// the factory command which creates iq rotation commands
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Iq_balance_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::iq-balance", "1.0.0", "sdrkit::iq-balance", _factory);
+int DLLEXPORT Iq_rotation_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::iq-rotation", "1.0.0", "sdrkit::iq-rotation", _factory);
 }

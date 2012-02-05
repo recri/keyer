@@ -127,6 +127,19 @@ typedef struct {
 
 
 /*
+** common error return with dyanmic or static interp result
+*/
+static int fw_error_obj(Tcl_Interp *interp, Tcl_Obj *usage) {
+  Tcl_SetObjResult(interp, usage);
+  return TCL_ERROR;
+}
+
+static int fw_error_str(Tcl_Interp *interp, const char *usage) {
+  Tcl_SetResult(interp, (char *)usage, TCL_STATIC);
+  return TCL_ERROR;
+}
+
+/*
 ** provide common option processing command creation, configure, and cget.
 **
 ** allows commands to simply tabulate their options in an option_t array
@@ -141,20 +154,16 @@ static int fw_option_lookup(char *string, const fw_option_table_t *table) {
 }
 
 static int fw_option_unrecognized_option_name(Tcl_Interp *interp, char *option) {
-  Tcl_SetObjResult(interp, Tcl_ObjPrintf("\"%s\" is not a valid option name ", option));
-  return TCL_ERROR;
+  return fw_error_obj(interp, Tcl_ObjPrintf("\"%s\" is not a valid option name ", option));
 }
 
 static int fw_option_wrong_number_of_arguments(Tcl_Interp *interp) {
-  Tcl_SetResult(interp, (char *)"invalid option list: each option should have a value", TCL_STATIC);
-  return TCL_ERROR;
+  return fw_error_str(interp, (char *)"invalid option list: each option should have a value");
 }
 
 static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp, Tcl_Obj *val, const fw_option_table_t *entry, int create) {
-  if ((entry->flag & fw_flag_create_only) && ! create) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("option \"%s\" may only be set at creation", entry->name));
-    return TCL_ERROR;
-  }
+  if ((entry->flag & fw_flag_create_only) && ! create)
+    return fw_error_obj(interp, Tcl_ObjPrintf("option \"%s\" may only be set at creation", entry->name));
   switch (entry->type) {
   case fw_option_int: {
     int ival;
@@ -177,10 +186,8 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
   case fw_option_char: {
     int clength;
     char *cval= Tcl_GetStringFromObj(val, &clength);
-    if (clength != 1) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("character option value is longer than one character: \"%s\"", cval));
-      return TCL_ERROR;
-    }
+    if (clength != 1)
+      return fw_error_obj(interp, Tcl_ObjPrintf("character option value is longer than one character: \"%s\"", cval));
     *(char *)((char *)clientData+entry->offset) = *cval;
     return TCL_OK;
   }
@@ -192,10 +199,8 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
   }
   case fw_option_dict: {
     Tcl_Obj *result;
-    if (Tcl_DictObjGet(interp, val, Tcl_NewStringObj("", 0), &result) != TCL_OK) {
-      Tcl_SetResult(interp, (char *)"argument is not a dict", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if (Tcl_DictObjGet(interp, val, Tcl_NewStringObj("", 0), &result) != TCL_OK)
+      return fw_error_str(interp, (char *)"argument is not a dict");
     Tcl_Obj *old_value = *(Tcl_Obj **)((char *)clientData+entry->offset);
     if (old_value != NULL) Tcl_DecrRefCount(old_value);
     Tcl_IncrRefCount(val);
@@ -210,8 +215,7 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
     return TCL_OK;
   }
   default:
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
-    return TCL_ERROR;
+    return fw_error_obj(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
   }
 }
 
@@ -306,10 +310,8 @@ static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int ar
 static int fw_option_cget(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
   const fw_option_table_t *table = fp->options;
-  if (argc != 3) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s cget option", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s cget option", Tcl_GetString(objv[0])));
   int j = fw_option_lookup(Tcl_GetString(objv[2]), table);
   if (j < 0) return fw_option_unrecognized_option_name(interp, Tcl_GetString(objv[2]));
   Tcl_Obj *result = fw_option_get_value_obj(clientData, interp, table+j);
@@ -331,10 +333,8 @@ static int fw_option_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, T
     Tcl_SetResult(interp, fp->doc_string, TCL_STATIC);
     return TCL_OK;
   }
-  if (argc != 3) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s cdoc [option|subcommand]", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s cdoc [option|subcommand]", Tcl_GetString(objv[0])));
   char *arg = Tcl_GetString(objv[2]);
   int j = fw_option_lookup(arg, fp->options);
   if (j >= 0) {
@@ -347,8 +347,7 @@ static int fw_option_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, T
       Tcl_SetResult(interp, (char *)fp->subcommands[i].doc_string, TCL_STATIC);
       return TCL_OK;
     }
-  Tcl_SetResult(interp, (char *)"unrecognized subcommand", TCL_STATIC);
-  return TCL_ERROR;
+  return fw_error_str(interp, (char *)"unrecognized subcommand");
 }
 
 /*
@@ -390,16 +389,13 @@ static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int
   framework_t *fp = (framework_t *)clientData;
   // fprintf(stderr, "fw_subcommand_dispatch(%lx, %lx, %d, %lx)\n", (long)clientData, (long)interp, argc, (long)objv);
   const fw_subcommand_table_t *table = fp->subcommands;
-  if (argc < 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s subcommand [ ... ]", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc < 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s subcommand [ ... ]", Tcl_GetString(objv[0])));
   char *subcmd = Tcl_GetString(objv[1]);
   for (int i = 0; table[i].name != NULL; i += 1)
     if (strcmp(subcmd, table[i].name) == 0)
       return table[i].handler(clientData, interp, argc, objv);
-  Tcl_SetObjResult(interp, Tcl_ObjPrintf("unrecognized subcommand \"%s\", should one of %s", subcmd, fw_subcommand_subcommands(clientData)));
-  return TCL_ERROR;
+  return fw_error_obj(interp, Tcl_ObjPrintf("unrecognized subcommand \"%s\", should one of %s", subcmd, fw_subcommand_subcommands(clientData)));
 }
 
 /*
@@ -576,27 +572,19 @@ static void framework_dump_template(const framework_t *atemplate) {
 /* usage: keyer_module_type_name command_name [options] */
 static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const framework_t *atemplate, size_t data_size) {
   // test for insufficient arguments
-  if (argc < 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s name [option value ...]", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc < 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s name [option value ...]", Tcl_GetString(objv[0])));
   // framework_dump_template(template);
   // decide if this wants to open as a jack client
   int wants_jack = fw_option_lookup((char *)"-server", atemplate->options) >= 0;
   // check for some sanity
-  if (atemplate->command == NULL) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj("command pointer?", -1));
-    return TCL_ERROR;
-  }
+  if (atemplate->command == NULL)
+    return fw_error_str(interp, "command pointer?");
   if (wants_jack) {
-    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs != 0 && atemplate->process == NULL) {
-      Tcl_SetObjResult(interp, Tcl_NewStringObj("jack ports but no jack process callback?", -1));
-      return TCL_ERROR;
-    }
-    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs == 0 && atemplate->process != NULL) {
-      Tcl_SetObjResult(interp, Tcl_NewStringObj("no jack ports for jack process callback?", -1));
-      return TCL_ERROR;
-    }
+    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs != 0 && atemplate->process == NULL)
+      return fw_error_str(interp, "jack ports but no jack process callback?");
+    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs == 0 && atemplate->process != NULL)
+      return fw_error_str(interp, "no jack ports for jack process callback?");
   }
   // get class and command name
   char *class_name = Tcl_GetString(objv[0]);
@@ -604,10 +592,8 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
 
   // allocate command data
   framework_t *data = (framework_t *)Tcl_Alloc(data_size);
-  if (data == NULL) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation afailure", -1));
-    return TCL_ERROR;
-  }
+  if (data == NULL)
+    return fw_error_str(interp, "memory allocation afailure");
 
   // initialize command data
   memset(data, 0, data_size);
@@ -657,10 +643,9 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
     // fprintf(stderr, "framework_factory: client %p\n", client);  
     if (data->client == NULL) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
       framework_jack_status_report(interp, status);
       framework_delete(data);
-      return TCL_ERROR;
+      return fw_error_obj(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
     }
 
     // create jack ports
@@ -669,8 +654,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
       data->port = (jack_port_t **)Tcl_Alloc(n*sizeof(jack_port_t *));
       if (data->port == NULL) {
 	framework_delete(data);
-	Tcl_SetObjResult(interp, Tcl_NewStringObj("memory allocation failure", -1));
-	return TCL_ERROR;
+	return fw_error_str(interp, "memory allocation failure");
       }
       memset(data->port, 0, n*sizeof(jack_port_t *));
       // fprintf(stderr, "framework_factory: port %p\n", data->port);  
@@ -701,15 +685,13 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     if (data->n_midi_inputs+data->n_midi_buffers) {
       int n = data->n_midi_inputs+data->n_midi_buffers;
       if (data->n_midi_buffers > 1) {
-	Tcl_SetResult(interp, (char *)"only one midi_buffer is supported", TCL_STATIC);
 	framework_delete(data);
-	return TCL_ERROR;
+	return fw_error_str(interp, "only one midi_buffer is supported");
       }
       data->midi = (framework_midi_t *)Tcl_Alloc(n*sizeof(framework_midi_t));
       if (data->midi == NULL) {
 	framework_delete(data);
-	Tcl_SetResult(interp, (char *)"memory allocation failure", TCL_STATIC);
-	return TCL_ERROR;
+	return fw_error_str(interp, (char *)"memory allocation failure");
       }
       memset(data->midi, 0, n*sizeof(framework_midi_t));
     }
@@ -721,9 +703,8 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     void *p = atemplate->init((void *)data);
     if (p != data) {
       // initialization failed
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("init of \"%s\", a \"%s\" command, failed: \"%s\"", command_name, class_name, (char *)p));
       framework_delete(data);
-      return TCL_ERROR;
+      return fw_error_obj(interp, Tcl_ObjPrintf("init of \"%s\", a \"%s\" command, failed: \"%s\"", command_name, class_name, (char *)p));
     }
   }
   data->cdelete = atemplate->cdelete;
@@ -752,11 +733,10 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     status = (jack_status_t)jack_activate(data->client);
     if (status) {
       // fprintf(stderr, "framework_factory: activate failed\n");  
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("jack_activate(%s) failed: ", client_name));
       // this is just a guess, the header doesn't say it's so
       // jack_status_report(adaptp->interp, status);
       framework_delete(data);
-      return TCL_ERROR;
+      return fw_error_obj(interp, Tcl_ObjPrintf("jack_activate(%s) failed: ", client_name));
     }
   }
   // fprintf(stderr, "framework_factory: returning okay\n");
@@ -773,16 +753,12 @@ static int framework_init(Tcl_Interp *interp, const char *pkg, const char *pkg_v
   // tcl stubs and tk stubs are needed for dynamic loading,
   // you must have this set as a compiler option
 #ifdef USE_TCL_STUBS
-  if (Tcl_InitStubs(interp, TCL_VERSION, 1) == NULL) {
-    Tcl_SetResult(interp, (char *)"Tcl_InitStubs failed", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (Tcl_InitStubs(interp, TCL_VERSION, 1) == NULL)
+    return fw_error_str(interp, "Tcl_InitStubs failed");
 #endif
 #ifdef USE_TK_STUBS
-  if (Tk_InitStubs(interp, TCL_VERSION, 1) == NULL) {
-    Tcl_SetResult(interp, (char *)"Tk_InitStubs failed",TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if (Tk_InitStubs(interp, TCL_VERSION, 1) == NULL)
+    return fw_error_str(interp,"Tk_InitStubs failed");
 #endif
   Tcl_PkgProvide(interp, pkg, pkg_version);
   Tcl_CreateObjCommand(interp, name, factory, NULL, NULL);

@@ -79,41 +79,27 @@ static int _exec(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   int ninput;
   float _Complex *input;
   // check the argument count
-  if (argc < 3 || argc > 4) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s exec input_byte_array [window_byte_array]", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc < 3 || argc > 4) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s exec input_byte_array [window_byte_array]", Tcl_GetString(objv[0])));
   // check the input byte array
-  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[2], &ninput)) == NULL) {
-    Tcl_SetResult(interp, "failed to get input byte array", TCL_STATIC);
-    return TCL_ERROR;
-  }
+  if ((input = (float _Complex *)Tcl_GetByteArrayFromObj(objv[2], &ninput)) == NULL) return fw_error_str(interp, "failed to get input byte array");
   // convert bytes to number of input samples
   ninput /= sizeof(float complex);
   // check for a window
   int nwindow;
   float *window;
   if (argc == 4) {
-    if ((window = (float *)Tcl_GetByteArrayFromObj(objv[3], &nwindow)) == NULL) {
-      Tcl_SetResult(interp, "failed to get window byte array", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if ((window = (float *)Tcl_GetByteArrayFromObj(objv[3], &nwindow)) == NULL)
+      return fw_error_str(interp, "failed to get window byte array");
     // convert bytes to size of window
     nwindow /= sizeof(float);
     // check that window size makes sense
-    if (nwindow < data->opts.size) {
-      Tcl_SetResult(interp, "window is not large enough for fft", TCL_STATIC);
-      return TCL_ERROR;
-    }
-    if ((nwindow % data->opts.size) != 0) {
-      Tcl_SetResult(interp, "window is not an integral multiple of fft size", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if (nwindow < data->opts.size)
+      return fw_error_str(interp, "window is not large enough for fft");
+    if ((nwindow % data->opts.size) != 0)
+      return fw_error_str(interp, "window is not an integral multiple of fft size");
     // check that input size is agreeable
-    if (ninput < nwindow) {
-      Tcl_SetResult(interp, "not enough input samples for fft window", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if (ninput < nwindow)
+      return fw_error_str(interp, "not enough input samples for fft window");
     int polyphase = nwindow / data->opts.size;
     // make windowed input
     for (int i = 0; i < data->opts.size; i += 1) {
@@ -127,10 +113,8 @@ static int _exec(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
     }
   } else {
     // check that input size is agreeable
-    if (ninput < data->opts.size) {
-      Tcl_SetResult(interp, "not enough input samples for fft window", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if (ninput < data->opts.size)
+      return fw_error_str(interp, "not enough input samples for fft window");
     // make square windowed input
     memcpy(data->inout, input, data->opts.size*sizeof(float complex));
   }
@@ -155,10 +139,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       save.planbits != data->opts.planbits ||
       save.direction != data->opts.direction) {
     _delete(data);
-    void *p = _init(data); if (p != data) {
-      Tcl_SetResult(interp, (char *)p, TCL_STATIC);
-      return TCL_ERROR;
-    }
+    void *p = _init(data); if (p != data) return fw_error_str(interp, p);
   }
   return TCL_OK;
 }

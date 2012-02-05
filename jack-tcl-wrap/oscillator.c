@@ -79,15 +79,20 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 #ifndef NO_GAIN
   float dBgain = data->dBgain;
 #endif
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    data->hertz = hertz;
+#ifndef NO_GAIN
+    data->dBgain = dBgain;
+#endif
+    return TCL_ERROR;
+  }
   if (data->hertz != hertz) {
     if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("frequency %.1fHz is more than samplerate/4", data->hertz));
       data->hertz = hertz;
 #ifndef NO_GAIN
       data->dBgain = dBgain;
 #endif
-      return TCL_ERROR;
+      return fw_error_str(interp, "frequency is more than samplerate/4");
     }
     data->modified = 1;
   }

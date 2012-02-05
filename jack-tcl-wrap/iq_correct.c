@@ -57,29 +57,25 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
-    Tcl_NewDoubleObj(data->iqb.wi), Tcl_NewDoubleObj(data->iqb.wq), NULL
+    Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)), NULL
   };
   Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
   return TCL_OK;
 }
 static int _set(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 4) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s set wi wq", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 4)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s set wi wq", Tcl_GetString(objv[0])));
   double wi, wq;
   if (Tcl_GetDoubleFromObj(interp, objv[2], &wi) != TCL_OK ||
       Tcl_GetDoubleFromObj(interp, objv[3], &wq) != TCL_OK)
     return TCL_ERROR;
   // this may not be atomic, but it will work itself out
   _t *data = (_t *)clientData;
-  data->iqb.wi = wi; data->iqb.wq = wq;
+  data->iqb.w = wi + I*wq;
   return TCL_OK;
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -93,9 +89,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   if (data->modified) {
     void *e = iq_correct_preconfigure(&data->iqb, &data->opts);
     if (e != &data->iqb) {
-      Tcl_SetResult(interp, e, TCL_STATIC);
       data->opts = save;
-      return TCL_ERROR;
+      return fw_error_str(interp, e);
     }
     iq_correct_configure(&data->iqb, &data->opts);
   }
@@ -105,7 +100,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-mu", "mu", "Mu", "0.25", fw_option_float, 0, offsetof(_t, opts.mu), "adaptation factor, larger is faster" },
+  { "-mu", "mu", "Mu", "0.25", fw_option_float, 0, offsetof(_t, opts.mu),	    "adaptation factor, larger is faster" },
   { NULL }
 };
 

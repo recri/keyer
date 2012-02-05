@@ -71,18 +71,14 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _puts(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 3) {
-    Tcl_SetObjResult(interp, Tcl_ObjPrintf("usage: %s puts string", Tcl_GetString(objv[0])));
-    return TCL_ERROR;
-  }
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s puts string", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   int n;
   unsigned char *p = Tcl_GetByteArrayFromObj(objv[2], &n);
   if (n > 0) {
-    if (midi_buffer_write_command(&data->midi, 0, p, n) < 0) {
-      Tcl_SetResult(interp, "error writing midi command", TCL_STATIC);
-      return TCL_ERROR;
-    }
+    if (midi_buffer_write_command(&data->midi, 0, p, n) < 0)
+      return fw_error_str(interp, "error writing midi command");
   }
   return TCL_OK;
 }
