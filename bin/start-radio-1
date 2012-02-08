@@ -2,32 +2,42 @@
 ##
 ## this script launches a simple SDR radio
 ##
-## the first assumption is that a Softrock Ensemble II is attached
-## to this computer through a soundcard attached as hw:1
+
 ##
-RFDEV=hw:1			# the rf soundcard
+## the zeroeth assumption is that pulseaudio will interfere with this
+## so we suspend it
+##
+pasuspender wish &
+
+##
+## the first assumption is that a Softrock Ensemble II is attached
+## to this computer through a soundcard attached as hw:2
+##
+RFDEV=hw:2			# the rf soundcard
 RFRATE=96000			# the rf sample rate
-RFBUFFER=1024			# the jack buffer size
+RFBUFFER=512			# the jack buffer size
 
 ## launch jackd to process the rf
 jackd -T -s -dalsa -C$RFDEV -P$RFDEV -r$RFRATE -p$RFBUFFER -n3 > rfjackd.log 2>&1 &
-exit 0
+
 ##
 ## the second assumption is that you want to listen to the radio through
 ## the onboard soundcard attached as hw:0
 ##
 AFDEV=hw:0			# the af soundcard
 AFQUAL=0			# the quality of samplerate conversion
-## launch alsa_in
-alsa_out -d$AFDEF -q$AFQUAL > afalsa_out.log 2>&1 &
+## launch alsa_out
+alsa_out -d $AFDEV > afalsa_out.log 2>&1 &
+exit
 
 ##
 ## we could simply connect the rf input to the af output, but the signals
 ## are at -100 dB, so you won't hear much, so we'll add a gain widget to
 ## boost the signals up
 ##
-gain --min-gain -30 --max-gain 100
+bin/gain --min-gain -30 --max-gain 100 &
 
 ##
 ## and we add a panadapter display
 ##
+bin/panorama &

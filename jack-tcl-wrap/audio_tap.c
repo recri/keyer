@@ -196,8 +196,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     // if nothing was found, return an empty string
     if (choice == NULL) {
       Tcl_Obj *result[] = { Tcl_NewLongObj(0), Tcl_NewStringObj("", -1), NULL };
-      Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
-      return TCL_OK;
+      return fw_success_obj(interp, Tcl_NewListObj(2, result));
     }
     // attempt to grab the choice
     Tcl_IncrRefCount(choice->buff);
@@ -224,8 +223,7 @@ static int _start(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* 
 static int _state(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s state", Tcl_GetString(objv[0])));
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(data->started));
-  return TCL_OK;
+  return fw_success_obj(interp, Tcl_NewIntObj(data->started));
 }
 static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;

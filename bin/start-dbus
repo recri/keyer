@@ -1,0 +1,12 @@
+#!/bin/sh
+RFRATE=192000
+AFRATE=8000
+jack_control eps name rf
+jack_control ds dummy
+jack_control dps rate $RFRATE
+jack_control start
+jack_control eps name af
+jack_control ds dummy
+jack_control dps rate $AFRATE
+jack_control start
+

@@ -1,0 +1,66 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set libdir [file normalize [file join [file dirname [info script]] .. lib sdrkit]]
+set so [info sharedlibextension]
+
+load [file join $libdir jack_ctl$so]
+
+proc print-parameter {p whose} {
+    set pname [sdrkit::jack-ctl parameter-get-name $p]
+    set sdesc [sdrkit::jack-ctl parameter-get-short-description $p]
+    set ldesc [sdrkit::jack-ctl parameter-get-long-description $p]
+    set ptype [sdrkit::jack-ctl parameter-get-type $p]
+    set pid [sdrkit::jack-ctl parameter-get-id $p]
+    set pset [sdrkit::jack-ctl parameter-is-set $p]
+    set pval [sdrkit::jack-ctl parameter-get-value $p]
+    set pdef [sdrkit::jack-ctl parameter-get-default-value $p]
+    if {[sdrkit::jack-ctl parameter-has-range-constraint $p]} {
+    } elseif {[sdrkit::jack-ctl parameter-has-enum-constraint $p]} {
+    }
+    if {$sdesc ne $ldesc} {
+	set desc "\n\t$sdesc\n\t$ldesc"
+    } else {
+	set desc "\n\t$sdesc"
+    }
+    puts "$whose: $pname $ptype $pid $pset $pval $pdef $desc"
+}
+
+set s [sdrkit::jack-ctl create]
+
+foreach p [sdrkit::jack-ctl get-parameters $s] {
+    print-parameter $p {server}
+}
+foreach d [sdrkit::jack-ctl get-drivers $s] {
+    set name [sdrkit::jack-ctl driver-get-name $d]
+    set type [sdrkit::jack-ctl driver-get-type $d]
+    puts "driver $name $type"
+    foreach p [sdrkit::jack-ctl driver-get-parameters $d] {
+	print-parameter $p "driver $name"
+    }
+}
+
+foreach i [sdrkit::jack-ctl get-internals $s] {
+    set name [sdrkit::jack-ctl internal-get-name $d]
+    puts "internal $name"
+    foreach p [sdrkit::jack-ctl internal-get-parameters $d] {
+	print-parameter $p "internal $name"
+    }
+}

@@ -222,9 +222,9 @@ int main(int argc, char *argv[]) {
       // test(5, osc_z_process(), frame, hertz, sample_rate);
       frame += 1;
     }
-    // time(0, osc_fd_process, n);
-    // time(1, osc_td_process, n);
-    // time(2, osc_zd_process, n);
+    time(0, osc_fd_process, n);
+    time(1, osc_td_process, n);
+    time(2, osc_zd_process, n);
     // time(3, osc_f_process, n);
     // time(4, osc_t_process, n);
     // time(5, osc_z_process, n);

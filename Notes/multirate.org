@@ -63,3 +63,25 @@
 ** Starting small
    So, as a test case, just start the keyer in a low sample rate jack
    server.  Should be able to get a decent waterfall from it then.
+
+** Well, things don't work as expected.
+   Or maybe they do, but all I get is a mess of error messages.
+
+   It's clear that the source for alsa_in and alsa_out makes no provision
+   for choosing the server to connect to.  The JACK_DEFAULT_SERVER environment
+   doesn't seem to work all that reliably either.  Modifying the sources didn't
+   work that well either.
+
+   I get multiple servers running, but the messages from the drivers I
+   attempt to load indicate that the wires are getting crossed all over
+   the place.
+
+   I've since upgraded to jack-1.9.8 by downloading the Debian unstable source
+   packages and rebuilding them.  Not sure what works, yet.
+
+   I also started coding up a tcl interface to the jack/control.h interface,
+   but it's going to require some event loop handling because its use involves
+   setting up signals and waiting for them to fire, but the only example only
+   waits to unload the server.  It may have been obvious to Nedko, but it's a
+   mystery to me.  Where is the signal coming from?
+

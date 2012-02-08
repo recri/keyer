@@ -20,6 +20,7 @@ FIR_LPF_R_CFLAGS=-DFILTER_LOW_PASS -DFILTER_REAL
 
 LIBS=-ltclstub8.5 -lm
 JACK_LIBS=$(shell pkg-config --libs jack)
+JACKSERVER_LIBS=-ljackserver
 ALSA_LIBS=$(shell pkg-config --libs alsa)
 LIBUSB_LIBS=$(shell pkg-config --libs libusb-1.0)
 FFTW3_LIBS=$(shell pkg-config --libs fftw3f)
@@ -53,6 +54,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/iq_rotation.so \
 	$(LIBDIR)/iq_swap.so \
 	$(LIBDIR)/jack_client.so \
+	$(LIBDIR)/jack_ctl.so \
 	$(LIBDIR)/lo_mixer.so \
 	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/mixer.so \
@@ -136,6 +138,9 @@ $(LIBDIR)/iq_swap.so: iq_swap.c framework.h
 
 $(LIBDIR)/jack_client.so: jack_client.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/jack_ctl.so: jack_ctl.c framework.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACKSERVER_LIBS) $(LIBS)
 
 $(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../sdrkit/lo_mixer.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
