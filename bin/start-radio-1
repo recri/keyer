@@ -1,43 +1,126 @@
 #!/bin/sh
 ##
+########################################################################
+## this script fails, apparently because the netjack2 in jack-1.9.7
+## doesn't support connections between servers on the same machine,
+## that's my best guess, it isn't doing anything useful for me.
+########################################################################
+##
 ## this script launches a simple SDR radio
+## we launch four jack servers which could
+## be on up to four different machines or
+## all hosted on one machine.
+##
+## The basic DSP functions are handled by server #2
+## and the resampling between servers #2 and #3.
+## Servers #1, #2, and #3 must have high bandwidth
+## connections between them, ideally they run on the
+## same machine.
+##
+## Control is over a MIDI channel, and one puzzle is
+## how to transfer that MIDI channel across the resampling
+## point, since all the resampling options make no provision
+## for MIDI.
+##
+## #1 handles the hardware at hardware rates
+## and makes the hardware available over the network.
+## It runs jackd slaved to the hardware interface
+## and loads netmanager.
+## It should be a high speed network because it may be
+## running at 48, 96, or 192k.  Running on the same
+## machine qualifies as a high speed net.
+##
+## #2 does the DSP to convert the hardware to audio
+## it connects to server #1 as a network client and
+## by providing a local network or loopback connection
+## for server #3
+## it runs jackd slaved to the net interface and
+## loads netmanager.
+##
+## #3 handles the client audio channels
+## it connects as a network client to server #2
+## and provides audio samples over the network
+## to the client.
+## It resamples the network stream down to audio rates
+## It should have a high speed network connection to
+## server #2, ideally on the same host.
+##
+## #4 is the client
+## it receives audio over the network as a slave to server #3
+## and connects to the local audio devices with audioadapter.
+##
+
+## The resampling from baseband to audio sample rates may be
+## combined with the DSP function or may be handled by the
+## loopback device connection.
+##
+## The DSP filtering can produce a resampled stream where
+## every N samples are identical and baseband/N is the target
+## audio sample rate, so the loopback resampler needs only
+## take every Nth sample value.
+##
+## The audio stream is I/Q at 32 bits per sample.  The client
+## is expected to do AGC and demodulation.
 ##
 
 ##
 ## the zeroeth assumption is that pulseaudio will interfere with this
-## so we suspend it
+## so we suspend it, running qjackctl also handles this
 ##
-pasuspender wish &
+#pasuspender wish &
 
 ##
 ## the first assumption is that a Softrock Ensemble II is attached
 ## to this computer through a soundcard attached as hw:2
 ##
+#MULTI=224.0.0.1		# all hosts on the local network
+MULTI=225.3.19.154		# netjack2 default multicast
+
 RFDEV=hw:2			# the rf soundcard
-RFRATE=96000			# the rf sample rate
-RFBUFFER=512			# the jack buffer size
+RFRATE=48000			# the rf sample rate
+RFPORT=19000			# the rf udp port
+RFBUFFER=512			# the rf jack buffer size: needs to be MTU sensitive
+
+DSPPORT=19001			# the dsp udp port
+DSPBUFFER=512			# the dsp jack buffer size: needs to be MTU sensitive
+
+AFRATE=6000			# the af sample rate
+AFPORT=19000			# the af udp port
+AFBUFFER=512			# the af jack buffer size
+
+CLDEV=hw:0			# the client soundcard
+
+SLEEP=2
 
 ## launch jackd to process the rf
-jackd -T -s -dalsa -C$RFDEV -P$RFDEV -r$RFRATE -p$RFBUFFER -n3 > rfjackd.log 2>&1 &
+/usr/bin/jackd -n rf -d alsa -r $RFRATE -p $RFBUFFER -n 2 -D -C $RFDEV -P $RFDEV > logs/jackd.rf.log 2>&1 &
+sleep $SLEEP
+## load the netmanager to accept dsp clients
+#/usr/bin/jack_load -s rf netmanager -i "-a $MULTI -p $RFPORT"
+/usr/bin/jack_load -s rf netmanager
+sleep $SLEEP
 
-##
-## the second assumption is that you want to listen to the radio through
-## the onboard soundcard attached as hw:0
-##
-AFDEV=hw:0			# the af soundcard
-AFQUAL=0			# the quality of samplerate conversion
-## launch alsa_out
-alsa_out -d $AFDEV > afalsa_out.log 2>&1 &
+## launch jackd to perform dsp processing
+#/usr/bin/jackd -n dsp -d net -a $MULTI -p $RFPORT -i 1 -o 1 > logs/jackd.dsp.log 2>&1 &
+/usr/bin/jackd -n dsp -d net -i 1 -o 1 > logs/jackd.dsp.log 2>&1 &
+sleep $SLEEP
 exit
+## load the netmanager to accept audio clients
+/usr/bin/jack_load -s dsp netmanager -i "-a $MULTI -p $DSPPORT"
+sleep $SLEEP
 
-##
-## we could simply connect the rf input to the af output, but the signals
-## are at -100 dB, so you won't hear much, so we'll add a gain widget to
-## boost the signals up
-##
-bin/gain --min-gain -30 --max-gain 100 &
+## launch jackd to process the af
+/usr/bin/jackd -n af -d dummy -r $AFRATE -p $AFBUFFER > logs/jackd.af.log 2>&1 &
+sleep $SLEEP
+## load the netadapter to resample dsp
+/usr/bin/jack_load -s af netadapter -i "-a $MULTI -p $DSPPORT"
+sleep $SLEEP
+## load the netmanager to accept clients
+/usr/bin/jack_load -s af netmanager -i "-a $MULTI -p $AFPORT"
+sleep $SLEEP
 
-##
-## and we add a panadapter display
-##
-bin/panorama &
+## launch jackd to server audio to the client
+/usr/bin/jackd -n client -d net -a $MULTI -p $AFPORT -i 1 -o 1 > logs/jackd.client.log 2>&1 &
+## load audioadapter 
+/usr/bin/jack_load -s client audioadapter -i "-D -C$CLDEV -P$CLDEV"
+

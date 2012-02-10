@@ -20,23 +20,50 @@
 #define FRAMEWORK_USES_JACK 0
 #define _POSIX_C_SOURCE 1
 #include <signal.h>
+#include <stdint.h>
 #include <jack/control.h>
 
 #include "framework.h"
+
+/*
+** The proper use of this extension requires a thread per server
+** started because of the jackctl_wait_signals(signals) that
+** occurs in the middle of this sequence:
+
+	server = jackctl_server_create(NULL, NULL);
+	// set server parameters
+	// set driver parameters
+	// set internal parameters
+	jackctl_server_open(server, jackctl_server_get_driver(server, driver_name));
+	jackctl_server_start(server);
+	jackctl_server_load_internal(server, jackctl_server_get_internal(server, client_name));
+
+	signals = jackctl_setup_signals(0);
+	jackctl_wait_signals(signals);
+
+	jackctl_server_stop(server);
+	jackctl_server_close(server);
+	jackctl_server_destroy(server);
+
+** However, I don't see the point.  The purpose of jackctl_setup_signals(0) appears to be
+** to block all signals from the server threads while unblocking them on the control thread
+** so the control thread can go to sleep and wait for a signal, so it can stop the server
+** thread.  But why should the server control be limited to that way of waiting for the
+** shutdown?
+*/
 
 static char *jack_parameter_types[] = { "none", "int", "uint", "char", "string", "bool", NULL };
 static char *jack_driver_types[] = { "none", "master", "slave", NULL };
 
 static Tcl_Obj *_make_pointer(void *pointer) {
   // fprintf(stderr, "make pointer %lu\n", (long int)pointer);
-  if (sizeof(int) == sizeof(void *))
-    return Tcl_NewIntObj((int)pointer);
-  else if (sizeof(long) == sizeof(void *))
-    return Tcl_NewLongObj((long)pointer);
-  else {
-    fprintf(stderr, "sizeof(void *) == %ld\n", sizeof(void *));
-    exit(1);
-  }
+#if __WORDSIZE == 64
+return Tcl_NewLongObj((long)pointer);
+#elif __WORDSIZE == 32
+  return Tcl_NewIntObj((int)pointer);
+#else
+#error "sizeof(void *) isn't obvious"
+#endif
 }
 static Tcl_Obj *_make_value(jackctl_parameter_t *parameter, union jackctl_parameter_value value) {
   switch (jackctl_parameter_get_type(parameter)) {
@@ -85,14 +112,13 @@ static int _return_value(Tcl_Interp *interp, jackctl_parameter_t *parameter, uni
   return fw_success_obj(interp, _make_value(parameter, value));
 }
 static int _get_pointer(Tcl_Interp *interp, Tcl_Obj *value, void **pointer) {
-  if (sizeof(int) == sizeof(void *))
-    return Tcl_GetIntFromObj(interp, value, (int *)pointer);
-  else if (sizeof(long) == sizeof(void *))
-    return Tcl_GetLongFromObj(interp, value, (long *)pointer);
-  else {
-    fprintf(stderr, "sizeof(void *) == %ld\n", sizeof(void *));
-    exit(1);
-  }
+#if __WORDSIZE == 64
+  return Tcl_GetLongFromObj(interp, value, (long *)pointer);
+#elif __WORDSIZE == 32
+  return Tcl_GetIntFromObj(interp, value, (int *)pointer);
+#else
+#error "sizeof(void *) isn't obvious"
+#endif
 }
 static int _get_value(Tcl_Interp *interp, jackctl_parameter_t *parameter, Tcl_Obj *value, union jackctl_parameter_value *result) {
   switch (jackctl_parameter_get_type(parameter)) {
@@ -124,6 +150,12 @@ static int _get_value(Tcl_Interp *interp, jackctl_parameter_t *parameter, Tcl_Ob
 }
 
 // sigset_t jackctl_setup_signals(unsigned int flags);
+static int _setup_signals(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2) return fw_error_str(interp, "usage: jack-ctl setup-signals");
+  jackctl_setup_signals(0);
+  return TCL_OK;
+}
+
 // void jackctl_wait_signals(sigset_t signals);
 
 // jackctl_server_t *jackctl_server_create(bool (* on_device_acquire)(const char * device_name), void (* on_device_release)(const char * device_name));
@@ -251,6 +283,7 @@ static int _driver_get_name(ClientData clientData, Tcl_Interp *interp, int argc,
   // fprintf(stderr, "driver = %lu\n", (long)driver);
   return _return_string(interp, jackctl_driver_get_name(driver));
 }
+#if 0				// not in jack-1.9.7
 // jackctl_driver_type_t jackctl_driver_get_type(jackctl_driver_t * driver);
 static int _driver_get_type(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 3) return fw_error_str(interp, "usage: jack-ctl driver-get-type driver");
@@ -259,6 +292,7 @@ static int _driver_get_type(ClientData clientData, Tcl_Interp *interp, int argc,
     return TCL_ERROR;
   return _return_string(interp, jack_driver_types[jackctl_driver_get_type(driver)]);
 }
+#endif
 // const JSList *jackctl_driver_get_parameters(jackctl_driver_t * driver);
 static int _driver_get_parameters(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 3) return fw_error_str(interp, "usage: jack-ctl driver-get-parameters driver");
@@ -476,7 +510,9 @@ static const fw_subcommand_table_t _subcommands[] = {
   { "switch-master", _switch_master, "" },
 
   { "driver-get-name", _driver_get_name, "" },
+#if 0
   { "driver-get-type", _driver_get_type, "" },
+#endif
   { "driver-get-parameters", _driver_get_parameters, "" },
 
   { "internal-get-name", _internal_get_name, "" },

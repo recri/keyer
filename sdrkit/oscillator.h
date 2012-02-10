@@ -51,11 +51,20 @@ static const float oone = 1.0f;
 #ifdef OSCILLATOR_F
 /*
 ** oscillator - a recursive filter
+** in its original form it only generates
+** positive frequencies. 
 */
 typedef struct {
   ofloat xi, c, x, y;
+  ocomplex (*finish)(ofloat x, ofloat y);
 } oscillator_t;
 
+static ocomplex oscillator_finish_positive_frequency(ofloat x, ofloat y) {
+  return x + I*y;
+}
+static ocomplex oscillator_finish_negative_frequency(ofloat x, ofloat y) {
+  return x - I*y;
+}
 static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_second) {
   ofloat current_xi = o->xi;
   ofloat wps = hertz / samples_per_second;
@@ -63,6 +72,7 @@ static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_s
   o->c = osqrt(oone / (oone + osquare(otan(rps))));
   o->xi = osqrt((oone - o->c) / (oone + o->c));
   o->x *=  o->xi / current_xi;
+  o->finish = (hertz > 0) ? oscillator_finish_positive_frequency : oscillator_finish_negative_frequency;
 }
 
 static void oscillator_set_phase(oscillator_t *o, float radians) {
@@ -76,7 +86,7 @@ static float complex oscillator_process(oscillator_t *o) {
   ofloat ny = t+o->x;
   ofloat x = (o->x = nx) / o->xi; /* better as multiply by inverse? */
   ofloat y = o->y = ny;
-  return x + I * y;
+  return o->finish(x, y);
 }
 
 #endif

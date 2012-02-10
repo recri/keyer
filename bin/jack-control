@@ -23,7 +23,28 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 
+package require sdrkit::jack-ctl
 package require sdrkit::jack-client
+
+array set data {}
+
+proc get-parameter-by-name {ps name} {
+    foreach p $ps {
+	if {[sdrkit::jack-ctl parameter-get-name $p] eq {name}} {
+	    return $p
+	}
+    }
+    error "parameter $name not found"
+}
+proc get-server-parameter-by-name {obj name} {
+    return [get-parameter-by-name [sdrkit::jack-ctl get-parameters $obj] $name]
+}
+proc get-driver-parameter-by-name {drv name} {
+    return [get-parameter-by-name [sdrkit::jack-ctl driver-get-parameters $drv] $name]
+}
+proc get-internal-parameter-by-name {int name} {
+    return [get-parameter-by-name [sdrkit::jack-ctl internal-get-parameters $int] $name]
+}
 
 proc config-panel {w} {
     upvar #0 $w data
@@ -42,15 +63,29 @@ proc connect-panel {w} {
     ttk::frame $w
     return $w
 }
-    
+
+proc server-destroy {w wd} {
+    upvar #0 $w data
+    if {$w eq $wd} {
+	switch $data(state) {
+	    created { sdrkit::jack-ctl destroy $data(obj) }
+	}
+    }
+}
+
 proc server-panel {w server} {
     upvar #0 $w data
     set data(server) $server
+    set data(obj) [sdrkit::jack-ctl create]
+    puts "create $data(obj)"
+    puts "set server name -> [sdrkit::jack-ctl parameter-set-value [get-server-parameter-by-name $data(obj) name] $server]"
+    set data(state) created
     ttk::notebook $w
     set p 0
     foreach panel {config status connect} {
 	$w add [$panel-panel $w.p[incr p]] -text $panel
     }
+    bind . <Destroy> [server-destroy $w %W]
     return $w
 }
 

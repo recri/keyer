@@ -50,7 +50,8 @@ foreach p [sdrkit::jack-ctl get-parameters $s] {
 }
 foreach d [sdrkit::jack-ctl get-drivers $s] {
     set name [sdrkit::jack-ctl driver-get-name $d]
-    set type [sdrkit::jack-ctl driver-get-type $d]
+    set type {}
+    if {0} { set type [sdrkit::jack-ctl driver-get-type $d] }
     puts "driver $name $type"
     foreach p [sdrkit::jack-ctl driver-get-parameters $d] {
 	print-parameter $p "driver $name"
@@ -58,9 +59,9 @@ foreach d [sdrkit::jack-ctl get-drivers $s] {
 }
 
 foreach i [sdrkit::jack-ctl get-internals $s] {
-    set name [sdrkit::jack-ctl internal-get-name $d]
+    set name [sdrkit::jack-ctl internal-get-name $i]
     puts "internal $name"
-    foreach p [sdrkit::jack-ctl internal-get-parameters $d] {
+    foreach p [sdrkit::jack-ctl internal-get-parameters $i] {
 	print-parameter $p "internal $name"
     }
 }

@@ -1,73 +1,42 @@
 #!/bin/sh
 ##
-## this script launches a simple SDR radio receiver
-##
-
-
-##
-## the first assumption is that you want to listen to the radio through
-## the onboard soundcard attached as hw:0
-##
-AFDEV=hw:0			# the AF soundcard
+########################################################################
+## this script isn't tested, this is tail ended onto the qtradio-start
+## backend script.  The rf server is just the default server there.
+########################################################################
 
 ##
-## the second assumption is that you've started the alsa loopback device
-## by adding snd-aloop to /etc/modules, so it's hw:1
+## start the hardware and dspserver components of a jack
+## networked SDR radio
 ##
-LPDEV=hw:1
 
 ##
-## the third assumption is that you've attached your Softrock to a usb
-## soundcard which is at hw:2
+## make sure the alsa loop back device is loaded
 ##
-RFDEV=hw:2			# the RF soundcard
+if "lsmod | grep snd_aloop | wc -l" -lt 3; then
+    echo "you need to \"sudo modprobe snd-aloop\" to load the alsa loopback device"
+    echo "or add \"snd-aloop\" to /etc/modules and it will be loaded after every boot"
+    exit 1
+fi
+
+TSTAMP=`date --rfc-3339=date`
 
 ##
-## the rate at which the usb soundcard operates
-## which sets the rate of the RF jack server
+## start the server connected to the hardware
 ##
-RFRATE=48000			# the RF sample rate
-RFBUFFER=512			# the RF jack buffer size
+jackd -n rf -d alsa -C hw:1 -P hw:1 -r 192000 -p 1024 -n 3 > ~/Sources/keyer/logs/$TSTAMP-rf.log 2>&1 &
 
 ##
-## the rate at which the AF processing will occur
-## which sets the rate of the AF jack server
+## connect the rf/dsp server to the loopback device
 ##
-AFRATE=8000			# the AF sample rate, not for the card, for jackd 
-AFBUFFER=128			# the AF jack buffer size
+jack_load -s rf audioadapter -i "-D -C hw:2,0 -P hw:2,1"
 
 ##
-## the quality of samplerate conversion we request from the alsa_in/alsa_out
-## converters
+## start the audio server, connect to the loopback device, run at 8000 samples/second
 ##
-QUAL=4				# the quality of samplerate conversion
+jackd -n af -d alsa -r 8000 -D -C hw:2,1 -P hw:2,0 -i 2 -o 2 > ~/Sources/keyer/logs/$TSTAMP-af.log 2>&1
 
 ##
-## launch the RF jackd
-## this jackd runs at the incoming sample rate
+## start the audio netmanager
 ##
-jackd -nrfjack -T -dalsa -Xraw -C$RFDEV -P$LPDEV,0 -r$RFRATE -p$RFBUFFER -n3 > rfjackd.log 2>&1 &
-
-##
-## launch the AF jackd
-## this jackd runs at a communications audio sample rate
-##
-jackd -nafjack -T -ddummy -r$AFRATE -p$AFBUFFER > afjackd.log 2>&1 &
-
-##
-## connect afjack to the hardware and loopback ports
-##
-bin/alsa_in -Safjack -jrfin -d$LPDEV,1 -q$QUAL > rfin.log 2>&1 &
-bin/alsa_out -Safjack -jafout -d$AFDEV -q$QUAL > afout.log 2>&1 &
-
-##
-## we could simply connect the rf input to the af output, but the signals
-## are at -100 dB, so you won't hear much, so we'll add a gain widget to
-## boost the signals up
-##
-#bin/gain --server afjack --min-gain -30 --max-gain 100 > gain.log 2>&1 &
-
-##
-## and we add a panadapter display
-##
-#bin/panorama --server rfjack > panorama.log 2>&1 &
+jack_load -s af netmanager

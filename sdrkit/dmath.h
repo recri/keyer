@@ -18,6 +18,7 @@
 #ifndef DMATH_H
 #define DMATH_H
 
+#include <string.h>
 #include <complex.h>
 #include <math.h>
 
@@ -94,6 +95,26 @@ static float interpf(float p, float v0, float v1) {
 /* convert a dB gain to a linear voltage gain */
 static float dB_to_linear(float dBgain) {
   return powf(10.0f, dBgain / 20.0f);
+}
+
+/* complex multiply two complex vectors together */ 
+static void complex_vector_multiply(float complex *dst, float complex *src1, float complex *src2, int n) {
+  while (--n >= 0) *dst++ = *src1++ * *src2++;
+}
+
+/* multiply a complex vector by a real scale */
+static void complex_vector_scale(float complex *dst, float complex *src, float scale, int n) {
+  while (--n >= 0) *dst++ = *src++ * scale;
+}
+
+/* copy a complex vector */
+static void complex_vector_copy(float complex *dst, float complex *src, int n) {
+  memcpy(dst, src, n*sizeof(float complex));
+}
+
+/* clear a complex vector */
+static void complex_vector_clear(float complex *dst, int n) {
+  memset(dst, 0, n*sizeof(float complex));
 }
 
 #endif
