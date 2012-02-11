@@ -19,12 +19,12 @@ if "lsmod | grep snd_aloop | wc -l" -lt 3; then
     exit 1
 fi
 
-TSTAMP=`date --rfc-3339=date`
+LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
 
 ##
 ## start the server connected to the hardware
 ##
-jackd -n rf -d alsa -C hw:1 -P hw:1 -r 192000 -p 1024 -n 3 > ~/Sources/keyer/logs/$TSTAMP-rf.log 2>&1 &
+jackd -n rf -d alsa -C hw:1 -P hw:1 -r 192000 -p 1024 -n 3 > $LOG-rf.log 2>&1 &
 
 ##
 ## connect the rf/dsp server to the loopback device
@@ -34,7 +34,7 @@ jack_load -s rf audioadapter -i "-D -C hw:2,0 -P hw:2,1"
 ##
 ## start the audio server, connect to the loopback device, run at 8000 samples/second
 ##
-jackd -n af -d alsa -r 8000 -D -C hw:2,1 -P hw:2,0 -i 2 -o 2 > ~/Sources/keyer/logs/$TSTAMP-af.log 2>&1
+jackd -n af -d alsa -r 8000 -D -C hw:2,1 -P hw:2,0 -i 2 -o 2 > $LOG-af.log 2>&1
 
 ##
 ## start the audio netmanager

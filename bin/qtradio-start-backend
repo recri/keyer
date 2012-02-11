@@ -12,7 +12,8 @@ RATE=96000
 DEV=hw:1			# 1 for sdr-widget
 SHARE="--share"
 SI570="--si570"
-TSTAMP=`date --rfc-3339=date`
+LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
+
 for f in $*; do
     case $f in
 	--48k) RATE=48000;;
@@ -31,11 +32,11 @@ for f in $*; do
     esac
 done
 
-jackd -T -s -dalsa -C$DEV -P$DEV -r$RATE -p$BUFFER -n3 > ~/Sources/keyer/logs/$TSTAMP-jackd.log 2>&1 &
+jackd -T -s -dalsa -C$DEV -P$DEV -r$RATE -p$BUFFER -n3 > $LOG-jackd.log 2>&1 &
 sleep 1
-nohup softrock --jack $SI570 --iq --samplerate $RATE > ~/Sources/keyer/logs/$TSTAMP-softrock.log 2>&1 &
+nohup softrock --jack $SI570 --iq --samplerate $RATE > $LOG-softrock.log 2>&1 &
 sleep 1
-nohup dspserver --lo 10000 $SHARE > ~/Sources/keyer/logs/$TSTAMP-dspserver.log 2>&1 &
+nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
 
 ##
 ## tagged on start jack network backend
@@ -51,7 +52,7 @@ jack_load audioadapter -i "-D -Chw:2,0 -Phw:2,1"
 ## there is a downsampling step here
 ##
 sleep 1
-jackd -n af -d alsa -r 8000 -D -Chw:2,1 -Phw:2,0 -i 2 -o 2 > ~/Sources/keyer/logs/$TSTAMP-af.log 2>&1 &
+jackd -n af -d alsa -r 8000 -D -Chw:2,1 -Phw:2,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
 ##
 ## audio server netmanager backend
 ## so the downsampled stream can

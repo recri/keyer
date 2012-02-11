@@ -3,15 +3,20 @@
 ## start the front end of a jack networked radio
 ##
 
-TSTAMP=`date --rfc-3339=date`
+LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
 
 ##
 ## start the jack server connected to the hardware
 ##
-jackd -d net -C 1 -P 1 -i 1 -o 1 > ~/Sources/keyer/logs/$TSTAMP-client.log 2>&1 &
+jackd -d net -C 1 -P 1 -i 1 -o 1 > $LOG-client.log 2>&1 &
+sleep 1
 
 ##
 ## connect the server to the local audio card
 ##
-jack_load audioadapter
-
+jack_load audioadapter -i "-r 48000 -q 2"
+sleep 1
+##
+## connect the server to the midi
+##
+a2jmidid --export-hw > $LOG-a2jmidid.log 2>&1 &
