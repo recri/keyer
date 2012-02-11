@@ -106,6 +106,19 @@ array set opts {
     debounce-note 0
     debounce-period 0.0002
     debounce-steps 10
+    input-midi {
+	{a2j:Teensy MIDI [24] (capture): Teensy MIDI MIDI 1}
+	system:midi_capture_1
+	mouse-key:midi_out
+    }
+    output-audio-1 {
+	audioadapter:playback_1
+	system:playback_1
+    }
+    output-audio-2 {
+	audioadapter:playback_2
+	system:playback_2
+    }
 }
 
 #
@@ -151,12 +164,13 @@ proc client-init {} {
 		}
 	    }
 	}
-	switch -glob $port {
-	    system:midi_capture_* {
-		set midi_capture $port
-	    }
-	    mouse-key:midi_out {
-		set mouse_key $port
+	foreach list {input-midi output-audio-1 output-audio-2} {
+	    if {[lsearch -exact $::opts($list) $port] >= 0} {
+		if { ! [info exists picked($list)]} {
+		    set picked($list) $port
+		} elseif {[lsearch -exact $::opts($list) $port] < [lsearch -exact $::opts($list) $picked($list)]} {
+		    set picked($list) $port
+		}
 	    }
 	}
     }
@@ -169,9 +183,9 @@ proc client-init {} {
 	keyer::tone ascii_tone {*}[client-opts ascii_tone]
 	set clients(ascii) ascii
 	set clients(ascii_tone) ascii_tone
-	lappend connects {sdrkit::jack connect ascii:midi_out ascii_tone:midi_in}
-	lappend connects {sdrkit::jack connect ascii_tone:out_i system:playback_1}
-	lappend connects {sdrkit::jack connect ascii_tone:out_q system:playback_2}
+	lappend connects {list sdrkit::jack connect ascii:midi_out ascii_tone:midi_in}
+	lappend connects [list sdrkit::jack connect ascii_tone:out_i $picked(output-audio-1)]
+	lappend connects [list sdrkit::jack connect ascii_tone:out_q $picked(output-audio-2)]
     } else {
 	set clients(ascii) {}
 	set clients(ascii_tone) {}
@@ -180,8 +194,8 @@ proc client-init {} {
     if {$opts(iambic) || $opts(dttsp_iambic)} {
 	keyer::tone iambic_tone {*}[client-opts iambic_tone]
 	set clients(iambic_tone) iambic_tone
-	lappend connects {sdrkit::jack connect iambic_tone:out_i system:playback_1}
-	lappend connects {sdrkit::jack connect iambic_tone:out_q system:playback_2}
+	lappend connects [list sdrkit::jack connect iambic_tone:out_i $picked(output-audio-1)]
+	lappend connects [list sdrkit::jack connect iambic_tone:out_q $picked(output-audio-2)]
     } else {
 	set clients(iambic_tone) {}
     }
@@ -190,12 +204,7 @@ proc client-init {} {
 	# plug-open keyer::iambic iambic
 	keyer::iambic iambic {*}[client-opts iambic]
 	set clients(iambic) iambic
-	if {[info exists midi_capture]} {
-	    lappend connects [list sdrkit::jack connect $midi_capture iambic:midi_in]
-	}
-	if {[info exists mouse_key]} {
-	    lappend connects [list sdrkit::jack connect $mouse_key iambic:midi_in]
-	}
+	lappend connects [list sdrkit::jack connect $picked(input-midi) iambic:midi_in]
 	lappend connects {sdrkit::jack connect iambic:midi_out iambic_tone:midi_in}
     } else {
 	set clients(iambic) {}
@@ -205,12 +214,7 @@ proc client-init {} {
 	# plug-open keyer::iambic iambic
 	keyer::dttsp-iambic dttsp_iambic {*}[client-opts dttsp_iambic]
 	set clients(dttsp_iambic) dttsp_iambic
-	if {[info exists midi_capture]} {
-	    lappend connects [list sdrkit::jack connect $midi_capture dttsp_iambic:midi_in]
-	}
-	if {[info exists mouse_key]} {
-	    lappend connects [list sdrkit::jack connect $mouse_key dttsp_iambic:midi_in]
-	}
+	lappend connects [list sdrkit::jack connect $picked(input-midi) dttsp_iambic:midi_in]
 	lappend connects {sdrkit::jack connect dttsp_iambic:midi_out iambic_tone:midi_in}
     } else {
 	set clients(dttsp_iambic) {}
@@ -230,20 +234,20 @@ proc client-init {} {
 	keyer::debounce debounce {*}[client-opts debounce]
 	set clients(debounce) debounce
 	if {$opts(iambic)} {
-	    lappend connects {sdrkit::jack disconnect system:midi_capture_1 iambic:midi_in}
+	    lappend connects [list sdrkit::jack disconnect $picked(input-midi) iambic:midi_in]
 	    lappend connects {sdrkit::jack connect debounce:midi_out iambic:midi_in}
 	} elseif {$opts(dttsp_iambic)} {
-	    lappend connects {sdrkit::jack disconnect system:midi_capture_1 dttsp_iambic:midi_in}
+	    lappend connects [list sdrkit::jack disconnect $picked(input-midi) dttsp_iambic:midi_in]
 	    lappend connects {sdrkit::jack connect debounce:midi_out dttsp_iambic:midi_in}
 	}
-	lappend connects {sdrkit::jack connect system:midi_capture_1 debounce:midi_in}
+	lappend connects [list sdrkit::jack connect $picked(input-midi) debounce:midi_in]
     } else {
 	set clients(debounce) {}
     }
     
     # make the connections
     foreach cmd $connects {
-	if {[catch "eval $cmd" error]} {
+	if {[catch "{*}$cmd" error]} {
 	    puts "$cmd: yielded $error"
 	}
     }

@@ -35,7 +35,7 @@ proc main {argv} {
 	}
     }
     set jack [sdrkit::jack-client $::data(client) -server $::data(server) -client $::data(client)]
-    puts [$jack {*}$args]
+    puts [$jack {*}$argv]
 }
 
 main $argv
