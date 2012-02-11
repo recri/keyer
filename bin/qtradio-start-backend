@@ -39,15 +39,6 @@ sleep 1
 nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
 
 ##
-## tagged on start jack network backend
-## audio adapter to alsa loopback ports
-## the loopback ports are started by adding
-## snd-aloop to /etc/modules, it will be
-## started at boot time as long as its there
-##
-sleep 1
-jack_load audioadapter -i "-D -Chw:2,0 -Phw:2,1"
-##
 ## audio server from loopback ports
 ## there is a downsampling step here
 ##
@@ -63,3 +54,13 @@ jackd -n af -d alsa -r 8000 -D -Chw:2,1 -Phw:2,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
 ## 
 sleep 1
 jack_load -s af netmanager
+
+##
+## tagged on start jack network backend
+## audio adapter to alsa loopback ports
+## the loopback ports are started by adding
+## snd-aloop to /etc/modules, it will be
+## started at boot time as long as its there
+##
+sleep 1
+jack_load audioadapter -i "-D -Chw:2,0 -Phw:2,1 -q 2"
