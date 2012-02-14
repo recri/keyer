@@ -7,9 +7,12 @@
 ## remote SDR radio implemented with sdrkit.
 ##
 
+
+export DISPLAY=:0
 BUFFER=1024
-RATE=96000
+RATE=192000
 DEV=hw:1			# 1 for sdr-widget
+LOOP=hw:2			# 2 for loopback
 SHARE="--share"
 SI570="--si570"
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
@@ -37,13 +40,12 @@ sleep 1
 nohup softrock --jack $SI570 --iq --samplerate $RATE > $LOG-softrock.log 2>&1 &
 sleep 1
 nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
-
 ##
 ## audio server from loopback ports
 ## there is a downsampling step here
 ##
 sleep 1
-jackd -n af -d alsa -r 8000 -D -Chw:2,1 -Phw:2,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
+jackd -n af -d alsa -r 8000 -D -C$LOOP,1 -P$LOOP,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
 ##
 ## audio server netmanager backend
 ## so the downsampled stream can
@@ -53,7 +55,7 @@ jackd -n af -d alsa -r 8000 -D -Chw:2,1 -Phw:2,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
 ## with jack-1.9.8
 ## 
 sleep 1
-jack_load -s af netmanager
+jack_load -s af netmanager -i "--celt 64" # 64kbit celt decoding
 
 ##
 ## tagged on start jack network backend
@@ -63,4 +65,4 @@ jack_load -s af netmanager
 ## started at boot time as long as its there
 ##
 sleep 1
-jack_load audioadapter -i "-D -Chw:2,0 -Phw:2,1 -q 2"
+jack_load audioadapter -i "-D -C$LOOP,0 -P$LOOP,1 -q 2"
