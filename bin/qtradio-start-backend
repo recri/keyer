@@ -9,24 +9,25 @@
 
 
 export DISPLAY=:0
-BUFFER=1024
-RATE=192000
-DEV=hw:1			# 1 for sdr-widget
-LOOP=hw:2			# 2 for loopback
+HWBUFFER=1024
+HWRATE=192000
+HWDEV=hw:1			# 1 for sdr-widget
+LPRATE=48000
+LPDEV=hw:2			# 2 for loopback
 SHARE="--share"
 SI570="--si570"
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
 
 for f in $*; do
     case $f in
-	--48k) RATE=48000;;
-	--96k) RATE=96000;;
-	--192k) RATE=192000;;
+	--48k) HWRATE=48000;;
+	--96k) HWRATE=96000;;
+	--192k) HWRATE=192000;;
 	--share) SHARE=--share;;
-	--hw:0) DEV=hw:0;;
-	--hw:1) DEV=hw:1;;
-	--hw:2) DEV=hw:2;;
-	--hw:3) DEV=hw:3;;
+	--hw:0) HWDEV=hw:0;;
+	--hw:1) HWDEV=hw:1;;
+	--hw:2) HWDEV=hw:2;;
+	--hw:3) HWDEV=hw:3;;
 	--si570) SI570=--si570;;
 	*)
 	    echo "unknown argument: $f"
@@ -35,9 +36,9 @@ for f in $*; do
     esac
 done
 
-jackd -T -s -dalsa -C$DEV -P$DEV -r$RATE -p$BUFFER -n3 > $LOG-jackd.log 2>&1 &
+jackd -T -s -dalsa -C$HWDEV -P$HWDEV -r$HWRATE -p$HWBUFFER -n3 > $LOG-jackd.log 2>&1 &
 sleep 1
-nohup softrock --jack $SI570 --iq --samplerate $RATE > $LOG-softrock.log 2>&1 &
+nohup softrock --jack $SI570 --iq --samplerate $HWRATE > $LOG-softrock.log 2>&1 &
 sleep 1
 nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
 ##
@@ -45,7 +46,7 @@ nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
 ## there is a downsampling step here
 ##
 sleep 1
-jackd -n af -d alsa -r 8000 -D -C$LOOP,1 -P$LOOP,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
+jackd -n af -d alsa -r $LPRATE -D -C$LPDEV,1 -P$LPDEV,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
 ##
 ## audio server netmanager backend
 ## so the downsampled stream can
@@ -65,4 +66,4 @@ jack_load -s af netmanager -i "--celt 64" # 64kbit celt decoding
 ## started at boot time as long as its there
 ##
 sleep 1
-jack_load audioadapter -i "-D -C$LOOP,0 -P$LOOP,1 -q 2"
+jack_load audioadapter -i "-D -C$LPDEV,0 -P$LPDEV,1 -q 2"
