@@ -1,0 +1,34 @@
+* jack-1.9.8 difficulties
+** requires dbus to start
+   awkward for headless machines because DISPLAY is required
+   and DISPLAY is used to make an X11 call.
+** only one client per process
+   If I open a jack client connection to the default server
+   and then open a jack client connection to a named server
+   that isn't the default server, then both clients end up
+   connected to the default server.  Reverse the order of
+   the opens and both clients end up connected to the named
+   server.
+   Is there a reason for only allowing a process to connect
+   to only one server?
+   Or is it a one client per thread restriction?
+** MIDI is treated asymmetrically
+   -driver alsa allows MIDI and PCM device import
+   audioadapter only allows PCM import
+   -driver net allows MIDI and PCM device import
+   netadapter only allows PCM import
+** celt only allows some sample rates
+   it works with -- oh, it's probably a celt version problem
+** trouble resampling from 8kHz to 48kHz
+   when I use audioadapter to add hw:0 to a net slaved
+   jackd running at 8kHz, I get outputs with indeterminate
+   latency, with echoes, which are dropped, and outputs which
+   are truncated in time.
+
+** cannot run jack net master and client on same machine
+   the minimum configuration is two machines
+   but the mechanism of connecting through a
+   network interface could work on one machine
+   and that would mean that multi-server configurations
+   could be redistributed over machines without needing
+   to be rewritten when they end up on one machine.
