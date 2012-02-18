@@ -1,0 +1,765 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# flashbite - CW keyer audio flash cards with keyer response
+# don't translate, just hear and reply
+# 	
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+
+package require keyer::ascii
+package require keyer::iambic
+package require keyer::tone
+package require keyer::debounce
+package require keyer::detime
+package require sdrkit::jack
+
+package require keyer-control
+package require morse::morse
+package require morse::itu
+#
+# default options
+#
+namespace eval ::main {
+    array set data {
+	wpm 15
+	tone 700
+	gain -6
+	offs 100
+	user default
+
+	state 0
+
+	number_session 0
+	sent {}
+	max_speed 0
+
+	last-echo {}
+	play-panel-update-simulate-delay 50
+	play-codes-to-draw {}
+	play-codes-to-undraw {}
+	drawn-items {}
+	unmatched {}
+	ptt 0
+	listen-last-echo {}
+	listen-last-echo-repeat 0
+	listen-matched {}
+	listen-echoes-received {}
+	listen-rcvd {}
+	active-voices 0
+    }
+}
+
+proc ::main::heard_clear {} {
+    set ::main::data(sent) {}
+    set ::main::data(unmatched) {}
+    .sent.sent delete 0.0 end
+}
+
+proc ::main::heard_callsign {call code} {
+    lappend ::main::data(sent) [list $call $code]
+    lappend ::main::data(unmatched) $code
+    .sent.sent insert end "$call $code\n"
+    .sent.sent see end
+}
+    
+proc ::main::translate {dict call} {
+    return [text-to-morse $dict $call]
+}
+    
+proc ::main::draw_callsign {send} {
+    lappend ::main::data(play-codes-to-draw) $send
+}
+
+proc ::main::undraw_callsign {send} {
+    lappend ::main::data(play-codes-to-undraw) $send
+}
+    
+proc ::main::hear_callsign {send} {
+    if {$::main::data(ptt)} {
+	foreach {send call voice speed tone gain code continuation} $::main::data(send-$send) break
+	ascii$voice abort
+	::main::undraw_callsign $send
+	::main::resend_callsign $send
+    } else {
+	foreach {send call voice speed tone gain code continuation} $::main::data(send-$send) break
+	if {[ascii$voice pending]} {
+	    set ::main::data(after-$voice) [after 100 [list ::main::hear_callsign $send]]
+	} else {
+	    heard_callsign $call $code
+	    set ::main::data(after-$voice) [eval $continuation]
+	}
+    }
+}
+
+proc ::main::send_callsign {send} {
+    if {$::main::data(ptt)} {
+	::main::resend_callsign $send
+    } else {
+	foreach {send call voice speed tone gain code continuation} $::main::data(send-$send) break
+	set ::main::data(max_speed) [expr {max($::main::data(max_speed), $speed)}]
+	tone$voice configure -freq $tone -gain $gain
+	ascii$voice configure -wpm $speed
+	ascii$voice puts $call
+	draw_callsign $send
+	hear_callsign $send
+    }
+}
+
+proc ::main::resend_callsign {send} {
+    if {$::main::data(ptt)} {
+	after 100 [list ::main::resend_callsign $send]
+    } else {
+	after [expr {2000+int(rand () * 1000)}] [list ::main::send_callsign $send]
+    }
+}
+
+proc ::main::listen_clear {} {
+    array set ::main::data {listen-last-echo {} listen-last-echo-repeat 0 listen-matched {} listen-echoes-received {} listen-rcvd {}}
+    .rcvd.rcvd delete 0.0 end
+}
+
+proc ::main::listen_score_echo {item} {
+    set item [string trim $item]
+    if {$item eq {}} return
+    lappend ::main::data(listen-rcvd) $item
+    set i [lsearch $::main::data(unmatched) $item]
+    if {$i >= 0} {
+	set ::main::data(unmatched) [lreplace $::main::data(unmatched) $i $i]
+	lappend ::main::data(matched) $item
+	.rcvd.rcvd insert end "$item [morse-to-text [ascii cget -dict] $item] correct\n"
+	::main::play-score correct 1
+    } else {
+	.rcvd.rcvd insert end "$item [morse-to-text [ascii cget -dict] $item] wrong\n"
+	::main::play-score wrong 1
+    }
+}
+
+proc ::main::listen_for_echoes {echo detime} {
+    set new [$detime get]
+    append ::main::data(listen-echoes-received) $new
+    append echo $new
+    if {$echo ne {}} {
+	if {$echo ne $::main::data(listen-last-echo)} {
+	    # puts "listen_for_echoes heard {$echo} this time"
+	    set ::main::data(listen-last-echo-repeat) 0
+	    set ::main::data(listen-last-echo) $echo
+	} else {
+	    incr ::main::data(listen-last-echo-repeat)
+	}
+	set echoes [split $echo \n]
+	# puts "[llength $echoes] echoes to match, [llength $::main::data(unmatched)] unmatched, $::main::data(listen-last-echo-repeat) repeats"
+	foreach item [lrange $echoes 0 end-1] {
+	    ::main::listen_score_echo $item
+	}
+	set echo [lindex $echoes end]
+	if {$::main::data(active-voices) == 0 && $::main::data(listen-last-echo-repeat) > 10} {
+	    ::main::listen_score_echo $echo
+	    foreach item $::main::data(unmatched) {
+		::main::play-score missed 1
+	    }
+	    set echo {}
+	}
+    }
+    after 100 [list ::main::listen_for_echoes $echo $detime]
+}
+
+proc ::main::sound_voice {voice} {
+    if {$::main::data(number_session) > 0} {
+	# reduce the count to be sent
+	incr ::main::data(number_session) -1
+	# get the callsign to be sent
+	set call [lindex $::main::data(items) 0]; set ::main::data(items) [lrange $::main::data(items) 1 end]
+	# choose a random speed
+	set speed [expr {rand() * $::main::data(wpm-range) + $::main::data(wpm)}]
+	# choose a random tone
+	set tone [expr {(rand() * $::main::data(tone-range)) - $::main::data(tone-range)/2 + $::main::data(tone)}]
+	# choose a random gain
+	set gain [expr {(rand() * $::main::data(gain-range)) + $::main::data(gain)}]
+	# choose the timeout between the end of this call
+	# and the start of the next call on this voice
+	set timeout [expr {2000+int(rand () * 1000)}]
+	# send the callsign and wait for it to finish
+	# senders need to back off if the operator is replying
+	# senders need to abort and retry if the operator is replying
+	set send [incr ::main::data(sent-count)]
+	set ::main::data(send-$send) [list $send $call $voice $speed $tone $gain [translate [ascii$voice cget -dict] $call] [list after $timeout [list ::main::sound_voice $voice]]]
+	send_callsign $send
+    } else {
+	stop_voice $voice
+    }
+}
+
+proc ::main::start_voice {voice} {
+    # mark us as active
+    incr ::main::data(active-voices)
+    set ::main::data(voice-$voice) {}
+    # start keyer
+    keyer::ascii ascii$voice
+    keyer::tone tone$voice
+    # keyer::detime detime$voice
+    # connect
+    sdrkit::jack connect ascii$voice:midi_out tone$voice:midi_in
+    sdrkit::jack connect tone$voice:out_i pileup:in_i
+    sdrkit::jack connect tone$voice:out_q pileup:in_q
+    # sdrkit::jack connect ascii$voice:midi_out detime$voice:midi_in
+    # start loop until all sent
+    after [expr {int(rand () * 3000)}] [list ::main::sound_voice $voice]
+}
+
+proc ::main::stop_voice {voice} {
+    if {[info exists ::main::data(voice-$voice)]} {
+	unset ::main::data(voice-$voice)
+	incr ::main::data(active-voices) -1
+	catch {after cancel $::main::data(after-$voice)}
+	rename ascii$voice {}
+	rename tone$voice {}
+	# rename detime$voice {}
+    }
+}
+
+proc ::main::check_if_finished {} {
+    if {$::main::data(number_session) > 0 || $::main::data(active-voices) > 0} {
+	after 100 ::main::check_if_finished
+    } else {
+	::main::play-stop
+    }
+}
+
+proc ::main::choose_items {n list} {
+    set choices {}
+    set length [llength $list]
+    while {[incr n -1] >= 0} {
+	lappend choices [lindex $list [expr {int(rand()*$length)}]]
+    }
+    return $choices
+}
+
+####
+#### play panel animation
+####
+proc ::main::play-panel-window-configure {w cw wd ht} {
+    if {$w eq $cw} {
+	# puts "configure $w $cw $wd $ht"
+    }
+}
+
+proc ::main::play-panel-window-destroy {w dw} {
+    # puts "destroy $w ..."
+}
+
+##
+## this is an {x y x y ...} list of
+## frequency vs magnitude in dB full scale
+##
+proc ::main::play-panel-update {w xy} {
+}
+
+proc ::main::play-panel-setup-drawing {w send call speed tone gain code} {
+}
+
+proc ::main::play-panel-update-simulate {w} {
+}
+
+proc ::main::play-score {category points} {
+}
+
+####
+#### sessions
+####
+proc ::main::session-allowed {word} {
+    # no tripled letters
+    # no tripled vowels
+    # no punctuation
+    switch -regexp -- $word {
+	TTT - NNN - MMM - [AEIOU][AEIOU][AEIOU] -
+	[-.;:()'\"/!?&+@$=_] { return 0}
+	default { return 1 }
+    }
+}
+proc ::main::session-init {} {
+    array unset ::main::session_data
+    set dict [morse-itu-dict]
+    set seen {}
+    dict for {character value} $dict {
+	set dits [morse-character-length $dict $character]
+	lappend seen $character
+	lappend ::main::session(char-[format %02d $dits]) $character
+    }
+    for {set dits 1} {$dits <= 21} {incr dits 2} {
+	foreach word [morse-words-of-length $dict $dits] {
+	    if { ! [::main::session-allowed $word]} {
+		continue
+	    }
+	    if {[lsearch $seen $word] < 0} {
+		lappend seen $word
+		lappend ::main::session(word-[format %02d $dits]-[format %02d [string length $word]]) $word
+	    }
+	}
+    }
+    foreach name [lsort [array names ::main::session]] {
+	puts "$name -> [lsort $::main::session($name)]"
+    }
+}
+
+proc ::main::session-save {user} {
+    if {0} {
+	if {[catch {open ~/.flashbite-$user w} fp]} {
+	    error "could not open ~/.flashbite-$user for writing"
+	}
+    }
+    error "not ready to write"
+}
+
+proc ::main::session-load {user} {
+    if {[catch {open ~/.flashbite-$user r} fp]} {
+	# no such user, create session planner data
+	::main::session-init
+	::main::session-save $user
+	set fp [open ~/.flashbite-$user]
+    }
+    array set ::main::session_data [read $fp]
+    close $fp
+}
+####
+#### user interface actions
+####
+
+##
+## close window handler
+##
+proc ::main::close-window {w ew} {
+    if {$w eq $ew} {
+	foreach x [lreverse $::main::data(on-exit)] {
+	    catch $x
+	}
+	::main::stop
+    }
+}
+
+##
+## ptt signal listener
+##
+proc ::main::ptt-signal-listener {mtap chan note} {
+    foreach item [$mtap get] {
+	foreach {frame event} $item break
+	binary scan $event c* bytes
+	foreach {ecmd enote vel} $bytes break
+	if {($ecmd&0xff) == (0x90+($chan-1)) && $enote == $note+1} {
+	    set ::main::data(ptt)  1
+	} elseif {($ecmd&0xff) == (0x80+($chan-1)) && $enote == $note+1} {
+	    set ::main::data(ptt)  0
+	}
+    }
+    after 100 [list ::main::ptt-signal-listener $mtap $chan $note]
+}
+
+##
+## game play panel button actions
+##
+proc ::main::play-start {} {
+    # change button state
+    .play.m.start configure -state disabled
+    #.play.m.pause configure -state normal
+    .play.m.stop  configure -state normal
+    set ::main::data(state) 1
+    # choose mode
+    switch $::main::data(mode) {
+	callsigns {
+	    set ::main::data(number_session) $::main::data(n-items)
+	    set ::main::data(items) [choose_items $::main::data(number_session) [morse-pileup-callsigns]]
+	}
+	default {
+	    set ::main::data(number_session) $::main::data(n-items)
+	    set dits [lindex $::main::data(mode) 0]
+	    set words [morse-words-of-length [ascii cget -dict] $dits]
+	    set ::main::data(items) [choose_items $::main::data(number_session) $words]
+	}
+    }
+    # clear sent
+    ::main::heard_clear
+    # clear received
+    ::main::listen_clear
+    # clear score
+    array set ::main::data {play-dits-correct 0 play-dits-wrong 0 play-dits-missed 0}
+    # clear score bar graph
+    catch {.play.score delete all}
+    set ht [winfo height .play.score]
+    .play.score create rectangle 0 $ht 10 $ht -fill red -tag wrong
+    .play.score create rectangle 10 $ht 20 $ht -fill green -tag correct
+    .play.score create rectangle 20 $ht 30 $ht -fill blue -tag missed
+    # start voices
+    set ::main::data(active-voices) 0
+    for {set voice 0} {$voice < $::main::data(voices)} {incr voice} {
+	start_voice $voice
+    }
+    # listen for echoes
+    # ::main::listen_for_echoes_to_sent {}
+    # wait for done
+    ::main::check_if_finished
+}
+
+proc ::main::play-pause {} {
+    # change button state
+    .play.m.start configure -state normal
+    #.play.m.pause configure -state disabled
+    .play.m.stop  configure -state normal
+    set ::main::data(state) 2
+}
+
+proc ::main::play-stop {} {
+    # change button state
+    .play.m.start configure -state normal
+    #.play.m.pause configure -state disabled
+    .play.m.stop  configure -state disabled
+    set ::main::data(state) 0
+    for {set voice 0} {$voice < $::main::data(voices)} {incr voice} {
+	stop_voice $voice
+    }
+}
+
+####
+#### user interface panels, mostly buried
+####
+
+##
+## about panel
+##
+proc ::main::about-panel {w} {
+    ttk::frame $w
+    pack [text $w.t] -fill both -expand true
+    $w.t insert end {
+Flashbite is an audible flash card program for learning to key morse code.
+
+You should have an iambic paddle attached to your computer via a MIDI interface.
+When the game starts, the computer will play patterns of dits, dahs, and spaces
+and you should echo them back with your key.	
+} 
+    return $w
+}
+
+##
+## texts sent panel
+##
+proc ::main::sent-panel {w} {
+    ttk::frame $w
+    grid [text $w.sent -yscrollcommand [list $w.vsent set]] -row 0 -column 0 -sticky nsew
+    grid [ttk::scrollbar $w.vsent -orient vertical -command [list $w.sent yview]] -row 0 -column 1 -sticky ns
+    grid columnconfigure $w 0 -weight 100
+    grid rowconfigure $w 0 -weight 100
+    return $w
+}
+
+##
+## texts received panel
+##
+proc ::main::rcvd-panel {w} {
+    ttk::frame $w
+    grid [text $w.rcvd -yscrollcommand [list $w.vrcvd set]] -row 0 -column 0 -sticky nsew
+    grid [ttk::scrollbar $w.vrcvd -orient vertical -command [list $w.rcvd yview]] -row 0 -column 1 -sticky ns
+    grid columnconfigure $w 0 -weight 100
+    grid rowconfigure $w 0 -weight 100
+    return $w
+}
+
+##
+## game configuration panel
+##
+proc ::main::game-panel {w} {
+    ttk::frame $w
+    return $w
+}
+
+##
+## keyer configuration panel
+##
+proc ::main::iambic-keyer-panel {w} {
+    set opts {
+	ascii 0
+	debounce 1
+	iambic 1
+	ptt 0
+
+	layout 1
+
+	client-ascii {}
+	client-ascii_tone {}
+	client-iambic iambic
+	client-iambic_tone iambic_tone
+	client-ptt {}
+	client-debounce debounce
+	client-dttsp_iambic {}
+
+	debounce-verbose 0
+	debounce-chan 1
+	debounce-note 0
+	debounce-period 0.0002
+	debounce-steps 6
+
+	iambic-verbose 0
+	iambic-chan 1
+	iambic-note 0
+	iambic-wpm 15
+	iambic-word 50
+	iambic-dah 3
+	iambic-ies 1
+	iambic-ils 3
+	iambic-iws 7
+	iambic-mode A
+	iambic-alsp 0
+	iambic-awsp 0
+	iambic-swap 0
+	
+	iambic_tone-verbose 0
+	iambic_tone-freq 750
+	iambic_tone-gain -30
+	iambic_tone-rise 5
+	iambic_tone-fall 5
+
+    }
+    return [keyer-control $w $opts]
+}
+
+proc ::main::ascii-keyer-panel {w} {
+    set opts {
+	ascii 1
+	debounce 0
+	iambic 0
+	ptt 0
+
+	layout 1
+
+	client-ascii ascii
+	client-ascii_tone ascii_tone
+	client-iambic {}
+	client-iambic_tone {}
+	client-ptt {}
+	client-debounce {}
+	client-dttsp_iambic {}
+
+	ascii-verbose 0
+	ascii-chan 1
+	ascii-note 0
+	ascii-wpm 15
+	ascii-word 50
+	ascii-dah 3
+	ascii-ies 1
+	ascii-ils 3
+	ascii-iws 7
+
+	ascii_tone-verbose 0
+	ascii_tone-freq 750
+	ascii_tone-gain -30
+	ascii_tone-rise 5
+	ascii_tone-fall 5
+    }
+    return [keyer-control $w $opts]
+}
+
+proc ::main::config-panel-op {w op} {
+    switch $op {
+	play {
+	    pack unpack .config
+	    pack .play -side top -fill both -expand true
+	}
+    }
+}
+
+proc ::main::config-panel {w} {
+    ttk::frame $w
+    pack [ttk::notebook $w.config] -side top -fill both -expand true
+    $w.config add [::main::game-panel $w.game] -text {Game Config}
+    $w.config add [::main::iambic-keyer-panel $w.ikeyer] -text {Iambic Keyer}
+    $w.config add [::main::ascii-keyer-panel $w.akeyer] -text {Ascii Keyer}
+    $w.config add [::main::about-panel $w.about] -text {About}
+    $w.config add [::main::sent-panel $w.sent] -text {Sent Text}
+    $w.config add [::main::rcvd-panel $w.rcvd] -text {Rcvd Text}
+    pack [ttk::frame $w.menu] -side top
+    foreach op {play} {
+	pack [ttk::button $w.menu.$op -text $op -command [list ::main::config-panel-op $w $op]] -side left
+    }
+    return $w
+}
+
+##
+## adjustments
+##
+proc ::main::adjust-wpm {incr} {
+    set wpm [expr {[ascii cget -wpm] + $incr}]
+    ascii configure -wpm $wpm
+    iambic configure -wpm $wpm
+}
+
+proc ::main::adjust-freq {incr} {
+    set freq [expr {[ascii_tone cget -freq] + $incr}]
+    ascii_tone configure -freq $freq
+    set freq [expr {[iambic_tone cget -freq] + $incr}]
+    iambic_tone configure -freq $freq
+}
+
+proc ::main::adjust-gain {incr} {
+    set gain [expr {[ascii_tone cget -gain] + $incr}]
+    ascii_tone configure -gain $gain
+    iambic_tone configure -gain $gain
+}
+
+##
+## game play panel
+##
+proc ::main::play-panel-running {w} {
+    if {[$w.menu.run cget -text] eq "stop"} { return 1 } else { return 0 }
+}
+
+proc ::main::play-panel-run {w} {
+    if {[main::play-panel-running $w]} {
+	$w.menu.run configure -text stop
+	after 1 [list ::main::play-ready $w]
+    } else {
+	$w.menu.run configure -text ready
+	after 1 [list ::main::play-stop $w]
+    }
+}
+
+proc ::main::play-panel-ready {w} {
+    if { ! [main::play-panel-running $w]} {
+	main::play-panel-run $w
+    }
+}
+
+proc ::main::play-panel-stop {w} {
+    if {[main::play-panel-running $w]} {
+	main::play-panel-run $w
+    }
+}
+
+proc ::main::play-panel-time {w} {
+    ::main::play-panel-clear $w
+    ::main::play-panel-send $w [clock format [clock seconds] -format %I:%M]
+}
+
+proc ::main::play-panel-op {w op} {
+    switch $op {
+	{qrq - faster} { ::main::adjust-wpm +2.5 }
+	{qrs - slower} { ::main::adjust-wpm -2.5 }
+	{qsw - higher} { ::main::adjust-freq +100 }
+	{qsx - lower} { ::main::adjust-freq -100 }
+	{qro - louder} { ::main::adjust-gain +3 }
+	{qrp - quieter} { ::main::adjust-gain -3 }
+	{qrt - stop} { main::play-panel-stop $w }
+	{qrv - ready} { main::play-panel-ready $w }
+	{qtr - time} {
+	    main::play-panel-stop $w
+	    after 500 [list main::play-panel-time $w]
+	}
+	{configure page} {
+	    pack unpack .play
+	    pack .config -side top -fill both -expand true
+	}
+    }
+}
+
+proc ::main::play-panel {w} {
+    ttk::frame $w
+    pack [canvas $w.play] -side top -fill both -expand true
+    pack [ttk::frame $w.menu] -side top
+    pack [ttk::button $w.menu.run -text ready -command [list ::main::play-panel-run $w]] -side left
+    set m $w.menu.menu.menu
+    pack [ttk::menubutton $w.menu.menu -text control -menu $m] -side left
+    menu $m -tearoff no
+    foreach label {
+	{qrq - faster}
+	{qrs - slower}
+	{qsw - higher}
+	{qsx - lower}
+	{qro - louder}
+	{qrp - quieter}
+	{qrt - stop}
+	{qrv - ready}
+	{qtr - time}
+	{configure page}} {
+	$m add command -label $label -command [list ::main::play-panel-op $w $label]
+    }
+    return $w
+}
+
+##
+## process options, build interface, start background listeners
+##
+proc ::main::main {argv} {
+    # process options
+    foreach {option value} $argv {
+	switch -- $option {
+	    --wpm { set ::main::data(wpm) $value }
+	    --tone { set ::main::data(tone) $value }
+	    --gain { set ::main::data(gain) $value }
+	    --offs { set ::main::data(offs) $value }
+	    --user { set ::main::data(user) $value }
+	}
+    }
+    
+    # jack/sdrkit/keyer modules and cleanup
+    foreach {module client opts} [list \
+				      sdrkit::jack-client jack {} \
+				      keyer::ascii ascii [list -wpm $::main::data(wpm)] \
+				      keyer::tone ascii_tone [list -freq [expr {$::main::data(tone)+$::main::data(offs)}] -gain $::main::data(gain)] \
+				      keyer::debounce debounce {} \
+				      keyer::iambic iambic [list -wpm $::main::data(wpm)] \
+				      keyer::tone iambic_tone [list -freq $::main::data(tone) -gain $::main::data(gain)] \
+				      keyer::detime iambic_detime {} \
+				     ] {
+	$module $client {*}$opts
+	lappend ::main::data(on-exit) [list rename $client {}]
+    }
+
+    # initialize user, requires ascii for morse code map
+    ::main::session-load $::main::data(user)
+    
+    # jack connections and cleanup
+    foreach {to from} {
+	ascii_tone:out_i system:playback_1
+	ascii_tone:out_q system:playback_2
+	system:midi_capture_1 debounce:midi_in
+	debounce:midi_out iambic:midi_in
+	iambic:midi_out iambic_tone:midi_in
+	iambic:midi_out iambic_detime:midi_in
+	iambic_tone:out_i system:playback_1
+	iambic_tone:out_q system:playback_2
+    } {
+	jack connect $to $from
+	lappend ::main::data(on-exit) [list jack disconnect $to $from]
+    }
+
+    # basic layout
+    pack [::main::play-panel .play] -side top -fill both -expand true
+    ::main::config-panel .config
+    
+    # extra bindings
+    bind . <Destroy> [list ::main::close-window . %W]
+
+    # configure listener to keyer input
+    after 100 [list ::main::listen_for_echoes {} iambic_detime]
+    
+}
+
+::main::main $argv
