@@ -7,7 +7,8 @@
 package provide si570 1.0
 
 namespace eval si570 {
-    # the part number on an Si570 specifies the I2C address and the startup 
+    # the part number on an Si570 specifies the I2C address and the startup frequency
+    # these are the ones that usually turn up in amateur radios
     set I2C_ADDR	0x55
     set STARTUP_FREQ	56.32
     # the actual crystal freq is trimmed to make the actual startup frequency correct
@@ -18,6 +19,7 @@ namespace eval si570 {
     set DCO_HIGH	5670.0
     set DCO_LOW		4850.0
     # divider mapping
+    # this is just i+4, except that i == 4 or 6 are unimplemented
     array set HS_DIV_MAP {
 	0 4
 	1 5
@@ -92,6 +94,21 @@ proc si570::calculate_registers {frequency xtal} {
     }
     foreach {RFREQ HS_DIV N1} $solution break
     # chop these values up into registers
+    # |DDDNNNNN|NNIIIIII|IIIIFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF|
+    # D=HS_DIV
+    # N=N1
+    # I=RFREQ_int
+    # F=RFREQ_frac
+    set RFREQ_int [expr {int($RFREQ)}]
+    set RFREQ_frac [expr {int(($RFREQ-$RFREQ_int)*268435456)}]
+    # foreach {b0 b1 b2 b3 b4 b5} $registers break
+    set b0 [expr {($HS_DIV << 5) | (($N1 >> 2) & 0x1f)}]
+    set b1 [expr {(($N1&0x3) << 6) | ($RFREQ_int >> 4)}]
+    set b2 [expr {(($RFREQ_int&0xF) << 4) | (($RFREQ_frac >> 24) & 0xF)}]
+    set b3 [expr {(($RFREQ_frac >> 16) & 0xFF)}]
+    set b4 [expr {(($RFREQ_frac >> 8) & 0xFF)}]
+    set b5 [expr {(($RFREQ_frac >> 0) & 0xFF)}]
+    return [list $b0 $b1 $b2 $b3 $b4 $b5]
 }
 
 ## check if the computed crystal frequency is within spec
