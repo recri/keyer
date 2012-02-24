@@ -94,7 +94,7 @@ static void iq_correct_postprocess(iq_correct_t *p, int nsamples) {
   } else {
     // the filter is finite
     // compute the average update per sample
-    const float mag_dw = cmagf(p->w - p->w0) / nsamples;
+    const float mag_dw = cabsf(p->w - p->w0) / nsamples;
     if (mag_dw > IQ_CORRECT_MAX_MAG_DW) {
       // the updates are greater than the allowed max
       // reduce mu to reduce the size of the updates
@@ -103,7 +103,7 @@ static void iq_correct_postprocess(iq_correct_t *p, int nsamples) {
       // the updates per sample are below the upper limit
       // compute the update per sample if all updates were
       // in the same direction
-      const float mag_abs_dw = cmagf(p->sum_abs_dw) / nsamples;
+      const float mag_abs_dw = cabsf(p->sum_abs_dw) / nsamples;
       
     }
   }
@@ -116,7 +116,7 @@ static float complex iq_correct_process(iq_correct_t *p, const float complex z0)
   p->w += dw;
 
   // instrumentation
-  p->avg_abs_dw += fabsf(crealf(dw)) + I * fabsf(cimagf(dw));	/* sum absolute updates */
+  p->sum_abs_dw += fabsf(crealf(dw)) + I * fabsf(cimagf(dw));	/* sum absolute updates */
   
   return z1;
 #if 0
