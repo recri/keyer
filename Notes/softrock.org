@@ -12,3 +12,14 @@
   over the place in their specs, but they're cheap so buy a bunch and
   pick your own matched pairs.
   https://sites.google.com/site/g4zfqradio/matching-bs170-for-softrock
+* Using a single wire antenna
+With regards to the input circuit on the Ensemble RxII, while I
+usually use one of my dipoles and do not need to worry about the BNC
+shell/board ground link, occasionally I do use a single wire
+antenna. To that end, experimentation showed that putting a permanent
+.01 microfarad cap from shell case to board ground (the link option),
+brought results similar to using the dipole, given approximately the
+same length of antenna and height. I left it in permanently after
+testing, it did not effect the dipole usage.
+
+Roland, KB8XI 

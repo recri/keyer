@@ -162,10 +162,10 @@ namespace eval ::morse::abbrev {
     }
     # common cw abbreviations in amateur radio
     # from http://ac6v.com/morseaids.htm and other sources
-    set hamabbrev {
+    set abbrev {
 	/ST
 	161 30 33 55 73 88
-	<AA> <AR> <AS> <AT> <BT> <HH> <II> <IMI> <NR> <SK>
+	+ & = ? /
 	AA AB ABT ADEE ADR ADS AGE AGN AM ANI ANS ANT
 	B4 BCI BCL BCNU BD BEAM BK BN BTH BTR BTW BUG BURO
 	C CB CBA CFM CK CKT CL CLBK CLD CLG CMG CNT CONDX CPI CPY CQ CRD CS CU CUAGN CUD CUL CUM CUZ CW

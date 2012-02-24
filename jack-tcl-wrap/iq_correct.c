@@ -61,9 +61,20 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
-    Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)), NULL
+    Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)),
+    Tcl_NewDoubleObj(crealf(data->iqb.avg_dw)), Tcl_NewDoubleObj(cimagf(data->iqb.avg_dw)),
+    Tcl_NewDoubleObj(data->iqb.avg_mz), NULL
   };
-  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
+  Tcl_SetObjResult(interp, Tcl_NewListObj(5, result));
+  return TCL_OK;
+}
+static int _reset(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+  _t *data = (_t *)clientData;
+  data->iqb.w = 0.0f;
+  data->iqb.avg_dw = 0.0f;
+  data->iqb.avg_mz = 0.0f;
   return TCL_OK;
 }
 static int _set(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -109,6 +120,7 @@ static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get",   _get,   "fetch the current adaptive filter coefficients" },
   { "set",   _set,   "set the current adaptive filter coefficients" },
+  { "reset", _reset, "reset the current adaptive filter coefficients to zero" },
   { NULL }
 };
 

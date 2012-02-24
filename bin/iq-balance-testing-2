@@ -1,0 +1,4 @@
+#!/bin/sh
+
+bin/sig-gen & bin/iq-unbal & bin/iq-rebal & bin/panorama &
+

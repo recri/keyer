@@ -38,17 +38,26 @@ package require sdrkit::jack
 package require keyer-control
 package require morse::morse
 package require morse::itu
+package require morse::callsigns
+package require morse::voa
+package require morse::abbrev
+
 #
 # default options
 #
 namespace eval ::main {
-    array set data {
+    array set opts {
 	wpm 15
 	tone 700
 	gain -6
 	offs 100
 	user default
-
+	digrams 1
+	voa 1
+	calls 0
+	abbrev 1
+    }
+    array set data {
 	state 0
 
 	number_session 0
@@ -286,63 +295,6 @@ proc ::main::play-score {category points} {
 }
 
 ####
-#### sessions
-####
-proc ::main::session-allowed {word} {
-    # no tripled letters
-    # no tripled vowels
-    # no punctuation
-    switch -regexp -- $word {
-	TTT - NNN - MMM - [AEIOU][AEIOU][AEIOU] -
-	[-.;:()'\"/!?&+@$=_] { return 0}
-	default { return 1 }
-    }
-}
-proc ::main::session-init {} {
-    array unset ::main::session_data
-    set dict [morse-itu-dict]
-    set seen {}
-    dict for {character value} $dict {
-	set dits [morse-character-length $dict $character]
-	lappend seen $character
-	lappend ::main::session(char-[format %02d $dits]) $character
-    }
-    for {set dits 1} {$dits <= 21} {incr dits 2} {
-	foreach word [morse-words-of-length $dict $dits] {
-	    if { ! [::main::session-allowed $word]} {
-		continue
-	    }
-	    if {[lsearch $seen $word] < 0} {
-		lappend seen $word
-		lappend ::main::session(word-[format %02d $dits]-[format %02d [string length $word]]) $word
-	    }
-	}
-    }
-    foreach name [lsort [array names ::main::session]] {
-	puts "$name -> [lsort $::main::session($name)]"
-    }
-}
-
-proc ::main::session-save {user} {
-    if {0} {
-	if {[catch {open ~/.flashbite-$user w} fp]} {
-	    error "could not open ~/.flashbite-$user for writing"
-	}
-    }
-    error "not ready to write"
-}
-
-proc ::main::session-load {user} {
-    if {[catch {open ~/.flashbite-$user r} fp]} {
-	# no such user, create session planner data
-	::main::session-init
-	::main::session-save $user
-	set fp [open ~/.flashbite-$user]
-    }
-    array set ::main::session_data [read $fp]
-    close $fp
-}
-####
 #### user interface actions
 ####
 
@@ -440,6 +392,100 @@ proc ::main::play-stop {} {
 }
 
 ####
+#### sessions
+####
+proc ::main::session-init {} {
+    array unset ::main::session
+    set dict [morse-itu-dict]
+    set seen {}
+    # 1. generate length classes of characters in dictionary
+    dict for {character value} $dict {
+	set dits [morse-character-length $dict $character]
+	lappend seen $character
+	lappend ::main::session(word-[format %03d $dits]) $character
+    }
+    # 2. generate random digrams
+    if {$::main::opts(digrams)} {
+	dict for {character1 value1} $dict {
+	    dict for {character2 value2} $dict {
+		set word $character1$character2
+		if {[string is alnum $word] && [lsearch $seen $word] < 0} {
+		    lappend seen $word
+		    set dits [morse-word-length $dict $word]
+		    #lappend ::main::session(word-[format %03d $dits]-[format %02d [string length $word]]) $word
+		    lappend ::main::session(word-[format %03d $dits]) $word
+		}
+	    }
+	}
+    }
+    # 3. generate length classes of voa special english vocabulary
+    if {$::main::opts(voa)} {
+	foreach word [morse-voa-vocabulary] {
+	    set word [string toupper $word]
+	    if {[lsearch $seen $word] < 0} {
+		lappend seen $word
+		set dits [morse-word-length $dict $word]
+		#lappend ::main::session(word-[format %03d $dits]-[format %02d [string length $word]]) $word
+		lappend ::main::session(word-[format %03d $dits]) $word
+	    }
+	}
+    }
+    # 4. generate length classes of pileup callsign list
+    if {$::main::opts(calls)} {
+	foreach word [morse-pileup-callsigns] {
+	    set word [string toupper $word]
+	    if {[lsearch $seen $word] < 0} {
+		lappend seen $word
+		set dits [morse-word-length $dict $word]
+		#lappend ::main::session(word-[format %03d $dits]-[format %02d [string length $word]]) $word
+		lappend ::main::session(word-[format %03d $dits]) $word
+	    }
+	}
+    }
+    # 5. generate length classes of ham vocabulary
+    if {$::main::opts(abbrev)} {
+	foreach word [morse-ham-abbrev] {
+	    if {[lsearch $seen $word] < 0} {
+		lappend seen $word
+		set dits [morse-word-length $dict $word]
+		#lappend ::main::session(word-[format %03d $dits]-[format %02d [string length $word]]) $word
+		lappend ::main::session(word-[format %03d $dits]) $word
+	    }
+	}
+    }
+    # 6. print out the results
+    puts "[array size ::main::session] word groups"
+    set total 0
+    foreach name [lsort [array names ::main::session]] {
+	foreach {class dits len} [split $name -] break
+	set n [llength $::main::session($name)]
+	incr total $n
+	puts "$name -> $n words"
+    }
+    puts "$total words"
+}
+
+proc ::main::session-save {user} {
+    if {0} {
+	if {[catch {open ~/.flashbite-$user w} fp]} {
+	    error "could not open ~/.flashbite-$user for writing"
+	}
+    }
+    error "not ready to write"
+}
+
+proc ::main::session-load {user} {
+    if {[catch {open ~/.flashbite-$user r} fp]} {
+	# no such user, create session planner data
+	::main::session-init
+	::main::session-save $user
+	set fp [open ~/.flashbite-$user]
+    }
+    array set ::main::session_data [read $fp]
+    close $fp
+}
+
+####
 #### user interface panels, mostly buried
 ####
 
@@ -450,12 +496,12 @@ proc ::main::about-panel {w} {
     ttk::frame $w
     pack [text $w.t] -fill both -expand true
     $w.t insert end {
-Flashbite is an audible flash card program for learning to key morse code.
-
-You should have an iambic paddle attached to your computer via a MIDI interface.
-When the game starts, the computer will play patterns of dits, dahs, and spaces
-and you should echo them back with your key.	
-} 
+	Flashbite is an audible flash card program for learning to key morse code.
+	
+	You should have an iambic paddle attached to your computer via a MIDI interface.
+	When the game starts, the computer will play patterns of dits, dahs, and spaces
+	and you should echo them back with your key.	
+    } 
     return $w
 }
 
@@ -500,9 +546,9 @@ proc ::main::iambic-keyer-panel {w} {
 	debounce 1
 	iambic 1
 	ptt 0
-
+	
 	layout 1
-
+	
 	client-ascii {}
 	client-ascii_tone {}
 	client-iambic iambic
@@ -510,13 +556,13 @@ proc ::main::iambic-keyer-panel {w} {
 	client-ptt {}
 	client-debounce debounce
 	client-dttsp_iambic {}
-
+	
 	debounce-verbose 0
 	debounce-chan 1
 	debounce-note 0
 	debounce-period 0.0002
 	debounce-steps 6
-
+	
 	iambic-verbose 0
 	iambic-chan 1
 	iambic-note 0
@@ -536,7 +582,7 @@ proc ::main::iambic-keyer-panel {w} {
 	iambic_tone-gain -30
 	iambic_tone-rise 5
 	iambic_tone-fall 5
-
+	
     }
     return [keyer-control $w $opts]
 }
@@ -547,9 +593,9 @@ proc ::main::ascii-keyer-panel {w} {
 	debounce 0
 	iambic 0
 	ptt 0
-
+	
 	layout 1
-
+	
 	client-ascii ascii
 	client-ascii_tone ascii_tone
 	client-iambic {}
@@ -557,7 +603,7 @@ proc ::main::ascii-keyer-panel {w} {
 	client-ptt {}
 	client-debounce {}
 	client-dttsp_iambic {}
-
+	
 	ascii-verbose 0
 	ascii-chan 1
 	ascii-note 0
@@ -567,7 +613,7 @@ proc ::main::ascii-keyer-panel {w} {
 	ascii-ies 1
 	ascii-ils 3
 	ascii-iws 7
-
+	
 	ascii_tone-verbose 0
 	ascii_tone-freq 750
 	ascii_tone-gain -30
@@ -710,30 +756,35 @@ proc ::main::main {argv} {
     # process options
     foreach {option value} $argv {
 	switch -- $option {
-	    --wpm { set ::main::data(wpm) $value }
-	    --tone { set ::main::data(tone) $value }
-	    --gain { set ::main::data(gain) $value }
-	    --offs { set ::main::data(offs) $value }
-	    --user { set ::main::data(user) $value }
+	    --wpm { set ::main::opts(wpm) $value }
+	    --tone { set ::main::opts(tone) $value }
+	    --gain { set ::main::opts(gain) $value }
+	    --offs { set ::main::opts(offs) $value }
+	    --user { set ::main::opts(user) $value }
+	    --voa { set ::main::opts(voa) $value }
+	    --calls { set ::main::opts(calls) $value }
+	    --abbrev { set ::main::opts(abbrev) $value }
 	}
     }
+    
+    #array set ::main::data [array get ::main::opts]
     
     # jack/sdrkit/keyer modules and cleanup
     foreach {module client opts} [list \
 				      sdrkit::jack-client jack {} \
-				      keyer::ascii ascii [list -wpm $::main::data(wpm)] \
-				      keyer::tone ascii_tone [list -freq [expr {$::main::data(tone)+$::main::data(offs)}] -gain $::main::data(gain)] \
+				      keyer::ascii ascii [list -wpm $::main::opts(wpm)] \
+				      keyer::tone ascii_tone [list -freq [expr {$::main::opts(tone)+$::main::opts(offs)}] -gain $::main::opts(gain)] \
 				      keyer::debounce debounce {} \
-				      keyer::iambic iambic [list -wpm $::main::data(wpm)] \
-				      keyer::tone iambic_tone [list -freq $::main::data(tone) -gain $::main::data(gain)] \
+				      keyer::iambic iambic [list -wpm $::main::opts(wpm)] \
+				      keyer::tone iambic_tone [list -freq $::main::opts(tone) -gain $::main::opts(gain)] \
 				      keyer::detime iambic_detime {} \
 				     ] {
 	$module $client {*}$opts
 	lappend ::main::data(on-exit) [list rename $client {}]
     }
-
+    
     # initialize user, requires ascii for morse code map
-    ::main::session-load $::main::data(user)
+    ::main::session-load $::main::opts(user)
     
     # jack connections and cleanup
     foreach {to from} {
@@ -749,14 +800,14 @@ proc ::main::main {argv} {
 	jack connect $to $from
 	lappend ::main::data(on-exit) [list jack disconnect $to $from]
     }
-
+    
     # basic layout
     pack [::main::play-panel .play] -side top -fill both -expand true
     ::main::config-panel .config
     
     # extra bindings
     bind . <Destroy> [list ::main::close-window . %W]
-
+    
     # configure listener to keyer input
     after 100 [list ::main::listen_for_echoes {} iambic_detime]
     
