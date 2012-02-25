@@ -18,6 +18,8 @@ namespace eval si570 {
     # these are limits used to calculate registers
     set DCO_HIGH	5670.0
     set DCO_LOW		4850.0
+    # conversion factor
+    set FACTOR 268435456.0
     # divider mapping
     # this is just i+4, except that i == 4 or 6 are unimplemented
     array set HS_DIV_MAP {
@@ -39,15 +41,39 @@ proc si570::default_startup {} { return $si570::STARTUP_FREQ }
 # the default si570 crystal frequency
 proc si570::default_xtal {} { return $si570::XTAL_FREQ }
 
-## compute the crystal frequency multiplier for the set of register values
-proc si570::calculate_xtal_multiplier {registers} {
-    variable HS_DIV_MAP
+## compute the HS_DIV, N1, and RFREQ for the registers
+proc si570::registers_to_variables {registers} {
     foreach {b0 b1 b2 b3 b4 b5} $registers break
     set HS_DIV [expr {($b0 & 0xE0) >> 5}]
     set N1 [expr {(($b0 & 0x1f) << 2) | (($b1 & 0xc0 ) >> 6)}]
     set RFREQ_int [expr {(($b1 & 0x3f) << 4) | (($b2 & 0xf0) >> 4)}]
     set RFREQ_frac [expr {(((((($b2 & 0xf) << 8) | $b3) << 8) | $b4) << 8) | $b5}]
-    set RFREQ [expr {$RFREQ_int + $RFREQ_frac / 268435456.0}]
+    set RFREQ [expr {$RFREQ_int + $RFREQ_frac / $::si570::FACTOR}]
+    return [list $HS_DIV $N1 $RFREQ]
+}
+## compute the registers for the HS_DIV, N1, RFREQ
+proc si570::variables_to_registers {HS_DIV N1 RFREQ} {
+    # chop these values up into registers
+    # |DDDNNNNN|NNIIIIII|IIIIFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF|
+    # D=HS_DIV
+    # N=N1
+    # I=RFREQ_int
+    # F=RFREQ_frac
+    set RFREQ_int [expr {int($RFREQ)}]
+    set RFREQ_frac [expr {int(($RFREQ-$RFREQ_int)*$::si570::FACTOR)}]
+    set b0 [expr {($HS_DIV << 5) | (($N1 >> 2) & 0x1f)}]
+    set b1 [expr {(($N1&0x3) << 6) | ($RFREQ_int >> 4)}]
+    set b2 [expr {(($RFREQ_int&0xF) << 4) | (($RFREQ_frac >> 24) & 0xF)}]
+    set b3 [expr {(($RFREQ_frac >> 16) & 0xFF)}]
+    set b4 [expr {(($RFREQ_frac >> 8) & 0xFF)}]
+    set b5 [expr {(($RFREQ_frac >> 0) & 0xFF)}]
+    return [list $b0 $b1 $b2 $b3 $b4 $b5]
+}
+    
+## compute the crystal frequency multiplier for the set of register values
+proc si570::calculate_xtal_multiplier {registers} {
+    variable HS_DIV_MAP
+    foreach {HS_DIV N1 RFREQ} [registers_to_variables $registers] break
     return [expr {$RFREQ / (($N1 + 1) * $HS_DIV_MAP($HS_DIV))}]
 }
 
@@ -59,6 +85,26 @@ proc si570::calculate_xtal {registers startup} {
 ## compute the frequency from the registers and the crystal frequency
 proc si570::calculate_frequency {registers xtal} {
     return [expr {$xtal * [calculate_xtal_multiplier $registers]}]
+}
+
+## compute the variables for a frequency and the specified crystal frequency
+proc si570::calculate_all_variables {frequency xtal} {
+    set solutions {}
+    ## for each of the possible dividers
+    ## get the divider index (HS_DIV) and the divider value (HS_DIVIDER)
+    foreach {HS_DIV HS_DIVIDER} [array get si570::HS_DIV_MAP] {
+	## the negative divider values don't count
+	if {$HS_DIVIDER <= 0} continue
+	## calculate N1 at the midrange of the DCO
+	set N1 [expr {int(floor(($si570::DCO_HIGH+$si570::DCO_LOW) / (2 * $frequency * $HS_DIVIDER)) - 1)}]
+	if {$N1 < 0 || $N1 > 127} continue
+	set f0 [expr {$frequency * ($N1+1) * $HS_DIVIDER}]
+	if {$si570::DCO_LOW <= $f0 && $f0 <= $si570::DCO_HIGH} {
+	    set RFREQ [expr {$f0 / $xtal}]
+	    lappend solutions [list $RFREQ $HS_DIV $N1]
+	}
+    }
+    return $solutions
 }
 
 ## compute the registers for a frequency and the specified crystal frequency
@@ -92,23 +138,7 @@ proc si570::calculate_registers {frequency xtal} {
     if {$solutions eq {}} {
 	return {}
     }
-    foreach {RFREQ HS_DIV N1} $solution break
-    # chop these values up into registers
-    # |DDDNNNNN|NNIIIIII|IIIIFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF|
-    # D=HS_DIV
-    # N=N1
-    # I=RFREQ_int
-    # F=RFREQ_frac
-    set RFREQ_int [expr {int($RFREQ)}]
-    set RFREQ_frac [expr {int(($RFREQ-$RFREQ_int)*268435456)}]
-    # foreach {b0 b1 b2 b3 b4 b5} $registers break
-    set b0 [expr {($HS_DIV << 5) | (($N1 >> 2) & 0x1f)}]
-    set b1 [expr {(($N1&0x3) << 6) | ($RFREQ_int >> 4)}]
-    set b2 [expr {(($RFREQ_int&0xF) << 4) | (($RFREQ_frac >> 24) & 0xF)}]
-    set b3 [expr {(($RFREQ_frac >> 16) & 0xFF)}]
-    set b4 [expr {(($RFREQ_frac >> 8) & 0xFF)}]
-    set b5 [expr {(($RFREQ_frac >> 0) & 0xFF)}]
-    return [list $b0 $b1 $b2 $b3 $b4 $b5]
+    return [variables_to_registers {*}$solution]
 }
 
 ## check if the computed crystal frequency is within spec

@@ -36,8 +36,9 @@ proc main {argv} {
 	    }
 	}
     }
-    puts $regs
-    
+    set vars [si570::registers_to_variables $regs]
+    set freq [si570::calculate_frequency $regs [si570::default_xtal]]
+    puts "regs {$regs} vars {$vars} $freq [expr {$freq/4+0.01}]"
 }
 
 main $argv
