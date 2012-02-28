@@ -27,27 +27,11 @@
 ** to purify our I/Q stream of any gain or phase imperfections introduced by the hardware.  The
 ** filter updates its coefficients according to the magnitude of mu, a larger mu moves faster.
 **
-** What happens when I test is that I can make it work if I give it enough signal to work on,
-** and that signal can be my IQ noise generator, but I have to push the levels up to push the
-** adaptation to convergence.  So there's another parameter to be balanced.
-**
-** As Rob Frohne pointed out, adapting the mu to the size of the input signal is probably
-** important.  Hand picked mu's tend to blow up the filter when a strong signal comes into the
-** pass band.
-**
-** My idea is that one can sense the filter progress by looking at the average updates to w
-** and the cumulative change in w.  If the average updates add up to the cumulative change
-** then the filter is adapting, a larger mu might make adaptation faster.
-**
-** But mu needs to be interpreted as a scaling factor on the input signal magnitude, not an
-** absolute magnitude.
+** The actual rate of update depends on mu times the error signal, and the magnitude of the
+** error signal depends on the magnitude of the signals in the pass band.
 */
 
 #include "dmath.h"
-
-#ifndef IQ_CORRECT_MAX_MAG_DW
-#define IQ_CORRECT_MAX_MAG_DW 0.001
-#endif
 
 typedef struct {
   float mu;			/* update factor, a loop gain */
@@ -57,8 +41,12 @@ typedef struct {
   float mu;
   float complex w;
   // instrumentation for automatic tuning
+  int reset;			/* number of filter blowup resets */
   float complex w0;		/* w at beginning of buffer */
-  float complex sum_abs_dw;	/* sum absolute updates to w over buffer */
+  float sum_mag2_dw;		/* sum magnitude squared updates to w over buffer */
+  // instrumentation for monitoring
+  float avg_net_dw2;		/* average net change squared in w per sample */
+  float avg_mag2_dw;		/* average squared adjustment to w per sample */
 } iq_correct_t;
 
 static void iq_correct_configure(iq_correct_t *p, iq_correct_options_t *q) {
@@ -72,14 +60,17 @@ static void *iq_correct_preconfigure(iq_correct_t *p, iq_correct_options_t *q) {
 
 static void *iq_correct_init(iq_correct_t *p, iq_correct_options_t *q) {
   p->w = 0.0f;
+  p->reset = 0;
+  p->avg_net_dw2 = 0.0f;
+  p->avg_mag2_dw = 0.0f;
   void *e = iq_correct_preconfigure(p, q); if (e != p) return e;
   iq_correct_configure(p, q);
   return p;
 }
 
-static void iq_correct_preprocess(iq_correct_t *p) {
+static void iq_correct_preprocess(iq_correct_t *p, int nsamples) {
   p->w0 = p->w;
-  p->sum_abs_dw = 0.0f;
+  p->sum_mag2_dw = 0.0f;
 }
 
 static void iq_correct_postprocess(iq_correct_t *p, int nsamples) {
@@ -89,35 +80,35 @@ static void iq_correct_postprocess(iq_correct_t *p, int nsamples) {
        fabsf(crealf(p->w)) >= 1 ||
        fabsf(cimagf(p->w)) >= 1) {
     // the filter blew up on us, reset
+    p->reset += 1;
     p->w = 0.0f;
-    p->mu = 0.0625f;
+    p->avg_net_dw2 = 0.0f;
+    p->avg_mag2_dw = 0.0f;
   } else {
     // the filter is finite
-    // compute the average update per sample
-    const float mag_dw = cabsf(p->w - p->w0) / nsamples;
-    if (mag_dw > IQ_CORRECT_MAX_MAG_DW) {
-      // the updates are greater than the allowed max
-      // reduce mu to reduce the size of the updates
-      p->mu /= mag_dw / IQ_CORRECT_MAX_MAG_DW;
-    } else {
-      // the updates per sample are below the upper limit
-      // compute the update per sample if all updates were
-      // in the same direction
-      const float mag_abs_dw = cabsf(p->sum_abs_dw) / nsamples;
-      
-    }
+    // compute running averages
+    // the net update squared moved per buffer
+    const float net_dw = (p->w - p->w0);
+    p->avg_net_dw2 += crealf(net_dw)*crealf(net_dw) + cimagf(net_dw)*cimagf(net_dw);
+    p->avg_net_dw2 /= 2;
+    // the magnitude squared update per buffer
+    p->avg_mag2_dw += p->sum_mag2_dw;
+    p->avg_mag2_dw /= 2;
   }
 }
 
 static float complex iq_correct_process(iq_correct_t *p, const float complex z0) {
+  // compute correction to input sample
   const float complex dz = p->w * conjf(z0);
+  // compute corrected sample
   const float complex z1 = z0 + dz;
+  // compute update to filter coefficients
   const float complex dw = -p->mu * z1 * z1;
+  // filter update: coefficients += -mu * error
   p->w += dw;
-
-  // instrumentation
-  p->sum_abs_dw += fabsf(crealf(dw)) + I * fabsf(cimagf(dw));	/* sum absolute updates */
-  
+  // instrumentation: sum magnitude squared updates
+  p->sum_mag2_dw += crealf(dw)*crealf(dw) + cimagf(dw)*cimagf(dw);
+  // finished
   return z1;
 #if 0
   // this is the gnuradio routine

@@ -48,11 +48,13 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   AVOID_DENORMALS;
+  iq_correct_preprocess(&data->iqb, nframes);
   for (int i = nframes; --i >= 0; ) {
     float _Complex y = iq_correct_process(&data->iqb, *in0++ + *in1++ * I);
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }
+  iq_correct_postprocess(&data->iqb, nframes);
   return 0;
 }
 
@@ -61,28 +63,20 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
-    Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)), NULL
+    Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)),
+    Tcl_NewDoubleObj(data->iqb.avg_net_dw2), Tcl_NewDoubleObj(data->iqb.avg_mag2_dw),
+    NULL
   };
-  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
+  Tcl_SetObjResult(interp, Tcl_NewListObj(4, result));
   return TCL_OK;
 }
 static int _reset(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s reset", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   data->iqb.w = 0.0f;
-  return TCL_OK;
-}
-static int _set(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 4)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s set wi wq", Tcl_GetString(objv[0])));
-  double wi, wq;
-  if (Tcl_GetDoubleFromObj(interp, objv[2], &wi) != TCL_OK ||
-      Tcl_GetDoubleFromObj(interp, objv[3], &wq) != TCL_OK)
-    return TCL_ERROR;
-  // this may not be atomic, but it will work itself out
-  _t *data = (_t *)clientData;
-  data->iqb.w = wi + I*wq;
+  data->iqb.avg_net_dw2 = 0.0f;
+  data->iqb.avg_mag2_dw = 0.0f;
   return TCL_OK;
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -115,7 +109,6 @@ static const fw_option_table_t _options[] = {
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get",   _get,   "fetch the current adaptive filter coefficients" },
-  { "set",   _set,   "set the current adaptive filter coefficients" },
   { "reset", _reset, "reset the current adaptive filter coefficients to zero" },
   { NULL }
 };

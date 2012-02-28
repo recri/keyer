@@ -37,15 +37,11 @@ typedef struct {
 
 typedef struct {
   framework_t fw;
-  int modified;
   options_t opts;
   noise_t noise;
   float gain;
 } _t;
 
-static void _update(_t *data) {
-}
-  
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = noise_init(&data->noise); if (p != &data->noise) return p;
@@ -59,7 +55,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   AVOID_DENORMALS;
-  _update(data);
   for (int i = nframes; --i >= 0; ) {
     float _Complex z = data->gain * noise_process(&data->noise);
     *out0++ = creal(z);
