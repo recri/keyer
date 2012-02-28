@@ -57,14 +57,17 @@ array set data {
     corrector-mu 0.25
     corrector-wi 0.00
     corrector-wq 0.00
-    corrector-dwi 0.00
-    corrector-dwq 0.00
-    corrector-mz 0.00
-    autotune-on 0
-    autotune-initial-mu 0.125
-    autotune-dir ---
-    autotune-mag ---
-    autotune-mu ---
+    corrector-ndw2 0.00
+    corrector-m2dw 0.00
+    corrector-ratio 0.00
+    corrector-avg-ratio 0.00
+    corrector-abs-mag 0.00
+    corrector-rel-mag 0.00
+    corrector-t {0 0 0 0 0 0 0 0}
+    corrector-ws {0 0 0 0 0 0 0 0}
+    corrector-dots {0 0 0 0 0 0 0 0}
+    corrector-kick 0
+    corrector-state idle
 }
 
 namespace eval ::meters {}
@@ -76,14 +79,16 @@ namespace eval ::meters {}
 ##
 proc ::meters::update {w} {
     upvar #0 ::meters::$w data
-    foreach {wi wq dwi dwq mz} [iq-correct get] break
-    set xy {}
-    foreach {t ct st} $data(theta-cos-sin) {
-	lappend xy [expr {$ct - $wi * $st}] [expr {$st - $wq * $ct}]
+    foreach {wi wq ndw2 m2d2} [iq-correct get] break
+    if {abs($wi) > 1e-12 && abs($wq) > 1e-12} {
+	set xy {}
+	foreach {t ct st} $data(theta-cos-sin) {
+	    lappend xy [expr {$ct - $wi * $st}] [expr {$st - $wq * $ct}]
+	}
+	$w coords xyplot $xy
+	$w scale xyplot 0 0 75 -75
+	$w move xyplot 125 125
     }
-    $w coords xyplot $xy
-    $w scale xyplot 0 0 75 -75
-    $w move xyplot 125 125
     after 10 [list ::meters::update $w]
 }
 
@@ -155,67 +160,94 @@ proc reset-ws {} {
     iq-correct reset
 }
 proc update-ws {} {
-    foreach {wi wq dwi dwq mz} [iq-correct get] break
-    if {[catch {
-	foreach v {wi wq dwi dwq} {
-	    set ::data(corrector-$v) [expr {($::data(corrector-$v)+[set $v])/2}]
-	    set ::data(label-corrector-$v) [format %.10g $::data(corrector-$v)]
-	}
-    } error]} {
-	puts "$error"
-	if {$::data(corrector-on)} {
-	    corrector-onoff
+    foreach {wi wq ndw2 m2dw} [iq-correct get] break
+    set t [sdrkit::jack frame-time]
+    set b [sdrkit::jack buffer-size]
+    if {$wi != 0 || $wq != 0 } {
+	if {[catch {
+	    # puts "$wi $wq $ndw2 $m2dw"
+	    # puts "$ndw $mdw $mw"
+	    # update our list of filter weights
+	    lassign $::data(corrector-ws) wi1 wq1 wi2 wq2 wi3 wq3 wi4 wq4
+	    set ::data(corrector-ws) [list $wi $wq $wi1 $wq1 $wi2 $wq2 $wi3 $wq3]
+	    # construct the last delta
+	    lassign $::data(corrector-t) t1 t2 t3 t4 t5 t6 t7 t8
+	    set ::data(corrector-t) [list $t $t1 $t2 $t3 $t4 $t5 $t6 $t7]
+	    set dt1 [expr {$t-$t1}]
+	    set dwi0 [expr {($wi-$wi1)/$dt1}]
+	    set dwq0 [expr {($wq-$wq1)/$dt1}]
+	    # construct the overall delta
+	    set dt4 [expr {$t-$t4}]
+	    set dwi [expr {($wi-$wi4)/$dt4}]
+	    set dwq [expr {($wq-$wq4)/$dt4}]
+	    set len2 [expr {$dwi*$dwi+$dwq*$dwq}]
+	    # update the dot signal
+	    incr ::data(corrector-kick) [expr {-[lindex $::data(corrector-dots) 0]}]
+	    set ::data(corrector-dots) [lrange $::data(corrector-dots) 1 end]
+	    set newdot [expr {$len2 > 0 && 0.7 <= (($dwi0*$dwi+$dwq0*$dwq)/$len2)}]
+	    incr ::data(corrector-kick) $newdot
+	    lappend ::data(corrector-dots) $newdot
+	    set ::data(label-corrector-kick) $::data(corrector-kick)
+	    if {1} {
+		set ndw [expr {sqrt($ndw2)/$b}]
+		set mdw [expr {sqrt($m2dw)/$b}]
+		set mw [expr {sqrt($wi*$wi+$wq*$wq)}]
+		set ratio [expr {log10(1.0e-100+$ndw/$mdw)}]
+		set {abs-mag} [expr {log10(1.0e-100+$mdw)}]
+		set {rel-mag} [expr {log10(1.0e-100+$mdw/$mw)}]
+	    } else {
+		set mw2 [expr {$wi*$wi+$wq*$wq}]
+		set ratio [expr {log10(1.0e-100+$ndw2/$m2dw)}]
+		set {abs-mag} [expr {log10(1.0e-100+$m2dw)}]
+		set {rel-mag} [expr {log10(1.0e-100+$m2dw/$mw2)}]
+	    }
+	    foreach v {ratio abs-mag rel-mag} {
+		set ::data(corrector-$v) [set $v]
+		set ::data(label-corrector-$v) [format %.2f $::data(corrector-$v)]
+	    }
+	    foreach v {wi wq ndw2 m2dw} {
+		set ::data(corrector-$v) [expr {($::data(corrector-$v)+[set $v])/2}]
+		set ::data(label-corrector-$v) [format %.10g $::data(corrector-$v)]
+	    }
+	    # the problem with the kick reading is that the very next kick reading
+	    # is going to share 7 readings with the previous reading
+	    switch $::data(corrector-state) {
+		idle {
+		    ## in idle state we look for a kick of 8 to shift to converge
+		    ## we need to maintain a level of mu that allows the kick to be seen
+		    ## so filter coefficients cannot be frozen, then need to be turning over
+		    ## this might introduce some phase noise
+		    if {$::data(corrector-kick) > 6} {
+			set ::data(corrector-state) converge
+			more-mu
+		    } elseif {$::data(corrector-rel-mag) < -9} {
+			more-mu
+		    } elseif {$::data(corrector-rel-mag) > -8} {
+			less-mu
+		    }
+		}
+		converge {
+		    ## in converge state we look a decay in the kick signal to shift to relax
+		    ## mu is large, so we need to observe the level of the error signal
+		    ## and adjust to keep the filter from going into oscillation or chaos
+		    if {$::data(corrector-abs-mag) > -4} {
+			less-mu
+		    } elseif {$::data(corrector-rel-mag) < -8} {
+			set ::data(corrector-state) idle
+		    } elseif {$::data(corrector-kick) < 4} {
+			less-mu
+		    } elseif {$::data(corrector-kick) > 6} {
+			more-mu
+		    }
+		}
+	    }
+	    set ::data(label-corrector-state) $::data(corrector-state)
+	} error]} {
+	    puts "$error: $::errorInfo"
+	    if {$::data(corrector-on)} corrector-onoff
 	}
     }
     after 20 [list update-ws]
-}
-##
-## okay, the issue is that the adaptive filter mu is the learning rate
-## there is a critical value of mu, above critical the filter goes chaotic
-## just below critical we get oscillations, further below learns unconditionally,
-## too far below takes a while
-## the critical value of mu depends on the input signal level
-proc autotune-ws {} {
-    if {$::data(autotune-on)} {
-	foreach {wi wq dwi dwq mz} [iq-correct get] break
-	set magw [expr {sqrt(pow($wi,2)+pow($wq,2))}]
-	set dwi [expr {$wi-$::data(autotune-last-wi)}]
-	set dwq [expr {$wq-$::data(autotune-last-wq)}]
-	set mag [expr {sqrt(pow($dwi,2)+pow($dwq,2))}]
-	if {$mag > 0} {
-	    set dwi [expr {$dwi/$mag}]
-	    set dwq [expr {$dwq/$mag}]
-	    set cos [expr {$dwi*$::data(autotune-last-dwi)+$dwq*$::data(autotune-last-dwq)}]
-	    if {$cos > 0.7 && $mag/$magw < 0.05} {
-		set mu [expr {[iq-correct cget -mu]*2}]
-		set ::data(autotune-mu) [format %.5g $mu]
-		iq-correct configure -mu $mu
-	    } elseif {[iq-correct cget -mu] > 1.0/32.0} {
-		set mu [expr {[iq-correct cget -mu]/2}]
-		set ::data(autotune-mu) [format %.5g $mu]
-		iq-correct configure -mu $mu
-	    }
-	    set dir [expr {int(180*atan2($dwq,$dwi)/atan2(0,-1))}]
-	    set mag [format %.5g [expr {$mag/$magw}]]
-	    array set ::data [list autotune-dir $dir autotune-mag $mag autotune-last-wi $wi autotune-last-wq $wq autotune-last-dwi $dwi autotune-last-dwq $dwq autotune-cos $cos]
-	}
-	after 20 [list autotune-ws]
-    }
-}
-proc autotune-onoff {} {
-    if {$::data(autotune-on)} {
-	#puts "iq-correct reset to -mu $::data(corrector-mu)"
-	iq-correct reset
-	set ::data(autotune-mu) $::data(autotune-initial-mu)
-	iq-correct configure -mu $::data(autotune-mu)
-	array set ::data {autotune-last-wi 0 autotune-last-wq 0 autotune-last-dwi 0 autotune-last-dwq 0 autotune-dir 0 autotune-mag 0}
-	autotune-ws
-    } else {
-	#puts "iq-correct muted to 0"
-	iq-correct reset
-	iq-correct configure -mu 0
-	array set ::data {autotune-dir --- autotune-mag --- }
-    }
 }
 proc corrector-onoff {} {
     if {$::data(corrector-on)} {
@@ -309,10 +341,21 @@ proc main {argv} {
     grid [ttk::label .blk$row -text {Corrector}] -row $row -column 0 -columnspan 3
     incr row
     grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
-    foreach item {mu wi wq dwi dwq} {
+    foreach item {mu wi wq ndw2 m2dw} {
 	pack [ttk::label .blk$row.l-$item -text $item] -side left
 	pack [ttk::label .blk$row.v-$item -textvariable ::data(label-corrector-$item) -width 15] -side left
 	set ::data(label-corrector-$item) [format %.13f $::data(corrector-$item)]
+    }
+    incr row
+    grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
+    foreach item {state ratio kick abs-mag rel-mag} {
+	pack [ttk::label .blk$row.l-$item -text $item] -side left
+	pack [ttk::label .blk$row.v-$item -textvariable ::data(label-corrector-$item) -width 10] -side left
+	if {$item eq {state}} {
+	    set ::data(label-corrector-$item) $::data(corrector-$item)
+	} else {
+	    set ::data(label-corrector-$item) [format %.2f $::data(corrector-$item)]
+	}
     }
     incr row
     grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
@@ -321,12 +364,7 @@ proc main {argv} {
     pack [ttk::button .blk$row.less-mu -text {More mu} -command [list more-mu]] -side left
     pack [ttk::button .blk$row.reset-ws -text {Reset wi/wq} -command [list reset-ws]] -side left
     incr row
-    grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
-    pack [ttk::checkbutton .blk$row.onoff -text {Autotune} -variable ::data(autotune-on) -onvalue 1 -offvalue 0 -command autotune-onoff] -side left
-    foreach v {dir mag cos mu} {
-	pack [ttk::label .blk$row.l$v -text $v] -side left
-	pack [ttk::label .blk$row.v$v -textvariable ::data(autotune-$v) -width 15] -side left
-    }
+
     set row 1
     grid [meters .blk$row] -row $row -column 3 -columnspan 3 -rowspan 10
     ::meters::update .blk$row

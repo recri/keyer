@@ -42,13 +42,6 @@ typedef struct {
   float gain;
 } _t;
 
-static void _update(_t *data) {
-  if (data->modified) {
-    data->modified = 0;
-    data->gain = data->opts.gain;
-  }
-}
-
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = iq_noise_init(&data->iq_noise); if (p != &data->iq_noise) return p;
@@ -63,7 +56,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   AVOID_DENORMALS;
-  _update(data);
   for (int i = nframes; --i >= 0; ) {
     float _Complex z = data->gain * iq_noise_process(&data->iq_noise);
     *out0++ = creal(z);
@@ -80,7 +72,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     return TCL_ERROR;
   }
   if(data->opts.dBgain != save.dBgain) {
-    data->opts.gain = dB_to_linear(data->opts.dBgain);
+    data->gain = dB_to_linear(data->opts.dBgain);
   }
   return TCL_OK;
 }
