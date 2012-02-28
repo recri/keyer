@@ -23,22 +23,85 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require si570
 
-proc main {argv} {
-    foreach line [split [string trim [exec usbsoftrock getregisters]] \n] {
-	switch -regexp -- $line {
+proc getfreq {args} {
+    foreach line [split [string trim [exec usbsoftrock {*}$args getfreq]] \n] {
+	switch -regexp -matchvar x -- $line {
 	    {^Version\s+: \d+.\d+$} {
 	    }
-	    {^Register \d+ = [0-9A-F]+ \(\d+\)$} {
-		lappend regs "0x[lindex $line 3]"
+	    {^Frequency\s+:\s*(\d+.\d+) \(x (\d+.\d+)\)$} {
+		lassign $x all cfreq cmult
 	    }
 	    default {
 		error "did not match line: {$line}"
 	    }
 	}
     }
+    return [list $cfreq $cmult]
+}
+
+proc getregisters {args} {
+    set regs {}
+    foreach line [split [string trim [exec usbsoftrock {*}$args getregisters]] \n] {
+	switch -regexp -matchvar x -- $line {
+	    {^Version\s+: \d+.\d+$} {
+	    }
+	    {^Register \d+ = ([0-9A-F]+) \((\d+)\)$} {
+		lassign $x all hex dec
+		lappend regs $dec
+	    }
+	    default {
+		error "did not match line: {$line}"
+	    }
+	}
+    }
+    return $regs
+}
+
+proc calibrate {fs} {
+    set sum 0
+    set n 0
+    foreach f $fs {
+	exec usbsoftrock -a set freq $f
+	set regs [getregisters]
+	set freq [expr {[si570::calculate_frequency $regs [si570::default_xtal]]/4.0}]
+	set ratio [expr {$freq/$f}]
+	set sum [expr {$sum+$ratio}]
+	incr n
+	puts [format {f %9.3f freq %9.3f freq/f %21.15f} $f $freq $ratio]
+    }
+    puts [format {E(freq/f) = %21.15f} [expr {$sum/$n}]]
+}
+
+proc main {argv} {
+    foreach {opt val} $argv {
+	switch $opt {
+	    calibrate {
+		switch $val {
+		    1 { calibrate {1.8 2.0 3.5 4.0 5.3 5.4 7 7.3 10.1 10.15 14.0 14.35  18.068 18.168 21 21.45 24.89 24.99 28 29.7} }
+		    2 { calibrate {1.80 1.81 1.82 1.83 1.84 1.85 1.86 1.87 1.88 1.89} }
+		    3 { calibrate {11.80 11.81 11.82 11.83 11.84 11.85 11.86 11.87 11.88 11.89} }
+		    4 { calibrate {7.000 7.001 7.002 7.003 7.004 7.005 7.006 7.007 7.008 7.009 7.010 7.011 7.012 7.013 7.014 7.015} }
+		    default { calibrate $val }
+		}
+		exit 0
+	    }
+	}
+    }
+    lassign [getfreq] freq mult
+    lassign [getfreq -a] cfreq cmult
+    set regs [getregisters]
     set vars [si570::registers_to_variables $regs]
+    #set r2 [si570::variables_to_registers {*}$vars]
+    #puts "regs1 {$regs}"
+    #puts "regs2 {$r2}"
+    puts "cfreq $cfreq freq $freq ratio [expr {$cfreq/$freq}]"
     set freq [si570::calculate_frequency $regs [si570::default_xtal]]
-    puts "regs {$regs} vars {$vars} $freq [expr {$freq/4+0.01}]"
+    puts "regs {$regs} vars {$vars} $freq [expr {$freq/4+0.01}] $cfreq $cmult"
+    foreach v [si570::calculate_all_variables $freq [si570::default_xtal]] {
+	set r [si570::variables_to_registers {*}$v]
+	set f [si570::calculate_frequency $r [si570::default_xtal]]
+	puts "... regs {$r} vars {$v} $f [expr {$f/4+0.01}]"
+    }
 }
 
 main $argv

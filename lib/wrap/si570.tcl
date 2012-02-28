@@ -51,6 +51,7 @@ proc si570::registers_to_variables {registers} {
     set RFREQ [expr {$RFREQ_int + $RFREQ_frac / $::si570::FACTOR}]
     return [list $HS_DIV $N1 $RFREQ]
 }
+
 ## compute the registers for the HS_DIV, N1, RFREQ
 proc si570::variables_to_registers {HS_DIV N1 RFREQ} {
     # chop these values up into registers
@@ -88,20 +89,37 @@ proc si570::calculate_frequency {registers xtal} {
 }
 
 ## compute the variables for a frequency and the specified crystal frequency
-proc si570::calculate_all_variables {frequency xtal} {
+proc si570::calculate_all_variables {frequency {xtal {}}} {
+    if {$xtal eq {}} {
+	set xtal [si570::default_xtal]
+    }
+    variable HS_DIV_MAP
+    variable DCO_LOW
+    variable DCO_HIGH
     set solutions {}
     ## for each of the possible dividers
     ## get the divider index (HS_DIV) and the divider value (HS_DIVIDER)
-    foreach {HS_DIV HS_DIVIDER} [array get si570::HS_DIV_MAP] {
+    foreach HS_DIV [lsort [array names HS_DIV_MAP]] {
+	set HS_DIVIDER $HS_DIV_MAP($HS_DIV);
 	## the negative divider values don't count
 	if {$HS_DIVIDER <= 0} continue
 	## calculate N1 at the midrange of the DCO
-	set N1 [expr {int(floor(($si570::DCO_HIGH+$si570::DCO_LOW) / (2 * $frequency * $HS_DIVIDER)) - 1)}]
+	set y [expr {($DCO_HIGH+$DCO_LOW) / (2 * $frequency * $HS_DIVIDER)}]
+	if {$y < 1.5} {
+	    set y 1.0
+	} else {
+	    set y [expr {2 * round($y / 2.0)}]
+	}
+	if {$y > 128} {
+	    set y 128.0
+	}
+	set N1 [expr {int(floor($y) - 1)}]
+	## set N1 [expr {int(floor(($DCO_HIGH+$DCO_LOW) / (2 * $frequency * $HS_DIVIDER)) - 1)}]
 	if {$N1 < 0 || $N1 > 127} continue
 	set f0 [expr {$frequency * ($N1+1) * $HS_DIVIDER}]
-	if {$si570::DCO_LOW <= $f0 && $f0 <= $si570::DCO_HIGH} {
+	if {$DCO_LOW <= $f0 && $f0 <= $DCO_HIGH} {
 	    set RFREQ [expr {$f0 / $xtal}]
-	    lappend solutions [list $RFREQ $HS_DIV $N1]
+	    lappend solutions [list $HS_DIV $N1 $RFREQ]
 	}
     }
     return $solutions
@@ -109,15 +127,18 @@ proc si570::calculate_all_variables {frequency xtal} {
 
 ## compute the registers for a frequency and the specified crystal frequency
 proc si570::calculate_registers {frequency xtal} {
+    variable HS_DIV_MAP
+    variable DCO_LOW
+    variable DCO_HIGH
     ## start with no solution
     set solution {}
     ## for each of the possible dividers
     ## get the divider index (HS_DIV) and the divider value (HS_DIVIDER)
-    foreach {HS_DIV HS_DIVIDER} [array get si570::HS_DIV_MAP] {
+    foreach {HS_DIV HS_DIVIDER} [array get HS_DIV_MAP] {
 	## the negative divider values don't count
 	if {$HS_DIVIDER <= 0} continue
 	## let y be the midrange of the DCO, divided by (the frequency times the divider)
-	set y [expr {($si570::DCO_HIGH+$si570::DCO_LOW) / (2 * $frequency * $HS_DIVIDER)}]
+	set y [expr {($DCO_HIGH+$DCO_LOW) / (2 * $frequency * $HS_DIVIDER)}]
 	if {$y < 1.5} {
 	    set y 1.0
 	} else {
@@ -128,10 +149,10 @@ proc si570::calculate_registers {frequency xtal} {
 	}
 	set N1 [expr {int(floor($y) - 1)}]
 	set f0 [expr {$frequency * $y * $HS_DIVIDER}]
-	if {$si570::DCO_LOW <= $f0 && $f0 <= $si570::DCO_HIGH} {
+	if {$DCO_LOW <= $f0 && $f0 <= $DCO_HIGH} {
 	    set RFREQ [expr {$f0 / $xtal}]
-	    if {$solution eq {} || $RFREQ < [lindex $solution 0]} {
-		set solution [list $RFREQ $HS_DIV $N1]
+	    if {$solution eq {} || $RFREQ < [lindex $solution 2]} {
+		set solution [list $HS_DIV $N1 $RFREQ]
 	    }
 	}
     }
