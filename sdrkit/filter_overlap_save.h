@@ -162,7 +162,7 @@ static void *filter_overlap_save_init(filter_overlap_save_t *p, filter_overlap_s
     filter_overlap_save_delete(p);
     return "memory allocation failure #1";
   }
-  p->scale = 1.0 / fftlen;
+  p->scale = 1.0 / p->fftlen;
   void *e = filter_overlap_save_preconfigure(p, q); if (e != p) return e;
   filter_overlap_save_configure(p, q);
   return p;
@@ -174,20 +174,20 @@ static float complex filter_overlap_save_process(filter_overlap_save_t *p, float
     /* forward transform */
     fftwf_execute(p->pfwd);
     /* convolve with transformed filter kernel */
-    complex_vector_muliply(p->zsignal, p->zsignal, p->zfilter, p->fftlen);
+    complex_vector_multiply(p->zsignal, p->zsignal, p->zfilter, p->fftlen);
     /* inverse transform */
     fftwf_execute(p->pinv);
     /* scale result */
-    complex_vector_scale(p->zoutput, p->zoutput, p->scale, p->buflen);
+    complex_vector_scale(p->zoutput, p->zoutput, p->scale, p->length);
     /* shift input block */
-    complex_vector_copy(p->zinput, p->zinput+p->buflen, p->buflen);
-    p->input_index = p->buflen;
+    complex_vector_copy(p->zinput, p->zinput+p->length, p->length);
+    p->input_index = p->length;
 #if LHS
     p->output_index = p->length;
 #else  
     p->output_index = 0;
 #endif
   }
-  return p->zoutput[p>output_index++];
+  return p->zoutput[p->output_index++];
 }
 #endif

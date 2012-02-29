@@ -25,18 +25,19 @@ package require Tk
 package require panorama
 package require sdrkit
 package require sdrkit::jack
-package require sdrkit::oscillator
-## package require sdrkit::oscillator-zd
-package require sdrkit::noise
-package require sdrkit::iq-noise
-package require sdrkit::iq-balance
 package require sdrkit::iq-correct
-
+package require sdrkit::lo-mixer
+package require sdrkit::gain
+package require sdrkit::demod-am
+package require sdrkit::demod-fm
+package require sdrkit::demod-sam
 
 #
-# just make an oscillator and some noise
-# an iq-balance to unbalance the oscillator
-# and an iq-correct to rebalance the oscillator
+# an sdr as a pipeline
+# capture | iq-correct | lo-mixer | filter-overlap-save | gain | demod | playback
+# one or more spectrum/waterfall/meter displays that can be tapped into the pipeline
+# at any point.
+# noise reduction and additional filtering can be added at any point.
 #
 
 array set data {
@@ -69,6 +70,7 @@ array set data {
     corrector-ws {0 0 0 0 0 0 0 0}
     corrector-dots {0 0 0 0 0 0 0 0}
     corrector-kick 0
+    corrector-kick-up 6 corrector-kick-down 2
     corrector-state idle
 }
 
@@ -114,40 +116,17 @@ proc ::meters {w args} {
 }
 
 ##
-## controllers for the input signal, unbalancing, and rebalancing components
+## controller for gain
 ##
-proc dB2linear {dB} { return [expr {pow(10, $dB/20)}] }
 
-proc set-gain {v} {
-    osc configure -gain $v
-    set ::data(gain-label) [format %.1f $v]
+proc set-gain {g} {
+    gain configure -gain $g
+    set ::data(label-gain) [format %.2f $g]
 }
 
-proc set-freq {v} {
-    if {$v == 0} { set v 10 }
-    osc configure -freq $v
-    set ::data(freq-label) [format %.1f $v]
-}
-
-proc set-noise {v} {
-    noise configure -level $v
-    set ::data(noise-label) [format %.1f $v]
-}
-
-proc set-iq-noise {v} {
-    iq-noise configure -level $v
-    set ::data(iq-noise-label) [format %.1f $v]
-}
-
-proc set-iq-sine-phase {v} {
-    iq-balance configure -sine-phase [expr {sin([sdrkit::radians $v])}]
-    set ::data(iq-sine-label) [format %6.2f $v]
-}
-proc set-iq-gain {v} {
-    iq-balance configure -linear-gain [sdrkit::dB-to-linear $v]
-    set ::data(iq-gain-label) [format %6.2f $v]
-}
-
+##
+## controller display for iq-correct
+##
 proc more-mu {} {
     set ::data(corrector-mu) [expr {2*$::data(corrector-mu)}]
     set ::data(label-corrector-mu) [format %.13f $::data(corrector-mu)]
@@ -219,14 +198,15 @@ proc update-ws {} {
 		    ## we need to maintain a level of mu that allows the kick to be seen
 		    ## so filter coefficients cannot be frozen, then need to be turning over
 		    ## this might introduce some phase noise
-		    if {$::data(corrector-kick) > 6} {
+		    if {$::data(corrector-kick) > $::data(corrector-kick-up)} {
 			set ::data(corrector-state) converge
 			more-mu
 		    } elseif {$::data(corrector-rel-mag) < $::data(corrector-rel-mag-min)} {
 			more-mu
-		    } elseif {$::data(corrector-rel-mag) > $::data(corrector-rel-man-max)} {
+		    } elseif {$::data(corrector-rel-mag) > $::data(corrector-rel-mag-max)} {
 			less-mu
 		    }
+
 		}
 		converge {
 		    ## in converge state we look a decay in the kick signal to shift to relax
@@ -236,9 +216,9 @@ proc update-ws {} {
 			less-mu
 		    } elseif {$::data(corrector-rel-mag) < $::data(corrector-rel-mag-max)} {
 			set ::data(corrector-state) idle
-		    } elseif {$::data(corrector-kick) < 2} {
+		    } elseif {$::data(corrector-kick) < $::data(corrector-kick-down)} {
 			less-mu
-		    } elseif {$::data(corrector-kick) > 6} {
+		    } elseif {$::data(corrector-kick) > $::data(corrector-kick-up)} {
 			more-mu
 		    }
 		}
@@ -251,11 +231,12 @@ proc update-ws {} {
     }
     after 20 [list update-ws]
 }
+
 proc corrector-onoff {} {
     if {$::data(corrector-on)} {
 	#puts "iq-correct reset to -mu $::data(corrector-mu)"
 	iq-correct reset
-	iq-correct configure -mu $::data(corrector-mu)
+	iq-correct configure -mu 1
     } else {
 	#puts "iq-correct muted to 0"
 	iq-correct configure -mu 0
@@ -265,11 +246,8 @@ proc corrector-onoff {} {
 
 proc shutdown {w} {
     if {$w eq {.}} {
-	rename osc {}
-	rename noise {}
-	rename iq-noise {}
-	rename iq-balance {}
 	rename iq-correct {}
+	rename gain {}
     }
 }
 
@@ -292,53 +270,29 @@ proc main {argv} {
 	}
     }
 
-    sdrkit::oscillator osc
+    ## sdrkit::oscillator osc
     ## sdrkit::oscillator-zd osc
-    sdrkit::noise noise
-    sdrkit::iq-noise iq-noise
-    sdrkit::iq-balance iq-balance
+    ## sdrkit::noise noise
+    ## sdrkit::iq-noise iq-noise
+    ## sdrkit::iq-balance iq-balance
     sdrkit::iq-correct iq-correct
+    sdrkit::lo-mixer lo-mixer -freq 10000
+    sdrkit::gain gain
+    sdrkit::demod-sam demod
     
-    wm title . sdrkit:balancer
-    set-gain $::data(gain)
-    set-freq $::data(freq)
-    set-noise $::data(noise)
-    set-iq-noise $::data(iq-noise)
+    wm title . sdrkit:radio
 
     set row 0
     grid [panorama .pan -width 1024] -row $row -column 0 -columnspan 6 -sticky nsew
     incr row
-    grid [ttk::label .b$row -text {Oscillator}] -row $row -column 0 -columnspan 3
+    grid [ttk::label .blk$row -text {Gain}] -row $row -column 0 -columnspan 3
     incr row
-    grid [ttk::label .gain-l -textvar ::data(gain-label) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .gain-u -text dB] -row $row -column 1
-    grid [ttk::scale .gain-s -from $::data(max-gain) -to $::data(min-gain) -command set-gain -variable ::data(gain) -length $::data(length)] -row $row -column 2 -sticky ew
-    incr row
-    grid [ttk::label .freq-l -textvar ::data(freq-label) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .freq-u -text Hz] -row $row -column 1
-    grid [ttk::scale .freq-s -from $::data(min-freq) -to $::data(max-freq) -command set-freq -variable ::data(freq) -length $::data(length)] -row $row -column 2 -sticky ew
-    incr row
-    grid [ttk::label .b$row -text {Noise}] -row $row -column 0 -columnspan 3
-    incr row
-    grid [ttk::label .noise-l -textvar ::data(noise-label) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .noise-u -text dB] -row $row -column 1
-    grid [ttk::scale .noise-s -from $::data(max-gain) -to $::data(min-gain) -command set-noise -variable ::data(noise) -length $::data(length)] -row $row -column 2 -sticky ew
-    incr row
-    grid [ttk::label .b$row -text {IQ Noise}] -row $row -column 0 -columnspan 3
-    incr row
-    grid [ttk::label .iq-noise-l -textvar ::data(iq-noise-label) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .iq-noise-u -text dB] -row $row -column 1
-    grid [ttk::scale .iq-noise-s -from $::data(max-gain) -to $::data(min-gain) -command set-iq-noise -variable ::data(iq-noise) -length $::data(length)] -row $row -column 2 -sticky ew
-    incr row
-    grid [ttk::label .b$row -text {Unbalancer}] -row $row -column 0 -columnspan 3
-    incr row
-    grid [ttk::label .sine$row-l -textvar ::data(iq-sine-label) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .sine$row-u -text {deg}] -row $row -column 1
-    grid [ttk::scale .sine$row-s -from -45.0 -to 45.0 -command set-iq-sine-phase -variable ::data(iq-sine) -length $::data(length)] -row $row -column 2 -sticky ew
-    incr row
-    grid [ttk::label .gain$row-l -textvar ::data(iq-gain-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .gain$row-l -textvar ::data(label-gain) -width 10 -anchor e] -row $row -column 0
     grid [ttk::label .gain$row-u -text {dB}] -row $row -column 1
-    grid [ttk::scale .gain$row-s -from -30.00 -to 30.00 -command set-iq-gain -variable ::data(iq-gain) -length $::data(length)] -row $row -column 2 -sticky ew
+    grid [ttk::scale .gain$row-s -from -100.00 -to 100.00 -command set-iq-gain -variable ::data(gain) -length $::data(length)] -row $row -column 2 -sticky ew
+    set ::data(gain) -100.0
+    set-gain -100.0
+    .gain$row-s configure -command [list set-gain]
     incr row
     grid [ttk::label .blk$row -text {Corrector}] -row $row -column 0 -columnspan 3
     incr row
@@ -368,24 +322,24 @@ proc main {argv} {
     incr row
 
     set row 1
-    grid [meters .blk$row] -row $row -column 3 -columnspan 3 -rowspan 10
-    ::meters::update .blk$row
+    grid [meters .blk2$row] -row $row -column 3 -columnspan 3 -rowspan 10
+    ::meters::update .blk2$row
     grid columnconfigure . 2 -weight 100
     grid columnconfigure . 5 -weight 100
     grid rowconfigure . 0 -weight 100
 
-    sdrkit::jack connect osc:out_i iq-balance:in_i
-    sdrkit::jack connect osc:out_q iq-balance:in_q
-    sdrkit::jack connect noise:out_i iq-balance:in_i
-    sdrkit::jack connect noise:out_q iq-balance:in_q
-    sdrkit::jack connect iq-noise:out_i iq-balance:in_i
-    sdrkit::jack connect iq-noise:out_q iq-balance:in_q
-    sdrkit::jack connect iq-balance:out_i iq-correct:in_i
-    sdrkit::jack connect iq-balance:out_q iq-correct:in_q
+    sdrkit::jack connect system:capture_1 iq-correct:in_q
+    sdrkit::jack connect system:capture_2 iq-correct:in_i
     sdrkit::jack connect iq-correct:out_i capture_spectrum_1:in_i
     sdrkit::jack connect iq-correct:out_q capture_spectrum_1:in_q
-    sdrkit::jack connect iq-correct:out_i system:playback_1
-    sdrkit::jack connect iq-correct:out_q system:playback_2
+    sdrkit::jack connect iq-correct:out_i lo-mixer:in_i
+    sdrkit::jack connect iq-correct:out_q lo-mixer:in_q
+    sdrkit::jack connect lo-mixer:out_i gain:in_i
+    sdrkit::jack connect lo-mixer:out_q gain:in_q
+    sdrkit::jack connect gain:out_i demod:in_i
+    sdrkit::jack connect gain:out_q demod:in_q
+    sdrkit::jack connect demod:out_i audioadapter:playback_1
+    sdrkit::jack connect demod:out_q audioadapter:playback_2
     corrector-onoff
     update-ws
     bind . <Destroy> [list shutdown %W]
