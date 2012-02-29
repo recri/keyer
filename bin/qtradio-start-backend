@@ -9,11 +9,13 @@
 
 
 export DISPLAY=:0
-HWBUFFER=1024
-HWRATE=192000
+OBDEV=hw:0			# 0 for onboard
+OBRATE=96000			# onboard rate
 HWDEV=hw:1			# 1 for sdr-widget
-LPRATE=48000
+HWRATE=192000			# hardware rate
+HWBUFFER=1024			# hardware buffer
 LPDEV=hw:2			# 2 for loopback
+LPRATE=48000			# loopback rate
 SHARE="--share"
 SI570="--si570"
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
@@ -36,34 +38,46 @@ for f in $*; do
     esac
 done
 
+##
+## plain old qtradio backend
+##
 jackd -T -s -dalsa -C$HWDEV -P$HWDEV -r$HWRATE -p$HWBUFFER -n3 > $LOG-jackd.log 2>&1 &
 sleep 1
 nohup softrock --jack $SI570 --iq --samplerate $HWRATE > $LOG-softrock.log 2>&1 &
 sleep 1
 nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
-##
-## audio server from loopback ports
-## there is a downsampling step here
-##
-sleep 1
-jackd -n af -d alsa -r $LPRATE -D -C$LPDEV,1 -P$LPDEV,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
-##
-## audio server netmanager backend
-## so the downsampled stream can
-## be remotely accessed.  Only mono
-## over a WiFi with jack-1.9.7, but
-## the celt codec becomes available
-## with jack-1.9.8
-## 
-sleep 1
-jack_load -s af netmanager -i "--celt 64" # 64kbit celt decoding
 
 ##
-## tagged on start jack network backend
+## default jackd server: started above
 ## audio adapter to alsa loopback ports
 ## the loopback ports are started by adding
 ## snd-aloop to /etc/modules, it will be
 ## started at boot time as long as its there
 ##
+## actually, skip the tricky stuff, just connect to the onboard audio
+##
 sleep 1
-jack_load audioadapter -i "-D -C$LPDEV,0 -P$LPDEV,1 -q 2"
+jack_load audioadapter -i "-D -C$OBDEV,0 -P$OBDEV,1 -q 0 -r $OBRATE"
+
+##
+## network manager to get midi controls
+##
+##sleep 1
+##jack_load netmanager -i "-p 19000 --celt 64" # 64kbit celt decoding
+
+##
+## audio server: from loopback ports
+## there is a downsampling step between
+## the default jack server and the af jack server
+##
+##sleep 1
+##jackd -n af -d alsa -r $LPRATE -D -C$LPDEV,1 -P$LPDEV,0 -i 2 -o 2 > $LOG-af.log 2>&1 &
+
+##
+## audio server netmanager backend
+## so the downsampled stream can
+## be remotely accessed.
+## 
+##sleep 1
+##jack_load -s af netmanager -i "-p 19001 --celt 64" # 64kbit celt decoding
+
