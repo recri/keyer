@@ -77,7 +77,7 @@ static void *bandpass_complex(float lo, float hi, float sr, int size, float comp
     return (void *)"lo frequency and/or hi frequency out of bounds";
   if (size < 1)
     return (void *)"size too small";
-  if ((size&1) != 0)
+  if ((size&1) == 0)
     return (void *)"size not odd";
 
   float fc;

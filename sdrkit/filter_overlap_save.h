@@ -95,20 +95,20 @@ static void *filter_overlap_save_preconfigure(filter_overlap_save_t *p, filter_o
   if ((q->low_frequency + 10) >= q->high_frequency)
     return (void *)"bandwidth is too narrow";
   int ncoef = q->length+1;
-  float complex *zkernel = fftw_malloc(p->fftlen*sizeof(float complex));
+  float complex *zkernel = fftwf_malloc(p->fftlen*sizeof(float complex));
   if (zkernel == NULL)
     return (void *)"memory allocation failure #2";
   complex_vector_clear(zkernel, p->fftlen);
   if (q->zfilter == NULL) {
-    q->zfilter = fftw_malloc(p->fftlen*sizeof(float complex));
+    q->zfilter = fftwf_malloc(p->fftlen*sizeof(float complex));
     if (q->zfilter == NULL) {
-      fftw_free(zkernel);
+      fftwf_free(zkernel);
       return (void *)"memory allocation failure #3";
     }
   }
   fftwf_plan pkernel = fftwf_plan_dft_1d(p->fftlen, zkernel, q->zfilter, FFTW_FORWARD, p->planbits);
   if (pkernel == NULL) {
-    fftw_free(zkernel);
+    fftwf_free(zkernel);
     return (void *)"memory allocation failure #4";
   }
   float complex *filter;

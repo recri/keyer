@@ -113,8 +113,8 @@ $(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../sdrkit/filter_biquad.
 $(LIBDIR)/filter_fir.so: filter_FIR.c framework.h ../sdrkit/filter_FIR.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_overlap_save.so: filter_overlap_save.c framework.h ../sdrkit/filter_overlap_save.h
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+$(LIBDIR)/filter_overlap_save.so: filter_overlap_save.c framework.h ../sdrkit/filter_overlap_save.h ../sdrkit/filter_FIR.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(FFTW3_LIBS) $(LIBS)
 
 $(LIBDIR)/fftw.so: fftw.c framework.h ../sdrkit/dmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)

@@ -27,6 +27,7 @@ package require sdrkit
 package require sdrkit::jack
 package require sdrkit::iq-correct
 package require sdrkit::lo-mixer
+package require sdrkit::filter-overlap-save
 package require sdrkit::gain
 package require sdrkit::demod-am
 package require sdrkit::demod-fm
@@ -63,7 +64,7 @@ array set data {
     corrector-ratio 0.00
     corrector-avg-ratio 0.00
     corrector-abs-mag 0.00
-    corrector-abs-mag-max -5
+    corrector-abs-mag-max -5.5
     corrector-rel-mag 0.00
     corrector-rel-mag-min -9 corrector-rel-mag-max -8
     corrector-t {0 0 0 0 0 0 0 0}
@@ -277,6 +278,7 @@ proc main {argv} {
     ## sdrkit::iq-balance iq-balance
     sdrkit::iq-correct iq-correct
     sdrkit::lo-mixer lo-mixer -freq 10000
+    sdrkit::filter-overlap-save ovsv
     sdrkit::gain gain
     sdrkit::demod-sam demod
     
@@ -334,8 +336,10 @@ proc main {argv} {
     sdrkit::jack connect iq-correct:out_q capture_spectrum_1:in_q
     sdrkit::jack connect iq-correct:out_i lo-mixer:in_i
     sdrkit::jack connect iq-correct:out_q lo-mixer:in_q
-    sdrkit::jack connect lo-mixer:out_i gain:in_i
-    sdrkit::jack connect lo-mixer:out_q gain:in_q
+    sdrkit::jack connect lo-mixer:out_i ovsv:in_i
+    sdrkit::jack connect lo-mixer:out_q ovsv:in_q
+    sdrkit::jack connect ovsv:out_i gain:in_i
+    sdrkit::jack connect ovsv:out_q gain:in_q
     sdrkit::jack connect gain:out_i demod:in_i
     sdrkit::jack connect gain:out_q demod:in_q
     sdrkit::jack connect demod:out_i audioadapter:playback_1

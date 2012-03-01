@@ -43,6 +43,7 @@ static void _update(_t *data) {
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
+  data->opts.sample_rate = sdrkit_sample_rate(arg);
   void *p = filter_overlap_save_init(&data->ovsv, &data->opts); if (p != &data->ovsv) return p;
   data->modified = 1;
   _update(data);
@@ -114,6 +115,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Filter_biquad_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::filter-biquad", "1.0.0", "sdrkit::filter-biquad", _factory);
+int DLLEXPORT Filter_overlap_save_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::filter-overlap-save", "1.0.0", "sdrkit::filter-overlap-save", _factory);
 }

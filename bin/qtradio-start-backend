@@ -16,9 +16,14 @@ HWRATE=192000			# hardware rate
 HWBUFFER=1024			# hardware buffer
 LPDEV=hw:2			# 2 for loopback
 LPRATE=48000			# loopback rate
-SHARE="--share"
+SHARE=""
 SI570="--si570"
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
+
+case `hostname` in
+    elf12) HWDEV=hw:2;;
+    elf11) HWDEV=hw:1;;
+esac
 
 for f in $*; do
     case $f in
