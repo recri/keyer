@@ -157,6 +157,7 @@ static void *filter_overlap_save_init(filter_overlap_save_t *p, filter_overlap_s
   p->length = q->length;
   p->fftlen = 2*q->length;
   p->planbits = q->planbits;
+  p->sample_rate = q->sample_rate;
   p->input_index = p->length;
   p->input_limit = p->fftlen;
 #if LHS
