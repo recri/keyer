@@ -117,5 +117,17 @@ static void complex_vector_clear(float complex *dst, int n) {
   memset(dst, 0, n*sizeof(float complex));
 }
 
+static float complex_vector_max_abs(float complex *dst, int n) {
+  float max_abs = 0.0f;
+  while (--n >= 0) max_abs = maxf(max_abs, cabsf(*dst++));
+  return max_abs;
+}
+
+static float complex_vector_normalize(float complex *dst, float complex *src, int n) {
+  float max_abs = complex_vector_max_abs(src, n);
+  if (max_abs > 0.0f) complex_vector_scale(dst, src, 1.0f/max_abs, n);
+  return max_abs;
+}
+
 #endif
 

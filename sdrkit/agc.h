@@ -15,19 +15,8 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#if 0				// dsp mailing lists
-				// also quoted below
-loop forever 
-{ 
-/* Voltage controlled amplifier is just a multiplier here */ 
-yout=yin*iout 
-/* error */ 
-err=spoint-abs(yout) 
-/* Integrate */ 
-iout1=iout 
-iout=iout1+gain*err } 
-#endif
 #if 0				// dttsp-cgran-r624/src/update.c
+
 /* -------------------------------------------------------------------------- */
 /** @brief private setfixedAGC 
 * 
@@ -646,9 +635,9 @@ newDttSPAgc(AGCMODE mode,
   a->mask = 2 * BufSize;
 
   a->hangindex = a->indx = 0;
-  a->hangtime = hangtime * 0.001;
+  a->hangtime = hangtime * 0.001; /* units??? */
   a->hangthresh = 0.0;
-  a->sndx = (int) (samprate * attack * 0.003);
+  a->sndx = (int) (samprate * attack * 0.003); /* units??? */
   a->fastindx = FASTLEAD;
   a->gain.fix = 10.0;
 
@@ -664,7 +653,7 @@ newDttSPAgc(AGCMODE mode,
   a->mask -= 1;
 
   a->fasthang = 0;
-  a->fasthangtime = 48 * 0.001;
+  a->fasthangtime = 48 * 0.001;	/* units??? looks like 48k sample rate??? */
   a->samprate = samprate;
 
   return a;

@@ -55,12 +55,15 @@
 */
 
 typedef struct {
-  int length;			/* length of chunk to process, fixed at creation */
-  int planbits;			/* plan bits for fftw, fixed at creation */
+  // options which are fixed at creation
+  int length;			/* length of chunk to process */
+  int planbits;			/* plan bits for fftw */
+  int sample_rate;		/* sample rate */
+  // options which may be altered ad lib
   float high_frequency;		/* high cutoff of bandpass */
   float low_frequency;		/* low cutoff of bandpass */
-  int sample_rate;		/* sample rate, fixed at creation */
   // derived options
+  int modified;			// marks new zfilter value
   float complex *zfilter;	/* new value for zfilter */
 } filter_overlap_save_options_t;
 
@@ -68,6 +71,7 @@ typedef struct {
   int length;			/* length of chunk */
   int fftlen;			/* length of fft */
   int planbits;			/* plan bits for fftw */
+  int sample_rate;		/* sample rate */
   float complex *zinput;	/* incoming signal buffer */
   fftwf_plan pfwd;		/* plan for transform zinput -> zsignal */
   float complex *zfilter;	/* forward transformed filter kernel */
@@ -88,17 +92,20 @@ static void filter_overlap_save_configure(filter_overlap_save_t *p, filter_overl
 static void *filter_overlap_save_preconfigure(filter_overlap_save_t *p, filter_overlap_save_options_t *q) {
   if (q->length != p->length)
     return (void *)"overlap save length cannot be altered";
+  if (q->sample_rate != p->sample_rate)
+    return (void *)"overlap save sample rate cannot be altered";
   if (fabsf(q->low_frequency) >= q->sample_rate / 2)
     return (void *)"low frequency is too high for sample rate";
   if (fabsf(q->high_frequency) >= q->sample_rate / 2)
     return (void *)"high frequency is too high for sample rate";
   if ((q->low_frequency + 10) >= q->high_frequency)
     return (void *)"bandwidth is too narrow";
+  // number of filter coefficients
   int ncoef = q->length+1;
+  // 
   float complex *zkernel = fftwf_malloc(p->fftlen*sizeof(float complex));
   if (zkernel == NULL)
     return (void *)"memory allocation failure #2";
-  complex_vector_clear(zkernel, p->fftlen);
   if (q->zfilter == NULL) {
     q->zfilter = fftwf_malloc(p->fftlen*sizeof(float complex));
     if (q->zfilter == NULL) {
@@ -114,9 +121,11 @@ static void *filter_overlap_save_preconfigure(filter_overlap_save_t *p, filter_o
   float complex *filter;
 #if LHS
   // write filter coeffs into the left hand side of fft input, pad with zeroes on the right
+  complex_vector_clear(zkernel, p->fftlen);
   filter = zkernel;
 #else
   // write filter coeffs into the right hand side of fft input, pad with zeroes on the left
+  complex_vector_clear(zkernel, p->fftlen);
   filter = zkernel+p->fftlen-ncoef;
 #endif
   void *e = bandpass_complex(q->low_frequency, q->high_frequency, q->sample_rate, ncoef, filter); if (e != filter) {
@@ -124,10 +133,12 @@ static void *filter_overlap_save_preconfigure(filter_overlap_save_t *p, filter_o
     fftwf_free(zkernel);
     return e;
   }
+  
   fftwf_execute(pkernel);
   fftwf_destroy_plan(pkernel);
   fftwf_free(zkernel);
-  return p;
+  complex_vector_normalize(p->zfilter, p->zfilter, p->fftlen);
+ return p;
 }
 
 static void filter_overlap_save_delete(filter_overlap_save_t *p) {
