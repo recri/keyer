@@ -312,8 +312,9 @@ proc main {argv} {
     grid [ttk::frame .menu] -row $row -column 0 -columnspan 6 -sticky ew
     incr row
     grid [panorama .pan -width 1024] -row $row -column 0 -columnspan 6 -sticky nsew
-    pack [polyphase-menu .menu.polyphase] -side left
+    pack [polyphase-menu .pan .menu.polyphase] -side left
     incr row
+    set startrow $row
     grid [ttk::label .blk$row -text {Gain}] -row $row -column 0 -columnspan 3
     incr row
     grid [ttk::label .gain$row-l -textvar ::data(label-gain) -width 10 -anchor e] -row $row -column 0
@@ -350,7 +351,7 @@ proc main {argv} {
     pack [ttk::button .blk$row.reset-ws -text {Reset wi/wq} -command [list reset-ws]] -side left
     incr row
 
-    set row 1
+    set row $startrow
     grid [meters .blk2$row] -row $row -column 3 -columnspan 3 -rowspan 10
     ::meters::update .blk2$row
     grid columnconfigure . 2 -weight 100
