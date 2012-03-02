@@ -80,8 +80,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+#if 0
   { "-fixed",   "fixed",   "Fixed",   "-100.0",   fw_option_float, 0,	offsetof(_t.opts, fixed), "fixed gain in dB" },
   { "-compress", "compress", "Compress",   "0",   fw_option_float, 0,	offsetof(_t.opts, compress), "gain compression in ??" },
+#endif
   { NULL }
 };
 
