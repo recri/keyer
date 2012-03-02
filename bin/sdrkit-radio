@@ -115,6 +115,30 @@ proc ::meters {w args} {
     ::meters::setup $w 32
     return $w
 }
+##
+## controller for panorama
+##
+array set pan {
+    polyphase plain
+}
+
+proc polyphase {pan args} {
+    switch -glob $::pan(polyphase) {
+	plain { ::panorama::configure $pan -polyphase 0 }
+	polyphase-* { ::panorama::configure $pan -polyphase [lindex [split $::pan(polyphase) -] 1] }
+    }
+}
+
+proc polyphase-menu {pan w} {
+    ttk::frame $w
+    pack [ttk::label $w.l -text {Spectrum: }] -side left
+    pack [ttk::menubutton $w.b -textvar ::pan(polyphase) -menu $w.b.m] -side left
+    menu $w.b.m
+    foreach x {plain polyphase-2 polyphase-3 polyphase-4 polyphase-5 polyphase-6 polyphase-7 polyphase-8} {
+	$w.b.m add radiobutton -label $x -variable ::pan(polyphase) -value $x -command [list polyphase $pan]
+    }
+    return $w
+}
 
 ##
 ## controller for gain
@@ -285,7 +309,10 @@ proc main {argv} {
     wm title . sdrkit:radio
 
     set row 0
+    grid [ttk::frame .menu] -row $row -column 0 -columnspan 6 -sticky ew
+    incr row
     grid [panorama .pan -width 1024] -row $row -column 0 -columnspan 6 -sticky nsew
+    pack [polyphase-menu .menu.polyphase] -side left
     incr row
     grid [ttk::label .blk$row -text {Gain}] -row $row -column 0 -columnspan 3
     incr row
