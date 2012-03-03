@@ -20,6 +20,8 @@
 #define METER_H
 
 /*
+** I think all of this happens after the tap.
+**
 ** dttsp computes in sdr.c/do_rx_meter:
 **   RX PRE_CONV meter value, which is
 **       ADC_REAL, ADC_IMAG = max(fabs(real)),max(fabs(imag)) over a window

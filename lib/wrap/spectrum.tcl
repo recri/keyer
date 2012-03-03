@@ -31,14 +31,18 @@ namespace eval ::spectrum {
 	-height 100
 	-offset 0.0
 	-scale 1.0
+	-max 0
+	-min -180
     }
 }
 
 proc ::spectrum::update {w xy} {
     upvar #0 ::spectrum::$w data
+    set ht [expr {($data(-max)-$data(-min))}]
+    set yscale [expr {-[winfo height $w]/$ht}]
     $w coords spectrum $xy
-    $w scale spectrum 0 0 $data(-scale) [expr {-[winfo height $w]/180.0}]
-    $w move spectrum $data(-offset) 0
+    $w scale spectrum 0 0 $data(-scale) $yscale
+    $w move spectrum $data(-offset) [expr {$data(-max)*$yscale}]
     # keep older copies fading to black
 }
 
@@ -65,18 +69,18 @@ proc ::spectrum::configure {w args} {
     }
 }
 
+proc ::spectrum::defaults {} {
+    return [array get ::spectrum::default_data]
+}
+
 proc ::spectrum::spectrum {w args} {
     upvar #0 ::spectrum::$w data
-    array set data [array get ::spectrum::default_data]
+    array set data [::spectrum::defaults]
     array set data $args
     canvas $w -height $data(-height) -bg black
     $w create line 0 0 0 0 -fill white -tags spectrum
     return $w
 }    
-
-proc ::spectrum::defaults {} {
-    return [array get ::spectrum::default_data]
-}
 
 proc ::spectrum {w args} {
     return [::spectrum::spectrum $w {*}$args]

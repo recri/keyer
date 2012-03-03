@@ -77,7 +77,6 @@ proc ::waterfall::configure {w args} {
 		set adjustpos 1
 		set data($option) $value
 	    }
-	    -pal -
 	    -rows -
 	    -atten -
 	    -pal -

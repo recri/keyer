@@ -60,6 +60,12 @@ proc ::panorama::configure {w args} {
 		::capture::configure $w $option $value
 		set data($option) $value
 	    }
+	    -min -
+	    -max -
+	    -pal {
+		::waterfall::configure $w.w $option $value
+	    }
+	    
 	    default { set data($option) $value 	}
 	}
     }
