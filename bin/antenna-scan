@@ -1,0 +1,154 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# this script scan the Softrock through a set of frequencies and plots
+# the magnitude of the signals found.  Interesting to run with a dummy
+# load installed to see where the spurs live.
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require sdrkit::jack
+package require sdrkit::audio-tap
+
+proc get-levels {tap} {
+    after $::data(delay-ms)
+    while {1} {
+	foreach {frame buffer} [$tap get] break
+	if {$frame == 0} break
+	set sum2 0
+	set n 0
+	binary scan $buffer f* samples
+	set buffer {}
+	foreach {i q} $samples {
+	    set sum2 [expr {$sum2+$i*$i+$q*$q}]
+	    incr n
+	}
+    }
+    if {$n != 0} {
+	return [expr {10*log10($sum2/$n)}]
+    } else {
+	return -1000
+    }
+}
+
+proc replot-levels {} {
+    set xy {}
+    foreach f [lsort -real -increasing [array names ::levels]] {
+	set l $::levels($f)
+	set l [expr "([join $l +])/[llength $l]"]
+	lappend xy $f $l
+    }
+    if {[llength $xy] > 4} {
+	.c coords line $xy
+	.c move line [expr {-$::data(low-f)}] 0
+	.c scale line 0 0 [expr {[winfo width .c]/($::data(high-f)-$::data(low-f))}] [expr {-[winfo height .c]/160.0}]
+    } else {
+	.c coords line 0 0 0 0
+    }
+}
+
+proc show-freq {w x y} {
+    set ::data(cursorf) [format %6.3f [expr {$::data(low-f)+$x/([winfo width .c]/($::data(high-f)-$::data(low-f)))}]]
+}
+
+proc scan-freqs {low high step} {
+    for {set f $low} {$f <= $high} {set f [expr {$f+$step}]} {
+	set ::data(freq) [format %6.3f $f]
+	exec usbsoftrock -a set freq $f >& /dev/null
+	for {set l [get-levels tap]} {$l < -200} {set l [get-levels tap]} {}
+	set ::data(level) [format %7.2f $l]
+	lappend ::levels($f) $l
+	# puts "$::data(freq) $::data(level)"
+	replot-levels
+	update
+    }
+}
+
+proc find-scan-max {low high step} {
+    set maxf 0
+    set maxl -200
+    foreach {f level} [array get ::levels] {
+	set l [expr "([join $level +])/[llength $level]"]
+	if {$l > $maxl} {
+	    set maxl $l
+	    set maxf $f
+	}
+    }
+    return [list $maxf $maxl]
+}
+    
+proc scan {} {
+    array unset ::levels
+    set low $::data(low-f)
+    set high $::data(high-f)
+    set step $::data(step-f)
+    set span [expr {($::data(high-f)-$::data(low-f))/2.0}]
+    foreach i {1 2 3} {
+	set limits [list $low $high $step]
+	foreach j {1 2 3} {
+	    scan-freqs {*}$limits
+	    foreach {maxf maxl} [find-scan-max {*}$limits] break
+	    set ::data(maxf) [format %6.3f $maxf]
+	    set ::data(maxl) [format %7.2f $maxl]
+	}
+	set span [expr {$span/2.0}]
+	set step [expr {$step/2.0}]
+	set low [expr {$maxf-$span}]
+	set high [expr {$maxf+$span}]
+	if {$i == $::data(level)} break
+    }
+}
+
+proc main {argv} {
+    lassign {1.5 30.0 0.01 1} ::data(low-f) ::data(high-f) ::data(step-f) ::data(levels)
+    switch [llength $argv] {
+	4 { lassign $argv ::data(low-f) ::data(high-f) ::data(step-f) ::data(levels) }
+	3 { lassign $argv ::data(low-f) ::data(high-f) ::data(step-f) }
+	2 { lassign $argv ::data(low-f) ::data(high-f) }
+	1 { lassign $argv ::data(low-f) }
+    }
+    puts "$::data(low-f) $::data(high-f) $::data(step-f) $::data(levels)"
+    set ::data(sample-rate) [sdrkit::jack sample-rate]
+    sdrkit::audio-tap tap -log2n 3 -log2size 12 -complex 1
+    set ::data(delay-ms) [expr {int(1000.0*pow(2,3)*pow(2,12)/$::data(sample-rate))}]
+    sdrkit::jack connect system:capture_1 tap:in_i
+    sdrkit::jack connect system:capture_2 tap:in_q
+    tap start
+    pack [canvas .c] -side top -fill both -expand true
+    .c create line 0 0 0 0 -fill black -tags line
+    bind .c <Motion> [list show-freq .c %x %y]
+    pack [ttk::frame .m] -side top -fill x
+    pack [ttk::button .m.s -text scan -command scan] -side left
+    pack [ttk::label .m.fl -text freq] -side left
+    pack [ttk::label .m.fv -textvar ::data(freq)] -side left
+    pack [ttk::label .m.ll -text level] -side left
+    pack [ttk::label .m.lv -textvar ::data(level)] -side left
+    pack [ttk::label .m.mfl -text maxf] -side left
+    pack [ttk::label .m.mfv -textvar ::data(maxf)] -side left
+    pack [ttk::label .m.mll -text maxl] -side left
+    pack [ttk::label .m.mlv -textvar ::data(maxl)] -side left
+    pack [ttk::label .m.cfl -text cursor] -side left
+    pack [ttk::label .m.cfv -textvar ::data(cursorf)] -side left
+}
+
+main $argv
