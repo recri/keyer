@@ -43,6 +43,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/demod_am.so \
 	$(LIBDIR)/demod_fm.so \
 	$(LIBDIR)/demod_sam.so \
+	$(LIBDIR)/filter_complex_bandpass.so \
 	$(LIBDIR)/filter_biquad.so \
 	$(LIBDIR)/filter_fir.so \
 	$(LIBDIR)/filter_overlap_save.so \
@@ -105,6 +106,9 @@ $(LIBDIR)/demod_fm.so: demod_fm.c framework.h ../sdrkit/fm_demod.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/demod_sam.so: demod_sam.c framework.h ../sdrkit/sam_demod.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/filter_complex_bandpass.so: filter_complex_bandpass.c framework.h ../sdrkit/filter_complex_bandpass.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../sdrkit/filter_biquad.h
