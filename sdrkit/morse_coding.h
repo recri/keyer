@@ -197,8 +197,6 @@ static char *morse_coding_table[128] = {
 };
 
 static char *morse_coding(Tcl_UniChar char) {
-  for (int i = 0; morse_coding_table[i] != NULL; i += 1)
-    if 
   return morse_coding_table[ascii & 127]; }
 #endif
 #endif

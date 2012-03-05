@@ -1,0 +1,97 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require sdrkit::filter-complex-bandpass
+
+array set data {
+    server default
+    name bandpass
+    length 320
+    filter-length 15
+    low -5000.0
+    high 5000.0
+    min-low -20000
+    max-high 20000
+}
+
+proc set-high {v} {
+    $::data(name) configure -high $v
+    set ::data(high-label) [format %6.1f $v]
+}
+
+proc set-low {v} {
+    $::data(name) configure -low $v
+    set ::data(low-label) [format %6.1f $v]
+}
+
+proc set-length {args} {
+    if {[llength $args] == 1} {
+	set v [lindex $args 0]
+    } else {
+	set v $::data(filter-length)
+    }
+    $::data(name) configure -length $v
+    set ::data(filter-length-label) $v
+}
+
+proc shutdown {w} {
+    if {$w eq {.}} {
+	rename $::data(name) {}
+    }
+}
+
+proc main {argv} {
+    foreach {option value} $argv {
+	switch -- $option {
+	    -n - -name - --name { set ::data(name) $value }
+	    -s - -server - --server { set ::data(server) $value }
+	    -h - -high - --high { set ::data(high) $value }
+	    -l - -low - --low { set ::data(low) $value }
+	    -f - -filter-length - --filter-length { set ::data(filter-length) $value }
+	    default { error "unknown option \"$option\"" }
+	}
+    }
+
+    sdrkit::filter-complex-bandpass $::data(name)
+    wm title . $::data(name)
+    set-high $::data(high)
+    set-low $::data(low)
+    set-length $::data(filter-length)
+    set row 0
+    grid [ttk::label .low-l -textvar ::data(low-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .low-u -text Hz] -row $row -column 1
+    grid [ttk::scale .low-s -from $::data(min-low) -to $::data(max-high) -command set-low -variable ::data(low) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .high-l -textvar ::data(high-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .high-u -text Hz] -row $row -column 1
+    grid [ttk::scale .high-s -from $::data(min-low) -to $::data(max-high) -command set-high -variable ::data(high) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .length-l -textvar ::data(filter-length-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::spinbox .length-s -from 3 -to 127 -increment 2 -command set-length -textvariable ::data(filter-length)] -row $row -column 2 -sticky ew
+
+    grid columnconfigure . 2 -weight 100
+    bind . <Destroy> [list shutdown %W]
+}
+
+main $argv

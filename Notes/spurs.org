@@ -1,0 +1,5 @@
+* Spurs on my softrock
+* Are they subharmonics of the Si570 crystal?
+|          | std xtal | inferred xtal | inferred xtal2 |
+| harmonic |  114.285 |     114.76784 |      114.72788 |
+| 2        |          |               |                |

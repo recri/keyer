@@ -40,19 +40,18 @@ static void *bandpass_real(float lo, float hi, float sr, int size, float *coeff)
 static void *bandstop_real(float lo, float hi, float sr, int size, float *coeff) {
   return (void *)"real bandstop filter not implemented";
 }  
+
 static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) {
   return (void *)"real hilbert filter not implemented";
 }  
+
 /*
 ** a lowpass real filter is used to implement polyphase spectra
 */
 static void *lowpass_real(float cutoff, float sr, int size, float *coeff) {
-  if ((cutoff < 0.0) || (cutoff > (sr / 2.0)))
-    return (void *)"cutoff out of range";
-  if (size < 1)
-    return (void *)"size too small";
-  if ((size & 1) == 0)
-    return (void *)"size not odd";
+  if ((cutoff < 0.0) || (cutoff > (sr / 2.0))) return (void *)"cutoff out of range";
+  if (size < 1) return (void *)"size too small";
+  if ((size & 1) == 0) return (void *)"size not odd";
   float fc = cutoff / sr;
   int midpoint = (size >> 01) | 01;
   for (int i = 1; i <= size; i++) {
@@ -75,10 +74,8 @@ static void *highpass_real(float cutoff, float sr, int size, float *coeff) {
 static void *bandpass_complex(float lo, float hi, float sr, int size, float complex *coeff) {
   if ((lo < -(sr / 2.0)) || (hi > (sr / 2.0)) || (hi <= lo))
     return (void *)"lo frequency and/or hi frequency out of bounds";
-  if (size < 1)
-    return (void *)"size too small";
-  if ((size&1) == 0)
-    return (void *)"size not odd";
+  if (size < 1) return (void *)"size too small";
+  if ((size&1) == 0) return (void *)"size not odd";
 
   float fc;
   float ff;
@@ -102,14 +99,18 @@ static void *bandpass_complex(float lo, float hi, float sr, int size, float comp
 
 static void *bandstop_complex(float lo, float hi, float sr, int size, float complex *coeff) {
   return (void *)"complex bandstop filter not implemented";
-}  
+}
+  
 static void *hilbert_complex(float lo, float hi, float sr, int size, float complex *coeff) {
   return (void *)"complex hilbert filter not implemented";
-}  
+}
+  
 static void *lowpass_complex(float cutoff, float sr, int size, float complex *coeff) {
   return (void *)"complex lowpass filter not implemented";
 }
+
 static void *highpass_complex(float cutoff, float sr, int size, float complex *coeff) {
   return (void *)"complex highpass filter not implemented";
 }
+
 #endif
