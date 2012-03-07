@@ -27,7 +27,8 @@ package require sdrkit
 package require sdrkit::jack
 package require sdrkit::iq-correct
 package require sdrkit::lo-mixer
-package require sdrkit::filter-overlap-save
+#package require sdrkit::filter-overlap-save
+package require sdrkit::filter-complex-bandpass
 package require sdrkit::gain
 package require sdrkit::demod-am
 package require sdrkit::demod-fm
@@ -35,7 +36,7 @@ package require sdrkit::demod-sam
 
 #
 # an sdr as a pipeline
-# capture | iq-correct | lo-mixer | filter-overlap-save | gain | demod | playback
+# capture | iq-correct | lo-mixer | filter-complex-bandpass | gain | demod | playback
 # one or more spectrum/waterfall/meter displays that can be tapped into the pipeline
 # at any point.
 # noise reduction and additional filtering can be added at any point.
@@ -302,7 +303,9 @@ proc main {argv} {
     ## sdrkit::iq-balance iq-balance
     sdrkit::iq-correct iq-correct
     sdrkit::lo-mixer lo-mixer -freq 10000
-    sdrkit::filter-overlap-save ovsv
+    #sdrkit::filter-overlap-save ovsv
+    sdrkit::filter-complex-bandpass bpf
+    puts [bpf configure]
     sdrkit::gain gain
     sdrkit::demod-sam demod
     
@@ -364,10 +367,10 @@ proc main {argv} {
     sdrkit::jack connect iq-correct:out_q capture_spectrum_1:in_q
     sdrkit::jack connect iq-correct:out_i lo-mixer:in_i
     sdrkit::jack connect iq-correct:out_q lo-mixer:in_q
-    sdrkit::jack connect lo-mixer:out_i ovsv:in_i
-    sdrkit::jack connect lo-mixer:out_q ovsv:in_q
-    sdrkit::jack connect ovsv:out_i gain:in_i
-    sdrkit::jack connect ovsv:out_q gain:in_q
+    sdrkit::jack connect lo-mixer:out_i bpf:in_i
+    sdrkit::jack connect lo-mixer:out_q bpf:in_q
+    sdrkit::jack connect bpf:out_i gain:in_i
+    sdrkit::jack connect bpf:out_q gain:in_q
     sdrkit::jack connect gain:out_i demod:in_i
     sdrkit::jack connect gain:out_q demod:in_q
     sdrkit::jack connect demod:out_i audioadapter:playback_1

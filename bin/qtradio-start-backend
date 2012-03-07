@@ -19,6 +19,8 @@ LPRATE=48000			# loopback rate
 SHARE=""
 SI570="--si570"
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
+ADAPTER=1
+XFI=0
 
 case `hostname` in
     elf12) HWDEV=hw:2;;
@@ -27,6 +29,7 @@ esac
 
 for f in $*; do
     case $f in
+	--xfi) XFI=1; ADAPTER=0;;
 	--48k) HWRATE=48000;;
 	--96k) HWRATE=96000;;
 	--192k) HWRATE=192000;;
@@ -36,6 +39,7 @@ for f in $*; do
 	--hw:2) HWDEV=hw:2;;
 	--hw:3) HWDEV=hw:3;;
 	--si570) SI570=--si570;;
+	--noadapter) ADAPTER=no;;
 	*)
 	    echo "unknown argument: $f"
 	    exit 1
@@ -46,7 +50,13 @@ done
 ##
 ## plain old qtradio backend
 ##
-jackd -T -s -dalsa -C$HWDEV -P$HWDEV -r$HWRATE -p$HWBUFFER -n3 > $LOG-jackd.log 2>&1 &
+IHWDEV=$HWDEV
+OHWDEV=$HWDEV
+if [ $XFI -eq 1 ]; then
+    OHWDEV=$OBDEV
+fi
+
+jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 > $LOG-jackd.log 2>&1 &
 sleep 1
 nohup softrock --jack $SI570 --iq --samplerate $HWRATE > $LOG-softrock.log 2>&1 &
 sleep 1
@@ -61,9 +71,10 @@ nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
 ##
 ## actually, skip the tricky stuff, just connect to the onboard audio
 ##
-sleep 1
-jack_load audioadapter -i "-D -C$OBDEV,0 -P$OBDEV,1 -q 0 -r $OBRATE"
-
+if [ $ADAPTER -eq 1 ]; then
+    sleep 1
+    jack_load audioadapter -i "-D -C$OBDEV,0 -P$OBDEV,1 -q 0 -r $OBRATE"
+fi
 ##
 ## network manager to get midi controls
 ##

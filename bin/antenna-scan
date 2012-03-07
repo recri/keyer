@@ -30,28 +30,61 @@ package require Tk
 package require sdrkit::jack
 package require sdrkit::audio-tap
 
+array set levels {}
+array set data {}
+
+#
+# read one buffer of samples compute 10*log10(sum(squared-magnitude)/n)
+#
 proc get-levels {tap} {
-    after $::data(delay-ms)
     while {1} {
-	foreach {frame buffer} [$tap get] break
-	if {$frame == 0} break
-	set sum2 0
-	set n 0
-	binary scan $buffer f* samples
-	set buffer {}
-	foreach {i q} $samples {
-	    set sum2 [expr {$sum2+$i*$i+$q*$q}]
-	    incr n
-	}
+	# get the frame time and the binary buffer
+	lassign [$tap get] frame buffer
+	if {$frame != 0} break
+	# no data, yet, wait for a buffer
+	after $::data(buffer-delay-ms)
     }
-    if {$n != 0} {
-	return [expr {10*log10($sum2/$n)}]
-    } else {
-	return -1000
+    # convert the binary to a list of doubles
+    binary scan $buffer f* samples
+    # free the binary buffer
+    set buffer {}
+    # initialize the computation
+    set sum2 0
+    set n 0
+    foreach {i q} $samples {
+	set sum2 [expr {$sum2+$i*$i+$q*$q}]
+	incr n
     }
+    # convert to decibels
+    return [expr {10*log10($sum2/$n)}]
 }
 
-proc replot-levels {} {
+proc rescale-tag {w tag} {
+    set lo $::data(low-f)
+    set hi $::data(high-f)
+    set min $::data(low-dB)
+    set max $::data(high-dB)
+    set wd [winfo width $w]
+    set ht [winfo height $w]
+    $w move $tag [expr {-$lo}] [expr {-$max}]
+    $w scale $tag 0 0 [expr {$wd/double($hi-$lo)}] [expr {-$ht/double($max-$min)}]
+}
+
+#
+# show the frequency and decibel level the cursor is pointing to
+#
+proc show-freq {w x y} {
+    set lo $::data(low-f)
+    set hi $::data(high-f)
+    set min $::data(low-dB)
+    set max $::data(high-dB)
+    set wd [winfo width $w]
+    set ht [winfo height $w]
+    set ::data(cursorf) [format %6.3f [expr {double($lo)+$x/($wd/double($hi-$lo))}]]
+    set ::data(cursorl) [format %7.2f [expr {double($max)-$y/($ht/double($max-$min))}]]
+}
+
+proc replot-levels {w} {
     set xy {}
     foreach f [lsort -real -increasing [array names ::levels]] {
 	set l $::levels($f)
@@ -59,96 +92,221 @@ proc replot-levels {} {
 	lappend xy $f $l
     }
     if {[llength $xy] > 4} {
-	.c coords line $xy
-	.c move line [expr {-$::data(low-f)}] 0
-	.c scale line 0 0 [expr {[winfo width .c]/($::data(high-f)-$::data(low-f))}] [expr {-[winfo height .c]/160.0}]
+	$w coords line $xy
+	rescale-tag $w line
     } else {
-	.c coords line 0 0 0 0
+	$w coords line 0 0 0 0
     }
+    $w raise line
 }
 
-proc show-freq {w x y} {
-    set ::data(cursorf) [format %6.3f [expr {$::data(low-f)+$x/([winfo width .c]/($::data(high-f)-$::data(low-f)))}]]
+proc replot-grid {w} {
+    $w delete grid
+    set lo $::data(low-f)
+    set hi $::data(high-f)
+    set min $::data(low-dB)
+    set max $::data(high-dB)
+    set wd [winfo width $w]
+    set ht [winfo height $w]
+    set dark \#888
+    set med \#AAA
+    set light \#CCC
+    for {set l 0} {$l > -160} {incr l -20} {
+	# main db grid
+	if {$l >= $min && $l <= $max} {
+	    $w create line $lo $l $hi $l -fill $dark -tags grid
+	    $w create text $lo $l -text "$l dB" -anchor nw -fill $dark -tags grid
+	}
+	# sub grid
+	for {set ll [expr {$l-2}]} {$ll > $l-20} {incr ll -2} {
+	    if {$ll >= $min && $ll <= $max} {
+		$w create line $lo $ll $hi $ll -fill $med -tags grid
+	    }
+	}
+    }
+    for {set f 0} {$f < 30} {incr f 5} {
+	# main freq grid
+	if {$f >= $lo && $f <= $hi} {
+	    $w create line $f $max $f $min -fill $dark -tags grid
+	    $w create text $f $min -text "$f MHz" -anchor sw -fill $dark -tags grid
+	}
+	# sub grid
+	for {set ff [expr {$f+1}]} {$ff < $f+5} {incr ff 1} {
+	    if {$ff >= $lo && $ff <= $hi} {
+		$w create line $ff $max $ff $min -fill $med -tags grid
+		$w create line [expr {$ff-0.5}] $max [expr {$ff-0.5}] $min -fill $light -tags grid
+	    }
+	}
+	for {set ff $f} {$ff < $f+5} {incr ff 1} {
+	    if {$ff >= $lo && $ff <= $hi} {
+		$w create line [expr {$ff+0.5}] $max [expr {$ff+0.5}] $min -fill $light -tags grid
+	    }
+	}
+    }
+    rescale-tag $w grid
 }
 
-proc scan-freqs {low high step} {
+proc replot {w wd ht} {
+    replot-grid $w
+    replot-levels $w
+}
+
+#
+# scan from low to high by step collecting samples samples at each step
+#
+proc scan-freqs {low high step samples} {
     for {set f $low} {$f <= $high} {set f [expr {$f+$step}]} {
 	set ::data(freq) [format %6.3f $f]
 	exec usbsoftrock -a set freq $f >& /dev/null
-	for {set l [get-levels tap]} {$l < -200} {set l [get-levels tap]} {}
-	set ::data(level) [format %7.2f $l]
-	lappend ::levels($f) $l
+	# allow the buffering long enough to see the new frequency
+	after $::data(sampling-delay-ms)
+	set avgl 0.0 
+	for {set i 0} {$i < $samples} {incr i} {
+	    set l [get-levels tap]
+	    if {$l < -200} {
+		incr i -1
+		continue
+	    }
+	    # puts "avg $avgl $l"
+	    set avgl [expr {$avgl+$l/double($samples)}]
+	}
+	set ::data(level) [format %7.2f $avgl]
+	lappend ::levels($f) $avgl
 	# puts "$::data(freq) $::data(level)"
-	replot-levels
+	replot-levels .c
 	update
     }
 }
 
-proc find-scan-max {low high step} {
-    set maxf 0
-    set maxl -200
-    foreach {f level} [array get ::levels] {
-	set l [expr "([join $level +])/[llength $level]"]
-	if {$l > $maxl} {
-	    set maxl $l
-	    set maxf $f
-	}
+proc antenna-scan {w} {
+    incr ::data(n-scan)
+    $w configure -text scanning -state disabled
+    for {set j 0} {$j < $::data(loops)} {incr j} {
+	scan-freqs $::data(low-f) $::data(high-f) $::data(step-f) $::data(samples)
     }
-    return [list $maxf $maxl]
-}
-    
-proc scan {} {
-    array unset ::levels
-    set low $::data(low-f)
-    set high $::data(high-f)
-    set step $::data(step-f)
-    set span [expr {($::data(high-f)-$::data(low-f))/2.0}]
-    foreach i {1 2 3} {
-	set limits [list $low $high $step]
-	foreach j {1 2 3} {
-	    scan-freqs {*}$limits
-	    foreach {maxf maxl} [find-scan-max {*}$limits] break
-	    set ::data(maxf) [format %6.3f $maxf]
-	    set ::data(maxl) [format %7.2f $maxl]
-	}
-	set span [expr {$span/2.0}]
-	set step [expr {$step/2.0}]
-	set low [expr {$maxf-$span}]
-	set high [expr {$maxf+$span}]
-	if {$i == $::data(level)} break
-    }
+    $w configure -text rescan -state normal
 }
 
 proc main {argv} {
-    lassign {1.5 30.0 0.01 1} ::data(low-f) ::data(high-f) ::data(step-f) ::data(levels)
-    switch [llength $argv] {
-	4 { lassign $argv ::data(low-f) ::data(high-f) ::data(step-f) ::data(levels) }
-	3 { lassign $argv ::data(low-f) ::data(high-f) ::data(step-f) }
-	2 { lassign $argv ::data(low-f) ::data(high-f) }
-	1 { lassign $argv ::data(low-f) }
+    array set ::data {
+	low-f 1.5
+	high-f 30.0
+	step-f 0.01
+	low-dB -100
+	high-dB -50
+	loops 1
+	samples 20
     }
-    puts "$::data(low-f) $::data(high-f) $::data(step-f) $::data(levels)"
+    foreach {opt value} $argv {
+	switch -- $opt {
+	    --title {
+		# window title so screen snaps are identified
+		wm title . $value
+	    }
+	    --lo {
+		# low frequency for scan
+		set ::data(low-f) $value
+	    }
+	    --hi {
+		# high frequency for scan
+		set ::data(high-f) $value
+	    }
+	    --step {
+		# frequency step for scan
+		set ::data(step-f) $value
+	    }
+	    --samples {
+		# number of samples to average at each frequency
+		set ::data(samples) $value
+	    }
+	    --lo-dB {
+		# lowest level to display
+		set ::data(low-dB) $value
+	    }
+	    --hi-dB {
+		# highest level to display
+		set ::data(high-dB) $value
+	    }
+	    --loops {
+		# number of loops to perform
+		set ::data(loops) $value
+	    }
+	    default { error "unknown option: $opt" }
+	}
+    }
+    #
+    # get the jack sample rate
+    #
     set ::data(sample-rate) [sdrkit::jack sample-rate]
+    #
+    # configure the audio tap to maintain 2^3 buffers of 2^12 samples each
+    # with the IQ samples interleaved in complex format
+    # so each tap get will fetch 4096 audio samples
+    # from the least recently filled buffer of 8
+    #
     sdrkit::audio-tap tap -log2n 3 -log2size 12 -complex 1
-    set ::data(delay-ms) [expr {int(1000.0*pow(2,3)*pow(2,12)/$::data(sample-rate))}]
+    #
+    # the delay for one buffer to fill
+    #
+    set ::data(buffer-delay-ms) [expr {int(1000.0*pow(2,12)/$::data(sample-rate))}]
+    #
+    # the delay for all buffers to fill after changing frequency
+    #
+    set ::data(sampling-delay-ms) [expr {int(1000.0*pow(2,3)*pow(2,12)/$::data(sample-rate))}]
+    #
+    # connect the audio tap to the system capture device
+    #
     sdrkit::jack connect system:capture_1 tap:in_i
     sdrkit::jack connect system:capture_2 tap:in_q
+    #
+    # start the tap collecting samples
+    #
     tap start
+    #
+    # user interface
+    #
+
+    # suggested overall geometry
+    wm geometry . 1200x440
+    
+    # canvas for graphical display of spectrum
     pack [canvas .c] -side top -fill both -expand true
     .c create line 0 0 0 0 -fill black -tags line
     bind .c <Motion> [list show-freq .c %x %y]
+    bind .c <Configure> [list replot .c %w %h]
+
+    # frame for buttons and labels
     pack [ttk::frame .m] -side top -fill x
-    pack [ttk::button .m.s -text scan -command scan] -side left
-    pack [ttk::label .m.fl -text freq] -side left
+
+    # rescan button
+    pack [ttk::button .m.s -text scan -command [list antenna-scan .m.s]] -side left
+
+    # scan number
+    pack [ttk::label .m.sl -text { scan }] -side left
+    pack [ttk::label .m.sv -textvar ::data(n-scan)] -side left
+
+    # plan summary
+    pack [ttk::label .m.plan -textvar ::data(plan)] -side left
+    set ::data(plan)  [format { from %.3f MHz to %.3f MHz step %.3f MHz %d samples/step} $::data(low-f) $::data(high-f) $::data(step-f) $::data(samples)] 
+
+    # last computed frequency and level
+    pack [ttk::label .m.fl -text { at: }] -side left
     pack [ttk::label .m.fv -textvar ::data(freq)] -side left
-    pack [ttk::label .m.ll -text level] -side left
+    pack [ttk::label .m.fu -text { MHz }] -side left
+    pack [ttk::label .m.ll -text { level: }] -side left
     pack [ttk::label .m.lv -textvar ::data(level)] -side left
-    pack [ttk::label .m.mfl -text maxf] -side left
-    pack [ttk::label .m.mfv -textvar ::data(maxf)] -side left
-    pack [ttk::label .m.mll -text maxl] -side left
-    pack [ttk::label .m.mlv -textvar ::data(maxl)] -side left
-    pack [ttk::label .m.cfl -text cursor] -side left
+    pack [ttk::label .m.lu -text { dB }] -side left
+
+    # identify frequency and level under the cursor
+    pack [ttk::label .m.cfl -text { cursor: }] -side left
     pack [ttk::label .m.cfv -textvar ::data(cursorf)] -side left
+    pack [ttk::label .m.cfu -text { MHz }] -side left
+    pack [ttk::label .m.cll -text { and }] -side left
+    pack [ttk::label .m.clv -textvar ::data(cursorl)] -side left
+    pack [ttk::label .m.clu -textvar { dB }] -side left
+    
+    # start the first scan loop
+    antenna-scan .m.s
 }
 
 main $argv
