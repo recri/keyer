@@ -1,0 +1,31 @@
+* Pinout for ATTiny85 on Softrock
+
+| Pin | Id  | RX       | RXTX    | Color | Teensy | Teensy Pin |
+|   1 | PB5 | FL Sel 1 | TIP     |       | PF6    |         17 |
+|   2 | PB3 | SCL      | SCL     |       | PD0    |          5 |
+|   3 | PB4 | FL Sel 0 | /PTT    |       | PF7    |         16 |
+|   4 | GND | GND      | GND     |       | GND    |            |
+|   5 | PB0 | USB3     | USB3    |       | N/C    |          - |
+|   6 | PB1 | SDA      | SDA,RNG |       | PD1    |          6 |
+|   7 | PB2 | USB2     | USB2    |       | N/C    |          - |
+|   8 | VCC | VCC      | VCC     |       | VCC    |            |
+
+* Not Pinned Out, but maybe needed
+** RX - /QSD EN - detector enable
+** RXTX - extra LPF enable
+** RX - transmit - route LO through BPF 
+   and on to amplifier and LPF
+* Other Teensy Pins maybe of use, so don't preempt
+ | Teensy | Teensy Pin | Function |
+ |      0 | PB0        | SPI SS   |
+ |      1 | PB1        | SPI SCLK |
+ |      2 | PB2        | SPI MOSI |
+ |      3 | PB3        | SPI MISO |
+ |      7 | PD2        | RXD1     |
+ |      8 | PD3        | RXD1     |
+ |      4 | PB7        | PWM      |
+ |      9 | PC6        | PWM      |
+ |     10 | PC7        | PWM      |
+ |     12 | PA9        | PWM      |
+ |     14 | PA7        | PWM      |
+ |     15 | PA6        | PWM      |

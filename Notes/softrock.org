@@ -23,3 +23,5 @@ same length of antenna and height. I left it in permanently after
 testing, it did not effect the dipole usage.
 
 Roland, KB8XI 
+* Spurs from the Si570 from a conversation with a SiLabs engineer
+  http://groups.yahoo.com/group/softrock40/message/23885
