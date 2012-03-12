@@ -63,7 +63,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(dp->fw.client)),
+    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
     Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)),
     Tcl_NewDoubleObj(data->iqb.avg_net_dw2), Tcl_NewDoubleObj(data->iqb.avg_mag2_dw),
     NULL
