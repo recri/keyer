@@ -162,37 +162,41 @@ proc reset-ws {} {
     iq-correct reset
 }
 proc update-ws {} {
-    foreach {wi wq ndw2 m2dw} [iq-correct get] break
-    set t [sdrkit::jack frame-time]
-    set b [sdrkit::jack buffer-size]
+    set input [iq-correct get]; # t wi wq ndw2 m2dw 
+    lappend ::data(corrector-input) $input
     if {$wi != 0 || $wq != 0 } {
 	if {[catch {
 	    # puts "$wi $wq $ndw2 $m2dw"
 	    # puts "$ndw $mdw $mw"
 	    # update our list of filter weights
-	    lassign $::data(corrector-ws) wi1 wq1 wi2 wq2 wi3 wq3 wi4 wq4
-	    set ::data(corrector-ws) [list $wi $wq $wi1 $wq1 $wi2 $wq2 $wi3 $wq3]
-	    # construct the last delta
+	    lassign [lrange $::data(corrector-ws) 6 7] wi4 wq4
+	    set ::data(corrector-ws) [linsert [lrange $::data(corrector-ws) 0 5] 0 $wi $wq]
+	    # update our list of frame times
+	    set t4 [lindex $::data(corrector-t) 3]
+	    set ::data(corrector-t) [linsert [lrange $::data(corrector-t) 0 6] 0 $t]
 	    lassign $::data(corrector-t) t1 t2 t3 t4 t5 t6 t7 t8
-	    set ::data(corrector-t) [list $t $t1 $t2 $t3 $t4 $t5 $t6 $t7]
+	    # construct the last delta
 	    set dt1 [expr {$t-$t1}]
 	    set dwi0 [expr {($wi-$wi1)/$dt1}]
 	    set dwq0 [expr {($wq-$wq1)/$dt1}]
-	    # construct the overall delta
+	    # construct the delta over four steps
 	    set dt4 [expr {$t-$t4}]
-	    set dwi [expr {($wi-$wi4)/$dt4}]
-	    set dwq [expr {($wq-$wq4)/$dt4}]
-	    set len2 [expr {$dwi*$dwi+$dwq*$dwq}]
+	    set dwi4 [expr {($wi-$wi4)/$dt4}]
+	    set dwq4 [expr {($wq-$wq4)/$dt4}]
+	    set len2 [expr {$dwi4*$dwi4+$dwq4*$dwq4}]
 	    # update the dot signal
-	    incr ::data(corrector-kick) [expr {-[lindex $::data(corrector-dots) 0]}]
-	    set ::data(corrector-dots) [lrange $::data(corrector-dots) 1 end]
-	    set newdot [expr {$len2 > 0 && 0.7 <= (($dwi0*$dwi+$dwq0*$dwq)/$len2)}]
-	    incr ::data(corrector-kick) $newdot
+	    if {$len2 > 0} {
+		set newdot [expr {(($dwi0*$dwi4+$dwq0*$dwq4)/$len2)}]
+	    } else {
+		set newdot 0.0
+	    }
+	    set ::data(corrector-kick) [expr {$::data(corrector-kick)-[lindex $::data(corrector-dots) end]+$newdot}]
+	    set ::data(corrector-dots) [concat [list $newdot] [lrange $::data(corrector-dots) 0 end-1]
 	    lappend ::data(corrector-dots) $newdot
-	    set ::data(label-corrector-kick) $::data(corrector-kick)
+	    set ::data(label-corrector-kick) [format %.3f $::data(corrector-kick)]
 	    if {1} {
-		set ndw [expr {sqrt($ndw2)/$b}]
-		set mdw [expr {sqrt($m2dw)/$b}]
+		set ndw [expr {sqrt($ndw2)/$::data(buffer-size)}]
+		set mdw [expr {sqrt($m2dw)/$::data(buffer-size)}]
 		set mw [expr {sqrt($wi*$wi+$wq*$wq)}]
 		set ratio [expr {log10(1.0e-100+$ndw/$mdw)}]
 		set {abs-mag} [expr {log10(1.0e-100+$mdw)}]
@@ -386,6 +390,10 @@ proc main {argv} {
     sdrkit::jack connect iq-correct:out_q capture_spectrum_1:in_q
     sdrkit::jack connect iq-correct:out_i system:playback_1
     sdrkit::jack connect iq-correct:out_q system:playback_2
+    
+    set ::data(buffer-size) [sdrkit::jack buffer-size]
+    set ::data(sample-rate) [sdrkit::jack sample-rate]
+
     corrector-onoff
     update-ws
     bind . <Destroy> [list shutdown %W]

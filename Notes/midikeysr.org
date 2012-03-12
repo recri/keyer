@@ -1,14 +1,14 @@
 * Pinout for ATTiny85 on Softrock
 
 | Pin | Id  | RX       | RXTX    | Color | Teensy | Teensy Pin |
-|   1 | PB5 | FL Sel 1 | TIP     |       | PF6    |         17 |
-|   2 | PB3 | SCL      | SCL     |       | PD0    |          5 |
-|   3 | PB4 | FL Sel 0 | /PTT    |       | PF7    |         16 |
-|   4 | GND | GND      | GND     |       | GND    |            |
+|   1 | PB5 | FL Sel 1 | TIP     |  ORG? | PF6    |         17 |
+|   2 | PB3 | SCL      | SCL     |  WHT  | PD0    |          5 |
+|   3 | PB4 | FL Sel 0 | /PTT    |  YLW? | PF7    |         16 |
+|   4 | GND | GND      | GND     |  BLK  | GND    |            |
 |   5 | PB0 | USB3     | USB3    |       | N/C    |          - |
-|   6 | PB1 | SDA      | SDA,RNG |       | PD1    |          6 |
+|   6 | PB1 | SDA      | SDA,RNG |  GRN  | PD1    |          6 |
 |   7 | PB2 | USB2     | USB2    |       | N/C    |          - |
-|   8 | VCC | VCC      | VCC     |       | VCC    |            |
+|   8 | VCC | VCC      | VCC     |  RED  | VCC    |            |
 
 * Not Pinned Out, but maybe needed
 ** RX - /QSD EN - detector enable

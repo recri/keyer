@@ -1,3 +1,4 @@
+/* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
@@ -39,12 +40,12 @@
 
    Six of the pins are connected to the Teensy:
 
-   1 - PF6 pin 17 - paddle TIP - FL Sel 1
-   2 - PD0 pin 5 - SCL
-   3 - PF7 pin 16 - /PTT - FL Sel 0
+   1 - F6 pin 17 - paddle TIP - FL Sel 1
+   2 - D0 pin 5 - SCL
+   3 - F7 pin 16 - /PTT - FL Sel 0
    4 - GND 
    5 - 
-   6 - PD1 pin 6 - SDA, paddle RING - 
+   6 - D1 pin 6 - SDA, paddle RING - 
    7 -
    8 - VCC +5V
 
@@ -63,31 +64,38 @@
 device_type_t device= no_device;
 
 // the MIDI channel used for transferring MIDI note_on/off events
-const int channel = 1;		// the MIDI channel number
-const int base_note = 0;	// the base midi note
+const uint8_t channel = 1;	// the MIDI channel number
+const uint8_t base_note = 0;	// the base midi note
 
 // common assignments
-const int sclPin = 5;		// I2C clock pin, is D0
-const int sdaPin = 6;		// I2C data pin, is D1
+const uint8_t sclPin = 5;	// I2C clock pin, is D0
+const uint8_t sdaPin = 6;	// I2C data pin, is D1
 
 // RXTX assignments
-const int dahPin = 6;		// the dah pin number, is D1
-const int ditPin = 7;		// the dit pin number, is D2
-const int pttPin = 8;		// /ptt on D3
+const uint8_t dahPin = 6;	// the dah pin number, is D1
+const uint8_t ditPin = 17;	// the dit pin number, is F6
+const uint8_t pttPin = 16;	// /ptt on F7
 
 // RX assignments
-const int fl1Pin = 7;		// FL SEL 1 on D2
-const int fl0Pin = 8;		// FL SEL 0 on D3
+const uint8_t fl1Pin = 17;	// FL SEL 1 on F6
+const uint8_t fl0Pin = 16;	// FL SEL 0 on F7
 
-const int readPeriod = 100;	// usec between pin samples
-byte dit;			// the current dit value
-byte dah;			// the current dah value
+const uint8_t readPeriod = 100;	// usec between pin samples
+uint8_t dit;			// the current dit value
+uint8_t dah;			// the current dah value
 
 //===================================================================
 //	MC9S08QG8 IIC Subroutines	3/1/2008
 //	Written by John H. Fisher - K5JHF
 //===================================================================
-char i2c_read(char slave_address, char reg_address) {
+void i2c_put(uint8_t slave_address, uint8_t reg_address, uint8_t data) {
+  Wire.beginTransmission(slave_address);
+  Wire.send(reg_address);
+  Wire.send(data);
+  Wire.endTransmission();
+}
+
+uint8_t i2c_get(uint8_t slave_address, uint8_t reg_address) {
   Wire.beginTransmission(slave_address);
   Wire.send(reg_address);
   Wire.endTransmission();
@@ -95,17 +103,26 @@ char i2c_read(char slave_address, char reg_address) {
   return  Wire.receive();
 }
 
-void i2c_write(char slave_address, char reg_address, char data) {
+void i2c_write(uint8_t slave_address, uint8_t nbytes, uint8_t *bytes) {
   Wire.beginTransmission(slave_address);
-  Wire.send(reg_address);
-  Wire.send(data);
+  for (uint8_t i = 0; i < nbytes; i += 1) Wire.send(bytes[i]);
   Wire.endTransmission();
 }
 
-void i2c_write_N(char slave_address, char reg_address, unsigned char write_data[], char N ) {
-  char	i;
+void i2c_read(uint8_t slave_address, uint8_t nbytes, uint8_t *bytes) {
+  for (uint8_t i = 0; i < nbytes; i += 1) bytes[i] = i2c_get(slave_address, bytes[i]);
 }
 
+uint8_t i2c_probe(uint8_t slave_address) {
+  Wire.beginTransmission(slave_address);
+  Wire.send(slave_address);
+  Wire.send(0);
+  return Wire.endTransmission(); // 0 success, 1 too many bytes, 2 NACK on address, 3 NACK on transmission
+}
+  
+/*
+** device specific set up
+*/
 // setup pins for rxtx
 void setup_rxtx() {
   pinMode(ditPin, INPUT_PULLUP);
@@ -124,6 +141,51 @@ void setup_rx() {
   digitalWrite(fl1Pin, LOW);
 }
 
+uint8_t device_init(device_type_t dev) {
+  switch (dev) {
+  case no_device:
+    device = dev;
+    return 1;
+  case rx_device:
+    setup_rx();
+    device = dev;
+    return 1;
+  case rxtx_device:
+    setup_rxtx();
+    device = dev;
+    return 1;
+  default:
+    return 0;
+  }
+}
+
+/*
+** sysex decoding and encoding
+** MIDI only allows 7 bit characters in messages
+*/
+void sysExDecode(uint8_t nbytes, uint8_t *ibytes, uint8_t *obytes) {
+  for (uint8_t i = 0; i < nbytes; i += 2) {
+    *obytes = (*ibytes++ - 'a');
+    *obytes <<= 4;
+    *obytes++ |= (*ibytes++ - 'a');
+  }
+}
+
+void sysExEncode(uint8_t nbytes, uint8_t *ibytes, uint8_t *obytes) {
+  for (uint8_t i = 0; i < nbytes; i += 1) {
+    *obytes++ = 'a'+((*ibytes>>4)&0xf);
+    *obytes++ = 'a'+(*ibytes++&0xf);
+  }
+  *obytes = 0;
+}
+
+void sysExEncodeString(char *ibytes, uint8_t *obytes) {
+  sysExEncode(strlen(ibytes), (uint8_t *)ibytes, obytes);
+}
+
+/*
+** midi event handling
+*/
 // handle incoming note off messages
 void handleNoteOff(uint8_t note, uint8_t velocity) {
   switch (note) {
@@ -149,59 +211,85 @@ void handleNoteOn(uint8_t note, uint8_t velocity) {
 }
 
 // handle incoming system exclusive messages
-void handleSysEx(uint8_t nbytes, uint8_t *bytes) {
-  if (nbytes & 1) {
-    const static unsigned char msg[] = "}!odd length sysex";
-    usbMIDI.sendSysex(sizeof(msg), msg);
-  } else if (nbytes < 6) {
-    const static unsigned char msg[] = "}!short sysex";
-    usbMIDI.sendSysex(sizeof(msg), msg);
-  } else if (bytes[0] != MIDI_SYSEX_VENDOR) {
-    const static unsigned char msg[] = "}!unknown vendor";
-    usbMIDI.sendSysex(sizeof(msg), msg);
-  } else if (bytes[1] != '!') {
-    const static unsigned char msg[] = "}!unknown prefix";
-    usbMIDI.sendSysex(sizeof(msg), msg);
+void handleSysEx(uint8_t n, uint8_t *ibuff) {
+  uint8_t obuff[MAX_SYSEX+4];
+  obuff[0] = MIDI_SYSEX;	// start SysEx output wrapper
+  obuff[1] = MIDI_SYSEX_VENDOR;	// start SysEx vendor
+  obuff[2] = '!';		// start SysEx prefix
+  ibuff += 1;			// skip SysEx wrapper
+  n -= 2;			// skip SysEx wrapper
+  if (n & 1) {
+    sysExEncodeString("odd?", obuff+3);	// 
+  } else if (n < 2) {
+    sysExEncodeString("short?", obuff+3); // 
+  } else if (n > MAX_SYSEX) {
+    sysExEncodeString("long?", obuff+3); // 
+  } else if (ibuff[0] != MIDI_SYSEX_VENDOR) {
+    sysExEncodeString("vendor?", obuff+3); // 
+  } else if (ibuff[1] != '!') {
+    sysExEncodeString("prefix?", obuff+3); // 
+  } else if (n == 2) {
+    sysExEncodeString("00.00", obuff+3); // identify version
+  } else if (n < 6) {
+    sysExEncodeString("short?", obuff+3); // 
   } else {
-    // convert from nibbles to bytes
-    bytes += 2;
-    nbytes -= 2;
-    for (int i = 0, j = 0; i < nbytes; i += 2, j += 1)
-      bytes[j] = ((bytes[i]-'0')<<4) | (bytes[i+1]-'0');
-    nbytes /= 2;
-    switch (bytes[0]) {
-    default: {
-      const static uint8_t msg[] = "}!unimplemented operation"; 
-      usbMIDI.sendSysex(sizeof(msg), msg);
+    // convert from nibbles to bytes in place
+    sysExDecode(n-2, ibuff+2, ibuff);
+    n = (n-2)/2;
+    switch (ibuff[0]) {
+    case MIDIKEYSR_SET_DEVICE:
+      if (n != 2)
+        sysExEncodeString("short?", obuff+3);
+      else if (device_init((device_type_t)ibuff[1]))
+	sysExEncodeString("ok", obuff+3);
+      else
+	sysExEncodeString("device?", obuff+3);
       break;
-    }
-    //case MIDIKEYSR_I2C_SCAN: /* scan i2c bus for actives, return bit map */
-    //break;
+    case MIDIKEYSR_I2C_PROBE: /* probe i2c address */
+      if (n != 2)
+        sysExEncodeString("short?", obuff+3);
+      else switch (i2c_probe(ibuff[1])) {
+        case 0: sysExEncodeString("ok", obuff+3); break;
+        case 2: sysExEncodeString("nak", obuff+3); break;
+        case 3: sysExEncodeString("nak", obuff+3); break;
+        case 4: sysExEncodeString("err", obuff+3); break;
+        default: sysExEncodeString("unk", obuff+3); break;
+      }
+      break;
     case MIDIKEYSR_I2C_SEND: /* send i2c address, value, ... */
-      Wire.beginTransmission(bytes[1]);
-      for (int i = 2; i < nbytes; i += 1) Wire.send(bytes[i]);
-      Wire.endTransmission();
+      i2c_write(ibuff[1], n-2, ibuff+2);
+      sysExEncodeString("ok", obuff+3);
       break;
     case MIDIKEYSR_I2C_RECV: /* recv i2c address, register, ... */
-      for (i = 2, i < nbytes; i += 1) bytes[i] = i2c_read(bytes[1], bytes[i]);
-      replySysEx(nbytes-2, &bytes[2]);
+      i2c_read(ibuff[1], n-2, ibuff+2);
+      sysExEncode(n-2, ibuff+2, obuff+3);
       break;
     case MIDIKEYSR_SI570_FREEZE_DCO:
-      i2c_write(0x55, 137, i2c_read ( 0x55, 137 ) | 0x10 );
+      i2c_put(0x55, 137, i2c_get(0x55, 137) | 0x10);
+      sysExEncodeString("ok", obuff+3);
       break;
     case MIDIKEYSR_SI570_UNFREEZE_DCO: /*  */
-      i2c_write(0x55, 137, i2c_read ( 0x55, 137 ) & ~0x10 );
+      i2c_put(0x55, 137, i2c_get(0x55, 137) & ~0x10);
+      sysExEncodeString("ok", obuff+3);
       break;
     case MIDIKEYSR_SI570_NEW_FREQ: /*  */
-      i2c_write( 0x55, 135, i2c_read ( 0x55, 135 ) | 0x40 );
-      while (  i2c_read ( 0x55, 135 ) & 0x40 );
+      i2c_put(0x55, 135, i2c_get(0x55, 135) | 0x40);
+      while (i2c_get(0x55, 135) & 0x40);
+      sysExEncodeString("ok", obuff+3);
       break;
     case MIDIKEYER_SI570_RECALL_F0: /*  */
-      i2c_write ( 0x55, 135, i2c_read ( 0x55, 135 ) | 0x01 );
-      while (  i2c_read ( 0x55, 135 ) & 0x01 );
+      i2c_put(0x55, 135, i2c_get(0x55, 135) | 0x01);
+      while (i2c_get(0x55, 135) & 0x01);
+      sysExEncodeString("ok", obuff+3);
+      break;
+    default:
+      sysExEncodeString("op?", obuff+3);
       break;
     }
   }
+  n = strlen((char *)obuff);
+  obuff[n++] = MIDI_SYSEX_END;
+  usbMIDI.sendSysEx(n, obuff);
 }
 
 // handle input pin change dispatching
@@ -228,13 +316,14 @@ void handleInputs() {
 
 // setup
 void setup() {
+  Wire.begin();
 }
 
 // loop until done
 void loop() {
   // dispatch incoming MIDI messages
   if (usbMIDI.read(channel)) {
-    switch usbMIDI.getType() {
+    switch (usbMIDI.getType()) {
       case 0: handleNoteOff(usbMIDI.getData1(), usbMIDI.getData2()); break;
       case 1: handleNoteOn(usbMIDI.getData1(), usbMIDI.getData2()); break;
       case 7: handleSysEx(usbMIDI.getData1(), usbMIDI.getSysExArray()); break;

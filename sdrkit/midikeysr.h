@@ -26,28 +26,26 @@ extern "C"
 /*
 ** MidiKeySR SysExcommands
 ** prefixed by sysex vendor 0x7D, educational '}'
-** and by '!' to indicate our flavor of commands
-** encoded as nibbles using
-** ascii '0','1','2','3','4','5','6','7','8','9',':',';','<','=','>', and '?'
-** to encode 0 .. 15
-** packed back into byte values, first byte is command, remainder are parameters.
+** and by '!' to indicate encoded as nibbles using ascii 'a' .. 'p' to encode 0 .. 15
+** or by '"' to indicate literal text commands
 */
-#define MIDIKEYSR_I2C_SCAN		0 /* scan i2c bus for actives, return bit map */
-#define MIDIKEYSR_I2C_SEND		1 /* send i2c address, value, ... */
-#define MIDIKEYSR_I2C_RECV		2 /* recv i2c address, nbytes */
-#define MIDIKEYSR_SI570_FREEZE_DCO	3 /*  */
-#define MIDIKEYSR_SI570_UNFREEZE_DCO	4 /*  */
-#define MIDIKEYSR_SI570_SET_REGS	5 /*  */
-#define MIDIKEYSR_SI570_GET_REGS	6 /*  */
-#define MIDIKEYSR_SI570_NEW_FREQ	7 /*  */
-#define MIDIKEYER_SI570_RECALL_F0	8 /*  */
+#define MIDIKEYSR_SET_DEVICE		0 /* device_type_t value */
+#define MIDIKEYSR_I2C_PROBE		1 /* probe i2c address */
+#define MIDIKEYSR_I2C_SEND		2 /* send i2c address, value, ... */
+#define MIDIKEYSR_I2C_RECV		3 /* recv i2c address, from_value, ... */
+#define MIDIKEYSR_SI570_FREEZE_DCO	4 /*  */
+#define MIDIKEYSR_SI570_UNFREEZE_DCO	5 /*  */
+#define MIDIKEYSR_SI570_NEW_FREQ	6 /*  */
+#define MIDIKEYER_SI570_RECALL_F0	7 /*  */
+
+#define MAX_SYSEX	32		  /* maximum size of sysex, including }! prefix */
 
 // device identification, comes through MIDI
 typedef enum {
   no_device = 0,
   rx_device = 1,
   rxtx_device = 2
-} device_type_t
+} device_type_t;
 
 #ifdef __cplusplus
 }
