@@ -81,7 +81,7 @@ namespace eval ::meters {}
 ##
 proc ::meters::update {w} {
     upvar #0 ::meters::$w data
-    foreach {wi wq ndw2 m2d2} [iq-correct get] break
+    foreach {t wi wq ndw2 m2d2} [iq-correct get] break
     if {abs($wi) > 1e-12 && abs($wq) > 1e-12} {
 	set xy {}
 	foreach {t ct st} $data(theta-cos-sin) {

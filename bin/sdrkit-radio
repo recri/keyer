@@ -71,6 +71,7 @@ array set data {
     corrector-t {0 0 0 0 0 0 0 0}
     corrector-ws {0 0 0 0 0 0 0 0}
     corrector-dots {0 0 0 0 0 0 0 0}
+    corrector-n-kick 0
     corrector-kick 0
     corrector-kick-up 6 corrector-kick-down 2
     corrector-state idle
@@ -85,7 +86,7 @@ namespace eval ::meters {}
 ##
 proc ::meters::update {w} {
     upvar #0 ::meters::$w data
-    foreach {wi wq ndw2 m2d2} [iq-correct get] break
+    foreach {t wi wq ndw2 m2d2} [iq-correct get] break
     if {abs($wi) > 1e-12 && abs($wq) > 1e-12} {
 	set xy {}
 	foreach {t ct st} $data(theta-cos-sin) {
@@ -166,56 +167,103 @@ proc less-mu {} {
 proc reset-ws {} {
     iq-correct reset
 }
+proc ws-progress-vector {i0 i1} {
+    lassign $i0 t0 wi0 wq0 ndw20 m2dw0
+    lassign $i1 t1 wi1 wq1 ndw21 m2dw1
+    # construct the delta over one step
+    set dt01 [expr {$t0-$t1}]
+    return [list [expr {($wi0-$wi1)/$dt01}] [expr {($wq0-$wq1)/$dt01}]]
+}
+proc ws-reset-kick {} {
+    set ::data(n-corrector-kick) 0
+    set ::data(corrector-kick) 0.0
+    set ::data(label-corrector-kick) [format %.3f $::data(corrector-kick)]
+}
+proc ws-less-mu {} {
+    less-mu
+    ws-reset-kick
+}
+proc ws-more-mu {} {
+    more-mu
+    ws-reset-kick
+}
 proc update-ws {} {
-    foreach {wi wq ndw2 m2dw} [iq-correct get] break
-    set t [sdrkit::jack frame-time]
-    set b [sdrkit::jack buffer-size]
-    if {$wi != 0 || $wq != 0 } {
-	if {[catch {
-	    # puts "$wi $wq $ndw2 $m2dw"
-	    # puts "$ndw $mdw $mw"
-	    # update our list of filter weights
-	    lassign $::data(corrector-ws) wi1 wq1 wi2 wq2 wi3 wq3 wi4 wq4
-	    set ::data(corrector-ws) [list $wi $wq $wi1 $wq1 $wi2 $wq2 $wi3 $wq3]
-	    # construct the last delta
-	    lassign $::data(corrector-t) t1 t2 t3 t4 t5 t6 t7 t8
-	    set ::data(corrector-t) [list $t $t1 $t2 $t3 $t4 $t5 $t6 $t7]
-	    set dt1 [expr {$t-$t1}]
-	    set dwi0 [expr {($wi-$wi1)/$dt1}]
-	    set dwq0 [expr {($wq-$wq1)/$dt1}]
-	    # construct the overall delta
-	    set dt4 [expr {$t-$t4}]
-	    set dwi [expr {($wi-$wi4)/$dt4}]
-	    set dwq [expr {($wq-$wq4)/$dt4}]
-	    set len2 [expr {$dwi*$dwi+$dwq*$dwq}]
-	    # update the dot signal
-	    incr ::data(corrector-kick) [expr {-[lindex $::data(corrector-dots) 0]}]
-	    set ::data(corrector-dots) [lrange $::data(corrector-dots) 1 end]
-	    set newdot [expr {$len2 > 0 && 0.7 <= (($dwi0*$dwi+$dwq0*$dwq)/$len2)}]
-	    incr ::data(corrector-kick) $newdot
-	    lappend ::data(corrector-dots) $newdot
-	    set ::data(label-corrector-kick) $::data(corrector-kick)
-	    if {1} {
-		set ndw [expr {sqrt($ndw2)/$b}]
-		set mdw [expr {sqrt($m2dw)/$b}]
-		set mw [expr {sqrt($wi*$wi+$wq*$wq)}]
-		set ratio [expr {log10(1.0e-100+$ndw/$mdw)}]
-		set {abs-mag} [expr {log10(1.0e-100+$mdw)}]
-		set {rel-mag} [expr {log10(1.0e-100+$mdw/$mw)}]
-	    } else {
-		set mw2 [expr {$wi*$wi+$wq*$wq}]
-		set ratio [expr {log10(1.0e-100+$ndw2/$m2dw)}]
-		set {abs-mag} [expr {log10(1.0e-100+$m2dw)}]
-		set {rel-mag} [expr {log10(1.0e-100+$m2dw/$mw2)}]
+    # get the current value
+    set input0 [iq-correct get]; # t wi wq ndw2 m2dw 
+    # append to the list of values
+    lappend ::data(corrector-input) $input0
+    # extract the current values
+    lassign $input0 t0 wi0 wq0 ndw20 m2dw0
+    # count this step
+    incr ::data(corrector-n-inputs)
+    # compute the absolute and relative magnitudes of steps
+    if {1} {
+	set ndw [expr {sqrt($ndw20)/$::data(buffer-size)}]
+	set mdw [expr {sqrt($m2dw0)/$::data(buffer-size)}]
+	set mw2 [expr {$wi0*$wi0+$wq0*$wq0}]
+	set mw [expr {sqrt($wi0*$wi0+$wq0*$wq0)}]
+	if {$mdw != 0} {
+	    set ::data(corrector-ratio) [expr {log10(1.0e-100+$ndw/$mdw)}]
+	} else {
+	    set ::data(corrector-ratio) 0.0
+	}
+	set ::data(corrector-abs-mag) [expr {log10(1.0e-100+$mdw)}]
+	if {$mw2 != 0} {
+	    set ::data(corrector-rel-mag) [expr {log10(1.0e-100+$mdw/$mw)}]
+	} else {
+	    set ::data(corrector-rel-mag) [expr {log10(1.0e-100+$mdw)}]
+	}
+    } else {
+	set mw2 [expr {$wi0*$wi0+$wq0*$wq0}]
+	set ::data(corrector-ratio) [expr {log10(1.0e-100+$ndw20/$m2dw0)}]
+	set ::data(corrector-abs-mag) [expr {log10(1.0e-100+$m2dw0)}]
+	if {$mw2 != 0} {
+	    set ::data(corrector-rel-mag) [expr {log10(1.0e-100+$m2dw0/$mw2)}]
+	} else {
+	    set ::data(corrector-rel-mag) [expr {log10(1.0e-100+$m2dw0)}]
+	}
+    }
+    # make labels
+    foreach v {ratio abs-mag rel-mag} {
+	set ::data(label-corrector-$v) [format %.2f $::data(corrector-$v)]
+    }
+    foreach v {wi wq ndw2 m2dw} {
+	set ::data(corrector-$v) [expr {($::data(corrector-$v)*7+[set "${v}0"])/8.0}]
+	set ::data(label-corrector-$v) [format %.10g $::data(corrector-$v)]
+    }
+    if {$::data(corrector-on)} {
+	# enforce bounds
+	if {$::data(corrector-abs-mag) > $::data(corrector-abs-mag-max)} {
+	    ws-less-mu
+	} elseif {$::data(corrector-rel-mag) < $::data(corrector-rel-mag-min)} {
+	    ws-more-mu
+	} 
+	# compute progress metric
+	# running average of dot products between overlapping progress vectors
+	if {[llength $::data(corrector-input)] > 3} {
+	    if {[catch {
+		# puts "$wi $wq $ndw2 $m2dw"
+		# puts "$ndw $mdw $mw"
+		# update our list of filter weights
+		lassign [lrange $::data(corrector-input) end-3 end-1] input3 input2 input1
+		lassign [ws-progress-vector $input3 $input1] dwi31 dwq31
+		lassign [ws-progress-vector $input2 $input0] dwi20 dwq20
+		# normalization
+		set len2 [expr {$dwi20*$dwi20+$dwq20*$dwq20}]
+		# update the dot signal
+		if {$len2 > 0} {
+		    set newdot [expr {($dwi31*$dwi20+$dwq31*$dwq20)/$len2}]
+		} else {
+		    set newdot 0.0
+		}
+		incr ::data(n-corrector-kick)
+		set ::data(corrector-kick) [expr {($::data(corrector-kick)*7+$newdot)/8.0}]
+		set ::data(label-corrector-kick) [format %.3f $::data(corrector-kick)]
+	    } error]} {
+		puts "$error: $::errorInfo"
+		if {$::data(corrector-on)} corrector-onoff
 	    }
-	    foreach v {ratio abs-mag rel-mag} {
-		set ::data(corrector-$v) [set $v]
-		set ::data(label-corrector-$v) [format %.2f $::data(corrector-$v)]
-	    }
-	    foreach v {wi wq ndw2 m2dw} {
-		set ::data(corrector-$v) [expr {($::data(corrector-$v)+[set $v])/2}]
-		set ::data(label-corrector-$v) [format %.10g $::data(corrector-$v)]
-	    }
+	    
 	    # the problem with the kick reading is that the very next kick reading
 	    # is going to share 7 readings with the previous reading
 	    switch $::data(corrector-state) {
@@ -224,45 +272,40 @@ proc update-ws {} {
 		    ## we need to maintain a level of mu that allows the kick to be seen
 		    ## so filter coefficients cannot be frozen, then need to be turning over
 		    ## this might introduce some phase noise
-		    if {$::data(corrector-kick) > $::data(corrector-kick-up)} {
+		    if {$::data(corrector-n-kick) > 8 && $::data(corrector-kick) > 0.75} {
 			set ::data(corrector-state) converge
-			more-mu
-		    } elseif {$::data(corrector-rel-mag) < $::data(corrector-rel-mag-min)} {
-			more-mu
+			ws-more-mu
 		    } elseif {$::data(corrector-rel-mag) > $::data(corrector-rel-mag-max)} {
-			less-mu
+			ws-less-mu
 		    }
-
 		}
 		converge {
 		    ## in converge state we look a decay in the kick signal to shift to relax
 		    ## mu is large, so we need to observe the level of the error signal
 		    ## and adjust to keep the filter from going into oscillation or chaos
-		    if {$::data(corrector-abs-mag) > $::data(corrector-abs-mag-max)} {
-			less-mu
-		    } elseif {$::data(corrector-rel-mag) < $::data(corrector-rel-mag-max)} {
+		    if {$::data(corrector-rel-mag) < $::data(corrector-rel-mag-max)} {
 			set ::data(corrector-state) idle
-		    } elseif {$::data(corrector-kick) < $::data(corrector-kick-down)} {
-			less-mu
-		    } elseif {$::data(corrector-kick) > $::data(corrector-kick-up)} {
-			more-mu
+		    } elseif {$::data(corrector-n-kick) > 8} {
+			if {$::data(corrector-kick) < 0.5} {
+			    ws-less-mu
+			} elseif {$::data(corrector-kick) > 0.75} {
+			    ws-more-mu
+			}
 		    }
 		}
 	    }
 	    set ::data(label-corrector-state) $::data(corrector-state)
-	} error]} {
-	    puts "$error: $::errorInfo"
-	    if {$::data(corrector-on)} corrector-onoff
+	    set ::data(corrector-input) [lrange $::data(corrector-input) 1 end]
 	}
     }
     after 20 [list update-ws]
 }
-
+    
 proc corrector-onoff {} {
     if {$::data(corrector-on)} {
 	#puts "iq-correct reset to -mu $::data(corrector-mu)"
 	iq-correct reset
-	iq-correct configure -mu 1
+	iq-correct configure -mu [expr {1.0/128.0}]
     } else {
 	#puts "iq-correct muted to 0"
 	iq-correct configure -mu 0
@@ -295,7 +338,7 @@ proc main {argv} {
 	    default { error "unknown option \"$option\"" }
 	}
     }
-
+    
     ## sdrkit::oscillator osc
     ## sdrkit::oscillator-zd osc
     ## sdrkit::noise noise
@@ -305,12 +348,12 @@ proc main {argv} {
     sdrkit::lo-mixer lo-mixer -freq 10000
     #sdrkit::filter-overlap-save ovsv
     sdrkit::filter-complex-bandpass bpf
-    puts [bpf configure]
+    #puts [bpf configure]
     sdrkit::gain gain
     sdrkit::demod-sam demod
     
     wm title . sdrkit:radio
-
+    
     set row 0
     grid [ttk::frame .menu] -row $row -column 0 -columnspan 6 -sticky ew
     incr row
@@ -353,14 +396,14 @@ proc main {argv} {
     pack [ttk::button .blk$row.less-mu -text {More mu} -command [list more-mu]] -side left
     pack [ttk::button .blk$row.reset-ws -text {Reset wi/wq} -command [list reset-ws]] -side left
     incr row
-
+    
     set row $startrow
     grid [meters .blk2$row] -row $row -column 3 -columnspan 3 -rowspan 10
     ::meters::update .blk2$row
     grid columnconfigure . 2 -weight 100
     grid columnconfigure . 5 -weight 100
     grid rowconfigure . 0 -weight 100
-
+    
     sdrkit::jack connect system:capture_1 iq-correct:in_q
     sdrkit::jack connect system:capture_2 iq-correct:in_i
     sdrkit::jack connect iq-correct:out_i capture_spectrum_1:in_i
@@ -375,6 +418,10 @@ proc main {argv} {
     sdrkit::jack connect gain:out_q demod:in_q
     sdrkit::jack connect demod:out_i audioadapter:playback_1
     sdrkit::jack connect demod:out_q audioadapter:playback_2
+    
+    set ::data(buffer-size) [sdrkit::jack buffer-size]
+    set ::data(sample-rate) [sdrkit::jack sample-rate]
+    
     corrector-onoff
     update-ws
     bind . <Destroy> [list shutdown %W]
