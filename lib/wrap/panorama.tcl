@@ -61,12 +61,22 @@ proc ::panorama::configure {w args} {
 		set data($option) $value
 	    }
 	    -min -
-	    -max -
+	    -max {
+		::spectrum::configure $w.s $option $value
+		::waterfall::configure $w.w $option $value
+		set data($option) $value
+	    }
 	    -pal {
 		::waterfall::configure $w.w $option $value
+		set data($option) $value
 	    }
-	    
-	    default { set data($option) $value 	}
+	    -center {
+		::frequency::configure $w.f -lo1-offset $value
+		set data($option) $value
+	    }
+	    default {
+		set data($option) $value
+	    }
 	}
     }
 }
@@ -88,6 +98,7 @@ proc ::panorama::window-configure {w cw width height} {
 proc ::panorama::window-destroy {w cw} {
     if {$w ne $cw} return
     upvar #0 ::panorama::$w data
+    ::capture::stop $w
     ::capture::destroy $w
     ::waterfall::destroy $w.w
     ::spectrum::destroy $w.s
@@ -109,6 +120,7 @@ proc ::panorama::panorama {w args} {
     #rename $w ::panorama::$w
     #proc $w {args} [list return [list panorama::command $w \$args]]
     ::capture::spectrum $w -period $data(-period) -size $data(-size) -client ::panorama::update
+    ::panorama::configure $w {*}[array get data]
     ::capture::start $w
     bind . <Configure> [list ::panorama::window-configure $w %W %w %h]
     bind . <Destroy> [list ::panorama::window-destroy $w %W]

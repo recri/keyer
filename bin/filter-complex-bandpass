@@ -27,22 +27,42 @@ package require sdrkit::filter-complex-bandpass
 array set data {
     server default
     name bandpass
-    length 320
+    length 100
     filter-length 15
-    low -5000.0
-    high 5000.0
-    min-low -20000
-    max-high 20000
+    center 0.0
+    min-center -10000
+    max-center  10000
+    width 10000.0
+    min-width 20
+    max-width 25000
 }
 
-proc set-high {v} {
-    $::data(name) configure -high $v
-    set ::data(high-label) [format %6.1f $v]
+proc draw-filter {w width center length} {
+    if { ! [winfo exists $w]} return
+    set wd [winfo width $w]
+    set ht [winfo height $w]
+    set f0 [expr {0.5+(($center/32000.0)*0.5)}]
+    set lo [expr {$f0-(($width/(2*32000.0))*0.5)}]
+    set hi [expr {$f0+(($width/(2*32000.0))*0.5)}]
+    catch {$w delete all}
+    $w create line 0.5 0.0 0.5 1.0 -fill grey
+    $w create line $lo 1.0 $lo 0.2 $hi 0.2 $hi 1.0 -fill black
+    $w scale all 0 0 $wd $ht
 }
 
-proc set-low {v} {
-    $::data(name) configure -low $v
-    set ::data(low-label) [format %6.1f $v]
+proc set-filter {} {
+    draw-filter .c $::data(width) $::data(center) $::data(filter-length)
+    $::data(name) configure -low [expr {$::data(center)-$::data(width)/2}] -high [expr {$::data(center)+$::data(width)/2}]
+}
+
+proc set-width {v} {
+    set ::data(width-label) [format %6.0f $v]
+    set-filter
+}
+
+proc set-center {v} {
+    set ::data(center-label) [format %6.0f $v]
+    set-filter
 }
 
 proc set-length {args} {
@@ -66,30 +86,32 @@ proc main {argv} {
 	switch -- $option {
 	    -n - -name - --name { set ::data(name) $value }
 	    -s - -server - --server { set ::data(server) $value }
-	    -h - -high - --high { set ::data(high) $value }
-	    -l - -low - --low { set ::data(low) $value }
+	    -w - -width - --width { set ::data(width) $value }
+	    -c - -center - --center { set ::data(center) $value }
 	    -f - -filter-length - --filter-length { set ::data(filter-length) $value }
 	    default { error "unknown option \"$option\"" }
 	}
     }
 
     sdrkit::filter-complex-bandpass $::data(name)
-    wm title . $::data(name)
-    set-high $::data(high)
-    set-low $::data(low)
+    wm title . "sdrkit:$::data(name)"
+    set-center $::data(center)
+    set-width $::data(width)
     set-length $::data(filter-length)
     set row 0
-    grid [ttk::label .low-l -textvar ::data(low-label) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .low-u -text Hz] -row $row -column 1
-    grid [ttk::scale .low-s -from $::data(min-low) -to $::data(max-high) -command set-low -variable ::data(low) -length $::data(length)] -row $row -column 2 -sticky ew
+    grid [canvas .c -width 128 -height 128] -row $row -column 0 -columnspan 3
     incr row
-    grid [ttk::label .high-l -textvar ::data(high-label) -width 10 -anchor e] -row $row -column 0
-    grid [ttk::label .high-u -text Hz] -row $row -column 1
-    grid [ttk::scale .high-s -from $::data(min-low) -to $::data(max-high) -command set-high -variable ::data(high) -length $::data(length)] -row $row -column 2 -sticky ew
+    grid [ttk::label .width-l -textvar ::data(width-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .width-u -text Hz] -row $row -column 1
+    grid [ttk::scale .width-s -from $::data(min-width) -to $::data(max-width) -command set-width -variable ::data(width) -length $::data(length)] -row $row -column 2 -sticky ew
+    incr row
+    grid [ttk::label .center-l -textvar ::data(center-label) -width 10 -anchor e] -row $row -column 0
+    grid [ttk::label .center-u -text Hz] -row $row -column 1
+    grid [ttk::scale .center-s -from $::data(min-center) -to $::data(max-center) -command set-center -variable ::data(center) -length $::data(length)] -row $row -column 2 -sticky ew
     incr row
     grid [ttk::label .length-l -textvar ::data(filter-length-label) -width 10 -anchor e] -row $row -column 0
     grid [ttk::spinbox .length-s -from 3 -to 127 -increment 2 -command set-length -textvariable ::data(filter-length)] -row $row -column 2 -sticky ew
-
+    incr row
     grid columnconfigure . 2 -weight 100
     bind . <Destroy> [list shutdown %W]
 }

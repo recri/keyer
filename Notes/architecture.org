@@ -63,3 +63,21 @@
     well in some cases and not at all in others.  The collection will
     evolve, I'll describe the ones I'm happiest with when I get around
     to it.
+* Second abstraction
+  The modules used to build radios should be skinnable, meaning that
+  the interface for controlling them should be clear and with no
+  commitment to user interface. 
+  This is true for the jack-tcl-wrap components, but when I start
+  gluing them together into larger pieces, I'm not preserving the
+  widget interface, I'm letting things wander all over the place.
+** So bin/demodulate lets you switch receive modulations
+   It needs to be a jack module that knows its inputs and outputs, and
+   when no demodulation is required, it simply connects the two.  When
+   demodulation is required, it instantiates the necessary module and
+   inserts it between the inputs and the outputs.
+   As written, it is a command with a user interface.
+   But it should be first of all a component with no user interface.
+   Then that should be wrapped into a user interface in a specified
+   window.
+   Then that should be wrapped into a command that puts the user
+   interface into a top-level window.

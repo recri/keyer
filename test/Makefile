@@ -1,4 +1,7 @@
 CFLAGS=-std=c99 -g -O3 
+test-ovsv: test-ovsv.c ../sdrkit/filter_overlap_save.h
+	cc $(CFLAGS) -o test-ovsv test-ovsv.c -lfftw3f
+
 OBJ=test-osc.o test-osc-fd.o test-osc-td.o test-osc-zd.o test-osc-f.o test-osc-t.o test-osc-z.o
 test-osc: $(OBJ)
 	cc -o test-osc $(OBJ) -lm

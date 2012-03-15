@@ -23,23 +23,42 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require panorama
 
-proc polyphase {args} {
-    switch -glob $::pan(polyphase) {
-	plain { ::panorama::configure .p -polyphase 0 }
-	polyphase-* { ::panorama::configure .p -polyphase [lindex [split $::pan(polyphase) -] 1] }
-    }
-}
-
-
 proc main {argv} {
     pack [panorama .p] -side top -fill both -expand true
     pack [ttk::frame .m] -side top
-    pack [ttk::menubutton .m.s -textvar ::pan(polyphase) -menu .m.s.m]
+    # polyphase spectrum control
+    pack [ttk::menubutton .m.s -textvar ::pan(polyphase) -menu .m.s.m] -side left
     menu .m.s.m -tearoff no
-    foreach x {plain polyphase-2 polyphase-3 polyphase-4 polyphase-5 polyphase-6 polyphase-7 polyphase-8} {
-	.m.s.m add radiobutton -label $x -variable ::pan(polyphase) -value $x -command polyphase
+    foreach x {1 2 4 8 16 32} {
+	if {$x == 1} {
+	    set label {no polyphase}
+	} else {
+	    set label "polyphase $x"
+	}
+	.m.s.m add radiobutton -label $label -variable ::pan(polyphase) -value $label -command [list ::panorama::configure .p -polyphase $x]
     }
-    set ::pan(polyphase) plain
+    set ::pan(polyphase) {no polyphase}
+    # waterfall palette control
+    pack [ttk::menubutton .m.p -textvar ::pan(pal) -menu .m.p.m] -side left
+    menu .m.p.m -tearoff no
+    foreach p {0 1 2 3 4 5} {
+	.m.p.m add radiobutton -label "palette $p" -variable ::pan(pal) -value "palette $p" -command [list ::panorama::configure .p -pal $p]
+    }
+    set ::pan(pal) "palette 0"
+    # waterfall/spectrum min dB
+    pack [ttk::menubutton .m.min -textvar ::pan(min) -menu .m.min.m] -side left
+    menu .m.min.m -tearoff no
+    foreach min {-160 -150 -140 -130 -120 -110 -100 -90 -80} {
+	.m.min.m add radiobutton -label "min $min" -variable ::pan(min) -value "min $min" -command [list ::panorama::configure .p -min $min]
+    }
+    set ::pan(min) "min -160"
+    # waterfall/spectrum max dB
+    pack [ttk::menubutton .m.max -textvar ::pan(max) -menu .m.max.m] -side left
+    menu .m.max.m -tearoff no
+    foreach max {0 -10 -20 -30 -40 -50 -60 -70 -80} {
+	.m.max.m add radiobutton -label "max $max" -variable ::pan(max) -value "max $max" -command [list ::panorama::configure .p -max $max]
+    }
+    set ::pan(max) "max 0"
 }
 
 main $argv
