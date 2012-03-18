@@ -25,52 +25,28 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::lo-mixer
+package require lo-mixer-control
 
-array set data {
-    server default
-    name lo-mixer
-    length 320
-    freq 600.0
-    min-freq 1.0
-    max-freq 23500
-}
-
-proc set-freq {v} {
-    $::data(name) configure -freq $v
-    set ::data(freq-label) [format %.1f $v]
-}
-
-proc shutdown {w} {
-    if {$w eq {.}} {
-	rename $::data(name) {}
+proc options-map {argv} {
+    array set map {
+	-n -name --name -name
+	-s -server --server -server
+	-f -freq --freq -freq
     }
+    set mapped {}
+    foreach {opt val} $argv {
+	if {[info exists map($opt)]} {
+	    lappend mapped $map($opt) $val
+	} else {
+	    lappend mapped $opt $val
+	}
+    }
+    return $mapped
 }
 
 proc main {argv} {
-    foreach {option value} $argv {
-	switch -- $option {
-	    -n - -name - --name { set ::data(name) $value }
-	    -s - -server - --server { set ::data(server) $value }
-	    -l - -length - --length { set ::data(length) $value }
-	    -f - -freq - --freq - -frequency - --frequency { set ::data(freq) $value }
-	    -min-freq - --min-freq { set ::data(min-freq) $value }
-	    -max-freq - --max-freq { set ::data(max-freq) $value }
-	    default { error "unknown option \"$option\"" }
-	}
-    }
-
-    sdrkit::lo-mixer $::data(name)
-    wm title . $::data(name)
-    set-freq $::data(freq)
-
-    set row 0
-    grid [ttk::label .freq-l -textvar ::data(freq-label)] -row $row -column 0
-    grid [ttk::label .freq-u -text Hz] -row $row -column 1
-    grid [ttk::scale .freq-s -from $::data(min-freq) -to $::data(max-freq) -command set-freq -variable ::data(freq) -length $::data(length)] -row $row -column 2 -sticky ew
-
-    grid columnconfigure . 2 -weight 100
-    bind . <Destroy> [list shutdown %W]
+    pack [lo-mixer-control .lo {*}[options-map $argv]] -fill both -expand true
+    wm title . sdrkit:lo-mixer
 }
 
 main $argv

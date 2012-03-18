@@ -16,8 +16,8 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef AM_DEMOD_H
-#define AM_DEMOD_H
+#ifndef DEMOD_AM_H
+#define DEMOD_AM_H
 
 /*
 ** AM demodulation - rewritten from dttsp
@@ -30,19 +30,19 @@ typedef struct {
   float val;
   float dc;
   float smooth;
-} am_demod_t;
+} demod_am_t;
 
 typedef struct {
-} am_demod_options_t;
+} demod_am_options_t;
 
-static void *am_demod_init(am_demod_t *p) {
+static void *demod_am_init(demod_am_t *p) {
   p->val = 0.0f;
   p->dc = 0.0f;
   p->smooth = 0.0f;
   return p;
 }
 
-static float am_demod_process(am_demod_t *p, const float _Complex in) {
+static float demod_am_process(demod_am_t *p, const float _Complex in) {
   p->val = cabsf(in);
   p->dc = 0.9999f * p->dc + 0.0001f * p->val;
   p->smooth = 0.5f * p->smooth + 0.5f * (p->val - p->dc);

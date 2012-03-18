@@ -77,7 +77,7 @@ proc ::spectrum::configure {w args} {
 	set light \#CCC
 	set lo [expr {-double([winfo width $w])/$data(-scale)/2.0}]
 	set hi [expr {-$lo}]
-	puts "scale $data(-scale) offset $data(-offset) width [winfo width $w], $lo .. $hi"
+	#puts "scale $data(-scale) offset $data(-offset) width [winfo width $w], $lo .. $hi"
 	for {set l $data(-min)} {$l <= $data(-max)} {incr l 20} {
 	    # main db grid
 	    $w create line $lo $l $hi $l -fill $dark -tags grid

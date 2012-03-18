@@ -21,7 +21,7 @@
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/sam_demod.h"
+#include "../sdrkit/demod_sam.h"
 #include "framework.h"
 
 /*
@@ -29,12 +29,12 @@
 */
 typedef struct {
   framework_t fw;
-  sam_demod_t sam;
+  demod_sam_t sam;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *e = sam_demod_init(&data->sam, sdrkit_sample_rate(&data->fw)); if (e != &data->sam) return e;
+  void *e = demod_sam_init(&data->sam, sdrkit_sample_rate(&data->fw)); if (e != &data->sam) return e;
   return arg;
 }
 
@@ -45,7 +45,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float y = sam_demod_process(&data->sam, *in0++ + I * *in1++);
+    float y = demod_sam_process(&data->sam, *in0++ + I * *in1++);
     *out0++ = y;
   }
   return 0;

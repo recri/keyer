@@ -15,8 +15,8 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef FM_DEMOD_H
-#define FM_DEMOD_H
+#ifndef DEMOD_FM_H
+#define DEMOD_FM_H
 
 /*
 ** FM demodulation - rewritten from dttsp
@@ -29,9 +29,9 @@
 typedef struct {
   pll_t pll;
   float afc, cvt;
-} fm_demod_t;
+} demod_fm_t;
 
-static void *fm_demod_init(fm_demod_t *p, const int sample_rate) {
+static void *demod_fm_init(demod_fm_t *p, const int sample_rate) {
   const float f_initial = 0.0f;
   const float f_lobound = -6000.0f;
   const float f_hibound =  6000.0f;
@@ -43,7 +43,7 @@ static void *fm_demod_init(fm_demod_t *p, const int sample_rate) {
   return p;
 }  
 
-static float fm_demod_process(fm_demod_t *p, const float _Complex sig) {
+static float demod_fm_process(demod_fm_t *p, const float _Complex sig) {
   pll(&p->pll, sig, 1.0f);
   p->afc = 0.9999f * p->afc + 0.0001f * p->pll.freq.f;
   return (p->pll.freq.f - p->afc) * p->cvt;

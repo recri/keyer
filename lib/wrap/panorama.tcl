@@ -122,8 +122,8 @@ proc ::panorama::panorama {w args} {
     ::capture::spectrum $w -period $data(-period) -size $data(-size) -client ::panorama::update
     ::panorama::configure $w {*}[array get data]
     ::capture::start $w
-    bind . <Configure> [list ::panorama::window-configure $w %W %w %h]
-    bind . <Destroy> [list ::panorama::window-destroy $w %W]
+    bind $w <Configure> [list ::panorama::window-configure $w %W %w %h]
+    bind $w <Destroy> [list ::panorama::window-destroy $w %W]
     return $w
 }
 

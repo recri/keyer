@@ -21,8 +21,8 @@
 ** Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
-#ifndef SAM_DEMOD_H
-#define SAM_DEMOD_H
+#ifndef DEMOD_SAM_H
+#define DEMOD_SAM_H
 
 #include <complex.h>
 #include <math.h>
@@ -33,9 +33,9 @@ typedef struct {
   pll_t pll;
   float lock;
   float dc;
-} sam_demod_t;
+} demod_sam_t;
 
-static void *sam_demod_init(sam_demod_t *p, const int sample_rate) {
+static void *demod_sam_init(demod_sam_t *p, const int sample_rate) {
   const float f_initial = 0.0f;
   const float f_lobound = -2000.0f;
   const float f_hibound =  2000.0f;
@@ -46,7 +46,7 @@ static void *sam_demod_init(sam_demod_t *p, const int sample_rate) {
   return p;
 }
 
-static float sam_demod_process(sam_demod_t *p, float _Complex sig) {
+static float demod_sam_process(demod_sam_t *p, float _Complex sig) {
   pll(&p->pll, sig, cabsf(sig));
   p->lock = 0.999f * p->lock + 0.001f * fabsf(cimag(p->pll.delay));
   p->dc = 0.9999f * p->dc + 0.0001f * crealf(p->pll.delay);

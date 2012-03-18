@@ -43,12 +43,14 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/demod_am.so \
 	$(LIBDIR)/demod_fm.so \
 	$(LIBDIR)/demod_sam.so \
+	$(LIBDIR)/demod_block.so \
 	$(LIBDIR)/filter_complex_bandpass.so \
 	$(LIBDIR)/filter_biquad.so \
 	$(LIBDIR)/filter_fir.so \
 	$(LIBDIR)/filter_overlap_save.so \
 	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
+	$(LIBDIR)/input_block.so \
 	$(LIBDIR)/iq_balance.so \
 	$(LIBDIR)/iq_correct.so \
 	$(LIBDIR)/iq_delay.so \
@@ -99,13 +101,16 @@ $(LIBDIR)/audio_tap.so: audio_tap.c framework.h
 $(LIBDIR)/constant.so: constant.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_am.so: demod_am.c framework.h ../sdrkit/am_demod.h
+$(LIBDIR)/demod_am.so: demod_am.c framework.h ../sdrkit/demod_am.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_fm.so: demod_fm.c framework.h ../sdrkit/fm_demod.h
+$(LIBDIR)/demod_fm.so: demod_fm.c framework.h ../sdrkit/demod_fm.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_sam.so: demod_sam.c framework.h ../sdrkit/sam_demod.h
+$(LIBDIR)/demod_sam.so: demod_sam.c framework.h ../sdrkit/demod_sam.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/demod_block.so: demod_block.c framework.h ../sdrkit/demod_am.h  ../sdrkit/demod_fm.h ../sdrkit/demod_sam.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/filter_complex_bandpass.so: filter_complex_bandpass.c framework.h ../sdrkit/filter_complex_bandpass.h
@@ -124,6 +129,9 @@ $(LIBDIR)/fftw.so: fftw.c framework.h ../sdrkit/dmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/gain.so: gain.c framework.h ../sdrkit/dmath.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/input_block.so: input_block.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_correct.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/iq_balance.so: iq_balance.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_balance.h

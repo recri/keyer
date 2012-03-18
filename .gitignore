@@ -5,3 +5,4 @@ pkgIndex.tcl
 *.so
 *~
 *.log
+test/test-ovsv

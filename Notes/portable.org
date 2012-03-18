@@ -1,0 +1,19 @@
+* Portable operation notes
+  Took my Ensemble RX II on vacation, got annoyed with all sorts of
+  unanticipated problems. 
+** Convert softrock Ensemble RX II to USB power
+   See softrock.org notes for pointer to instructions.  The extra
+   power brick was weight and volume I could do without, and when I
+   went to set up the kit, there was only one outlet.
+** Multi-tap converter/extension cord
+   More cords probably not a good idea, but one of those 3/1
+   sockets/plug multi-tap adapters would have been helpful.  Not that
+   I want multiple power supplies.
+** Make an easily managed dipole
+   Use lightweight coax, a robust feed line to dipole connection, and
+   wires that aren't going to break, possibly a collection of wires
+   that bolt onto the feed line connector.
+** Enough cable to keep the sound card separate from the radio.
+   Seemed that proximity to the radio prevented the sound card from
+   booting.
+

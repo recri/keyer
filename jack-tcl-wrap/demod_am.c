@@ -22,7 +22,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/am_demod.h"
+#include "../sdrkit/demod_am.h"
 #include "framework.h"
 
 /*
@@ -30,12 +30,12 @@
 */
 typedef struct {
   framework_t fw;
-  am_demod_t am;
+  demod_am_t am;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *e = am_demod_init(&data->am); if (e != &data->am) return e;
+  void *e = demod_am_init(&data->am); if (e != &data->am) return e;
   return arg;
 }
 
@@ -46,7 +46,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float y = am_demod_process(&data->am, *in0++ + I * *in1++);
+    float y = demod_am_process(&data->am, *in0++ + I * *in1++);
     *out0++ = y;
   }
   return 0;

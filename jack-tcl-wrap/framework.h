@@ -52,12 +52,17 @@ typedef enum {
   fw_option_boolean = 5,
   fw_option_obj = 6,		/* Tcl_Obj * */
   fw_option_dict = 7,		/* Tcl_Obj * which is a Tcl dict */
+  fw_option_custom = 8,		/* defined by string to int mapping */
 } fw_option_type_t;
 
 typedef enum {
   fw_flag_none = 0,		/* no option for c++ */
   fw_flag_create_only = 1	/* option can only be set at create time */
 } fw_option_flag_t;
+
+typedef struct {
+  char *name; int value;
+} fw_option_custom_t;
 
 typedef struct {
   const char *name;			/* option name */
@@ -68,6 +73,7 @@ typedef struct {
   const fw_option_flag_t flag;		/* option flag */
   const size_t offset;			/* offset in clientData */
   const char *doc_string;		/* option documentation string */
+  const fw_option_custom_t *opt_custom; /* custom option string value map */
 } fw_option_table_t;
 
 /*
@@ -225,6 +231,16 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
     *(Tcl_Obj **)((char *)clientData+entry->offset) = val;
     return TCL_OK;
   }
+  case fw_option_custom: {
+    char *str = Tcl_GetString(val);
+    for (int i = 0; entry->opt_custom[i].name != NULL; i += 1) {
+      if (strcmp(entry->opt_custom[i].name, str) == 0) {
+	*(int *)(clientData+entry->offset) = entry->opt_custom[i].value;
+	return TCL_OK;
+      }
+    }
+    return fw_error_obj(interp, Tcl_ObjPrintf("unmatched custom option value: %s", str));
+  }
   default:
     return fw_error_obj(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
   }
@@ -242,6 +258,14 @@ static Tcl_Obj *fw_option_get_value_obj(ClientData clientData, Tcl_Interp *inter
   case fw_option_boolean: return Tcl_NewIntObj(*(int *)((char *)clientData+entry->offset));
   case fw_option_dict:    return *(Tcl_Obj **)((char *)clientData+entry->offset);
   case fw_option_obj:     return *(Tcl_Obj **)((char *)clientData+entry->offset);
+  case fw_option_custom: {
+    int val = *(int *)((char *)clientData+entry->offset);
+    for (int i = 0; entry->opt_custom[i].name != NULL; i += 1)
+      if (entry->opt_custom[i].value == val)
+	return Tcl_NewStringObj(entry->opt_custom[i].name, -1);
+    Tcl_SetObjResult(interp, Tcl_ObjPrintf("unmatched custom option value: %d", val));
+    return NULL;
+  }
   default:
     Tcl_SetObjResult(interp, Tcl_ObjPrintf("unimplemented option value type: %d", entry->type));
     return NULL;

@@ -48,13 +48,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(data,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   AVOID_DENORMALS;
-  iq_correct_preprocess(&data->iqb, nframes);
   for (int i = nframes; --i >= 0; ) {
     float _Complex y = iq_correct_process(&data->iqb, *in0++ + *in1++ * I);
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }
-  iq_correct_postprocess(&data->iqb, nframes);
   return 0;
 }
 
@@ -65,21 +63,20 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   Tcl_Obj *result[] = {
     Tcl_NewIntObj(jack_frame_time(data->fw.client)),
     Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)),
-    Tcl_NewDoubleObj(data->iqb.avg_net_dw2), Tcl_NewDoubleObj(data->iqb.avg_mag2_dw),
     NULL
   };
-  Tcl_SetObjResult(interp, Tcl_NewListObj(5, result));
+  Tcl_SetObjResult(interp, Tcl_NewListObj(3, result));
   return TCL_OK;
 }
+
 static int _reset(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 2)
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s reset", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   data->iqb.w = 0.0f;
-  data->iqb.avg_net_dw2 = 0.0f;
-  data->iqb.avg_mag2_dw = 0.0f;
   return TCL_OK;
 }
+
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;

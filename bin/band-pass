@@ -21,11 +21,30 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require panorama-control
+package require Tk
+package require band-pass-control
+
+proc options-map {argv} {
+    array set map {
+	-n -name --name -name
+	-s -server --server -server
+	-l -low --low -low
+	-h -high --high -high
+    }
+    set mapped {}
+    foreach {opt val} $argv {
+	if {[info exists map($opt)]} {
+	    lappend mapped $map($opt) $val
+	} else {
+	    lappend mapped $opt $val
+	}
+    }
+    return $mapped
+}
 
 proc main {argv} {
-    pack [panorama-control .p] -fill both -expand true
-    wm title . sdrkit:panorama
+    pack [band-pass-control .bpf {*}[options-map $argv]] -fill both -expand true
+    wm title . sdrkit:band-pass
 }
 
 main $argv

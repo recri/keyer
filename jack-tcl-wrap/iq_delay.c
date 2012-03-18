@@ -90,7 +90,7 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "a component which converts a monoaural audio channel into an I/Q audio channel pair"
+  "a component which delays I or Q by one sample"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

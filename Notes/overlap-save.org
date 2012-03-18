@@ -1,0 +1,26 @@
+* Overlap Save/Overlap Add
+  There comes a time in every finite impulse response filter's life
+  when it becomes better to be implemented in the frequency domain.
+  At that point, you fft the filter kernel and run it as an overlap
+  save or overlap add filter.
+** Testing the sdrkit overlap save filter.
+   First it didn't appear to work, then Jack was disabling it, so I
+   assumed it was broken in some way, too slow or crashing.
+   I wrote test/test-ovsv.c to run the filter outside of Jack, and it
+   appears to run quite satisfactorily.
+   |--------+----------------|
+   | filter |    seconds per |
+   | length | 192000 samples |
+   |--------+----------------|
+   |    128 |      0.0057600 |
+   |    256 |      0.0055488 |
+   |    512 |      0.0057408 |
+   |   1024 |      0.0059520 |
+   |   2048 |      0.0063168 |
+   |   4096 |      0.0075072 |
+   |   8192 |      0.0079680 |
+   |--------+----------------|
+   So it runs without faults, whether it's computing the correct
+   output remains to be seen.
+   And it runs fast enough to be a jack module.
+
