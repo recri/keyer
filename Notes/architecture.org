@@ -81,3 +81,23 @@
    window.
    Then that should be wrapped into a command that puts the user
    interface into a top-level window.
+* Third abstraction
+**  Looking at the frequency control we have multiple frequency setting
+    controls and multiple frequency display controls.
+*** There is a frequency display that shows where we're tuned.
+*** There is a frequency readout on the waterfall that shows where we're tuned.
+*** There is a dial which can change where we're tuned.
+*** There is a keypad which can change where we're tuned.
+*** There are cursor keys or mouse wheels that can adjust the tuning, too.   
+*** There is a band switch which can change where we're tuned, the mode,
+    and the filter parameters.
+*** There is a bank of memorized channels which can change where we're tuned,
+    the mode, and the filter parameters.
+*** Mousing on the spectrum can change where we're tuned.
+*** Mousing on the waterfall can change where we're tuned.
+*** If we add notches to the filter, they will need to track the tuning
+    to keep each notch centered on a specific interferer.
+** How should all of these work together?
+*** The frequency tuned is a combination of transverter, local oscillator,
+    and second LO offset.  In the simplest case we're looking at the Si570
+    frequency and an offset added in the dsp chain.

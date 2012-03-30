@@ -22,6 +22,7 @@
 package provide band-pass-control 1.0.0
 
 package require Tk
+package require sdrkit::jack
 package require sdrkit::filter-complex-bandpass
 package require sdrkit::filter-overlap-save
 
@@ -50,6 +51,39 @@ proc ::band-pass-control::set-width {w} { set-filter $w }
 proc ::band-pass-control::set-center {w} { set-filter $w }
 proc ::band-pass-control::set-filter-length {w} { set-filter $w }
 
+proc ::band-pass-control::toggle-filter {w} {
+    upvar \#0 $w data
+    foreach {port connect} [sdrkit::jack list-ports] {
+	if {[string first $data(-name) $port] == 0} {
+	    lappend connects $port $connect
+	}
+    }
+    rename $data(-name) {}
+    switch $data(label-filter) {
+	fir {
+	    set data(-filter) sdrkit::filter-overlap-save
+	    set data(label-filter) ovsv
+	}
+	ovsv {
+	    set data(-filter) sdrkit::filter-complex-bandpass
+	    set data(label-filter) fir
+	}
+    }
+    $data(-filter) $data(-name)
+    set-filter $w
+    foreach {port connect} $connects {
+	array set details $connect
+	puts "{$port} {$connect}"
+	foreach c $details(connections) {
+	    switch $details(direction) {
+		input { sdrkit::jack connect $c $port }
+		output { sdrkit::jack connect $port $c }
+	    }
+	}
+	array unset details
+    }
+}
+
 proc ::band-pass-control::shutdown {w} {
     if {$w ne $cw} return
     upvar \#0 $w data
@@ -61,11 +95,12 @@ proc ::band-pass-control {w args} {
     upvar \#0 $w data
     array set data {
 	-filter sdrkit::filter-complex-bandpass
+	label-filter fir
 	-server default
 	-name bandpass
 	-filter-length 15
 	-min-filter-length 3
-	-max-filter-length 127
+	-max-filter-length 1023
 	-center 0
 	-min-center -5000
 	-max-center  5000
@@ -74,7 +109,7 @@ proc ::band-pass-control {w args} {
 	-max-width 10000
     }
     array set data $args
-    $data(-filter) $data(-name) 
+    $data(-filter) $data(-name) -length $data(-filter-length)
     ::band-pass-control::set-filter $w
 
     set row 0
@@ -93,6 +128,8 @@ proc ::band-pass-control {w args} {
 	      -from $data(-min-filter-length) -to $data(-max-filter-length) -increment 2 -width 5 -format %3.0f \
 	     ] -row $row -column 1 -sticky ew
     incr row
+    grid [ttk::label $w.lf -text {filter}] -row $row -column 0
+    grid [ttk::button $w.filter -textvar ${w}(label-filter) -command [list ::band-pass-control::toggle-filter $w]] -row $row -column 1
 
     bind $w <Destroy> [list ::band-pass-control::shutdown  $w %W]
 

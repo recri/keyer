@@ -23,4 +23,9 @@
    So it runs without faults, whether it's computing the correct
    output remains to be seen.
    And it runs fast enough to be a jack module.
-
+** Ah, forgot to return 0 from the process callback, works perfectly.
+** So, how do I add notch filtering to the bandpass?
+*** Build the bandstop filter for the desired notch,
+**** Either add the coefficients in the time domain
+**** Or transform into the frequency domain and multiply together
+     

@@ -63,13 +63,31 @@ static int _process(jack_nframes_t nframes, void *arg) {
     *out0++ = creal(y);
     *out1++ = cimag(y);
   }
+  return 0;
+}
+
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+  _t *data = (_t *)clientData;
+  Tcl_Obj *result[] = {
+    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
+    Tcl_NewIntObj(data->ovsv.n_samples), Tcl_NewIntObj(data->ovsv.n_transforms),
+    Tcl_NewIntObj(data->ovsv.length), Tcl_NewIntObj(data->ovsv.fftlen),
+    NULL
+  };
+  Tcl_SetObjResult(interp, Tcl_NewListObj(5, result));
+  return TCL_OK;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (save.low_frequency != data->opts.low_frequency || save.high_frequency != data->opts.high_frequency) {
+  if (save.low_frequency != data->opts.low_frequency ||
+      save.high_frequency != data->opts.high_frequency ||
+      save.length != data->opts.length ||
+      save.planbits != data->opts.planbits) {
     void *e = filter_overlap_save_preconfigure(&data->ovsv, &data->opts); if (e != &data->ovsv) {
       Tcl_SetResult(interp, e, TCL_STATIC);
       data->opts = save;
@@ -83,16 +101,17 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-length", "length", "Length", "128",      fw_option_int,	fw_flag_create_only, offsetof(_t, opts.length),	      "length of filter" },
-  { "-planbits","planbits","Planbits", "0",    fw_option_int,	fw_flag_create_only, offsetof(_t, opts.planbits),     "fftw planbits" },
-  { "-low",    "low",    "Hertz",  "-5000",    fw_option_float,	0,		     offsetof(_t, opts.low_frequency),"filter low frequency cutoff" },
-  { "-high",   "high",   "Hertz",  "+5000",    fw_option_float,	0,		     offsetof(_t, opts.high_frequency),"filter high frequency cutoff" },
+  { "-length", "length", "Length", "128",      fw_option_int,	fw_flag_none, offsetof(_t, opts.length),	      "length of filter" },
+  { "-planbits","planbits","Planbits", "0",    fw_option_int,	fw_flag_none, offsetof(_t, opts.planbits),     "fftw planbits" },
+  { "-low",    "low",    "Hertz",  "-5000",    fw_option_float,	fw_flag_none, offsetof(_t, opts.low_frequency),"filter low frequency cutoff" },
+  { "-high",   "high",   "Hertz",  "+5000",    fw_option_float,	fw_flag_none, offsetof(_t, opts.high_frequency),"filter high frequency cutoff" },
   { NULL }
 };
 
 // the subcommands implemented by this command
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
+  { "get",   _get,   "fetch the current diagnostics" },
   { NULL }
 };
 

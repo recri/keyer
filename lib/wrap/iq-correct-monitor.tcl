@@ -1,10 +1,33 @@
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+package provide iq-correct-monitor 1.0.0
+
+package require Tk
+
+namespace eval ::iq-correct-monitor {}
+
 ##
 ## meter the possible iq balancing signals
 ## this is plotting the transform applied
 ## to incoming iq signals
 ##
-proc ::meters::update {w} {
-    upvar #0 ::meters::$w data
+proc ::iq-correct-monitor::meter-update {w} {
+    upvar #0 ::iq-correct-monitor::meter-$w data
     foreach {t wi wq ndw2 m2d2} [iq-correct get] break
     if {abs($wi) > 1e-12 && abs($wq) > 1e-12} {
 	set xy {}
@@ -18,8 +41,8 @@ proc ::meters::update {w} {
     after 10 [list ::meters::update $w]
 }
 
-proc ::meters::setup {w n} {
-    upvar #0 ::meters::$w data
+proc ::iq-correct-monitor::meter-setup {w n} {
+    upvar #0 ::iq-correct-monitor::meter-$w data
     set data(n-theta) $n
     set data(theta-cos-sin) {}
     set pi [expr {atan2(0,-1)}]
@@ -30,8 +53,8 @@ proc ::meters::setup {w n} {
     catch {$w delete all}
     $w create line {0 0 0 0} -fill white -tags xyplot
 }
-proc ::meters {w args} {
-    upvar #0 ::meters::$w data
+proc ::iq-correct-monitor::meter {w args} {
+    upvar #0 ::iq-correct-monitor::meter-$w data
     canvas $w -bg black -width 250 -height 250
     ::meters::setup $w 32
     return $w
@@ -40,40 +63,40 @@ proc ::meters {w args} {
 ##
 ## controller display for iq-correct
 ##
-proc more-mu {} {
+proc ::iq-correct-monitor::more-mu {w} {
     set ::data(corrector-mu) [expr {2*$::data(corrector-mu)}]
     set ::data(label-corrector-mu) [format %.13f $::data(corrector-mu)]
     iq-correct configure -mu $::data(corrector-mu)
 }
-proc less-mu {} {
+proc ::iq-correct-monitor::less-mu {w} {
     set ::data(corrector-mu) [expr {$::data(corrector-mu)/2}]
     set ::data(label-corrector-mu) [format %.13f $::data(corrector-mu)]
     iq-correct configure -mu $::data(corrector-mu)
 }
-proc reset-ws {} {
+proc ::iq-correct-monitor::reset-ws {w} {
     iq-correct reset
 }
-proc ws-progress-vector {i0 i1} {
+proc ::iq-correct-monitor::ws-progress-vector {w i0 i1} {
     lassign $i0 t0 wi0 wq0 ndw20 m2dw0
     lassign $i1 t1 wi1 wq1 ndw21 m2dw1
     # construct the delta over one step
     set dt01 [expr {$t0-$t1}]
     return [list [expr {($wi0-$wi1)/$dt01}] [expr {($wq0-$wq1)/$dt01}]]
 }
-proc ws-reset-kick {} {
+proc ::iq-correct-monitor::ws-reset-kick {w} {
     set ::data(n-corrector-kick) 0
     set ::data(corrector-kick) 0.0
     set ::data(label-corrector-kick) [format %.3f $::data(corrector-kick)]
 }
-proc ws-less-mu {} {
+proc ::iq-correct-monitor::ws-less-mu {w} {
     less-mu
     ws-reset-kick
 }
-proc ws-more-mu {} {
+proc ::iq-correct-monitor::ws-more-mu {w} {
     more-mu
     ws-reset-kick
 }
-proc update-ws {} {
+proc ::iq-correct-monitor::update-ws {w} {
     # get the current value
     set input0 [iq-correct get]; # t wi wq ndw2 m2dw 
     # append to the list of values
@@ -187,7 +210,7 @@ proc update-ws {} {
     after 20 [list update-ws]
 }
     
-proc corrector-onoff {} {
+proc ::iq-correct-monitor::corrector-onoff {w} {
     if {$::data(corrector-on)} {
 	#puts "iq-correct reset to -mu $::data(corrector-mu)"
 	iq-correct reset
@@ -199,6 +222,7 @@ proc corrector-onoff {} {
     }
 }
 
+proc ::iq-correct-monitor {w} {
     grid [ttk::label .blk$row -text {Corrector}] -row $row -column 0 -columnspan 3
     incr row
     grid [ttk::frame .blk$row] -row $row -column 0 -columnspan 3
@@ -232,3 +256,4 @@ proc corrector-onoff {} {
     grid columnconfigure . 2 -weight 100
     grid columnconfigure . 5 -weight 100
     grid rowconfigure . 0 -weight 100
+}

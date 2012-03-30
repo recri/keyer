@@ -27,12 +27,16 @@ filter_overlap_save_options_t opts;
 filter_overlap_save_t ovsv;
 
 int main(int argc, char *argv[]) {
-  const int n = argc>1 ? atoi(argv[1]) : 32*1024;
-  opts.length = 8192;
+  if (argc != 6) {
+    fprintf(stderr, "usage: test-ovsv filter-length low high sample-rate nsamples\n");
+    exit(2);
+  }
+  opts.length = atoi(argv[1]);
   opts.planbits = 0;
-  opts.low_frequency = -5000.0f;
-  opts.high_frequency = 5000.0f;
-  opts.sample_rate = 192000;
+  opts.low_frequency = atof(argv[2]);
+  opts.high_frequency = atof(argv[3]);
+  opts.sample_rate = atoi(argv[4]);
+  const int n = atoi(argv[5]);
   void *e = filter_overlap_save_init(&ovsv, &opts); if (e != &ovsv) {
     fprintf(stderr, "init returned \"%s\"\n", (char *)e);
     return 1;
@@ -43,6 +47,8 @@ int main(int argc, char *argv[]) {
     float complex y = filter_overlap_save_process(&ovsv, 0.0f);
   }
   times(&finish);
-  fprintf(stdout, "%g\n", 192000*(double)(finish.tms_utime-start.tms_utime) / (n * sysconf(_SC_CLK_TCK)));
+  fprintf(stdout, "%g\n", opts.sample_rate*(double)(finish.tms_utime-start.tms_utime) / (n * sysconf(_SC_CLK_TCK)));
+  fprintf(stdout, "%d samples %d transforms\n", ovsv.n_samples, ovsv.n_transforms);
+  exit(0);
 }
 

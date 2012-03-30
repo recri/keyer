@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,15 +17,42 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package provide sdrblk::iq-swap 1.0.0
 
-package require Tk
-package require band-pass-control
+package require snit
+package require sdrblk::validate
+package require sdrblk::block
 
-proc main {argv} {
-    pack [band-pass-control .bpf {*}$argv] -fill both -expand true
-    wm title . sdrkit:band-pass
+::snit::type sdrblk::iq-swap {
+
+    component myblock
+
+    option -swap -default false -validateMethod Validate -configuremethod Configure
+
+    constructor {args} {
+	install myblock 
+        $self configure {*}$args
+    }
+
+    destructor {
+        catch {$tail destroy}
+    }
+
+    method Validate {opt val} {
+	switch -- $opt {
+	    -swap {
+		::sdrblk::validate::boolean $opt $val
+	    }
+	    default {
+		error "unknown option \"$opt\""
+	    }
+	}
+    }
+
+    method Configure {opt val} {
+	if {$val} {
+	} else {
+	}
+	set options($opt) $val
+    }
 }
-
-main $argv

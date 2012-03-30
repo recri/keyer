@@ -126,7 +126,7 @@ proc main {argv} {
 
     wm title . sdrkit:signal-generator
 
-    start-client sdrkit::gain signal-genenerator
+    start-client sdrkit::gain signal-generator
     signal-generator configure -gain 0.0
 
     set row 0
