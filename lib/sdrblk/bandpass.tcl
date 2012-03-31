@@ -17,36 +17,51 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::bandpass 1.0.0
 
 package require snit
 package require sdrblk::validate
 package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
+package require sdrkit::filter-overlap-save
+
+::snit::type ::sdrblk::bandpass {
     component block -public block
+    component bandpass 
 
     option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
+    option -name -default ::bandpass -readonly yes -validatemethod Validate -configuremethod Configure
     option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
+    option -center -default 800 -validatemethod Validate -configuremethod Configure
+    option -width -default 200 -validatemethod Validate -configuremethod Configure
+    option -length -default 1024 -validatemethod Validate -configuremethod Configure
 
     constructor {args} {
-	puts "iq-swap $self constructor $args"
+	puts "bandpass $self constructor $args"
         $self configure {*}$args
 	install block using ::sdrblk::block %AUTO% -partof $self
+	install bandpass using sdrkit::filter-overlap-save $options(-name) -server $options(-server) \
+	    -length $options(-length)
+	$self configure -center $options(-center) -width $options(-width)
     }
 
     destructor {
         $block destroy
+	catch {rename $bandpass {}}
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "bandpass $self Validate $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		::sdrblk::validate::boolean $opt $val
+	    -partof -
+	    -name {}
+	    -center -
+	    -width {
+		::sdrblk::validate::double $opt $val
+	    }
+	    -length {
+		::sdrblk::validate::integer $opt $val
 	    }
 	    default {
 		error "unknown validate option \"$opt\""
@@ -54,21 +69,23 @@ package require sdrblk::block
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "bandpass $self Configure $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
-		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
+	    -partof -
+	    -name {}
+	    -center -
+	    -width {
+		if {$bandpass ne {}} {
+		    set options(-low) [expr {$options(-center)-$options(-width)/2.0}]
+		    set options(-high) [expr {$options(-center)+$options(-width)/2.0}]
+		    $bandpass configure -low $options(-low) -high $options(-high)
+		}
+	    }
+	    -length {
+		if {$bandpass ne {}} {
+		    $bandpass configure $opt $val
 		}
 	    }
 	    default {

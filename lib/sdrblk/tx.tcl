@@ -17,60 +17,65 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::tx 1.0.0
 
 package require snit
-package require sdrblk::validate
-package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
+#package require sdrblk::tx-af
+#package require sdrblk::tx-if
+#package require sdrblk::tx-rf
+
+::snit::type sdrblk::tx {
     component block -public block
+    #component txaf
+    #component txif
+    #component txrf
 
     option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
     option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
-
+    option -inport -readonly yes -validatemethod Validate -configuremethod Configure
+    option -outport -readonly yes -validatemethod Validate -configuremethod Configure
+    
     constructor {args} {
-	puts "iq-swap $self constructor $args"
-        $self configure {*}$args
+	puts "tx $self constructor $args"
+	$self configure {*}$args
 	install block using ::sdrblk::block %AUTO% -partof $self
+	#install txaf using ::sdrblk::tx-af %AUTO% -partof $self
+	#install txif using ::sdrblk::tx-if %AUTO% -partof $self
+	#install txrf using ::sdrblk::tx-rf %AUTO% -partof $self
+	#$txaf block configure -output $txif
+	#$txif block configure -input $txaf -output $txrf
+	#$txrf block configure -input $txif
+	$block configure -inport $options(-inport) -outport $options(-outport)
     }
 
     destructor {
-        $block destroy
+	catch {$block destroy}
+	catch {$txaf destroy}
+	catch {$txif destroy}
+	catch {$txrf destroy}
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "tx $self Validate $opt $val"
 	switch -- $opt {
 	    -server -
+	    -inport -
+	    -outport -
 	    -partof {}
-	    -swap {
-		::sdrblk::validate::boolean $opt $val
-	    }
 	    default {
 		error "unknown validate option \"$opt\""
 	    }
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "tx $self Configure $opt $val"
 	switch -- $opt {
 	    -server -
+	    -inport -
+	    -outport -
 	    -partof {}
-	    -swap {
-		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
-		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
-		}
-	    }
 	    default {
 		error "unknown configure option \"$opt\""
 	    }

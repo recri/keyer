@@ -17,60 +17,65 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::rx 1.0.0
 
 package require snit
-package require sdrblk::validate
-package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
+package require sdrblk::rx-rf
+package require sdrblk::rx-if
+package require sdrblk::rx-af
+
+::snit::type sdrblk::rx {
     component block -public block
+    component rxrf
+    component rxif
+    component rxaf
 
     option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
     option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
-
+    option -inport -readonly yes -validatemethod Validate -configuremethod Configure
+    option -outport -readonly yes -validatemethod Validate -configuremethod Configure
+    
     constructor {args} {
-	puts "iq-swap $self constructor $args"
-        $self configure {*}$args
+	puts "rx $self constructor $args"
+	$self configure {*}$args
 	install block using ::sdrblk::block %AUTO% -partof $self
+	install rxrf using ::sdrblk::rx-rf %AUTO% -partof $self -server $options(-server)
+	install rxif using ::sdrblk::rx-if %AUTO% -partof $self -server $options(-server)
+	install rxaf using ::sdrblk::rx-af %AUTO% -partof $self -server $options(-server)
+	$rxrf block configure -output $rxif
+	$rxif block configure -input $rxrf -output $rxaf
+	$rxaf block configure -input $rxaf
+	$block configure -inport $options(-inport) -outport $options(-outport)
     }
 
     destructor {
-        $block destroy
+	catch {$block destroy}
+	catch {$rxrf destroy}
+	catch {$rxif destroy}
+	catch {$rxaf destroy}
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "rx $self Validate $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		::sdrblk::validate::boolean $opt $val
-	    }
+	    -partof -
+	    -inport -
+	    -outport {}
 	    default {
 		error "unknown validate option \"$opt\""
 	    }
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "rx $self Configure $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
-		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
-		}
-	    }
+	    -partof -
+	    -inport -
+	    -outport {}
 	    default {
 		error "unknown configure option \"$opt\""
 	    }

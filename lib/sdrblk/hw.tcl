@@ -17,60 +17,42 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::hw 1.0.0
 
 package require snit
-package require sdrblk::validate
-package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
-    component block -public block
+
+::snit::type sdrblk::hw {
 
     option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
     option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
-
+    option -hw -readonly yes -validatemethod Validate -configuremethod Configure
+    
     constructor {args} {
-	puts "iq-swap $self constructor $args"
-        $self configure {*}$args
-	install block using ::sdrblk::block %AUTO% -partof $self
+	puts "hw $self constructor $args"
+	$self configure {*}$args
     }
 
     destructor {
-        $block destroy
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "hw $self Validate $opt $val"
 	switch -- $opt {
-	    -server -
+	    -hw -
 	    -partof {}
-	    -swap {
-		::sdrblk::validate::boolean $opt $val
-	    }
 	    default {
 		error "unknown validate option \"$opt\""
 	    }
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "hw $self Configure $opt $val"
 	switch -- $opt {
-	    -server -
-	    -partof {}
-	    -swap {
-		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
-		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
-		}
+	    -hw {
 	    }
+	    -partof {}
 	    default {
 		error "unknown configure option \"$opt\""
 	    }

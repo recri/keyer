@@ -17,36 +17,44 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::demod 1.0.0
 
 package require snit
 package require sdrblk::validate
 package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
+package require sdrkit::demod-am
+package require sdrkit::demod-sam
+package require sdrkit::demod-fm
+
+::snit::type ::sdrblk::demod {
     component block -public block
+    component demod
 
     option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
+    option -name -default ::demod -readonly yes -validatemethod Validate -configuremethod Configure
     option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
+    option -mode -default cw -validatemethod Validate -configuremethod Configure
 
     constructor {args} {
-	puts "iq-swap $self constructor $args"
+	puts "demod $self constructor $args"
         $self configure {*}$args
 	install block using ::sdrblk::block %AUTO% -partof $self
     }
 
     destructor {
-        $block destroy
+        catch {$block destroy}
+	catch {rename $demod {}}
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "demod $self Validate $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		::sdrblk::validate::boolean $opt $val
+	    -partof -
+	    -name {}
+	    -mode {
+		::sdrblk::validate::mode $opt $val
 	    }
 	    default {
 		error "unknown validate option \"$opt\""
@@ -54,21 +62,35 @@ package require sdrblk::block
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "demod $self Configure $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
-		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
+	    -partof -
+	    -name {}
+	    -mode {
+		$block configure -internal {}
+		catch {rename $demod {}}
+		switch $val {
+		    cw - cwu - cwl - ssb - usb - lsb {
+			# (blms_adapt(rx[k]->banr.gen) || blms_adapt(rx[k]->banf.gen) || nil ) ||
+			# ((blms_adapt(rx[k]->banr.gen) || lmsr_adapt(rx[k]->anr.gen) || nil) &&
+			# ((blms_adapt(rx[k]->banf.gen) || lmsr_adapt(rx[k]->anf.gen) || nil) here
+		    }
+		    am {
+			install demod using ::sdrkit::demod-am $options(-name) -server $options(-server)
+			$block configure -internal $demod
+			# lmsr_adapt(rx[k]->anf.gen) || blms_adapt(rx[k]->banf.gen) || nil here
+		    }
+		    sam {
+			install demod using ::sdrkit::demod-sam $options(-name) -server $options(-server)
+			$block configure -internal $demod
+			# lmsr_adapt(rx[k]->anf.gen) || blms_adapt(rx[k]->banf.gen) || nil here
+		    }
+		    fm {
+			install demod using ::sdrkit::demod-fm $options(-name) -server $options(-server)
+			$block configure -internal $demod
+		    }
 		}
 	    }
 	    default {

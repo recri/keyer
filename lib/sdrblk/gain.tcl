@@ -17,36 +17,42 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::gain 1.0.0
 
 package require snit
 package require sdrblk::validate
 package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
+package require sdrkit::gain
+
+::snit::type ::sdrblk::gain {
     component block -public block
+    component gain
 
     option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
+    option -name -default ::gain -readonly yes -validatemethod Validate -configuremethod Configure
     option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
+    option -gain -default 0 -validatemethod Validate -configuremethod Configure
 
     constructor {args} {
-	puts "iq-swap $self constructor $args"
+	puts "gain $self constructor $args"
         $self configure {*}$args
 	install block using ::sdrblk::block %AUTO% -partof $self
     }
 
     destructor {
         $block destroy
+	catch {rename $gain {}}
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "gain $self Validate $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		::sdrblk::validate::boolean $opt $val
+	    -partof -
+	    -name {}
+	    -gain {
+		::sdrblk::validate::decibel $opt $val
 	    }
 	    default {
 		error "unknown validate option \"$opt\""
@@ -54,21 +60,30 @@ package require sdrblk::block
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "gain $self Configure $opt $val"
 	switch -- $opt {
 	    -server -
-	    -partof {}
-	    -swap {
-		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
+	    -partof -
+	    -name {}
+	    -gain {
+		if {$val != 0} {
+		    if {$options($opt) != 0} {
+			# reconfigure existing gain
+			$gain configure -gain $val
+		    } else {
+			# create a gain module
+			install gain using ::sdrkit::gain $options(-name) -server $options(-server) -gain $val
+			# connect it
+			$block configure -internal $gain
+		    }
 		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
+		    if {$options($opt) != 0} {
+			# disconnect existing gain
+			$block configure -internal {}
+			# delete existing gain
+			rename $gain {}
+		    }
 		}
 	    }
 	    default {

@@ -2,7 +2,7 @@ VSN_FFTW3=3.2.2
 VSN_JACK=1.9.7
 VSN_TCL=8.5
 VSN_TK=8.5
-SUBDIRS=jack-tcl-wrap lib/wrap lib/morse
+SUBDIRS=jack-tcl-wrap lib/wrap lib/morse lib/sdrblk
 all::
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 

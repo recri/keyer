@@ -17,35 +17,37 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::agc 1.0.0
 
 package require snit
 package require sdrblk::validate
 package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
+::snit::type sdrblk::agc {
     component block -public block
 
     option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
     option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
+    option -name -default ::agc -readonly yes -validatemethod Validate -configuremethod Configure
+    option -agc -default false -validatemethod Validate -configuremethod Configure
 
     constructor {args} {
-	puts "iq-swap $self constructor $args"
+	puts "agc $self constructor $args"
         $self configure {*}$args
 	install block using ::sdrblk::block %AUTO% -partof $self
     }
 
     destructor {
-        $block destroy
+        catch {$block destroy}
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "agc $self Validate $opt $val"
 	switch -- $opt {
 	    -server -
+	    -name -
 	    -partof {}
-	    -swap {
+	    -agc {
 		::sdrblk::validate::boolean $opt $val
 	    }
 	    default {
@@ -54,22 +56,14 @@ package require sdrblk::block
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "agc $self Configure $opt $val"
 	switch -- $opt {
 	    -server -
+	    -name -
 	    -partof {}
-	    -swap {
+	    -agc {
 		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
-		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
-		}
 	    }
 	    default {
 		error "unknown configure option \"$opt\""

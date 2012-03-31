@@ -17,36 +17,44 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-swap 1.0.0
+package provide sdrblk::iq-correct 1.0.0
 
 package require snit
 package require sdrblk::validate
 package require sdrblk::block
 
-::snit::type sdrblk::iq-swap {
-    component block -public block
+package require sdrkit::iq-correct
 
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -swap -default false -validatemethod Validate -configuremethod Configure
+::snit::type ::sdrblk::iq-correct {
+    component block -public block
+    component correct
+
+    option -server -default default -readonly yes
+    option -partof -readonly yes
+    option -correct -default 0 -validatemethod Validate -configuremethod Configure
+    option -mu -validatemethod Validate -configuremethod Configure
 
     constructor {args} {
-	puts "iq-swap $self constructor $args"
+	puts "iq-correct $self constructor $args"
+	set correct {}
         $self configure {*}$args
 	install block using ::sdrblk::block %AUTO% -partof $self
     }
 
     destructor {
         $block destroy
+	catch {rename $correct {}}
     }
 
     method Validate {opt val} {
-	#puts "iq-swap $self Validate $opt $val"
+	#puts "iq-correct $self Validate $opt $val"
 	switch -- $opt {
-	    -server -
 	    -partof {}
-	    -swap {
+	    -correct {
 		::sdrblk::validate::boolean $opt $val
+	    }
+	    -mu {
+		::sdrblk::validate::double $opt $val
 	    }
 	    default {
 		error "unknown validate option \"$opt\""
@@ -54,21 +62,33 @@ package require sdrblk::block
 	}
     }
 
-    proc swap {port1 port2} { return [list $port2 $port1] }
-
     method Configure {opt val} {
-	#puts "iq-swap $self Configure $opt $val"
+	#puts "iq-correct $self Configure $opt $val"
 	switch -- $opt {
-	    -server -
 	    -partof {}
-	    -swap {
+	    -correct {
 		set val [::sdrblk::validate::get-boolean $val]
-		if {$val} {
-		    # swap inputs into outputs
-		    $block configure -outport [swap {*}[$block cget -inport]]
+		if {$val != 0} {
+		    if {$options($opt) == 0} {
+			# create an iq-delay
+			install correct using ::sdrkit::iq-correct ::iq-correct
+			# connect it
+			$block configure -internal ::iq-correct
+		    }
 		} else {
-		    # no swap inputs into outputs
-		    $block configure -outport [$block cget -inport]
+		    if {$options($opt) != 0} {
+			# disconnect existing iq-correct
+			$block configure -internal {}
+			# delete existing iq-correct
+			rename ::iq-correct {}
+			# remove component??
+			unset correct
+		    }
+		}
+	    }
+	    -mu {
+		if {$options(-correct) != 0} {
+		    $correct configure -mu $val
 		}
 	    }
 	    default {
