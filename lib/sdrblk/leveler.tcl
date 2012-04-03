@@ -17,13 +17,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-rx 1.0.0
+package provide sdrblk::leveler 1.0.0
 
-package require sdrblk::block-pipeline
+package require sdrblk::block-sdrkit-audio
+package require sdrkit::agc
 
 namespace eval ::sdrblk {}
 
-proc ::sdrblk::radio-rx {name args} {
-    return [::sdrblk::block-pipeline $name -suffix rx \
-		-pipeline {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af} {*}$args]
+proc ::sdrblk::leveler {name args} {
+    return [::sdrblk::block-sdrkit-audio $name \
+		-implemented no \
+		-suffix leveler \
+		-factory sdrkit::agc \
+		-controls {} {*}$args]
 }

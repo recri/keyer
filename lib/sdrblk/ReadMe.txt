@@ -24,6 +24,21 @@ control are localized between the controller and the controllees.
 
 ------------------------------------------------------------------------
 
+Now each component is a block, either a container block, an alternate
+block, or an audio block.  The audio and alternate blocks register
+controls, but it seems that:
+
+[ ] all the blocks should register as controls
+[ ] all the blocks should have the -enabled/-implemented options
+[ ] only -implemented true blocks can be -enabled true
+[ ] only blocks with parent -enabled true can be -enabled true
+[ ] setting a block -enabled false forces all children -enabled false
+[ ] someone needs to remember the control values
+[ ] the block-audio wrappers should use [$widget configure] to
+  determine the controls.
+
+------------------------------------------------------------------------
+
 [x] debug the failure to enable
 [x] stop passing options that can be retrieved or computed from the
   -partof parent pointer, eg
@@ -31,7 +46,7 @@ control are localized between the controller and the controllees.
 	-control is $options(-partof) cget -control
 	-prefix is $options(-partof) cget -name
 [x] rename for functional distinctions
-[ ] abstract the pipeline block
+[x] abstract the pipeline block
 [ ] abstract the radiobutton block required for demodulation
 [ ] start making a Tk ui block
 [ ] implement block-sdrkit-midi

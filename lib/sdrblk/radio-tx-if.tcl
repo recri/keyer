@@ -17,13 +17,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-rx 1.0.0
+package provide sdrblk::radio-tx-if 1.0.0
 
 package require sdrblk::block-pipeline
 
 namespace eval ::sdrblk {}
 
-proc ::sdrblk::radio-rx {name args} {
-    return [::sdrblk::block-pipeline $name -suffix rx \
-		-pipeline {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af} {*}$args]
+proc ::sdrblk::radio-tx-if {name args} {
+    # -pipeline {sdrblk::filter-overlap-save sdrblk::compander meter_tx_compander spectrum_tx sdrblk::lo-mixer}
+    return [::sdrblk::block-pipeline $name -suffix if \
+		-pipeline {sdrblk::filter-overlap-save sdrblk::lo-mixer} {*}$args]
 }

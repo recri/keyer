@@ -17,13 +17,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-rx 1.0.0
+package provide sdrblk::radio-tx-af 1.0.0
 
 package require sdrblk::block-pipeline
 
 namespace eval ::sdrblk {}
 
-proc ::sdrblk::radio-rx {name args} {
-    return [::sdrblk::block-pipeline $name -suffix rx \
-		-pipeline {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af} {*}$args]
+proc ::sdrblk::radio-tx-af {name args} {
+    # -pipeline {sdrblk::gain sdrblk::real sdrblk::waveshape meter_tx_wavs sdrblk::dc-block tx_squelch grapiceq meter_tx_eqtap
+    #		sdrblk::leveler meter_tx_leveler sdrblk::speech_processor meter_tx_comp sdrbk::modulate}
+    # a lot of this is voice specific
+    return [::sdrblk::block-pipeline $name \
+		-suffix af \
+		-pipeline {sdrblk::gain sdrblk::leveler sdrblk::modulate} \
+		{*}$args]
 }

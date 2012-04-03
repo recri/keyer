@@ -17,13 +17,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-rx 1.0.0
+package provide sdrblk::radio-tx-rf 1.0.0
 
 package require sdrblk::block-pipeline
 
 namespace eval ::sdrblk {}
 
-proc ::sdrblk::radio-rx {name args} {
-    return [::sdrblk::block-pipeline $name -suffix rx \
-		-pipeline {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af} {*}$args]
+proc ::sdrblk::radio-tx-rf {name args} {
+    # -pipeline { sdrblk::iq-balance sdrblk::gain meter_tx_power}
+    return [::sdrblk::block-pipeline $name \
+		-suffix rf \
+		-pipeline {sdrblk::iq-balance sdrblk::gain} \
+		{*}$args]
 }
