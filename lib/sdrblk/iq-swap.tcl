@@ -19,13 +19,13 @@
 
 package provide sdrblk::iq-swap 1.0.0
 
-package require sdrblk::sdrkit-audio-block
+package require sdrblk::block-sdrkit-audio
 package require sdrkit::iq-swap
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::iq-swap {name args} {
-    return [::sdrblk::sdrkit-audio-block $name \
+    return [::sdrblk::block-sdrkit-audio $name \
 		-implemented yes \
 		-suffix iq-swap \
 		-factory sdrkit::iq-swap \

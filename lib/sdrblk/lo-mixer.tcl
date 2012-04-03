@@ -19,13 +19,13 @@
 
 package provide sdrblk::lo-mixer 1.0.0
 
-package require sdrblk::sdrkit-audio-block
+package require sdrblk::block-sdrkit-audio
 package require sdrkit::lo-mixer 
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::lo-mixer {name args} {
-    return [::sdrblk::sdrkit-audio-block $name \
+    return [::sdrblk::block-sdrkit-audio $name \
 		-implemented yes \
 		-suffix mix \
 		-factory sdrkit::lo-mixer \

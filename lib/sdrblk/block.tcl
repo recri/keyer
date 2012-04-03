@@ -54,13 +54,13 @@ package require sdrkit::jack
     option -input -default {}
     option -output -default {}
     option -super -default {}
+    option -internal-inputs -readonly true
+    option -internal-outputs -readonly true
     option -internal -default {} -validatemethod Validate -configuremethod Configure
     option -inport -default {} -validatemethod Validate -configuremethod Configure
     option -outport -default {} -validatemethod Validate -configuremethod Configure
     option -sink -default {} -validatemethod Validate -configuremethod Configure
     option -source -default {} -validatemethod Validate -configuremethod Configure
-    option -internal-inputs -readonly true -default {in_i in_q}
-    option -internal-outputs -readonly true -default {out_i out_q}
 
     constructor {args} {
 	if {$verbose(construct)} { puts "block $self constructor $args" }

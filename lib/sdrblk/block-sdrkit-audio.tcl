@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::sdrkit-audio-block 1.0.0
+package provide sdrblk::block-sdrkit-audio 1.0.0
 
 package require snit
 package require sdrblk::validate
@@ -26,10 +26,9 @@ package require sdrblk::block
 #
 # a snit type to wrap a single sdrkit audio module
 #
+::snit::type ::sdrblk::block-sdrkit-audio {
 
-::snit::type ::sdrblk::sdrkit-audio-block {
-
-    typevariable verbose -array {connect 0 construct 0 destroy 0 validate 0 configure 0 control 0 controlget 0}
+    typevariable verbose -array {connect 0 construct 0 destroy 0 validate 0 configure 0 control 0 controlget 0 enable 0}
 
     component block -public block
 
@@ -50,7 +49,7 @@ package require sdrblk::block
         $self configure {*}$args
 	if {$verbose(construct)} { puts "$options(-name) $self constructor $args" }
 	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
-	install block using ::sdrblk::block %AUTO% -partof $self
+	install block using ::sdrblk::block %AUTO% -partof $self -internal-inputs {in_i in_q} -internal-outputs {out_i out_q}
 	[$self cget -control] add $options(-name) $self
     }
 
@@ -86,13 +85,11 @@ package require sdrblk::block
 	switch -- $opt {
 	    -enable {
 		if {$val && ! $options($opt)} {
-		    puts "enabling $options(-name)"
+		    if {$verbose(enable)} { puts "enabling $options(-name)" }
 		    $options(-factory) $options(-name) -server [$self cget -server]
 		    $block configure -internal $options(-name)
-		    [$self cget -control] enable $options(-name)
 		} elseif { ! $val && $options($opt)} {
-		    puts "disabling $options(-name)"
-		    [$self cget -control] disable $options(-name)
+		    if {$verbose(enable)} { puts "disabling $options(-name)" }
 		    $block configure -internal {}
 		    rename $options(-name) {}
 		}

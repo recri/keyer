@@ -43,26 +43,53 @@ package require snit
 	unset enabled($name)
     }
 
+    method list {} {
+	return [lsort [array names parts]]
+    }
+
+    method show {name} {
+	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	return $parts($name)
+    }
+
+    method controls {name} {
+	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	return [$parts($name) controls]
+    }
+
+    method control {name opt val} {
+	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	$parts($name) control $opt $val
+    }
+
+    method controlget {name opt} {
+	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	return [$parts($name) controlget $opt]
+    }
+    
     method enable {name} {
 	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
 	if {$enabled($name)} { error "control part {$name} is already enabled" }
+	$parts($name) configure -enable true
 	set enabled($name) 1
     }
 
     method disable {name} {
 	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
 	if { ! $enabled($name)} { error "control part {$name} is already disabled" }
+	$parts($name) configure -enable false
 	set enabled($name) 0
     }
 	
-    method list {args} {
-	if {$args eq {}} {
-	    return [lsort [array names parts]]
-	}
+    method enabled {} {
 	set result {}
-	foreach arg $args {
-	    lappend result $parts($arg)
+	foreach name [$self list] {
+	    if {$enabled($name)} {
+		lappend result $name
+	    }
 	}
 	return $result
     }
+
 }
+

@@ -19,72 +19,14 @@
 
 package provide sdrblk::radio-rx-af 1.0.0
 
-package require snit
+package require sdrblk::block-pipeline
 
-package require sdrkit::jack
+namespace eval ::sdrblk {}
 
-package require sdrblk::block
-package require sdrblk::validate
-
-package require sdrblk::agc
-package require sdrblk::demod
-package require sdrblk::gain
-
-::snit::type sdrblk::radio-rx-af {
-    component block -public block
-    component agc
-    component demod
-    component gain
-
-    option -partof -readonly yes
-    option -server -readonly yes -default {} -cgetmethod Cget
-    option -control -readonly yes -default {} -cgetmethod Cget
-    option -prefix -readonly yes -default {} -cgetmethod Prefix
-    option -name -readonly yes -default {}
-
-    option -implemented -readonly yes -default yes
-    option -suffix -readonly yes -default af
-
-    constructor {args} {
-	puts "rx-af $self constructor $args"
-	$self configure {*}$args
-	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
-	install block using ::sdrblk::block %AUTO% -partof $self
-	install agc using ::sdrblk::agc %AUTO% -partof $self
-	install demod using ::sdrblk::demod %AUTO% -partof $self
-	install gain using ::sdrblk::gain %AUTO% -partof $self
-	# WSCompand here
-	$agc block configure -output $demod
-	# RXMETER_POST_AGC here
-	# SPEC_POST_AGC here
-	$demod block configure -input $agc -output $gain
-	# do_rx_squelch here
-	# SpotTone here
-	# graphiceq here
-	# SPEC_POST_DET here
-	$gain block configure -input $demod
-    }
-
-    destructor {
-	catch {$block destroy}
-        catch {$agc destroy}
-	catch {$demod destroy}
-	catch {$gain destroy}
-    }
-
-    method Cget {opt} {
-	if {[info exists options($opt)] && $options($opt) ne {}} {
-	    return $options($opt)
-	} else {
-	    return [$options(-partof) cget $opt]
-	}
-    }
-    
-    method Prefix {opt} {
-	if {[info exists options($opt)] && $options($opt) ne {}} {
-	    return $options($opt)
-	} else {
-	    return [$options(-partof) cget -name]
-	}
-    }
+proc ::sdrblk::radio-rx-af {name args} {
+    # -pipeline {sdrblk::compand agc rxmeter_post_agc spec_post_agc sdrblk::demod rx_squelch spottone graphiceq spec_post_det}
+    return [::sdrblk::block-pipeline $name \
+		-suffix af \
+		-pipeline {sdrblk::agc sdrblk::demod sdrblk::gain} \
+		{*}$args]
 }

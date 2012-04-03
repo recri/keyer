@@ -48,9 +48,13 @@ package require sdrblk::radio-rx-af
 	$self configure {*}$args
 	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
 	install block using ::sdrblk::block %AUTO% -partof $self
+	#puts "radio-rx block = $block"
 	install rxrf using ::sdrblk::radio-rx-rf %AUTO% -partof $self
+	#puts "radio-rx rxrf = $rxrf"
 	install rxif using ::sdrblk::radio-rx-if %AUTO% -partof $self
+	#puts "radio-rx rxif = $rxif"
 	install rxaf using ::sdrblk::radio-rx-af %AUTO% -partof $self
+	puts "radio-rx rxaf = $rxaf"
 	$rxrf block configure -output $rxif
 	$rxif block configure -input $rxrf -output $rxaf
 	$rxaf block configure -input $rxaf

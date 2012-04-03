@@ -19,13 +19,13 @@
 
 package provide sdrblk::iq-delay 1.0.0
 
-package require sdrblk::sdrkit-audio-block
+package require sdrblk::block-sdrkit-audio
 package require sdrkit::iq-delay
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::iq-delay {name args} {
-    return [::sdrblk::sdrkit-audio-block $name \
+    return [::sdrblk::block-sdrkit-audio $name \
 		-implemented yes \
 		-suffix iq-delay \
 		-factory sdrkit::iq-delay \

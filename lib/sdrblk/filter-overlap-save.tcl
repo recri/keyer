@@ -19,13 +19,13 @@
 
 package provide sdrblk::filter-overlap-save 1.0.0
 
-package require sdrblk::sdrkit-audio-block
+package require sdrblk::block-sdrkit-audio
 package require sdrkit::filter-overlap-save
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::filter-overlap-save {name args} {
-    return [::sdrblk::sdrkit-audio-block $name \
+    return [::sdrblk::block-sdrkit-audio $name \
 		-implemented yes \
 		-suffix bpf \
 		-factory sdrkit::filter-overlap-save \

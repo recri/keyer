@@ -19,6 +19,17 @@
 
 package provide sdrblk::radio-rx-if 1.0.0
 
+package require sdrblk::block-pipeline
+
+namespace eval ::sdrblk {}
+
+proc ::sdrblk::radio-rx-if {name args} {
+    # -pipeline {spec_pre_filt sdrblk::lo-mixer sdrblk::filter-overlap-save rxmeter_post_filt spec_post_filt}
+    return [::sdrblk::block-pipeline $name -suffix if \
+		-pipeline {sdrblk::lo-mixer sdrblk::filter-overlap-save} {*}$args]
+}
+
+if {0} {
 package require snit
 
 package require sdrkit::jack
@@ -78,4 +89,5 @@ package require sdrblk::filter-overlap-save
 	    return [$options(-partof) cget -name]
 	}
     }
+}
 }
