@@ -21,6 +21,8 @@ package provide sdrblk::block 1.0.0
 
 package require snit
 
+package require sdrkit::jack
+
 #
 # A computational block which maintains minimal jack audio connections
 # to its peers.
@@ -35,32 +37,39 @@ package require snit
 # and sends its outport downstream to be the inport of the next active component.
 #
 
+# 1) needs to know -server option to use sdrkit::jack correctly
+# 2) needs to connect the final block's -outport to the -inport
+# 3) needs to retain the iq-swap when automatically rewiring
+
 ::snit::type sdrblk::block {
+
+    typevariable verbose -array {connect 0 construct 0 validate 0 configure 0}
+
     variable parts {}
 
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -input -default {} -validatemethod Validate -configuremethod Configure
-    option -output -default {}  -validatemethod Validate -configuremethod Configure
-    option -super -default {} -validatemethod Validate -configuremethod Configure
+    option -partof -readonly yes
+    option -server -readonly yes -default {} -cgetmethod Cget
+    option -control -readonly yes -default {} -cgetmethod Cget
+
+    option -input -default {}
+    option -output -default {}
+    option -super -default {}
     option -internal -default {} -validatemethod Validate -configuremethod Configure
     option -inport -default {} -validatemethod Validate -configuremethod Configure
     option -outport -default {} -validatemethod Validate -configuremethod Configure
-    option -internal-input -default {} -validatemethod Validate -configuremethod Configure
-    option -internal-output -default {} -validatemethod Validate -configuremethod Configure
-    option -self -readonly yes -cgetmethod Cget
+    option -sink -default {} -validatemethod Validate -configuremethod Configure
+    option -source -default {} -validatemethod Validate -configuremethod Configure
+    option -internal-inputs -readonly true -default {in_i in_q}
+    option -internal-outputs -readonly true -default {out_i out_q}
 
     constructor {args} {
-	#puts "block $self constructor $args"
+	if {$verbose(construct)} { puts "block $self constructor $args" }
 	$self configure {*}$args
 	set options(-super) [$options(-partof) cget -partof]
 	if {[catch {
 	    $options(-super) block addpart $self
 	} error erropts]} {
-	    #puts "error calling $options(-super)\n$error\n$erropts"
-	    #catch {$options(-super) block addpart $self} error2 erropts2
-	    #puts "error calling $options(-super)\n$error2\n$erropts2"
-	    if {$error eq {unknown subcommand "block": must be Configure, Validate, or configure} ||
-		$error eq {unknown subcommand "block": namespace ::sdrblk::radio::Snit_inst1 does not export any commands}} {
+	    if {[string match {unknown subcommand "block":*} $error]} {
 		set options(-super) {}
 	    } else {
 		return -options $erropts $error
@@ -72,14 +81,65 @@ package require snit
 
     method addpart {block} { lappend parts $block }
 
+    method parts {} { return $parts }
+	
+    method input-parts {} {
+	set inputparts {}
+	foreach part [$self parts] {
+	    if {[$part cget -input] eq {}} {
+		lappend inputparts $part
+	    }
+	}
+	return $inputparts
+    }
+    
+    method internal-inputs {internal} {
+	set inputs {}
+	foreach i $options(-internal-inputs) {
+	    lappend inputs ${internal}:$i
+	}
+	return $inputs
+    }
+
+    method internal-outputs {internal} {
+	set outputs {}
+	foreach i $options(-internal-outputs) {
+	    lappend outputs ${internal}:$i
+	}
+	return $outputs
+    }
+
+    method disconnect {ins outs} {
+	if {[llength $ins] == [llength $outs]} {
+	    foreach i $ins o $outs {
+		sdrkit::jack -server [$self cget -server] disconnect [$self portname $i] [$self portname $o]
+	    }
+	}
+    }
+    
+    method connect {ins outs} {
+	if {[llength $ins] == [llength $outs]} {
+	    foreach i $ins o $outs {
+		sdrkit::jack -server [$self cget -server] connect [$self portname $i] [$self portname $o]
+	    }
+	}
+    }
+    
+    method portname {i} {
+	foreach {name value} [sdrkit::jack -server [$self cget -server] list-ports] {
+	    if {[string first $name $i] >= 0} {
+		return $name
+	    }
+	}
+	return $i
+    }
+
     method Validate {opt val} {
-	#puts "block $self Validate $opt $val"
+	if {$verbose(validate)} { puts "block $self Validate $opt $val" }
 	switch -- $opt {
-	    -partof -
-	    -input -
-	    -output -
-	    -super -
 	    -internal -
+	    -sink -
+	    -source -
 	    -inport -
 	    -outport {}
 	    default {
@@ -88,13 +148,11 @@ package require snit
 	}
     }
 
-    method Configure {opt val} {
-	#puts "block $self Configure $opt $val"
+    method Configure {opt newval} {
+	if {$verbose(configure)} { puts "block $self Configure $opt $val" }
+	set oldval $options($opt)
+	set options($opt) $newval
 	switch -- $opt {
-	    -partof -
-	    -input -
-	    -output -
-	    -super {}
 	    -internal {
 		# change in internal block structure
 		# requires rewiring, either to connect
@@ -102,104 +160,85 @@ package require snit
 		# resulting outport, or to disconnect
 		# the old internal and propagate the
 		# inport to the outport
-		puts "block $self Configure $opt {$val} #[llength $parts]"
-		if {$val eq $options($opt)} {
+		if {$verbose(connect)} { puts "block $self Configure $opt {$newval} #[llength $parts] was {$oldval}" }
+		if {$newval eq $oldval} {
 		    # no change
-		} elseif {$val eq {}} { # && $options(-internal) ne {}
+		} elseif {$newval eq {}} { # && $oldval ne {}
 		    # replace -internal with {}
-		    $self configure -outport [$self cget -inport]
+		    $self configure -outport $options(-inport)
 		    # disconnect -inport from the old -internal
-		    foreach i [$self cget -inport] o {in_i in_q} {
-			sdrkit::jack disconnect $i $options(-internal):$o
-		    }
-		} elseif {$options($opt) eq {}} { # && $val ne {}
+		    $self disconnect $options(-inport) [$self internal-inputs $oldval]
+		} elseif {$oldval eq {}} { # && $newval ne {}
 		    # replace {} with -internal
-		    foreach i [$self cget -inport] o {in_i in_q} {
-			sdrkit::jack connect $i ${val}:$o
-		    }
-		    $self configure -outport [list ${val}:out_i ${val}:out_q]
+		    $self connect $options(-inport) [$self internal-inputs $newval]
+		    $self configure -outport [$self internal-outputs $newval]
 		} else {
 		    # connect -inport to the new -internal
-		    foreach i [$self cget -inport] o {in_i in_q} {
-			sdrkit::jack connect $i ${val}:$o
-		    }
+		    $self connect $options(-inport) [$self internal-inputs $newval]
 		    # disconnect -inport from the old -internal
-		    foreach i [$self cget -inport] o {in_i in_q} {
-			sdrkit::jack disconnect $i $options(-internal):$o
-		    }
+		    $self disconnect $options(-inport) [$self internal-inputs $oldval]
 		    # update -outport
-		    $self configure -outport [list ${val}:out_i ${val}:out_q]
+		    $self configure -outport [$self internal-outputs $newval]
 		}
 	    }
 	    -inport {
 		# change in inport requires rewiring the internal inport
 		# or propagation of the outport
-		puts "block $self Configure $opt {$val} #[llength $parts]"
+		if {$verbose(connect)} { puts "block $self Configure $opt {$newval} #[llength $parts] was {$oldval}" }
 		if {[llength $parts] > 0} {
-		    foreach part [$self InputParts] {
-			$part configure -inport $val
+		    foreach part [$self input-parts] {
+			$part configure -inport $newval
 		    }
-		} elseif {$val eq $options($opt)} {
+		} elseif {$newval eq $oldval} {
 		    # no change
 		} elseif {$options(-internal) eq {}} {
 		    # propagate -inport to -outport
-		    $self configure -outport $val
+		    $self configure -outport $newval
 		} else {
 		    # connect -inport to -internal
-		    foreach i $val o {in_i in_q} {
-			sdrkit::jack connect $i $options(-internal):$o
-		    }
+		    $self connect $newval [$self internal-inputs $options(-internal)]
 		    # disconnect old -inport from -internal
-		    foreach i [$self cget -inport] o {in_i in_q} {
-			sdrkit::jack disconnect $i $options(-internal):$o
-		    }
+		    $self disconnect $oldval [$self internal-inputs $options(-internal)]
+		    # configure downstream
+		    $self configure -outport [$self internal-outputs $options(-internal)]
 		}
 	    }
 	    -outport {
 		# change in outport requires propagation of the outport downstream
-		puts "block $self Configure $opt {$val} #[llength $parts]"
+		if {$verbose(connect)} { puts "block $self Configure $opt {$newval} #[llength $parts] was {$oldval}" }
 		if {$options(-output) ne {}} {
-		    $options(-output) block configure -inport $val
+		    $options(-output) block configure -inport $newval
 		} elseif {$options(-super) ne {}} {
-		    $options(-super) block configure -outport $val
+		    $options(-super) block configure -outport $newval
 		} else {
-		    puts "block $self configure -outport {$val} -- terminated"
+		    # terminal -outport
+		    if {$oldval ne $newval} {
+			$self connect $newval $options(-sink)
+			$self disconnect $oldval $options(-sink)
+		    }
 		}
+	    }
+	    -source {
+		if {$verbose(connect)} { puts "block $self Configure $opt {$newval} #[llength $parts] was {$oldval}" }
+		$self configure -inport $newval
+	    }
+	    -sink {
+		if {$verbose(connect)} { puts "block $self Configure $opt {$newval} #[llength $parts] was {$oldval}" }
+		$self connect $options(-outport) $newval
+		$self disconnect $options(-outport) $oldval
 	    }
 	    default {
 		error "unknown configure option \"$opt\""
 	    }
 	}
-	set options($opt) $val
     }
     
     method Cget {opt} {
-	switch -- $opt {
-	    -self { return $self }
-	    default {
-		error "unknown cget option \"$opt\""
-	    }
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget $opt]
 	}
-    }
-
-    method InputParts {} {
-	set inputparts {}
-	foreach part $parts {
-	    if {[$part cget -input] eq {}} {
-		lappend inputparts $part
-	    }
-	}
-	return $inputparts
-    }
-    
-    method OutputParts {} {
-	set outputparts {}
-	foreach part $parts {
-	    if {[$part cget -output] eq {}} {
-		lappend outputparts $part
-	    }
-	}
-	return $outputparts
     }
 }
 

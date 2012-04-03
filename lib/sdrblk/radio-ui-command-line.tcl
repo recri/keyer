@@ -17,46 +17,30 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::hw 1.0.0
+package provide sdrblk::radio-ui-command-line 1.0.0
 
 package require snit
 
+::snit::type sdrblk::radio-ui-command-line {
 
-::snit::type sdrblk::hw {
-
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -hw -readonly yes -validatemethod Validate -configuremethod Configure
+    option -partof -readonly yes
+    option -control -readonly yes -default {} -cgetmethod Cget
     
-    constructor {args} {
-	puts "hw $self constructor $args"
-	$self configure {*}$args
-    }
-
-    destructor {
-    }
-
-    method Validate {opt val} {
-	#puts "hw $self Validate $opt $val"
-	switch -- $opt {
-	    -hw -
-	    -partof {}
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
+    method repl {} {
+	set c [$self cget -control]
+	while {1} {
+	    puts -nonewline stderr "sdr> "
+	    if {[gets stdin input] < 0} break
+	    puts stderr [string trim [eval $input]]
 	}
     }
 
-    method Configure {opt val} {
-	#puts "hw $self Configure $opt $val"
-	switch -- $opt {
-	    -hw {
-	    }
-	    -partof {}
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
+    method Cget {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget $opt]
 	}
-	set options($opt) $val
     }
+    
 }

@@ -19,77 +19,15 @@
 
 package provide sdrblk::gain 1.0.0
 
-package require snit
-package require sdrblk::validate
-package require sdrblk::block
-
+package require sdrblk::sdrkit-audio-block
 package require sdrkit::gain
 
-::snit::type ::sdrblk::gain {
-    component block -public block
-    component gain
+namespace eval ::sdrblk {}
 
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -name -default ::gain -readonly yes -validatemethod Validate -configuremethod Configure
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -gain -default 0 -validatemethod Validate -configuremethod Configure
-
-    constructor {args} {
-	puts "gain $self constructor $args"
-        $self configure {*}$args
-	install block using ::sdrblk::block %AUTO% -partof $self
-    }
-
-    destructor {
-        $block destroy
-	catch {rename $gain {}}
-    }
-
-    method Validate {opt val} {
-	#puts "gain $self Validate $opt $val"
-	switch -- $opt {
-	    -server -
-	    -partof -
-	    -name {}
-	    -gain {
-		::sdrblk::validate::decibel $opt $val
-	    }
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
-	}
-    }
-
-    method Configure {opt val} {
-	#puts "gain $self Configure $opt $val"
-	switch -- $opt {
-	    -server -
-	    -partof -
-	    -name {}
-	    -gain {
-		if {$val != 0} {
-		    if {$options($opt) != 0} {
-			# reconfigure existing gain
-			$gain configure -gain $val
-		    } else {
-			# create a gain module
-			install gain using ::sdrkit::gain $options(-name) -server $options(-server) -gain $val
-			# connect it
-			$block configure -internal $gain
-		    }
-		} else {
-		    if {$options($opt) != 0} {
-			# disconnect existing gain
-			$block configure -internal {}
-			# delete existing gain
-			rename $gain {}
-		    }
-		}
-	    }
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
-	}
-	set options($opt) $val
-    }
+proc ::sdrblk::gain {name args} {
+    return [::sdrblk::sdrkit-audio-block $name \
+		-implemented yes \
+		-suffix gain \
+		-factory sdrkit::gain \
+		-controls { -gain {gain in decibels} } {*}$args]
 }

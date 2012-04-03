@@ -1,0 +1,20 @@
+* GPS
+** GPS frequency bands
+| Band | Frequency    | Description                                                                                                                                    |
+| L1   | 1575.42 MHz  | Coarse-acquisition (C/A) and encrypted precision P(Y) codes, plus the L1 civilian (L1C) and military (M) codes on future Block III satellites. |
+| L2   | 1227.60 MHz  | P(Y) code, plus the L2C and military codes on the Block IIR-M and newer satellites.                                                            |
+| L3   | 1381.05 MHz  | Used for nuclear detonation (NUDET) detection.                                                                                                 |
+| L4   | 1379.913 MHz | Being studied for additional ionospheric correction.[citation needed]                                                                          |
+| L5   | 1176.45 MHz  | Proposed for use as a civilian safety-of-life (SoL) signal.** 15                                                                               |
+** GPS encoding
+   Messages from each satellite are sent as 1500 bit frames at 50 bits/second every 30 seconds, on the minute and half-minute at the satellite.
+   A complete message consists of 25 frames over 12.5 minutes.
+   Each frame contains 5 subframes.
+   The first three subframes of each frame identify the time, the health of the satellite, and the satellite ephemeris.
+   The last two subframes of each frame give the almanac for all satellites over the course of 25 frames.
+** All satellites transmit on the same frequencies
+   The coarse acquisition signal (C/A) is tranmitted at 1.023 million chips/second, 20460 chips/bit.
+   The signals are modulated with Binary phase-shift keying (BPSK), the C/A signal is in phase and
+   the military P signal is in quadrature.
+   (I'm not sure what that 1.023 million chips/second means.)
+

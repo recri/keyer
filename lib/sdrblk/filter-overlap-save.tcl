@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,14 +17,21 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package provide sdrblk::filter-overlap-save 1.0.0
 
-package require sdrblk::radio
+package require sdrblk::sdrkit-audio-block
+package require sdrkit::filter-overlap-save
 
-proc main {argv} {
-    ::sdrblk::radio ::radio {*}$argv
-    ::radio repl
-}
+namespace eval ::sdrblk {}
 
-main $argv
+proc ::sdrblk::filter-overlap-save {name args} {
+    return [::sdrblk::sdrkit-audio-block $name \
+		-implemented yes \
+		-suffix bpf \
+		-factory sdrkit::filter-overlap-save \
+		-controls {
+		    -low {bandpass low frequency cutoff in Hertz}
+		    -high {bandpass high frequency cutoff in Hertz}
+		    -length {bandpass filter size in samples}
+		} {*}$args]
+}    

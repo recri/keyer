@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::rx-rf 1.0.0
+package provide sdrblk::radio-rx-rf 1.0.0
 
 package require snit
 
@@ -32,33 +32,31 @@ package require sdrblk::iq-correct
 package require sdrblk::gain
 
 
-::snit::type sdrblk::rx-rf {
+::snit::type sdrblk::radio-rx-rf {
     component block -public block
     component gain
     component swap
     component delay
     component correct
 
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -rf-gain-name -default ::rf-gain -readonly yes
+    option -partof -readonly yes
+    option -server -readonly yes -default {} -cgetmethod Cget
+    option -control -readonly yes -default {} -cgetmethod Cget
+    option -prefix -readonly yes -default {} -cgetmethod Prefix
+    option -name -readonly yes -default {}
 
-    delegate option -iq-swap to swap as -swap
-    delegate option -iq-delay to delay as -delay
-    delegate option -iq-correct to correct as -correct
-    delegate option -iq-correct-mu to correct as -mu
-    delegate option -gain to gain
+    option -implemented -readonly yes -default yes
+    option -suffix -readonly yes -default rf
 
     constructor {args} {
 	puts "rx-rf $self constructor $args"
-
 	$self configure {*}$args
-
+	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
 	install block using ::sdrblk::block %AUTO% -partof $self
-	install gain using ::sdrblk::gain %AUTO% -partof $self -name $options(-rf-gain-name) -server $options(-server)
-	install swap using ::sdrblk::iq-swap %AUTO% -partof $self -server $options(-server)
-	install delay using ::sdrblk::iq-delay %AUTO% -partof $self -server $options(-server)
-	install correct using ::sdrblk::iq-correct %AUTO% -partof $self -server $options(-server)
+	install gain using ::sdrblk::gain %AUTO% -partof $self
+	install swap using ::sdrblk::iq-swap %AUTO% -partof $self
+	install delay using ::sdrblk::iq-delay %AUTO% -partof $self
+	install correct using ::sdrblk::iq-correct %AUTO% -partof $self
 
 	$gain block configure -output $swap
 	# SPEC_SEMI_RAW here
@@ -70,34 +68,26 @@ package require sdrblk::gain
     }
 
     destructor {
-	$block destroy
+	catch {$block destroy}
         catch {$swap destroy}
 	catch {$delay destroy}
 	catch {$correct destroy}
 	catch {$gain destroy}
     }
 
-    method Validate {opt val} {
-	#puts "rx-rf $self Validate $opt $val"
-	switch -- $opt {
-	    -server -
-	    -partof {}
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
+    method Cget {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget $opt]
 	}
     }
-
-    method Configure {opt val} {
-	#puts "rx-rf $self Configure $opt $val"
-	switch -- $opt {
-	    -server -
-	    -partof {}
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
+    
+    method Prefix {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget -name]
 	}
-	set options($opt) $val
     }
-
 }

@@ -19,56 +19,15 @@
 
 package provide sdrblk::agc 1.0.0
 
-package require snit
-package require sdrblk::validate
-package require sdrblk::block
+package require sdrblk::sdrkit-audio-block
+package require sdrkit::agc
 
-::snit::type sdrblk::agc {
-    component block -public block
+namespace eval ::sdrblk {}
 
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -name -default ::agc -readonly yes -validatemethod Validate -configuremethod Configure
-    option -agc -default false -validatemethod Validate -configuremethod Configure
-
-    constructor {args} {
-	puts "agc $self constructor $args"
-        $self configure {*}$args
-	install block using ::sdrblk::block %AUTO% -partof $self
-    }
-
-    destructor {
-        catch {$block destroy}
-    }
-
-    method Validate {opt val} {
-	#puts "agc $self Validate $opt $val"
-	switch -- $opt {
-	    -server -
-	    -name -
-	    -partof {}
-	    -agc {
-		::sdrblk::validate::boolean $opt $val
-	    }
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
-	}
-    }
-
-    method Configure {opt val} {
-	#puts "agc $self Configure $opt $val"
-	switch -- $opt {
-	    -server -
-	    -name -
-	    -partof {}
-	    -agc {
-		set val [::sdrblk::validate::get-boolean $val]
-	    }
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
-	}
-	set options($opt) $val
-    }
+proc ::sdrblk::agc {name args} {
+    return [::sdrblk::sdrkit-audio-block $name \
+		-implemented no \
+		-suffix agc \
+		-factory sdrkit::agc \
+		-controls {} {*}$args]
 }

@@ -17,36 +17,44 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::rx 1.0.0
+package provide sdrblk::radio-rx 1.0.0
 
 package require snit
 
-package require sdrblk::rx-rf
-package require sdrblk::rx-if
-package require sdrblk::rx-af
+package require sdrblk::radio-rx-rf
+package require sdrblk::radio-rx-if
+package require sdrblk::radio-rx-af
 
-::snit::type sdrblk::rx {
+::snit::type sdrblk::radio-rx {
     component block -public block
     component rxrf
     component rxif
     component rxaf
 
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -inport -readonly yes -validatemethod Validate -configuremethod Configure
-    option -outport -readonly yes -validatemethod Validate -configuremethod Configure
+    option -partof -readonly yes
+    option -server -readonly yes -default {} -cgetmethod Cget
+    option -control -readonly yes -default {} -cgetmethod Cget
+    option -prefix -readonly yes -default {} -cgetmethod Prefix
+    option -name -readonly yes -default {}
+
+    option -implemented -readonly yes -default yes
+    option -suffix -readonly yes -default rx
+
+    option -inport -readonly yes
+    option -outport -readonly yes
     
     constructor {args} {
 	puts "rx $self constructor $args"
 	$self configure {*}$args
+	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
 	install block using ::sdrblk::block %AUTO% -partof $self
-	install rxrf using ::sdrblk::rx-rf %AUTO% -partof $self -server $options(-server)
-	install rxif using ::sdrblk::rx-if %AUTO% -partof $self -server $options(-server)
-	install rxaf using ::sdrblk::rx-af %AUTO% -partof $self -server $options(-server)
+	install rxrf using ::sdrblk::radio-rx-rf %AUTO% -partof $self
+	install rxif using ::sdrblk::radio-rx-if %AUTO% -partof $self
+	install rxaf using ::sdrblk::radio-rx-af %AUTO% -partof $self
 	$rxrf block configure -output $rxif
 	$rxif block configure -input $rxrf -output $rxaf
 	$rxaf block configure -input $rxaf
-	$block configure -inport $options(-inport) -outport $options(-outport)
+	$block configure -sink $options(-outport) -source $options(-inport)
     }
 
     destructor {
@@ -56,30 +64,19 @@ package require sdrblk::rx-af
 	catch {$rxaf destroy}
     }
 
-    method Validate {opt val} {
-	#puts "rx $self Validate $opt $val"
-	switch -- $opt {
-	    -server -
-	    -partof -
-	    -inport -
-	    -outport {}
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
+    method Cget {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget $opt]
 	}
     }
-
-    method Configure {opt val} {
-	#puts "rx $self Configure $opt $val"
-	switch -- $opt {
-	    -server -
-	    -partof -
-	    -inport -
-	    -outport {}
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
+    
+    method Prefix {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget -name]
 	}
-	set options($opt) $val
     }
 }

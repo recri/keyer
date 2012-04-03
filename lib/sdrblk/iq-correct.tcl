@@ -19,82 +19,15 @@
 
 package provide sdrblk::iq-correct 1.0.0
 
-package require snit
-package require sdrblk::validate
-package require sdrblk::block
-
+package require sdrblk::sdrkit-audio-block
 package require sdrkit::iq-correct
 
-::snit::type ::sdrblk::iq-correct {
-    component block -public block
-    component correct
+namespace eval ::sdrblk {}
 
-    option -server -default default -readonly yes
-    option -partof -readonly yes
-    option -correct -default 0 -validatemethod Validate -configuremethod Configure
-    option -mu -validatemethod Validate -configuremethod Configure
-
-    constructor {args} {
-	puts "iq-correct $self constructor $args"
-	set correct {}
-        $self configure {*}$args
-	install block using ::sdrblk::block %AUTO% -partof $self
-    }
-
-    destructor {
-        $block destroy
-	catch {rename $correct {}}
-    }
-
-    method Validate {opt val} {
-	#puts "iq-correct $self Validate $opt $val"
-	switch -- $opt {
-	    -partof {}
-	    -correct {
-		::sdrblk::validate::boolean $opt $val
-	    }
-	    -mu {
-		::sdrblk::validate::double $opt $val
-	    }
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
-	}
-    }
-
-    method Configure {opt val} {
-	#puts "iq-correct $self Configure $opt $val"
-	switch -- $opt {
-	    -partof {}
-	    -correct {
-		set val [::sdrblk::validate::get-boolean $val]
-		if {$val != 0} {
-		    if {$options($opt) == 0} {
-			# create an iq-delay
-			install correct using ::sdrkit::iq-correct ::iq-correct
-			# connect it
-			$block configure -internal ::iq-correct
-		    }
-		} else {
-		    if {$options($opt) != 0} {
-			# disconnect existing iq-correct
-			$block configure -internal {}
-			# delete existing iq-correct
-			rename ::iq-correct {}
-			# remove component??
-			unset correct
-		    }
-		}
-	    }
-	    -mu {
-		if {$options(-correct) != 0} {
-		    $correct configure -mu $val
-		}
-	    }
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
-	}
-	set options($opt) $val
-    }
+proc ::sdrblk::iq-correct {name args} {
+    return [::sdrblk::sdrkit-audio-block $name \
+		-implemented yes \
+		-suffix iq-correct \
+		-factory sdrkit::iq-correct \
+		-controls { -mu {learning rate for adaptive filter} } {*}$args]
 }

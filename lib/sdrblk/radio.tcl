@@ -21,81 +21,61 @@ package provide sdrblk::radio 1.0.0
 
 package require snit
 
-package require sdrblk::rx
-package require sdrblk::tx
-package require sdrblk::hw
+package require sdrblk::radio-control
+package require sdrblk::radio-rx
+package require sdrblk::radio-tx
+package require sdrblk::radio-hw
+package require sdrblk::radio-ui
 
 ::snit::type sdrblk::radio {
+    component control
     component rx
     component tx
     component hw
+    component ui
 
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -rx -default true -readonly yes -validatemethod Validate -configuremethod Configure
-    option -tx -default false -readonly yes -validatemethod Validate -configuremethod Configure
-    option -hw -default {softrock ensemble rx ii dg8saq} -readonly yes -validatemethod Validate -configuremethod Configure
-    option -rx-inport -readonly yes -default {system:capture_1 system:capture_2} -validatemethod Validate -configuremethod Configure
-    option -rx-outport -readonly yes -default {system:playback_1 system:playback_2} -validatemethod Validate -configuremethod Configure
-    option -tx-inport -readonly yes -default {} -validatemethod Validate -configuremethod Configure
-    option -tx-outport -readonly yes -default {} -validatemethod Validate -configuremethod Configure
-
-    option -rx-iq-swap -default false
-    option -rx-iq-delay -default 0
-    option -rx-iq-correct -default false
-    option -rx-iq-correct-mu -default 0.0125
-    option -rx-rf-gain -default 0
+    option -server -readonly yes -default default
+    option -control -readonly yes
+    option -name -readonly yes -default {}
+    option -rx -readonly yes -default true
+    option -tx -readonly yes -default false
+    option -hw -readonly yes -default true
+    option -hw-type -readonly yes -default {softrock-dg8saq}
+    option -ui -readonly yes -default true
+    option -ui-type -readonly yes -default {command-line}
+    option -rx-inport -readonly yes -default {system:capture_1 system:capture_2}
+    option -rx-outport -readonly yes -default {system:playback_1 system:playback_2}
+    option -tx-inport -readonly yes -default {}
+    option -tx-outport -readonly yes -default {}
 
     constructor {args} {
 	puts "radio $self constructor $args"
 	$self configure {*}$args
-	install rx using ::sdrblk::rx %AUTO% -partof $self -server $options(-server) -inport $options(-rx-inport) -outport $options(-rx-outport)
-	install tx using ::sdrblk::tx %AUTO% -partof $self -server $options(-server) -inport $options(-tx-inport) -outport $options(-tx-outport)
-	install hw using ::sdrblk::hw %AUTO% -partof $self -hw $options(-hw)
+	install control using ::sdrblk::radio-control %AUTO% -partof $self
+	set options(-control) $control
+	if {$options(-rx)} {
+	    install rx using ::sdrblk::radio-rx %AUTO% -partof $self -inport $options(-rx-inport) -outport $options(-rx-outport)
+	}
+	if {$options(-tx)} {
+	    install tx using ::sdrblk::radio-tx %AUTO% -partof $self -inport $options(-tx-inport) -outport $options(-tx-outport)
+	}
+	if {$options(-hw)} {
+	    install hw using ::sdrblk::radio-hw %AUTO% -partof $self -type $options(-hw-type)
+	}
+	if {$options(-ui)} {
+	    install ui using ::sdrblk::radio-ui %AUTO% -partof $self -type $options(-ui-type)
+	}
     }
 
     destructor {
-	catch {$rx destroy}
-	catch {$tx destroy}
+	catch {$ui destroy}
 	catch {$hw destroy}
+	catch {$tx destroy}
+	catch {$rx destroy}
+	catch {$control destroy}
     }
 
-    method Validate {opt val} {
-	#puts "radio $self Validate $opt $val"
-	switch -- $opt {
-	    -hw -
-	    -rx-inport -
-	    -rx-outport -
-	    -tx-inport -
-	    -tx-outport -
-	    -server {
-	    }
-	    -rx -
-	    -tx {
-		::sdrblk::validate::boolean $opt $val
-	    }
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
-	}
-    }
-
-    method Configure {opt val} {
-	#puts "radio $self Configure $opt $val"
-	switch -- $opt {
-	    -rx-inport -
-	    -rx-outport -
-	    -tx-inport -
-	    -tx-outport -
-	    -server -
-	    -rx -
-	    -tx {
-	    }
-	    -hw {
-	    }
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
-	}
-	set options($opt) $val
+    method repl {} {
+	if {$ui ne {}} { $ui repl }
     }
 }

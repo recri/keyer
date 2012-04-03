@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,14 +17,36 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package provide sdrblk::radio-hw 1.0.0
 
-package require sdrblk::radio
+package require snit
 
-proc main {argv} {
-    ::sdrblk::radio ::radio {*}$argv
-    ::radio repl
+::snit::type sdrblk::radio-hw {
+    component impl
+
+    option -partof -readonly yes
+    option -server -readonly yes -default {} -cgetmethod Cget
+    option -control -readonly yes -default {} -cgetmethod Cget
+
+    option -type -readonly yes
+    
+    constructor {args} {
+	puts "hw $self constructor $args"
+	$self configure {*}$args
+	package require sdrblk::radio-hw-$options(-type)
+	install impl using sdrblk::radio-hw-$options(-type) %AUTO% -partof $self
+    }
+
+    destructor {
+	catch {$impl destroy}
+    }
+
+    method Cget {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget $opt]
+	}
+    }
+    
 }
-
-main $argv

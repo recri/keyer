@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::tx 1.0.0
+package provide sdrblk::radio-tx 1.0.0
 
 package require snit
 
@@ -25,20 +25,28 @@ package require snit
 #package require sdrblk::tx-if
 #package require sdrblk::tx-rf
 
-::snit::type sdrblk::tx {
+::snit::type sdrblk::radio-tx {
     component block -public block
-    #component txaf
-    #component txif
-    #component txrf
+    component txaf
+    component txif
+    component txrf
 
-    option -server -default default -readonly yes -validatemethod Validate -configuremethod Configure
-    option -partof -readonly yes -validatemethod Validate -configuremethod Configure
-    option -inport -readonly yes -validatemethod Validate -configuremethod Configure
-    option -outport -readonly yes -validatemethod Validate -configuremethod Configure
+    option -partof -readonly yes
+    option -server -readonly yes -default {} -cgetmethod Cget
+    option -control -readonly yes -default {} -cgetmethod Cget
+    option -prefix -readonly yes -default {} -cgetmethod Prefix
+    option -name -readonly yes -default {}
+
+    option -implemented -readonly yes -default yes
+    option -suffix -readonly yes -default tx
+
+    option -inport -readonly yes
+    option -outport -readonly yes
     
     constructor {args} {
 	puts "tx $self constructor $args"
 	$self configure {*}$args
+	set options(-name) [string trim [$self cget -prefix]-$options(-name) -]
 	install block using ::sdrblk::block %AUTO% -partof $self
 	#install txaf using ::sdrblk::tx-af %AUTO% -partof $self
 	#install txif using ::sdrblk::tx-if %AUTO% -partof $self
@@ -46,7 +54,7 @@ package require snit
 	#$txaf block configure -output $txif
 	#$txif block configure -input $txaf -output $txrf
 	#$txrf block configure -input $txif
-	$block configure -inport $options(-inport) -outport $options(-outport)
+	$block configure -sink $options(-outport) -source $options(-inport)
     }
 
     destructor {
@@ -56,30 +64,19 @@ package require snit
 	catch {$txrf destroy}
     }
 
-    method Validate {opt val} {
-	#puts "tx $self Validate $opt $val"
-	switch -- $opt {
-	    -server -
-	    -inport -
-	    -outport -
-	    -partof {}
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
+    method Cget {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget $opt]
 	}
     }
-
-    method Configure {opt val} {
-	#puts "tx $self Configure $opt $val"
-	switch -- $opt {
-	    -server -
-	    -inport -
-	    -outport -
-	    -partof {}
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
+    
+    method Prefix {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget -name]
 	}
-	set options($opt) $val
     }
 }

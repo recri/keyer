@@ -19,75 +19,15 @@
 
 package provide sdrblk::iq-delay 1.0.0
 
-package require snit
-package require sdrblk::validate
-package require sdrblk::block
-
+package require sdrblk::sdrkit-audio-block
 package require sdrkit::iq-delay
 
-::snit::type ::sdrblk::iq-delay {
-    component block -public block
-    component delay
+namespace eval ::sdrblk {}
 
-    option -server -default default -readonly yes
-    option -partof -readonly yes
-    option -delay -validatemethod Validate -configuremethod Configure
-
-    constructor {args} {
-	puts "iq-delay $self constructor $args"
-        $self configure {*}$args
-	install block using ::sdrblk::block %AUTO% -partof $self
-    }
-
-    destructor {
-        $block destroy
-	catch {rename $delay {}}
-    }
-
-    method Validate {opt val} {
-	#puts "iq-delay $self Validate $opt $val"
-	switch -- $opt {
-	    -partof {}
-	    -delay {
-		::sdrblk::validate::integer $opt $val
-	    }
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
-	}
-    }
-
-    method Configure {opt val} {
-	#puts "iq-delay $self Configure $opt $val"
-	switch -- $opt {
-	    -partof {}
-	    -delay {
-		if {$val != 0} {
-		    if {$options($opt) != 0} {
-			# reconfigure existing iq-delay
-			$delay configure -delay $val
-		    } else {
-			# create an iq-delay
-			install delay using ::sdrkit::iq-delay ::iq-delay -delay $val
-			# connect it
-			$block configure -internal ::iq-delay
-		    }
-		} else {
-		    if {$options($opt) != 0} {
-			# disconnect existing iq-delay
-			$block configure -internal {}
-			# delete existing iq-delay
-			rename ::iq-delay {}
-		    } else {
-			# already have no delay
-			# nothing to do
-		    }
-		}
-	    }
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
-	}
-	set options($opt) $val
-    }
+proc ::sdrblk::iq-delay {name args} {
+    return [::sdrblk::sdrkit-audio-block $name \
+		-implemented yes \
+		-suffix iq-delay \
+		-factory sdrkit::iq-delay \
+		-controls { -delay {delay of I sample, 1, 0, or -1} } {*}$args]
 }

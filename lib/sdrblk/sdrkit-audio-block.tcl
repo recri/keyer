@@ -17,54 +17,64 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::demod 1.0.0
+package provide sdrblk::sdrkit-audio-block 1.0.0
 
 package require snit
 package require sdrblk::validate
 package require sdrblk::block
 
-package require sdrkit::demod-am
-package require sdrkit::demod-sam
-package require sdrkit::demod-fm
+#
+# a snit type to wrap a single sdrkit audio module
+#
 
-::snit::type ::sdrblk::demod {
+::snit::type ::sdrblk::sdrkit-audio-block {
+
+    typevariable verbose -array {connect 0 construct 0 destroy 0 validate 0 configure 0 control 0 controlget 0}
+
     component block -public block
-    component demod
 
     option -partof -readonly yes
     option -server -readonly yes -default {} -cgetmethod Cget
     option -control -readonly yes -default {} -cgetmethod Cget
     option -prefix -readonly yes -default {} -cgetmethod Prefix
 
-    option -implemented -readonly yes -default yes
-    option -suffix -readonly yes -default demod
+    option -implemented -readonly yes -default no
+    option -suffix -readonly yes
 
-    option -enable -default no
+    option -enable -default no -validatemethod Validate -configuremethod Configure
+
+    option -factory -readonly yes
+    option -controls -readonly yes
 
     constructor {args} {
-	puts "demod $self constructor $args"
         $self configure {*}$args
+	if {$verbose(construct)} { puts "$options(-name) $self constructor $args" }
 	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
 	install block using ::sdrblk::block %AUTO% -partof $self
 	[$self cget -control] add $options(-name) $self
-
     }
 
     destructor {
+	if {$verbose(destroy)} { puts "$options(-name) $self destructor" }
+	catch {[$self cget -control] remove $options(-name)}
         catch {$block destroy}
 	catch {rename $options(-name) {}}
     }
 
-    method controls {} {
-	return { -mode {demodulation, one of cw, cwu, cwl, ssb, usb, lsb, am, sam, or fm} }
+    method controls {} { return $options(-controls) }
+
+    method control {opt val} {
+	if {$verbose(control)} { puts "$options(-name) $self control $opt $val" }
+	$options(-name) configure $opt $val
     }
 
-    method control {opt val} { $options(-name) configure $opt $val }
-
-    method controlget {opt} { return [$options(-name) cget $opt] }
+    method controlget {opt} {
+	if {$verbose(controlget)} { puts "$options(-name) $self control $opt $val" }
+	return [$options(-name) cget $opt]
+    }
 
     method Validate {opt val} {
-	#puts "demod $self Validate $opt $val"
+	if {$verbose(validate)} { puts "$options(-name) $self Validate $opt $val" }
 	switch -- $opt {
 	    -enable { ::sdrblk::validate::boolean $opt $val }
 	    default { error "unknown validate option \"$opt\"" }
@@ -72,31 +82,19 @@ package require sdrkit::demod-fm
     }
 
     method Configure {opt val} {
-	#puts "demod $self Configure $opt $val"
+	if {$verbose(configure)} { puts "$options(-name) $self Configure $opt $val" }
 	switch -- $opt {
-	    -mode {
-		$block configure -internal {}
-		catch {rename $demod {}}
-		switch $val {
-		    cw - cwu - cwl - ssb - usb - lsb {
-			# (blms_adapt(rx[k]->banr.gen) || blms_adapt(rx[k]->banf.gen) || nil ) ||
-			# ((blms_adapt(rx[k]->banr.gen) || lmsr_adapt(rx[k]->anr.gen) || nil) &&
-			# ((blms_adapt(rx[k]->banf.gen) || lmsr_adapt(rx[k]->anf.gen) || nil) here
-		    }
-		    am {
-			install demod using ::sdrkit::demod-am $options(-name) -server [$self cget -server]
-			$block configure -internal $demod
-			# lmsr_adapt(rx[k]->anf.gen) || blms_adapt(rx[k]->banf.gen) || nil here
-		    }
-		    sam {
-			install demod using ::sdrkit::demod-sam $options(-name) -server [$self cget -server]
-			$block configure -internal $demod
-			# lmsr_adapt(rx[k]->anf.gen) || blms_adapt(rx[k]->banf.gen) || nil here
-		    }
-		    fm {
-			install demod using ::sdrkit::demod-fm $options(-name) -server [$self cget -server]
-			$block configure -internal $demod
-		    }
+	    -enable {
+		if {$val && ! $options($opt)} {
+		    puts "enabling $options(-name)"
+		    $options(-factory) $options(-name) -server [$self cget -server]
+		    $block configure -internal $options(-name)
+		    [$self cget -control] enable $options(-name)
+		} elseif { ! $val && $options($opt)} {
+		    puts "disabling $options(-name)"
+		    [$self cget -control] disable $options(-name)
+		    $block configure -internal {}
+		    rename $options(-name) {}
 		}
 	    }
 	    default { error "unknown configure option \"$opt\"" }

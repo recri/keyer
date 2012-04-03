@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::rx-af 1.0.0
+package provide sdrblk::radio-rx-af 1.0.0
 
 package require snit
 
@@ -30,25 +30,29 @@ package require sdrblk::agc
 package require sdrblk::demod
 package require sdrblk::gain
 
-::snit::type sdrblk::rx-af {
+::snit::type sdrblk::radio-rx-af {
     component block -public block
     component agc
     component demod
     component gain
 
-    option -server -default default -readonly yes
     option -partof -readonly yes
-    option -gain-name -default ::rx-af-gain -readonly yes
-    option -agc-name -default ::rx-agc -readonly yes
-    option -demod-name -default ::rx-demod -readonly yes
-    
+    option -server -readonly yes -default {} -cgetmethod Cget
+    option -control -readonly yes -default {} -cgetmethod Cget
+    option -prefix -readonly yes -default {} -cgetmethod Prefix
+    option -name -readonly yes -default {}
+
+    option -implemented -readonly yes -default yes
+    option -suffix -readonly yes -default af
+
     constructor {args} {
 	puts "rx-af $self constructor $args"
 	$self configure {*}$args
+	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
 	install block using ::sdrblk::block %AUTO% -partof $self
-	install agc using ::sdrblk::agc %AUTO% -partof $self -server $options(-server) -name $options(-agc-name)
-	install demod using ::sdrblk::demod %AUTO% -partof $self -server $options(-server) -name $options(-demod-name)
-	install gain using ::sdrblk::gain %AUTO% -partof $self -server $options(-server) -name $options(-gain-name)
+	install agc using ::sdrblk::agc %AUTO% -partof $self
+	install demod using ::sdrblk::demod %AUTO% -partof $self
+	install gain using ::sdrblk::gain %AUTO% -partof $self
 	# WSCompand here
 	$agc block configure -output $demod
 	# RXMETER_POST_AGC here
@@ -68,25 +72,19 @@ package require sdrblk::gain
 	catch {$gain destroy}
     }
 
-    method Validate {opt val} {
-	#puts "rx-af $self Validate $opt $val"
-	switch -- $opt {
-	    -partof {}
-	    default {
-		error "unknown validate option \"$opt\""
-	    }
+    method Cget {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget $opt]
 	}
     }
-
-    method Configure {opt val} {
-	#puts "rx-af $self Configure $opt $val"
-	switch -- $opt {
-	    -partof {}
-	    default {
-		error "unknown configure option \"$opt\""
-	    }
+    
+    method Prefix {opt} {
+	if {[info exists options($opt)] && $options($opt) ne {}} {
+	    return $options($opt)
+	} else {
+	    return [$options(-partof) cget -name]
 	}
-	set options($opt) $val
     }
-
 }

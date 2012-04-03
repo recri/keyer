@@ -29,5 +29,15 @@ namespace eval ::sdrkit {
 }
 
 proc ::sdrkit::jack {args} {
-    return [$::sdrkit::jack(default) {*}$args]
+    set server default
+    switch -- [lindex $args 0] {
+	-server {
+	    set server [lindex $args 1]
+	    set args [lrange $args 2 end]
+	    if { ! [info exists ::sdrkit::jack($server)]} {
+		set ::sdrkit::jack($server) [sdrkit::jack-client jack-$server-[pid] -server $server]
+	    }
+	}
+    }
+    return [$::sdrkit::jack($server) {*}$args]
 }
