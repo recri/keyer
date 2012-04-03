@@ -19,6 +19,15 @@
 
 package provide sdrblk::radio-rx 1.0.0
 
+package require sdrblk::block-pipeline
+
+namespace eval ::sdrblk {}
+
+proc ::sdrblk::radio-rx {name args} {
+    return [::sdrblk::block-pipeline $name -suffix rx \
+		-pipeline {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk-radio-rx-af} {*}$args]
+}
+if {0} {
 package require snit
 
 package require sdrblk::radio-rx-rf
@@ -83,4 +92,5 @@ package require sdrblk::radio-rx-af
 	    return [$options(-partof) cget -name]
 	}
     }
+}
 }
