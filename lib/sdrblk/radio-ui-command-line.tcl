@@ -24,23 +24,20 @@ package require snit
 ::snit::type sdrblk::radio-ui-command-line {
 
     option -partof -readonly yes
-    option -control -readonly yes -default {} -cgetmethod Cget
+    option -control -readonly yes
     
+    constructor {args} {
+	$self configure {*}$args
+	set options(-control) [$options(-partof) cget -control]
+    }
+
     method repl {} {
-	set c [$self cget -control]
+	set c $options(-control)
 	while {1} {
 	    puts -nonewline stderr "sdr> "
 	    if {[gets stdin input] < 0} break
-	    puts stderr [string trim [eval $input]]
+	    catch {eval $input} result
+	    puts stderr [string trim $result]
 	}
     }
-
-    method Cget {opt} {
-	if {[info exists options($opt)] && $options($opt) ne {}} {
-	    return $options($opt)
-	} else {
-	    return [$options(-partof) cget $opt]
-	}
-    }
-    
 }

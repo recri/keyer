@@ -25,8 +25,6 @@ namespace eval ::sdrblk {}
 
 proc ::sdrblk::radio-tx-rf {name args} {
     # -pipeline { sdrblk::iq-balance sdrblk::gain meter_tx_power}
-    return [::sdrblk::block-pipeline $name \
-		-suffix rf \
-		-pipeline {sdrblk::iq-balance sdrblk::gain} \
-		{*}$args]
+    set pipe {sdrblk::iq-balance sdrblk::gain}
+    return [::sdrblk::block-pipeline $name -suffix rf -pipeline $pipe {*}$args]
 }

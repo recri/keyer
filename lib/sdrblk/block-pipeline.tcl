@@ -21,8 +21,9 @@ package provide sdrblk::block-pipeline 1.0.0
 
 package require snit
 
-package require sdrblk::block
-package require sdrblk::validate
+package require sdrblk::block-graph
+package require sdrblk::block-control
+package require sdrblk::stub
 
 #
 # this type implements a simple pipeline of components
@@ -33,52 +34,72 @@ package require sdrblk::validate
 
     typevariable verbose -array {connect 0 construct 0 destroy 0 validate 0 configure 0 control 0 controlget 0 enable 0}
 
-    component block -public block
+    component graph -public graph
+    component control
+
+    delegate method control to control
+    delegate method controls to control
+    delegate method controlget to control
 
     variable pipeline {}
 
     option -partof -readonly yes
-    option -server -readonly yes -default {} -cgetmethod Cget
-    option -control -readonly yes -default {} -cgetmethod Cget
-    option -prefix -readonly yes -default {} -cgetmethod Prefix
-    option -name -readonly yes -default {}
+    option -server -readonly yes
+    option -control -readonly yes
+    option -prefix -readonly yes
     option -suffix -readonly yes
+    option -name -readonly yes
+
     option -pipeline -readonly yes
 
     option -inport -readonly yes
     option -outport -readonly yes
 
+    option -implemented -readonly yes -default yes
+
+    option -enable -default no -configuremethod Enable
+
+    delegate option -type to graph
+
     constructor {args} {
-	puts "block-pipeline $self constructor $args"
+	if {$verbose(construct)} { puts "block-pipeline $self constructor $args" }
 	$self configure {*}$args
-	set options(-name) [string trim [$self cget -prefix]-$options(-suffix) -]
-	install block using ::sdrblk::block %AUTO% -partof $self
+	set options(-prefix) [$options(-partof) cget -name]
+	set options(-server) [$options(-partof) cget -server]
+	set options(-control) [$options(-partof) cget -control]
+	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
+	install graph using ::sdrblk::block-graph %AUTO% -partof $self -type pipeline
+	install control using ::sdrblk::block-control %AUTO% -partof $self -name $options(-name) -control $options(-control)
+
 	foreach element $options(-pipeline) {
 	    package require $element
 	    lappend pipeline [$element %AUTO% -partof $self]
 	}
+
 	catch {unset last}
 	foreach element $pipeline next [lrange $pipeline 1 end] {
 	    if {[info exists last] && $next ne {}} {
-		$element block configure -input $last -output $next
+		$element graph configure -input $last -output $next
 	    } elseif {$next ne {}} {
-		$element block configure -output $next
-	    } else {
-		$element block configure -input $last
+		$element graph configure -output $next
+	    } elseif {[info exists last]} {
+		$element graph configure -input $last
 	    }
 	    set last $element
 	}
+
 	if {$options(-outport) ne {}} {
-	    $block configure -sink $options(-outport)
+	    $self graph configure -sink $options(-outport)
 	}
 	if {$options(-inport) ne {}} {
-	    $block configure -source $options(-inport)
+	    $self graph configure -source $options(-inport)
 	}
 	return $self
     }
 
     destructor {
-	catch {$block destroy}
+	catch {$control destroy}
+	catch {$graph destroy}
 	catch {
 	    foreach element $pipeline {
 		catch {$element destroy}
@@ -86,19 +107,18 @@ package require sdrblk::validate
 	}
     }
 
-    method Cget {opt} {
-	if {[info exists options($opt)] && $options($opt) ne {}} {
-	    return $options($opt)
-	} else {
-	    return [$options(-partof) cget $opt]
+    method Enable {opt val} {
+	if { ! $options(-implemented)} {
+	    error "$options(-name) cannot be enabled"
 	}
-    }
-    
-    method Prefix {opt} {
-	if {[info exists options($opt)] && $options($opt) ne {}} {
-	    return $options($opt)
-	} else {
-	    return [$options(-partof) cget -name]
+	if {$val && ! $options($opt)} {
+	    if {$verbose(enable)} { puts "enabling $options(-name)" }
+	    sdrblk::stub ::sdrblk::$options(-name)
+	} elseif { ! $val && $options($opt)} {
+	    if {$verbose(enable)} { puts "disabling $options(-name)" }
+	    rename ::sdrblk::$options(-name) {}
 	}
+	set options($opt) $val
     }
+
 }

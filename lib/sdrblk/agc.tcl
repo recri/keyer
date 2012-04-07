@@ -19,15 +19,11 @@
 
 package provide sdrblk::agc 1.0.0
 
-package require sdrblk::block-sdrkit-audio
+package require sdrblk::block-audio
 package require sdrkit::agc
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::agc {name args} {
-    return [::sdrblk::block-sdrkit-audio $name \
-		-implemented no \
-		-suffix agc \
-		-factory sdrkit::agc \
-		-controls {} {*}$args]
+    return [::sdrblk::block-audio $name -implemented no -suffix agc -factory sdrkit::agc {*}$args]
 }

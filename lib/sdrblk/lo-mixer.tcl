@@ -19,15 +19,11 @@
 
 package provide sdrblk::lo-mixer 1.0.0
 
-package require sdrblk::block-sdrkit-audio
+package require sdrblk::block-audio
 package require sdrkit::lo-mixer 
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::lo-mixer {name args} {
-    return [::sdrblk::block-sdrkit-audio $name \
-		-implemented yes \
-		-suffix mix \
-		-factory sdrkit::lo-mixer \
-		-controls { -freq {frequency of local oscillator in Hertz} } {*}$args]
+    return [::sdrblk::block-audio $name -implemented yes -suffix mix -factory sdrkit::lo-mixer {*}$args]
 }

@@ -17,14 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-rx-af 1.0.0
+package provide sdrblk::stub 1.0.0
 
-package require sdrblk::block-pipeline
+package require snit
 
 namespace eval ::sdrblk {}
 
-proc ::sdrblk::radio-rx-af {name args} {
-    # set {sdrblk::compand agc rxmeter_post_agc spec_post_agc sdrblk::demod rx_squelch spottone graphiceq spec_post_det}
-    set pipe {sdrblk::agc sdrblk::detect sdrblk::gain}
-    return [::sdrblk::block-pipeline $name -suffix af -pipeline $pipe {*}$args]
+::snit::type ::sdrblk::stub {
+    option -verbose 0
 }

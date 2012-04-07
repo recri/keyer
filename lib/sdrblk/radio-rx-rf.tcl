@@ -25,8 +25,6 @@ namespace eval ::sdrblk {}
 
 proc ::sdrblk::radio-rx-rf {name args} {
     # -pipeline {::sdrblk::gain ::sdrblk::iq-swap spec_semi_raw ::sdrblk::noiseblanker meter_pre_conv ::sdrblk::iq-delay ::sdrblk::iq-correct}
-    return [::sdrblk::block-pipeline $name \
-		-suffix rf \
-		-pipeline {sdrblk::gain sdrblk::iq-swap sdrblk::iq-delay sdrblk::iq-correct} \
-		{*}$args]
+    set pipe {sdrblk::gain sdrblk::iq-swap sdrblk::iq-delay sdrblk::iq-correct}
+    return [::sdrblk::block-pipeline $name -suffix rf -pipeline $pipe {*}$args]
 }

@@ -19,19 +19,11 @@
 
 package provide sdrblk::filter-overlap-save 1.0.0
 
-package require sdrblk::block-sdrkit-audio
+package require sdrblk::block-audio
 package require sdrkit::filter-overlap-save
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::filter-overlap-save {name args} {
-    return [::sdrblk::block-sdrkit-audio $name \
-		-implemented yes \
-		-suffix bpf \
-		-factory sdrkit::filter-overlap-save \
-		-controls {
-		    -low {bandpass low frequency cutoff in Hertz}
-		    -high {bandpass high frequency cutoff in Hertz}
-		    -length {bandpass filter size in samples}
-		} {*}$args]
+    return [::sdrblk::block-audio $name -implemented yes -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
 }    

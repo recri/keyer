@@ -22,39 +22,20 @@ package provide sdrblk::radio-hw-softrock-dg8saq 1.0.0
 package require snit
 
 ::snit::type sdrblk::radio-hw-softrock-dg8saq {
-    component impl
 
-    option -partof -readonly yes
-    option -control -readonly yes -default {} -cgetmethod Cget
-    
+    option -partof -readonly true
+    option -freq -default 7.050 -configuremethod SetFreq
+
     constructor {args} {
-	puts "radio-hw-softrock-dg8saq $self constructor $args"
+	# puts "radio-hw-softrock-dg8saq $self constructor $args"
 	$self configure {*}$args
-	[$self cget -control] add hw $self
     }
 
-    destructor {
-	catch {$impl destroy}
-    }
+    destructor {}
 
-    method controls {} {
-	return { -freq {frequency to tune in MHz} }
-    }
-
-    method control {opt val} {
+    method SetFreq {opt val} {
 	exec usbsoftrock set freq $val
-    }
-
-    method controlget {opt} {
-	return [exec usbsoftrock getfreq | tail -1]
-    }
-
-    method Cget {opt} {
-	if {[info exists options($opt)] && $options($opt) ne {}} {
-	    return $options($opt)
-	} else {
-	    return [$options(-partof) cget $opt]
-	}
+	set options($opt) $val
     }
     
 }

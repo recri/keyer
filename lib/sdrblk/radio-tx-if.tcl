@@ -25,6 +25,6 @@ namespace eval ::sdrblk {}
 
 proc ::sdrblk::radio-tx-if {name args} {
     # -pipeline {sdrblk::filter-overlap-save sdrblk::compander meter_tx_compander spectrum_tx sdrblk::lo-mixer}
-    return [::sdrblk::block-pipeline $name -suffix if \
-		-pipeline {sdrblk::filter-overlap-save sdrblk::lo-mixer} {*}$args]
+    set pipe {sdrblk::filter-overlap-save sdrblk::lo-mixer}
+    return [::sdrblk::block-pipeline $name -suffix if -pipeline $pipe {*}$args]
 }

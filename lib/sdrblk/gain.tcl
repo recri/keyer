@@ -19,15 +19,11 @@
 
 package provide sdrblk::gain 1.0.0
 
-package require sdrblk::block-sdrkit-audio
+package require sdrblk::block-audio
 package require sdrkit::gain
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::gain {name args} {
-    return [::sdrblk::block-sdrkit-audio $name \
-		-implemented yes \
-		-suffix gain \
-		-factory sdrkit::gain \
-		-controls { -gain {gain in decibels} } {*}$args]
+    return [::sdrblk::block-audio $name -implemented yes -suffix gain -factory sdrkit::gain {*}$args]
 }

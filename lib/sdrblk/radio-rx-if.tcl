@@ -25,6 +25,6 @@ namespace eval ::sdrblk {}
 
 proc ::sdrblk::radio-rx-if {name args} {
     # -pipeline {spec_pre_filt sdrblk::lo-mixer sdrblk::filter-overlap-save rxmeter_post_filt spec_post_filt}
-    return [::sdrblk::block-pipeline $name -suffix if \
-		-pipeline {sdrblk::lo-mixer sdrblk::filter-overlap-save} {*}$args]
+    set pipe {sdrblk::lo-mixer sdrblk::filter-overlap-save}
+    return [::sdrblk::block-pipeline $name -suffix if -pipeline $pipe {*}$args]
 }

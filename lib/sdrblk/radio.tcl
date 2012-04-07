@@ -37,6 +37,7 @@ package require sdrblk::radio-ui
     option -server -readonly yes -default default
     option -control -readonly yes
     option -name -readonly yes -default {}
+    option -enable -readonly yes -default true
     option -rx -readonly yes -default true
     option -tx -readonly yes -default false
     option -hw -readonly yes -default true
@@ -49,7 +50,7 @@ package require sdrblk::radio-ui
     option -tx-outport -readonly yes -default {}
 
     constructor {args} {
-	puts "radio $self constructor $args"
+	#puts "radio $self constructor $args"
 	$self configure {*}$args
 	install control using ::sdrblk::radio-control %AUTO% -partof $self
 	set options(-control) $control
@@ -60,10 +61,15 @@ package require sdrblk::radio-ui
 	    install tx using ::sdrblk::radio-tx %AUTO% -partof $self -inport $options(-tx-inport) -outport $options(-tx-outport)
 	}
 	if {$options(-hw)} {
-	    install hw using ::sdrblk::radio-hw %AUTO% -partof $self -type $options(-hw-type)
+	    package require sdrblk::radio-hw-$options(-hw-type)
+	    install hw using ::sdrblk::radio-hw-$options(-hw-type) %AUTO% -partof $self
 	}
 	if {$options(-ui)} {
-	    install ui using ::sdrblk::radio-ui %AUTO% -partof $self -type $options(-ui-type)
+	    # puts "requiring sdrblk::radio-ui-$options(-ui-type)"
+	    package require sdrblk::radio-ui-$options(-ui-type)
+	    # puts "installing ui using ::sdrblk::radio-ui-$options(-ui-type) %AUTO% -partof $self"
+	    install ui using ::sdrblk::radio-ui-$options(-ui-type) %AUTO% -partof $self
+	    # puts "ui is $ui"
 	}
     }
 

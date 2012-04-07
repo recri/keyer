@@ -28,13 +28,13 @@ Now each component is a block, either a container block, an alternate
 block, or an audio block.  The audio and alternate blocks register
 controls, but it seems that:
 
-[ ] all the blocks should register as controls
-[ ] all the blocks should have the -enabled/-implemented options
-[ ] only -implemented true blocks can be -enabled true
-[ ] only blocks with parent -enabled true can be -enabled true
-[ ] setting a block -enabled false forces all children -enabled false
+[x] all the blocks should register as controls
+[x] all the blocks should have the -enabled/-implemented options
+[x] only -implemented true blocks can be -enabled true
+[x] only blocks with parent -enabled true can be -enabled true
+[x] setting a block -enabled false forces all children -enabled false
 [ ] someone needs to remember the control values
-[ ] the block-audio wrappers should use [$widget configure] to
+[x] the block-audio wrappers should use [$widget configure] to
   determine the controls.
 
 ------------------------------------------------------------------------
@@ -49,20 +49,50 @@ controls, but it seems that:
 [x] abstract the pipeline block
 [ ] abstract the radiobutton block required for demodulation
 [ ] start making a Tk ui block
-[ ] implement block-sdrkit-midi
+[ ] implement block-midi
   keyer-debounce
   keyer-iambic
   keyer-dttsp-iambic
   keyer-ptt
-[ ] implement block-sdrkit-midi-audio
+[ ] implement block-midi-audio
   keyer-tone
   keyer-ptt-mute
-[ ] implement block-sdrkit-audio-midi
+[ ] implement block-audio-midi
   keyer-detone
 [ ] add the missing/unimplemented components
   The parts that aren't done should just be inserted as unimplemented
   dummies so I can not worry about how they're supposed to work.
-[ ] insert spectrum and meter tap components
+[ ] devise a spectrum component
+[ ] devixe a meter component
 [ ] figure out the composite control components
   deconstructing tuning commands into frequency setters
   deconstructing mode commands into demodulation and filter setters
+
+------------------------------------------------------------------------
+
+This is still bugging me in that the implementation is overly
+complicated.  It seems that snit is best when the the core
+functionality is implemented in a base type, and the variations are
+added on in types which embellish the base type.
+
+There are four things going on here:
+
+1) the wiring up of jack components so they can be hot
+enabled/disabled and connected/disconnected from the jack process
+graph.
+2) the hierarchical grouping of components into functional blocks.
+3) the hierarchical naming of components
+4) the provision of the control interface that avoids the hierarchy.
+
+So we started with 1 and quickly added 2, or vice versa.
+3 sort of happened along the way to provide the names used by 4.
+Then I generalized the enablement mechanism in a way that turns out to
+be more awkward than useful -- the pipelines don't need to be enabled.
+
+But then the alternate/select block threw several more awkwardnesses
+into the pot, it has a control, it's imposing a structure, but it's
+just trying to clarify the hierarchical structure -- I could simply
+throw all the detectors in-line and impose the radiobutton constraint
+elsewhere.  The separate demodulation pipelines seem like a good idea
+because the noise limiters are different for the different
+demodulations.

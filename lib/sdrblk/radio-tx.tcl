@@ -24,6 +24,6 @@ package require sdrblk::block-pipeline
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::radio-tx {name args} {
-    return [::sdrblk::block-pipeline $name -suffix rx \
-		-pipeline {sdrblk::radio-tx-af sdrblk::radio-tx-if sdrblk-radio-tx-rf} {*}$args]
+    set pipe {sdrblk::radio-tx-af sdrblk::radio-tx-if sdrblk-radio-tx-rf}
+    return [::sdrblk::block-pipeline $name -suffix rx -pipeline $pipe {*}$args]
 }

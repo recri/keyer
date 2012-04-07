@@ -22,31 +22,49 @@ package provide sdrblk::radio-hw 1.0.0
 package require snit
 
 ::snit::type sdrblk::radio-hw {
-    component impl
+    typevariable verbose -array {enable 0}
+
+    component control
+
+    delegate method control to control
+    delegate method controls to control
+    delegate method controlget to control
 
     option -partof -readonly yes
-    option -server -readonly yes -default {} -cgetmethod Cget
-    option -control -readonly yes -default {} -cgetmethod Cget
-
+    option -server -readonly yes
+    option -control -readonly yes
+    option -suffix -readonly yes -default hw
+    option -implemented -readonly yes -default true
+    option -enable -default no -configuremethod Enable
     option -type -readonly yes
     
     constructor {args} {
 	puts "hw $self constructor $args"
 	$self configure {*}$args
+	set options(-prefix) [$options(-partof) cget -name]
+	set options(-server) [$options(-partof) cget -server]
+	set options(-control) [$options(-partof) cget -control]
+	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
 	package require sdrblk::radio-hw-$options(-type)
-	install impl using sdrblk::radio-hw-$options(-type) %AUTO% -partof $self
+	install control using ::sdrblk::block-control %AUTO% -partof $self -name $options(-name) -control $options(-control)
     }
 
     destructor {
-	catch {$impl destroy}
+	catch {$control destroy}
     }
 
-    method Cget {opt} {
-	if {[info exists options($opt)] && $options($opt) ne {}} {
-	    return $options($opt)
-	} else {
-	    return [$options(-partof) cget $opt]
+    method Enable {opt val} {
+	if { ! $options(-implemented)} {
+	    error "$options(-name) cannot be enabled"
 	}
+	if {$val && ! $options($opt)} {
+	    if {$verbose(enable)} { puts "enabling $options(-name)" }
+	    sdrblk::radio-hw-$options(-type) ::sdrblk::$options(-name)
+	} elseif { ! $val && $options($opt)} {
+	    if {$verbose(enable)} { puts "disabling $options(-name)" }
+	    rename ::sdrblk::$options(-name) {}
+	}
+	set options($opt) $val
     }
-    
+
 }

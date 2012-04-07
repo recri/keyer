@@ -31,10 +31,10 @@ package require snit
 
     destructor {}
 
-    method add {name args} {
+    method add {name block} {
 	if {[info exists parts($name)]} { error "control part $name already exists" }
-	set parts($name) $args
-	set enabled($name) 0
+	set parts($name) $block
+	set enabled($name) [$block cget -enable]
     }
 
     method remove {name} {
@@ -54,12 +54,13 @@ package require snit
 
     method controls {name} {
 	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	if { ! $enabled($name)} { error "control part {$name} is not enabled" }
 	return [$parts($name) controls]
     }
 
-    method control {name opt val} {
+    method control {name args} {
 	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	$parts($name) control $opt $val
+	$parts($name) control {*}$args
     }
 
     method controlget {name opt} {
@@ -67,17 +68,27 @@ package require snit
 	return [$parts($name) controlget $opt]
     }
     
+    method ccget {name opt} {
+	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	return [$parts($name) cget $opt]
+    }
+    
+    method cconfigure {name args} {
+	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	return [$parts($name) configure {*}$args]
+    }
+    
     method enable {name} {
 	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
 	if {$enabled($name)} { error "control part {$name} is already enabled" }
-	$parts($name) configure -enable true
+	$parts($name) configure -enable yes
 	set enabled($name) 1
     }
 
     method disable {name} {
 	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
 	if { ! $enabled($name)} { error "control part {$name} is already disabled" }
-	$parts($name) configure -enable false
+	$parts($name) configure -enable no
 	set enabled($name) 0
     }
 	

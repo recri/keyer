@@ -27,8 +27,6 @@ proc ::sdrblk::radio-tx-af {name args} {
     # -pipeline {sdrblk::gain sdrblk::real sdrblk::waveshape meter_tx_wavs sdrblk::dc-block tx_squelch grapiceq meter_tx_eqtap
     #		sdrblk::leveler meter_tx_leveler sdrblk::speech_processor meter_tx_comp sdrbk::modulate}
     # a lot of this is voice specific
-    return [::sdrblk::block-pipeline $name \
-		-suffix af \
-		-pipeline {sdrblk::gain sdrblk::leveler sdrblk::modulate} \
-		{*}$args]
+    set pipe {sdrblk::gain sdrblk::leveler sdrblk::modulate}
+    return [::sdrblk::block-pipeline $name -suffix af -pipeline $pipe {*}$args]
 }

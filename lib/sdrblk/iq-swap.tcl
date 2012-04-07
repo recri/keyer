@@ -19,15 +19,11 @@
 
 package provide sdrblk::iq-swap 1.0.0
 
-package require sdrblk::block-sdrkit-audio
+package require sdrblk::block-audio
 package require sdrkit::iq-swap
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::iq-swap {name args} {
-    return [::sdrblk::block-sdrkit-audio $name \
-		-implemented yes \
-		-suffix iq-swap \
-		-factory sdrkit::iq-swap \
-		-controls { -swap {whether I/Q should be swapped or mapped straight through} } {*}$args]
+    return [::sdrblk::block-audio $name -implemented yes -suffix iq-swap -factory sdrkit::iq-swap {*}$args]
 }

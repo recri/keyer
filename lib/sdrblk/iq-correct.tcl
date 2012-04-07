@@ -19,15 +19,11 @@
 
 package provide sdrblk::iq-correct 1.0.0
 
-package require sdrblk::block-sdrkit-audio
+package require sdrblk::block-audio
 package require sdrkit::iq-correct
 
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::iq-correct {name args} {
-    return [::sdrblk::block-sdrkit-audio $name \
-		-implemented yes \
-		-suffix iq-correct \
-		-factory sdrkit::iq-correct \
-		-controls { -mu {learning rate for adaptive filter} } {*}$args]
+    return [::sdrblk::block-audio $name -implemented yes -suffix iq-correct -factory sdrkit::iq-correct {*}$args]
 }
