@@ -34,7 +34,6 @@ package require snit
     option -server -readonly yes
     option -control -readonly yes
     option -suffix -readonly yes -default hw
-    option -implemented -readonly yes -default true
     option -enable -default no -configuremethod Enable
     option -type -readonly yes
     
@@ -54,9 +53,6 @@ package require snit
     }
 
     method Enable {opt val} {
-	if { ! $options(-implemented)} {
-	    error "$options(-name) cannot be enabled"
-	}
 	if {$val && ! $options($opt)} {
 	    if {$verbose(enable)} { puts "enabling $options(-name)" }
 	    sdrblk::radio-hw-$options(-type) ::sdrblk::$options(-name)

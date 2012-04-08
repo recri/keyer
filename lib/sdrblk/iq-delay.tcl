@@ -25,5 +25,5 @@ package require sdrkit::iq-delay
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::iq-delay {name args} {
-    return [::sdrblk::block-audio $name -implemented yes -suffix iq-delay -factory sdrkit::iq-delay {*}$args]
+    return [::sdrblk::block-audio $name -suffix iq-delay -factory sdrkit::iq-delay {*}$args]
 }

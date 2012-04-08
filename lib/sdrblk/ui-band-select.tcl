@@ -1,0 +1,177 @@
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# a graphical band/channel select manager
+#
+
+package provide sdrblk::ui-band-select 1.0
+
+package require Tk
+package require snit
+
+package require sdrblk::spectrum
+
+snit::widgetadaptor ::sdrblk::ui-band-select {
+
+    option -range HF;			# the range to display
+    option -command {};			# script called to report band selection 
+    option -height 200;			# height of the band display
+    option -width 600;			# width of the band display
+    option -hover-time 250;		# milliseconds before popup
+    
+    component spectrum
+
+    variable data -array {
+	hover-displayed 0
+	hover-text {}
+    }
+
+    constructor {args} {
+	installhull using canvas
+	install spectrum using ::sdrblk::spectrum %AUTO%
+	$self configure {*}$args
+	$hull configure -width $options(-width) -height $options(-height)
+	$self draw-bands
+    }
+    
+    destructor {
+	catch {$spectrum destroy}
+    }
+
+    proc x-for-frequency {f} {
+	return [expr {log10($f)-log10(30000)}]
+    }
+
+    method draw-bands {} {
+	lassign [$spectrum range-hertz $options(-range)] fmin fmax
+	set xmin [x-for-frequency $fmin]
+	set xmax [x-for-frequency $fmax]
+	set y 0
+	set dy [expr {$options(-height)/(2+[llength [$spectrum services]])}]
+	foreach service [$spectrum services] {
+	    incr y $dy
+	    set yc [expr {$y+$dy}]
+	    foreach band [$spectrum bands $service] {
+		lassign [$spectrum band-range-hertz $service $band] bmin bmax
+		set i [$hull create rectangle [x-for-frequency $bmin] $y [x-for-frequency $bmax] $yc -fill [$spectrum color $service] -width 1 -activewidth 4]
+		$hull bind $i <Button-1> [mymethod band-pick $service $band]
+		$hull bind $i <Enter> [mymethod hover-text "$service $band\n[join [$spectrum band-range $service $band]]"]
+		$hull bind $i <Leave> [mymethod hover-text ""]
+	    }
+	    foreach channel [$spectrum channels $service] {
+		set freq [$spectrum channel-freq-hertz $service $channel]
+		set x [x-for-frequency $freq]
+		set i [$hull create rectangle $x $y $x $yc -fill white -outline black -width 2 -activewidth 4]
+		$hull bind $i <Button-1> [mymethod channel-pick $service $channel]
+		$hull bind $i <Enter> [mymethod hover-text "$service $channel\n[join [$spectrum channel-freq $service $channel]]"]
+		$hull bind $i <Leave> [mymethod hover-text ""]
+	    }
+	}
+	#catch {unset last}
+	incr y $dy
+	set y2 $y
+	incr y $dy
+	set y3 $y
+	set y0 0
+	set y1 $dy
+	set y1 [expr {($y0+$y1)/2}]
+	set y2 [expr {($y2+$y3)/2}]
+	foreach tick {30kHz 75kHz 150kHz 300kHz 750kHz 1.5MHz 3MHz 7.5MHz 15MHz 30MHz 75MHz 150MHz 300MHz 750MHz 1500MHz 3GHz 7.5GHz 15GHz 30GHz 75GHz 150GHz 300GHz} {
+	    set x [x-for-frequency [$spectrum hertz $tick]]
+	    $hull create line $x $y0 $x $y1
+	    $hull create text $x $y0 -text " $tick" -anchor nw
+	    $hull create line $x $y2 $x $y3
+	    $hull create text $x $y3 -text " $tick" -anchor sw
+	}
+	$hull move all [expr {-$xmin}] 0
+	$hull scale all 0 0 [expr {$options(-width)/double($xmax-$xmin)}] 1
+	bind $win <ButtonPress-1> [mymethod no-pick]
+	bind $win <ButtonPress-2> [mymethod scan-mark %x]
+	bind $win <B2-Motion> [mymethod scan-dragto %x]
+	bind $win <Motion> [mymethod motion %x %y]
+    }
+
+    method scan-mark {x} { $hull scan mark $x 0 }
+    method scan-dragto {x} { $hull scan dragto $x 0 }
+
+    method no-pick {} { if {$data(hover-text) eq {}} { $self callback no-pick } }
+    method band-pick {service band} { $self callback band-pick $service $band }
+    method channel-pick {service channel} { $self callback channel-pick $service $channel }
+
+    method callback {args} {
+	if {$options(-command) ne {}} { eval "$options(-command) $args" }
+    }
+
+    method window-configure {width height} {
+	puts "window-configure $width $height"
+    }
+
+    method hover-text {text} {
+	set data(hover-text) $text
+    }
+
+    method motion {x y} {
+	if {$data(hover-displayed)} {
+	    $self hover-cancel
+	} elseif {$data(hover-text) ne {}} {
+	    set data(hover-x) $x
+	    set data(hover-y) $y
+	    catch {after cancel $data(hover-timer)}
+	    set data(hover-timer) [after $options(-hover-time) [mymethod hover-display]]
+	}
+    }
+
+    method hover-display {} {
+	if {$data(hover-text) ne {}} {
+	    set xc [expr {$options(-width)/2}]
+	    set yc [expr {$options(-height)/2}]
+	    if {$data(hover-x)-$xc >= 0} {
+		set dx -4
+		set a1 e
+	    } else {
+		set dx 4
+		set a1 w
+	    }
+	    if {$data(hover-y)-$yc <= 0} {
+		set dy -4
+		set a2 s
+	    } else {
+		set dy -4
+		set a2 s
+	    }
+	    set x [expr {$dx+[$hull canvasx $data(hover-x)]}]
+	    set y [expr {$dy+[$hull canvasy $data(hover-y)]}]
+	    set data(hover-displayed) [$hull create text $x $y -text $data(hover-text) -anchor $a2$a1 -justify center]
+	    lassign [$hull bbox $data(hover-displayed)] x0 y0 x1 y1
+	    set data(hover-display-box) [$hull create rectangle $x0 $y0 $x1 $y1 -outline black -fill {light yellow}]
+	    $hull raise $data(hover-displayed)
+	}
+    }
+
+    method hover-cancel {} {
+	if {$data(hover-displayed)} {
+	    $hull delete $data(hover-displayed)
+	    $hull delete $data(hover-display-box)
+	    set data(hover-displayed) 0
+	    set data(hover-display-box) 0
+	}
+    }
+
+}    

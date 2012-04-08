@@ -32,7 +32,7 @@ package require sdrblk::stub
 #
 ::snit::type sdrblk::block-pipeline {
 
-    typevariable verbose -array {connect 0 construct 0 destroy 0 validate 0 configure 0 control 0 controlget 0 enable 0}
+    typevariable verbose -array {connect 0 construct 0 destroy 0 configure 0 control 0 controlget 0 enable 0}
 
     component graph -public graph
     component control
@@ -55,9 +55,7 @@ package require sdrblk::stub
     option -inport -readonly yes
     option -outport -readonly yes
 
-    option -implemented -readonly yes -default yes
-
-    option -enable -default no -configuremethod Enable
+    option -enable -readonly yes -default true
 
     delegate option -type to graph
 
@@ -70,6 +68,7 @@ package require sdrblk::stub
 	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
 	install graph using ::sdrblk::block-graph %AUTO% -partof $self -type pipeline
 	install control using ::sdrblk::block-control %AUTO% -partof $self -name $options(-name) -control $options(-control)
+	sdrblk::stub ::sdrblk::$options(-name)
 
 	foreach element $options(-pipeline) {
 	    package require $element
@@ -106,19 +105,4 @@ package require sdrblk::stub
 	    }
 	}
     }
-
-    method Enable {opt val} {
-	if { ! $options(-implemented)} {
-	    error "$options(-name) cannot be enabled"
-	}
-	if {$val && ! $options($opt)} {
-	    if {$verbose(enable)} { puts "enabling $options(-name)" }
-	    sdrblk::stub ::sdrblk::$options(-name)
-	} elseif { ! $val && $options($opt)} {
-	    if {$verbose(enable)} { puts "disabling $options(-name)" }
-	    rename ::sdrblk::$options(-name) {}
-	}
-	set options($opt) $val
-    }
-
 }

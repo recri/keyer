@@ -25,6 +25,6 @@ package require sdrkit::demod-am
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::demod-am {name args} {
-    return [::sdrblk::block-audio $name -implemented yes -suffix am -factory sdrkit::demod-am {*}$args]
+    return [::sdrblk::block-audio $name -suffix am -factory sdrkit::demod-am {*}$args]
 }
 

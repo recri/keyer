@@ -18,11 +18,6 @@
 # 
 
 package provide sdrblk::detect 1.0.0
-package provide sdrblk::detect-cw 1.0.0
-package provide sdrblk::detect-ssb 1.0.0
-package provide sdrblk::detect-am 1.0.0
-package provide sdrblk::detect-sam 1.0.0
-package provide sdrblk::detect-fm 1.0.0
 
 package require sdrblk::block-alternate
 
@@ -33,24 +28,8 @@ package require sdrkit::demod-fm
 
 namespace eval ::sdrblk {}
 
-proc ::sdrblk::detect-cw {name args} {
-    return [::sdrblk::block-pipeline $name -suffix cw -pipeline {} {*}$args]
-}
-proc ::sdrblk::detect-ssb {name args} {
-    return [::sdrblk::block-pipeline $name -suffix ssb -pipeline {} {*}$args]
-}
-proc ::sdrblk::detect-am {name args} {
-    return [::sdrblk::block-pipeline $name -suffix am -pipeline {sdrblk::demod-am} {*}$args]
-}
-proc ::sdrblk::detect-sam {name args} {
-    return [::sdrblk::block-pipeline $name -suffix sam -pipeline {sdrblk::demod-sam} {*}$args]
-}
-proc ::sdrblk::detect-fm {name args} {
-    return [::sdrblk::block-pipeline $name -suffix fm -pipeline {sdrblk::demod-fm} {*}$args]
-}
-    
 proc ::sdrblk::detect {name args} {
-    set alts {cw sdrblk::detect-cw ssb sdrblk::detect-ssb am sdrblk::detect-am sam sdrblk::detect-sam fm sdrblk::detect-fm}
+    set alts {sdrblk::demod-am sdrblk::demod-sam sdrblk::demod-fm}
     return [::sdrblk::block-alternate $name -suffix mode -alternates $alts {*}$args]
 }
 

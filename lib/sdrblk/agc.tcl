@@ -25,5 +25,5 @@ package require sdrkit::agc
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::agc {name args} {
-    return [::sdrblk::block-audio $name -implemented no -suffix agc -factory sdrkit::agc {*}$args]
+    return [::sdrblk::block-audio $name -suffix agc -factory sdrkit::agc {*}$args]
 }

@@ -25,5 +25,5 @@ package require sdrkit::iq-correct
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::iq-correct {name args} {
-    return [::sdrblk::block-audio $name -implemented yes -suffix iq-correct -factory sdrkit::iq-correct {*}$args]
+    return [::sdrblk::block-audio $name -suffix iq-correct -factory sdrkit::iq-correct {*}$args]
 }

@@ -20,7 +20,6 @@
 package provide sdrblk::block-audio 1.0.0
 
 package require snit
-package require sdrblk::validate
 package require sdrblk::block-graph
 package require sdrblk::block-control
 
@@ -29,7 +28,7 @@ package require sdrblk::block-control
 #
 ::snit::type ::sdrblk::block-audio {
 
-    typevariable verbose -array {connect 0 construct 0 destroy 0 validate 0 configure 0 control 0 controlget 0 enable 0}
+    typevariable verbose -array {connect 0 construct 0 destroy 0 configure 0 control 0 controlget 0 enable 0}
 
     component graph -public graph
     component control
@@ -44,8 +43,6 @@ package require sdrblk::block-control
     option -prefix -readonly yes
     option -suffix -readonly yes
     option -name -readonly yes
-
-    option -implemented -readonly yes -default no
 
     option -enable -default no -configuremethod Enable
 
@@ -75,9 +72,6 @@ package require sdrblk::block-control
     }
 
     method Enable {opt val} {
-	if { ! $options(-implemented)} {
-	    error "$options(-name) cannot be enabled"
-	}
 	if { ! [$options(-partof) cget -enable]} {
 	    error "parent of $options(-name) is not enabled"
 	}

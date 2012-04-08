@@ -92,8 +92,8 @@ libdir-clean::
 libdir-all-clean::
 	cd $(LIBDIR) && make all-clean
 
-$(LIBDIR)/agc.so: agc.c framework.h ../sdrkit/dmath.h
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+$(LIBDIR)/agc.so: agc.c framework.h ../sdrkit/dmath.h ../sdrkit/agc.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(FFTW3_LIBS) $(LIBS)
 
 $(LIBDIR)/audio_tap.so: audio_tap.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)

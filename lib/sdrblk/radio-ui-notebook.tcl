@@ -44,6 +44,3 @@ package require sdrblk::ui-tree
     method repl {} { }
 
 }
-
-puts "::snit::type ::sdrblk::radio-ui-notebook loaded"
-

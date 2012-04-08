@@ -43,7 +43,7 @@ package require sdrkit::jack
 
 ::snit::type sdrblk::block-graph {
 
-    typevariable verbose -array {connect 0 construct 0 validate 0 configure 0}
+    typevariable verbose -array {connect 0 construct 0 configure 0}
 
     # these options apply to all varieties
     option -partof -readonly yes

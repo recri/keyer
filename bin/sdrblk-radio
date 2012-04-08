@@ -21,7 +21,6 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
 package require snit
 
 package require sdrblk::radio

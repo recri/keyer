@@ -25,5 +25,5 @@ package require sdrkit::iq-swap
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::iq-swap {name args} {
-    return [::sdrblk::block-audio $name -implemented yes -suffix iq-swap -factory sdrkit::iq-swap {*}$args]
+    return [::sdrblk::block-audio $name -suffix iq-swap -factory sdrkit::iq-swap {*}$args]
 }

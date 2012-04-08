@@ -25,5 +25,5 @@ package require sdrkit::filter-overlap-save
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::filter-overlap-save {name args} {
-    return [::sdrblk::block-audio $name -implemented yes -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
+    return [::sdrblk::block-audio $name -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
 }    

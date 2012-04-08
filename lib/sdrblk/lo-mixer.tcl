@@ -25,5 +25,5 @@ package require sdrkit::lo-mixer
 namespace eval ::sdrblk {}
 
 proc ::sdrblk::lo-mixer {name args} {
-    return [::sdrblk::block-audio $name -implemented yes -suffix mix -factory sdrkit::lo-mixer {*}$args]
+    return [::sdrblk::block-audio $name -suffix mix -factory sdrkit::lo-mixer {*}$args]
 }

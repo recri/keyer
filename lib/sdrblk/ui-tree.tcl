@@ -32,7 +32,7 @@ package require snit
     delegate method * to treeview except {update}
     delegate option * to treeview except {-partof -control}
 
-    variable columns {type works enabled in out control value}
+    variable columns {type enabled in out control value}
     variable items -array {}
     
     constructor {args} {
@@ -47,7 +47,6 @@ package require snit
 	    $win.t heading $c -text $c
 	    switch $c {
 		type { $win.t column $c -width [expr {7*8}] -stretch no -anchor center }
-		works { $win.t column $c -width [expr {6*8}] -stretch no -anchor center }
 		enabled { $win.t column $c -width [expr {7*8}] -stretch no -anchor center }
 		inport -
 		outport { $win.t column $c -width [expr {30*8}] }
@@ -75,15 +74,14 @@ package require snit
 
     method values {item} {
 	set type [$options(-control) ccget $item -type]
-	set implemented [$options(-control) ccget $item -implemented]
 	set enabled [$options(-control) ccget $item -enable]
 	set inport [$options(-control) ccget $item -inport]
 	set outport [$options(-control) ccget $item -outport]
-	return [list $type $implemented $enabled $inport $outport {} {}]
+	return [list $type $enabled $inport $outport {} {}]
     }
     
     method control-values {item opt} {
-	return [list {} {} {} {} {} $opt [$options(-control) controlget $item $opt]]
+	return [list {} {} {} {} $opt [$options(-control) controlget $item $opt]]
     }
 
     method update {} {
@@ -144,5 +142,3 @@ package require snit
     }
 
 }
-
-puts "::snit::widgetadaptor sdrblk::ui-tree loaded"

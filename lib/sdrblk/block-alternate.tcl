@@ -22,15 +22,6 @@ package provide sdrblk::block-alternate 1.0.0
 package require snit
 
 package require sdrblk::block-graph
-package require sdrblk::validate
-
-#
-# this type implements the controller for the alternate component block
-#
-::snit::type sdrblk::block-alternate-controller {
-    option -alternates -readonly true
-    option -alternate
-}
 
 #
 # this type implements alternate components
@@ -40,7 +31,7 @@ package require sdrblk::validate
 #
 ::snit::type sdrblk::block-alternate {
 
-    typevariable verbose -array {connect 0 construct 0 destroy 0 validate 0 configure 0 control 0 controlget 0 enable 1}
+    typevariable verbose -array {connect 0 construct 0 destroy 0 configure 0 control 0 controlget 0 enable 1}
 
     component graph -public graph
     component control
@@ -49,8 +40,7 @@ package require sdrblk::validate
     delegate method controls to control
     delegate method controlget to control
 
-    variable alternates -array {}
-    variable selected {}
+    variable alternates {}
 
     option -partof -readonly yes
     option -server -readonly yes
@@ -64,9 +54,7 @@ package require sdrblk::validate
     option -inport -readonly yes
     option -outport -readonly yes
 
-    option -implemented -readonly yes -default yes
-
-    option -enable -default no -configuremethod Enable
+    option -enable -readonly yes -default yes
 
     delegate option -type to graph
 
@@ -79,17 +67,12 @@ package require sdrblk::validate
 	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
 	install graph using ::sdrblk::block-graph %AUTO% -partof $self -type alternate
 	install control using ::sdrblk::block-control %AUTO% -partof $self -name $options(-name) -control $options(-control)
+	sdrblk::stub ::sdrblk::$options(-name)
 
-	foreach {name element} $options(-alternates) {
+	foreach element $options(-alternates) {
 	    package require $element
-	    set alternates($name) [$element %AUTO% -partof $self]
+	    lappend alternates [$element %AUTO% -partof $self]
 	}
-	set selected [lindex $options(-alternates) 0]
-
-	foreach {name element} [array get alternates] {
-	    $self graph addalternate $name $element
-	}
-	$self graph configure -alternate $selected
 
 	if {$options(-outport) ne {}} {
 	    $graph configure -sink $options(-outport)
@@ -101,26 +84,13 @@ package require sdrblk::validate
     }
 
     destructor {
+	catch {$control destroy}
 	catch {$graph destroy}
 	catch {
-	    foreach name [array names alternate] {
-		catch {$alternates($name) destroy}
+	    foreach element $alternates {
+		catch {$element destroy}
 	    }
 	}
-    }
-
-    method Enable {opt val} {
-	if { ! $options(-implemented)} {
-	    error "$options(-name) cannot be enabled"
-	}
-	if {$val && ! $options($opt)} {
-	    if {$verbose(enable)} { puts "enabling $options(-name)" }
-	    ::sdrblk::block-alternate-controller ::sdrblk::$options(-name) -alternates [array names alternates] -alternate $selected
-	} elseif { ! $val && $options($opt)} {
-	    if {$verbose(enable)} { puts "disabling $options(-name)" }
-	    rename ::sdrblk::$options(-name) {}
-	}
-	set options($opt) $val
     }
 
 }
