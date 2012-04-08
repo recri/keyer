@@ -30,7 +30,7 @@ package require snit
 package require sdrblk::ui-band-select
 
 proc main {argv} {
-     pack [::sdrblk::ui-band-select .bands {*}$argv]
+     pack [::sdrblk::ui-band-select .bands {*}$argv] -expand true -fill x
 }
 
 main $argv

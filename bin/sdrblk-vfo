@@ -30,7 +30,7 @@ package require snit
 package require sdrblk::ui-vfo
 
 proc main {argv} {
-     pack [::sdrblk::ui-vfo .vfo {*}$argv]
+     pack [::sdrblk::ui-vfo .vfo {*}$argv] -fill both -expand true
 }
 
 main $argv

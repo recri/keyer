@@ -29,10 +29,10 @@ package require snit
 package require sdrblk::ui-dial
 package require sdrblk::ui-freq-readout
 package require sdrblk::ui-band-select
-package require sdrblk::spectrum
+package require sdrblk::band-data
 
 ::snit::widget ::sdrblk::ui-vfo {
-    component spectrum
+    component bands
     component readout
     component dial
     component bandbutton
@@ -75,13 +75,13 @@ package require sdrblk::spectrum
 		# puts "no-pick"
 	    }
 	    band-pick {
-		lassign [$spectrum band-range-hertz $service $arg] low high
+		lassign [$bands band-range-hertz $service $arg] low high
 		set freq [expr {($low+$high)/2}]
 		# puts "band-pick $service $arg $low .. $high"
 		$self set-freq $freq
 	    }
 	    channel-pick {
-		set freq [$spectrum channel-freq-hertz $service $arg]
+		set freq [$bands channel-freq-hertz $service $arg]
 		# puts "channel-pick $service $arg $freq"
 		$self set-freq $freq
 	    }
@@ -89,14 +89,14 @@ package require sdrblk::spectrum
     }
 
     constructor {args} {
-	install spectrum using sdrblk::spectrum %AUTO%
+	install bands using sdrblk::band-data %AUTO%
 	install readout using sdrblk::ui-freq-readout $win.readout
-	install dial using sdrblk::ui-dial $win.dial -radius 100 -command [mymethod turned]
+	install dial using sdrblk::ui-dial $win.dial -command [mymethod turned]
 	install bandbutton using ttk::button $win.bandbutton -text Band/Channel -command [mymethod popup]
 	install bandpopup using toplevel $win.band-select
 	install bandselect using ::sdrblk::ui-band-select $win.band-select.bs -range HF -command [mymethod band-select]
 	pack $win.readout -side top
-	pack $win.dial -side top
+	pack $win.dial -side top -expand true -fill both
 	pack $win.bandbutton -side top
 	pack $win.band-select.bs
 	wm withdraw $win.band-select

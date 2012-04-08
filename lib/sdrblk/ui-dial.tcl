@@ -19,7 +19,9 @@
 
 #
 # a rotary encoder
-# that can be sized, colored, proportioned, and spun
+#
+# Slightly messed up, in that it generates all sorts of fractional counts
+# per rotation, rather than nice neat decimals.
 #
 
 package provide sdrblk::ui-dial 1.0
@@ -28,17 +30,30 @@ package require Tk
 package require snit
 
 snit::widgetadaptor ::sdrblk::ui-dial {
-    option -radius -default 64;		# radius of the dial in pixels
+    # the maximum radius is 1/2 the minimum of width and height
     option -bg {};			# background color of the window containing the dial
-    option -fill \#88e;			# color of the dial
+
+    option -radius 90;			# radius of the dial in percent of max
+    option -fill \#888;			# color of the dial
     option -outline black;		# color of the dial outline
-    option -width 2;			# thickness of the dial outline
-    option -thumb-radius 0.2;		# radius of the thumb in fraction of dial radius
-    option -thumb-position 0.75;	# center of thumb in fraction of dial radius
-    option -thumb-fill \#44e;		# color of the thumb
-    option -thumb-outline white;	# color of the thumb outline
-    option -thumb-activeoutline \#00f;	# color of the thumb outline when active
+    option -width 3;			# thickness of the dial outline
+
+    option -thumb-radius 20;		# radius of the thumb in percent of max
+    option -thumb-position 65;		# center of thumb in percent of max
+    option -thumb-fill \#999;		# color of the thumb
+    option -thumb-outline black;	# color of the thumb outline
     option -thumb-width 2;		# thickness of the thumb outline
+    option -thumb-activewidth 4;	# thickness of the thumb outline when active
+
+    option -graticule 20;		# number of graticule lines to draw
+    option -graticule-radius 95;	# radius of graticule lines in percent of max
+    option -graticule-width 3;		# width of graticule lines in pixels
+    option -graticule-fill black;	# 
+
+    option -scale 1.0;			# scale applied to rotation
+    option -scale-fill black;		# scale label fill
+    option -scale-font {Helvetica 12};	# scale label font
+
     option -command {};			# script called to report rotation 
     
     variable data -array {}
@@ -48,58 +63,102 @@ snit::widgetadaptor ::sdrblk::ui-dial {
 	$self configure {*}$args
 	set data(pi) [expr atan2(0,-1)]
 	set data(2pi) [expr {2*$data(pi)}]
-	set data(edge) [expr {2*($options(-radius)+$options(-width))}]
-	set data(p0) [expr {$data(edge)/2}]
-	set data(tr) [expr {$options(-radius)*$options(-thumb-radius)}]
-	set data(tp) [expr {$options(-radius)*$options(-thumb-position)}]
+	set data(phi) [expr {-$data(pi)/2}]
+	set data(up-step) [expr {$data(2pi)/100}]
+	set data(down-step) [expr {-$data(2pi)/100}]
+	$self set-scale $options(-scale)
 	if {$options(-bg) eq {}} {
 	    set options(-bg) [$hull cget -background]
 	}
-	$hull configure -width $data(edge) -height $data(edge) -background $options(-bg)
-	set p1 $options(-width)
-	set p2 [expr {$data(edge)-$options(-width)}]
-	$hull create oval $p1 $p1 $p2 $p2 -tag dial
-	$hull itemconfig dial -fill $options(-fill) -outline $options(-outline) -width $options(-width) 
-	set xc $data(p0)
-	set yc [expr {$data(p0)-$data(tp)}]
-	set x1 [expr {$xc-$data(tr)}]
-	set y1 [expr {$yc-$data(tr)}]
-	set x2 [expr {$xc+$data(tr)}]
-	set y2 [expr {$yc+$data(tr)}]
-	$hull create oval $x1 $y1 $x2 $y2 -fill $options(-thumb-fill) -outline $options(-thumb-outline) -activeoutline $options(-thumb-activeoutline) -width $options(-thumb-width) -tag thumb
-	$hull bind thumb <ButtonPress-1> [mymethod thumb-press %x %y]
-	$hull bind thumb <B1-Motion> [mymethod thumb-motion %x %y]
+	$hull configure -background $options(-bg)
+	bind $win <Configure> [mymethod window-configure %w %h]
+	bind $win <ButtonPress-4> [mymethod tune up]
+	bind $win <ButtonPress-5> [mymethod tune down]
+	bind $win <Shift-ButtonPress-4> [mymethod scale up]
+	bind $win <Shift-ButtonPress-5> [mymethod scale down]
     }
     
-    method thumb-press {x y} {
-	set data(phi) [expr {atan2($y-$data(p0),$x-$data(p0))}]
+    method {tune} {dir} { $self rotate $data($dir-step) }
+    method {scale up} {} { $self set-scale [expr {$options(-scale)*10}] }
+    method {scale down} {} { $self set-scale [expr {$options(-scale)/10}] }
+    method set-scale {scale} {
+	set options(-scale) $scale
+	if {$scale < 1} {
+	    set data(scale-label) "rev / [format %.0f [expr {1.0/$scale}]]"
+	} else {
+	    set data(scale-label) "rev * [format %.0f $scale]"
+	}
+	$hull itemconfigure scale -text $data(scale-label)
     }
 
-    method thumb-motion {x y} {
-	## compute new angle
-	set phi [expr {atan2($y-$data(p0),$x-$data(p0))}]
-	## change in angle
-	set dphi [expr {$phi-$data(phi)}]
-	## get current coordinates
+    method thumb-press {x y} { set data(phi) [expr {atan2($y-$data(yc),$x-$data(xc))}] }
+    method thumb-motion {x y} { $self rotate [expr {atan2($y-$data(yc),$x-$data(xc))-$data(phi)}] }
+
+    method rotate {dphi} {
+	set phi [expr {$data(phi)+$dphi}]
+	## get current thumb coordinates
 	foreach {x1 y1 x2 y2} [$hull coords thumb] break
-	set x [expr {($x1+$x2)/2-$data(p0)}]
-	set y [expr {($y1+$y2)/2-$data(p0)}]
-	## rotate coordinates
+	## compute the thumb center
+	set x [expr {($x1+$x2)/2-$data(xc)}]
+	set y [expr {($y1+$y2)/2-$data(yc)}]
+	## rotate thumb coordinates
 	set sindphi [expr {sin($dphi)}]
 	set cosdphi [expr {cos($dphi)}]
 	foreach {x y} [list [expr {$x*$cosdphi - $y*$sindphi}] [expr {$y*$cosdphi + $x*$sindphi}]] break
-	## reset coordinates
-	$hull coords thumb [expr {$x-$data(tr)+$data(p0)}] [expr {$y-$data(tr)+$data(p0)}] [expr {$x+$data(tr)+$data(p0)}] [expr {$y+$data(tr)+$data(p0)}]
+	## set current thumb coordinates
+	$hull coords thumb [expr {$x-$data(tr)+$data(xc)}] [expr {$y-$data(tr)+$data(yc)}] [expr {$x+$data(tr)+$data(xc)}] [expr {$y+$data(tr)+$data(yc)}]
 	## remember last phi
 	set data(phi) $phi
+	## compute turn as fraction of rotation
 	set dturn [expr {fmod($dphi,$data(2pi)) / $data(2pi)}]
 	if {$dturn > 0.5} {
 	    set dturn [expr {$dturn-1}]
 	} elseif {$dturn < -0.5} {
 	    set dturn [expr {$dturn+1}]
 	}
+	## send scaled value to client
 	if {$options(-command) ne {}} {
-	    eval "$options(-command) $dturn"
+	    eval "$options(-command) [expr {$options(-scale)*$dturn}]"
 	}
+    }
+    
+    method window-configure {w h} {
+	set r  [expr {min($w,$h)/2.0}]; # radius of space available
+	set xc [expr {$w/2.0}];	       # center of space available
+	set yc [expr {$h/2.0}];	       # center of space available
+	set dr [expr {$options(-radius)*$r/100.0}];			# dial radius
+	set tr [expr {$r*$options(-thumb-radius)/100.0}];		# thumb radius
+	set tp [expr {$r*$options(-thumb-position)/100.0}];		# thumb position radius
+	set gr [expr {$r*$options(-graticule-radius)/100.0}];	# graticule radius
+	set dial [list [expr {$xc-$dr}] [expr {$yc-$dr}] [expr {$xc+$dr}] [expr {$yc+$dr}]]
+	set xt [expr {$xc+$tp*cos($data(phi))}]
+	set yt [expr {$yc+$tp*sin($data(phi))}]
+	set thumb [list [expr {$xt-$tr}] [expr {$yt-$tr}] [expr {$xt+$tr}] [expr {$yt+$tr}]]
+	set graticule {}
+	if {$options(-graticule) <= 0} {
+	    lappend graticule $xc $yc $xc $yc
+	} else {
+	    set p 0
+	    set dp [expr {$data(2pi)/$options(-graticule)}]
+	    for {set i 0} {$i < $options(-graticule)} {incr i} {
+		lappend graticule $xc $yc [expr {$xc+$gr*cos($p)}] [expr {$yc+$gr*sin($p)}]
+		set p [expr {$p+$dp}]
+	    }
+	}
+	set scale [list  2 [expr {$h-2}]]
+	if {[llength [$hull find withtag thumb]] == 0} {
+	    $hull create line $graticule -tag graticule -fill $options(-graticule-fill) -width $options(-graticule-width)
+	    $hull create oval $dial -tag dial -fill $options(-fill) -outline $options(-outline) -width $options(-width) 
+	    $hull create oval $thumb -tag thumb -fill $options(-thumb-fill) -outline $options(-thumb-outline) -activewidth $options(-thumb-activewidth) -width $options(-thumb-width)
+	    $hull create text $scale -tag scale -text $data(scale-label) -anchor sw -fill $options(-scale-fill) -font $options(-scale-font)
+	    $hull bind thumb <ButtonPress-1> [mymethod thumb-press %x %y]
+	    $hull bind thumb <B1-Motion> [mymethod thumb-motion %x %y]
+	} else {
+	    $hull coords graticule $graticule
+	    $hull coords dial $dial
+	    $hull coords thumb $thumb
+	    $hull coords scale $scale
+	}
+	array set data [list yc $yc xc $xc tr $tr]
     }
 }    

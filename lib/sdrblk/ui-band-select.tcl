@@ -19,6 +19,10 @@
 
 #
 # a graphical band/channel select manager
+# needs to zoom
+# needs detailed band plans to zoom into
+# needs to move channel markers off the band rectangles
+# needs merge some services into single row
 #
 
 package provide sdrblk::ui-band-select 1.0
@@ -26,7 +30,7 @@ package provide sdrblk::ui-band-select 1.0
 package require Tk
 package require snit
 
-package require sdrblk::spectrum
+package require sdrblk::band-data
 
 snit::widgetadaptor ::sdrblk::ui-band-select {
 
@@ -36,7 +40,7 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
     option -width 600;			# width of the band display
     option -hover-time 250;		# milliseconds before popup
     
-    component spectrum
+    component bands
 
     variable data -array {
 	hover-displayed 0
@@ -45,14 +49,14 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
 
     constructor {args} {
 	installhull using canvas
-	install spectrum using ::sdrblk::spectrum %AUTO%
+	install bands using ::sdrblk::band-data %AUTO%
 	$self configure {*}$args
 	$hull configure -width $options(-width) -height $options(-height)
 	$self draw-bands
     }
     
     destructor {
-	catch {$spectrum destroy}
+	catch {$bands destroy}
     }
 
     proc x-for-frequency {f} {
@@ -60,41 +64,39 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
     }
 
     method draw-bands {} {
-	lassign [$spectrum range-hertz $options(-range)] fmin fmax
+	lassign [$bands range-hertz $options(-range)] fmin fmax
 	set xmin [x-for-frequency $fmin]
 	set xmax [x-for-frequency $fmax]
-	set y 0
-	set dy [expr {$options(-height)/(2+[llength [$spectrum services]])}]
-	foreach service [$spectrum services] {
-	    incr y $dy
-	    set yc [expr {$y+$dy}]
-	    foreach band [$spectrum bands $service] {
-		lassign [$spectrum band-range-hertz $service $band] bmin bmax
-		set i [$hull create rectangle [x-for-frequency $bmin] $y [x-for-frequency $bmax] $yc -fill [$spectrum color $service] -width 1 -activewidth 4]
+	set nrows [$bands nrows]
+	set dy [expr {$options(-height)/(2+$nrows)}]
+	foreach service [$bands services] {
+	    set y0 [expr {[$bands row $service]*$dy}]
+	    set y1 [expr {$y0+$dy/2}]
+	    set y2 [expr {$y1+$dy/8}]
+	    set y3 [expr {$y2+$dy/4}]
+	    foreach band [$bands bands $service] {
+		lassign [$bands band-range-hertz $service $band] bmin bmax
+		set i [$hull create rectangle [x-for-frequency $bmin] $y0 [x-for-frequency $bmax] $y1 -fill [$bands color $service] -width 1 -activewidth 2]
 		$hull bind $i <Button-1> [mymethod band-pick $service $band]
-		$hull bind $i <Enter> [mymethod hover-text "$service $band\n[join [$spectrum band-range $service $band]]"]
+		$hull bind $i <Enter> [mymethod hover-text "$service $band\n[join [$bands band-range $service $band]]"]
 		$hull bind $i <Leave> [mymethod hover-text ""]
 	    }
-	    foreach channel [$spectrum channels $service] {
-		set freq [$spectrum channel-freq-hertz $service $channel]
+	    foreach channel [$bands channels $service] {
+		set freq [$bands channel-freq-hertz $service $channel]
 		set x [x-for-frequency $freq]
-		set i [$hull create rectangle $x $y $x $yc -fill white -outline black -width 2 -activewidth 4]
+		set i [$hull create rectangle $x $y2 $x $y3 -fill white -outline black -width 1 -activewidth 2]
 		$hull bind $i <Button-1> [mymethod channel-pick $service $channel]
-		$hull bind $i <Enter> [mymethod hover-text "$service $channel\n[join [$spectrum channel-freq $service $channel]]"]
+		$hull bind $i <Enter> [mymethod hover-text "$service $channel\n[join [$bands channel-freq $service $channel]]"]
 		$hull bind $i <Leave> [mymethod hover-text ""]
 	    }
 	}
 	#catch {unset last}
-	incr y $dy
-	set y2 $y
-	incr y $dy
-	set y3 $y
 	set y0 0
-	set y1 $dy
-	set y1 [expr {($y0+$y1)/2}]
-	set y2 [expr {($y2+$y3)/2}]
+	set y1 [expr {2*$dy/3}]
+	set y2 [expr {(1+$nrows)*$dy+$dy/3}]
+	set y3 [expr {(2+$nrows)*$dy}]
 	foreach tick {30kHz 75kHz 150kHz 300kHz 750kHz 1.5MHz 3MHz 7.5MHz 15MHz 30MHz 75MHz 150MHz 300MHz 750MHz 1500MHz 3GHz 7.5GHz 15GHz 30GHz 75GHz 150GHz 300GHz} {
-	    set x [x-for-frequency [$spectrum hertz $tick]]
+	    set x [x-for-frequency [$bands hertz $tick]]
 	    $hull create line $x $y0 $x $y1
 	    $hull create text $x $y0 -text " $tick" -anchor nw
 	    $hull create line $x $y2 $x $y3
@@ -103,11 +105,19 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
 	$hull move all [expr {-$xmin}] 0
 	$hull scale all 0 0 [expr {$options(-width)/double($xmax-$xmin)}] 1
 	bind $win <ButtonPress-1> [mymethod no-pick]
-	bind $win <ButtonPress-2> [mymethod scan-mark %x]
-	bind $win <B2-Motion> [mymethod scan-dragto %x]
+	bind $win <ButtonPress-3> [mymethod scan-mark %x]
+	bind $win <B3-Motion> [mymethod scan-dragto %x]
 	bind $win <Motion> [mymethod motion %x %y]
+	bind $win <ButtonPress-4> [mymethod scroll left]
+	bind $win <ButtonPress-5> [mymethod scroll right]
+	bind $win <Shift-ButtonPress-4> [mymethod zoom in %x]
+	bind $win <Shift-ButtonPress-5> [mymethod zoom out %x]
     }
 
+    method {scroll left} {} { $hull scan mark 10 0; $hull scan dragto 9 0 }
+    method {scroll right} {} { $hull scan mark 10 0; $hull scan dragto 11 0 }
+    method {zoom in} {x} { $hull scale all [$hull canvasx $x] 0 1.0101010101 1 } 
+    method {zoom out} {x} { $hull scale all [$hull canvasy $x] 0 0.99 1 }
     method scan-mark {x} { $hull scan mark $x 0 }
     method scan-dragto {x} { $hull scan dragto $x 0 }
 
@@ -173,5 +183,4 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
 	    set data(hover-display-box) 0
 	}
     }
-
 }    
