@@ -74,9 +74,10 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     Tcl_NewIntObj(jack_frame_time(data->fw.client)),
     Tcl_NewIntObj(data->ovsv.n_samples), Tcl_NewIntObj(data->ovsv.n_transforms),
     Tcl_NewIntObj(data->ovsv.length), Tcl_NewIntObj(data->ovsv.fftlen),
+    Tcl_NewByteArrayObj((unsigned char *)data->ovsv.zfilter, data->ovsv.fftlen*sizeof(float complex)),
     NULL
   };
-  Tcl_SetObjResult(interp, Tcl_NewListObj(5, result));
+  Tcl_SetObjResult(interp, Tcl_NewListObj(6, result));
   return TCL_OK;
 }
 
@@ -101,10 +102,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the options that the command implements
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-length", "length", "Length", "128",      fw_option_int,	fw_flag_none, offsetof(_t, opts.length),	      "length of filter" },
-  { "-planbits","planbits","Planbits", "0",    fw_option_int,	fw_flag_none, offsetof(_t, opts.planbits),     "fftw planbits" },
-  { "-low",    "low",    "Hertz",  "-5000",    fw_option_float,	fw_flag_none, offsetof(_t, opts.low_frequency),"filter low frequency cutoff" },
-  { "-high",   "high",   "Hertz",  "+5000",    fw_option_float,	fw_flag_none, offsetof(_t, opts.high_frequency),"filter high frequency cutoff" },
+  { "-length",  "length",  "Length",  "128",   fw_option_int,	fw_flag_none, offsetof(_t, opts.length),        "length of filter" },
+  { "-planbits","planbits","Planbits","0",     fw_option_int,	fw_flag_none, offsetof(_t, opts.planbits),      "fftw planbits" },
+  { "-low",     "low",     "Hertz",   "-5000", fw_option_float,	fw_flag_none, offsetof(_t, opts.low_frequency), "filter low frequency cutoff" },
+  { "-high",    "high",    "Hertz",   "+5000", fw_option_float,	fw_flag_none, offsetof(_t, opts.high_frequency),"filter high frequency cutoff" },
   { NULL }
 };
 
