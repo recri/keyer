@@ -34,10 +34,9 @@ package require sdrblk::band-data
 
 snit::widgetadaptor ::sdrblk::ui-band-select {
 
-    option -range HF;			# the range to display
     option -command {};			# script called to report band selection 
-    option -height 200;			# height of the band display
-    option -width 600;			# width of the band display
+    option -height 150;			# height of the band display
+    option -width 200;			# width of the band display
     option -hover-time 250;		# milliseconds before popup
     
     component bands
@@ -52,6 +51,7 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
 	install bands using ::sdrblk::band-data %AUTO%
 	$self configure {*}$args
 	$hull configure -width $options(-width) -height $options(-height)
+	bind $win <Configure> [mymethod window-configure %w %h]
 	$self draw-bands
     }
     
@@ -64,9 +64,8 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
     }
 
     method draw-bands {} {
-	lassign [$bands range-hertz $options(-range)] fmin fmax
-	set xmin [x-for-frequency $fmin]
-	set xmax [x-for-frequency $fmax]
+	set xmin [x-for-frequency  2500000]
+	set xmax [x-for-frequency 25000000]
 	set nrows [$bands nrows]
 	set dy [expr {$options(-height)/(2+$nrows)}]
 	foreach service [$bands services] {
@@ -95,7 +94,7 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
 	set y1 [expr {2*$dy/3}]
 	set y2 [expr {(1+$nrows)*$dy+$dy/3}]
 	set y3 [expr {(2+$nrows)*$dy}]
-	foreach tick {30kHz 75kHz 150kHz 300kHz 750kHz 1.5MHz 3MHz 7.5MHz 15MHz 30MHz 75MHz 150MHz 300MHz 750MHz 1500MHz 3GHz 7.5GHz 15GHz 30GHz 75GHz 150GHz 300GHz} {
+	foreach tick {50kHz 100kHz 250kHz 500kHz 1MHz 2.5MHz 5MHz 10MHz 25MHz 50MHz 100MHz 250MHz 500MHz 1GHz 2.5GHz 5GHz 10GHz 25GHz 50GHz 100GHz 250GHz} {
 	    set x [x-for-frequency [$bands hertz $tick]]
 	    $hull create line $x $y0 $x $y1
 	    $hull create text $x $y0 -text " $tick" -anchor nw
@@ -124,13 +123,16 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
     method no-pick {} { if {$data(hover-text) eq {}} { $self callback no-pick } }
     method band-pick {service band} { $self callback band-pick $service $band }
     method channel-pick {service channel} { $self callback channel-pick $service $channel }
+    
+    method window-configure {w h} {
+	if {$h != $options(-height)} {
+	    $hull scale all 0 0 1 [expr {double($h)/$options(-height)}]
+	    set options(-height) $h
+	}
+    }
 
     method callback {args} {
 	if {$options(-command) ne {}} { eval "$options(-command) $args" }
-    }
-
-    method window-configure {width height} {
-	puts "window-configure $width $height"
     }
 
     method hover-text {text} {

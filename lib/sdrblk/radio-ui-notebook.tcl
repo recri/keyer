@@ -22,6 +22,7 @@ package provide sdrblk::radio-ui-notebook 1.0.0
 package require Tk
 package require snit
 
+package require sdrblk::ui-vfo
 package require sdrblk::ui-tree
 
 ::snit::type ::sdrblk::radio-ui-notebook {
@@ -30,15 +31,11 @@ package require sdrblk::ui-tree
     option -control -readonly yes
     
     constructor {args} {
-	puts "::sdrblk::radio-ui-notebook constructor {$args}"
 	$self configure {*}$args
 	set options(-control) [$options(-partof) cget -control]
-	pack [ttk::frame .m] -side top
-	pack [ttk::label .m.l -text "This is the window"] -side left
 	pack [ttk::notebook .t] -side top -fill both -expand true
-	puts "packed notebook"
+	.t add [::sdrblk::ui-vfo .t.v -partof $self -control $options(-control)] -text Radio
 	.t add [::sdrblk::ui-tree .t.t -partof $self -control $options(-control)] -text Tree
-	puts "added tree"
     }
 	
     method repl {} { }

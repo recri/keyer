@@ -25,7 +25,7 @@ namespace eval ::sdrblk {}
 
 ::snit::type ::sdrblk::block-control {
 
-    typevariable verbose -array {construct 0 destroy 0 control 1 controlget 1 controls 1}
+    typevariable verbose -array {construct 0 destroy 0 control 0 controlget 0 controls 0}
 
     option -partof -readonly yes
     option -control -readonly yes

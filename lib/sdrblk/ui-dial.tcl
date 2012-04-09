@@ -20,10 +20,6 @@
 #
 # a rotary encoder
 #
-# Slightly messed up, in that it generates all sorts of fractional counts
-# per rotation, rather than nice neat decimals.
-#
-
 package provide sdrblk::ui-dial 1.0
 
 package require Tk
@@ -48,15 +44,16 @@ snit::widgetadaptor ::sdrblk::ui-dial {
     option -graticule 20;		# number of graticule lines to draw
     option -graticule-radius 95;	# radius of graticule lines in percent of max
     option -graticule-width 3;		# width of graticule lines in pixels
-    option -graticule-fill black;	# 
+    option -graticule-fill white;	# 
 
-    option -scale 1.0;			# scale applied to rotation
-    option -scale-fill black;		# scale label fill
-    option -scale-font {Helvetica 12};	# scale label font
+    option -cpr 1000;			# counts per revolution
 
     option -command {};			# script called to report rotation 
     
-    variable data -array {}
+    variable data -array {
+	turn 0
+	last-turn 0
+    }
 
     constructor {args} {
 	installhull using canvas
@@ -64,9 +61,8 @@ snit::widgetadaptor ::sdrblk::ui-dial {
 	set data(pi) [expr atan2(0,-1)]
 	set data(2pi) [expr {2*$data(pi)}]
 	set data(phi) [expr {-$data(pi)/2}]
-	set data(up-step) [expr {$data(2pi)/100}]
-	set data(down-step) [expr {-$data(2pi)/100}]
-	$self set-scale $options(-scale)
+	set data(up-step) [expr {$data(2pi)/$options(-cpr)}]
+	set data(down-step) [expr {-$data(2pi)/$options(-cpr)}]
 	if {$options(-bg) eq {}} {
 	    set options(-bg) [$hull cget -background]
 	}
@@ -74,28 +70,43 @@ snit::widgetadaptor ::sdrblk::ui-dial {
 	bind $win <Configure> [mymethod window-configure %w %h]
 	bind $win <ButtonPress-4> [mymethod tune up]
 	bind $win <ButtonPress-5> [mymethod tune down]
-	bind $win <Shift-ButtonPress-4> [mymethod scale up]
-	bind $win <Shift-ButtonPress-5> [mymethod scale down]
     }
     
     method {tune} {dir} { $self rotate $data($dir-step) }
-    method {scale up} {} { $self set-scale [expr {$options(-scale)*10}] }
-    method {scale down} {} { $self set-scale [expr {$options(-scale)/10}] }
-    method set-scale {scale} {
-	set options(-scale) $scale
-	if {$scale < 1} {
-	    set data(scale-label) "rev / [format %.0f [expr {1.0/$scale}]]"
-	} else {
-	    set data(scale-label) "rev * [format %.0f $scale]"
-	}
-	$hull itemconfigure scale -text $data(scale-label)
-    }
 
     method thumb-press {x y} { set data(phi) [expr {atan2($y-$data(yc),$x-$data(xc))}] }
     method thumb-motion {x y} { $self rotate [expr {atan2($y-$data(yc),$x-$data(xc))-$data(phi)}] }
 
     method rotate {dphi} {
-	set phi [expr {$data(phi)+$dphi}]
+	## rotate thumb
+	$self rotate-thumb $dphi
+	## remember last phi
+	set data(phi) [expr {$data(phi)+$dphi}]
+	## compute turn as fraction of rotation
+	set dturn [expr {fmod($dphi,$data(2pi)) / $data(2pi)}]
+	if {$dturn > 0.5} {
+	    set dturn [expr {$dturn-1}]
+	} elseif {$dturn < -0.5} {
+	    set dturn [expr {$dturn+1}]
+	}
+	## compute counts to send to client
+	set data(turn) [expr {$data(turn)+$options(-cpr)*$dturn}]
+	set d [expr {$data(turn)-$data(last-turn)}]
+	if {abs($d) >= 1} {
+	    if {$d > 0} {
+		set d [expr {int($d)}]
+	    } else {
+		set d [expr {-int(-$d)}]
+	    }
+	    set data(turn) [expr {$data(turn)-$d}]
+	    set data(last-turn) $data(turn)
+	    if {$options(-command) ne {}} {
+		{*}$options(-command) $d
+	    }
+	}
+    }
+
+    method rotate-thumb {dphi} {
 	## get current thumb coordinates
 	foreach {x1 y1 x2 y2} [$hull coords thumb] break
 	## compute the thumb center
@@ -107,21 +118,8 @@ snit::widgetadaptor ::sdrblk::ui-dial {
 	foreach {x y} [list [expr {$x*$cosdphi - $y*$sindphi}] [expr {$y*$cosdphi + $x*$sindphi}]] break
 	## set current thumb coordinates
 	$hull coords thumb [expr {$x-$data(tr)+$data(xc)}] [expr {$y-$data(tr)+$data(yc)}] [expr {$x+$data(tr)+$data(xc)}] [expr {$y+$data(tr)+$data(yc)}]
-	## remember last phi
-	set data(phi) $phi
-	## compute turn as fraction of rotation
-	set dturn [expr {fmod($dphi,$data(2pi)) / $data(2pi)}]
-	if {$dturn > 0.5} {
-	    set dturn [expr {$dturn-1}]
-	} elseif {$dturn < -0.5} {
-	    set dturn [expr {$dturn+1}]
-	}
-	## send scaled value to client
-	if {$options(-command) ne {}} {
-	    eval "$options(-command) [expr {$options(-scale)*$dturn}]"
-	}
     }
-    
+
     method window-configure {w h} {
 	set r  [expr {min($w,$h)/2.0}]; # radius of space available
 	set xc [expr {$w/2.0}];	       # center of space available
@@ -145,19 +143,16 @@ snit::widgetadaptor ::sdrblk::ui-dial {
 		set p [expr {$p+$dp}]
 	    }
 	}
-	set scale [list  2 [expr {$h-2}]]
 	if {[llength [$hull find withtag thumb]] == 0} {
 	    $hull create line $graticule -tag graticule -fill $options(-graticule-fill) -width $options(-graticule-width)
 	    $hull create oval $dial -tag dial -fill $options(-fill) -outline $options(-outline) -width $options(-width) 
 	    $hull create oval $thumb -tag thumb -fill $options(-thumb-fill) -outline $options(-thumb-outline) -activewidth $options(-thumb-activewidth) -width $options(-thumb-width)
-	    $hull create text $scale -tag scale -text $data(scale-label) -anchor sw -fill $options(-scale-fill) -font $options(-scale-font)
 	    $hull bind thumb <ButtonPress-1> [mymethod thumb-press %x %y]
 	    $hull bind thumb <B1-Motion> [mymethod thumb-motion %x %y]
 	} else {
 	    $hull coords graticule $graticule
 	    $hull coords dial $dial
 	    $hull coords thumb $thumb
-	    $hull coords scale $scale
 	}
 	array set data [list yc $yc xc $xc tr $tr]
     }

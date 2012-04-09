@@ -19,6 +19,7 @@
 
 #
 # a rotary encoder with a frequency readout
+# and a band selector
 #
 
 package provide sdrblk::ui-vfo 1.0
@@ -35,8 +36,6 @@ package require sdrblk::band-data
     component bands
     component readout
     component dial
-    component bandbutton
-    component bandpopup
     component bandselect
 
     variable data -array {
@@ -45,6 +44,8 @@ package require sdrblk::band-data
 
     option -turn-resolution 1000
     option -freq 7050000
+    option -partof {}
+    option -control {}
     option -command {}
 
     method turned {turns} {
@@ -54,34 +55,24 @@ package require sdrblk::band-data
     method set-freq {hertz} {
 	$win.readout set-freq $hertz
 	set options(-freq) $hertz
+	if {$options(-command) ne {}} {
+	    eval "$options(-command) $hertz"
+	}
     }
 
-    method popup {} {
-	set top [winfo toplevel $win]
-	set x [winfo rootx $win.bandbutton]
-	set y [winfo rooty $win.bandbutton]
-	wm transient $win.band-select $top
-	wm title     $win.band-select "Band Select"
-	wm geometry  $win.band-select +$x+$y
-	wm deiconify $win.band-select
-	grab $win.band-select
-    }
-    
-    method band-select {which service arg} {
-	grab release $win.band-select
-	wm withdraw $win.band-select
+    method band-select {which args} {
 	switch $which {
 	    no-pick {
 		# puts "no-pick"
 	    }
 	    band-pick {
-		lassign [$bands band-range-hertz $service $arg] low high
+		lassign [$bands band-range-hertz {*}$args] low high
 		set freq [expr {($low+$high)/2}]
 		# puts "band-pick $service $arg $low .. $high"
 		$self set-freq $freq
 	    }
 	    channel-pick {
-		set freq [$bands channel-freq-hertz $service $arg]
+		set freq [$bands channel-freq-hertz {*}$args]
 		# puts "channel-pick $service $arg $freq"
 		$self set-freq $freq
 	    }
@@ -92,14 +83,12 @@ package require sdrblk::band-data
 	install bands using sdrblk::band-data %AUTO%
 	install readout using sdrblk::ui-freq-readout $win.readout
 	install dial using sdrblk::ui-dial $win.dial -command [mymethod turned]
-	install bandbutton using ttk::button $win.bandbutton -text Band/Channel -command [mymethod popup]
-	install bandpopup using toplevel $win.band-select
-	install bandselect using ::sdrblk::ui-band-select $win.band-select.bs -range HF -command [mymethod band-select]
+	install bandselect using ::sdrblk::ui-band-select $win.band-select -command [mymethod band-select]
 	pack $win.readout -side top
+	pack [ttk::separator $win.sep1 -orient horizontal] -side top -fill x
 	pack $win.dial -side top -expand true -fill both
-	pack $win.bandbutton -side top
-	pack $win.band-select.bs
-	wm withdraw $win.band-select
+	pack [ttk::separator $win.sep2 -orient horizontal] -side top -fill x
+	pack $win.band-select -side top -expand true -fill both
 	$self set-freq $options(-freq)
     }    
 }

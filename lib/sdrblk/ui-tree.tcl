@@ -36,7 +36,6 @@ package require snit
     variable items -array {}
     
     constructor {args} {
-	puts "radio-ui-tree constructor $args"
 	install treeview using ttk::treeview $win.t -columns $columns -displaycolumns $columns -yscrollcommand [list $win.v set]
 	install scrollbar using ttk::scrollbar $win.v -orient vertical -command [list $win.t yview]
 	$win.t heading #0 -text module
@@ -137,7 +136,6 @@ package require snit
 		    $self update
 		}
 	    }	
-	    puts "pick $item $col"
 	}
     }
 
