@@ -51,6 +51,19 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+  _t *data = (_t *)clientData;
+  Tcl_Obj *result[] = {
+    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
+    Tcl_NewDoubleObj(data->sam.pll.freq.f),
+    NULL
+  };
+  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
+  return TCL_OK;
+}
+
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return framework_command(clientData, interp, argc, objv);
 }
@@ -62,6 +75,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
+  { "get", _get, "get the pll frequency" },
   { NULL }
 };
 

@@ -30,7 +30,7 @@ typedef struct {
     struct { float f, l, h; } freq;
     float phs;
     struct { float alpha; } iir;
-    float _Complex delay;
+    float complex delay;
 } pll_t;
 
 static void *pll_init(pll_t *p, const int sample_rate, const float f_initial, const float f_lobound, const float f_hibound, const float f_bandwid) {
@@ -47,8 +47,8 @@ static void *pll_init(pll_t *p, const int sample_rate, const float f_initial, co
   return p;
 }
 
-static void pll(pll_t *p, float _Complex sig, float wgt) {
-  float _Complex z = cosf(p->phs) + I * sinf(p->phs);
+static void pll(pll_t *p, float complex sig, float wgt) {
+  float complex z = cosf(p->phs) + I * sinf(p->phs);
   float diff;
 
   p->delay = (crealf(z) * crealf(sig) + cimagf(z) * cimagf(sig)) +
