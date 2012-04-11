@@ -93,29 +93,27 @@ typedef struct {
   int input_index; 		/* where the next signal goes in zinput */
   int output_index;		/* where the next signal is in zoutput */
   // values to be cleaned up at next opportunity
-  float complex *xfilter;
-  float complex *xinput;
-  float complex *xsignal;
-  float complex *xoutput;
-  // diagnostics
-  unsigned n_samples, n_transforms;
+  float complex *xzfilter;
+  float complex *xzinput;
+  float complex *xzsignal;
+  float complex *xzoutput;
 } filter_overlap_save_t;
 
 /* configure installs a new transformed filter kernel */
 static void filter_overlap_save_configure(filter_overlap_save_t *p, filter_overlap_save_options_t *q) {
   if (q->fmodified) {
     q->fmodified = 0;
-    p->xfilter = p->zfilter; p->zfilter = q->zfilter; q->zfilter = NULL;
+    p->xzfilter = p->zfilter; p->zfilter = q->zfilter; q->zfilter = NULL;
     p->high_frequency = q->high_frequency;
     p->low_frequency = q->low_frequency;
   }
   if (q->lmodified) {
     q->lmodified = 0;
-    p->xinput = p->zinput; p->zinput = q->zinput; q->zinput = NULL;
+    p->xzinput = p->zinput; p->zinput = q->zinput; q->zinput = NULL;
     p->pfwd = q->pfwd; q->pfwd = NULL;
-    p->xsignal = p->zsignal; p->zsignal = q->zsignal; q->zsignal = NULL;
+    p->xzsignal = p->zsignal; p->zsignal = q->zsignal; q->zsignal = NULL;
     p->pinv = q->pinv; q->pinv = NULL;
-    p->xoutput = p->zoutput; p->zoutput = q->zoutput; q->zoutput = NULL;
+    p->xzoutput = p->zoutput; p->zoutput = q->zoutput; q->zoutput = NULL;
     p->length = q->length;
     p->fftlen = 2*q->length;
     p->planbits = q->planbits;
@@ -128,10 +126,10 @@ static void filter_overlap_save_configure(filter_overlap_save_t *p, filter_overl
 }
 
 static void filter_overlap_save_xcleanup(filter_overlap_save_t *p) {
-  if (p->xinput != NULL) fftwf_free(p->xinput); p->xinput = NULL;
-  if (p->xfilter != NULL) fftwf_free(p->xfilter); p->xfilter = NULL;
-  if (p->xsignal != NULL) fftwf_free(p->xsignal); p->xsignal = NULL;
-  if (p->xoutput != NULL) fftwf_free(p->xoutput); p->xoutput = NULL;
+  if (p->xzinput != NULL) fftwf_free(p->xzinput); p->xzinput = NULL;
+  if (p->xzfilter != NULL) fftwf_free(p->xzfilter); p->xzfilter = NULL;
+  if (p->xzsignal != NULL) fftwf_free(p->xzsignal); p->xzsignal = NULL;
+  if (p->xzoutput != NULL) fftwf_free(p->xzoutput); p->xzoutput = NULL;
 }
 
 static void filter_overlap_save_delete(filter_overlap_save_t *p) {
@@ -206,7 +204,9 @@ static void *filter_overlap_save_preconfigure(filter_overlap_save_t *p, filter_o
     fftwf_execute(pkernel);
     fftwf_destroy_plan(pkernel);
     fftwf_free(zkernel);
+    // fprintf(stderr, "ovsv max_abs before normalization = %.5f\n", complex_vector_max_abs(q->zfilter, fftlen));
     complex_vector_normalize(q->zfilter, q->zfilter, fftlen);
+    // fprintf(stderr, "ovsv max_abs after normalization = %.5f\n", complex_vector_max_abs(q->zfilter, fftlen));
     q->fmodified = 1;
   }
   if (lmodified) {
@@ -232,10 +232,8 @@ static void *filter_overlap_save_init(filter_overlap_save_t *p, filter_overlap_s
 }
 
 static float complex filter_overlap_save_process(filter_overlap_save_t *p, float complex x) {
-  p->n_samples += 1;
   p->zinput[p->input_index++] = x;
   if (p->input_index == p->input_limit) {
-    p->n_transforms += 1;
     /* forward transform */
     fftwf_execute(p->pfwd);
     /* convolve with transformed filter kernel */

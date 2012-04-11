@@ -36,8 +36,8 @@ typedef struct {
 
 static void _update(_t *data) {
   if (data->modified) {
-    data->modified = 0;
     filter_overlap_save_configure(&data->ovsv, &data->opts);
+    data->modified = 0;
   }
 }
 
@@ -70,23 +70,44 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   if (argc != 2)
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
+  // fprintf(stderr, "ovsv max_abs in get = %.5f\n", complex_vector_max_abs(data->ovsv.zfilter, data->ovsv.fftlen));
   Tcl_Obj *result[] = {
     Tcl_NewIntObj(jack_frame_time(data->fw.client)),
-    Tcl_NewIntObj(data->ovsv.n_samples), Tcl_NewIntObj(data->ovsv.n_transforms),
-    Tcl_NewIntObj(data->ovsv.length), Tcl_NewIntObj(data->ovsv.fftlen),
     Tcl_NewByteArrayObj((unsigned char *)data->ovsv.zfilter, data->ovsv.fftlen*sizeof(float complex)),
     NULL
   };
-  Tcl_SetObjResult(interp, Tcl_NewListObj(6, result));
+  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
+  return TCL_OK;
+}
+
+static int _modified(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+  _t *data = (_t *)clientData;
+  Tcl_Obj *result[] = {
+    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
+    Tcl_NewIntObj(data->modified),
+    NULL
+  };
+  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
   return TCL_OK;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
+  if (data->modified) {		// not safe to access
+    if (argc == 2 && strcmp("modified", Tcl_GetString(objv[1])) == 0)
+      return _modified(clientData, interp, argc, objv);
+    Tcl_SetResult(interp, "busy", TCL_STATIC);
+    return TCL_ERROR;
+  }
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
   if (save.low_frequency != data->opts.low_frequency ||
       save.high_frequency != data->opts.high_frequency ||
+      // save.notch1_frequency != data->opts.notch1_frequency ||
+      // save.notch2_frequency != data->opts.notch2_frequency ||
+      // save.notch3_frequency != data->opts.notch3_frequency ||
       save.length != data->opts.length ||
       save.planbits != data->opts.planbits) {
     void *e = filter_overlap_save_preconfigure(&data->ovsv, &data->opts); if (e != &data->ovsv) {
@@ -106,13 +127,17 @@ static const fw_option_table_t _options[] = {
   { "-planbits","planbits","Planbits","0",     fw_option_int,	fw_flag_none, offsetof(_t, opts.planbits),      "fftw planbits" },
   { "-low",     "low",     "Hertz",   "-5000", fw_option_float,	fw_flag_none, offsetof(_t, opts.low_frequency), "filter low frequency cutoff" },
   { "-high",    "high",    "Hertz",   "+5000", fw_option_float,	fw_flag_none, offsetof(_t, opts.high_frequency),"filter high frequency cutoff" },
+  // { "-notch1",    "notch",    "Hertz",   "0", fw_option_float,	fw_flag_none, offsetof(_t, opts.notch1_frequency),"first notch center frequency" },
+  // { "-notch2",    "notch",    "Hertz",   "0", fw_option_float,	fw_flag_none, offsetof(_t, opts.notch2_frequency),"second notch center frequency" },
+  // { "-notch3",    "notch",    "Hertz",   "0", fw_option_float,	fw_flag_none, offsetof(_t, opts.notch3_frequency),"third notch center frequency" },
   { NULL }
 };
 
 // the subcommands implemented by this command
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",   _get,   "fetch the current diagnostics" },
+  { "get",      _get,	   "fetch the current transformed filter" },
+  { "modified", _modified, "fetch the current modified flag" },
   { NULL }
 };
 

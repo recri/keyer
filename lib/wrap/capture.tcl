@@ -151,7 +151,7 @@ proc ::capture::capture-spectrum {w} {
 	    # so 10*log10(coeff^2) is 10*log10(sqrt(n)^2) too big
 	    set norm [expr {10*log10($n)}]
 	    if { ! [catch {
-		foreach {re im} [concat [lrange $levels [expr {1+$n}] end] [lrange $levels 0 $n]] {
+		foreach {re im} [concat [lrange $levels $n end] [lrange $levels 0 [expr {$n-1}]]] {
 		    # squared magnitude means 10*log10 dB
 		    set p [expr {10*log10($re*$re+$im*$im+1e-64)-$norm}]
 		    set maxp [expr {max($p,$maxp)}]

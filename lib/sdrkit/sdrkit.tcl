@@ -48,7 +48,7 @@ proc sdrkit::dB-to-power {dB} {
 }
 
 proc sdrkit::power-to-dB {p} {
-    return [expr {10*log10($l)}]
+    return [expr {10*log10($p)}]
 }
 
 #

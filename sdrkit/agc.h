@@ -127,7 +127,8 @@ static void agc_configure(agc_t *p, agc_options_t *q) {
   p->magnitudes = q->new_magnitudes;
   p->in = 0;
   p->out = (int)((3 * q->attack * q->sample_rate) / 1000.0f);
-  p->fast = p->out / 4;		// 72 is the hardwired constant in dttsp
+  // 72 is the hardwired constant in dttsp, that's 1/4 out at 48k
+  p->fast = p->out / 4;
 }
 
 static void *agc_preconfigure(agc_t *p, agc_options_t *q) {

@@ -32,11 +32,11 @@ package require snit
     delegate method * to treeview except {update}
     delegate option * to treeview except {-partof -control}
 
-    variable columns {type enabled in out control value}
+    variable columns {value}
     variable items -array {}
     
     constructor {args} {
-	install treeview using ttk::treeview $win.t -columns $columns -displaycolumns $columns -yscrollcommand [list $win.v set]
+	install treeview using ttk::treeview $win.t -show tree -columns $columns -displaycolumns $columns -yscrollcommand [list $win.v set]
 	install scrollbar using ttk::scrollbar $win.v -orient vertical -command [list $win.t yview]
 	$win.t heading #0 -text module
 	$win.t column #0 -width [expr {30*8}] -stretch no -anchor w
@@ -76,11 +76,16 @@ package require snit
 	set enabled [$options(-control) ccget $item -enable]
 	set inport [$options(-control) ccget $item -inport]
 	set outport [$options(-control) ccget $item -outport]
-	return [list $type $enabled $inport $outport {} {}]
+	#return [list $type $enabled $inport $outport {} {}]
+	if {$type in {pipeline alternate}} {
+	    return [list {}]
+	}
+	return [list $enabled]
     }
     
     method control-values {item opt} {
-	return [list {} {} {} {} $opt [$options(-control) controlget $item $opt]]
+	#return [list {} {} {} {} $opt [$options(-control) controlget $item $opt]]
+	return [list [$options(-control) controlget $item $opt]]
     }
 
     method update {} {
@@ -92,7 +97,7 @@ package require snit
 	    set values [$self values $label]
 	    if { ! [info exists items($label)]} {
 		$win.t insert [find-parent [array names items] $label] end -id $label -text $label -values $values
-		set items($label) module
+		set items($label) [$options(-control) ccget $label -type]
 	    } else {
 		$win.t item $label -values $values
 	    }
@@ -104,13 +109,13 @@ package require snit
 			-client -
 			-server { }
 			default {
-			    set optlabel $label-$optname
+			    set optlabel "$label:$optname"
 			    set values [$self control-values $label $optname]
 			    if { ! [info exists items($optlabel)]} {
-				$win.t insert $label end -id $optlabel -values $values
-				set items($optlabel) option
+				$win.t insert $label end -id $optlabel -text $optlabel -values $values
+				set items($optlabel) control
 			    } else {
-				$win.t item $optlabel -values
+				$win.t item $optlabel -values $values
 			    }
 			}
 		    }
@@ -126,17 +131,27 @@ package require snit
 	    set item [$w identify item $x $y]
 	    set type $items($item)
 	    set col [lindex $columns [expr {[string range [$w identify column $x $y] 1 end]-1}]]
-	    if {$type eq {module}} {
-		if {$col eq {enabled}} {
-		    if {[$options(-control) ccget $item -enable]} {
-			$options(-control) disable $item
-		    } else { 
-			$options(-control) enable $item
+	    switch $type {
+		pipeline - alternate {}
+		internal {
+		    if {$col eq {value}} {
+			if {[$options(-control) ccget $item -enable]} {
+			    $options(-control) disable $item
+			} else { 
+			    $options(-control) enable $item
+			}
+			$self update
 		    }
-		    $self update
 		}
-	    }	
+		control {
+		    if {$col eq {value}} {
+			puts "control $item selected"
+		    }
+		}
+		default {
+		    puts "type = $type?"
+		}
+	    }
 	}
     }
-
 }
