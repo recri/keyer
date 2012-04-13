@@ -22,7 +22,7 @@ package provide sdrblk::radio 1.0.0
 package require snit
 
 package require sdrblk::radio-control
-package require sdrblk::block-pipeline
+package require sdrblk::block-sequence
 
 namespace eval sdrblk {}
 
@@ -42,14 +42,13 @@ snit::type sdrblk::radio {
     option -hw -readonly yes -default true
     option -hw-type -readonly yes -default {softrock-dg8saq}
     option -ui -readonly yes -default true
-    option -ui-type -readonly yes -default {command-line}
+    option -ui-type -readonly yes -default {notebook}
     option -rx-inport -readonly yes -default {system:capture_1 system:capture_2}
     option -rx-outport -readonly yes -default {system:playback_1 system:playback_2}
     option -tx-inport -readonly yes -default {}
     option -tx-outport -readonly yes -default {}
 
     constructor {args} {
-	#puts "radio $self constructor $args"
 	$self configure {*}$args
 	install control using ::sdrblk::radio-control %AUTO% -partof $self
 	set options(-control) $control
@@ -64,11 +63,8 @@ snit::type sdrblk::radio {
 	    install hw using ::sdrblk::radio-hw-$options(-hw-type) %AUTO% -partof $self
 	}
 	if {$options(-ui)} {
-	    # puts "requiring sdrblk::radio-ui-$options(-ui-type)"
 	    package require sdrblk::radio-ui-$options(-ui-type)
-	    # puts "installing ui using ::sdrblk::radio-ui-$options(-ui-type) %AUTO% -partof $self"
 	    install ui using ::sdrblk::radio-ui-$options(-ui-type) %AUTO% -partof $self
-	    # puts "ui is $ui"
 	}
     }
 
@@ -87,49 +83,51 @@ snit::type sdrblk::radio {
 
 proc sdrblk::radio-rx {name args} {
     set pipe {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af}
-    return [sdrblk::block-pipeline $name -suffix rx -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix rx -pipeline $pipe {*}$args]
 }
 
 proc sdrblk::radio-rx-rf {name args} {
     #  gain iq-swap spectrum-semi-raw noiseblanker meter-pre-conv iq-delay iq-correct
     set pipe {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-spectrum-semi-raw sdrblk::comp-iq-delay sdrblk::comp-iq-correct}
-    return [sdrblk::block-pipeline $name -suffix rf -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix rf -pipeline $pipe {*}$args]
 }
 
 proc sdrblk::radio-rx-if {name args} {
     # -pipeline {spec_pre_filt lo-mixer filter-overlap-save rxmeter_post_filt spec_post_filt}
     set pipe {sdrblk::comp-spectrum-pre-filt sdrblk::comp-lo-mixer sdrblk::comp-filter-overlap-save sdrblk::comp-meter-post-filt sdrblk::comp-spectrum-post-filt}
-    return [sdrblk::block-pipeline $name -suffix if -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix if -pipeline $pipe {*}$args]
 }
 
 proc sdrblk::radio-rx-af {name args} {
     # set {compand agc rxmeter_post_agc spec_post_agc sdrblk::comp-demod rx_squelch spottone graphiceq spec_post_det}
     set pipe {sdrblk::comp-agc sdrblk::comp-meter-post-agc sdrblk::comp-spectrum-post-agc sdrblk::comp-demod sdrblk::comp-gain}
-    return [sdrblk::block-pipeline $name -suffix af -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix af -pipeline $pipe {*}$args]
 }
 
 proc sdrblk::radio-tx {name args} {
     set pipe {sdrblk::radio-tx-af sdrblk::radio-tx-if sdrblk-radio-tx-rf}
-    return [sdrblk::block-pipeline $name -suffix tx -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix tx -pipeline $pipe {*}$args]
 }
 
 proc sdrblk::radio-tx-af {name args} {
     # -pipeline {sdrblk::comp-gain sdrblk::comp-real sdrblk::comp-waveshape meter_tx_wavs sdrblk::comp-dc-block tx_squelch grapiceq meter_tx_eqtap
     #		sdrblk::comp-leveler meter_tx_leveler sdrblk::comp-speech_processor meter_tx_comp sdrbk::comp-modulate}
     # a lot of this is voice specific
-    # CW only has an oscillator feeding into the LO mixer
+    # CW only has a keyed oscillator feeding into the LO mixer
+    # hw-softrock-dg8saq should have an option to poll keystate and insert as midi
+    # hw-softrock-dg8saq should by default convert midi control to dg8saq, both directions
     set pipe {sdrblk::comp-gain sdrblk::comp-leveler sdrblk::comp-modulate}
-    return [sdrblk::block-pipeline $name -suffix af -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix af -pipeline $pipe {*}$args]
 }
 
 proc sdrblk::radio-tx-if {name args} {
     # -pipeline {sdrblk::comp-filter-overlap-save sdrblk::comp-compander meter_tx_compander spectrum_tx sdrblk::comp-lo-mixer}
     set pipe {sdrblk::comp-filter-overlap-save sdrblk::comp-lo-mixer}
-    return [sdrblk::block-pipeline $name -suffix if -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix if -pipeline $pipe {*}$args]
 }
 
 proc sdrblk::radio-tx-rf {name args} {
     # -pipeline { sdrblk::comp-iq-balance sdrblk::comp-gain meter_tx_power}
     set pipe {sdrblk::comp-iq-balance sdrblk::comp-gain}
-    return [sdrblk::block-pipeline $name -suffix rf -pipeline $pipe {*}$args]
+    return [sdrblk::block-sequence $name -suffix rf -pipeline $pipe {*}$args]
 }

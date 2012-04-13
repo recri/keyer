@@ -17,15 +17,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::block-audio 1.0.0
+package provide sdrblk::block-jack 1.0.0
 
 package require snit
 package require sdrblk::block-core
 
 #
-# a snit type to wrap a single sdrkit audio module
+# manage a jack audio/midi component
 #
-snit::type sdrblk::block-audio {
+snit::type sdrblk::block-jack {
 
     typevariable verbose -array {connect 0 construct 0 destroy 0 configure 0 control 0 controlget 0 enable 0}
 
@@ -36,9 +36,24 @@ snit::type sdrblk::block-audio {
 
     constructor {args} {
 	if {$verbose(construct)} { puts "$self constructor $args" }
-	install core using ::sdrblk::block-core %AUTO% -type internal -coreof $self \
-	    -internal-inputs {in_i in_q} -internal-outputs {out_i out_q} \
-	    -enablemethod [mymethod enable] {*}$args
+	# install the core
+	install core using ::sdrblk::block-core %AUTO% -type jack -coreof $self -enablemethod [mymethod enable] {*}$args
+	# get the name for this instance
+	set name [$core cget -name]
+	set server [$core cget -server]
+	set factory [$core cget -factory]
+	# create the instance
+	$factory ::sdrblk::$name -server $server
+	# get the jack ports
+	set ports {}
+	foreach {port desc} [sdrkit::jack -server $server list-ports] {
+	    if {[string first ${name}: $port] == 0} {
+		lappend ports $port $desc
+	    }
+	}
+	$core configure -jack-ports $ports
+	# deactivate
+	$name deactivate
     }
 
     destructor {
@@ -47,19 +62,4 @@ snit::type sdrblk::block-audio {
 	catch {$core destroy}
     }
 
-    method enable {opt val} {
-	set name [$core cget -name]
-	if { ! [[$core cget -partof] cget -enable]} {
-	    error "parent of $name is not enabled"
-	}
-	if {$val && ! [$core cget $opt]} {
-	    if {$verbose(enable)} { puts "enabling $name" }
-	    [$core cget -factory] ::sdrblk::$name -server [$core cget -server]
-	    $core configure -internal $name
-	} elseif { ! $val && [$core cget $opt]} {
-	    if {$verbose(enable)} { puts "disabling $name" }
-	    $core configure -internal {}
-	    rename ::sdrblk::$name {}
-	}
-    }
 }

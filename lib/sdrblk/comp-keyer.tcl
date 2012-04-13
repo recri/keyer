@@ -41,18 +41,6 @@ package require keyer::tone
 
 namespace eval sdrblk {}
 
-##
-## Each of these started to specify a -jack-io {x y z w} option
-## but I can just start the module and list its ports.
-## And that works for the existing block-audio modules, too.
-## I can create all the referenced modules, collect their ports,
-## collect their configuration options, and then deactivate them
-## until they're enabled.  I can deactivate and activate whole
-## chains of computational units as required.  But they're all
-## initialized and configured and ready to go.
-## I can collect the entire list of activate/connect or deactivate
-## commands for the rx and tx and swap between them on ptt. 
-##
 proc sdrblk::comp-keyer-ascii {name args} {
     return [sdrblk::block-jack $name -suffix ascii -factory keyer::ascii {*}$args]
 }

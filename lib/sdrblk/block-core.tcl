@@ -23,31 +23,60 @@ package require snit
 
 package require sdrkit::jack
 
-
+#
+# The block represents a node or a subgraph of computational nodes.
+# The nodes may be enabled or disabled. Enabled nodes will participate
+# in the computation when activated. The enabled nodes may be activated
+# or deactivated. Activated nodes are actively processing samples and
+# consuming computational cycles.
+#
+# The graph is constructed with all the potential computational units
+# organized into the structure they would form if enabled and activated.
+# The graph has subgraphs which can be sequences, alternate branches,
+# parallel paths, fan out, fan in, and terminal nodes.
+#
+# The units required for the desired computation are enabled, and when
+# enabled their parameters can be configured as required.
+#
+# So, the blocks serve these purposes:
+# 1 - they organize the structure of the radio or other dsp computation
+# 2 - they organize the enablement/disablement of the units
+# 3 - they organize the configuration of the units
+# 4 - they organize the activation/deactivation of the units
+# 5 - they maintain the port connection/disconnection of the units
+#
 snit::type sdrblk::block-core {
-
-    typevariable verbose -array {connect 0 construct 0 configure 0 enable 0}
+    ##
+    ## this type variable, shared among all instances, enables verbose messages
+    ##
+    typevariable verbose -array {connect 0 construct 0 configure 0 enable 0 destroy 0}
 
     ##
-    ## these apply to all varieties
+    ## data that is private to the instance
     ##
+    variable data -array {}
+
+    ##
+    ## common options and methods
+    ##
+    # -type defines the type of block
+    option -type -readonly yes -type {snit::stringtype -regexp {^(jack|sequence|parallel|split|join|alternate|spectrum|meter|input|output)$}}
+    
+    # -server specifies the jack server name
+    option -server -readonly yes
+
+    # -partof and -coreof define the instance hierarchy
     option -partof -readonly yes
     option -coreof -readonly yes
-    option -server -readonly yes
-    option -type -readonly yes -type {snit::stringtype -regexp {^(internal|pipeline|alternate|spectrum|meter|input|output)$}}
 
+    # -input, -output, and -super define the graph and subgraph structure
     option -input -default {}
     option -output -default {}
     option -super -default {}
+    
+    # -inport and -outport define the enabled connections
     option -inport -default {} -configuremethod SetInport
     option -outport -default {} -configuremethod SetOutport
-
-    option -prefix -readonly yes
-    option -suffix -readonly yes
-    option -name -readonly yes
-
-    option -enable -default no -configuremethod Enable
-    option -enablemethod -default {} -readonly yes
 
     method SetInport {opt newval} {
 	set oldval $options($opt)
@@ -92,6 +121,15 @@ snit::type sdrblk::block-core {
 	}
     }
 
+    # -prefix, -suffix, and -name define the hierarchical naming of components
+    option -prefix -readonly yes
+    option -suffix -readonly yes
+    option -name -readonly yes
+
+    # -enable and -activate? options or methods?
+    option -enable -default no -configuremethod Enable
+    option -enablemethod -default {} -readonly yes
+
     method Enable {opt newval} {
 	if {$options(-enablemethod) ne {}} {
 	    {*}$options(-enablemethod) $opt $newval
@@ -99,18 +137,36 @@ snit::type sdrblk::block-core {
 	set options($opt) $newval
     }
 
+    # -control is the radio controller
+    option -control -readonly yes
+
+    method controls {} {
+	if {$verbose(controls)} { puts "$options(-name) $self controls" }
+	return [::sdrblk::$options(-name) configure]
+    }
+
+    method control {args} {
+	if {$verbose(control)} { puts "$options(-name) $self control $args" }
+	::sdrblk::$options(-name) configure {*}$args
+    }
+
+    method controlget {opt} {
+	if {$verbose(controlget)} { puts "$options(-name) $self control $opt" }
+	return [::sdrblk::$options(-name) cget $opt]
+    }
+
     ##
     ## these apply to blocks which contain a single jack module
+    ## -type jack
     ##
+    option -jack-ports {}
     option -internal-inputs -readonly true
     option -internal-outputs -readonly true
     option -internal -default {} -configuremethod SetInternal
     option -factory -readonly yes
     
     method SetInternal {opt newval} {
-	if {$options(-type) ne {internal}} {
-	    error "option \"$opt\" is only valid in a type \"internal\" block-core"
-	}
+	if {$options(-type) ne {jack}} { error "$options(-name) is not a jack block" }
 	set oldval $options($opt)
 	set options($opt) $newval
 	# change in internal block structure requires rewiring, either to connect
@@ -139,6 +195,7 @@ snit::type sdrblk::block-core {
     }
 
     method internal-inputs {internal} {
+	if {$options(-type) ne {jack}} { error "$options(-name) is not a jack block" }
 	set inputs {}
 	foreach i $options(-internal-inputs) {
 	    lappend inputs ${internal}:$i
@@ -147,6 +204,7 @@ snit::type sdrblk::block-core {
     }
 
     method internal-outputs {internal} {
+	if {$options(-type) ne {jack}} { error "$options(-name) is not a jack block" }
 	set outputs {}
 	foreach i $options(-internal-outputs) {
 	    lappend outputs ${internal}:$i
@@ -155,24 +213,31 @@ snit::type sdrblk::block-core {
     }
 
     method disconnect {ins outs} {
+	if {$options(-type) ne {jack}} { error "$options(-name) is not a jack block" }
 	if {[llength $ins] == [llength $outs]} {
 	    foreach i $ins o $outs {
 		sdrkit::jack -server [$self cget -server] disconnect [$self portname $i] [$self portname $o]
 	    }
+	} else {
+	    error "$options(-name) disconnect: {$ins} don't match {$outs}"
 	}
     }
     
     method connect {ins outs} {
+	if {$options(-type) ne {jack}} { error "$options(-name) is not a jack block" }
 	if {[llength $ins] == [llength $outs]} {
 	    foreach i $ins o $outs {
 		sdrkit::jack -server [$self cget -server] connect [$self portname $i] [$self portname $o]
 	    }
+	} else {
+	    error "$options(-name) connect: {$ins} don't match {$outs}"
 	}
     }
     
     method portname {i} {
+	if {$options(-type) ne {jack}} { error "$options(-name) is not a jack block" }
 	foreach {name value} [sdrkit::jack -server [$self cget -server] list-ports] {
-	    if {[string first $name $i] >= 0} {
+	    if {[string first ${name}: $i] == 0} {
 		return $name
 	    }
 	}
@@ -181,11 +246,13 @@ snit::type sdrblk::block-core {
 
     ##
     ## these apply to the rx and tx blocks which connect directly to hardware
+    ## -type input|output
     ##
     option -sink -default {} -configuremethod Sink
     option -source -default {} -configuremethod Source
 
     method Sink {opt newval} {
+	if {$options(-type) ne {output}} { error "$options(-name) is not an output block" }
 	set oldval $options($opt)
 	set options($opt) $newval
 	if {$verbose(connect)} { puts "block-core $self Sink $opt {$newval} #[llength $parts] was {$oldval}" }
@@ -194,6 +261,7 @@ snit::type sdrblk::block-core {
     }
 
     method Source {opt newval} {
+	if {$options(-type) ne {input}} { error "$options(-name) is not an input block" }
 	set oldval $options($opt)
 	set options($opt) $newval
 	if {$verbose(connect)} { puts "block-core $self Source $opt {$newval} #[llength $parts] was {$oldval}" }
@@ -202,6 +270,7 @@ snit::type sdrblk::block-core {
 
     ##
     ## these options and method applies to blocks which switch between alternate graphs
+    ## -type alternate
     ##
     option -alternates -readonly yes
     option -alternate -default {} -configuremethod SetAlternate
@@ -209,6 +278,7 @@ snit::type sdrblk::block-core {
     variable alternates -array {}
 
     method SetAlternate {opt newval} {
+	if {$options(-type) ne {alternate}} { error "$options(-name) is not an alternate block" }
 	if {$verbose(configure)} { puts "block-core $self Configure $opt $val" }
 	set oldval $options($opt)
 	set options($opt) $newval
@@ -221,25 +291,32 @@ snit::type sdrblk::block-core {
     }
     
     method addalternate {name block} {
+	if {$options(-type) ne {alternate}} { error "$options(-name) is not an alternate block" }
 	set alternates($name) $block
     }
 
     ##
-    ## these manage pipelined parts
+    ## these manage sequences of parts
+    ## -type sequence
     ##
-    option -pipeline -readonly yes
+    option -sequence -readonly yes
 
     variable parts {}
 
     method addpart {block} {
+	# if {$options(-type) ne {sequence}} { error "$options(-name) is not a sequence block" }
 	lappend parts $block
 	if {[llength $parts] > 1} {
 	}
     }
 
-    method parts {} { return $parts }
+    method parts {} {
+	# if {$options(-type) ne {sequence}} { error "$options(-name) is not a sequence block" }
+	return $parts
+    }
 	
     method input-parts {} {
+	# if {$options(-type) ne {sequence}} { error "$options(-name) is not a sequence block" }
 	set inputparts {}
 	foreach part [$self parts] {
 	    if {[$part cget -input] eq {}} {
@@ -249,26 +326,17 @@ snit::type sdrblk::block-core {
 	return $inputparts
     }
     
-    ##
-    ## these options apply to controlling the block
-    ##
-    option -control -readonly yes
-
-    method controls {} {
-	if {$verbose(controls)} { puts "$options(-name) $self controls" }
-	return [::sdrblk::$options(-name) configure]
+    method output-parts {} {
+	# if {$options(-type) ne {sequence}} { error "$options(-name) is not a sequence block" }
+	set outputparts {}
+	foreach part [$self parts] {
+	    if {[$part cget -output] eq {}} {
+		lappend outputparts $part
+	    }
+	}
+	return $outputparts
     }
-
-    method control {args} {
-	if {$verbose(control)} { puts "$options(-name) $self control $args" }
-	::sdrblk::$options(-name) configure {*}$args
-    }
-
-    method controlget {opt} {
-	if {$verbose(controlget)} { puts "$options(-name) $self control $opt" }
-	return [::sdrblk::$options(-name) cget $opt]
-    }
-
+    
     ##
     ## common code
     ##
@@ -276,12 +344,10 @@ snit::type sdrblk::block-core {
 	if {$verbose(construct)} { puts "block-core $self constructor $args" }
 	$self configure {*}$args
 	set options(-server) [$options(-partof) cget -server]
-	# this may be equivalent to -partof now
-	#set options(-super) [$options(-partof) cget -partof]
-	set options(-super) $options(-partof)
 	set options(-prefix) [$options(-partof) cget -name]
 	set options(-control) [$options(-partof) cget -control]
 	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
+	set options(-super) $options(-partof)
 	$options(-control) add $options(-name) $self
 	if {[catch {
 	    $options(-super) addpart $self

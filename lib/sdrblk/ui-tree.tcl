@@ -78,7 +78,7 @@ snit::widget sdrblk::ui-tree {
 	set inport [$options(-control) ccget $item -inport]
 	set outport [$options(-control) ccget $item -outport]
 	#return [list $type $enabled $inport $outport {} {}]
-	if {$type in {pipeline alternate}} {
+	if {$type in {sequence alternate}} {
 	    return [list {}]
 	}
 	return [list $enabled]
@@ -133,8 +133,8 @@ snit::widget sdrblk::ui-tree {
 	    set type $items($item)
 	    set col [lindex $columns [expr {[string range [$w identify column $x $y] 1 end]-1}]]
 	    switch $type {
-		pipeline - alternate {}
-		internal {
+		sequence - alternate {}
+		jack {
 		    if {$col eq {value}} {
 			if {[$options(-control) ccget $item -enable]} {
 			    $options(-control) disable $item
@@ -144,13 +144,16 @@ snit::widget sdrblk::ui-tree {
 			$self update
 		    }
 		}
+		meter - spectrum -
+		input - output {
+		}
 		control {
 		    if {$col eq {value}} {
 			puts "control $item selected"
 		    }
 		}
 		default {
-		    puts "type = $type?"
+		    puts "ui-tree::pick type = $type?"
 		}
 	    }
 	}

@@ -19,11 +19,11 @@
 
 package provide sdrblk::comp-leveler 1.0.0
 
-package require sdrblk::block-audio
+package require sdrblk::block-jack
 package require sdrkit::agc
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-leveler {name args} {
-    return [sdrblk::block-audio $name -suffix leveler -factory sdrkit::agc {*}$args]
+    return [sdrblk::block-jack $name -suffix leveler -factory sdrkit::agc {*}$args]
 }

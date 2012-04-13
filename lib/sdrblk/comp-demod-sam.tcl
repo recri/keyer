@@ -19,12 +19,12 @@
 
 package provide sdrblk::comp-demod-sam 1.0.0
 
-package require sdrblk::block-audio
+package require sdrblk::block-jack
 package require sdrkit::demod-sam
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-demod-sam {name args} {
-    return [sdrblk::block-audio $name -suffix sam -factory sdrkit::demod-sam {*}$args]
+    return [sdrblk::block-jack $name -suffix sam -factory sdrkit::demod-sam {*}$args]
 }
 
