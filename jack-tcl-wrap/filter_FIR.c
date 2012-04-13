@@ -66,7 +66,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   case HILBERT:
     if (argc != 7)
       return fw_error_str(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size low high");
-
     if (Tcl_GetDoubleFromObj(interp, objv[5], &lo) != TCL_OK ||
 	Tcl_GetDoubleFromObj(interp, objv[6], &hi) != TCL_OK)
       return TCL_ERROR;

@@ -21,7 +21,7 @@ package provide sdrblk::radio-hw-softrock-dg8saq 1.0.0
 
 package require snit
 
-::snit::type sdrblk::radio-hw-softrock-dg8saq {
+snit::type sdrblk::radio-hw-softrock-dg8saq {
 
     option -partof -readonly true
     option -freq -default 7.050 -configuremethod SetFreq

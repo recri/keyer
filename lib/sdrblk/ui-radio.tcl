@@ -34,7 +34,7 @@ package require sdrblk::ui-band-select
 package require sdrblk::ui-band-pass
 package require sdrblk::band-data
 
-::snit::widget ::sdrblk::ui-radio {
+snit::widget sdrblk::ui-radio {
     component bands
     component readout
     component dial
@@ -88,8 +88,8 @@ package require sdrblk::band-data
 	install readout using sdrblk::ui-freq-readout $win.readout
 	install dial using sdrblk::ui-dial $win.dial -command [mymethod turned]
 	install notebook using ttk::notebook $win.notes
-	install bandselect using ::sdrblk::ui-band-select $win.notes.band-select -command [mymethod band-select]
-	#install bandpass using ::sdrblk::ui-band-pass $win.notes.band-pass -name rx-if-...
+	install bandselect using sdrblk::ui-band-select $win.notes.band-select -command [mymethod band-select]
+	#install bandpass using sdrblk::ui-band-pass $win.notes.band-pass -name rx-if-...
 	pack $win.readout -side top
 	pack [ttk::separator $win.sep1 -orient horizontal] -side top -fill x
 	pack $win.dial -side top -expand true -fill both

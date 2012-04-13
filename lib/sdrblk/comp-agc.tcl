@@ -17,19 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::detect 1.0.0
+package provide sdrblk::comp-agc 1.0.0
 
-package require sdrblk::block-alternate
+package require sdrblk::block-audio
+package require sdrkit::agc
 
-package require sdrblk::stub
-package require sdrkit::demod-am
-package require sdrkit::demod-sam
-package require sdrkit::demod-fm
+namespace eval sdrblk {}
 
-namespace eval ::sdrblk {}
-
-proc ::sdrblk::detect {name args} {
-    set alts {sdrblk::demod-am sdrblk::demod-sam sdrblk::demod-fm}
-    return [::sdrblk::block-alternate $name -suffix mode -alternates $alts {*}$args]
+proc sdrblk::comp-agc {name args} {
+    return [sdrblk::block-audio $name -suffix agc -factory sdrkit::agc {*}$args]
 }
-

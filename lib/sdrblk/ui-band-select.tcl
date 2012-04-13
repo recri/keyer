@@ -32,7 +32,7 @@ package require snit
 
 package require sdrblk::band-data
 
-snit::widgetadaptor ::sdrblk::ui-band-select {
+snit::widgetadaptor sdrblk::ui-band-select {
 
     option -command {};			# script called to report band selection 
     option -height 150;			# height of the band display
@@ -48,7 +48,7 @@ snit::widgetadaptor ::sdrblk::ui-band-select {
 
     constructor {args} {
 	installhull using canvas
-	install bands using ::sdrblk::band-data %AUTO%
+	install bands using sdrblk::band-data %AUTO%
 	$self configure {*}$args
 	$hull configure -width $options(-width) -height $options(-height)
 	bind $win <Configure> [mymethod window-configure %w %h]

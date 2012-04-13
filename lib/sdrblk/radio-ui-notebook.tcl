@@ -25,7 +25,7 @@ package require snit
 package require sdrblk::ui-radio
 package require sdrblk::ui-tree
 
-::snit::type ::sdrblk::radio-ui-notebook {
+snit::type sdrblk::radio-ui-notebook {
 
     option -partof -readonly yes
     option -control -readonly yes
@@ -34,8 +34,8 @@ package require sdrblk::ui-tree
 	$self configure {*}$args
 	set options(-control) [$options(-partof) cget -control]
 	pack [ttk::notebook .t] -side top -fill both -expand true
-	.t add [::sdrblk::ui-radio .t.v -partof $self -control $options(-control)] -text Radio
-	.t add [::sdrblk::ui-tree .t.t -partof $self -control $options(-control)] -text Tree
+	.t add [sdrblk::ui-radio .t.v -partof $self -control $options(-control)] -text Radio
+	.t add [sdrblk::ui-tree .t.t -partof $self -control $options(-control)] -text Tree
     }
 	
     method repl {} { }

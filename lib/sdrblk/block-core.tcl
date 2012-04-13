@@ -17,38 +17,24 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::block-graph 1.0.0
+package provide sdrblk::block-core 1.0.0
 
 package require snit
 
 package require sdrkit::jack
 
-#
-# A computational block which maintains minimal jack audio connections
-# to its peers.
-#
-# A block has an input peer, an output peer, and a supervisor which handles
-# input and output outside the block.  At the moment the input and output are
-# singular, but there could be multiple connections.
-#
-# A block graph with no active components simply propagates input to output.
-#
-# A block with an active component connects its inport to the upstream outport
-# and sends its outport downstream to be the inport of the next active component.
-#
 
-# 1) needs to know -server option to use sdrkit::jack correctly
-# 2) needs to connect the final block's -outport to the -inport
-# 3) needs to retain the iq-swap when automatically rewiring
+snit::type sdrblk::block-core {
 
-::snit::type sdrblk::block-graph {
+    typevariable verbose -array {connect 0 construct 0 configure 0 enable 0}
 
-    typevariable verbose -array {connect 0 construct 0 configure 0}
-
-    # these options apply to all varieties
+    ##
+    ## these apply to all varieties
+    ##
     option -partof -readonly yes
+    option -coreof -readonly yes
     option -server -readonly yes
-    option -type -readonly yes -type {snit::stringtype -regexp {^(internal|pipeline|alternate)$}}
+    option -type -readonly yes -type {snit::stringtype -regexp {^(internal|pipeline|alternate|spectrum|meter|input|output)$}}
 
     option -input -default {}
     option -output -default {}
@@ -56,12 +42,19 @@ package require sdrkit::jack
     option -inport -default {} -configuremethod SetInport
     option -outport -default {} -configuremethod SetOutport
 
+    option -prefix -readonly yes
+    option -suffix -readonly yes
+    option -name -readonly yes
+
+    option -enable -default no -configuremethod Enable
+    option -enablemethod -default {} -readonly yes
+
     method SetInport {opt newval} {
 	set oldval $options($opt)
 	set options($opt) $newval
 	# change in inport requires rewiring the internal inport
 	# or propagation of the outport
-	if {$verbose(connect)} { puts "block-graph $self Inport $opt {$newval} #[llength $parts] was {$oldval}" }
+	if {$verbose(connect)} { puts "block-core $self Inport $opt {$newval} #[llength $parts] was {$oldval}" }
 	if {[llength $parts] > 0} {
 	    foreach part [$self input-parts] {
 		$part configure -inport $newval
@@ -85,11 +78,11 @@ package require sdrkit::jack
 	set oldval $options($opt)
 	set options($opt) $newval
 	# change in outport requires propagation of the outport downstream
-	if {$verbose(connect)} { puts "block-graph $self Outport $opt {$newval} #[llength $parts] was {$oldval}" }
+	if {$verbose(connect)} { puts "block-core $self Outport $opt {$newval} #[llength $parts] was {$oldval}" }
 	if {$options(-output) ne {}} {
-	    $options(-output) graph configure -inport $newval
+	    $options(-output) configure -inport $newval
 	} elseif {$options(-super) ne {}} {
-	    $options(-super) graph configure -outport $newval
+	    $options(-super) configure -outport $newval
 	} else {
 	    # terminal -outport
 	    if {$oldval ne $newval} {
@@ -99,21 +92,31 @@ package require sdrkit::jack
 	}
     }
 
-    # these options apply to blocks which contain a single jack module
+    method Enable {opt newval} {
+	if {$options(-enablemethod) ne {}} {
+	    {*}$options(-enablemethod) $opt $newval
+	}
+	set options($opt) $newval
+    }
+
+    ##
+    ## these apply to blocks which contain a single jack module
+    ##
     option -internal-inputs -readonly true
     option -internal-outputs -readonly true
     option -internal -default {} -configuremethod SetInternal
+    option -factory -readonly yes
     
     method SetInternal {opt newval} {
 	if {$options(-type) ne {internal}} {
-	    error "option \"$opt\" is only valid in a type \"internal\" block-graph"
+	    error "option \"$opt\" is only valid in a type \"internal\" block-core"
 	}
 	set oldval $options($opt)
 	set options($opt) $newval
 	# change in internal block structure requires rewiring, either to connect
 	# the new internal and propagate the resulting outport, or to disconnect
 	# the old internal and propagate the inport to the outport
-	if {$verbose(connect)} { puts "block-graph $self Internal $opt {$newval} #[llength $parts] was {$oldval}" }
+	if {$verbose(connect)} { puts "block-core $self Internal $opt {$newval} #[llength $parts] was {$oldval}" }
 	if {$newval eq $oldval} {
 	    # no change
 	} elseif {$newval eq {}} { # && $oldval ne {}
@@ -176,14 +179,16 @@ package require sdrkit::jack
 	return $i
     }
 
-    # these apply to the rx and tx blocks which connect directly to hardware
+    ##
+    ## these apply to the rx and tx blocks which connect directly to hardware
+    ##
     option -sink -default {} -configuremethod Sink
     option -source -default {} -configuremethod Source
 
     method Sink {opt newval} {
 	set oldval $options($opt)
 	set options($opt) $newval
-	if {$verbose(connect)} { puts "block-graph $self Sink $opt {$newval} #[llength $parts] was {$oldval}" }
+	if {$verbose(connect)} { puts "block-core $self Sink $opt {$newval} #[llength $parts] was {$oldval}" }
 	$self connect $options(-outport) $newval
 	$self disconnect $options(-outport) $oldval
     }
@@ -191,23 +196,27 @@ package require sdrkit::jack
     method Source {opt newval} {
 	set oldval $options($opt)
 	set options($opt) $newval
-	if {$verbose(connect)} { puts "block-graph $self Source $opt {$newval} #[llength $parts] was {$oldval}" }
+	if {$verbose(connect)} { puts "block-core $self Source $opt {$newval} #[llength $parts] was {$oldval}" }
 	$self configure -inport $newval
     }
 
-    # this variable and method applies to blocks which switch between alternate graphs
+    ##
+    ## these options and method applies to blocks which switch between alternate graphs
+    ##
+    option -alternates -readonly yes
     option -alternate -default {} -configuremethod SetAlternate
 
     variable alternates -array {}
+
     method SetAlternate {opt newval} {
-	if {$verbose(configure)} { puts "block-graph $self Configure $opt $val" }
+	if {$verbose(configure)} { puts "block-core $self Configure $opt $val" }
 	set oldval $options($opt)
 	set options($opt) $newval
 	if {$newval ne {}} {
-	    $alternates($newval) graph configure -inport $options(-inport) -outport $options(-outport)
+	    $alternates($newval) configure -inport $options(-inport) -outport $options(-outport)
 	}
 	if {$oldval ne {}} {
-	    $alternates($oldval) graph configure -inport {} -outport {}
+	    $alternates($oldval) configure -inport {} -outport {}
 	}
     }
     
@@ -215,7 +224,11 @@ package require sdrkit::jack
 	set alternates($name) $block
     }
 
-    # this variable and these methods manage pipelined parts
+    ##
+    ## these manage pipelined parts
+    ##
+    option -pipeline -readonly yes
+
     variable parts {}
 
     method addpart {block} {
@@ -236,16 +249,44 @@ package require sdrkit::jack
 	return $inputparts
     }
     
-    # common code
+    ##
+    ## these options apply to controlling the block
+    ##
+    option -control -readonly yes
+
+    method controls {} {
+	if {$verbose(controls)} { puts "$options(-name) $self controls" }
+	return [::sdrblk::$options(-name) configure]
+    }
+
+    method control {args} {
+	if {$verbose(control)} { puts "$options(-name) $self control $args" }
+	::sdrblk::$options(-name) configure {*}$args
+    }
+
+    method controlget {opt} {
+	if {$verbose(controlget)} { puts "$options(-name) $self control $opt" }
+	return [::sdrblk::$options(-name) cget $opt]
+    }
+
+    ##
+    ## common code
+    ##
     constructor {args} {
-	if {$verbose(construct)} { puts "block-graph $self constructor $args" }
+	if {$verbose(construct)} { puts "block-core $self constructor $args" }
 	$self configure {*}$args
 	set options(-server) [$options(-partof) cget -server]
-	set options(-super) [$options(-partof) cget -partof]
+	# this may be equivalent to -partof now
+	#set options(-super) [$options(-partof) cget -partof]
+	set options(-super) $options(-partof)
+	set options(-prefix) [$options(-partof) cget -name]
+	set options(-control) [$options(-partof) cget -control]
+	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
+	$options(-control) add $options(-name) $self
 	if {[catch {
-	    $options(-super) graph addpart $self
+	    $options(-super) addpart $self
 	} error erropts]} {
-	    if {[string match {unknown subcommand "graph":*} $error]} {
+	    if {[string match {unknown subcommand "addpart": must be*} $error]} {
 		set options(-super) {}
 	    } else {
 		return -options $erropts $error
@@ -253,7 +294,9 @@ package require sdrkit::jack
 	}
     }
 
-    destructor { }
+    destructor {
+	catch {$options(-control) remove $options(-name)}
+    }
 
 
 }

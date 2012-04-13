@@ -20,8 +20,7 @@
 package provide sdrblk::block-alternate 1.0.0
 
 package require snit
-
-package require sdrblk::block-graph
+package require sdrblk::block-core
 
 #
 # this type implements alternate components
@@ -29,63 +28,36 @@ package require sdrblk::block-graph
 # and alternate components
 # and the suffix for the name construction
 #
-::snit::type sdrblk::block-alternate {
+snit::type sdrblk::block-alternate {
 
     typevariable verbose -array {connect 0 construct 0 destroy 0 configure 0 control 0 controlget 0 enable 1}
 
-    component graph -public graph
-    component control
-
-    delegate method control to control
-    delegate method controls to control
-    delegate method controlget to control
+    component core
+    delegate method * to core
+    delegate option * to core
 
     variable alternates {}
 
-    option -partof -readonly yes
-    option -server -readonly yes
-    option -control -readonly yes
-    option -prefix -readonly yes
-    option -suffix -readonly yes
-    option -name -readonly yes
-
-    option -alternates -readonly yes
-
-    option -inport -readonly yes
-    option -outport -readonly yes
-
-    option -enable -readonly yes -default yes
-
-    delegate option -type to graph
-
     constructor {args} {
 	if {$verbose(construct)} { puts "block-alternate $self constructor $args" }
-	$self configure {*}$args
-	set options(-prefix) [$options(-partof) cget -name]
-	set options(-server) [$options(-partof) cget -server]
-	set options(-control) [$options(-partof) cget -control]
-	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
-	install graph using ::sdrblk::block-graph %AUTO% -partof $self -type alternate
-	install control using ::sdrblk::block-control %AUTO% -partof $self -name $options(-name) -control $options(-control)
-	sdrblk::stub ::sdrblk::$options(-name)
+	install core using sdrblk::block-core %AUTO% -type alternate -coreof $self {*}$args
 
-	foreach element $options(-alternates) {
+	sdrblk::comp-stub ::sdrblk::[$core cget -name]
+	foreach element [$core cget -alternates] {
 	    package require $element
 	    lappend alternates [$element %AUTO% -partof $self]
 	}
 
-	if {$options(-outport) ne {}} {
-	    $graph configure -sink $options(-outport)
+	if {[$core cget -outport] ne {}} {
+	    $core configure -sink [$self cget -outport]
 	}
-	if {$options(-inport) ne {}} {
-	    $graph configure -source $options(-inport)
+	if {[$core cget -inport] ne {}} {
+	    $core configure -source [$self cget -inport]
 	}
-	return $self
     }
 
     destructor {
-	catch {$control destroy}
-	catch {$graph destroy}
+	catch {$core destroy}
 	catch {
 	    foreach element $alternates {
 		catch {$element destroy}

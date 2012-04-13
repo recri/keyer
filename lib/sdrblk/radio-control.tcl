@@ -21,7 +21,8 @@ package provide sdrblk::radio-control 1.0.0
 
 package require snit
 
-::snit::type sdrblk::radio-control {
+snit::type sdrblk::radio-control {
+    variable order {}
     variable parts -array {}
     variable enabled -array {}
 
@@ -35,16 +36,21 @@ package require snit
 	if {[info exists parts($name)]} { error "control part $name already exists" }
 	set parts($name) $block
 	set enabled($name) [$block cget -enable]
+	lappend order $name
     }
 
     method remove {name} {
 	if { ! [info exists parts($name)]} { error "control part $name does not exist" }
 	unset parts($name)
 	unset enabled($name)
+	set i [lsearch -exact $order $name]
+	if {$i >= 0} {
+	    set order [lreplace $order $i $i]
+	}
     }
 
     method list {} {
-	return [lsort [array names parts]]
+	return $order
     }
 
     method show {name} {
@@ -70,6 +76,7 @@ package require snit
     
     method ccget {name opt} {
 	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
+	# puts "ccget calls $parts($name) cget $opt"
 	return [$parts($name) cget $opt]
     }
     

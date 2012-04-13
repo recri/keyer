@@ -32,7 +32,7 @@ package require sdrblk::ui-freq-readout
 package require sdrblk::ui-band-select
 package require sdrblk::band-data
 
-::snit::widget ::sdrblk::ui-vfo {
+snit::widget sdrblk::ui-vfo {
     component bands
     component readout
     component dial

@@ -24,11 +24,19 @@ lappend auto_path [file join [file dirname $script] .. lib]
 package require Tk
 
 proc main {argv} {
-     set dir [file normalize [file dirname $::script]]
-     # image create photo icon229 -file /home/rec/Desktop/solder2.jpg
-     image create photo icon128 -file [file join $dir solder2-128.gif]
-     image create photo icon64 -file [file join $dir solder2-64.gif]
-     wm iconphoto . -default icon128 icon64
+    set dir [file normalize [file join [file dirname $::script] .. icons]]
+    if {0} {
+	image create photo icon1 -file /home/rec/Desktop/solder2.jpg
+	wm iconphoto . -default icon1
+    } elseif {0} {
+	image create photo icon1 -file [file join $dir solder2-128.gif]
+	image create photo icon2 -file [file join $dir solder2-64.gif]
+	wm iconphoto . -default icon1 icon2
+    } else {
+	image create photo icon1 -file [file join $dir solder-256.gif]
+	image create photo icon2 -file [file join $dir solder-128.gif]
+	wm iconphoto . -default icon1 icon2
+    }
 }
 
 main $argv

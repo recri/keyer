@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::filter-overlap-save 1.0.0
+package provide sdrblk::comp-gain 1.0.0
 
 package require sdrblk::block-audio
-package require sdrkit::filter-overlap-save
+package require sdrkit::gain
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::filter-overlap-save {name args} {
-    return [::sdrblk::block-audio $name -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
-}    
+proc sdrblk::comp-gain {name args} {
+    return [sdrblk::block-audio $name -suffix gain -factory sdrkit::gain {*}$args]
+}

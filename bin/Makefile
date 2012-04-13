@@ -1,4 +1,3 @@
-# -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
@@ -16,15 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
+clean::
+	rm -f *~
 
-package provide sdrblk::radio-rx-if 1.0.0
 
-package require sdrblk::block-pipeline
-
-namespace eval ::sdrblk {}
-
-proc ::sdrblk::radio-rx-if {name args} {
-    # -pipeline {spec_pre_filt sdrblk::lo-mixer sdrblk::filter-overlap-save rxmeter_post_filt spec_post_filt}
-    set pipe {sdrblk::lo-mixer sdrblk::filter-overlap-save}
-    return [::sdrblk::block-pipeline $name -suffix if -pipeline $pipe {*}$args]
-}

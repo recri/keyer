@@ -28,9 +28,9 @@ package provide sdrblk::band-data 1.0
 
 package require snit
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-namespace eval ::sdrblk::band-data {
+namespace eval sdrblk::band-data {
     ##
     ## create the dictionary
     ##
@@ -326,7 +326,7 @@ namespace eval ::sdrblk::band-data {
 }
 
 
-::snit::type ::sdrblk::band-data {
+snit::type sdrblk::band-data {
     variable data 
 
     constructor {args} { set data ${::sdrblk::band-data::data} }

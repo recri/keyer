@@ -25,7 +25,7 @@ package provide sdrblk::ui-dial 1.0
 package require Tk
 package require snit
 
-snit::widgetadaptor ::sdrblk::ui-dial {
+snit::widgetadaptor sdrblk::ui-dial {
     # the maximum radius is 1/2 the minimum of width and height
     option -bg {};			# background color of the window containing the dial
 
@@ -56,7 +56,7 @@ snit::widgetadaptor ::sdrblk::ui-dial {
     }
 
     constructor {args} {
-	installhull using canvas
+	installhull using canvas -width 250 -height 250
 	$self configure {*}$args
 	set data(pi) [expr atan2(0,-1)]
 	set data(2pi) [expr {2*$data(pi)}]
@@ -121,6 +121,7 @@ snit::widgetadaptor ::sdrblk::ui-dial {
     }
 
     method window-configure {w h} {
+	#puts "ui-dial window-configure $w $h"
 	set r  [expr {min($w,$h)/2.0}]; # radius of space available
 	set xc [expr {$w/2.0}];	       # center of space available
 	set yc [expr {$h/2.0}];	       # center of space available

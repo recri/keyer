@@ -148,7 +148,7 @@ static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-size",     "size",     "Samples",   "4096", fw_option_int, 0,	offsetof(_t, opts.size),        "size of fft computed" },
   { "-planbits", "planbits", "Planbits",  "0",	  fw_option_int, 0,	offsetof(_t, opts.planbits),    "fftw plan bits" },
-  { "-direction","direction","Direction", "-1",	  fw_option_int, 0,     offsetof(_t, opts.direction),	"fft direction, 1 or -1" },
+  { "-direction","direction","Direction", "-1",	  fw_option_int, 0,     offsetof(_t, opts.direction),	"fft direction, 1=inverse or -1=forward" },
   { NULL }
 };
 

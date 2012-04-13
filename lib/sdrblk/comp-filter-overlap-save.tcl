@@ -17,14 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::demod-am 1.0.0
+package provide sdrblk::comp-filter-overlap-save 1.0.0
 
 package require sdrblk::block-audio
-package require sdrkit::demod-am
+package require sdrkit::filter-overlap-save
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::demod-am {name args} {
-    return [::sdrblk::block-audio $name -suffix am -factory sdrkit::demod-am {*}$args]
-}
-
+proc sdrblk::comp-filter-overlap-save {name args} {
+    return [sdrblk::block-audio $name -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
+}    

@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::gain 1.0.0
+package provide sdrblk::comp-lo-mixer 1.0.0
 
 package require sdrblk::block-audio
-package require sdrkit::gain
+package require sdrkit::lo-mixer 
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::gain {name args} {
-    return [::sdrblk::block-audio $name -suffix gain -factory sdrkit::gain {*}$args]
+proc sdrblk::comp-lo-mixer {name args} {
+    return [sdrblk::block-audio $name -suffix mix -factory sdrkit::lo-mixer {*}$args]
 }

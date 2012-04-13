@@ -26,7 +26,7 @@ package provide sdrblk::ui-freq-readout 1.0
 package require Tk
 package require snit
 
-::snit::widget ::sdrblk::ui-freq-readout {
+snit::widget sdrblk::ui-freq-readout {
 
     variable data -array {
 	display-units {MHz kHz Hz}

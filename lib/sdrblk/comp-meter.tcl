@@ -17,14 +17,21 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::demod-fm 1.0.0
+package provide sdrblk::comp-meter-pre-conv 1.0.0
+package provide sdrblk::comp-meter-post-filt 1.0.0
+package provide sdrblk::comp-meter-post-agc 1.0.0
 
-package require sdrblk::block-audio
-package require sdrkit::demod-fm
+package require sdrblk::block-stub
+package require sdrkit::gain
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::demod-fm {name args} {
-    return [::sdrblk::block-audio $name -suffix fm -factory sdrkit::demod-fm  {*}$args]
+proc sdrblk::comp-meter-pre-conv {name args} {
+    return [sdrblk::block-stub $name -type meter -suffix meter-pre-conv {*}$args]
 }
-
+proc sdrblk::comp-meter-post-filt {name args} {
+    return [sdrblk::block-stub $name -type meter -suffix meter-post-filt {*}$args]
+}
+proc sdrblk::comp-meter-post-agc {name args} {
+    return [sdrblk::block-stub $name -type meter -suffix meter-post-agc {*}$args]
+}

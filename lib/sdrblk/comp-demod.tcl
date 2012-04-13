@@ -17,13 +17,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::lo-mixer 1.0.0
+package provide sdrblk::comp-demod 1.0.0
 
-package require sdrblk::block-audio
-package require sdrkit::lo-mixer 
+package require sdrblk::block-alternate
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::lo-mixer {name args} {
-    return [::sdrblk::block-audio $name -suffix mix -factory sdrkit::lo-mixer {*}$args]
+proc sdrblk::comp-demod {name args} {
+    set alts {sdrblk::comp-demod-am sdrblk::comp-demod-sam sdrblk::comp-demod-fm}
+    return [sdrblk::block-alternate $name -suffix mode -alternates $alts {*}$args]
 }
+

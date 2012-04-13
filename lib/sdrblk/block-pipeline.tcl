@@ -21,9 +21,8 @@ package provide sdrblk::block-pipeline 1.0.0
 
 package require snit
 
-package require sdrblk::block-graph
-package require sdrblk::block-control
-package require sdrblk::stub
+package require sdrblk::block-core
+package require sdrblk::comp-stub
 
 #
 # this type implements a simple pipeline of components
@@ -34,71 +33,45 @@ package require sdrblk::stub
 
     typevariable verbose -array {connect 0 construct 0 destroy 0 configure 0 control 0 controlget 0 enable 0}
 
-    component graph -public graph
-    component control
+    component core
 
-    delegate method control to control
-    delegate method controls to control
-    delegate method controlget to control
+    delegate method * to core
+    delegate option * to core
 
     variable pipeline {}
 
-    option -partof -readonly yes
-    option -server -readonly yes
-    option -control -readonly yes
-    option -prefix -readonly yes
-    option -suffix -readonly yes
-    option -name -readonly yes
-
-    option -pipeline -readonly yes
-
-    option -inport -readonly yes
-    option -outport -readonly yes
-
-    option -enable -readonly yes -default true
-
-    delegate option -type to graph
-
     constructor {args} {
 	if {$verbose(construct)} { puts "block-pipeline $self constructor $args" }
-	$self configure {*}$args
-	set options(-prefix) [$options(-partof) cget -name]
-	set options(-server) [$options(-partof) cget -server]
-	set options(-control) [$options(-partof) cget -control]
-	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
-	install graph using ::sdrblk::block-graph %AUTO% -partof $self -type pipeline
-	install control using ::sdrblk::block-control %AUTO% -partof $self -name $options(-name) -control $options(-control)
-	sdrblk::stub ::sdrblk::$options(-name)
+	install core using ::sdrblk::block-core %AUTO% -coreof $self -type pipeline {*}$args
 
-	foreach element $options(-pipeline) {
+	sdrblk::comp-stub ::sdrblk::[$core cget -name]
+	foreach element [$core cget -pipeline] {
 	    package require $element
-	    lappend pipeline [$element %AUTO% -partof $self]
+	    lappend pipeline [$element %AUTO% -partof $core]
 	}
 
-	catch {unset last}
+	set last {}
 	foreach element $pipeline next [lrange $pipeline 1 end] {
-	    if {[info exists last] && $next ne {}} {
-		$element graph configure -input $last -output $next
+	    if {$last ne {} && $next ne {}} {
+		$element configure -input $last -output $next
 	    } elseif {$next ne {}} {
-		$element graph configure -output $next
-	    } elseif {[info exists last]} {
-		$element graph configure -input $last
+		$element configure -output $next
+	    } elseif {$last ne {}} {
+		$element configure -input $last
 	    }
 	    set last $element
 	}
 
-	if {$options(-outport) ne {}} {
-	    $self graph configure -sink $options(-outport)
+	if {[$core cget -outport] ne {}} {
+	    $core configure -sink [$self cget -outport]
 	}
-	if {$options(-inport) ne {}} {
-	    $self graph configure -source $options(-inport)
+	if {[$core cget -inport] ne {}} {
+	    $core configure -source [$self cget -inport]
 	}
-	return $self
     }
 
     destructor {
-	catch {$control destroy}
-	catch {$graph destroy}
+	catch {$core destroy}
 	catch {
 	    foreach element $pipeline {
 		catch {$element destroy}

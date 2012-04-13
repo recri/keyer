@@ -1,3 +1,6 @@
+Don't read this, it's a confusion of many different times in the
+development.
+------------------------------------------------------------------------
 These wrappers are written using SNIT which is a pure-Tcl object
 composition wrapper included in tcllib and described here:
 
@@ -24,6 +27,20 @@ control are localized between the controller and the controllees.
 
 ------------------------------------------------------------------------
 
+Naming
+
+block-*.tcl - a block, ie node, in the computation graph which may be
+	    enabled, disabled, or controlled.
+comp-*.tcl - a computational component which wraps some unit or units
+	   inside a block
+radio.tcl - one radio definition
+radio-control.tcl - the radio controller
+radio-hw-*.tcl - a radio hardware interface
+radio-ui-*.tcl - a radio user interface
+ui-*.tcl - user interface components
+
+------------------------------------------------------------------------
+
 Now each component is a block, either a container block, an alternate
 block, or an audio block.  The audio and alternate blocks register
 controls, but it seems that:
@@ -47,8 +64,9 @@ controls, but it seems that:
 	-prefix is $options(-partof) cget -name
 [x] rename for functional distinctions
 [x] abstract the pipeline block
-[ ] abstract the radiobutton block required for demodulation
-[ ] start making a Tk ui block
+[-] abstract the radiobutton block required for demodulation
+	not sure where the abstraction really goes
+[x] start making a Tk ui block
 [ ] implement block-midi
   keyer-debounce
   keyer-iambic
@@ -62,8 +80,8 @@ controls, but it seems that:
 [ ] add the missing/unimplemented components
   The parts that aren't done should just be inserted as unimplemented
   dummies so I can not worry about how they're supposed to work.
-[ ] devise a spectrum component
-[ ] devixe a meter component
+[ ] devise a spectrum block that can be enabled to provide a spectrum
+[ ] devise a meter block that can be enabled to provide a meter
 [ ] figure out the composite control components
   deconstructing tuning commands into frequency setters
   deconstructing mode commands into demodulation and filter setters

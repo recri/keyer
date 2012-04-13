@@ -21,7 +21,7 @@ package provide sdrblk::radio-ui-command-line 1.0.0
 
 package require snit
 
-::snit::type sdrblk::radio-ui-command-line {
+snit::type sdrblk::radio-ui-command-line {
 
     option -partof -readonly yes
     option -control -readonly yes

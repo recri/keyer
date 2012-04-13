@@ -129,8 +129,8 @@ typedef struct {
   jack_client_t *client;
   jack_port_t **port;
   framework_midi_t *midi;
+  int activated;
 } framework_t;
-
 
 /*
 ** common error/success return with dyanamic or static interp result
@@ -420,6 +420,30 @@ static int fw_subcommand_cget(ClientData clientData, Tcl_Interp *interp, int arg
 static int fw_subcommand_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return fw_option_cdoc(clientData, interp, argc, objv);
 }
+static int fw_subcommand_activate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot activate");
+  if (fp->activated) return fw_error_str(interp, "command is already active");
+  jack_status_t status = (jack_status_t)jack_activate(fp->client);
+  if (status) return fw_error_str(interp, "command failed to activate");
+  fp->activated = 1;
+  return TCL_OK;
+}
+static int fw_subcommand_deactivate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot activate");
+  if ( ! fp->activated) return fw_error_str(interp, "command is not active");
+  jack_status_t status = (jack_status_t)jack_deactivate(fp->client);
+  if (status) return fw_error_str(interp, "command failed to deactivate");
+  fp->activated = 0;
+  return TCL_OK;
+}
+static int fw_subcommand_is_active(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client");
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(fp->activated));
+  return TCL_OK;
+}
 static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
   // fprintf(stderr, "fw_subcommand_dispatch(%lx, %lx, %d, %lx)\n", (long)clientData, (long)interp, argc, (long)objv);
@@ -548,13 +572,11 @@ static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_
   return 0;
 }
 
-
 /* delete a dsp module cleanly */
-static void framework_delete(void *arg) {
+static void framework_delete2(void *arg, int outside_shutdown) {
   framework_t *dsp = (framework_t *)arg;
-  if (dsp->client) {
+  if (outside_shutdown && dsp->client) {
     jack_deactivate(dsp->client);
-    // NB - this cannot be safely called inside the jack shutdown callback
     jack_client_close(dsp->client);
   }
   if (dsp->cdelete) {
@@ -574,6 +596,16 @@ static void framework_delete(void *arg) {
   if (dsp->subcommands_string != NULL) Tcl_DecrRefCount(dsp->subcommands_string);
 
   Tcl_Free((char *)(void *)dsp);
+}
+
+/* delete called from shutdown callback */
+static void framework_shutdown(void *arg) {
+  framework_delete2(arg, 0);
+}
+
+/* delete called outside shutdown callback */
+static void framework_delete(void *arg) {
+  framework_delete2(arg, 1);
 }
 
 /* report jack status in strings */
@@ -748,7 +780,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
 
   if (wants_jack) {
     // set callbacks
-    jack_on_shutdown(data->client, framework_delete, data);
+    jack_on_shutdown(data->client, framework_shutdown, data);
     if (data->process) jack_set_process_callback(data->client, data->process, data);
     if (data->sample_rate) jack_set_sample_rate_callback(data->client, data->sample_rate, data);
     // if (data->buffer_size) jack_set_buffer_size_callback(data->client, data->buffer_size, data);
@@ -773,6 +805,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
       framework_delete(data);
       return fw_error_obj(interp, Tcl_ObjPrintf("jack_activate(%s) failed: ", client_name));
     }
+    data->activated = 1;
   }
   // fprintf(stderr, "framework_factory: returning okay\n");
   Tcl_SetObjResult(interp, objv[1]);

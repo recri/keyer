@@ -17,13 +17,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-correct 1.0.0
+package provide sdrblk::comp-demod-fm 1.0.0
 
 package require sdrblk::block-audio
-package require sdrkit::iq-correct
+package require sdrkit::demod-fm
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::iq-correct {name args} {
-    return [::sdrblk::block-audio $name -suffix iq-correct -factory sdrkit::iq-correct {*}$args]
+proc sdrblk::comp-demod-fm {name args} {
+    return [sdrblk::block-audio $name -suffix fm -factory sdrkit::demod-fm  {*}$args]
 }
+

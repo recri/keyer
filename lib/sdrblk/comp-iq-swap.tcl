@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-rx 1.0.0
+package provide sdrblk::comp-iq-swap 1.0.0
 
-package require sdrblk::block-pipeline
+package require sdrblk::block-audio
+package require sdrkit::iq-swap
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::radio-rx {name args} {
-    set pipe {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af}
-    return [::sdrblk::block-pipeline $name -suffix rx -pipeline $pipe {*}$args]
+proc sdrblk::comp-iq-swap {name args} {
+    return [sdrblk::block-audio $name -suffix iq-swap -factory sdrkit::iq-swap {*}$args]
 }

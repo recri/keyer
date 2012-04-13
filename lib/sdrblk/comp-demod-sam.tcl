@@ -17,14 +17,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-rx-rf 1.0.0
+package provide sdrblk::comp-demod-sam 1.0.0
 
-package require sdrblk::block-pipeline
+package require sdrblk::block-audio
+package require sdrkit::demod-sam
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::radio-rx-rf {name args} {
-    # -pipeline {::sdrblk::gain ::sdrblk::iq-swap spec_semi_raw ::sdrblk::noiseblanker meter_pre_conv ::sdrblk::iq-delay ::sdrblk::iq-correct}
-    set pipe {sdrblk::gain sdrblk::iq-swap sdrblk::iq-delay sdrblk::iq-correct}
-    return [::sdrblk::block-pipeline $name -suffix rf -pipeline $pipe {*}$args]
+proc sdrblk::comp-demod-sam {name args} {
+    return [sdrblk::block-audio $name -suffix sam -factory sdrkit::demod-sam {*}$args]
 }
+

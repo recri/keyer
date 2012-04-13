@@ -17,15 +17,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::block-audio 1.0.0
+package provide sdrblk::block-stub 1.0.0
 
 package require snit
 package require sdrblk::block-core
 
 #
-# a snit type to wrap a single sdrkit audio module
+# a snit type for spectrum and meter tap points
 #
-snit::type sdrblk::block-audio {
+snit::type sdrblk::block-stub {
 
     typevariable verbose -array {connect 0 construct 0 destroy 0 configure 0 control 0 controlget 0 enable 0}
 
@@ -35,15 +35,12 @@ snit::type sdrblk::block-audio {
     delegate option * to core
 
     constructor {args} {
-	if {$verbose(construct)} { puts "$self constructor $args" }
-	install core using ::sdrblk::block-core %AUTO% -type internal -coreof $self \
-	    -internal-inputs {in_i in_q} -internal-outputs {out_i out_q} \
-	    -enablemethod [mymethod enable] {*}$args
+	install core using ::sdrblk::block-core %AUTO% -coreof $self -enablemethod [mymethod enable] {*}$args 
     }
 
     destructor {
 	if {$verbose(destroy)} { puts "$self destructor" }
-	catch {rename [$core cget -name] {}}
+	catch {rename ::sdrblk::[$core cget -name] {}}
 	catch {$core destroy}
     }
 
@@ -54,11 +51,9 @@ snit::type sdrblk::block-audio {
 	}
 	if {$val && ! [$core cget $opt]} {
 	    if {$verbose(enable)} { puts "enabling $name" }
-	    [$core cget -factory] ::sdrblk::$name -server [$core cget -server]
-	    $core configure -internal $name
+	    sdrblk::comp-stub ::sdrblk::$name
 	} elseif { ! $val && [$core cget $opt]} {
 	    if {$verbose(enable)} { puts "disabling $name" }
-	    $core configure -internal {}
 	    rename ::sdrblk::$name {}
 	}
     }

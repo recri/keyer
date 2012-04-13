@@ -1,4 +1,3 @@
-/* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
@@ -16,16 +15,39 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef FRAMEWORK_SUBCOMMANDS_H
-#define FRAMEWORK_SUBCOMMANDS_H
-  { "configure", fw_subcommand_configure, "configure option values, or get list of options" },
-  { "cget",      fw_subcommand_cget,      "get an option value" },
-  { "cdoc",      fw_subcommand_cdoc,      "get the doc string for a command, a subcommand, or an option" },
-#if FRAMEWORK_USES_JACK
-  { "activate",  fw_subcommand_activate,  "activate a jack client" },
-  { "deactivate",fw_subcommand_deactivate,"deactivate a jack client" },
-  { "is-active", fw_subcommand_is_active, "test if a jack client is active" },
-#endif
-#else
-#error "framework_subcommands.h multiply included"
+
+#ifndef MOD_SSB_H
+#define MOD_SSB_H
+
+/*
+** modulation for any single sideband mode - rewritten from dttsp
+** doesn't do much, just compensates for the discarded sideband power
+** Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
+*/
+
+#include "dmath.h"
+
+typedef struct {
+} mod_ssb_t;
+
+typedef struct {
+} mod_ssb_options_t;
+
+static void mod_ssb_configure(mod_ssb_t *p, mod_ssb_options_t *q) {
+}
+
+static void *mod_ssb_preconfigure(mod_ssb_t *p, mod_ssb_options_t *q) {
+  return p;
+}
+
+static void *mod_ssb_init(mod_ssb_t *p) {
+  void *e = mod_ssb_preconfigure(p,q); if (e != p) return e;
+  mod_ssb_configure(p, q);
+  return p;
+}
+
+static complex float mod_ssb_process(mod_ssb_t *p, const float complex in) {
+  return 2.0f * in;
+}
+
 #endif

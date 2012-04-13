@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::leveler 1.0.0
+package provide sdrblk::comp-iq-delay 1.0.0
 
 package require sdrblk::block-audio
-package require sdrkit::agc
+package require sdrkit::iq-delay
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::leveler {name args} {
-    return [::sdrblk::block-audio $name -suffix leveler -factory sdrkit::agc {*}$args]
+proc sdrblk::comp-iq-delay {name args} {
+    return [sdrblk::block-audio $name -suffix iq-delay -factory sdrkit::iq-delay {*}$args]
 }

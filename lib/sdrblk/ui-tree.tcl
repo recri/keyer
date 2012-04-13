@@ -22,7 +22,7 @@ package provide sdrblk::ui-tree 1.0.0
 package require Tk
 package require snit
 
-::snit::widget sdrblk::ui-tree {
+snit::widget sdrblk::ui-tree {
     option -partof -readonly yes
     option -control -readonly yes
     
@@ -72,6 +72,7 @@ package require snit
     }
 
     method values {item} {
+	# puts "values for $options(-control) ccget $item -type"
 	set type [$options(-control) ccget $item -type]
 	set enabled [$options(-control) ccget $item -enable]
 	set inport [$options(-control) ccget $item -inport]

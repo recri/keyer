@@ -17,13 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::iq-delay 1.0.0
+package provide sdrblk::comp-stub 1.0.0
 
-package require sdrblk::block-audio
-package require sdrkit::iq-delay
+package require snit
 
-namespace eval ::sdrblk {}
+namespace eval sdrblk {}
 
-proc ::sdrblk::iq-delay {name args} {
-    return [::sdrblk::block-audio $name -suffix iq-delay -factory sdrkit::iq-delay {*}$args]
+snit::type sdrblk::comp-stub {
+    option -verbose 0
 }
