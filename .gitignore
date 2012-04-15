@@ -6,3 +6,4 @@ pkgIndex.tcl
 *~
 *.log
 test/test-ovsv
+logs/*
