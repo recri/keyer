@@ -21,7 +21,7 @@ embed the dttsp_keyer, more work to do.
 */
 
 
-#include "../sdrkit/dttsp_iambic.h"
+#include "../sdrkit/iambic_dttsp.h"
 
 extern "C" {
 
@@ -34,12 +34,12 @@ extern "C" {
   typedef struct {
 #include "framework_options_vars.h"
     int swap;
-    dttsp_iambic_options_t key_opts;
+    iambic_dttsp_options_t key_opts;
   } options_t;
 
   typedef struct {
     framework_t fw;
-    dttsp_iambic_t key;
+    iambic_dttsp_t key;
     int modified;
     options_t opts;
     int raw_dit, raw_dah, key_out;
@@ -50,13 +50,13 @@ extern "C" {
   static void _update(_t *dp) {
     if (dp->modified) {
       dp->modified = 0;
-      dttsp_iambic_configure(&dp->key, &dp->opts.key_opts);
+      iambic_dttsp_configure(&dp->key, &dp->opts.key_opts);
     }
   }
 
   static void *_init(void *arg) {
     _t *dp = (_t *)arg;
-    void *p = dttsp_iambic_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
+    void *p = iambic_dttsp_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
     dp->millis_per_frame = 1000.0f / jack_get_sample_rate(dp->fw.client);
     dp->modified = 1;
     _update(dp);
@@ -120,7 +120,7 @@ extern "C" {
 	look_for_more_events = 1;
       }
       /* clock the iambic keyer */
-      if (dttsp_iambic_process(&dp->key, dp->raw_dit, dp->raw_dah, dp->millis_per_frame) != dp->key_out) {
+      if (iambic_dttsp_process(&dp->key, dp->raw_dit, dp->raw_dah, dp->millis_per_frame) != dp->key_out) {
 	dp->key_out ^= 1;
 	char midi_note_event[] = { (dp->key_out ? MIDI_NOTE_ON : MIDI_NOTE_OFF) | (dp->opts.chan-1), dp->opts.note, 0 };
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
@@ -187,8 +187,8 @@ extern "C" {
     return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
   }
 
-  int DLLEXPORT Keyer_dttsp_iambic_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "keyer::dttsp-iambic", "1.0.0", "keyer::dttsp-iambic", _factory);
+  int DLLEXPORT Keyer_iambic_dttsp_Init(Tcl_Interp *interp) {
+    return framework_init(interp, "keyer::iambic-dttsp", "1.0.0", "keyer::iambic-dttsp", _factory);
   }
 
 }

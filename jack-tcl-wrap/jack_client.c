@@ -29,17 +29,6 @@ static int _list_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
   if (argc != 2) return fw_error_str(interp, "jack-client list-ports");
   _t *dp = (_t *)clientData;
   Tcl_Obj *dict = Tcl_NewDictObj();
-  static Tcl_Obj *direction, *input, *output, *physical, *connections, *type, *audio, *midi;
-  if (direction == NULL) {
-    direction = Tcl_NewStringObj("direction", -1);
-    input = Tcl_NewStringObj("input", -1);
-    output = Tcl_NewStringObj("output", -1);
-    physical = Tcl_NewStringObj("physical", -1);
-    connections = Tcl_NewStringObj("connections", -1);
-    type = Tcl_NewStringObj("type", -1);
-    audio = Tcl_NewStringObj("audio", -1);
-    midi = Tcl_NewStringObj("midi", -1);
-  }
   const char **portv[] = {
     jack_get_ports (dp->fw.client, NULL, JACK_DEFAULT_AUDIO_TYPE, 0),
     jack_get_ports (dp->fw.client, NULL, JACK_DEFAULT_MIDI_TYPE, 0)
@@ -51,9 +40,9 @@ static int _list_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
 	if (port != NULL) {
 	  Tcl_Obj *pdict = Tcl_NewDictObj();
 	  int flags = jack_port_flags(port);
-	  Tcl_DictObjPut(interp, pdict, direction, flags & JackPortIsInput ? input : output );
-	  Tcl_DictObjPut(interp, pdict, physical, Tcl_NewIntObj(flags & JackPortIsPhysical ? 1 : 0));
-	  Tcl_DictObjPut(interp, pdict, type, p == 0 ? audio : midi);
+	  Tcl_DictObjPut(interp, pdict, Tcl_NewStringObj("direction", -1), flags & JackPortIsInput ? Tcl_NewStringObj("input", -1) : Tcl_NewStringObj("output", -1) );
+	  Tcl_DictObjPut(interp, pdict, Tcl_NewStringObj("physical", -1), Tcl_NewIntObj(flags & JackPortIsPhysical ? 1 : 0));
+	  Tcl_DictObjPut(interp, pdict, Tcl_NewStringObj("type", -1), p == 0 ? Tcl_NewStringObj("audio", -1) : Tcl_NewStringObj("midi", -1));
 	  const char **connv = jack_port_get_all_connections(dp->fw.client, port);
 	  Tcl_Obj *list = Tcl_NewListObj(0, NULL);
 	  if (connv != NULL) {
@@ -61,7 +50,7 @@ static int _list_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
 	      Tcl_ListObjAppendElement(interp, list, Tcl_NewStringObj(connv[j], -1));
 	    jack_free(connv);
 	  }
-	  Tcl_DictObjPut(interp, pdict, connections, list);
+	  Tcl_DictObjPut(interp, pdict, Tcl_NewStringObj("connections", -1), list);
 	  Tcl_DictObjPut(interp, dict, Tcl_NewStringObj(portv[p][i], -1), pdict);
 	}
       }

@@ -34,6 +34,11 @@ typedef struct {
   filter_overlap_save_t ovsv;
 } _t;
 
+static void _delete(void *arg) {
+  _t *data = (_t *)arg;
+  filter_overlap_save_delete(&data->ovsv);
+}
+
 static void _update(_t *data) {
   if (data->modified) {
     filter_overlap_save_configure(&data->ovsv, &data->opts);
@@ -147,7 +152,7 @@ static const framework_t _template = {
   _subcommands,			// subcommand table
   _init,			// initialization function
   _command,			// command function
-  NULL,				// delete function
+  _delete,			// delete function
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers

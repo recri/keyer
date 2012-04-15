@@ -19,11 +19,11 @@
 
 package provide sdrblk::comp-gain 1.0.0
 
-package require sdrblk::block-jack
+package require sdrblk::block
 package require sdrkit::gain
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-gain {name args} {
-    return [sdrblk::block-jack $name -suffix gain -factory sdrkit::gain {*}$args]
+    return [sdrblk::block $name -type jack -suffix gain -factory sdrkit::gain {*}$args]
 }

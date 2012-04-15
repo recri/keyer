@@ -19,11 +19,11 @@
 
 package provide sdrblk::comp-filter-overlap-save 1.0.0
 
-package require sdrblk::block-jack
+package require sdrblk::block
 package require sdrkit::filter-overlap-save
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-filter-overlap-save {name args} {
-    return [sdrblk::block-jack $name -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
+    return [sdrblk::block $name -type jack -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
 }    

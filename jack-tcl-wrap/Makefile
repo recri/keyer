@@ -31,8 +31,8 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_debounce.so \
 	$(LIBDIR)/keyer_detime.so \
 	$(LIBDIR)/keyer_detone.so \
-	$(LIBDIR)/keyer_dttsp_iambic.so \
-	$(LIBDIR)/keyer_iambic.so \
+	$(LIBDIR)/keyer_iambic_dttsp.so \
+	$(LIBDIR)/keyer_iambic_ad5dz.so \
 	$(LIBDIR)/keyer_ptt.so \
 	$(LIBDIR)/keyer_ptt_mute.so \
 	$(LIBDIR)/keyer_tone.so
@@ -212,7 +212,10 @@ $(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_
 $(LIBDIR)/keyer_detone.so: keyer_detone.c framework.h ../sdrkit/midi.h ../sdrkit/filter_goertzel.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_iambic.so: keyer_iambic.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/Iambic.h
+$(LIBDIR)/keyer_iambic_ad5dz.so: keyer_iambic_ad5dz.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/Iambic_ad5dz.h
+	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/keyer_iambic_dttsp.so: keyer_iambic_dttsp.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/iambic_dttsp.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_ptt.so: keyer_ptt.c framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h
@@ -223,7 +226,4 @@ $(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../sdrkit/midi.h ../sd
 
 $(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/keyed_tone.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
-
-$(LIBDIR)/keyer_dttsp_iambic.so: keyer_dttsp_iambic.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/dttsp_iambic.h
-	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 

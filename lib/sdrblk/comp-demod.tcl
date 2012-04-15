@@ -19,12 +19,12 @@
 
 package provide sdrblk::comp-demod 1.0.0
 
-package require sdrblk::block-alternate
+package require sdrblk::block
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-demod {name args} {
     set alts {sdrblk::comp-demod-am sdrblk::comp-demod-sam sdrblk::comp-demod-fm}
-    return [sdrblk::block-alternate $name -suffix mode -alternates $alts {*}$args]
+    return [sdrblk::block $name -type alternate -suffix mode -alternates $alts -require $alts {*}$args]
 }
 

@@ -24,7 +24,6 @@ package require snit
 snit::type sdrblk::radio-control {
     variable order {}
     variable parts -array {}
-    variable enabled -array {}
 
     option -partof -readonly yes
 
@@ -35,79 +34,35 @@ snit::type sdrblk::radio-control {
     method add {name block} {
 	if {[info exists parts($name)]} { error "control part $name already exists" }
 	set parts($name) $block
-	set enabled($name) [$block cget -enable]
 	lappend order $name
     }
 
     method remove {name} {
 	if { ! [info exists parts($name)]} { error "control part $name does not exist" }
 	unset parts($name)
-	unset enabled($name)
 	set i [lsearch -exact $order $name]
 	if {$i >= 0} {
 	    set order [lreplace $order $i $i]
 	}
     }
 
-    method list {} {
-	return $order
-    }
-
-    method show {name} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	return $parts($name)
-    }
-
-    method controls {name} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	if { ! $enabled($name)} { error "control part {$name} is not enabled" }
-	return [$parts($name) controls]
-    }
-
-    method control {name args} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	$parts($name) control {*}$args
-    }
-
-    method controlget {name opt} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	return [$parts($name) controlget $opt]
-    }
-    
-    method ccget {name opt} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	# puts "ccget calls $parts($name) cget $opt"
-	return [$parts($name) cget $opt]
-    }
-    
-    method cconfigure {name args} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	return [$parts($name) configure {*}$args]
-    }
-    
-    method enable {name} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	if {$enabled($name)} { error "control part {$name} is already enabled" }
-	$parts($name) configure -enable yes
-	set enabled($name) 1
-    }
-
-    method disable {name} {
-	if { ! [info exists parts($name)]} { error "control part {$name} does not exist" }
-	if { ! $enabled($name)} { error "control part {$name} is already disabled" }
-	$parts($name) configure -enable no
-	set enabled($name) 0
-    }
-	
-    method enabled {} {
-	set result {}
-	foreach name [$self list] {
-	    if {$enabled($name)} {
-		lappend result $name
-	    }
-	}
-	return $result
-    }
+    method exists {name} { return [info exists parts($name)] }
+    method list {} { return $order }
+    method show {name} { return $parts($name) }
+    method controls {name} { return [$parts($name) controls] }
+    method control {name args} { $parts($name) control {*}$args }
+    method controlget {name opt} { return [$parts($name) controlget $opt] }
+    method ccget {name opt} { return [$parts($name) cget $opt] }
+    method cconfigure {name args} { return [$parts($name) configure {*}$args] }
+    method enable {name} { $parts($name) configure -enable yes }
+    method disable {name} { $parts($name) configure -enable no }
+    method is-enabled {name} { return [$parts($name) cget -enable] }
+    method activate {name} { $parts($name) configure -activate yes }
+    method deactivate {name} { $parts($name) configure -activate no }
+    method is-activated {name} { return [$parts($name) cget -activate] }
+    method filter-parts {pred} { set list {}; foreach name $order { if {[$pred $name]} { lappend list $name } }; return $list }
+    method enabled {} { return [filter-parts [mymethod is-enabled]] }
+    method activated {} { return [filter-parts [mymethod is-activated]] }
 
 }
 

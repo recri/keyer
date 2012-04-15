@@ -19,11 +19,11 @@
 
 package provide sdrblk::comp-lo-mixer 1.0.0
 
-package require sdrblk::block-jack
+package require sdrblk::block
 package require sdrkit::lo-mixer 
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-lo-mixer {name args} {
-    return [sdrblk::block-jack $name -suffix mix -factory sdrkit::lo-mixer {*}$args]
+    return [sdrblk::block $name -type jack -suffix mix -factory sdrkit::lo-mixer {*}$args]
 }

@@ -17,25 +17,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-spectrum-semi-raw 1.0.0
-package provide sdrblk::comp-spectrum-pre-filt 1.0.0
-package provide sdrblk::comp-spectrum-post-filt 1.0.0
-package provide sdrblk::comp-spectrum-post-agc 1.0.0
+#package provide sdrblk::comp-spectrum-semi-raw 1.0.0
+#package provide sdrblk::comp-spectrum-pre-filt 1.0.0
+#package provide sdrblk::comp-spectrum-post-filt 1.0.0
+#package provide sdrblk::comp-spectrum-post-agc 1.0.0
+package provide sdrblk::comp-spectrum 1.0.0
 
-package require sdrblk::block-stub
-package require sdrkit::gain
+package require sdrblk::block
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-spectrum-semi-raw {name args} {
-    return [sdrblk::block-stub $name -type spectrum -suffix spectrum-semi-raw {*}$args]
+    return [sdrblk::block $name -type spectrum -suffix spectrum-semi-raw -enable yes {*}$args]
 }
 proc sdrblk::comp-spectrum-pre-filt {name args} {
-    return [sdrblk::block-stub $name -type spectrum -suffix spectrum-pre-filt {*}$args]
+    return [sdrblk::block $name -type spectrum -suffix spectrum-pre-filt -enable yes {*}$args]
 }
 proc sdrblk::comp-spectrum-post-filt {name args} {
-    return [sdrblk::block-stub $name -type spectrum -suffix spectrum-post-filt {*}$args]
+    return [sdrblk::block $name -type spectrum -suffix spectrum-post-filt -enable yes {*}$args]
 }
 proc sdrblk::comp-spectrum-post-agc {name args} {
-    return [sdrblk::block-stub $name -type spectrum -suffix spectrum-post-agc {*}$args]
+    return [sdrblk::block $name -type spectrum -suffix spectrum-post-agc -enable yes {*}$args]
 }

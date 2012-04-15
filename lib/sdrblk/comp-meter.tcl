@@ -17,21 +17,21 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-meter-pre-conv 1.0.0
-package provide sdrblk::comp-meter-post-filt 1.0.0
-package provide sdrblk::comp-meter-post-agc 1.0.0
+#package provide sdrblk::comp-meter-pre-conv 1.0.0
+#package provide sdrblk::comp-meter-post-filt 1.0.0
+#package provide sdrblk::comp-meter-post-agc 1.0.0
+package provide sdrblk::comp-meter 1.0.0
 
-package require sdrblk::block-stub
-package require sdrkit::gain
+package require sdrblk::block
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-meter-pre-conv {name args} {
-    return [sdrblk::block-stub $name -type meter -suffix meter-pre-conv {*}$args]
+    return [sdrblk::block $name -type meter -suffix meter-pre-conv -enable yes {*}$args]
 }
 proc sdrblk::comp-meter-post-filt {name args} {
-    return [sdrblk::block-stub $name -type meter -suffix meter-post-filt {*}$args]
+    return [sdrblk::block $name -type meter -suffix meter-post-filt -enable yes {*}$args]
 }
 proc sdrblk::comp-meter-post-agc {name args} {
-    return [sdrblk::block-stub $name -type meter -suffix meter-post-agc {*}$args]
+    return [sdrblk::block $name -type meter -suffix meter-post-agc -enable yes {*}$args]
 }

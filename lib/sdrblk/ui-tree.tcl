@@ -58,6 +58,7 @@ snit::widget sdrblk::ui-tree {
 	set options(-control) [$options(-partof) cget -control]
 	$self update
 	bind $win.t <Button-1> [mymethod pick %W %x %y]
+	bind $win.t <Button-3> [mymethod inform %W %x %y]
     }
 
     proc find-parent {candidates child} {
@@ -75,13 +76,17 @@ snit::widget sdrblk::ui-tree {
 	# puts "values for $options(-control) ccget $item -type"
 	set type [$options(-control) ccget $item -type]
 	set enabled [$options(-control) ccget $item -enable]
+	set activated [$options(-control) ccget $item -activate]
 	set inport [$options(-control) ccget $item -inport]
 	set outport [$options(-control) ccget $item -outport]
 	#return [list $type $enabled $inport $outport {} {}]
-	if {$type in {sequence alternate}} {
-	    return [list {}]
+	if {$enabled && $activated} {
+	    return [list {on}]
+	} elseif {$enabled} {
+	    return [list {ready}]
+	} else {
+	    return [list {off}]
 	}
-	return [list $enabled]
     }
     
     method control-values {item opt} {
@@ -95,34 +100,38 @@ snit::widget sdrblk::ui-tree {
 	set labels {}
 	foreach label [$options(-control) list] {
 	    set enabled [$options(-control) ccget $label -enable]
+	    set activated [$options(-control) ccget $label -activate]
 	    set values [$self values $label]
 	    if { ! [info exists items($label)]} {
-		$win.t insert [find-parent [array names items] $label] end -id $label -text $label -values $values
+		$win.t insert [find-parent [array names items] $label] end -id $label -text $label -values $values -tag $label
 		set items($label) [$options(-control) ccget $label -type]
 	    } else {
-		$win.t item $label -values $values
+		$win.t item $label -values $values -tag $label
 	    }
-	    if {$enabled} {
-		foreach option [$options(-control) controls $label] {
-		    set optname [lindex $option 0]
-		    switch -- $optname {
-			-verbose -
-			-client -
-			-server { }
-			default {
-			    set optlabel "$label:$optname"
-			    set values [$self control-values $label $optname]
-			    if { ! [info exists items($optlabel)]} {
-				$win.t insert $label end -id $optlabel -text $optlabel -values $values
-				set items($optlabel) control
-			    } else {
-				$win.t item $optlabel -values $values
-			    }
+	    if {$activated} {
+		$win.t tag configure $label -foreground black -background white
+	    } elseif {$enabled} {
+		$win.t tag configure $label -foreground black -background white
+	    } else {
+		$win.t tag configure $label -foreground grey -background white
+	    }
+	    foreach option [$options(-control) controls $label] {
+		set optname [lindex $option 0]
+		switch -- $optname {
+		    -verbose -
+		    -client -
+		    -server { }
+		    default {
+			set optlabel "$label:$optname"
+			set values [$self control-values $label $optname]
+			if { ! [info exists items($optlabel)]} {
+			    $win.t insert $label end -id $optlabel -text $optlabel -values $values -tag $label
+			    set items($optlabel) control
+			} else {
+			    $win.t item $optlabel -values $values
 			}
 		    }
 		}
-	    } else {
-		# if there are options listed, grey them out
 	    }
 	}
     }
@@ -133,7 +142,16 @@ snit::widget sdrblk::ui-tree {
 	    set type $items($item)
 	    set col [lindex $columns [expr {[string range [$w identify column $x $y] 1 end]-1}]]
 	    switch $type {
-		sequence - alternate {}
+		sequence {
+		    if {$col eq {value}} {
+			if {[$options(-control) ccget $item -activate]} {
+			    $options(-control) deactivate $item
+			} else {
+			    $options(-control) activate $item
+			}
+			$self update
+		    }
+		}
 		jack {
 		    if {$col eq {value}} {
 			if {[$options(-control) ccget $item -enable]} {
@@ -145,7 +163,7 @@ snit::widget sdrblk::ui-tree {
 		    }
 		}
 		meter - spectrum -
-		input - output {
+		input - output - alternate {
 		}
 		control {
 		    if {$col eq {value}} {
@@ -155,6 +173,15 @@ snit::widget sdrblk::ui-tree {
 		default {
 		    puts "ui-tree::pick type = $type?"
 		}
+	    }
+	}
+    }
+
+    method inform {w x y} {
+	set item [$w identify item $x $y]
+	if {[$options(-control) exists $item]} {
+	    foreach c [$options(-control) cconfigure $item] {
+		puts "$item: [lindex $c 0] {[lindex $c end]}"
 	    }
 	}
     }

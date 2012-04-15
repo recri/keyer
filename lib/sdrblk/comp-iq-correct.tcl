@@ -19,11 +19,11 @@
 
 package provide sdrblk::comp-iq-correct 1.0.0
 
-package require sdrblk::block-jack
+package require sdrblk::block
 package require sdrkit::iq-correct
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-iq-correct {name args} {
-    return [sdrblk::block-jack $name -suffix iq-correct -factory sdrkit::iq-correct {*}$args]
+    return [sdrblk::block $name -type jack -suffix iq-correct -factory sdrkit::iq-correct {*}$args]
 }

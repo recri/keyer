@@ -19,11 +19,11 @@
 
 package provide sdrblk::comp-iq-swap 1.0.0
 
-package require sdrblk::block-jack
+package require sdrblk::block
 package require sdrkit::iq-swap
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-iq-swap {name args} {
-    return [sdrblk::block-jack $name -suffix iq-swap -factory sdrkit::iq-swap {*}$args]
+    return [sdrblk::block $name -type jack -suffix iq-swap -factory sdrkit::iq-swap {*}$args]
 }

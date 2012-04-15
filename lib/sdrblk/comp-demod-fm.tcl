@@ -19,12 +19,12 @@
 
 package provide sdrblk::comp-demod-fm 1.0.0
 
-package require sdrblk::block-jack
+package require sdrblk::block
 package require sdrkit::demod-fm
 
 namespace eval sdrblk {}
 
 proc sdrblk::comp-demod-fm {name args} {
-    return [sdrblk::block-jack $name -suffix fm -factory sdrkit::demod-fm  {*}$args]
+    return [sdrblk::block $name -type jack -suffix fm -factory sdrkit::demod-fm  {*}$args]
 }
 

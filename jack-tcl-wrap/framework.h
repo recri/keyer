@@ -235,7 +235,7 @@ static int fw_option_set_option_value(ClientData clientData, Tcl_Interp *interp,
     char *str = Tcl_GetString(val);
     for (int i = 0; entry->opt_custom[i].name != NULL; i += 1) {
       if (strcmp(entry->opt_custom[i].name, str) == 0) {
-	*(int *)(clientData+entry->offset) = entry->opt_custom[i].value;
+	*(int *)((char *)clientData+entry->offset) = entry->opt_custom[i].value;
 	return TCL_OK;
       }
     }

@@ -16,8 +16,8 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef Iambic_h
-#define Iambic_h
+#ifndef IAMBIC_AD5DZ_H
+#define IAMBIC_AD5DZ_H
 
 /*
 ** A morse code keyer reduced to a simple logic class.
@@ -49,7 +49,7 @@
 
 // #include <stdio.h>
 
-class Iambic {
+class Iambic_ad5dz {
 private:
 #define KEYIN(dit,dah) (((dit)<<1)|(dah))
   typedef unsigned char byte;
@@ -64,7 +64,7 @@ private:
   static bool KEYIN_IS_DIDAH(int keyIn) { return keyIn == KEYIN_DIDAH; }
   
 public:
-  Iambic() {
+  Iambic_ad5dz() {
     _update = true;
 
     _keyIn = KEYIN_OFF;
@@ -293,10 +293,10 @@ public:
 
 extern "C" {
   typedef struct {
-    Iambic k;
+    Iambic_ad5dz k;
   } iambic_t;
   typedef struct {
   } iambic_options_t;
 }
 
-#endif // Iambic_hh
+#endif

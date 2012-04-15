@@ -17,8 +17,8 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef DTTSP_IAMBIC_H
-#define DTTSP_IAMBIC_H
+#ifndef IAMBIC_DTTSP_H
+#define IAMBIC_DTTSP_H
 
 /*
 ** This is the core of iambic-keyer.c from dttsp.
@@ -35,7 +35,7 @@
 
 // #include <stdio.h>
 
-class dttsp_iambic {
+class iambic_dttsp {
  private:
 
   static const int NO_TIME_LEFTS_SCHED	= (-2);
@@ -81,7 +81,7 @@ class dttsp_iambic {
   float ditlen;
   
  public:
-  dttsp_iambic() {
+  iambic_dttsp() {
     flag.prev.dit = 0;
     flag.prev.dah = 0;
     element.last = element.curr = NO_ELEMENT;
@@ -243,8 +243,8 @@ class dttsp_iambic {
 
 extern "C" {
   typedef struct {
-    dttsp_iambic k;
-  } dttsp_iambic_t;
+    iambic_dttsp k;
+  } iambic_dttsp_t;
   
   typedef struct {
     float wpm;
@@ -255,13 +255,13 @@ extern "C" {
     int autocharspacing;
     int autowordspacing;
     int weight;
-  } dttsp_iambic_options_t;
+  } iambic_dttsp_options_t;
 
-  static void *dttsp_iambic_init(dttsp_iambic_t *p, dttsp_iambic_options_t *q) {
+  static void *iambic_dttsp_init(iambic_dttsp_t *p, iambic_dttsp_options_t *q) {
     return p;
   }
 
-  static void dttsp_iambic_configure(dttsp_iambic_t *p, dttsp_iambic_options_t *q) {
+  static void iambic_dttsp_configure(iambic_dttsp_t *p, iambic_dttsp_options_t *q) {
     p->k.set_wpm(q->wpm);
     if (q->mode == 'A')
       p->k.set_iambicmode_a();
@@ -274,7 +274,7 @@ extern "C" {
     p->k.set_weight(q->weight);
   }
 
-  static int dttsp_iambic_process(dttsp_iambic_t *p, int dit, int dah, float tick_ms) {
+  static int iambic_dttsp_process(iambic_dttsp_t *p, int dit, int dah, float tick_ms) {
     return p->k.clock(dit, dah, tick_ms);
   }
 }

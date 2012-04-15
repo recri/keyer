@@ -29,88 +29,53 @@ control are localized between the controller and the controllees.
 
 Naming
 
-block-*.tcl - a block, ie node, in the computation graph which may be
-	    enabled, disabled, or controlled.
+block.tcl - a block, ie node, in the computation graph which may be
+	    enabled, activated, or controlled.
 comp-*.tcl - a computational component which wraps some unit or units
 	   inside a block
 radio.tcl - one radio definition
 radio-control.tcl - the radio controller
 radio-hw-*.tcl - a radio hardware interface
 radio-ui-*.tcl - a radio user interface
+ti-*.tcl - tk implemented visual displays
 ui-*.tcl - user interface components
-
 ------------------------------------------------------------------------
 
-Now each component is a block, either a container block, an alternate
-block, or an audio block.  The audio and alternate blocks register
-controls, but it seems that:
+Now each component is a block.
 
-[x] all the blocks should register as controls
-[x] all the blocks should have the -enabled/-implemented options
-[x] only -implemented true blocks can be -enabled true
-[x] only blocks with parent -enabled true can be -enabled true
-[x] setting a block -enabled false forces all children -enabled false
-[ ] someone needs to remember the control values
-[x] the block-audio wrappers should use [$widget configure] to
-  determine the controls.
-
-------------------------------------------------------------------------
-
-[x] debug the failure to enable
-[x] stop passing options that can be retrieved or computed from the
-  -partof parent pointer, eg
-	-server is $options(-partof) cget -server
-	-control is $options(-partof) cget -control
-	-prefix is $options(-partof) cget -name
-[x] rename for functional distinctions
-[x] abstract the pipeline block
-[-] abstract the radiobutton block required for demodulation
-	not sure where the abstraction really goes
-[x] start making a Tk ui block
-[ ] implement block-midi
-  keyer-debounce
-  keyer-iambic
-  keyer-dttsp-iambic
-  keyer-ptt
-[ ] implement block-midi-audio
-  keyer-tone
-  keyer-ptt-mute
-[ ] implement block-audio-midi
-  keyer-detone
-[ ] add the missing/unimplemented components
-  The parts that aren't done should just be inserted as unimplemented
-  dummies so I can not worry about how they're supposed to work.
-[ ] devise a spectrum block that can be enabled to provide a spectrum
-[ ] devise a meter block that can be enabled to provide a meter
-[ ] figure out the composite control components
-  deconstructing tuning commands into frequency setters
-  deconstructing mode commands into demodulation and filter setters
-
-------------------------------------------------------------------------
-
-This is still bugging me in that the implementation is overly
-complicated.  It seems that snit is best when the the core
-functionality is implemented in a base type, and the variations are
-added on in types which embellish the base type.
-
-There are four things going on here:
-
-1) the wiring up of jack components so they can be hot
-enabled/disabled and connected/disconnected from the jack process
-graph.
-2) the hierarchical grouping of components into functional blocks.
-3) the hierarchical naming of components
-4) the provision of the control interface that avoids the hierarchy.
-
-So we started with 1 and quickly added 2, or vice versa.
-3 sort of happened along the way to provide the names used by 4.
-Then I generalized the enablement mechanism in a way that turns out to
-be more awkward than useful -- the pipelines don't need to be enabled.
-
-But then the alternate/select block threw several more awkwardnesses
-into the pot, it has a control, it's imposing a structure, but it's
-just trying to clarify the hierarchical structure -- I could simply
-throw all the detectors in-line and impose the radiobutton constraint
-elsewhere.  The separate demodulation pipelines seem like a good idea
-because the noise limiters are different for the different
-demodulations.
+A block can be:
+ - a sequence of blocks
+ - a set of alternates
+ - a wrapper around a jack audio or midi component
+ - a named spectrum tap point
+ - a named meter tap point
+ - an input
+ - an output
+ 
+[ ] - Skip the input/output blocks, let the unconnected inputs
+  and outputs just be there, open for business.
+[ ] - Implement virtual named ports that sections can pseudo
+  connect to, maybe just an empty sequence.
+[ ] - The jack inputs of an enabled module will then propagate
+  upstream to the boundary of the section or the next enabled
+  component, just like the jack outputs propagate down stream
+[ ] - !!! Maybe activation is just the result of being connected
+  to a live source, not anything special.
+[ ] - Maybe the propagation in either direction is a "connect-me"
+  which doesn't immediately displace previous connections, it
+  augments them.  A "disconnect-me" follows to undo the previous
+  connections if that's what's needed.  Handles split/join with
+  no explicit node to handle it, any connector can make a split
+  or a join.
+[ ] - The result is a bunch of unconnected computational modules,
+  jack sources, and jack sinks.  So there will be a need for a
+  connection interface.  And the interface that starts jack up
+  with the necessary interfaces running at the correct sample
+  rates with the necessary resampling.
+[ ] - The standard jack/alsa resampling apparently uses raw FIR
+  filters rather than FFT overlap/save overlap/add filters.
+  Doesn't make much sense, the FIR with N coefficients delays the
+  samples, too, much longer because of the cost of the raw FIR
+  convolution.
+[ ] - So starting jack and connecting hardware ports to enabled
+  sections becomes another part of the control module.

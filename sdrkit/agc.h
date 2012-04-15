@@ -91,6 +91,9 @@ typedef struct {
   unsigned in;				// input index
   unsigned out;				// output index
   unsigned fast;			// fast index
+  // old values to be cleaned up
+  float complex *xsamples;
+  float *xmagnitudes;
 } agc_t;
 
 static void agc_configure(agc_t *p, agc_options_t *q) {
@@ -119,9 +122,8 @@ static void agc_configure(agc_t *p, agc_options_t *q) {
   p->max_linear = q->max_linear;
   p->min_linear = q->min_linear;
   p->hang_linear = q->hang_linear;
-  q->old_size = p->mask+1;
-  q->old_samples = p->samples;
-  q->old_magnitudes = p->magnitudes;
+  p->xsamples = p->samples;
+  p->xmagnitudes = p->magnitudes;
   p->mask = q->new_size-1;
   p->samples = q->new_samples;
   p->magnitudes = q->new_magnitudes;
@@ -131,13 +133,16 @@ static void agc_configure(agc_t *p, agc_options_t *q) {
   p->fast = p->out / 4;
 }
 
+static void agc_delete(agc_t *p) {
+  if (p->xsamples) { fftwf_free(p->xsamples); p->xsamples = NULL; }
+  if (p->xmagnitudes) { fftwf_free(p->xmagnitudes); p->xmagnitudes = NULL; }
+  if (p->samples) { fftwf_free(p->samples); p->samples = NULL; }
+  if (p->magnitudes) { fftwf_free(p->magnitudes); p->magnitudes = NULL; }
+}
+
 static void *agc_preconfigure(agc_t *p, agc_options_t *q) {
-  if (q->old_samples) {
-    fftwf_free(q->old_samples); q->old_samples = NULL;
-  }
-  if (q->old_magnitudes) {
-    fftwf_free(q->old_magnitudes); q->old_magnitudes = NULL;
-  }
+  if (p->xsamples) { fftwf_free(p->xsamples); p->xsamples = NULL; }
+  if (p->xmagnitudes) { fftwf_free(p->xmagnitudes); p->xmagnitudes = NULL; }
   q->new_size = nblock2((int)((3 * q->attack * q->sample_rate) / 1000.0f));
   q->new_samples = fftwf_malloc(q->new_size * sizeof(float complex));
   if (q->new_samples == NULL)

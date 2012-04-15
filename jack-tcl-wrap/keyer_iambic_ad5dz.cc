@@ -27,7 +27,7 @@
     
 */
 
-#include "../sdrkit/Iambic.h"
+#include "../sdrkit/Iambic_ad5dz.h"
 
 extern "C" {
 
@@ -48,7 +48,7 @@ extern "C" {
     framework_t fw;
     int modified;
     options_t opts;
-    Iambic k;
+    Iambic_ad5dz k;
     int raw_dit;
     int raw_dah;
     int key_out;
@@ -193,8 +193,9 @@ extern "C" {
     return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
   }
 
-  int DLLEXPORT Keyer_iambic_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "keyer::iambic", "1.0.0", "keyer::iambic", _factory);
+  // okay, so tcl truncates the name before _Init at the first digit
+  int DLLEXPORT Keyer_iambic_ad_Init(Tcl_Interp *interp) {
+    return framework_init(interp, "keyer::iambic-ad5dz", "1.0.0", "keyer::iambic-ad5dz", _factory);
   }
 
 }

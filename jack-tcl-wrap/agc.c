@@ -71,6 +71,11 @@ typedef struct {
   agc_t agc;
 } _t;
   
+static void _delete(void *arg) {
+  _t *data = (_t *)arg;
+  agc_delete(&data->agc);
+}
+
 static void _update(_t *data) {
   if (data->modified) {
     data->modified = 0;
@@ -185,7 +190,7 @@ static const framework_t _template = {
   _subcommands,			// subcommand table
   _init,			// initialization function
   _command,			// command function
-  NULL,				// delete function
+  _delete,			// delete function
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs, midi_buffers
