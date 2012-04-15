@@ -6,4 +6,7 @@ pkgIndex.tcl
 *~
 *.log
 test/test-ovsv
+test/test-osc
+test/test-osc2
+test/*.txt
 logs/*
