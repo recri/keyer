@@ -17,16 +17,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#package provide sdrblk::comp-keyer-ascii 1.0.0
-#package provide sdrblk::comp-keyer-debounce 1.0.0
-#package provide sdrblk::comp-keyer-detime 1.0.0
-#package provide sdrblk::comp-keyer-detone 1.0.0
-#package provide sdrblk::comp-keyer-iambic-dttsp 1.0.0
-#package provide sdrblk::comp-keyer-iambic-ad5dz 1.0.0
-#package provide sdrblk::comp-keyer-ptt 1.0.0
-#package provide sdrblk::comp-keyer-ptt-mute 1.0.0
-#package provide sdrblk::comp-keyer-tone 1.0.0
-#package provide sdrblk::comp-keyer-iambic 1.0.0
 package provide sdrblk::comp-keyer 1.0.0
 
 package require sdrblk::block

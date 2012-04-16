@@ -17,21 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-spectrum 1.0.0
+package provide sdrblk::comp-iq-balance 1.0.0
 
 package require sdrblk::block
+package require sdrkit::iq-balance
 
 namespace eval sdrblk {}
 
-proc sdrblk::comp-spectrum-semi-raw {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-semi-raw -enable yes {*}$args]
-}
-proc sdrblk::comp-spectrum-pre-filt {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-pre-filt -enable yes {*}$args]
-}
-proc sdrblk::comp-spectrum-post-filt {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-post-filt -enable yes {*}$args]
-}
-proc sdrblk::comp-spectrum-post-agc {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-post-agc -enable yes {*}$args]
+proc sdrblk::comp-iq-balance {name args} {
+    return [sdrblk::block $name -type jack -suffix iq-correct -factory sdrkit::iq-balance {*}$args]
 }

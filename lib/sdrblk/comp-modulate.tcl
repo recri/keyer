@@ -17,21 +17,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-spectrum 1.0.0
+package provide sdrblk::comp-modulate 1.0.0
 
 package require sdrblk::block
 
 namespace eval sdrblk {}
 
-proc sdrblk::comp-spectrum-semi-raw {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-semi-raw -enable yes {*}$args]
+proc sdrblk::comp-modulate {name args} {
+    #set alts {sdrblk::comp-modul-am sdrblk::comp-modul-fm}
+    set alts {}
+    return [sdrblk::block $name -type alternate -suffix modulate -alternates $alts -require $alts {*}$args]
 }
-proc sdrblk::comp-spectrum-pre-filt {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-pre-filt -enable yes {*}$args]
-}
-proc sdrblk::comp-spectrum-post-filt {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-post-filt -enable yes {*}$args]
-}
-proc sdrblk::comp-spectrum-post-agc {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-post-agc -enable yes {*}$args]
-}
+

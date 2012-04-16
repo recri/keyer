@@ -63,6 +63,7 @@ snit::type sdrblk::block {
 
     ##
     ## define the matching port suffixes
+    ##
     typevariable matches [dict create \
 			      capture_1 {in_i playback_1} \
 			      capture_2 {in_q playback_2} \
@@ -81,11 +82,17 @@ snit::type sdrblk::block {
 	parts {}
 	alternates {}
 	sequence {}
+	inputs {}
+	outputs {}
+	super {}
     }
 
     ##
     ## common options and methods
     ##
+
+    # -type defines the type of block
+    option -type -readonly yes -type {snit::stringtype -regexp {^(jack|sequence|alternate|stub)$}}
 
     # send a configuration option to the type's configuration handler
     method dispatch {opt val} {
@@ -93,9 +100,6 @@ snit::type sdrblk::block {
 	$self $options(-type) configure $opt $val
     }
 
-    # -type defines the type of block
-    option -type -readonly yes -type {snit::stringtype -regexp {^(jack|sequence|alternate|spectrum|meter|input|output)$}}
-    
     # -partof defines the containment hierarchy
     option -partof -readonly yes
 
@@ -107,11 +111,6 @@ snit::type sdrblk::block {
     option -suffix -readonly yes
     option -name -readonly yes
 
-    # -input and -output define the graph structure
-    option -input -default {}
-    option -output -default {}
-    option -super -default {} -readonly yes
-    
     # -inport and -outport define the enabled connections
     option -inport -default {} -configuremethod dispatch
     option -outport -default {} -configuremethod dispatch
@@ -142,7 +141,7 @@ snit::type sdrblk::block {
     
     # parts management for blocks that contain blocks
     # add a part to this block
-    method addpart {block} { lappend data(parts) $block }
+    method {add part} {block} { lappend data(parts) $block }
     # return the parts of this block
     method parts {} { return $data(parts) }
     # filter the parts of this block
@@ -152,13 +151,21 @@ snit::type sdrblk::block {
 	return $parts
     }
     # is this part an input part
-    method is-input-part {part} { return [expr {[$part cget -input] eq {}}] }
+    method is-input-part {part} { return [expr {[$part inputs] eq {}}] }
     # is this part an output part
-    method is-output-part {part} { return [expr {[$part cget -output] eq {}}] }
+    method is-output-part {part} { return [expr {[$part outputs] eq {}}] }
     # return the input parts of this block
     method input-parts {} { return [$self filter-parts [mymethod is-input-part]] }
     # return the output parts of this block
     method output-parts {} { return [$self filter-parts [mymethod is-output-part]] }
+
+    # input managment
+    method {add input} {block} { lappend data(inputs) $block }
+    method inputs {} { return $data(inputs) }
+    
+    # output management
+    method {add output} {block} { lappend data(outputs) $block }
+    method outputs {} { return $data(outputs) }
 
     # connection management
     proc match-ins-outs {ins outs} {
@@ -202,16 +209,15 @@ snit::type sdrblk::block {
 	}
 	    return [list $nins $nouts]
     }
+
     proc lremove {listname element} {
 	upvar $listname list
 	if {[set i [lsearch -exact $list $element]] >= 0} {
 	    set list [lreplace $list $i $i]
 	}
     }
+
     method connection {connect ins outs} {
-	if {$options(-type) ni {jack output}} {
-	    error "$options(-name) doesn't know how to $connect {$ins} and {$outs}: $options(-type) is wrong"
-	}
 	lassign [match-ins-outs $ins $outs] ins outs
 	if {[llength $ins] != [llength $outs]} {
 	    error "$options(-name) cannot $connect {$ins} and {$outs}: length mismatch"
@@ -246,15 +252,14 @@ snit::type sdrblk::block {
 	set options(-prefix) [$partof cget -name]
 	set options(-control) [$partof cget -control]
 	set options(-name) [string trim $options(-prefix)-$tmp(-suffix) -]
-	set super $partof
-	if {[catch {$super addpart $self} error erropts]} {
-	    if {[string match {unknown subcommand "addpart": must be*} $error]} {
-		set options(-super) {}
+	if {[catch {$partof add part $self} error erropts]} {
+	    if {[string match {unknown subcommand "add": must be*} $error]} {
+		set data(super) {}
 	    } else {
 		return -options $erropts $error
 	    }
 	} else {
-	    set options(-super) $super
+	    set data(super) $partof
 	}
 	#puts "before configure: server=$options(-server) prefix=$options(-prefix) suffix=$options(-suffix) name=$options(-name) control=$options(-control) super=$options(-super)"
 	$self configure {*}$args
@@ -437,7 +442,9 @@ snit::type sdrblk::block {
     ## -type sequence
     ##  sequences of blocks
     ##
-    option -sequence -readonly yes -configuremethod dispatch
+    option -sequence -default {} -readonly yes -configuremethod dispatch
+    option -sink -default {} -configuremethod dispatch
+    option -source -default {} -configuremethod dispatch
     
     method {sequence constructor} {} {
 	# make a stub controller
@@ -456,15 +463,14 @@ snit::type sdrblk::block {
 	    next [concat [lrange $data(sequence) 1 end] [list {}]] \
 	    {
 		if {$last ne {} && $next ne {}} {
-		    $element configure -input $last -output $next
+		    $element add input $last
+		    $element add output $next
 		} elseif {$next ne {}} {
-		    $element configure -output $next
+		    $element add output $next
 		} elseif {$last ne {}} {
-		    $element configure -input $last
+		    $element add input $last
 		}
 	    }
-	# reset the sequence sink and source
-	$self configure -source $options(-source) -sink $options(-sink)
     }
 
     method {sequence destructor} {} {
@@ -489,7 +495,19 @@ snit::type sdrblk::block {
 	    }
 	    -outport {
 		if {$verbose(outport)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
-		$self stub configure $opt $val
+		set options($opt) $val
+		if {[$self outputs] ne {}} {
+		    foreach out [$self outputs] {
+			$out configure -inport $val
+		    }
+		} elseif {$data(super) ne {}} {
+		    $data(super) configure -outport $val
+		} elseif {$options(-sink) ne {}} {
+		    $self connect $val $options(-sink)
+		    if {$old ne {}} {
+			$self disconnect $old $options(-sink)
+		    }
+		}
 	    }
 	    -activate {
 		if {$verbose(activate)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
@@ -514,20 +532,17 @@ snit::type sdrblk::block {
 		set options($opt) $val
 		if {$val ne {}} {
 		    foreach part [$self input-parts] {
-			if {[$part cget -type] eq {input}} {
-			    $part configure -source $val
-			}
+			$part configure -inport $val
 		    }
 		}
 	    }
 	    -sink {
 		if {$verbose(connect)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
 		set options($opt) $val
-		if {$val ne {}} {
-		    foreach part [$self output-parts] {
-			if {[$part cget -type] eq {output}} {
-			    $part configure -sink $options(-sink)
-			}
+		if {$options(-outport) ne {}} {
+		    $self connect $options(-outport) $val
+		    if {$old ne {}} {
+			$self disconnect $options(-outport) $old
 		    }
 		}
 	    }
@@ -538,86 +553,10 @@ snit::type sdrblk::block {
     }
 
     ##
-    ## -type input, -type output
-    ## blocks which connect directly to hardware
-    ##
-    option -sink -default {} -configuremethod dispatch
-
-    method {output constructor} {}  { $self stub constructor }
-    method {output destructor} {}  { $self stub destructor }
-    method {output configure} {opt val} {
-	set old $options($opt)
-	if {$verbose(configure)} { puts "block $options(-name) $self outport configure $opt {$val} was {$old}" }
-	switch -- $opt {
-	    -outport {
-		if {$verbose(outport)} { puts "block $options(-name) $self configure $opt {$val} was {$old}" }
-		set options($opt) $val
-	    }
-	    -inport {
-		if {$verbose(inport)} { puts "block $options(-name) $self configure $opt {$val} was {$old}" }
-		$self stub configure $opt $val
-	    }
-	    -activate { $self stub configure $opt $val }
-	    -enable { $self stub configure $opt $val }
-	    -sink {
-		if {$verbose(connect)} { puts "block $options(-name) $self output configure $opt {$val} was {$old}" }
-		set options($opt) $val
-		if {$options(-outport) ne {}} {
-		    if {$options(-outport) ne [$options(-super) cget -inport]} {
-			$self connect $options(-outport) $val
-		    }
-		    if {$old ne {}} {
-			$self disconnect $options(-outport) $old
-		    }
-		}
-	    }
-	    default {
-		error "$options(-name) doesn't know how to \"output configure $opt {$val}\""
-	    }
-	}
-    }
-
-    option -source -default {} -configuremethod dispatch
-    
-    method {input constructor} {}  { $self stub constructor }
-    method {input destructor} {}  { $self stub destructor }
-    method {input configure} {opt val} {
-	set old $options($opt)
-	if {$verbose(configure)} { puts "block $options(-name) $self input configure $opt {$val} was {$old}" }
-	switch -- $opt {
-	    -inport {
-		if {$verbose(inport)} { puts "block $options(-name) $self input configure $opt {$val} was {$old}" }
-		set options($opt) $val
-		$self configure -outport $val
-	    }
-	    -outport { $self stub configure $opt $val }
-	    -activate { $self stub configure $opt $val }
-	    -enable { $self stub configure $opt $val }
-	    -source {
-		set options($opt) $val
-		if {$verbose(connect)} { puts "block $self input configure $opt {$val} was {$old}" }
-		$self configure -inport $val
-	    }
-	    default {
-		error "$options(-name) doesn't know how to \"input configure $opt {$val}\""
-	    }
-	}
-    }
-    
-    ##
-    ## -type meter, -type spectrum
+    ## -type stub
     ## blocks which provide placeholders for meter and spectrum taps
-    ##
-    method {meter constructor} {}  { $self stub constructor }
-    method {meter destructor} {}  { $self stub destructor }
-    method {meter configure} {opt val} { $self stub configure $opt $val }
-
-    method {spectrum constructor} {} { $self stub constructor }
-    method {spectrum destructor} {} { $self stub destructor }
-    method {spectrum configure} {opt val} { $self stub configure $opt $val }
-
-    ##
-    ## stub methods for common behavior
+    ## or just connection points
+    ## also provides methods for common behavior
     ##
     method {stub constructor} {} {
 	sdrblk::comp-stub ::sdrblx::$options(-name)
@@ -637,10 +576,12 @@ snit::type sdrblk::block {
 	    -outport {
 		if {$verbose(outport)} { puts "block $options(-name) $self stub configure $opt {$val} was {$old}" }
 		set options($opt) $val
-		if {$options(-output) ne {}} {
-		    $options(-output) configure -inport $val
-		} elseif {$options(-super) ne {}} {
-		    $options(-super) configure -outport $val
+		if {[$self outputs] ne {}} {
+		    foreach out [$self outputs] {
+			$out configure -inport $val
+		    }
+		} elseif {$data(super) ne {}} {
+		    $data(super) configure -outport $val
 		}
 	    }
 	    -enable {
@@ -652,8 +593,10 @@ snit::type sdrblk::block {
 		if {$options(-enable)} {
 		    set options($opt) $val
 		}
-		if {$options(-output) ne {}} {
-		    $options(-output) configure $opt $val
+		if {[$self output] ne {}} {
+		    foreach out [$self output] {
+			$out configure $opt $val
+		    }
 		}
 	    }
 	    default {

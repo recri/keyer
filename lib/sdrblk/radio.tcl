@@ -88,16 +88,8 @@ snit::type sdrblk::radio {
     }
 }
 
-proc sdrblk::radio-input {name args} {
-    return [sdrblk::block $name -type input -suffix in -enable yes {*}$args]
-}
-
-proc sdrblk::radio-output {name args} {
-    return [sdrblk::block $name -type output -suffix out -enable yes {*}$args]
-}
-
 proc sdrblk::radio-rx {name args} {
-    set pipe {sdrblk::radio-input sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af sdrblk::radio-output}
+    set pipe {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af}
     return [sdrblk::block $name -type sequence -suffix rx -sequence $pipe -enable yes {*}$args]
 }
 
@@ -123,7 +115,7 @@ proc sdrblk::radio-rx-af {name args} {
 }
 
 proc sdrblk::radio-tx {name args} {
-    set seq {sdrblk::radio-input sdrblk::radio-tx-af sdrblk::radio-tx-if sdrblk-radio-tx-rf sdrblk::radio-output}
+    set seq {sdrblk::radio-tx-af sdrblk::radio-tx-if sdrblk::radio-tx-rf}
     return [sdrblk::block $name -type sequence -suffix tx -sequence $seq -enable yes {*}$args]
 }
 
