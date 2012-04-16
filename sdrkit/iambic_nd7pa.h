@@ -19,6 +19,12 @@
 
 #ifndef IAMBIC_ND7PA_H
 /*
+** This has been stripped down to the minimal iambic state machine
+** from the AVR sources that accompany the article in QEX March/April
+** 2012, and the length of the dah and inter-element-space has been
+** made into configurable multiples of the dit clock.
+*/
+/*
 * newkeyer.c  an electronic keyer with programmable outputs 
 * Copyright (C) 2012 Roger L. Traylor   
 * 
@@ -41,194 +47,135 @@
 // 3.19.2012
 // iambic keyer      
 
-//#define F_CPU 8000000UL     //8Mhz clock
-//#include <util/delay.h>
-//#include <avr/io.h>
-//#include <avr/interrupt.h>
-//#include <avr/eeprom.h>
-
 class iambic_nd7pa {
-  //main keyer state machine states
-  static const int IDLE =     0;  //waiting for a paddle closure 
-  static const int DIT =      1;  //making a dit 
-  static const int DAH =      2;  //making a dah  
-  static const int DIT_DLY =  3;  //intersymbol delay, one dot time
-  static const int DAH_DLY =  4;  //intersymbol delay, one dot time
-  static const int TUNE =     5;  //tune state...added after article to allow tuning
-  //
-  static const int FALSE =    0;
-  static const int TRUE =     1;
-  //
+private:
+  // keyer states
+  static const int IDLE =     0;  // waiting for a paddle closure 
+  static const int DIT =      1;  // making a dit 
+  static const int DAH =      2;  // making a dah  
+  static const int DIT_DLY =  3;  // intersymbol delay, one dot time
+  static const int DAH_DLY =  4;  // intersymbol delay, one dot time
 
-  //define EEPROM storage areas
-  // uint8_t EEMEM eeprom_wds_per_min = 20;    //this value only assigned during programming
+  // state variables
+  int keyer_state;	// the keyer state 
+  bool dit_pending;	// memory for dits  
+  bool dah_pending;	// memory for dahs  
+  int timer;		// ticks counting down
 
-  int keyer_state   = IDLE;   //the keyer state 
-  int timer_ena     = 0;      //the timer enable 
-  int dit_pending   = FALSE;  //memory for dits  
-  int dah_pending   = FALSE;  //memory for dahs  
-  int timeout       ;         //one dot interval  
-  int half_timeout  ;         //one half dot interval 
-  int key           = FALSE;  //internal keyer output 
-  int ee_wait_cnt   = -1;     //countdown to save new setting to eeprom
-  int wds_per_min   = 20;     //words per minute (still need to intalize if in EEPROM?)
+  // ticks per feature
+  int _ticksPerDit;
+  int _ticksPerDah;
+  int _ticksPerIes;
 
-  //output state machine states 
-  // static const int IDLE =   0;  // redefines the previous definition of IDLE
-  static const int A =      1;  //
-  static const int B =      2;  //
-  static const int C =      3;  //
-  static const int D =      4;  //
-  static const int E =      5;  //
-  static const int F =      6;  //
-  static const int G =      7;  //
-  static const int H =      8;  //
-  static const int I =      9;  //
+  // parameters
+  float _tick;			// microseconds per tick
+  bool _swapped;		// true if paddles are swapped
+  float _wpm;			// words per minute
+  float _dahLen;		// dits per dah
+  float _iesLen;		// dits per space between dits and dahs
 
-  //output state machine variables
-  int output_state     = IDLE;
-  int tx_dly           = 0x00;
-  int mute1_timeout    =    4;			//500uS for audio mute to engage
-  int relay_timeout    =   31;			//4mS for relay to actuate
-  int tx_decay         =   65;			//5mS for xmit envelope to decay
+  // update the clock computations
+  void update() {
+    // microsecond timing
+    float microsPerDit = 60000000.0 / (_wpm * 50);
 
-  int key_in	       =    0;
-  int key_out	       =    0;
+    // tick timing
+    _ticksPerDit = microsPerDit / _tick + 0.5;
+    _ticksPerDah = (microsPerDit * _dahLen) / _tick + 0.5;
+    _ticksPerIes = (microsPerDit * _iesLen) / _tick + 0.5;
+  }
 
-  static const int DIT_BIT = 1;
-  static const int DAH_BIT = 2;
-
-  //functions
-  void    tx_on()  { key_out = 1;}		//asserts key output (active high)
-  void    tx_off() { key_out = 0;}		//deasserts key output
-  int dit_on() { return(key_in&DIT_BIT); }	//returns non-zero if dit paddle on 
-  int dah_on() { return(key_in&DAH_BIT); }	//returns non-zero if dah paddle on 
-
-
-  /*****************************  mute1  ****************************************/
-  int mute1_state = 0;
-  //mute 1 is active low
-  void mute1(state) { mute1_state = state; }
-
-  /******************************************************************************/
-
-  /****************************  mute2  *****************************************/
-  
-  int mute2_state = 0;
-  void mute2(state) { mute2_state = state; }
-
-  /******************************************************************************/
-
-  //*****************************************************************************/
-  //                  Interrupt service routine for timer 0 
-  //worst case is about 18uS to run ISR
+public:
+  iambic_nd7pa() {
+    keyer_state = IDLE;
+    dit_pending = false;
+    dah_pending = false;
+    setTick(1);
+    setSwapped(false);
+    setWpm(15);
+    setDah(3);
+    setIes(1);
+    update();
+  }
 
   int clock(int raw_dit_on, int raw_dah_on, int ticks) {
 
-    static uint16_t timer;
+    bool dit_on = (_swapped ? raw_dah_on : raw_dit_on) != 0;
+    bool dah_on = (_swapped ? raw_dit_on : raw_dah_on) != 0;
+    bool key_out = false;
 
-    timer--;  //decrement clock 
+    // update timer
+    timer -= ticks;
+    bool timer_expired = timer <= 0;
 
-    //keyer main state machine   
-    switch(keyer_state){ //see if user changed the minutes setting
-    case (IDLE) : 
-      key = FALSE;
-      if      (bit_is_clear(PINC,5)){       keyer_state = TUNE;}
-      else if (dit_on()){timer = timeout;   keyer_state = DIT; }
-      else if (dah_on()){timer = timeout*3; keyer_state = DAH; }       
-      break;
-    case (TUNE):  //this state added to allow for a transmitter tuning state
-      key = TRUE;
-      if(bit_is_set(PINC,5)){keyer_state = IDLE;}
-      break;
-    case (DIT) :
-      key = TRUE; 
-      if(!timer){timer = timeout; keyer_state = DIT_DLY;}  
-      break;
-    case (DAH) : 
-      key = TRUE; 
-      if(!timer){timer = timeout; keyer_state = DAH_DLY;}  
-      break;
-    case (DIT_DLY) :
-      key = FALSE;  
-      if(!timer){
-        if(dah_pending == TRUE) {timer=timeout*3; keyer_state = DAH;}
-        else                    {keyer_state = IDLE;}
+    // keyer state machine   
+    if (keyer_state == IDLE) {
+      key_out = false;
+      if (dit_on) {
+	timer = _ticksPerDit; keyer_state = DIT;
+      } else if (dah_on) {
+	timer = _ticksPerDah; keyer_state = DAH;
+      }       
+    } else if (keyer_state == DIT) {
+      key_out = true; 
+      if ( timer_expired ) { timer = _ticksPerIes; keyer_state = DIT_DLY; }  
+    } else if (keyer_state == DAH) {
+      key_out = true; 
+      if ( timer_expired ) { timer = _ticksPerIes; keyer_state = DAH_DLY; }  
+    } else if (keyer_state == DIT_DLY) {
+      key_out = false;  
+      if ( timer_expired ) {
+	if ( dah_pending ) { timer = _ticksPerDah; keyer_state = DAH;
+	} else { keyer_state = IDLE; }
       }
-      break; 
-    case (DAH_DLY) : 
-      key = FALSE; 
-      if(!timer){
-        if(dit_pending == TRUE) {timer=timeout; keyer_state = DIT;}
-        else                    {keyer_state = IDLE;}
+    } else if (keyer_state == DAH_DLY) {
+      key_out = false; 
+      if ( timer_expired ) {
+        if ( dit_pending ) {
+	  timer = _ticksPerDit; keyer_state = DIT;
+	} else {
+	  keyer_state = IDLE;
+	}
       }
-      break; 
-    }//switch keyer state
+    }
 
-    //*****************  dit pending main state machine   *********************
-    switch(dit_pending){ //see if a dot is pending 
-    case (FALSE) : 
-      if( (dit_on() && (keyer_state == DAH)     & (timer < timeout / 3))   ||
-          (dit_on() && (keyer_state == DAH_DLY) & (timer > half_timeout))) 
-        { dit_pending = TRUE;}
-      break;
-    case (TRUE) : 
-      if(keyer_state == DIT){dit_pending = FALSE;}
-      break;
-    }//switch dit_pending
+    //*****************  dit pending state machine   *********************
+    dit_pending = dit_pending ?
+      keyer_state != DIT :
+      (dit_on && ((keyer_state == DAH && timer < _ticksPerDah/3) ||
+		  (keyer_state == DAH_DLY && timer > _ticksPerIes/2)));
          
-    //******************  dah pending main state machine   *********************
-    switch(dah_pending){ //see if a dah is pending 
-    case (FALSE) : 
-      if( (dah_on() && (keyer_state == DIT)     & (timer < half_timeout))  ||
-          (dah_on() && (keyer_state == DIT_DLY) & (timer > half_timeout)))
-	{dah_pending = TRUE;}
-      break;
-    case (TRUE) : 
-      if(keyer_state == DAH){dah_pending = FALSE;}
-      break;
-    }//switch dah_pending
+    //******************  dah pending state machine   *********************
+    dah_pending = dah_pending ?
+      keyer_state != DAH :
+      (dah_on && ((keyer_state == DIT && timer < _ticksPerDit/2) ||
+		  (keyer_state == DIT_DLY && timer > _ticksPerIes/2)));
 
-
-    //****************** state machine for the output sequencer *********
-    tx_dly--;  //decrement the delay counter for the output sequencer
-    switch(output_state){ 
-    case (IDLE) : 
-      if(key==TRUE){ tx_dly = mute1_timeout; output_state=A;} //delay from mute1 to relay on
-      break; 
-    case (A) : mute1(TRUE); 
-      if(!tx_dly){tx_dly=relay_timeout; output_state=B;} //delay from mute2 to relay on
-      break; 
-    case (B) : mute2(TRUE); 
-      if(!tx_dly){output_state=C;} //wait for relay
-      break; 
-    case (C) : if(key==FALSE){tx_dly=mute1_timeout+relay_timeout+1; output_state=D;} //equalize key low 
-      else{tx_on(); TCCR2B = (1<<CS22) | (1<<CS20);}  //tx_on and sidetone on 
-      break;
-    case (D) : if(!tx_dly){tx_dly=tx_decay; output_state=E;}  
-      break;
-    case (E) : tx_off(); TCCR2B = 0x00;  //tx off and sidetone off 
-      if(!tx_dly){tx_dly=mute1_timeout; output_state = F;}
-      break; 
-    case (F) : mute2(FALSE);
-      if(!tx_dly){output_state=G;}//let transmitter die out 
-      break;
-    case (G) : mute1(FALSE); 
-      output_state = IDLE;   //unmute audio
-      break; 
-    }//switch output state  
-
+    return key_out ? 1 : 0;
   }
 
-
-  //****************************  main code loop  ********************************
-  int main(void) { 
-    setup();   //do setup of timers, ports interrupts
-    tx_off();  //make sure xmitter is off
-    while(1){  //spin forever and update dot period blindly
-      timeout = (9375/wds_per_min); //1 dot time = ((1200/wds_per_min)*1000)/128
-      half_timeout = (timeout >> 1);
-    } //do forever
-  }//main
+  // set the microseconds in a tick
+  void setTick(float tick) { _tick = tick; update(); }
+  float getTick() { return _tick; }
+  // set the words per minute generated
+  void setWpm(float wpm) { _wpm = wpm; update(); }
+  float getWpm() { return _wpm; }
+  // swap the dit and dah paddles
+  void setSwapped(bool swapped) { _swapped = swapped; }
+  bool getSwapped() { return _swapped; } 
+  // set the dah length in dits
+  void setDah(float dahLen) { _dahLen = dahLen; update(); }
+  float getDah() { return _dahLen; }
+  // set the inter-element length in dits
+  void setIes(float iesLen) { _iesLen = iesLen; update(); }
+  float getIes() { return _iesLen; }
 };
 
+extern "C" {
+  typedef struct {
+    iambic_nd7pa k;
+  } iambic_t;
+  typedef struct {
+  } iambic_options_t;
+}
+#endif

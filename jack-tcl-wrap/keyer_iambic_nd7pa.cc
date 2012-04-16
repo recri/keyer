@@ -18,37 +18,33 @@
 */
 /** 
 
-    keyer_iambic implements an iambic keyer keyed by midi events
+    keyer_iambic_nd7pa implements an iambic keyer keyed by midi events
     and generating midi events.
 
-    the basic puzzle here is how to get the initial key event
-    out of the midi buffer on the frame it happens at.  I suppose
-    the call to the keyer tick could return an event.
-    
 */
 
-#include "../sdrkit/iambic_ad5dz.h"
+#include "../sdrkit/iambic_nd7pa.h"
 
 extern "C" {
 
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
-#define FRAMEWORK_OPTIONS_KEYER_SPEED	1
-#define FRAMEWORK_OPTIONS_KEYER_TIMING	1
-#define FRAMEWORK_OPTIONS_KEYER_OPTIONS	1
 
 #include "framework.h"
 #include "../sdrkit/midi.h"
 
   typedef struct {
 #include "framework_options_vars.h"
+    float wpm;
+    float  dah, ies;
+    int swap;
   } options_t;
 
   typedef struct {
     framework_t fw;
     int modified;
     options_t opts;
-    iambic_ad5dz k;
+    iambic_nd7pa k;
     int raw_dit;
     int raw_dah;
     int key_out;
@@ -60,18 +56,11 @@ extern "C" {
       dp->modified = 0;
 
       /* keyer recomputation */
-      dp->k.setVerbose(dp->fw.verbose);
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
-      dp->k.setWord(dp->opts.word);
       dp->k.setWpm(dp->opts.wpm);
       dp->k.setDah(dp->opts.dah);
       dp->k.setIes(dp->opts.ies);
-      dp->k.setIls(dp->opts.ils);
-      dp->k.setIws(dp->opts.iws);
-      dp->k.setAutoIls(dp->opts.alsp != 0);
-      dp->k.setAutoIws(dp->opts.awsp != 0);
       dp->k.setSwapped(dp->opts.swap != 0);
-      dp->k.setMode(dp->opts.mode);
     }
   }
 
@@ -160,15 +149,17 @@ extern "C" {
       dp->opts = save;
       return TCL_ERROR;
     }
-    dp->modified = (dp->opts.word != save.word || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
-		    dp->opts.ies != save.ies || dp->opts.ils != save.ils || dp->opts.iws != save.iws ||
-		    dp->opts.swap != save.swap || dp->opts.alsp != save.alsp || dp->opts.awsp != save.awsp ||
-		    dp->opts.mode != save.mode);
+    dp->modified = (dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
+		    dp->opts.ies != save.ies || dp->opts.swap != save.swap);
     return TCL_OK;
   }
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+    { "-wpm",      "wpm",       "Words",   "18.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.wpm),	  "words per minute" },
+    { "-dah",      "dah",       "Dits",    "3.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dah),	  "dah length in dits" },
+    { "-ies",	 "ies",	      "Dits",    "1.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.ies),	  "inter-element space in dits" },
+    { "-swap",	 "swap",      "Bool",    "0",	    fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.swap),	  "swap the dit and dah paddles" },
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 
@@ -194,8 +185,8 @@ extern "C" {
   }
 
   // okay, so tcl truncates the name before _Init at the first digit
-  int DLLEXPORT Keyer_iambic_ad_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "keyer::iambic-ad5dz", "1.0.0", "keyer::iambic-ad5dz", _factory);
+  int DLLEXPORT Keyer_iambic_nd_Init(Tcl_Interp *interp) {
+    return framework_init(interp, "keyer::iambic-nd7pa", "1.0.0", "keyer::iambic-nd7pa", _factory);
   }
 
 }

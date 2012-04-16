@@ -28,7 +28,7 @@ typedef unsigned char byte;
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 
-#include "../sdrkit/Debounce.h"
+#include "../sdrkit/debouncer.h"
 
 extern "C" {
 
@@ -53,8 +53,8 @@ extern "C" {
     int period_count;
     byte current[DEBOUNCE_N_NOTES];
     byte stable[DEBOUNCE_N_NOTES];
-    debounce_t deb[DEBOUNCE_N_NOTES];
-    debounce_options_t dopts;
+    debouncer_t deb[DEBOUNCE_N_NOTES];
+    debouncer_options_t dopts;
   } _t;
 
 
@@ -66,7 +66,7 @@ extern "C" {
       dp->period_samples = dp->opts.period * sdrkit_sample_rate(dp);
       dp->dopts.steps = dp->opts.steps;
       for (int i = 0; i < DEBOUNCE_N_NOTES; i += 1)
-	debounce_configure(&dp->deb[i], &dp->dopts);
+	debouncer_configure(&dp->deb[i], &dp->dopts);
     }
   }
 
@@ -75,7 +75,7 @@ extern "C" {
     dp->dopts.steps = dp->opts.steps;
     for (int i = 0; i < DEBOUNCE_N_NOTES; i += 1) {
       dp->current[i] = dp->stable[i] = 0;
-      void *p = debounce_init(&dp->deb[i], &dp->dopts); if (p != &dp->deb[i]) return p;
+      void *p = debouncer_init(&dp->deb[i], &dp->dopts); if (p != &dp->deb[i]) return p;
     }
     dp->modified = 1;
     _update(dp);
@@ -142,7 +142,7 @@ extern "C" {
       if (--dp->period_count <= 0) {
 	dp->period_count = dp->period_samples;
 	for (int j = 0; j < DEBOUNCE_N_NOTES; j += 1) {
-	  if (debounce_process(&dp->deb[j], dp->current[j]) != dp->stable[j]) {
+	  if (debouncer_process(&dp->deb[j], dp->current[j]) != dp->stable[j]) {
 	    dp->stable[j] ^= 1;
 	    _send(dp, midi_out, i, dp->stable[j] ? MIDI_NOTE_ON : MIDI_NOTE_OFF, dp->opts.note+j);
 	  }

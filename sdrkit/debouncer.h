@@ -25,14 +25,14 @@
 ** 
 */
 
-class Debounce {
+class debouncer {
  public:
-  Debounce() {
+  debouncer() {
     _filter = 0L;
     _value = 0;
     setSteps(8);
   }
-  Debounce(byte steps) {
+  debouncer(byte steps) {
     _filter = 0L;
     _value = 0;
     setSteps(steps);
@@ -57,20 +57,20 @@ class Debounce {
 
 extern "C" {
   typedef struct {
-    Debounce debounce;
-  } debounce_t;
+    debouncer debounce;
+  } debouncer_t;
   typedef struct {
     int steps;
-  } debounce_options_t;
-  static void *debounce_init(debounce_t *p, debounce_options_t *q) {
+  } debouncer_options_t;
+  static void *debouncer_init(debouncer_t *p, debouncer_options_t *q) {
     return p;
   }
-  static void debounce_configure(debounce_t *p, debounce_options_t *q) {
+  static void debouncer_configure(debouncer_t *p, debouncer_options_t *q) {
     p->debounce.setSteps(q->steps);
   }
-  static void debounce_preconfigure(debounce_t *p, debounce_options_t *q) {
+  static void debouncer_preconfigure(debouncer_t *p, debouncer_options_t *q) {
   }
-  static int debounce_process(debounce_t *p, int input) {
+  static int debouncer_process(debouncer_t *p, int input) {
     return p->debounce.debounce(input);
   }
 }

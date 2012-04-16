@@ -79,3 +79,9 @@ A block can be:
   convolution.
 [ ] - So starting jack and connecting hardware ports to enabled
   sections becomes another part of the control module.
+[ ] - the keyer ptt should just be a split into the number of
+  necessary signals routed into a generic midi-delay component.
+[ ] - the spectrum and meter tap points should be the same module,
+  distinguish by name.
+[ ] - the framework should implement the snit info command, the
+  info command should include documentation.

@@ -33,6 +33,7 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_detone.so \
 	$(LIBDIR)/keyer_iambic_dttsp.so \
 	$(LIBDIR)/keyer_iambic_ad5dz.so \
+	$(LIBDIR)/keyer_iambic_nd7pa.so \
 	$(LIBDIR)/keyer_ptt.so \
 	$(LIBDIR)/keyer_ptt_mute.so \
 	$(LIBDIR)/keyer_tone.so
@@ -203,7 +204,7 @@ $(LIBDIR)/window_polyphase.so: window_polyphase.c framework.h ../sdrkit/polyphas
 $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/morse_timing.h ../sdrkit/morse_coding.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../sdrkit/midi.h ../sdrkit/Debounce.h
+$(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../sdrkit/midi.h ../sdrkit/debouncer.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/ring_buffer.h
@@ -212,7 +213,10 @@ $(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_
 $(LIBDIR)/keyer_detone.so: keyer_detone.c framework.h ../sdrkit/midi.h ../sdrkit/filter_goertzel.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_iambic_ad5dz.so: keyer_iambic_ad5dz.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/Iambic_ad5dz.h
+$(LIBDIR)/keyer_iambic_ad5dz.so: keyer_iambic_ad5dz.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/iambic_ad5dz.h
+	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/keyer_iambic_nd7pa.so: keyer_iambic_nd7pa.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/iambic_nd7pa.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_iambic_dttsp.so: keyer_iambic_dttsp.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/iambic_dttsp.h

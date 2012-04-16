@@ -25,7 +25,7 @@
 ** // usage
 **
 ** // to make a keyer
-** Iambic k();
+** iambic_ad5dz k();
 **
 ** // to specify the current paddle state,
 ** // advance the keyer clock by ticks
@@ -49,7 +49,7 @@
 
 // #include <stdio.h>
 
-class Iambic_ad5dz {
+class iambic_ad5dz {
 private:
 #define KEYIN(dit,dah) (((dit)<<1)|(dah))
   typedef unsigned char byte;
@@ -64,7 +64,7 @@ private:
   static bool KEYIN_IS_DIDAH(int keyIn) { return keyIn == KEYIN_DIDAH; }
   
 public:
-  Iambic_ad5dz() {
+  iambic_ad5dz() {
     _update = true;
 
     _keyIn = KEYIN_OFF;
@@ -97,7 +97,7 @@ public:
       _lastKeyIn = _keyIn;
       _memKeyIn |= keyIn & ~_startKeyIn;
       _keyIn = keyIn;
-      // if (_verbose) fprintf(stderr, "Iambic._keyIn = %x\n", _keyIn);
+      // if (_verbose) fprintf(stderr, "iambic._keyIn = %x\n", _keyIn);
     }
 
     // start a symbol if either paddle is pressed
@@ -293,7 +293,7 @@ public:
 
 extern "C" {
   typedef struct {
-    Iambic_ad5dz k;
+    iambic_ad5dz k;
   } iambic_t;
   typedef struct {
   } iambic_options_t;
