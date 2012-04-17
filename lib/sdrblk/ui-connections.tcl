@@ -41,27 +41,19 @@ snit::widget sdrblk::ui-connections {
     variable data -array {
 	items {}
 	ports {}
-	item {}
-	enabled 0
-	activated 0
+	pop-item {}
+	pop-enabled 0
+	pop-activated 0
+	pop-type {}
     }
     
-    method {scroll set} {who args} {
-	#puts "$self scroll set $who {$args}"
-	$win.$who set {*}$args
-    }
-    method {scroll yview} {who args} {
-	#puts "$self scroll yview {$args}"
-	$win.$who yview {*}$args
-    }
-
     constructor {args} {
 	install sbl using ttk::scrollbar $win.sbl -orient vertical -command [mymethod scroll yview lft]
-	install lft using ttk::treeview $win.lft -show tree -yscrollcommand [mymethod scroll set sbl]
+	install lft using ttk::treeview $win.lft -show tree -yscrollcommand [mymethod scroll set sbl] -selectmode browse
 	install ctr using canvas $win.ctr -width 100
-	install rgt using ttk::treeview $win.rgt -show tree -yscrollcommand [mymethod scroll set sbr]
+	install rgt using ttk::treeview $win.rgt -show tree -yscrollcommand [mymethod scroll set sbr] -selectmode browse
 	install sbr using ttk::scrollbar $win.sbr -orient vertical -command [mymethod scroll yview rgt]
-	install pop using menu $win.pop -tearoff no
+
 	grid [ttk::label $win.ll -text source] -row 0 -column 0 -columnspan 2
 	grid [ttk::label $win.lc -text connect] -row 0 -column 2
 	grid [ttk::label $win.lr -text sink] -row 0 -column 3 -columnspan 2
@@ -75,19 +67,41 @@ snit::widget sdrblk::ui-connections {
 	$self configure {*}$args
 	set options(-control) [$options(-partof) cget -control]
 	set data(items) [dict create]
-	$self update
-	#$pop add command -label dummy -state disabled
-	#$pop entryconfigure 0 -disabledforeground [$pop entrycget 0 -foreground]
-	#$pop add separator
-	$pop add checkbutton -label enable -variable [myvar data(enabled)] -command [mymethod pop-enable]
-	$pop add checkbutton -label activate -variable [myvar data(activated)] -command [mymethod pop-activate]
+
+	install pop using menu $win.pop -tearoff no
+	$pop add checkbutton -label enable -variable [myvar data(pop-enabled)] -command [mymethod pop-enable]
+	$pop add checkbutton -label activate -variable [myvar data(pop-activated)] -command [mymethod pop-activate]
+	$pop add separator
+	$pop add command -label open -command [mymethod pop-open]
+	$pop add command -label collapse -command [mymethod pop-collapse]
+	$pop add separator
+	$pop add command -label {open all} -command [mymethod pop-open-all]
+	$pop add command -label {collapse all} -command [mymethod pop-collapse-all]
 	$pop add separator
 	$pop add command -label configuration -command [mymethod pop-configuration]
 	$pop add command -label controls -command [mymethod pop-controls]
+
 	foreach w {lft ctr rgt} {
 	    bind $win.$w <Button-3> [mymethod pop-up %W %x %y]
-	    #bind $win.$w <Button-3> [mymethod inform $w %W %x %y]
+	    bind $win.$w <<TreeviewOpen>> [mymethod defer-update-canvas]
+	    bind $win.$w <<TreeviewClose>> [mymethod defer-update-canvas]
+	    bind $win.$w <<TreeviewSelect>> [mymethod item-select $win.$w]
 	}
+
+	$self update
+
+    }
+
+    method {scroll set} {who args} {
+	#puts "$self scroll set $who {$args}"
+	$win.$who set {*}$args
+	$self update-canvas
+    }
+
+    method {scroll yview} {who args} {
+	#puts "$self scroll yview {$args}"
+	$win.$who yview {*}$args
+	$self update-canvas
     }
 
     proc find-parent {child items} {
@@ -101,89 +115,167 @@ snit::widget sdrblk::ui-connections {
 	return $parent
     }
 
-    proc find-ports {client ports} {
+    proc find-ports {item ports} {
 	set cports {}
-	foreach name [dict keys $ports] {
-	    if {[string first ${client}: $name] == 0} {
-		lappend cports [list $name [dict get $ports $name]]
+	foreach port [dict keys $ports] {
+	    if {[string first ${item}: $port] == 0} {
+		lappend cports [list $port [dict get $ports $port]]
 	    }
 	}
 	return $cports
     }
 	
+    proc trim-parent-prefix {parent item} {
+	if {[string first $parent- $item] == 0} {
+	    return [string range $item [string length $parent-] end]
+	} else {
+	    return $item
+	}
+    }
+	
     method update {} {
 	set data(ports) [sdrkit::jack -server $options(-server) list-ports]
-	foreach label [$options(-control) list] {
-	    set enabled [string is true -strict [$options(-control) ccget $label -enable]]
-	    set activated [string is true -strict [$options(-control) ccget $label -activate]]
-	    if { ! [dict exists $data(items) $label]} {
-		set parent [find-parent $label $data(items)]
-		dict set data(items) $label [dict create type [$options(-control) ccget $label -type]]
+
+	foreach item [$options(-control) list] {
+	    set enabled [string is true -strict [$options(-control) ccget $item -enable]]
+	    set activated [string is true -strict [$options(-control) ccget $item -activate]]
+	    if { ! [dict exists $data(items) $item]} {
+		set parent [find-parent $item $data(items)]
+		set name [trim-parent-prefix $parent $item]
+		dict set data(items) $item [dict create item $item type [$options(-control) ccget $item -type] parent $parent name $name]
 		foreach w {lft rgt} {
-		    $win.$w insert $parent end -id $label -text $label -tag $label
+		    $win.$w insert $parent end -id $item -text $name -tag $item
 		}
 	    }
-	    dict set data(items) $label enabled $enabled
-	    dict set data(items) $label activated $activated
+	    dict set data(items) $item enabled $enabled
+	    dict set data(items) $item activated $activated
+	    #puts "$item enabled=$enabled [$options(-control) ccget $item -enable]"
+	    #puts "$item activated=$activated [$options(-control) ccget $item -activate]"
 	    if {$activated} {
 		foreach w {lft rgt} {
-		    $win.$w tag configure $label -foreground black -background white
+		    $win.$w tag configure $item -foreground black -background white
 		}
 	    } elseif {$enabled} {
 		foreach w {lft rgt} {
-		    $win.$w tag configure $label -foreground black -background white
+		    $win.$w tag configure $item -foreground black -background white
 		}
 	    } else {
 		foreach w {lft rgt} {
-		    $win.$w tag configure $label -foreground grey -background white
+		    $win.$w tag configure $item -foreground grey -background white
 		}
 	    }
-	    foreach port [find-ports $label $data(ports)] {
-		# puts "$label: found $port"
+	    foreach port [find-ports $item $data(ports)] {
+		lassign $port pitem pdict
+		if { ! [dict exists $data(items) $pitem]} {
+		    set pname [lindex [split $pitem :] 1]
+		    dict set pdict item $item
+		    dict set pdict parent $item
+		    dict set pdict name $pname
+		    dict set data(items) $pitem $pdict
+		    switch [dict get $pdict direction] {
+			output { $win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
+			input { $win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
+		    }
+		}
+	    }
+	}
+
+	foreach item [dict keys $data(items)] {
+	    if {[dict get $data(items) $item type] in {audio midi}} {
+		if {[dict get $data(items) $item direction] eq {output}} {
+		    foreach o [dict get $data(items) $item connections] {
+			puts "$item connects to $o"
+		    }
+		}
+	    }
+	}
+
+	$self update-canvas
+    }
+
+    method defer-update-canvas {} {
+	after 10 [mymethod update-canvas]
+    }
+
+    method update-canvas {} {
+	foreach item [dict keys $data(items)] {
+	    foreach w {lft rgt} {
+		if {[$win.$w exists $item]} {
+		    set bbox [$win.$w bbox $item] 
+		    if {$bbox ne {}} {
+			lassign $bbox x y wd ht
+			dict set $item y [expr {$y+$wd/2.0}]
+		    } else {
+			dict set $item y {}
+		    }
+		}
 	    }
 	}
     }
 
+    ##
+    ## popup menu on right button
+    ##
     method pop-enable {} {
-	if {$data(enabled)} {
-	    $options(-control) enable $data(item)
+	if {$data(pop-enabled)} {
+	    $options(-control) enable $data(pop-item)
 	} else {
-	    $options(-control) disable $data(item)
+	    $options(-control) disable $data(pop-item)
 	}
 	after 10 [mymethod update]
     }
+
     method pop-activate {} {
-	if {$data(activated)} {
-	    $options(-control) activate $data(item)
+	if {$data(pop-activated)} {
+	    $options(-control) activate $data(pop-item)
 	} else {
-	    $options(-control) deactivate $data(item)
+	    $options(-control) deactivate $data(pop-item)
 	}
 	after 10 [mymethod update]
     }
+
     method pop-configuration {} {
-	if {[$options(-control) exists $data(item)]} {
+	if {[$options(-control) exists $data(pop-item)]} {
 	    puts "-- $data(item) -- configuration"
-	    foreach c [$options(-control) cconfigure $data(item)] {
-		puts "-- [lindex $c 0] {[lindex $c end]}"
-	    }
-	    puts "--"
-	}
-    }
-    method pop-controls {} {
-	if {[$options(-control) exists $data(item)]} {
-	    puts "-- $data(item) -- controls"
-	    foreach c [$options(-control) controls $data(item)] {
+	    foreach c [$options(-control) cconfigure $data(pop-item)] {
 		puts "-- [lindex $c 0] {[lindex $c end]}"
 	    }
 	    puts "--"
 	}
     }
 
+    method pop-controls {} {
+	if {[$options(-control) exists $data(pop-item)]} {
+	    puts "-- $data(pop-item) -- controls"
+	    foreach c [$options(-control) controls $data(pop-item)] {
+		puts "-- [lindex $c 0] {[lindex $c end]}"
+	    }
+	    puts "--"
+	}
+    }
+
+    proc item-open {w item true recurse} {
+	$w item $item -open $true
+	if {$recurse} {
+	    foreach child [$w children $item] {
+		item-open $w $child $true $recurse
+	    }
+	}
+    }
+
+    method pop-open {} { item-open $data(pop-window) $data(pop-item) true false }
+    method pop-collapse {} { item-open $data(pop-window) $data(pop-item) false false }
+    method pop-open-all {} { item-open $data(pop-window) $data(pop-item) true true }
+    method pop-collapse-all {} { item-open $data(pop-window) $data(pop-item) false true }
+    
     method pop-up {w x y} {
-	set data(item) [$w identify item $x $y]
-	set data(enabled) [dict get $data(items) $data(item) enabled]
-	set data(activated) [dict get $data(items) $data(item) activated]
-	switch [dict get $data(items) $data(item) type] {
+	set data(pop-window) $w
+	set data(pop-item) [$w identify item $x $y]
+	set data(pop-enabled) [dict get $data(items) $data(pop-item) enabled]
+	set data(pop-activated) [dict get $data(items) $data(pop-item) activated]
+	set data(pop-type) [dict get $data(items) $data(pop-item) type]
+	# puts "pop-up on $data(pop-item) enable=$data(pop-enabled) activate=$data(pop-activated) type=$data(pop-type)"
+	switch $data(pop-type) {
 	    sequence {
 		$pop entryconfigure 0 -state disabled
 		$pop entryconfigure 1 -state normal
@@ -201,7 +293,7 @@ snit::widget sdrblk::ui-connections {
 	tk_popup $pop {*}[winfo pointerxy $w]
     }
 
-    method inform {who w x y} {
-	set item [$w identify item $x $y]
+    method item-select {w} {
+	# puts "item-select $w -- [$w selection]"
     }
 }

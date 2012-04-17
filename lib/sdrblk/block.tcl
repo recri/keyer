@@ -56,7 +56,7 @@ snit::type sdrblk::block {
     ##
     typevariable verbose -array {
 	construct 0 configure 0 destroy 0 require 0
-	connect 1 enable 0 activate 1
+	connect 0 enable 0 activate 0
 	controls 0 controlget 0 control 0
 	inport 0 outport 0
     }
@@ -471,6 +471,7 @@ snit::type sdrblk::block {
 		    $element add input $last
 		}
 	    }
+	$self configure -sink $options(-sink) -source $options(-source)
     }
 
     method {sequence destructor} {} {

@@ -39,7 +39,7 @@ snit::type sdrblk::radio {
     option -name -readonly yes -default {}
     option -enable -readonly yes -default true
     option -rx -readonly yes -default true
-    option -tx -readonly yes -default false
+    option -tx -readonly yes -default true
     option -keyer -readonly yes -default true
     option -hw -readonly yes -default true
     option -hw-type -readonly yes -default {softrock-dg8saq}
