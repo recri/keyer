@@ -180,10 +180,12 @@ snit::widget sdrblk::ui-connections {
 	    }
 	}
 
+	# hmm, this would be a good time to be getting jack activation/connect/disconnect callbacks
 	foreach item [dict keys $data(items)] {
-	    if {[dict get $data(items) $item type] in {audio midi}} {
-		if {[dict get $data(items) $item direction] eq {output}} {
-		    foreach o [dict get $data(items) $item connections] {
+	    set idict [dict get $data(items) $item]
+	    if {[dict get $idict type] in {audio midi}} {
+		if {[dict get $idict direction] eq {output}} {
+		    foreach o [dict get $idict connections] {
 			puts "$item connects to $o"
 		    }
 		}
@@ -236,7 +238,7 @@ snit::widget sdrblk::ui-connections {
 
     method pop-configuration {} {
 	if {[$options(-control) exists $data(pop-item)]} {
-	    puts "-- $data(item) -- configuration"
+	    puts "-- $data(pop-item) -- configuration"
 	    foreach c [$options(-control) cconfigure $data(pop-item)] {
 		puts "-- [lindex $c 0] {[lindex $c end]}"
 	    }
@@ -289,7 +291,7 @@ snit::widget sdrblk::ui-connections {
 		$pop entryconfigure 1 -state disabled
 	    }
 	}
-	#$pop entryconfigure 0 -label $data(item)
+	#$pop entryconfigure 0 -label $data(pop-item)
 	tk_popup $pop {*}[winfo pointerxy $w]
     }
 
