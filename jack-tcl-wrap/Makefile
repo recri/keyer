@@ -6,7 +6,7 @@ ALSA_CFLAGS=$(shell pkg-config --cflags alsa)
 LIBUSB_CFLAGS=$(shell pkg-config --cflags libusb-1.0)
 FFTW3_CFLAGS=$(shell pkg-config --cflags fftw3f)
 
-OSC_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator\"
+OSC_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator\"
 
 OSCF_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_f_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-f\" -DNO_GAIN
 OSCT_CFLAGS=-DOSCILLATOR_T -DOSCILLATOR_INIT_NAME=Oscillator_t_Init -DOSCILLATOR_STRING_NAME=\"sdrkit::oscillator-t\" -DNO_GAIN
@@ -66,15 +66,16 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/midi_tap.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
-	$(LIBDIR)/oscillator_f.so \
+	$(LIBDIR)/window.so \
+	$(LIBDIR)/window_polyphase.so \
+	$(KEYERS)
+
+OSC_VARIANTS=$(LIBDIR)/oscillator_f.so \
 	$(LIBDIR)/oscillator_t.so \
 	$(LIBDIR)/oscillator_z.so \
 	$(LIBDIR)/oscillator_fd.so \
 	$(LIBDIR)/oscillator_td.so \
-	$(LIBDIR)/oscillator_zd.so \
-	$(LIBDIR)/window.so \
-	$(LIBDIR)/window_polyphase.so \
-	$(KEYERS)
+	$(LIBDIR)/oscillator_zd.so
 
 all:: $(ALL) libdir-all
 

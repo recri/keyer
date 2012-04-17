@@ -85,3 +85,12 @@ A block can be:
   distinguish by name.
 [ ] - the framework should implement the snit info command, the
   info command should include documentation.
+[ ] - interesting, the keyer introduced a one-to-many output, in
+  the branching of signals out of the ptt delay;  then the signal
+  generator introduced a parallel construction with oscillators
+  and noise sources feeding many-to-one.
+  So a block, which logically has one input port and one output port,
+  may need to connect multiple input signals from upstream output
+  ports, and multiple output signals to downstream input ports.
+
+  

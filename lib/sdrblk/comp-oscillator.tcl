@@ -17,29 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-ui-notebook 1.0.0
+package provide sdrblk::comp-oscillator 1.0.0
 
-package require Tk
-package require snit
+package require sdrblk::block
+package require sdrkit::oscillator
 
-package require sdrblk::ui-radio
-package require sdrblk::ui-tree
-package require sdrblk::ui-connections
+namespace eval sdrblk {}
 
-snit::type sdrblk::radio-ui-notebook {
-
-    option -partof -readonly yes
-    option -control -readonly yes
-    
-    constructor {args} {
-	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
-	pack [ttk::notebook .t] -side top -fill both -expand true
-	.t add [sdrblk::ui-radio .t.v -partof $self -control $options(-control)] -text Radio
-	.t add [sdrblk::ui-connections .t.c -partof $self -control $options(-control)] -text Connections
-	.t add [sdrblk::ui-tree .t.t -partof $self -control $options(-control)] -text Tree
-    }
-	
-    method repl {} { }
-
+proc sdrblk::comp-oscillator {name args} {
+    return [sdrblk::block $name -type jack -suffix osc -factory sdrkit::oscillator {*}$args]
 }

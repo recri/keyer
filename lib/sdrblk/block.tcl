@@ -56,7 +56,7 @@ snit::type sdrblk::block {
     ##
     typevariable verbose -array {
 	construct 0 configure 0 destroy 0 require 0
-	connect 1 enable 0 activate 0
+	connect 1 enable 0 activate 1
 	controls 0 controlget 0 control 0
 	inport 0 outport 0
     }
@@ -322,7 +322,7 @@ snit::type sdrblk::block {
 		    $self disconnect $options(-inport) [$self jack ports * input]
 		    $self configure -outport $options(-inport)
 		} else {
-		    error "$options(name) configure $opt $val when options($opt) is $options($opt)"
+		    error "$options(-name) configure $opt $val when options($opt) is $options($opt)"
 		}
 	    }
 	    -activate {
@@ -335,7 +335,7 @@ snit::type sdrblk::block {
 		    # foreach disconn $data(disconnect) { {*}$discon }; # unnecessary?
 		    ::sdrblx::$options(-name) deactivate
 		} else {
-		    error "$options(name) configure $opt $val when options($opt) is $options($opt)"
+		    error "$options(-name) configure $opt $val when options($opt) is $options($opt)"
 		}
 	    }
 	    -outport {
@@ -593,8 +593,8 @@ snit::type sdrblk::block {
 		if {$options(-enable)} {
 		    set options($opt) $val
 		}
-		if {[$self output] ne {}} {
-		    foreach out [$self output] {
+		if {[$self outputs] ne {}} {
+		    foreach out [$self outputs] {
 			$out configure $opt $val
 		    }
 		}
