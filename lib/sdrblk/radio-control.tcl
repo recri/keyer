@@ -57,8 +57,14 @@ snit::type sdrblk::radio-control {
     method enable {name} { $parts($name) configure -enable yes }
     method disable {name} { $parts($name) configure -enable no }
     method is-enabled {name} { return [$parts($name) cget -enable] }
-    method activate {name} { $parts($name) configure -activate yes }
-    method deactivate {name} { $parts($name) configure -activate no }
+    method activate {name} {
+	$parts($name) configure -activate yes
+	$parts($name) connect
+    }
+    method deactivate {name} {
+	$parts($name) disconnect
+	$parts($name) configure -activate no
+    }
     method is-activated {name} { return [$parts($name) cget -activate] }
     method filter-parts {pred} { set list {}; foreach name $order { if {[$pred $name]} { lappend list $name } }; return $list }
     method enabled {} { return [filter-parts [mymethod is-enabled]] }

@@ -90,33 +90,33 @@ snit::type sdrblk::radio {
 
 proc sdrblk::radio-rx {name args} {
     set pipe {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af}
-    return [sdrblk::block $name -type sequence -suffix rx -sequence $pipe -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix rx -sequence $pipe {*}$args]
 }
 
 proc sdrblk::radio-rx-rf {name args} {
     #  gain iq-swap spectrum-semi-raw noiseblanker meter-pre-conv iq-delay iq-correct
     set seq {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-spectrum-semi-raw sdrblk::comp-iq-delay sdrblk::comp-iq-correct}
     set req {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-spectrum sdrblk::comp-iq-delay sdrblk::comp-iq-correct}
-    return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $req -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::radio-rx-if {name args} {
     # -sequence {spec_pre_filt lo-mixer filter-overlap-save rxmeter_post_filt spec_post_filt}
     set seq {sdrblk::comp-spectrum-pre-filt sdrblk::comp-lo-mixer sdrblk::comp-filter-overlap-save sdrblk::comp-meter-post-filt sdrblk::comp-spectrum-post-filt}
     set req {sdrblk::comp-spectrum sdrblk::comp-lo-mixer sdrblk::comp-filter-overlap-save sdrblk::comp-meter}
-    return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $req -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::radio-rx-af {name args} {
     # set {compand agc rxmeter_post_agc spec_post_agc sdrblk::comp-demod rx_squelch spottone graphiceq spec_post_det}
     set seq {sdrblk::comp-agc sdrblk::comp-meter-post-agc sdrblk::comp-spectrum-post-agc sdrblk::comp-demod sdrblk::comp-gain}
     set req {sdrblk::comp-agc sdrblk::comp-meter sdrblk::comp-spectrum sdrblk::comp-demod sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $req -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::radio-tx {name args} {
     set seq {sdrblk::radio-tx-af sdrblk::radio-tx-if sdrblk::radio-tx-rf}
-    return [sdrblk::block $name -type sequence -suffix tx -sequence $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix tx -sequence $seq {*}$args]
 }
 
 proc sdrblk::radio-tx-af {name args} {
@@ -127,23 +127,23 @@ proc sdrblk::radio-tx-af {name args} {
     # hw-softrock-dg8saq should have an option to poll keystate and insert as midi
     # hw-softrock-dg8saq should by default convert midi control to dg8saq, both directions
     set seq {sdrblk::comp-gain sdrblk::comp-leveler sdrblk::comp-modulate}
-    return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $seq {*}$args]
 }
 
 proc sdrblk::radio-tx-if {name args} {
     # -sequence {sdrblk::comp-filter-overlap-save sdrblk::comp-compander meter_tx_compander spectrum_tx sdrblk::comp-lo-mixer}
     set seq {sdrblk::comp-filter-overlap-save sdrblk::comp-lo-mixer}
-    return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $seq {*}$args]
 }
 
 proc sdrblk::radio-tx-rf {name args} {
     # -sequence { sdrblk::comp-iq-balance sdrblk::comp-gain meter_tx_power}
     set seq {sdrblk::comp-iq-balance sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $seq {*}$args]
 }
 
 proc sdrblk::keyer {name args} {
     set req {sdrblk::comp-keyer}
     set seq {sdrblk::comp-keyer-debounce sdrblk::comp-keyer-iambic sdrblk::comp-keyer-ptt sdrblk::comp-keyer-tone}
-    return [sdrblk::block $name -type sequence -suffix keyer -sequence $seq -require $req -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix keyer -sequence $seq -require $req {*}$args]
 }

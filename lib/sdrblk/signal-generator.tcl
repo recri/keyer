@@ -66,27 +66,27 @@ snit::type sdrblk::signal-generator {
 
 proc sdrblk::sg {name args} {
     set seq {sdrblk::sg-source sdrblk::sg-gain}
-    return [sdrblk::block $name -type sequence -suffix sg -sequence $seq -enable yes {*}$args]    
+    return [sdrblk::block $name -type sequence -suffix sg -sequence $seq {*}$args]    
 }
 proc sdrblk::sg-source {name args} {
     set par {sdrblk::sg-osc1 sdrblk::sg-osc2 sdrblk::sg-noise sdrblk::sg-iq-noise}
-    return [sdrblk::block $name -type parallel -suffix src -parallel $par -enable yes {*}$args]
+    return [sdrblk::block $name -type parallel -suffix src -parallel $par {*}$args]
 }
 proc sdrblk::sg-osc1 {name args} {
     set seq {sdrblk::comp-oscillator sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix osc1 -sequence $seq -require $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix osc1 -sequence $seq -require $seq {*}$args]
 }
 proc sdrblk::sg-osc1 {name args} {
     set seq {sdrblk::comp-oscillator sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix osc2 -sequence $seq -require $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix osc2 -sequence $seq -require $seq {*}$args]
 }
 proc sdrblk::sg-noise {name args} {
     set seq [sdrblk::comp-noise sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix noise -sequence $seq -require $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix noise -sequence $seq -require $seq {*}$args]
 }
 proc sdrblk::sg-iq-noise {name args} {
     set seq [sdrblk::comp-iq-noise sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix iq-noise -sequence $seq -require $seq -enable yes {*}$args]
+    return [sdrblk::block $name -type sequence -suffix iq-noise -sequence $seq -require $seq {*}$args]
 }
 
 if {0} {
