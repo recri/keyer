@@ -1,0 +1,6 @@
+* The Secret Rabbit Code resampler, libsamplerate, is excellent
+  but it's applying huge FIR filters in the time domain.
+  This is the "best" resampling, but it could be oodles more efficient
+  if it transformed the filters into the frequency domain and ran the
+  filters there.
+** Try it.

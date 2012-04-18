@@ -1,0 +1,13 @@
+* Web site for distribution and documentation
+  It looks like easy web site management has moved off the allocated
+  server model and into the cloud.
+** heroku.com
+   where you upload a complete web application as a git repo and it
+   compiles the content to a slug that gets loaded on demand.
+   Up to a certain level of service it is free.
+** toto
+   a git based blogging platform which maintains blog articles in
+   markdown'ed text files.
+** zerigo.com
+   where DNS is maintained for free up to 50,000 queries per month.
+   No porn.
