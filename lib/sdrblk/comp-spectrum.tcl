@@ -35,3 +35,6 @@ proc sdrblk::comp-spectrum-post-filt {name args} {
 proc sdrblk::comp-spectrum-post-agc {name args} {
     return [sdrblk::block $name -type stub -suffix spectrum-post-agc -enable yes {*}$args]
 }
+proc sdrblk::comp-spectrum-tx {name args} {
+    return [sdrblk::block $name -type stub -suffix spectrum-tx -enable yes {*}$args]
+}

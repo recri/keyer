@@ -32,3 +32,21 @@ proc sdrblk::comp-meter-post-filt {name args} {
 proc sdrblk::comp-meter-post-agc {name args} {
     return [sdrblk::block $name -type stub -suffix meter-post-agc -enable yes {*}$args]
 }
+proc sdrblk::comp-meter-waveshape {name args} {
+    return [sdrblk::block $name -type stub -suffix meter-waveshape -enable yes {*}$args]
+}
+proc sdrblk::comp-meter-graphic-eq {name args} {
+    return [sdrblk::block $name -type stub -suffix meter-graphic-eq -enable yes {*}$args]
+}
+proc sdrblk::comp-meter-leveler {name args} {
+    return [sdrblk::block $name -type stub -suffix meter-leveler -enable yes {*}$args]
+}
+proc sdrblk::comp-meter-speech-processor {name args} {
+    return [sdrblk::block $name -type stub -suffix meter-speech-processor -enable yes {*}$args]
+}
+proc sdrblk::comp-meter-compand {name args} {
+    return [sdrblk::block $name -type stub -suffix meter-compand -enable yes {*}$args]
+}
+proc sdrblk::comp-meter-power {name args} {
+    return [sdrblk::block $name -type stub -suffix meter-power -enable yes {*}$args]
+}

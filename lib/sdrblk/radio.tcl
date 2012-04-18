@@ -94,23 +94,32 @@ proc sdrblk::radio-rx {name args} {
 }
 
 proc sdrblk::radio-rx-rf {name args} {
-    #  gain iq-swap spectrum-semi-raw noiseblanker meter-pre-conv iq-delay iq-correct
-    set seq {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-spectrum-semi-raw sdrblk::comp-iq-delay sdrblk::comp-iq-correct}
-    set req {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-spectrum sdrblk::comp-iq-delay sdrblk::comp-iq-correct}
+    set seq {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-iq-delay sdrblk::comp-spectrum-semi-raw}
+    set req {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-iq-delay sdrblk::comp-spectrum}
+    # lappend seq sdrblk::comp-noiseblanker sdrblk::comp-sdrom-noiseblanker
+    # lappend req sdrblk::comp-noiseblanker
+    lappend seq sdrblk::comp-iq-correct
+    lappend req sdrblk::comp-iq-correct
     return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::radio-rx-if {name args} {
-    # -sequence {spec_pre_filt lo-mixer filter-overlap-save rxmeter_post_filt spec_post_filt}
     set seq {sdrblk::comp-spectrum-pre-filt sdrblk::comp-lo-mixer sdrblk::comp-filter-overlap-save sdrblk::comp-meter-post-filt sdrblk::comp-spectrum-post-filt}
     set req {sdrblk::comp-spectrum sdrblk::comp-lo-mixer sdrblk::comp-filter-overlap-save sdrblk::comp-meter}
     return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::radio-rx-af {name args} {
-    # set {compand agc rxmeter_post_agc spec_post_agc sdrblk::comp-demod rx_squelch spottone graphiceq spec_post_det}
-    set seq {sdrblk::comp-agc sdrblk::comp-meter-post-agc sdrblk::comp-spectrum-post-agc sdrblk::comp-demod sdrblk::comp-gain}
-    set req {sdrblk::comp-agc sdrblk::comp-meter sdrblk::comp-spectrum sdrblk::comp-demod sdrblk::comp-gain}
+    set seq {}
+    set req {}
+    # lappend seq sdrblk::comp-compand
+    # lappend req sdrblk::comp-compand
+    lappend seq sdrblk::comp-agc sdrblk::comp-meter-post-agc sdrblk::comp-spectrum-post-agc sdrblk::comp-demod
+    lappend req sdrblk::comp-agc sdrblk::comp-meter sdrblk::comp-spectrum sdrblk::comp-demod
+    # lappend seq sdrblk::comp-rx-squelch sdrblk::comp-spottone sdrblk::comp-graphic-eq
+    # lappend req sdrblk::comp-rx-squelch sdrblk::comp-spottone sdrblk::comp-graphic-eq
+    lappend seq sdrblk::comp-gain
+    lappend req sdrblk::comp-gain
     return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $req {*}$args]
 }
 
@@ -120,26 +129,44 @@ proc sdrblk::radio-tx {name args} {
 }
 
 proc sdrblk::radio-tx-af {name args} {
-    # -sequence {sdrblk::comp-gain sdrblk::comp-real sdrblk::comp-waveshape meter_tx_wavs sdrblk::comp-dc-block tx_squelch grapiceq meter_tx_eqtap
-    #		sdrblk::comp-leveler meter_tx_leveler sdrblk::comp-speech_processor meter_tx_comp sdrbk::comp-modulate}
+    set seq {sdrblk::comp-gain}
+    set req {sdrblk::comp-gain}
+    # lappend seq sdrblk::comp-real sdrblk::comp-waveshape
+    # lappend req sdrblk::comp-real sdrblk::comp-waveshape
+    lappend seq sdrblk::comp-meter-waveshape
+    lappend req sdrblk::comp-meter
+    # lappend seq sdrblk::comp-dc-block sdrblk::comp-tx-squelch sdrblk::comp-grapic-eq
+    # lappend req sdrblk::comp-dc-block sdrblk::comp-tx-squelch sdrblk::comp-grapic-eq
+    lappend seq sdrblk::comp-meter-graphic-eq sdrblk::comp-leveler sdrblk::comp-meter-leveler
+    lappend req sdrblk::comp-meter sdrblk::comp-leveler
+    # lappend seq sdrblk::comp-speech-processor
+    # lappend req sdrblk::comp-speech-processor
+    lappend seq sdrblk::comp-meter-speech-processor
+    lappend req sdrblk::comp-meter
+    # lappend seq sdrblk::comp-modulate
+    # lappend req sdrblk::comp-modulate
+
     # a lot of this is voice specific
     # CW only has a keyed oscillator feeding into the LO mixer
     # hw-softrock-dg8saq should have an option to poll keystate and insert as midi
     # hw-softrock-dg8saq should by default convert midi control to dg8saq, both directions
-    set seq {sdrblk::comp-gain sdrblk::comp-leveler sdrblk::comp-modulate}
-    return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $seq {*}$args]
+    return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::radio-tx-if {name args} {
-    # -sequence {sdrblk::comp-filter-overlap-save sdrblk::comp-compander meter_tx_compander spectrum_tx sdrblk::comp-lo-mixer}
-    set seq {sdrblk::comp-filter-overlap-save sdrblk::comp-lo-mixer}
-    return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $seq {*}$args]
+    set seq {sdrblk::comp-filter-overlap-save}
+    set req {sdrblk::comp-filter-overlap-save}
+    # lappend seq sdrblk::comp-compand
+    # lappend req sdrblk::comp-compand
+    lappend seq sdrblk::comp-meter-compand sdrblk::comp-spectrum-tx sdrblk::comp-lo-mixer
+    lappend req sdrblk::comp-meter sdrblk::comp-spectrum sdrblk::comp-lo-mixer
+    return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::radio-tx-rf {name args} {
-    # -sequence { sdrblk::comp-iq-balance sdrblk::comp-gain meter_tx_power}
-    set seq {sdrblk::comp-iq-balance sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $seq {*}$args]
+    set seq {sdrblk::comp-iq-balance sdrblk::comp-gain sdrblk::comp-meter-power}
+    set req {sdrblk::comp-iq-balance sdrblk::comp-gain sdrblk::comp-meter}
+    return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $req {*}$args]
 }
 
 proc sdrblk::keyer {name args} {
