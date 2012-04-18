@@ -56,9 +56,10 @@ snit::type sdrblk::block {
     ##
     typevariable verbose -array {
 	construct 0 configure 0 destroy 0 require 0
-	connect 0 enable 0 activate 0
+	dispatch 0
+	enable 0 activate 0 connect 0 disconnect 0
 	controls 0 controlget 0 control 0
-	inport 0 outport 0
+	inport 0 outport 0 source 0 sink 0
     }
 
     ##
@@ -94,9 +95,14 @@ snit::type sdrblk::block {
     # -type defines the type of block
     option -type -readonly yes -type {snit::stringtype -regexp {^(jack|sequence|alternate|stub)$}}
 
+    # make a consistent verbose message
+    method verbose {msg} {
+	puts "block $options(-name) $msg"
+    }
+
     # send a configuration option to the type's configuration handler
     method dispatch {opt val} {
-	if {$verbose(configure)} { puts "block $options(-name) $self configure $opt {$val} dispatched to $options(-type)" }
+	if {$verbose(dispatch)} { $self verbose "configure $opt {$val} dispatched to $options(-type)" }
 	$self $options(-type) configure $opt $val
     }
 
@@ -119,7 +125,7 @@ snit::type sdrblk::block {
     option -require -default {}
 
     # -enable make this component enabled or disabled
-    option -enable -default no -configuremethod dispatch
+    option -enable -default 0 -configuremethod dispatch
 
     # -activate make this component activated or deactivated
     option -activate -default no -configuremethod dispatch
@@ -131,11 +137,11 @@ snit::type sdrblk::block {
     # to talk to the computational components
     method controls {} { return [$self control] }
     method control {args} {
-	if {$verbose(control)} { puts "block $options(-name) $self control {$args}" }
+	if {$verbose(control)} { $self verbose "control {$args}" }
 	return [::sdrblx::$options(-name) configure {*}$args]
     }
     method controlget {opt} {
-	if {$verbose(controlget)} { puts "block $options(-name) $self controlget $opt" }
+	if {$verbose(controlget)} { $self verbose "controlget $opt" }
 	return [::sdrblx::$options(-name) cget $opt]
     }
     
@@ -147,7 +153,11 @@ snit::type sdrblk::block {
     # filter the parts of this block
     method filter-parts {pred} {
 	set parts {}
-	foreach part [$self parts] { if {[{*}$pred $part]} { lappend parts $part } }
+	foreach part [$self parts] {
+	    if {[{*}$pred $part]} {
+		lappend parts $part
+	    }
+	}
 	return $parts
     }
     # is this part an input part
@@ -217,6 +227,10 @@ snit::type sdrblk::block {
 	}
     }
 
+    method do-connect {} { foreach action $data(connect) { {*}$action } }
+	
+    method do-disconnect {} { foreach action $data(disconnect) { {*}$action } }
+	
     method connection {connect ins outs} {
 	lassign [match-ins-outs $ins $outs] ins outs
 	if {[llength $ins] != [llength $outs]} {
@@ -226,20 +240,25 @@ snit::type sdrblk::block {
 	    set connection [list sdrkit::jack -server $options(-server) connect $i $o]
 	    set disconnection [list sdrkit::jack -server $options(-server) disconnect $i $o]
 	    if {$connect eq {connect}} {
+		if {$verbose(connect)} { $self verbose "connect: adding {$connection}" }
 		lappend data(connect) $connection
 		lappend data(disconnect) $disconnection
 		if {$options(-activate)} {
+		    if {$verbose(connect)} { $self verbose "connect: eval {$connection}" }
 		    {*}$connection
 		}
 	    } else {
+		if {$verbose(disconnect)} { $self verbose "connect: removing {$connection}" }
 		lremove data(connect) $connection
 		lremove data(disconnect) $disconnection
 		if {$options(-activate)} {
+		    if {$verbose(disconnect)} { $self verbose "connect: eval {$disconnection}" }
 		    {*}$disconnection
 		}
 	    }
 	}
     }
+
     method connect {ins outs} { $self connection connect $ins $outs }
     method disconnect {ins outs} { $self connection disconnect $ins $outs }
 
@@ -299,21 +318,23 @@ snit::type sdrblk::block {
 
     method {jack configure} {opt val} {
 	set old $options($opt)
-	if {$verbose(configure)} { puts "block $options(-name) $self jack configure $opt {$val} was {$old}" }
+	if {$verbose(configure)} { $self verbose "jack configure $opt {$val} was {$old}" }
 	switch -- $opt {
 	    -inport {
-		if {$verbose(inport)} { puts "block $options(-name) $self jack configure $opt {$val} was {$old}" }
-		set options($opt) $val
-		if {$options(-enable)} {
-		    if {$val ne {}} { $self connect $val [$self jack ports * input] }
-		    $self configure -outport [$self jack ports * output]
-		    if {$old ne {}} { $self disconnect $old [$self jack ports * input] }
-		} else {
-		    $self configure -outport $val
+		if {$verbose(inport)} { $self verbose "jack configure $opt {$val} was {$old}" }
+		if {$val ne $old} {
+		    set options($opt) $val
+		    if {$options(-enable)} {
+			if {$val ne {}} { $self connect $val [$self jack ports * input] }
+			$self configure -outport [$self jack ports * output]
+			if {$old ne {}} { $self disconnect $old [$self jack ports * input] }
+		    } else {
+			$self configure -outport $val
+		    }
 		}
 	    }
 	    -enable {
-		if {$verbose(enable)} { puts "block $options(-name) $self jack configure $opt {$val} was {$old}" }
+		if {$verbose(enable)} { $self verbose "jack configure $opt {$val} was {$old}" }
 		set options($opt) $val
 		if {$val && ! $old} { # enable
 		    $self connect $options(-inport) [$self jack ports * input]
@@ -326,11 +347,11 @@ snit::type sdrblk::block {
 		}
 	    }
 	    -activate {
-		if {$verbose(activate)} { puts "block $options(-name) $self jack configure $opt {$val} was {$old}" }
+		if {$verbose(activate)} { $self verbose "jack configure $opt {$val} was {$old}" }
 		set options($opt) $val
 		if {$val && ! $old} { # activate
 		    ::sdrblx::$options(-name) activate
-		    foreach conn $data(connect) { {*}$conn }
+		    after 10 [mymethod do-connect]
 		} elseif {$old && ! $val} { # deactivate
 		    # foreach disconn $data(disconnect) { {*}$discon }; # unnecessary?
 		    ::sdrblx::$options(-name) deactivate
@@ -339,7 +360,10 @@ snit::type sdrblk::block {
 		}
 	    }
 	    -outport {
-		$self stub configure $opt $val
+		if {$verbose(outport)} { $self verbose "jack configure $opt {$val} was {$old}" }
+		if {$val ne $old} {
+		    $self stub configure $opt $val
+		}
 	    }
 	    -factory -
 	    -ports { set options($opt) $val }
@@ -389,11 +413,11 @@ snit::type sdrblk::block {
 
     method {alternate configure} {opt val} {
 	set old $options($opt)
-	if {$verbose(configure)} { puts "block $options(-name) $self alternate configure $opt {$val} was {$old}" }
+	if {$verbose(configure)} { $self verbose "alternate configure $opt {$val} was {$old}" }
 	switch -- $opt {
 	    -inport {
 		set options($opt) $val
-		if {$verbose(inport)} { puts "block $options(-name) $self alternate configure $opt {$val} was {$old}" }
+		if {$verbose(inport)} { $self verbose "alternate configure $opt {$val} was {$old}" }
 		if {$options(-alternate) ne {}} {
 		    $options(-alternate) configure $opt $val
 		} else {
@@ -401,18 +425,23 @@ snit::type sdrblk::block {
 		}
 	    }
 	    -outport {
-		if {$verbose(outport)} { puts "block $options(-name) $self alternate configure $opt {$val} was {$old}" }
+		if {$verbose(outport)} { $self verbose "alternate configure $opt {$val} was {$old}" }
 		$self stub configure $opt $val
 	    }
 	    -activate {
-		if {$verbose(activate)} { puts "block $options(-name) $self alternate configure $opt {$val} was {$old}" }
+		if {$verbose(activate)} { $self verbose "alternate configure $opt {$val} was {$old}" }
 		set options($opt) $val
 		if {$options(-alternate) ne {} && [$options(-alternate) cget -enable]} {
 		    $options(-alternate) configure $opt $val
 		}
+		if {$val && ! $old} { # activate
+		    after 10 [mymethod do-connect]
+		} elseif {$old && ! $val} { # deactivate
+		    after 10 [mymethod do-disconnect]
+		}
 	    }
 	    -enable {
-		if {$verbose(enable)} { puts "block $options(-name) $self alternate configure $opt {$val} was {$old}" }
+		if {$verbose(enable)} { $self verbose "alternate configure $opt {$val} was {$old}" }
 		if { ! $old && $val} {
 		    set options($opt) $val
 		} else {
@@ -485,42 +514,55 @@ snit::type sdrblk::block {
     
     method {sequence configure} {opt val} {
 	set old $options($opt)
-	if {$verbose(configure)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
+	if {$verbose(configure)} { $self verbose "sequence configure $opt {$val} was {$old}" }
 	switch -- $opt {
 	    -inport {
-		if {$verbose(inport)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
-		set options($opt) $val
-		foreach part [$self input-parts] {
-		    $part configure -inport $val
+		if {$verbose(inport)} { $self verbose "sequence configure $opt {$val} was {$old}" }
+		if {$val ne $old} {
+		    set options($opt) $val
+		    foreach part [$self input-parts] {
+			$part configure -inport $val
+		    }
 		}
 	    }
 	    -outport {
-		if {$verbose(outport)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
-		set options($opt) $val
-		if {[$self outputs] ne {}} {
-		    foreach out [$self outputs] {
-			$out configure -inport $val
-		    }
-		} elseif {$data(super) ne {}} {
-		    $data(super) configure -outport $val
-		} elseif {$options(-sink) ne {}} {
-		    $self connect $val $options(-sink)
-		    if {$old ne {}} {
-			$self disconnect $old $options(-sink)
+		if {$verbose(outport)} { $self verbose "sequence configure $opt {$val} was {$old}" }
+		if {$val ne $old} {
+		    set options($opt) $val
+		    if {[$self outputs] ne {}} {
+			foreach out [$self outputs] {
+			    $out configure -inport $val
+			}
+		    } elseif {$data(super) ne {}} {
+			$data(super) configure -outport $val
+		    } elseif {$options(-sink) ne {}} {
+			$self connect $val $options(-sink)
+			if {$old ne {}} {
+			    $self disconnect $old $options(-sink)
+			}
 		    }
 		}
 	    }
 	    -activate {
-		if {$verbose(activate)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
+		if {$verbose(activate)} { $self verbose "sequence configure $opt {$val} was {$old}" }
 		set options($opt) $val
+		if {$val == $old} {
+		    error "$options(-name) configure $opt $val when options($opt) is $options($opt)"
+		}
 		foreach part [$self parts] {
 		    if {[$part cget -enable]} {
-			$part stub configure $opt $val
+			puts "[$part cget -name] is -enable [$part cget -enable]"
+			$part configure $opt $val
 		    }
+		}
+		if {$val && ! $old} { # activate
+		    after 10 [mymethod do-connect]
+		} elseif {$old && ! $val} { # deactivate
+		    after 10 [mymethod do-disconnect]
 		}
 	    }
 	    -enable {
-		if {$verbose(enable)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
+		if {$verbose(enable)} { $self verbose "sequence configure $opt {$val} was {$old}" }
 		if { ! $old && $val} {
 		    set options($opt) $val
 		} else {
@@ -529,7 +571,7 @@ snit::type sdrblk::block {
 	    }
 	    -sequence { set options($opt) $val }
 	    -source {
-		if {$verbose(connect)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
+		if {$verbose(source)} { $self verbose "sequence configure $opt {$val} was {$old}" }
 		set options($opt) $val
 		if {$val ne {}} {
 		    foreach part [$self input-parts] {
@@ -538,7 +580,7 @@ snit::type sdrblk::block {
 		}
 	    }
 	    -sink {
-		if {$verbose(connect)} { puts "block $options(-name) $self sequence configure $opt {$val} was {$old}" }
+		if {$verbose(sink)} { $self verbose "sequence configure $opt {$val} was {$old}" }
 		set options($opt) $val
 		if {$options(-outport) ne {}} {
 		    $self connect $options(-outport) $val
@@ -567,15 +609,15 @@ snit::type sdrblk::block {
     }
     method {stub configure} {opt val} {
 	set old $options($opt)
-	if {$verbose(configure)} { puts "block $options(-name) $self stub configure $opt {$val} was {$old}" }
+	if {$verbose(configure)} { $self verbose "stub configure $opt {$val} was {$old}" }
 	switch -- $opt {
 	    -inport {
-		if {$verbose(inport)} { puts "block $options(-name) $self stub configure $opt {$val} was {$old}" }
+		if {$verbose(inport)} { $self verbose "stub configure $opt {$val} was {$old}" }
 		set options($opt) $val
 		$self configure -outport $val
 	    }
 	    -outport {
-		if {$verbose(outport)} { puts "block $options(-name) $self stub configure $opt {$val} was {$old}" }
+		if {$verbose(outport)} { $self verbose "stub configure $opt {$val} was {$old}" }
 		set options($opt) $val
 		if {[$self outputs] ne {}} {
 		    foreach out [$self outputs] {
@@ -586,18 +628,13 @@ snit::type sdrblk::block {
 		}
 	    }
 	    -enable {
-		if {$verbose(enable)} { puts "block $options(-name) $self stub configure $opt {$val} was {$old}" }
+		if {$verbose(enable)} { $self verbose "stub configure $opt {$val} was {$old}" }
 		set options($opt) $val
 	    }
 	    -activate {
-		if {$verbose(activate)} { puts "block $options(-name) $self stub configure $opt {$val} was {$old}" }
+		if {$verbose(activate)} { $self verbose "stub configure $opt {$val} was {$old}" }
 		if {$options(-enable)} {
 		    set options($opt) $val
-		}
-		if {[$self outputs] ne {}} {
-		    foreach out [$self outputs] {
-			$out configure $opt $val
-		    }
 		}
 	    }
 	    default {

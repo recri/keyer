@@ -17,9 +17,9 @@
 # 
 
 ##
-## panorama - combined spectrum, waterfall, and frequency display
+## panadapter - combined spectrum, waterfall, and frequency display
 ##
-package provide sdrblk::tk-panorama 1.0.0
+package provide sdrblk::tk-panadapter 1.0.0
 
 package require Tk
 package require snit
@@ -30,7 +30,7 @@ package require sdrblk::tk-spectrum
 package require sdrblk::tk-frequency
 package require sdrblk::capture
 
-snit::widgetadaptor sdrblk::tk-panorama {
+snit::widgetadaptor sdrblk::tk-panadapter {
     option -zoom 1.0
     option -scroll 0.0
     option -update {}
@@ -89,7 +89,7 @@ snit::widgetadaptor sdrblk::tk-panorama {
     
     method window-configure {w cw width height} {
 	if {$w ne $cw} return
-	# puts "panorama::window-configure $w $cw $width $height"
+	# puts "panadapter::window-configure $w $cw $width $height"
 	# puts "::capture::configure $w -size $width"
 	$capture configure -size $width
 	set srate [sdrkit::jack sample-rate]
@@ -103,7 +103,7 @@ snit::widgetadaptor sdrblk::tk-panorama {
     destructor  {
 	catch {$capture stop}
 	catch {$capture destroy}
-	# puts "tk-panorama destructor called - not destroying subwindows"
+	# puts "tk-panadapter destructor called - not destroying subwindows"
 	#destroy $waterfall
 	#destroy $spectrum
 	#destroy $frequency

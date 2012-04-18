@@ -16,20 +16,23 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::ui-panorama 1.0.0
+package provide sdrblk::ui-panadapter 1.0.0
 
 package require Tk
 package require snit
-package require sdrblk::tk-panorama
+package require sdrblk::tk-panadapter
 
-snit::widget sdrblk::ui-panorama {
+snit::widget sdrblk::ui-panadapter {
+
     option -polyphase 0
     option -pal 0
     option -min -160
     option -max 0
     option -connect {}
     option -server -default default -readonly true
-    
+    option -partof -readonly yes
+    option -control -readonly yes
+
     variable data -array {}
 
     method set-option {opt val} {
@@ -37,9 +40,19 @@ snit::widget sdrblk::ui-panorama {
 	$win.p configure $opt $val
     }
 
+    proc filter-options {losers opts} {
+	set new {}
+	foreach {name val} $opts {
+	    if {$name ni $losers} {
+		lappend new $name $val
+	    }
+	}
+	return $new
+    }
+
     constructor {args} {
 	$self configure {*}$args
-	pack [sdrblk::tk-panorama $win.p {*}[array get options]] -side top -fill both -expand true
+	pack [sdrblk::tk-panadapter $win.p {*}[filter-options {-partof -control} [array get options]]] -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
 	# polyphase spectrum control
 	pack [ttk::menubutton $win.m.s -textvar [myvar data(polyphase)] -menu $win.m.s.m] -side left

@@ -21,12 +21,23 @@ package provide sdrblk::radio-ui-notebook 1.0.0
 
 package require Tk
 package require snit
+package require tkcon
 
 package require sdrblk::ui-radio
 package require sdrblk::ui-tree
 package require sdrblk::ui-connections
+package require sdrblk::ui-panadapter
+
+# not a notebook anymore
 
 snit::type sdrblk::radio-ui-notebook {
+
+    variable data -array {
+	tree 0
+	connections 0
+	console 0
+	spectrum 0
+    }
 
     option -partof -readonly yes
     option -control -readonly yes
@@ -34,10 +45,47 @@ snit::type sdrblk::radio-ui-notebook {
     constructor {args} {
 	$self configure {*}$args
 	set options(-control) [$options(-partof) cget -control]
-	pack [ttk::notebook .t] -side top -fill both -expand true
-	.t add [sdrblk::ui-radio .t.v -partof $self -control $options(-control)] -text Radio
-	.t add [sdrblk::ui-connections .t.c -partof $self -control $options(-control)] -text Connections
-	.t add [sdrblk::ui-tree .t.t -partof $self -control $options(-control)] -text Tree
+	menu .menu -tearoff no
+	.menu add cascade -label File -menu .menu.file
+	menu .menu.file -tearoff no
+	.menu add cascade -label Edit -menu .menu.edit
+	menu .menu.edit -tearoff no
+	.menu add cascade -label View -menu .menu.view
+	menu .menu.view -tearoff no
+	foreach view {panadapter tree connections console} {
+	    .menu.view add checkbutton -label $view -variable [myvar data($view)] -command [mymethod view $view]
+	}
+	. configure -menu .menu
+	pack [sdrblk::ui-radio .radio -partof $self -control $options(-control)] -fill both -expand true
+    }
+
+    method widget {foo} {
+    }
+
+    method view {window} {
+	switch $window {
+	    console {
+		if {$data(console)} {
+		    tkcon show
+		    tkcon title sdrkit:console
+		} else {
+		    tkcon hide
+		}
+	    }
+	    default {
+		if { ! [winfo exists .$window]} {
+		    toplevel .$window
+		    pack [ui-$window .$window.t -partof $self -control $options(-control)] -fill both -expand true
+		    wm withdraw .$window
+		    wm title .$window sdrkit:$window
+		}
+		if {$data($window)} {
+		    wm deiconify .$window
+		} else {
+		    wm withdraw .$window
+		}
+	    }
+	}
     }
 	
     method repl {} { }

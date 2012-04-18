@@ -34,6 +34,7 @@ snit::widget sdrblk::ui-connections {
     option -partof -readonly yes
     option -control -readonly yes
     option -server -readonly yes -default default
+    option -defer-ms -default 100
 
     # delegate method * to treeview except {update}
     # delegate option * to treeview except {-partof -control}
@@ -71,9 +72,9 @@ snit::widget sdrblk::ui-connections {
 	install pop using menu $win.pop -tearoff no
 	$pop add checkbutton -label enable -variable [myvar data(pop-enabled)] -command [mymethod pop-enable]
 	$pop add checkbutton -label activate -variable [myvar data(pop-activated)] -command [mymethod pop-activate]
-	$pop add separator
-	$pop add command -label open -command [mymethod pop-open]
-	$pop add command -label collapse -command [mymethod pop-collapse]
+	#$pop add separator
+	#$pop add command -label open -command [mymethod pop-open]
+	#$pop add command -label collapse -command [mymethod pop-collapse]
 	$pop add separator
 	$pop add command -label {open all} -command [mymethod pop-open-all]
 	$pop add command -label {collapse all} -command [mymethod pop-collapse-all]
@@ -133,6 +134,10 @@ snit::widget sdrblk::ui-connections {
 	}
     }
 	
+    method defer-update {} {
+	after $options(-defer-ms) [mymethod update]
+    }
+
     method update {} {
 	set data(ports) [sdrkit::jack -server $options(-server) list-ports]
 
@@ -185,6 +190,7 @@ snit::widget sdrblk::ui-connections {
 	    set idict [dict get $data(items) $item]
 	    if {[dict get $idict type] in {audio midi}} {
 		if {[dict get $idict direction] eq {output}} {
+		    # puts "$item has connections [dict get $idict connections]"
 		    foreach o [dict get $idict connections] {
 			puts "$item connects to $o"
 		    }
@@ -196,7 +202,7 @@ snit::widget sdrblk::ui-connections {
     }
 
     method defer-update-canvas {} {
-	after 10 [mymethod update-canvas]
+	after $options(-defer-ms) [mymethod update-canvas]
     }
 
     method update-canvas {} {
@@ -224,7 +230,7 @@ snit::widget sdrblk::ui-connections {
 	} else {
 	    $options(-control) disable $data(pop-item)
 	}
-	after 10 [mymethod update]
+	$self defer-update
     }
 
     method pop-activate {} {
@@ -233,7 +239,7 @@ snit::widget sdrblk::ui-connections {
 	} else {
 	    $options(-control) deactivate $data(pop-item)
 	}
-	after 10 [mymethod update]
+	$self defer-update
     }
 
     method pop-configuration {} {
