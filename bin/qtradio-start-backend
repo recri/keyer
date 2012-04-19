@@ -55,8 +55,8 @@ if [ $XFI -eq 1 ]; then
     OHWDEV=$OBDEV
 fi
 
-echo "jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3"
-jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 > $LOG-jackd.log 2>&1 &
+echo "jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 -X raw"
+jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 -X raw > $LOG-jackd.log 2>&1 &
 sleep 1
 echo "softrock --jack $SI570 $IQ --samplerate $HWRATE"
 nohup softrock --jack $SI570 $IQ --samplerate $HWRATE > $LOG-softrock.log 2>&1 &
