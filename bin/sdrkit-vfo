@@ -27,10 +27,10 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require snit
 
-package require sdrblk::ui-vfo
+package require sdrui::vfo
 
 proc main {argv} {
-     pack [::sdrblk::ui-vfo .vfo {*}$argv] -fill both -expand true
+     pack [::sdrui::vfo .vfo {*}$argv] -fill both -expand true
 }
 
 main $argv

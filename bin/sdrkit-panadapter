@@ -18,17 +18,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# a simple test/demo script of the band-pass widget
-#
-
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require sdrblk::ui-band-pass
+package require sdrui::panadapter
 
 proc main {argv} {
-     pack [::sdrblk::ui-band-pass .bpf {*}$argv] -expand true -fill both
+    pack [::sdrui::panadapter .p {*}$argv] -fill both -expand true
+    wm title . sdrkit:panadapter
 }
 
 main $argv
