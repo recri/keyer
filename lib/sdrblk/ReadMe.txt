@@ -92,5 +92,8 @@ A block can be:
   So a block, which logically has one input port and one output port,
   may need to connect multiple input signals from upstream output
   ports, and multiple output signals to downstream input ports.
-
-  
+------------------------------------------------------------------------
+[ ] - enforce alternates, and make them work
+[ ] - implement parallel
+[ ] - implement split/join
+------------------------------------------------------------------------
