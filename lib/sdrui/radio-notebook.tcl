@@ -17,20 +17,20 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-ui-notebook 1.0.0
+package provide sdrui::radio-notebook 1.0.0
 
 package require Tk
 package require snit
 package require tkcon
 
-package require sdrblk::ui-radio
-package require sdrblk::ui-tree
-package require sdrblk::ui-connections
-package require sdrblk::ui-panadapter
+package require sdrui::radio
+package require sdrui::tree
+package require sdrui::connections
+package require sdrui::panadapter
 
 # not a notebook anymore
 
-snit::type sdrblk::radio-ui-notebook {
+snit::type sdrui::radio-notebook {
 
     variable data -array {
 	tree 0
@@ -56,7 +56,7 @@ snit::type sdrblk::radio-ui-notebook {
 	    .menu.view add checkbutton -label $view -variable [myvar data($view)] -command [mymethod view $view]
 	}
 	. configure -menu .menu
-	pack [sdrblk::ui-radio .radio -partof $self -control $options(-control)] -fill both -expand true
+	pack [sdrui::radio .radio -partof $self -control $options(-control)] -fill both -expand true
     }
 
     method widget {foo} {
@@ -75,7 +75,7 @@ snit::type sdrblk::radio-ui-notebook {
 	    default {
 		if { ! [winfo exists .$window]} {
 		    toplevel .$window
-		    pack [ui-$window .$window.t -partof $self -control $options(-control)] -fill both -expand true
+		    pack [$window .$window.t -partof $self -control $options(-control)] -fill both -expand true
 		    wm withdraw .$window
 		    wm title .$window sdrkit:$window
 		}

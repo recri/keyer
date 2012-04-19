@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,16 +17,27 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package provide sdr::radio-command-line 1.0.0
 
 package require snit
 
-package require sdrblk::radio
+snit::type sdrui::radio-command-line {
 
-proc main {argv} {
-    ::sdrblk::radio ::radio {*}$argv
-    ::radio repl
+    option -partof -readonly yes
+    option -control -readonly yes
+    
+    constructor {args} {
+	$self configure {*}$args
+	set options(-control) [$options(-partof) cget -control]
+    }
+
+    method repl {} {
+	set c $options(-control)
+	while {1} {
+	    puts -nonewline stderr "sdr> "
+	    if {[gets stdin input] < 0} break
+	    catch {eval $input} result
+	    puts stderr [string trim $result]
+	}
+    }
 }
-
-main $argv

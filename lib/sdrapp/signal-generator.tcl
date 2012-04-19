@@ -22,7 +22,7 @@
 # some oscillators and some noise
 #
 
-package provide sdrblk::signal-generator 1.0.0
+package provide sdrapp::signal-generator 1.0.0
 
 package require snit
 
@@ -64,29 +64,20 @@ snit::type sdrblk::signal-generator {
     }
 }
 
-proc sdrblk::sg {name args} {
-    set seq {sdrblk::sg-source sdrblk::sg-gain}
+proc sdrapp::sg {name args} {
+    set seq {sdrapp::sg-source sdrapp::sg-gain}
     return [sdrblk::block $name -type sequence -suffix sg -sequence $seq {*}$args]    
 }
-proc sdrblk::sg-source {name args} {
-    set par {sdrblk::sg-osc1 sdrblk::sg-osc2 sdrblk::sg-noise sdrblk::sg-iq-noise}
+proc sdrapp::sg-source {name args} {
+    set par {sdrapp::sg-osc1 sdrapp::sg-osc2 sdrblk::comp-noise sdrblk::comp-iq-noise}
     return [sdrblk::block $name -type parallel -suffix src -parallel $par {*}$args]
 }
-proc sdrblk::sg-osc1 {name args} {
-    set seq {sdrblk::comp-oscillator sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix osc1 -sequence $seq -require $seq {*}$args]
+proc sdrapp::sg-osc1 {name args} {
+    set seq {sdrblk::comp-oscillator}
+    return [sdrblk::block $name -type jack -suffix osc1 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
 }
 proc sdrblk::sg-osc1 {name args} {
-    set seq {sdrblk::comp-oscillator sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix osc2 -sequence $seq -require $seq {*}$args]
-}
-proc sdrblk::sg-noise {name args} {
-    set seq [sdrblk::comp-noise sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix noise -sequence $seq -require $seq {*}$args]
-}
-proc sdrblk::sg-iq-noise {name args} {
-    set seq [sdrblk::comp-iq-noise sdrblk::comp-gain}
-    return [sdrblk::block $name -type sequence -suffix iq-noise -sequence $seq -require $seq {*}$args]
+    return [sdrblk::block $name -type jack -suffix osc2 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
 }
 
 if {0} {

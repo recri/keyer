@@ -1,4 +1,3 @@
-# -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
@@ -16,28 +15,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
+all:: pkgIndex.tcl
 
-package provide sdrblk::radio-ui-command-line 1.0.0
+clean::
+	rm -f *~
 
-package require snit
+all-clean:: clean
+	rm -f pkgIndex.tcl
 
-snit::type sdrblk::radio-ui-command-line {
+pkgIndex.tcl: $(wildcard *.so) $(filter-out pkgIndex.tcl, $(wildcard *.tcl))
+	echo 'pkg_mkIndex .' | tclsh
 
-    option -partof -readonly yes
-    option -control -readonly yes
-    
-    constructor {args} {
-	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
-    }
-
-    method repl {} {
-	set c $options(-control)
-	while {1} {
-	    puts -nonewline stderr "sdr> "
-	    if {[gets stdin input] < 0} break
-	    catch {eval $input} result
-	    puts stderr [string trim $result]
-	}
-    }
-}

@@ -17,16 +17,16 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio 1.0.0
+package provide sdrapp::radio 1.0.0
 
 package require snit
 
 package require sdrblk::radio-control
 package require sdrblk::block
 
-namespace eval sdrblk {}
+namespace eval sdrapp {}
 
-snit::type sdrblk::radio {
+snit::type sdrapp::radio {
     component control
     component rx
     component tx
@@ -57,21 +57,21 @@ snit::type sdrblk::radio {
 	install control using ::sdrblk::radio-control %AUTO% -partof $self
 	set options(-control) $control
 	if {$options(-rx)} {
-	    install rx using ::sdrblk::radio-rx %AUTO% -partof $self -source $options(-rx-source) -sink $options(-rx-sink)
+	    install rx using ::sdrapp::radio-rx %AUTO% -partof $self -source $options(-rx-source) -sink $options(-rx-sink)
 	}
 	if {$options(-tx)} {
-	    install tx using ::sdrblk::radio-tx %AUTO% -partof $self -source $options(-tx-source) -sink $options(-tx-sink)
+	    install tx using ::sdrapp::radio-tx %AUTO% -partof $self -source $options(-tx-source) -sink $options(-tx-sink)
 	}
 	if {$options(-keyer)} {
-	    install keyer using sdrblk::keyer %AUTO% -partof $self -source $options(-keyer-source) -sink $options(-keyer-sink)
+	    install keyer using sdrapp::keyer %AUTO% -partof $self -source $options(-keyer-source) -sink $options(-keyer-sink)
 	}
 	if {$options(-hw)} {
 	    package require sdrblk::radio-hw-$options(-hw-type)
 	    install hw using ::sdrblk::radio-hw-$options(-hw-type) %AUTO% -partof $self
 	}
 	if {$options(-ui)} {
-	    package require sdrblk::radio-ui-$options(-ui-type)
-	    install ui using ::sdrblk::radio-ui-$options(-ui-type) %AUTO% -partof $self
+	    package require sdrui::radio-$options(-ui-type)
+	    install ui using ::sdrui::radio-$options(-ui-type) %AUTO% -partof $self
 	}
     }
 
@@ -88,12 +88,12 @@ snit::type sdrblk::radio {
     }
 }
 
-proc sdrblk::radio-rx {name args} {
-    set pipe {sdrblk::radio-rx-rf sdrblk::radio-rx-if sdrblk::radio-rx-af}
+proc sdrapp::radio-rx {name args} {
+    set pipe {sdrapp::radio-rx-rf sdrapp::radio-rx-if sdrapp::radio-rx-af}
     return [sdrblk::block $name -type sequence -suffix rx -sequence $pipe {*}$args]
 }
 
-proc sdrblk::radio-rx-rf {name args} {
+proc sdrapp::radio-rx-rf {name args} {
     set seq {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-iq-delay sdrblk::comp-spectrum-semi-raw}
     set req {sdrblk::comp-gain sdrblk::comp-iq-swap sdrblk::comp-iq-delay sdrblk::comp-spectrum}
     # lappend seq sdrblk::comp-noiseblanker sdrblk::comp-sdrom-noiseblanker
@@ -103,13 +103,13 @@ proc sdrblk::radio-rx-rf {name args} {
     return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $req {*}$args]
 }
 
-proc sdrblk::radio-rx-if {name args} {
+proc sdrapp::radio-rx-if {name args} {
     set seq {sdrblk::comp-spectrum-pre-filt sdrblk::comp-lo-mixer sdrblk::comp-filter-overlap-save sdrblk::comp-meter-post-filt sdrblk::comp-spectrum-post-filt}
     set req {sdrblk::comp-spectrum sdrblk::comp-lo-mixer sdrblk::comp-filter-overlap-save sdrblk::comp-meter}
     return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $req {*}$args]
 }
 
-proc sdrblk::radio-rx-af {name args} {
+proc sdrapp::radio-rx-af {name args} {
     set seq {}
     set req {}
     # lappend seq sdrblk::comp-compand
@@ -123,12 +123,12 @@ proc sdrblk::radio-rx-af {name args} {
     return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $req {*}$args]
 }
 
-proc sdrblk::radio-tx {name args} {
-    set seq {sdrblk::radio-tx-af sdrblk::radio-tx-if sdrblk::radio-tx-rf}
+proc sdrapp::radio-tx {name args} {
+    set seq {sdrapp::radio-tx-af sdrapp::radio-tx-if sdrapp::radio-tx-rf}
     return [sdrblk::block $name -type sequence -suffix tx -sequence $seq {*}$args]
 }
 
-proc sdrblk::radio-tx-af {name args} {
+proc sdrapp::radio-tx-af {name args} {
     set seq {sdrblk::comp-gain}
     set req {sdrblk::comp-gain}
     # lappend seq sdrblk::comp-real sdrblk::comp-waveshape
@@ -153,7 +153,7 @@ proc sdrblk::radio-tx-af {name args} {
     return [sdrblk::block $name -type sequence -suffix af -sequence $seq -require $req {*}$args]
 }
 
-proc sdrblk::radio-tx-if {name args} {
+proc sdrapp::radio-tx-if {name args} {
     set seq {sdrblk::comp-filter-overlap-save}
     set req {sdrblk::comp-filter-overlap-save}
     # lappend seq sdrblk::comp-compand
@@ -163,13 +163,13 @@ proc sdrblk::radio-tx-if {name args} {
     return [sdrblk::block $name -type sequence -suffix if -sequence $seq -require $req {*}$args]
 }
 
-proc sdrblk::radio-tx-rf {name args} {
+proc sdrapp::radio-tx-rf {name args} {
     set seq {sdrblk::comp-iq-balance sdrblk::comp-gain sdrblk::comp-meter-power}
     set req {sdrblk::comp-iq-balance sdrblk::comp-gain sdrblk::comp-meter}
     return [sdrblk::block $name -type sequence -suffix rf -sequence $seq -require $req {*}$args]
 }
 
-proc sdrblk::keyer {name args} {
+proc sdrapp::keyer {name args} {
     set req {sdrblk::comp-keyer}
     set seq {sdrblk::comp-keyer-debounce sdrblk::comp-keyer-iambic sdrblk::comp-keyer-ptt sdrblk::comp-keyer-tone}
     return [sdrblk::block $name -type sequence -suffix keyer -sequence $seq -require $req {*}$args]

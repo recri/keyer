@@ -17,12 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::ui-tree 1.0.0
+package provide sdrui::tree 1.0.0
 
 package require Tk
 package require snit
 
-snit::widget sdrblk::ui-tree {
+snit::widget sdrui::tree {
     option -partof -readonly yes
     option -control -readonly yes
     

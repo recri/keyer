@@ -20,12 +20,12 @@
 ## frequency display panel
 ##
 
-package provide sdrblk::tk-frequency 1.0.0
+package provide sdrui::tk-frequency 1.0.0
 
 package require Tk
 package require snit
 
-snit::widgetadaptor sdrblk::tk-frequency {
+snit::widgetadaptor sdrui::tk-frequency {
     option -offset -default 0.0 -configuremethod handle-option
     option -scale -default 1.0 -configuremethod handle-option
     option -height 50

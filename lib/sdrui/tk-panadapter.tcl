@@ -19,18 +19,18 @@
 ##
 ## panadapter - combined spectrum, waterfall, and frequency display
 ##
-package provide sdrblk::tk-panadapter 1.0.0
+package provide sdrui::tk-panadapter 1.0.0
 
 package require Tk
 package require snit
 
 package require sdrkit::jack
-package require sdrblk::tk-waterfall
-package require sdrblk::tk-spectrum
-package require sdrblk::tk-frequency
+package require sdrui::tk-waterfall
+package require sdrui::tk-spectrum
+package require sdrui::tk-frequency
 package require sdrblk::capture
 
-snit::widgetadaptor sdrblk::tk-panadapter {
+snit::widgetadaptor sdrui::tk-panadapter {
     option -zoom 1.0
     option -scroll 0.0
     option -update {}
@@ -116,9 +116,9 @@ snit::widgetadaptor sdrblk::tk-panadapter {
     constructor {args} {
 	installhull using ttk::panedwindow -orient vertical
 	$self configure {*}$args
-	install spectrum using sdrblk::tk-spectrum $win.s
-	install frequency using sdrblk::tk-frequency $win.f
-	install waterfall using sdrblk::tk-waterfall $win.w
+	install spectrum using sdrui::tk-spectrum $win.s
+	install frequency using sdrui::tk-frequency $win.f
+	install waterfall using sdrui::tk-waterfall $win.w
 	install capture using sdrblk::capture %AUTO% -type spectrum -server $options(-server) -period $options(-period) -size $options(-size) -update [mymethod update]
 	$hull add $win.s -weight 1
 	$hull add $win.f -weight 0

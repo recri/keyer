@@ -26,7 +26,7 @@
 ## it should be no problem to convolve a bandpass with
 ## a bandstop or two to notch something out.
 ##
-package provide sdrblk::ui-band-pass 1.0.0
+package provide sdrui::band-pass 1.0.0
 
 package require Tk
 package require snit
@@ -39,7 +39,7 @@ package require sdrkit::filter-fir
 package require sdrkit::window
 package require sdrkit::fftw
 
-snit::widget sdrblk::ui-band-pass {
+snit::widget sdrui::band-pass {
     option -server default
     option -name bandpass
     option -filter-length 513
@@ -65,7 +65,7 @@ snit::widget sdrblk::ui-band-pass {
 
     variable data -array {
 	old-filter-length 0
-	fftw ::ui-band-pass::fftw
+	fftw ::sdrui::band-pass-fftw
 	coeffs {}
 	filter {}
 	busy 0

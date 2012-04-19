@@ -24,13 +24,13 @@
 # should show band plans for amateur bands
 #
 
-package provide sdrblk::band-data 1.0
+package provide sdrui::band-data 1.0
 
 package require snit
 
-namespace eval sdrblk {}
+namespace eval sdrui {}
 
-namespace eval sdrblk::band-data {
+namespace eval sdrui::band-data {
     ##
     ## create the dictionary
     ##
@@ -326,10 +326,10 @@ namespace eval sdrblk::band-data {
 }
 
 
-snit::type sdrblk::band-data {
+snit::type sdrui::band-data {
     variable data 
 
-    constructor {args} { set data ${::sdrblk::band-data::data} }
+    constructor {args} { set data ${::sdrui::band-data::data} }
     method get {args} { return [dict get $data {*}$args] }
     method ranges {} { return [$self get ranges] }
     method range {range} { return [$self get ranges $range] }
@@ -350,10 +350,10 @@ snit::type sdrblk::band-data {
     method hertz {args} {
 	switch [llength $args] {
 	    0 { return {} }
-	    1 { return [::sdrblk::band-data::hertz [lindex $args 0]] }
+	    1 { return [::sdrui::band-data::hertz [lindex $args 0]] }
 	    default {
 		set range {}
-		foreach f $args { lappend range [::sdrblk::band-data::hertz $f] }
+		foreach f $args { lappend range [::sdrui::band-data::hertz $f] }
 		return $range
 	    }
 	}

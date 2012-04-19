@@ -22,17 +22,17 @@
 # and a band selector
 #
 
-package provide sdrblk::ui-vfo 1.0
+package provide sdrui::vfo 1.0
 
 package require Tk
 package require snit
 
-package require sdrblk::ui-dial
-package require sdrblk::ui-freq-readout
-package require sdrblk::ui-band-select
-package require sdrblk::band-data
+package require sdrui::dial
+package require sdrui::freq-readout
+package require sdrui::band-select
+package require sdrui::band-data
 
-snit::widget sdrblk::ui-vfo {
+snit::widget sdrui::vfo {
     component bands
     component readout
     component dial
@@ -80,10 +80,10 @@ snit::widget sdrblk::ui-vfo {
     }
 
     constructor {args} {
-	install bands using sdrblk::band-data %AUTO%
-	install readout using sdrblk::ui-freq-readout $win.readout
-	install dial using sdrblk::ui-dial $win.dial -command [mymethod turned]
-	install bandselect using ::sdrblk::ui-band-select $win.band-select -command [mymethod band-select]
+	install bands using sdrui::band-data %AUTO%
+	install readout using sdrui::freq-readout $win.readout
+	install dial using sdrui::dial $win.dial -command [mymethod turned]
+	install bandselect using ::sdrui::band-select $win.band-select -command [mymethod band-select]
 	pack $win.readout -side top
 	pack [ttk::separator $win.sep1 -orient horizontal] -side top -fill x
 	pack $win.dial -side top -expand true -fill both

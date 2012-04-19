@@ -16,13 +16,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::ui-panadapter 1.0.0
+package provide sdrui::panadapter 1.0.0
 
 package require Tk
 package require snit
-package require sdrblk::tk-panadapter
+package require sdrui::tk-panadapter
 
-snit::widget sdrblk::ui-panadapter {
+snit::widget sdrui::panadapter {
 
     option -polyphase 0
     option -pal 0
@@ -52,7 +52,7 @@ snit::widget sdrblk::ui-panadapter {
 
     constructor {args} {
 	$self configure {*}$args
-	pack [sdrblk::tk-panadapter $win.p {*}[filter-options {-partof -control} [array get options]]] -side top -fill both -expand true
+	pack [sdrui::tk-panadapter $win.p {*}[filter-options {-partof -control} [array get options]]] -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
 	# polyphase spectrum control
 	pack [ttk::menubutton $win.m.s -textvar [myvar data(polyphase)] -menu $win.m.s.m] -side left

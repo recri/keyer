@@ -1,6 +1,8 @@
 * Web site for distribution and documentation
   It looks like easy web site management has moved off the allocated
   server model and into the cloud.
+  The idea is to provide a one-stop location where the ready-to-go
+  packaged versions of sdrkit are hosted.
 ** heroku.com
    where you upload a complete web application as a git repo and it
    compiles the content to a slug that gets loaded on demand.
@@ -11,3 +13,8 @@
 ** zerigo.com
    where DNS is maintained for free up to 50,000 queries per month.
    No porn.
+** Amazon S3 for asset storage
+   Rather than bundling large downloadable files, executables and
+   video tutorials, with the web application, it's suggested that they
+   be stored on Amazon S3 and the download requests be forwarded to
+   there for satisfaction.

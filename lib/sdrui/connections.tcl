@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::ui-connections 1.0.0
+package provide sdrui::connections 1.0.0
 
 package require Tk
 package require snit
 package require sdrkit::jack
 
-snit::widget sdrblk::ui-connections {
+snit::widget sdrui::connections {
     component sbl
     component lft
     component ctr
@@ -41,7 +41,8 @@ snit::widget sdrblk::ui-connections {
 
     variable data -array {
 	items {}
-	ports {}
+	update-pending 0
+	update-canvas-pending 0
 	pop-item {}
 	pop-enabled 0
 	pop-activated 0
@@ -96,13 +97,13 @@ snit::widget sdrblk::ui-connections {
     method {scroll set} {who args} {
 	#puts "$self scroll set $who {$args}"
 	$win.$who set {*}$args
-	$self update-canvas
+	$self defer-update-canvas
     }
 
     method {scroll yview} {who args} {
 	#puts "$self scroll yview {$args}"
 	$win.$who yview {*}$args
-	$self update-canvas
+	$self defer-update-canvas
     }
 
     proc find-parent {child items} {
@@ -135,12 +136,15 @@ snit::widget sdrblk::ui-connections {
     }
 	
     method defer-update {} {
-	after $options(-defer-ms) [mymethod update]
+	if {$data(update-pending) == 0} {
+	    set data(update-pending) 1
+	    after $options(-defer-ms) [mymethod update]
+	}
     }
 
     method update {} {
-	set data(ports) [sdrkit::jack -server $options(-server) list-ports]
-
+	# insert system playback, capture, and midi ports
+	set ports [sdrkit::jack -server $options(-server) list-ports]
 	foreach item [$options(-control) list] {
 	    set enabled [string is true -strict [$options(-control) ccget $item -enable]]
 	    set activated [string is true -strict [$options(-control) ccget $item -activate]]
@@ -169,7 +173,7 @@ snit::widget sdrblk::ui-connections {
 		    $win.$w tag configure $item -foreground grey -background white
 		}
 	    }
-	    foreach port [find-ports $item $data(ports)] {
+	    foreach port [find-ports $item $ports] {
 		lassign $port pitem pdict
 		if { ! [dict exists $data(items) $pitem]} {
 		    set pname [lindex [split $pitem :] 1]
@@ -184,40 +188,71 @@ snit::widget sdrblk::ui-connections {
 		}
 	    }
 	}
-
+	set data(connections) {}
 	foreach item [dict keys $data(items)] {
 	    set idict [dict get $data(items) $item]
 	    if {[dict get $idict type] in {audio midi}} {
 		if {[dict get $idict direction] eq {output}} {
-		    # puts "$item has connections [dict get $idict connections]"
-		    foreach o [dict get $idict connections] {
-			puts "$item connects to $o"
+		    # use the latest list-ports, not the first one
+		    foreach o [dict get $ports $item connections] {
+			lappend data(connections) $item $o
 		    }
 		}
 	    }
 	}
-
 	$self update-canvas
+	set data(update-pending) 0
     }
 
     method defer-update-canvas {} {
-	after $options(-defer-ms) [mymethod update-canvas]
+	if {$data(update-canvas-pending) == 0} {
+	    set data(update-canvas-pending) 1
+	    after $options(-defer-ms) [mymethod update-canvas]
+	}
     }
 
     method update-canvas {} {
 	foreach item [dict keys $data(items)] {
 	    foreach w {lft rgt} {
+		# initialize y coordinate
+		dict set data(items) $item $w-y {}
+		# find y coordinate
 		if {[$win.$w exists $item]} {
 		    set bbox [$win.$w bbox $item] 
 		    if {$bbox ne {}} {
 			lassign $bbox x y wd ht
-			dict set $item y [expr {$y+$wd/2.0}]
-		    } else {
-			dict set $item y {}
+			dict set data(items) $item $w-y [expr {$y+$ht/2.0}]
+		    }
+		}
+		# find parental y coordinate if necessary
+		if {[dict get $data(items) $item $w-y] eq {}} {
+		    for {set p [dict get $data(items) $item parent]} {$p ne {}} {set p [dict get $data(items) $p parent]} {
+			set y [dict get $data(items) $p $w-y]
+			if {$y ne {}} {
+			    dict set data(items) $item $w-y $y
+			    break
+			}
 		    }
 		}
 	    }
 	}
+	# draw the lines
+	$win.ctr delete all
+	set wd [winfo width $win.ctr]
+	set x0 0
+	set x1 [expr {$wd/8.0}]
+	set x2 [expr {$wd-1-$wd/8.0}]
+	set x3 [expr {$wd-1}]
+	foreach {i o} $data(connections) {
+	    if {[dict exists $data(items) $i] && [dict exists $data(items) $o]} {
+		set ly [dict get $data(items) $i lft-y]
+		set ry [dict get $data(items) $o rgt-y]
+		if {$ly ne {} && $ry ne {}} {
+			    $win.ctr create line $x0 $ly $x1 $ly $x2 $ry $x3 $ry -smooth true -width 2
+		}
+	    }
+	}
+	set data(update-canvas-pending) 0
     }
 
     ##

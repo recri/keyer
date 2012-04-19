@@ -20,12 +20,12 @@
 ## spectrum
 ##
 
-package provide sdrblk::tk-spectrum 1.0.0
+package provide sdrui::tk-spectrum 1.0.0
 
 package require Tk
 package require snit
 
-snit::widgetadaptor sdrblk::tk-spectrum {
+snit::widgetadaptor sdrui::tk-spectrum {
     option -width 250
     option -height 100
     option -offset -default 0.0 -configuremethod handle-option

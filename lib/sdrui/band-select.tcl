@@ -25,14 +25,14 @@
 # needs merge some services into single row
 #
 
-package provide sdrblk::ui-band-select 1.0
+package provide sdrui::band-select 1.0
 
 package require Tk
 package require snit
 
-package require sdrblk::band-data
+package require sdrui::band-data
 
-snit::widgetadaptor sdrblk::ui-band-select {
+snit::widgetadaptor sdrui::band-select {
 
     option -command {};			# script called to report band selection 
     option -height 150;			# height of the band display
@@ -48,7 +48,7 @@ snit::widgetadaptor sdrblk::ui-band-select {
 
     constructor {args} {
 	installhull using canvas
-	install bands using sdrblk::band-data %AUTO%
+	install bands using sdrui::band-data %AUTO%
 	$self configure {*}$args
 	$hull configure -width $options(-width) -height $options(-height)
 	bind $win <Configure> [mymethod window-configure %w %h]

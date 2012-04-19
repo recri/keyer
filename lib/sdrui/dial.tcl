@@ -20,12 +20,12 @@
 #
 # a rotary encoder
 #
-package provide sdrblk::ui-dial 1.0
+package provide sdrui::dial 1.0
 
 package require Tk
 package require snit
 
-snit::widgetadaptor sdrblk::ui-dial {
+snit::widgetadaptor sdrui::dial {
     # the maximum radius is 1/2 the minimum of width and height
     option -bg {};			# background color of the window containing the dial
 
