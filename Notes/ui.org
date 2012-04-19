@@ -1,6 +1,45 @@
 * Notes on user interfaces
 * XEvents from Lenovo pointer and touch pad
 ** The middle button isn't mouse button 2
-   It converts the pointer stick into a joystick
-   it generates button 4, 5, 6. and 7 events
-   as the pointer is pushed n, s, e, and w.
+   It converts the pointer stick into a joystick it generates button
+   4, 5, 6. and 7 events as the pointer is pushed n, s, e, and w.
+** Tk interprets the up/down events as mouse wheel
+   doesn't handle the others.
+* The dial logic was an interesting debugging session
+  The dial wasn't generating 1000 counts/revolution and I couldn't
+  figure out why for hours.  I redid the conversion to angle, redid
+  the conversion to counts, and stared and stared.  Finally printed
+  out some values and immediately saw that the logic for sending the
+  whole counts and keeping the fraction wasn't working.  Simplified
+  and it's fine.
+* The band-pass component is drawing exact filter responses
+  by generating FIR filters and FFTing them into the frequency domain.
+  It discovered a minor glitch in my conversion of FFT coefficient
+  reordering.  It's main discovery is that the dttsp filters, running
+  at the buffer lengths that Alex says get used, are way over
+  engineered, they do way more filtering then could ever be
+  appreciated.  A much smaller buffer length is quite adequate will
+  cost much less to run.  Probably continue to generate the filter
+  envelopes for preview using the configured overlap save parameters
+  so you can continue to see what you're getting.
+* The band-select component gives a graphic display of the radio spectrum
+  and allows various bands and/or channels to be chosen by point and
+  click.  It's already been useful for testing the dial logic by
+  resetting to 10.000000 MHz.
+  But it raises the consistency issue: what mouse events do what and
+  how do I keep the user from getting his/her fingers tied in a knot?
+  Left mouse selects, that's fine, that's the single button way.  But
+  how do the rest of the buttons work?
+  I guess I let the mouse wheel scroll, and pop up a context menu on
+  the right button.  No shift/alt/modifier keys on mouse events.  So
+  zoom happens in discrete steps off the context menu if there isn't a
+  separate control for it.
+* The panadapter is renamed from panorama
+  The controls there should be the same as the band-selector, so:
+** point and click to tune
+** mouse wheel tunes
+** grab and push to tune
+** separate zoom and pan controls as in PSDR?
+** grab filter envelope as in PSDR?
+   needs to be zoomed in to make any sense.
+   
