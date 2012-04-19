@@ -16,7 +16,6 @@ HWRATE=48000			# hardware rate
 HWBUFFER=1024			# hardware buffer
 LPDEV=hw:2			# 2 for loopback
 LPRATE=48000			# loopback rate
-SHARE=""
 SI570="--si570"
 IQ="--qi"
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
@@ -34,7 +33,6 @@ for f in $*; do
 	--48k) HWRATE=48000;;
 	--96k) HWRATE=96000;;
 	--192k) HWRATE=192000;;
-	--share) SHARE=--share;;
 	--hw:0) HWDEV=hw:0;;
 	--hw:1) HWDEV=hw:1;;
 	--hw:2) HWDEV=hw:2;;
@@ -63,8 +61,8 @@ sleep 1
 echo "softrock --jack $SI570 $IQ --samplerate $HWRATE"
 nohup softrock --jack $SI570 $IQ --samplerate $HWRATE > $LOG-softrock.log 2>&1 &
 sleep 1
-echo "dspserver --lo 10000 $SHARE"
-nohup dspserver --lo 10000 $SHARE > $LOG-dspserver.log 2>&1 &
+echo "dspserver --lo 10000"
+nohup dspserver --lo 10000 > $LOG-dspserver.log 2>&1 &
 
 ##
 ## default jackd server: started above
