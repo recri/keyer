@@ -55,7 +55,7 @@ snit::type sdrblk::block {
     ## this type variable, shared among all instances, enables verbose messages
     ##
     typevariable verbose -array {
-	construct 0 configure 0 destroy 0 require 0
+	construct 1 configure 0 destroy 0 require 0
 	dispatch 0
 	enable 0 activate 0 connect 0 disconnect 0 make-connect 0 make-disconnect 0
 	controls 0 controlget 0 control 0
@@ -95,17 +95,6 @@ snit::type sdrblk::block {
     # -type defines the type of block
     option -type -readonly yes -type {snit::stringtype -regexp {^(jack|sequence|alternate|stub)$}}
 
-    # make a consistent verbose message
-    method verbose {msg} {
-	puts "block $options(-name) $msg"
-    }
-
-    # send a configuration option to the type's configuration handler
-    method dispatch {opt val} {
-	if {$verbose(dispatch)} { $self verbose "configure $opt {$val} dispatched to $options(-type)" }
-	$self $options(-type) configure $opt $val
-    }
-
     # -partof defines the containment hierarchy
     option -partof -readonly yes
 
@@ -126,13 +115,59 @@ snit::type sdrblk::block {
 
     # -enable make this component enabled or disabled
     option -enable -default 0 -configuremethod dispatch
+    option -enablecallback -default {}
 
     # -activate make this component activated or deactivated
     option -activate -default no -configuremethod dispatch
+    option -activatecallback -default {}
 
     # -control is the radio controller
     option -control -readonly yes
     
+    # common constructor
+    constructor {args} {
+	if {$verbose(construct)} { puts "block $self constructor {$args}" }
+	array set tmp $args
+	set partof $tmp(-partof)
+	set options(-server) [$partof cget -server]
+	set options(-prefix) [$partof cget -name]
+	set options(-control) [$partof cget -control]
+	set options(-name) [string trim $options(-prefix)-$tmp(-suffix) -]
+	if {[catch {$partof add part $self} error erropts]} {
+	    if {[string match {unknown subcommand "add": must be*} $error]} {
+		set data(super) {}
+	    } else {
+		return -options $erropts $error
+	    }
+	} else {
+	    set data(super) $partof
+	}
+	#puts "before configure: server=$options(-server) prefix=$options(-prefix) suffix=$options(-suffix) name=$options(-name) control=$options(-control) super=$options(-super)"
+	$self configure {*}$args
+	$options(-control) add $options(-name) $self
+	$self $options(-type) constructor
+    }
+    
+    # common destructor
+    destructor {
+	catch {$self $options(-type) destructor}
+	catch {$options(-control) remove $options(-name)}
+    }
+    
+    # make a consistent verbose message
+    method verbose {msg} {
+	puts "block $options(-name) $msg"
+    }
+
+    # dispatch a configuration option to the type's configuration handler
+    method dispatch {opt val} {
+	if {$verbose(dispatch)} { $self verbose "configure $opt {$val} dispatched to $options(-type)" }
+	$self $options(-type) configure $opt $val
+	# handle configuration callbacks
+	if {$opt eq {-enable} && $options(-enablecallback) ne {}} { {*}$options(-enablecallback) $val }
+	if {$opt eq {-activate} && $options(-activatecallback) ne {}} { {*}$options(-activatecallback) $val }
+    }
+
     # these are the methods the radio controller uses
     # to talk to the computational components
     method controls {} { return [$self control] }
@@ -285,36 +320,6 @@ snit::type sdrblk::block {
     method make-connect {ins outs} { $self make-connection connect $ins $outs }
     method make-disconnect {ins outs} { $self make-connection disconnect $ins $outs }
     
-    # common constructor
-    constructor {args} {
-	if {$verbose(construct)} { puts "block $self constructor {$args}" }
-	array set tmp $args
-	set partof $tmp(-partof)
-	set options(-server) [$partof cget -server]
-	set options(-prefix) [$partof cget -name]
-	set options(-control) [$partof cget -control]
-	set options(-name) [string trim $options(-prefix)-$tmp(-suffix) -]
-	if {[catch {$partof add part $self} error erropts]} {
-	    if {[string match {unknown subcommand "add": must be*} $error]} {
-		set data(super) {}
-	    } else {
-		return -options $erropts $error
-	    }
-	} else {
-	    set data(super) $partof
-	}
-	#puts "before configure: server=$options(-server) prefix=$options(-prefix) suffix=$options(-suffix) name=$options(-name) control=$options(-control) super=$options(-super)"
-	$self configure {*}$args
-	$options(-control) add $options(-name) $self
-	$self $options(-type) constructor
-    }
-    
-    # common destructor
-    destructor {
-	catch {$self $options(-type) destructor}
-	catch {$options(-control) remove $options(-name)}
-    }
-    
     ##
     ## -type jack
     ## blocks which contain a single jack module
@@ -424,6 +429,25 @@ snit::type sdrblk::block {
 	foreach element $options(-alternates) {
 	    lappend data(alternates) [$element %AUTO% -partof $self]
 	}
+	# connect the components of the alternation
+	# they are logically sequenced,
+	# but at most one will be enabled at a time
+	foreach \
+	    prev [concat [list {}] [lrange $data(alternates) 0 end-1]] \
+	    element $data(alternates) \
+	    next [concat [lrange $data(alternates) 1 end] [list {}]] \
+	    {
+		if {$prev ne {} && $next ne {}} {
+		    $element add input $prev
+		    $element add output $next
+		} elseif {$next ne {}} {
+		    $element add output $next
+		} elseif {$prev ne {}} {
+		    $element add input $prev
+		}
+		# get the enable callback so we can unenable any others
+		$element configure -enablecallback [mymethod alternate enable $element]
+	    }
     }
     
     method {alternate destructor} {} {
@@ -435,6 +459,14 @@ snit::type sdrblk::block {
 	catch {rename ::sdrblx::$options(-name) {}}
     }
     
+    method {alternate enable} {who how} {
+	if {$how && $options(-alternate) ne $who} {
+	    $self configure -alternate $who
+	} elseif {$options(-alternate) ne {}} {
+	    $self configure -alternate {}
+	}
+    }
+
     method {alternate configure} {opt val} {
 	set old $options($opt)
 	if {$verbose(configure)} { $self verbose "alternate configure $opt {$val} was {$old}" }
@@ -442,10 +474,8 @@ snit::type sdrblk::block {
 	    -inport {
 		set options($opt) $val
 		if {$verbose(inport)} { $self verbose "alternate configure $opt {$val} was {$old}" }
-		if {$options(-alternate) ne {}} {
-		    $options(-alternate) configure $opt $val
-		} else {
-		    $self configure -outport $val
+		if {$data(alternates) ne {}} {
+		    [lindex $data(alternates) 0] configure $opt $val
 		}
 	    }
 	    -outport {
@@ -466,12 +496,8 @@ snit::type sdrblk::block {
 	    -alternate {
 		if {$val ne {} && $val ni $data(alternates)} { error "$options(-name) $val is not a valid alternate" }
 		set options($opt) $val
-		if {$val ne {}} {
-		    $val configure -inport $options(-inport) -outport $options(-outport)
-		}
-		if {$old ne {}} {
-		    $old configure -inport {} -outport {}
-		}
+		if {$old ne {} && [$old cget -enable]} { $old configure -enable no }
+		if {$val ne {} && ! [$val cget -enable]} { $val configure -enable yes }
 	    }
 	    default {
 		error "$options(-name) doesn't know how to \"alternate configure $opt {$val}\""

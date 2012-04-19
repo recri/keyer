@@ -19,22 +19,24 @@
 
 /*
 */
+
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/demod_fm.h"
+#include "../sdrkit/modul_am.h"
 #include "framework.h"
 
 /*
-** demodulate FM.
+** demodulate AM.
 */
 typedef struct {
   framework_t fw;
-  demod_fm_t fm;
+  modul_am_t am;
+  modul_am_options_t opts;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *e = demod_fm_init(&data->fm, sdrkit_sample_rate(&data->fw)); if (e != &data->fm) return e;
+  void *e = modul_am_init(&data->am, &data->opts); if (e != &data->am) return e;
   return arg;
 }
 
@@ -46,9 +48,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float y = demod_fm_process(&data->fm, *in0++ + I * *in1++);
-    *out0++ = y;		// treat as stereo
-    *out1++ = y;
+    complex float z = modul_am_process(&data->am, (*in0++ + *in1++)/2.0f);
+    *out0++ = crealf(z);
+    *out1++ = cimagf(z);
   }
   return 0;
 }
@@ -59,6 +61,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+  { "-level", "level", "Level", "0.5", fw_option_float, 0, offsetof(_t, opts.carrier_level), "carrier level" },
   { NULL }
 };
 
@@ -76,15 +79,27 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "an FM demodulation component"
+  "an AM modulation component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
+  _t *data = (_t *)clientData;
+  float carrier_level = data->opts.carrier_level;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  if (carrier_level != data->opts.carrier_level) {
+    void *e = modul_am_preconfigure(&data->am, &data->opts); if (e != &data->am) {
+      Tcl_SetResult(interp, e, TCL_STATIC);
+      data->opts.carrier_level = carrier_level;
+      return TCL_ERROR;
+    }
+    modul_am_configure(&data->am, &data->opts);
+  }
+  return TCL_OK;
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Demod_fm_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::demod-fm", "1.0.0", "sdrkit::demod-fm", _factory);
+int DLLEXPORT Modul_am_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::modul-am", "1.0.0", "sdrkit::modul-am", _factory);
 }
 

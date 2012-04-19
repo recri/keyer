@@ -16,38 +16,42 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef MOD_SSB_H
-#define MOD_SSB_H
+#ifndef MODUL_AM_H
+#define MODUL_AM_H
 
 /*
-** modulation for any single sideband mode - rewritten from dttsp
-** doesn't do much, just compensates for the discarded sideband power
-** Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
+** AM modulation - rewritten from dttsp
+   Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
 #include "dmath.h"
 
 typedef struct {
-} mod_ssb_t;
+  float carrier_level;
+  float one_m_carrier_level;
+} modul_am_t;
 
 typedef struct {
-} mod_ssb_options_t;
+  float carrier_level;
+} modul_am_options_t;
 
-static void mod_ssb_configure(mod_ssb_t *p, mod_ssb_options_t *q) {
+static void modul_am_configure(modul_am_t *p, modul_am_options_t *q) {
+  p->carrier_level = q->carrier_level;
+  p->one_m_carrier_level = 1.0f - p->carrier_level;
 }
 
-static void *mod_ssb_preconfigure(mod_ssb_t *p, mod_ssb_options_t *q) {
+static void *modul_am_preconfigure(modul_am_t *p, modul_am_options_t *q) {
   return p;
 }
 
-static void *mod_ssb_init(mod_ssb_t *p) {
-  void *e = mod_ssb_preconfigure(p,q); if (e != p) return e;
-  mod_ssb_configure(p, q);
+static void *modul_am_init(modul_am_t *p, modul_am_options_t *q) {
+  void *e = modul_am_preconfigure(p,q); if (e != p) return e;
+  modul_am_configure(p, q);
   return p;
 }
 
-static complex float mod_ssb_process(mod_ssb_t *p, const float complex in) {
-  return 2.0f * in;
+static complex float modul_am_process(modul_am_t *p, const float in) {
+  return p->carrier_level + p->one_m_carrier_level * in;
 }
 
 #endif

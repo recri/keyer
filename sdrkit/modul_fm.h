@@ -16,8 +16,8 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef MOD_FM_H
-#define MOD_FM_H
+#ifndef MODUL_FM_H
+#define MODUL_FM_H
 
 /*
 ** FM modulation - rewritten from dttsp
@@ -29,29 +29,29 @@
 typedef struct {
   float phase;
   float cvtmod2freq;
-} mod_fm_t;
+} modul_fm_t;
 
 typedef struct {
   float deviation;		/* 5000 Hz default */
   float sample_rate;
-} mod_fm_options_t;
+} modul_fm_options_t;
 
-static void mod_fm_configure(mod_fm_t *p, mod_fm_options_t *q) {
+static void modul_fm_configure(modul_fm_t *p, modul_fm_options_t *q) {
   p->phase = 0.0f;
   p->cvtmod2freq = q->deviation * two_pi / q->sample_rate;
 }
 
-static void *mod_fm_preconfigure(mod_fm_t *p, mod_fm_options_t *q) {
+static void *modul_fm_preconfigure(modul_fm_t *p, modul_fm_options_t *q) {
   return p;
 }
 
-static void *mod_fm_init(mod_fm_t *p, mod_fm_options_t *q) {
-  void *e = mod_fm_preconfigure(p,q); if (e != p) return e;
-  mod_fm_configure(p, q);
+static void *modul_fm_init(modul_fm_t *p, modul_fm_options_t *q) {
+  void *e = modul_fm_preconfigure(p,q); if (e != p) return e;
+  modul_fm_configure(p, q);
   return p;
 }
 
-static complex float mod_fm_process(mod_fm_t *p, const float complex in) {
+static complex float modul_fm_process(modul_fm_t *p, const float complex in) {
   p->phase += crealf(in) * p->cvtmod2freq;
   return cexpf(I * p->phase);
 }
