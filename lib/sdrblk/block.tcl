@@ -55,7 +55,7 @@ snit::type sdrblk::block {
     ## this type variable, shared among all instances, enables verbose messages
     ##
     typevariable verbose -array {
-	construct 1 configure 0 destroy 0 require 0
+	construct 0 configure 0 destroy 0 require 0
 	dispatch 0
 	enable 0 activate 0 connect 0 disconnect 0 make-connect 0 make-disconnect 0
 	controls 0 controlget 0 control 0
@@ -89,7 +89,7 @@ snit::type sdrblk::block {
     }
 
     ##
-    ## common options and methods
+    ## common options
     ##
 
     # -type defines the type of block
@@ -98,17 +98,10 @@ snit::type sdrblk::block {
     # -partof defines the containment hierarchy
     option -partof -readonly yes
 
-    # -server specifies the jack server name, acquired from -partof
-    option -server -readonly yes
-
     # -prefix, -suffix, and -name define the hierarchical naming of components, acquired from -partof, or constructed
     option -prefix -readonly yes
     option -suffix -readonly yes
     option -name -readonly yes
-
-    # -inport and -outport define the enabled connections
-    option -inport -default {} -configuremethod dispatch
-    option -outport -default {} -configuremethod dispatch
 
     # -require defines package required to load
     option -require -default {}
@@ -124,26 +117,40 @@ snit::type sdrblk::block {
     # -control is the radio controller
     option -control -readonly yes
     
+    # -server specifies the jack server name, acquired from -partof
+    option -server -readonly yes
+
+    # -inport and -outport define the enabled connections
+    option -inport -default {} -configuremethod dispatch
+    option -outport -default {} -configuremethod dispatch
+
     # common constructor
     constructor {args} {
 	if {$verbose(construct)} { puts "block $self constructor {$args}" }
-	array set tmp $args
-	set partof $tmp(-partof)
-	set options(-server) [$partof cget -server]
-	set options(-prefix) [$partof cget -name]
-	set options(-control) [$partof cget -control]
-	set options(-name) [string trim $options(-prefix)-$tmp(-suffix) -]
-	if {[catch {$partof add part $self} error erropts]} {
+	set options(-partof) [from args -partof]
+	set options(-suffix) [from args -suffix]
+	set options(-server) [$options(-partof) cget -server]
+	set options(-prefix) [$options(-partof) cget -name]
+	set options(-control) [$options(-partof) cget -control]
+	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
+	if {[catch {$options(-partof) add part $self} error erropts]} {
 	    if {[string match {unknown subcommand "add": must be*} $error]} {
 		set data(super) {}
 	    } else {
 		return -options $erropts $error
 	    }
 	} else {
-	    set data(super) $partof
+	    set data(super) $options(-partof)
 	}
 	#puts "before configure: server=$options(-server) prefix=$options(-prefix) suffix=$options(-suffix) name=$options(-name) control=$options(-control) super=$options(-super)"
 	$self configure {*}$args
+	# this is a bit hacky, we want to enable the controls asap,
+	# so we make the sub-command here
+	if {$options(-factory) ne {}} {
+	    $options(-factory) ::sdrblx::$options(-name) -server $options(-server)
+	} else {
+	    sdrblk::comp-stub ::sdrblx::$options(-name)
+	}
 	$options(-control) add $options(-name) $self
 	$self $options(-type) constructor
     }
@@ -152,6 +159,7 @@ snit::type sdrblk::block {
     destructor {
 	catch {$self $options(-type) destructor}
 	catch {$options(-control) remove $options(-name)}
+	catch {rename ::sdrblx::$options(-name) {}}
     }
     
     # make a consistent verbose message
@@ -329,7 +337,6 @@ snit::type sdrblk::block {
     option -factory -readonly yes -configuremethod dispatch
     
     method {jack constructor} {} {
-	$options(-factory) ::sdrblx::$options(-name) -server $options(-server)
 	set ports [dict create]
 	dict for {port desc} [sdrkit::jack -server $options(-server) list-ports] {
 	    if {[string first ${options(-name)}: $port] == 0} {
@@ -422,7 +429,6 @@ snit::type sdrblk::block {
     
     method {alternate constructor} {} {
 	set options(-enable) yes
-	sdrblk::comp-stub ::sdrblx::$options(-name)
 	foreach package $options(-require) {
 	    package require $package
 	}
@@ -456,7 +462,6 @@ snit::type sdrblk::block {
 		catch {$element destroy}
 	    }
 	}
-	catch {rename ::sdrblx::$options(-name) {}}
     }
     
     method {alternate enable} {who how} {
@@ -515,8 +520,6 @@ snit::type sdrblk::block {
     
     method {sequence constructor} {} {
 	set options(-enable) yes
-	# make a stub controller
-	sdrblk::comp-stub ::sdrblx::$options(-name)
 	# build the components of the sequence
 	foreach package $options(-require) {
 	    package require $package
@@ -543,7 +546,6 @@ snit::type sdrblk::block {
     }
     
     method {sequence destructor} {} {
-	catch {rename ::sdrblx::$options(-name) {}}
 	catch {
 	    foreach element $data(sequence) {
 		catch {$element destroy}
@@ -629,10 +631,8 @@ snit::type sdrblk::block {
     ##
     method {stub constructor} {} {
 	set options(-enable) yes
-	sdrblk::comp-stub ::sdrblx::$options(-name)
     }
     method {stub destructor} {} {
-	catch {rename ::sdrblx::$options(-name) {}}
     }
     method {stub configure} {opt val} {
 	set old $options($opt)

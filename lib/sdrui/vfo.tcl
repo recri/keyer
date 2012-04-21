@@ -29,66 +29,35 @@ package require snit
 
 package require sdrui::dial
 package require sdrui::freq-readout
-package require sdrui::band-select
-package require sdrui::band-data
 
 snit::widget sdrui::vfo {
-    component bands
-    component readout
-    component dial
-    component bandselect
 
     variable data -array {
 	turn-resolutions {10 100 1000 10000 100000}
     }
 
     option -turn-resolution 1000
-    option -freq 7050000
-    option -partof {}
-    option -control {}
+    option -freq -default 7050000 -configuremethod opt-handler
     option -command {}
+    option -controls {-freq}
 
-    method turned {turns} {
-	$self set-freq [expr {$options(-freq)+$turns*$options(-turn-resolution)}]
+    method turned {turns} { $self set-freq [expr {$options(-freq)+$turns*$options(-turn-resolution)}] }
+
+    method {opt-handler -freq} {hertz} {
+	set options(-freq) $hertz
+	$win.readout set-freq $hertz
     }
 
     method set-freq {hertz} {
-	$win.readout set-freq $hertz
-	set options(-freq) $hertz
-	if {$options(-command) ne {}} {
-	    eval "$options(-command) $hertz"
-	}
-    }
-
-    method band-select {which args} {
-	switch $which {
-	    no-pick {
-		# puts "no-pick"
-	    }
-	    band-pick {
-		lassign [$bands band-range-hertz {*}$args] low high
-		set freq [expr {($low+$high)/2}]
-		# puts "band-pick $service $arg $low .. $high"
-		$self set-freq $freq
-	    }
-	    channel-pick {
-		set freq [$bands channel-freq-hertz {*}$args]
-		# puts "channel-pick $service $arg $freq"
-		$self set-freq $freq
-	    }
-	}
+	$self opt-handler -freq $hertz
+	if {$options(-command) ne {}} { {*}$options(-command) report -freq $hertz }
     }
 
     constructor {args} {
-	install bands using sdrui::band-data %AUTO%
-	install readout using sdrui::freq-readout $win.readout
-	install dial using sdrui::dial $win.dial -command [mymethod turned]
-	install bandselect using ::sdrui::band-select $win.band-select -command [mymethod band-select]
-	pack $win.readout -side top
+	$self configure {*}$args
+	pack [sdrui::freq-readout $win.readout] -side top
 	pack [ttk::separator $win.sep1 -orient horizontal] -side top -fill x
-	pack $win.dial -side top -expand true -fill both
-	pack [ttk::separator $win.sep2 -orient horizontal] -side top -fill x
-	pack $win.band-select -side top -expand true -fill both
-	$self set-freq $options(-freq)
+	pack [sdrui::dial $win.dial -command [mymethod turned]] -side top -expand true -fill both
+	# $self set-freq $options(-freq)
     }    
 }

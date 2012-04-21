@@ -77,8 +77,8 @@ snit::widget sdrui::tree {
 	set type [$options(-control) ccget $item -type]
 	set enabled [$options(-control) ccget $item -enable]
 	set activated [$options(-control) ccget $item -activate]
-	set inport [$options(-control) ccget $item -inport]
-	set outport [$options(-control) ccget $item -outport]
+	#set inport [$options(-control) ccget $item -inport]
+	#set outport [$options(-control) ccget $item -outport]
 	#return [list $type $enabled $inport $outport {} {}]
 	if {$enabled && $activated} {
 	    return [list {on}]

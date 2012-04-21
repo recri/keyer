@@ -1,4 +1,3 @@
-# -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
@@ -17,25 +16,37 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::radio-hw-softrock-dg8saq 1.0.0
+##
+## iq-swap - I/Q channel swap control
+##
+package provide sdrui::iq-swap 1.0.0
 
+package require Tk
 package require snit
 
-snit::type sdrblk::radio-hw-softrock-dg8saq {
+    
+snit::widgetadaptor sdrui::iq-swap {
+    component button
 
-    option -partof -readonly true
-    option -freq -default 7.050 -configuremethod SetFreq
+    option -swap -default 0 -type snit::boolean
+    option -command {}
+    option -controls {-swap}
+
+    delegate option -label to hull as -text
+    delegate option -labelanchor to hull
 
     constructor {args} {
-	# puts "radio-hw-softrock-dg8saq $self constructor $args"
+	installhull using ttk::labelframe
+	install button using ttk::checkbutton $win.swap -text Swap -variable [myvar options(-swap)] -command [mymethod set-swap]
+	pack $win.swap -fill x -expand true
+	foreach {opt val} { -label {IQ swap} -labelanchor n } {
+	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
+	}
 	$self configure {*}$args
+
     }
 
-    destructor {}
-
-    method SetFreq {opt val} {
-	exec usbsoftrock set freq $val
-	set options($opt) $val
-    }
-    
+    method set-swap {} { if {$options(-command) ne {}} { {*}$options(-command) report -swap $options(-swap) } }
 }
+
+

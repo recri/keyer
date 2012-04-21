@@ -19,6 +19,12 @@
 
 package provide sdrui::connections 1.0.0
 
+#
+# connections draws a collapsable tree for the dsp components
+# in the radio and shows which components are connected
+# it also allows the configuration and controls of each component
+# to be printed to standard output
+#
 package require Tk
 package require snit
 package require sdrkit::jack
@@ -109,8 +115,7 @@ snit::widget sdrui::connections {
     proc find-parent {child items} {
 	set parent {}
 	foreach c [dict keys $items] {
-	    if {[string first $c $child] == 0 &&
-		[string length $parent] < [string length $c]} {
+	    if {[string first $c $child] == 0 && [string length $parent] < [string length $c]} {
 		set parent $c
 	    }
 	}

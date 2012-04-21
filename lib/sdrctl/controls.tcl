@@ -17,27 +17,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdr::radio-command-line 1.0.0
+package provide sdrctl::controls 1.0.0
 
 package require snit
 
-snit::type sdrui::radio-command-line {
-
-    option -partof -readonly yes
-    option -control -readonly yes
-    
-    constructor {args} {
-	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
-    }
-
-    method repl {} {
-	set c $options(-control)
-	while {1} {
-	    puts -nonewline stderr "sdr> "
-	    if {[gets stdin input] < 0} break
-	    catch {eval $input} result
-	    puts stderr [string trim $result]
-	}
-    }
+snit::type sdrctl::control {
+    option -name -readonly yes
+    option -units -readonly yes
+    option -sdrkit -readonly yes
+    option -sdrblk -readonly yes
+    option -sdrui -readonly yes
 }

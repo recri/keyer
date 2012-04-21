@@ -17,20 +17,21 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrui::radio-notebook 1.0.0
+package provide sdrui::ui-notebook 1.0.0
 
 package require Tk
 package require snit
 package require tkcon
 
-package require sdrui::radio
+package require sdrui::radio-panel
 package require sdrui::tree
 package require sdrui::connections
 package require sdrui::panadapter
+package require sdrui::components
 
 # not a notebook anymore
 
-snit::type sdrui::radio-notebook {
+snit::type sdrui::ui-notebook {
 
     variable data -array {
 	tree 0
@@ -56,7 +57,7 @@ snit::type sdrui::radio-notebook {
 	    .menu.view add checkbutton -label $view -variable [myvar data($view)] -command [mymethod view $view]
 	}
 	. configure -menu .menu
-	pack [sdrui::radio .radio -partof $self -control $options(-control)] -fill both -expand true
+	pack [sdrui::radio-panel .radio -partof $self -control $options(-control)] -fill both -expand true
     }
 
     method widget {foo} {

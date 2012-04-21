@@ -35,10 +35,15 @@ package require sdrui::band-data
 snit::widgetadaptor sdrui::band-select {
 
     option -command {};			# script called to report band selection 
+
     option -height 150;			# height of the band display
     option -width 200;			# width of the band display
     option -hover-time 250;		# milliseconds before popup
     
+    option -band {}
+    option -channel {}
+    option -controls {-band -channel}
+
     component bands
 
     variable data -array {
@@ -55,6 +60,8 @@ snit::widgetadaptor sdrui::band-select {
 	$self draw-bands
     }
     
+    method ignore {args} { }
+
     destructor {
 	catch {$bands destroy}
     }
@@ -120,9 +127,9 @@ snit::widgetadaptor sdrui::band-select {
     method scan-mark {x} { $hull scan mark $x 0 }
     method scan-dragto {x} { $hull scan dragto $x 0 }
 
-    method no-pick {} { if {$data(hover-text) eq {}} { $self callback no-pick } }
-    method band-pick {service band} { $self callback band-pick $service $band }
-    method channel-pick {service channel} { $self callback channel-pick $service $channel }
+    method no-pick {} { if {$data(hover-text) eq {}} { } }
+    method band-pick {service band} { if {$options(-command) ne {}} { {*}$options(-command) report -band [list $service $band] } }
+    method channel-pick {service channel} { if {$options(-command) ne {}} { {*}$options(-command) report -channel [list $service $channel] } }
     
     method window-configure {w h} {
 	if {$h != $options(-height)} {
@@ -131,13 +138,7 @@ snit::widgetadaptor sdrui::band-select {
 	}
     }
 
-    method callback {args} {
-	if {$options(-command) ne {}} { eval "$options(-command) $args" }
-    }
-
-    method hover-text {text} {
-	set data(hover-text) $text
-    }
+    method hover-text {text} { set data(hover-text) $text }
 
     method motion {x y} {
 	if {$data(hover-displayed)} {

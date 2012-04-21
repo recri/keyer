@@ -163,6 +163,8 @@ snit::widgetadaptor sdrui::dial {
 	    $hull coords graticule $graticule
 	    $hull coords dial $dial
 	    $hull coords thumb $thumb
+	    $hull coords pointer $pointer
+	    $hull coords mask $mask
 	}
 	array set data [list yc $yc xc $xc tr $tr tis $tis tos $tos]
     }
