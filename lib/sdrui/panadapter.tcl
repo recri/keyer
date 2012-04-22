@@ -24,7 +24,7 @@ package require sdrui::tk-panadapter
 
 snit::widget sdrui::panadapter {
 
-    option -polyphase 0
+    option -polyphase 1
     option -pal 0
     option -min -160
     option -max 0
@@ -32,13 +32,14 @@ snit::widget sdrui::panadapter {
     option -server -default default -readonly true
     option -partof -readonly yes
     option -control -readonly yes
-    option -input -default none -configuremethod opt-handler
+    option -input -default {} -configuremethod opt-handler
 
     variable data -array {}
 
     method set-and-delegate-option {opt val} {
+	# store option value
 	set options($opt) $val
-	# oh, this is delegating to the tk-panadapter
+	# delegate to tk-panadapter
 	$win.p configure $opt $val
     }
 
@@ -53,10 +54,10 @@ snit::widget sdrui::panadapter {
     }
 
     method {opt-handler -input} {input} {
-	puts "select input $input"
-	if {$input ne {none}} {
+	if {$input eq {}} {
+	    $win.p configure -connect {}
+	} else {
 	    set ports [$options(-control) ccget $input -inport]
-	    puts "selected input has ports $ports"
 	    $win.p configure -connect [lindex [split [lindex $ports 0] :] 0]
 	}
     }
@@ -67,12 +68,16 @@ snit::widget sdrui::panadapter {
 	pack [ttk::frame $win.m] -side top
 
 	# spectrum selection
-	pack [ttk::menubutton $win.m.i -textvar [myvar options(-input)] -menu $win.m.i.m] -side left
+	puts "making input selector: -input {$options(-input)}"
+	pack [ttk::menubutton $win.m.i -textvar [myvar data(input)] -menu $win.m.i.m] -side left
 	menu $win.m.i.m -tearoff no
-	$win.m.i.m add radiobutton -label none -variable [myvar options(-input)] -value none -command [mymethod configure -input none]
+	$win.m.i.m add radiobutton -label none -variable [myvar data(input)] -value none -command [mymethod configure -input {}]
+	if {$options(-input) eq {}} { set data(input) none }
 	foreach i [{*}$options(-control) list] {
-	    if {[string match *spectrum* $i]} {
-		$win.m.i.m add radiobutton -label $i -variable [myvar options(-input)] -value $i -command [mymethod configure -input $i]
+	    if {[regexp {^(rx|tx)-.*spectrum-(.*)$} $i input prefix suffix]} {
+		set label $prefix-$suffix
+		$win.m.i.m add radiobutton -label $label -variable [myvar data(input)] -value $label -command [mymethod configure -input $input]
+		if {$options(-input) eq $input} { set data(input) $label }
 	    }
 	}
 								

@@ -64,37 +64,49 @@ package require sdrkit::jack
 	switch $options(-type) {
 	    midi {
 		foreach x $options(-connect) {
-		    catch {sdrkit::jack $onoff $x $data(midi):midi_in}
+		    sdrkit::jack $onoff $x $data(midi):midi_in
 		}
 	    }
 	    iq -
 	    spectrum {
 		foreach x $options(-connect) {
-		    catch {sdrkit::jack $onoff $x:out_i $data($options(-type)):in_i}
-		    catch {sdrkit::jack $onoff $x:out_q $data($options(-type)):in_q}
+		    if {$x eq {system}} {
+			sdrkit::jack $onoff $x:capture_1 $data($options(-type)):in_i
+			sdrkit::jack $onoff $x:capture_2 $data($options(-type)):in_q
+		    } else {
+			sdrkit::jack $onoff $x:out_i $data($options(-type)):in_i
+			sdrkit::jack $onoff $x:out_q $data($options(-type)):in_q
+		    }
 		}
 	    }
 	}
     }
 
     method handle-option {option value} {
-	if {$data(started)} {
+	if { ! $data(started)} {
+	    set options($option) $value
+	} else {
 	    switch -- $option {
 		-size {
 		    set data(modified) 1
-		    set options($option) $value
 		}
 		-polyphase {
 		    set data(modified) 1
-		    set options($option) $value
+
 		}
 		-period {
 		    set options($option) $value
 		}
 		-connect {
-		    $self disconnect
+		    if {$options(-connect) ne {}} {
+			$self stop
+			$self disconnect
+		    }
 		    set options($option) $value
-		    $self connect
+		    if {$options(-connect) ne {}} {
+			$self connect
+			$self start
+		    }
 		}
 		default {
 		    set options($option) $value

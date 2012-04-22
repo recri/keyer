@@ -31,7 +31,7 @@ package require Tk
 
 package require sdrkit
 package require sdrkit::jack-client
-package require sdrkit::oscillator-zd
+package require sdrkit::oscillator
 package require sdrkit::noise
 package require sdrkit::iq-noise
 package require sdrkit::gain
@@ -48,7 +48,7 @@ array set data {
     max-freq 96000
     gain -75.0
     min-gain -130.0
-    max-gain -50.0
+    max-gain 0.0
     noise -100.0
     iq-noise -100.0
 }
@@ -60,6 +60,7 @@ array set data {
 proc set-mute {mod out args} {
     #puts "set-mute $mod {$args}"
     if {$::data($mod-unmute)} {
+	$mod activate
 	foreach iq {i q} {
 	    jack connect $out:out_$iq signal-generator:in_$iq
 	}
@@ -67,10 +68,11 @@ proc set-mute {mod out args} {
 	foreach iq {i q} {
 	    jack disconnect $out:out_$iq signal-generator:in_$iq
 	}
+	$mod deactivate
     }
 }
 proc set-gain {osc v} {
-    $osc-gain configure -gain $v
+    $osc configure -gain $v
     set ::data($osc-gain-label) [format %.2f $v]
 }
 
@@ -98,9 +100,12 @@ proc shutdown {w} {
     }
 }
 
-proc start-client {module name} {
+proc start-client {module name {active false}} {
     $module $name -server $::data(server)
     lappend ::data(clients-to-cleanup) $name
+    if { ! $active } {
+	$name deactivate
+    }
 }
 
 proc main {argv} {
@@ -118,7 +123,7 @@ proc main {argv} {
 	}
     }
     
-    start-client sdrkit::jack-client jack
+    start-client sdrkit::jack-client jack true
     if {$::data(max-freq) > [jack sample-rate]/2} {
 	set ::data(max-freq) [expr {[jack sample-rate]/2.01}]
 	set ::data(min-freq) [expr {-$::data(max-freq)}]
@@ -126,14 +131,12 @@ proc main {argv} {
 
     wm title . sdrkit:signal-generator
 
-    start-client sdrkit::gain signal-generator
+    start-client sdrkit::gain signal-generator true
     signal-generator configure -gain 0.0
 
     set row 0
     foreach i {0 1 2 3} {
-	start-client sdrkit::oscillator-zd osc$i
-	start-client sdrkit::gain osc$i-gain
-	foreach iq {i q} { jack connect osc$i:out_$iq osc$i-gain:in_$iq }
+	start-client sdrkit::oscillator osc$i
 	set ::data(osc$i-gain) $::data(gain)
 	set ::data(osc$i-freq) $::data(freq)
 	set ::data(osc$i-unmute) 0
@@ -141,7 +144,7 @@ proc main {argv} {
 	set-freq osc$i $::data(osc$i-freq)
 	grid [ttk::frame .b$row] -row $row -column 0 -columnspan 3
 	pack [ttk::label .b$row.l -text "Oscillator $i"] -side left
-	pack [ttk::checkbutton .b$row.e -text {enabled} -variable ::data(osc$i-unmute) -command [list set-mute osc$i osc$i-gain]] -side left
+	pack [ttk::checkbutton .b$row.e -text {enabled} -variable ::data(osc$i-unmute) -command [list set-mute osc$i osc$i]] -side left
 	incr row
 	grid [ttk::label .b$row-gain-l -textvar ::data(osc$i-gain-label) -width 10 -anchor e] -row $row -column 0
 	grid [ttk::label .b$row-gain-u -text dB] -row $row -column 1

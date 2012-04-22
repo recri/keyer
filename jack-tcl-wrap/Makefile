@@ -65,6 +65,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/modul_am.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
+	$(LIBDIR)/spectrum_tap.so \
 	$(LIBDIR)/window.so \
 	$(LIBDIR)/window_polyphase.so \
 	$(KEYERS)
@@ -191,6 +192,9 @@ $(LIBDIR)/oscillator_td.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit
 
 $(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCZD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/spectrum_tap.so: spectrum_tap.c framework.h ../sdrkit/window.h ../sdrkit/polyphase_fft.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/window.so: window.c framework.h ../sdrkit/window.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)

@@ -63,23 +63,27 @@ snit::widgetadaptor sdrui::tk-panadapter {
 	switch -- $option {
 	    -min -
 	    -max {
-		catch {$spectrum configure $option $value}
-		catch {$waterfall configure $option $value}
 		set options($option) $value
+		if {$spectrum ne {}} { $spectrum configure $option $value }
+		if {$waterfall ne {}} { $waterfall configure $option $value }
 	    }
 	    -pal {
-		catch {$waterfall configure $option $value}
 		set options($option) $value
+		if {$waterfall ne {}} { $waterfall configure $option $value }
 	    }
 	    -center {
-		catch {$frequency configure -lo1-offset $value}
 		set options($option) $value
+		if {$frequency ne {}} { $frequency configure -lo1-offset $value }
 	    }
 	    -size -
 	    -period -
-	    -connect -
 	    -polyphase {
-		catch {$capture configure $option $value}
+		set options($option) $value
+		if {$capture ne {}} { $capture configure $option $value }
+	    }
+	    -connect {
+		set options($option) $value
+		if {$capture ne {}} { $capture configure $option $value }
 	    }
 	    default {
 		set options($option) $value
@@ -103,11 +107,6 @@ snit::widgetadaptor sdrui::tk-panadapter {
     destructor  {
 	catch {$capture stop}
 	catch {$capture destroy}
-	# puts "tk-panadapter destructor called - not destroying subwindows"
-	#destroy $waterfall
-	#destroy $spectrum
-	#destroy $frequency
-
     }
 
     delegate method * to hull
@@ -123,7 +122,9 @@ snit::widgetadaptor sdrui::tk-panadapter {
 	$hull add $win.s -weight 1
 	$hull add $win.f -weight 0
 	$hull add $win.w -weight 1
-	$capture start
+	if {$options(-connect) ne {}} {
+	    $capture start
+	}
 	bind $win <Configure> [mymethod window-configure $win %W %w %h]
     }
 }

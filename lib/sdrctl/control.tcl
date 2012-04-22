@@ -106,12 +106,12 @@ snit::type sdrctl::control {
 	if {[dict exists $data(reporting) $name:$var] && [dict get $data(reporting) $name:$var]} {
 	    error "control report $name $var $value -- looping"
 	}
-	if { ! [string match *freq $var]} { puts "control report $name $var $value" }
+	# if { ! [string match *freq $var]} { puts "control report $name $var $value" }
 	dict set data(reporting) $name:$var true
 	# $self control $name $var $value
 	if {[catch {
 	    foreach {name2 var2} [dict get $data(vars) $name:$var] {
-		if { ! [string match *freq $var]} { puts "control report forward to $name2 $var2 $value" }
+		# if { ! [string match *freq $var]} { puts "control report forward to $name2 $var2 $value" }
 		$self control $name2 $var2 $value
 	    }
 	} error]} {
@@ -124,7 +124,7 @@ snit::type sdrctl::control {
     ## control value delivery
     ##
     method deliver {name var value args} {
-	puts "control deliver $name $var $value $args"
+	# puts "control deliver $name $var $value $args"
 	$self control $name $var $value {*}$args
     }
 
@@ -134,7 +134,7 @@ snit::type sdrctl::control {
     method add-listener {name1 var1 name2 var2} {
 	if { ! [dict exists $data(vars) $name1:$var1]} { error "control add-listener source $name1 $var1 -- no $name1:$var1 in data(vars)" }
 	if { ! [dict exists $data(vars) $name2:$var2]} { error "control add-listener destination $name2 $var2 -- no $name2:$var2 in data(vars)" }
-	puts "control add-listener $name1 $var1 $name2 $var2"
+	# puts "control add-listener $name1 $var1 $name2 $var2"
 	dict lappend data(vars) $name1:$var1 $name2 $var2
     }
     
@@ -147,10 +147,10 @@ snit::type sdrctl::control {
 	# match up names to establish some transfers
 	dict for {name listeners} $data(vars) {
 	    set l [llength $listeners]
-	    #puts "$name listeners $listeners"
+	    # puts "$name listeners $listeners"
 	    foreach k [dict keys $data(vars) *$name] {
 		if {$name ne $k} {
-		    #puts "$name matches tail of $k"
+		    # puts "$name matches tail of $k"
 		    $self add-listener {*}[split $k :] {*}[split $name :]
 		}
 	    }
@@ -223,7 +223,7 @@ snit::type sdrctl::mode {
     }
     method {opt-handler -mode} {val} {
 	set options(-mode) $val
-	puts "sdrctl::mode -mode $val"
+	# puts "sdrctl::mode -mode $val"
 	{*}$options(-command) report -mode $val
     }
     method controls {} { return [sdrctl::filter-controls {-command} [$self configure]] }
