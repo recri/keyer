@@ -28,16 +28,16 @@ package require snit
 snit::widgetadaptor sdrui::iq-correct {
     component button
 
-    option -correct -default 0 -type snit::boolean
+    option -mu -default 0 -type snit::boolean
     option -command {}
-    option -controls {-correct}
+    option -controls {-mu}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
 
     constructor {args} {
 	installhull using ttk::labelframe
-	install button using ttk::checkbutton $win.correct -text correct -variable [myvar options(-correct)] -command [mymethod set-correct]
+	install button using ttk::checkbutton $win.correct -text correct -variable [myvar options(-mu)] -command [mymethod set-mu]
 	pack $win.correct -fill x -expand true
 	foreach {opt val} { -label {IQ correct} -labelanchor n } {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
@@ -45,7 +45,7 @@ snit::widgetadaptor sdrui::iq-correct {
 	$self configure {*}$args
     }
 
-    method set-correct {} { if {$options(-command) ne {}} { {*}$options(-command) report -correct $options(-correct) } }
+    method set-mu {} { if {$options(-command) ne {}} { {*}$options(-command) report -mu $options(-mu) } }
 }
 
 

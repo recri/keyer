@@ -26,31 +26,31 @@ package require snit
 
     
 snit::widgetadaptor sdrui::iq-balance {
-    component rotation
-    component level
+    component sinephase
+    component lineargain
 
-    option -rotation -default 0
-    option -level -default 0
+    option -sine-phase -default 0
+    option -linear-gain -default 0
     option -command {}
-    option -controls {-rotation -level}
+    option -controls {-sine-phase -linear-gain}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
 
     constructor {args} {
 	installhull using ttk::labelframe
-	install rotation using ttk::spinbox $win.rotation -from 0 -to 1 -increment 0.0001 -textvariable [myvar options(-rotation)] -command [mymethod set-rotation]
-	install level using ttk::spinbox $win.level -from 0 -to 1 -increment 0.0001 -textvariable [myvar options(-level)] -command [mymethod set-level]
-	pack $win.rotation -side top -fill x -expand true
-	pack $win.level -side top -fill x -expand true
+	install sinephase using ttk::spinbox $win.sinephase -from -1 -to 1 -increment 0.001 -width 6 -textvariable [myvar options(-sine-phase)] -command [mymethod set-sine-phase]
+	install lineargain using ttk::spinbox $win.lineargain -from 0.25 -to 4 -increment 0.001 -width 6 -textvariable [myvar options(-linear-gain)] -command [mymethod set-linear-gain]
+	pack $win.sinephase -side top -fill x -expand true
+	pack $win.lineargain -side top -fill x -expand true
 	foreach {opt val} { -label {IQ balance } -labelanchor n } {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
     }
 
-    method set-rotation {} { if {$options(-command) ne {}} { {*}$options(-command) report -rotation $options(-rotation ) } }
-    method set-level {} { if {$options(-command) ne {}} { {*}$options(-command) report -level $options(-level ) } }
+    method set-sine-phase {} { if {$options(-command) ne {}} { {*}$options(-command) report -sine-phase $options(-sine-phase) } }
+    method set-linear-gain {} { if {$options(-command) ne {}} { {*}$options(-command) report -linear-gain $options(-linear-gain) } }
 }
 
 

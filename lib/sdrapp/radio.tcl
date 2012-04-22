@@ -62,6 +62,7 @@ snit::type sdrapp::radio {
 	    package require sdrui::$options(-ui-type)
 	    ::sdrui::$options(-ui-type) ::radio-ui -partof $self
 	}
+	::sdrapp::ctl resolve
     }
 
     destructor {

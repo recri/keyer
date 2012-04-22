@@ -121,6 +121,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       return TCL_ERROR;
     }
     data->modified = 1;
+    if ( ! framework_is_active(clientData))
+      _update(data);
   }
   return TCL_OK;
 }

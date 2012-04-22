@@ -30,7 +30,7 @@ package provide sdrui::band-select 1.0
 package require Tk
 package require snit
 
-package require sdrui::band-data
+package require sdrutil::band-data
 
 snit::widgetadaptor sdrui::band-select {
 
@@ -53,7 +53,7 @@ snit::widgetadaptor sdrui::band-select {
 
     constructor {args} {
 	installhull using canvas
-	install bands using sdrui::band-data %AUTO%
+	install bands using sdrutil::band-data %AUTO%
 	$self configure {*}$args
 	$hull configure -width $options(-width) -height $options(-height)
 	bind $win <Configure> [mymethod window-configure %w %h]
@@ -102,7 +102,7 @@ snit::widgetadaptor sdrui::band-select {
 	set y2 [expr {(1+$nrows)*$dy+$dy/3}]
 	set y3 [expr {(2+$nrows)*$dy}]
 	foreach tick {50kHz 100kHz 250kHz 500kHz 1MHz 2.5MHz 5MHz 10MHz 25MHz 50MHz 100MHz 250MHz 500MHz 1GHz 2.5GHz 5GHz 10GHz 25GHz 50GHz 100GHz 250GHz} {
-	    set x [x-for-frequency [$bands hertz $tick]]
+	    set x [x-for-frequency [sdrutil::hertz $tick]]
 	    $hull create line $x $y0 $x $y1
 	    $hull create text $x $y0 -text " $tick" -anchor nw
 	    $hull create line $x $y2 $x $y3

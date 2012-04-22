@@ -27,27 +27,27 @@ package require snit
 snit::widgetadaptor sdrui::lo-offset {
     component spinbox
 
-    option -offset -default 10000
+    option -freq -default 10000
     option -command {}
-    option -controls {-offset}
+    option -controls {-freq}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
-    delegate option -offset-min to spinbox as -from
-    delegate option -offset-max to spinbox as -to
-    delegate option -offset-step to spinbox as -increment
+    delegate option -freq-min to spinbox as -from
+    delegate option -freq-max to spinbox as -to
+    delegate option -freq-step to spinbox as -increment
 
     constructor {args} {
 	installhull using ttk::labelframe
-	install spinbox using ttk::spinbox $win.offset -width 4 -textvar [myvar options(-offset)] -command [mymethod set-offset]
-	pack $win.offset -side right -fill x -expand true
-	foreach {opt val} { -offset-min -24000 -offset-max 24000 -offset-step 1000 -label {LO offset} -labelanchor n } {
+	install spinbox using ttk::spinbox $win.freq -width 4 -textvar [myvar options(-freq)] -command [mymethod set-freq]
+	pack $win.freq -side right -fill x -expand true
+	foreach {opt val} { -freq-min -24000 -freq-max 24000 -freq-step 1000 -label {LO freq} -labelanchor n } {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
     }
 
-    method set-offset {} { if {$options(-command) ne {}} { {*}$options(-command) report -offset $options(-offset) } }
+    method set-freq {} { if {$options(-command) ne {}} { {*}$options(-command) report -freq $options(-freq) } }
 }
 
 

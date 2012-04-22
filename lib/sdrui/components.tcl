@@ -49,7 +49,6 @@ snit::type sdrui::components {
 	    {tx} ui-tx-rf {} sdrui::stub {}
 	    {tx} ui-tx-if {} sdrui::stub {}
 	    {tx} ui-tx-af {} sdrui::stub {}
-	    {rx tx} ui-rxtx {} sdrui::stub {}
 	    {keyer} ui-keyer {} sdrui::stub {}
 	    {rx tx} ui-tuner sdrui::vfo sdrui::vfo {}
 	    {rx tx} ui-band-select sdrui::band-select sdrui::band-select {}
@@ -58,21 +57,23 @@ snit::type sdrui::components {
 	    {rx} ui-rx-rf-iq-swap sdrui::iq-swap sdrui::iq-swap {}
 	    {rx} ui-rx-rf-iq-delay sdrui::iq-delay sdrui::iq-delay {}
 	    {rx} ui-rx-rf-iq-correct sdrui::iq-correct sdrui::iq-correct {}
-	    {rx tx} ui-rxtx-if-mix sdrui::lo-offset sdrui::lo-offset {}
-	    {rx tx} ui-rxtx-if-bpf sdrui::filter-select sdrui::filter-select {}
+	    {rx tx} ui-if-mix sdrui::lo-offset sdrui::lo-offset {}
+	    {rx tx} ui-if-bpf sdrui::filter-select sdrui::filter-select {}
 	    {rx} ui-rx-af-agc sdrui::agc-select sdrui::agc-select {}
-	    {rx tx} ui-rxtx-mode sdrui::mode-select sdrui::mode-select {}
+	    {rx tx} ui-mode sdrui::mode-select sdrui::mode-select {}
 	    {rx} ui-rx-af-gain sdrui::af-gain sdrui::af-gain {-label {RX AF Gain}}
 
 	    {tx} ui-tx-af-gain sdrui::af-gain sdrui::af-gain {-label {TX AF Gain}}
 	    {tx} ui-tx-af-leveler sdrui::leveler-select sdrui::leveler-select {}
 	    {tx} ui-tx-rf-iq-balance sdrui::iq-balance sdrui::iq-balance {}
 	    {tx} ui-tx-rf-gain sdrui::rf-gain sdrui::rf-gain {-label {TX RF Gain}}
-	    {rx tx} ui-rxtx-band-select sdrui::band-select sdrui::band-select {}
 
 	    {keyer} ui-keyer-debounce sdrui::debounce sdrui::debounce {}
 	    {keyer} ui-keyer-iambic sdrui::iambic sdrui::iambic {}
-	    {keyer rx tx} ui-keyer-pitch sdrui::cw-pitch sdrui::cw-pitch {}
+	    {keyer} ui-keyer-iambic-wpm sdrui::iambic sdrui::iambic-wpm {}
+	    {keyer} ui-keyer-iambic-dah sdrui::iambic sdrui::iambic-dah {}
+	    {keyer} ui-keyer-iambic-space sdrui::iambic sdrui::iambic-space {}
+	    {keyer rx tx} ui-keyer-tone sdrui::cw-pitch sdrui::cw-pitch {}
 	} {
 	    foreach x $wantedby {
 		if {$need($x)} {
@@ -94,8 +95,9 @@ snit::type sdrui::component {
     option -options {}
     option -name {}
     option -type ui
-    option -enable no
-    option -activate no
+    option -enable yes
+    option -activate -default no -cgetmethod cget-handler
+
     constructor {args} {
 	$self configure {*}$args
 	set options(-name) "$options(-root).$options(-suffix)"
@@ -104,11 +106,19 @@ snit::type sdrui::component {
 	}
 	$options(-factory) $options(-name) -command [mymethod command] {*}$options(-options)
 	$options(-control) add $options(-suffix) $self
+	if {[catch {
+	    # there may be no -add-listeners option defined
+	    foreach {name1 var1 var2} [$options(-name) cget -add-listeners] {
+		$self command add-listener $name1 $var1 $var2
+	    }
+	} error] && $options(-suffix) eq {ui-if-bpf}} {
+	    puts "error adding listeners for $options(-suffix): $error"
+	}
     }
     
+    method {cget-handler -activate} {} { return [winfo viewable $options(-name)] }
     method {command report} {opt val} { $options(-control) report $options(-suffix) $opt $val }
-    method {command supplies} {opts} { lappend $options(-controls) {*}$opts }
-    method {command requires} {opts} { lappend $options(-controls) {*}$opts }
+    method {command add-listener} {name1 opt1 opt2} { $options(-control) add-listener $name1 $opt1 $options(-suffix) $opt2 }
 
     # these are the methods the radio controller uses
     method controls {} {

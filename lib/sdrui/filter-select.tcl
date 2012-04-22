@@ -23,101 +23,66 @@ package provide sdrui::filter-select 1.0.0
 
 package require Tk
 package require snit
+package require sdrui::ui-types
 
 snit::widgetadaptor sdrui::filter-select {
 
-    option -mode -default CWU -configuremethod set-mode
-    option -cw-pitch -default 600 -configuremethod set-cw-pitch
-    option -limits {}
+    option -mode -default CWU -type sdrui::mode -configuremethod opt-handler
+    option -width {}
     option -command {}
-    option -controls {-limits -mode -pitch}
+    option -controls {-width -mode}
+    option -add-listeners { ctl-mode -mode -mode }
 
     ##
-    ## qtradio filter settings
-    ## the CW settings are offsets from the desired cw pitch
-    ## the unique filters settings are listed, the rest are aliases or
-    ## negations of the aliased set
+    ## QtRadio filter settings simplified.
+    ## They use 20 source files to define the 3 filter sets listed below.
+    ## Only the filter widths are specified.
+    ## Filters are symmetric, carrier-width/2 to carrier+width/2,
+    ## upper sideband, carrier+150 to carrier+150+width,
+    ## or lower sideband, carrier-150-width to carrier-150.
+    ## Modes with identical widths are aliased.
     ##
-    typevariable filters [dict create \
-			      LSB -USB \
-			      USB [dict create \
-				       0 {"5.0k" 150 5150} 1 {"4.4k" 150 4550} 2 {"3.8k" 150 3950} 3 {"3.3k" 150 3450} 4 {"2.9k" 150 3050} \
-				       5 {"2.7k" 150 2850} 6 {"2.4k" 150 2550} 7 {"2.1k" 150 2250} 8 {"1.8k" 150 1950} 9 {"1.0k" 150 1150} \
-				       default 3] \
-			      DSB AM \
-			      CWL CWU \
-			      CWU [dict create \
-				       0 {"1.0k" -500 500} 1 {"800" -400 400} 2 {"750" -375 375} 3 {"600" -300 300} 4 {"500" -250 250} \
-				       5 {"400" -200 200} 6 {"250" -125 125} 7 {"100" -50 50} 8 {"50" -25 25} 9 {"25" -13 13} \
-				       default 5] \
-			      AM [dict create \
-				      0 {"16k" -8000 8000} 1 {"12k" -6000 6000} 2 {"10k" -5000 5000} 3 {"8k"  -4000 4000} 4 {"6.6k" -3300 3300} \
-				      5 {"5.2k" -2600 2600} 6 {"4.0k" -2000 2000} 7 {"3.1k" -1550 1550} 8 {"2.9k" -1450 1450} 9 {"2.4k" -1200 1200} \
-				      default 3] \
-			      SAM AM \
-			      FMN AM \
-			      DIGL -DIGU \
-			      DIGU [dict create \
-					0 {"5.0k" 150 5150} 1 {"4.4k" 150 4550} 2 {"3.8k" 150 3950} 3 {"3.3k" 150 3450} 4 {"2.9k" 150 3050} \
-					5 {"2.7k" 150 2850} 6 {"2.4k" 150 2550} 7 {"2.1k" 150 2250} 8 {"1.8k" 150 1950} 9 {"1.0k" 150 1150} \
-					default 3] \
-			     ]
-    # local data
-    variable data -array {
-	selected 0
-	filters {}
-	string "xxxx"
-    }
+    typevariable aliases [dict create {*}{
+	CWL CWU
+	LSB USB DIGL USB DIGU USB
+	DSB AM SAM AM FMN AM
+    }]
+    typevariable filters [dict create {*}{
+	CWU-default 400  CWU { 1000   800   750  600  500  400  250  100   50   25}
+	USB-default 3300 USB { 5000  4400  3800 3300 2900 2700 2400 2100 1800 1000}
+	AM-default  8000  AM {16000 12000 10000 8000 6600 5200 4000 3100 2900 2400}
+	
+    }]
 
     constructor {args} {
 	installhull using ttk::labelframe -text Filter -labelanchor n
-	pack [ttk::menubutton $win.b -textvar [myvar data(string)] -menu $win.b.m] -fill x -expand true
+	pack [ttk::menubutton $win.b -textvar [myvar options(-width)] -menu $win.b.m] -fill x -expand true
 	menu $win.b.m -tearoff no
 	$self configure {*}$args
     }
     
-    method set-cw-pitch {opt val} {
-	set options($opt) $val
-	if {$options(-mode) in {CWL CWU}} {
-	    $self set-filter $data(selected)
+    method {opt-handler -mode} {val} {
+	set options(-mode) $val
+	set x $val
+	while {[dict exists $aliases $x]} {
+	    set x [dict get $aliases $x]
 	}
-    }
-
-    method set-mode {opt val} {
-	if { ! [dict exists $filters $val]} {
-	    error "unknown mode \"$val\", must be one of [dict keys filters]"
+	if { ! [dict exists $filters $x]} {
+	    error "no filter set for mode $val, aliased to $x"
 	}
-	set options($opt) $val
-	set negative 0
-	set fdict [dict get $filters $val]
-	if {[dict exists $filters $fdict]} {
-	    set fdict [dict get $filters $fdict]
-	} elseif {[dict exists $filters [string range $fdict 1 end]]} {
-	    set negative [string equal [string range $fdict 0 1] {-}]
-	    set fdict [dict get $filters [string range $fdict 1 end]]
+	if { ! [dict exists $filters $x-default]} {
+	    error "no filter set default for mode $val, aliased to $x"
 	}
-	set data(filters) $fdict
+	set data(widths) [dict get $filters $x]
+	set options(-width) [dict get $filters $x-default]
 	$win.b.m delete 0 end
-	dict for {key val} $data(filters) {
-	    if {$key eq {default}} {
-		set data(selected) $val
-		$self set-filter $data(selected)
-	    } else {
-		lassign $val string low high
-		if {$negative} { lassign [list [expr {-$high}] [expr {-$low}]] low high }
-		$win.b.m add radiobutton -label $string -value $key -variable [myvar data(selected)] -command [mymethod set-filter $key]
-	    }
+	foreach width $data(widths) {
+	    $win.b.m add radiobutton -label $width -value $width -variable [myvar options(-width)] -command [mymethod set-filter $width]
 	}
+	$self set-filter $options(-width)
     }
 
-    method set-filter {index} {
-	lassign [dict get $data(filters) $index] string low high
-	set data(string) $string
-	if {$options(-mode) eq {CWU}} {
-	    lassign [list [expr {$options(-cw-pitch)+$low}] [expr {$options(-cw-pitch)+$high}]] low high
-	} elseif {$options(-mode) eq {CWL}} {
-	    lassign [list [expr {-$options(-cw-pitch)+$low}] [expr {-$options(-cw-pitch)+$high}]] low high
-	}
-	if {$options(-command) ne {}} { {*}$options(-command) report -limits [list $low $high] }
+    method set-filter {width} {
+	if {$options(-command) ne {}} { {*}$options(-command) report -width $width }
     }
 }

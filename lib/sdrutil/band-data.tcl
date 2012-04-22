@@ -24,13 +24,14 @@
 # should show band plans for amateur bands
 #
 
-package provide sdrui::band-data 1.0
+package provide sdrutil::band-data 1.0
 
 package require snit
+package require sdrutil::util
 
-namespace eval sdrui {}
+namespace eval sdrutil {}
 
-namespace eval sdrui::band-data {
+namespace eval sdrutil::band-data {
     ##
     ## create the dictionary
     ##
@@ -53,25 +54,6 @@ namespace eval sdrui::band-data {
     ## initialize the services
     ##
     dict set data services {}
-
-    ##
-    ## convert variously formatted frequencies to Hertz
-    ##
-    proc hertz {string} {
-	# match a number followed by an optional frequency unit
-	# allow any case spellings of frequency units
-	# allow spaces before, after, or between
-	if {[regexp -nocase {^\s*(\d+|\d+\.\d+|\.\d+|\d+\.)([eE][-+]\d+)?\s*([kMG]?Hz)?\s*$} $string all number exponent unit]} {
-	    set f $number$exponent
-	    switch -nocase $unit {
-		{} - Hz  { return [expr {$f*1.0}] }
-		kHz { return [expr {$f*1000.0}] }
-		MHz { return [expr {$f*1000.0*1000.0}] }
-		GHz { return [expr {$f*1000.0*1000.0*1000.0}] }
-	    }
-	}
-	error "badly formatted frequency: $string"
-    }
 
     ##
     ## add service to spectrum database
@@ -104,7 +86,7 @@ namespace eval sdrui::band-data {
 	}
 	foreach {name value} $args {
 	    switch $name {
-		filter - channel-step - low - high { hertz $value }
+		filter - channel-step - low - high { sdrutil::hertz $value }
 		note - name - mode {}
 		default {
 		    error "unknown band $name = {$value}"
@@ -126,7 +108,7 @@ namespace eval sdrui::band-data {
 	foreach {name value} $args {
 	    switch $name {
 		note - name - mode  {}
-		filter - freq { hertz $value }
+		filter - freq { sdrutil::hertz $value }
 		default {
 		    error "unknown channel $name = {$value}"
 		}
@@ -137,9 +119,9 @@ namespace eval sdrui::band-data {
     }
     
     ##
-    ## Aeronautical bands
+    ## Aviation bands
     ##
-    add-service Aeronautical color {light blue} row 1
+    add-service Aviation color {light blue} row 1
     foreach {low high} {
 	2.850 3.155
 	3.400 3.500
@@ -155,11 +137,11 @@ namespace eval sdrui::band-data {
 	21.924 22.000
 	23.200 23.350
     } {
-	add-band Aeronautical $low low ${low}MHz high ${high}MHz mode SSB
+	add-band Aviation $low low ${low}MHz high ${high}MHz mode SSB
     }
-    add-band Aeronautical VHF-Nav low 108MHz high 117.975MHz mode AM
-    add-band Aeronautical VHF-AM low 118MHz high 137MHz mode AM
-    add-channel Aeronautical Distress freq 121.5MHz
+    add-band Aviation VHF-Nav low 108MHz high 117.975MHz mode AM
+    add-band Aviation VHF-AM low 118MHz high 137MHz mode AM
+    add-channel Aviation Distress freq 121.5MHz
 
     ##
     ## Marine mobile bands
@@ -325,37 +307,39 @@ namespace eval sdrui::band-data {
     # maybe some other day
 }
 
+proc sdrutil::band-data-get {args} { return [dict get ${::sdrutil::band-data::data} {*}$args] }
+proc sdrutil::band-data-ranges {} { return [band-data-get ranges] }
+proc sdrutil::band-data-range {range} { return [band-data-get ranges $range] }
+proc sdrutil::band-data-range-hertz {range} { return [map hertz [band-data-range $range]] }
+proc sdrutil::band-data-services {} { return [band-data-get services] }
+proc sdrutil::band-data-nrows {} { return [llength [lsort -unique [map band-data-row [band-data-services]]]] }
+proc sdrutil::band-data-row {service} { return [band-data-get $service row] }
+proc sdrutil::band-data-service {service} { return [band-data-get $service] }
+proc sdrutil::band-data-bands {service} { return [band-data-get $service bands] }
+proc sdrutil::band-data-channels {service} { return [band-data-get $service channels] }
+proc sdrutil::band-data-color {service} { return [band-data-get $service color] }
+proc sdrutil::band-data-band {service band} { return [band-data-get $service $band] }
+proc sdrutil::band-data-band-range {service band} { return [list [band-data-get $service $band low] [band-data-get $service $band high]] }
+proc sdrutil::band-data-band-range-hertz {service band} { return [map hertz [band-data-band-range $service $band]] }
+proc sdrutil::band-data-channel {service channel} { return [band-data-get $service $channel] }
+proc sdrutil::band-data-channel-freq {service channel} { return [band-data-get $service $channel freq] }
+proc sdrutil::band-data-channel-freq-hertz {service channel} { return [hertz [band-data-channel-freq $service $channel]] }
 
-snit::type sdrui::band-data {
-    variable data 
-
-    constructor {args} { set data ${::sdrui::band-data::data} }
-    method get {args} { return [dict get $data {*}$args] }
-    method ranges {} { return [$self get ranges] }
-    method range {range} { return [$self get ranges $range] }
-    method range-hertz {range} { return [$self hertz {*}[$self range $range]] }
-    method services {} { return [$self get services] }
-    method nrows {} { foreach s [$self services] { incr t([$self row $s]) }; return [array size t] }
-    method row {service} { return [$self get $service row] }
-    method service {service} { return [$self get $service] }
-    method bands {service} { return [$self get $service bands] }
-    method channels {service} { return [$self get $service channels] }
-    method color {service} { return [$self get $service color] }
-    method band {service band} { return [$self get $service $band] }
-    method band-range {service band} { return [list [$self get $service $band low] [$self get $service $band high]] }
-    method band-range-hertz {service band} { return [$self hertz {*}[$self band-range $service $band]] }
-    method channel {service channel} { return [$self get $service $channel] }
-    method channel-freq {service channel} { return [$self get $service $channel freq] }
-    method channel-freq-hertz {service channel} { return [$self hertz [$self channel-freq $service $channel]] }
-    method hertz {args} {
-	switch [llength $args] {
-	    0 { return {} }
-	    1 { return [::sdrui::band-data::hertz [lindex $args 0]] }
-	    default {
-		set range {}
-		foreach f $args { lappend range [::sdrui::band-data::hertz $f] }
-		return $range
-	    }
-	}
-    }
+snit::type sdrutil::band-data {
+    method get {args} { return [sdrutil::band-data-get {*}$args] }
+    method ranges {} { return [sdrutil::band-data-ranges] }
+    method range {range} { return [sdrutil::band-data-range $range] }
+    method services {} { return [sdrutil::band-data-services] }
+    method nrows {} { return [sdrutil::band-data-nrows] }
+    method row {service} { return [sdrutil::band-data-row $service] }
+    method service {service} { return [sdrutil::band-data-service $service] }
+    method bands {service} { return [sdrutil::band-data-bands $service] }
+    method channels {service} { return [sdrutil::band-data-channels $service] }
+    method color {service} { return [sdrutil::band-data-color $service] }
+    method band {service band} { return [sdrutil::band-data-band $service $band] }
+    method band-range {service band} { return [sdrutil::band-data-band-range $service $band] }
+    method band-range-hertz {service band} { return [sdrutil::band-data-band-range-hertz $service $band] }
+    method channel {service channel} { return [sdrutil::band-data-channel $service $channel] }
+    method channel-freq {service channel} { return [sdrutil::band-data-channel-freq $service $channel] }
+    method channel-freq-hertz {service channel} { return [sdrutil::band-data-channel-freq-hertz $service $channel] }
 }

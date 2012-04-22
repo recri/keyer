@@ -1,4 +1,3 @@
-# -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
@@ -16,14 +15,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
+all:: pkgIndex.tcl
 
-package provide sdrblk::comp-iq-balance 1.0.0
+clean::
+	rm -f *~
 
-package require sdrblk::block
-package require sdrkit::iq-balance
+all-clean:: clean
+	rm -f pkgIndex.tcl
 
-namespace eval sdrblk {}
+pkgIndex.tcl: $(wildcard *.so) $(filter-out pkgIndex.tcl, $(wildcard *.tcl))
+	echo 'pkg_mkIndex .' | tclsh
 
-proc sdrblk::comp-iq-balance {name args} {
-    return [sdrblk::block $name -type jack -suffix iq-balance -factory sdrkit::iq-balance {*}$args]
-}

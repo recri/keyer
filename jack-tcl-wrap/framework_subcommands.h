@@ -21,6 +21,7 @@
   { "configure", fw_subcommand_configure, "configure option values, or get list of options" },
   { "cget",      fw_subcommand_cget,      "get an option value" },
   { "cdoc",      fw_subcommand_cdoc,      "get the doc string for a command, a subcommand, or an option" },
+  { "info",      fw_subcommand_info,      "get the type, methods, options, or doc strings for a command" },
 #if FRAMEWORK_USES_JACK
   { "activate",  fw_subcommand_activate,  "activate a jack client" },
   { "deactivate",fw_subcommand_deactivate,"deactivate a jack client" },

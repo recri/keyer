@@ -23,7 +23,7 @@ package require Tk
 package require snit
 package require tkcon
 
-package require sdrui::radio-panel
+package require sdrui::ui-radio-panel
 package require sdrui::tree
 package require sdrui::connections
 package require sdrui::panadapter
@@ -57,7 +57,7 @@ snit::type sdrui::ui-notebook {
 	    .menu.view add checkbutton -label $view -variable [myvar data($view)] -command [mymethod view $view]
 	}
 	. configure -menu .menu
-	pack [sdrui::radio-panel .radio -partof $self -control $options(-control)] -fill both -expand true
+	pack [sdrui::ui-radio-panel .radio -partof $self -control $options(-control)] -fill both -expand true
     }
 
     method widget {foo} {

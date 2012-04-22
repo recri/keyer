@@ -23,12 +23,13 @@ package provide sdrui::agc-select 1.0.0
 
 package require Tk
 package require snit
+package require sdrui::ui-types
     
 snit::widgetadaptor sdrui::agc-select {
     component menubutton
     component menu
 
-    option -mode -default med -type {snit::enum -values {off long slow med fast}}
+    option -mode -default med -type sdrui::agc-mode
     option -command {}
     option -controls {-mode}
 
@@ -39,7 +40,7 @@ snit::widgetadaptor sdrui::agc-select {
 	installhull using ttk::labelframe
 	install menubutton using ttk::menubutton $win.b -textvar [myvar options(-mode)] -menu $win.b.m
 	install menu using menu $win.b.m -tearoff no
-	foreach mode {off long slow med fast} {
+	foreach mode [sdrui::agc-mode cget -values] {
 	    $win.b.m add radiobutton -label $mode -variable [myvar options(-mode)] -value $mode -command [mymethod set-mode $mode]
 	}
 	pack $win.b -fill x -expand true

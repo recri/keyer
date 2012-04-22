@@ -43,9 +43,9 @@ snit::widgetadaptor sdrui::debounce {
     constructor {args} {
 	installhull using ttk::labelframe
 	install wperiod using ttk::labelframe $win.p -text Period(ms)
-	install period using ttk::spinbox $win.p.s -from 0.1 -to 1 -increment 0.1 -textvariable [myvar options(-period)] -command [mymethod set-period]
+	install period using ttk::spinbox $win.p.s -from 0.1 -to 1 -increment 0.1 -width 4 -textvariable [myvar options(-period)] -command [mymethod set-period]
 	install wsteps using ttk::labelframe $win.s -text Steps
-	install steps using ttk::spinbox $win.s.s -from 0 -to 64 -increment 1 -textvariable [myvar options(-steps)] -command [mymethod set-steps]
+	install steps using ttk::spinbox $win.s.s -from 0 -to 64 -increment 1 -width 4 -textvariable [myvar options(-steps)] -command [mymethod set-steps]
 	pack $win.p.s -fill x -expand true
 	pack $win.p -fill x -expand true -side top
 	pack $win.s.s -fill x -expand true

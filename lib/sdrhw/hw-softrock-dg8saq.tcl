@@ -29,7 +29,7 @@ snit::type sdrhw::hw-softrock-dg8saq {
     option -prefix {}
     option -suffix hw
     option -control {}
-    option -enable no
+    option -enable yes
     option -activate no
 
     constructor {args} {
@@ -48,9 +48,9 @@ snit::type sdrhw::hw-softrock-dg8saq {
     method control {args} { $self configure {*}$args }
     method controlget {opt} { return [$self configure $opt] }
 
-    method opt-handle {opt val} {
-	exec usbsoftrock set freq $val
-	set options($opt) $val
+    method {opt-handle -freq} {val} {
+	# puts "hw-softrock-dg8saq -freq $val"
+	set options(-freq) $val
+	if {$options(-activate)} { exec usbsoftrock set freq [expr {$val/1e6}] }
     }
-    
 }

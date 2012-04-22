@@ -420,6 +420,39 @@ static int fw_subcommand_cget(ClientData clientData, Tcl_Interp *interp, int arg
 static int fw_subcommand_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return fw_option_cdoc(clientData, interp, argc, objv);
 }
+static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  char *cmd0 = Tcl_GetString(objv[0]);
+  if (argc <= 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info command ...\"", cmd0));
+  char *cmd2 = Tcl_GetString(objv[2]);
+  if (strcmp(cmd2, "doc") == 0) {
+    if (argc <= 3)
+      return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info doc command ...\"", Tcl_GetString(objv[0])));
+    char *cmd3 = Tcl_GetString(objv[3]);
+    if (strcmp(cmd3, "type") == 0)
+      return fw_success_str(interp, fp->doc_string);
+    if (strcmp(cmd3, "method") == 0) {
+      // return doc_string for method
+      return fw_error_str(interp, "info doc method ... not implemented");
+    }
+    if (strcmp(cmd3, "option") == 0) {
+      // return doc_string for option
+      return fw_error_str(interp, "info doc option ... not implemented");
+    }
+    return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info %s ...\" is not defined", cmd0, cmd3));
+  }
+  if (strcmp(cmd2, "type") == 0) return fw_success_obj(interp, fp->class_name);
+  if (strcmp(cmd2, "methods") == 0) {
+    // list of methods, optionally filtered by pattern
+    return fw_error_str(interp, "info methods not implemented");
+  }
+  if (strcmp(cmd2, "options") == 0) {
+    // list of options, optionally filtered by pattern
+    return fw_error_str(interp, "info options not implemented");
+  }
+  return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info %s ...\" is not defined", cmd0, cmd2));
+}
 static int fw_subcommand_activate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
   if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot activate");
@@ -482,6 +515,9 @@ static jack_port_t *framework_midi_output(void *p, int i) {
   framework_t *fp = (framework_t *)p;
   if (i < 0 || i >= fp->n_midi_outputs) fprintf(stderr, "invalid framework_midi_output %d\n", i);
   return framework_port(p, i+((framework_t *)p)->n_inputs+((framework_t *)p)->n_outputs+((framework_t *)p)->n_midi_inputs);
+}
+static int framework_is_active(void *arg) {
+  return ((framework_t *)arg)->activated;
 }
 
 static int sdrkit_sample_rate(void *arg) {

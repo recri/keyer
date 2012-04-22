@@ -1,4 +1,3 @@
-# -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
@@ -17,13 +16,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-iq-balance 1.0.0
+##
+## ui-types - snit types for ui validation 
+##
+package provide sdrui::ui-types 1.0.0
 
-package require sdrblk::block
-package require sdrkit::iq-balance
+package require snit
 
-namespace eval sdrblk {}
-
-proc sdrblk::comp-iq-balance {name args} {
-    return [sdrblk::block $name -type jack -suffix iq-balance -factory sdrkit::iq-balance {*}$args]
-}
+snit::enum sdrui::mode -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}
+snit::enum sdrui::agc-mode -values {off long slow med fast}
+snit::enum sdrui::leveler-mode -values {off leveler}

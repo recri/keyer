@@ -31,10 +31,10 @@ snit::widgetadaptor sdrui::cw-pitch {
     component button
     component spinbox
 
-    option -pitch 600
+    option -freq 600
     option -spot 0
     option -command {}
-    option -controls {-pitch -spot}
+    option -controls {-freq -spot}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -54,7 +54,7 @@ snit::widgetadaptor sdrui::cw-pitch {
 	$self configure {*}$args
     }
 
-    method set-pitch {} { if {$options(-command) ne {}} { {*}$options(-command) report -pitch $options(-pitch) } }
+    method set-pitch {} { if {$options(-command) ne {}} { {*}$options(-command) report -freq $options(-pitch) } }
     method set-spot {args} { if {$options(-command) ne {}} { {*}$options(-command) report -spot $options(-spot) } }
 
 }
