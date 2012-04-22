@@ -47,6 +47,9 @@ snit::type sdrapp::radio {
     option -tx-sink -readonly yes -default {}
     option -keyer-source -readonly yes -default {}
     option -keyer-sink -readonly yes -default {}
+    option -activate-hw -readonly yes -default no
+    option -enable-rx -readonly yes -default no
+    option -activate-rx -readonly yes -default no
 
     constructor {args} {
 	$self configure {*}$args
@@ -63,6 +66,13 @@ snit::type sdrapp::radio {
 	    ::sdrui::$options(-ui-type) ::radio-ui -partof $self
 	}
 	::sdrapp::ctl resolve
+	if {$options(-activate-hw)} { {*}$options(-control) activate hw }
+	if {$options(-enable-rx)} {
+	    foreach name {rx-rf-gain rx-rf-iq-correct rx-if-mix rx-if-bpf rx-af-agc} {
+		{*}$options(-control) enable $name
+	    }
+	}
+	if {$options(-activate-rx)} { {*}$options(-control) activate rx }
     }
 
     destructor {

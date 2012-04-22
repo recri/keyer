@@ -48,6 +48,8 @@ snit::type sdrhw::hw-softrock-dg8saq {
     method control {args} { $self configure {*}$args }
     method controlget {opt} { return [$self configure $opt] }
 
+    method connect {} {}
+
     method {opt-handle -freq} {val} {
 	# puts "hw-softrock-dg8saq -freq $val"
 	set options(-freq) $val

@@ -32,11 +32,13 @@ snit::widget sdrui::panadapter {
     option -server -default default -readonly true
     option -partof -readonly yes
     option -control -readonly yes
+    option -input -default none -configuremethod opt-handler
 
     variable data -array {}
 
-    method set-option {opt val} {
+    method set-and-delegate-option {opt val} {
 	set options($opt) $val
+	# oh, this is delegating to the tk-panadapter
 	$win.p configure $opt $val
     }
 
@@ -50,10 +52,30 @@ snit::widget sdrui::panadapter {
 	return $new
     }
 
+    method {opt-handler -input} {input} {
+	puts "select input $input"
+	if {$input ne {none}} {
+	    set ports [$options(-control) ccget $input -inport]
+	    puts "selected input has ports $ports"
+	    $win.p configure -connect [lindex [split [lindex $ports 0] :] 0]
+	}
+    }
+
     constructor {args} {
 	$self configure {*}$args
-	pack [sdrui::tk-panadapter $win.p {*}[filter-options {-partof -control} [array get options]]] -side top -fill both -expand true
+	pack [sdrui::tk-panadapter $win.p {*}[filter-options {-partof -control -input} [array get options]]] -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
+
+	# spectrum selection
+	pack [ttk::menubutton $win.m.i -textvar [myvar options(-input)] -menu $win.m.i.m] -side left
+	menu $win.m.i.m -tearoff no
+	$win.m.i.m add radiobutton -label none -variable [myvar options(-input)] -value none -command [mymethod configure -input none]
+	foreach i [{*}$options(-control) list] {
+	    if {[string match *spectrum* $i]} {
+		$win.m.i.m add radiobutton -label $i -variable [myvar options(-input)] -value $i -command [mymethod configure -input $i]
+	    }
+	}
+								
 	# polyphase spectrum control
 	pack [ttk::menubutton $win.m.s -textvar [myvar data(polyphase)] -menu $win.m.s.m] -side left
 	menu $win.m.s.m -tearoff no
@@ -64,33 +86,39 @@ snit::widget sdrui::panadapter {
 		set label "polyphase $x"
 	    }
 	    if {$options(-polyphase) == $x} { set data(polyphase) $label }
-	    $win.m.s.m add radiobutton -label $label -variable [myvar data(polyphase)] -value $label -command [mymethod set-option -polyphase $x]
+	    $win.m.s.m add radiobutton -label $label -variable [myvar data(polyphase)] -value $label -command [mymethod set-and-delegate-option -polyphase $x]
 	}
+
 	# waterfall palette control
 	pack [ttk::menubutton $win.m.p -textvar [myvar data(pal)] -menu $win.m.p.m] -side left
 	menu $win.m.p.m -tearoff no
 	foreach p {0 1 2 3 4 5} {
 	    set label "palette $p"
 	    if {$options(-pal) == $p} { set data(pal) $label }
-	    $win.m.p.m add radiobutton -label $label -variable [myvar data(pal)] -value $label -command [mymethod set-option -pal $p]
+	    $win.m.p.m add radiobutton -label $label -variable [myvar data(pal)] -value $label -command [mymethod set-and-delegate-option -pal $p]
 	}
+
 	# waterfall/spectrum min dB
 	pack [ttk::menubutton $win.m.min -textvar [myvar data(min)] -menu $win.m.min.m] -side left
 	menu $win.m.min.m -tearoff no
 	foreach min {-160 -150 -140 -130 -120 -110 -100 -90 -80} {
 	    set label "min $min dB"
 	    if {$options(-min) == $min} { set data(min) $label }
-	    $win.m.min.m add radiobutton -label $label -variable [myvar data(min)] -value $label -command [mymethod set-option -min $min]
+	    $win.m.min.m add radiobutton -label $label -variable [myvar data(min)] -value $label -command [mymethod set-and-delegate-option -min $min]
 	}
+
 	# waterfall/spectrum max dB
 	pack [ttk::menubutton $win.m.max -textvar [myvar data(max)] -menu $win.m.max.m] -side left
 	menu $win.m.max.m -tearoff no
 	foreach max {0 -10 -20 -30 -40 -50 -60 -70 -80} {
 	    set label "max $max dB"
 	    if {$options(-max) == $max} { set data(max) $label }
-	    $win.m.max.m add radiobutton -label $label -variable [myvar data(max)] -value $label -command [mymethod set-option -max $max]
+	    $win.m.max.m add radiobutton -label $label -variable [myvar data(max)] -value $label -command [mymethod set-and-delegate-option -max $max]
 	}
+
 	# zoom in/out
-	# scroll
+
+	# scroll/pan
+
     }
 }

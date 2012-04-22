@@ -10,7 +10,7 @@
 
 export DISPLAY=:0
 OBDEV=hw:0			# 0 for onboard
-OBRATE=96000			# onboard rate
+OBRATE=48000			# onboard rate
 HWDEV=hw:1			# 1 for sdr-widget
 HWRATE=48000			# hardware rate
 HWBUFFER=1024			# hardware buffer
@@ -75,6 +75,7 @@ nohup dspserver --lo 10000 > $LOG-dspserver.log 2>&1 &
 ##
 if [ $ADAPTER -eq 1 ]; then
     sleep 1
+    echo "jack_load audioadapter -i \"-D -C$OBDEV,0 -P$OBDEV,1 -q 0 -r $OBRATE\""
     jack_load audioadapter -i "-D -C$OBDEV,0 -P$OBDEV,1 -q 0 -r $OBRATE"
 fi
 ##

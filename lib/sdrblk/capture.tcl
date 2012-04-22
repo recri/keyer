@@ -246,7 +246,7 @@ package require sdrkit::jack
 	    $data($options(-type)) start
 	    #puts "::capture::start $w has state [state $w]"
 	    set data(started) 1
-	    after 100 [mymethod capture-$options(-type)]
+	    after 100 [list $self capture-$options(-type)]
 	}
     }
     
