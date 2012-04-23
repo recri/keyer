@@ -35,6 +35,8 @@
 ** keep the max, the sum, and the decayed average for which ever
 ** is chosen, and return frame nframes max, sum, decayed average
 ** over the frame period.
+**
+** there is another meter value read directly from the agc.
 */
 
 typedef enum {
@@ -50,7 +52,12 @@ typedef struct {
   float decay;
 } options_t;
 
-typedef void (*reduce_function_t)(jack_nframes_t n, float *in0, float *in1, float *val, float *sum, float *decayed, const float decay, const float comp_decay);
+typedef struct {
+  jack_nframes_t frame, nframes;
+  float max_val, sum_val, decayed_val;
+} summary_t;
+
+typedef void (*reduce_function_t)(jack_nframes_t n, float *in0, float *in1, summary_t *vals, const float decay, const float comp_decay);
 
 typedef struct {
   // computed results kept for get
@@ -63,33 +70,34 @@ typedef struct {
   framework_t fw;
   options_t opts;
   preconf_t prec;
+  int modified, reset;
   reduce_function_t reduce;
   float decay, comp_decay;
-  float max_val, sum_val, decayed_val;
-  jack_nframes_t frame;
-  jack_nframes_t nframes;
+  summary_t stable, working;
 } _t;
 
 /*
 ** shared reduction pattern
 */
-static void reduce_val(float val, float *max, float *sum, float *decayed, float decay, float comp_decay) {
-    *max = maxf(*max, val); *sum += val; *decayed = *decayed * decay + val * comp_decay;
+static void reduce_val(float val, summary_t *vals, float decay, float comp_decay) {
+    vals->max_val = maxf(vals->max_val, val);
+    vals->sum_val += val;
+    vals->decayed_val = vals->decayed_val * decay + val * comp_decay;
 }  
 /*
 ** four reduction functions
 */
-static void reduce_abs_real(jack_nframes_t n, float *in0, float *in1, float *max, float *sum, float *decayed, float decay, float comp_decay) {
-  for (int i = 0; i < n; i += 1) reduce_val(absf(*in0++), max, sum, decayed, decay, comp_decay);
+static void reduce_abs_real(jack_nframes_t n, float *in0, float *in1, summary_t *vals, float decay, float comp_decay) {
+  for (int i = 0; i < n; i += 1) reduce_val(fabsf(*in0++), vals, decay, comp_decay);
 }
-static void reduce_abs_imag(jack_nframes_t n, float *in0, float *in1, float *max, float *sum, float *decayed, float decay, float comp_decay) {
-  for (int i = 0; i < n; i += 1) reduce_val(absf(*in1++), max, sum, decayed, decay, comp_decay);
+static void reduce_abs_imag(jack_nframes_t n, float *in0, float *in1, summary_t *vals, float decay, float comp_decay) {
+  for (int i = 0; i < n; i += 1) reduce_val(fabsf(*in1++), vals, decay, comp_decay);
 }
-static void reduce_max_abs(jack_nframes_t n, float *in0, float *in1, float *max, float *sum, float *decayed, float decay, float comp_decay) {
-  for (int i = 0; i < n; i += 1) reduce_val(maxf(absf(*in0++), absf(*in1++)), max, sum, decayed, decay, comp_decay);
+static void reduce_max_abs(jack_nframes_t n, float *in0, float *in1, summary_t *vals, float decay, float comp_decay) {
+  for (int i = 0; i < n; i += 1) reduce_val(maxf(fabsf(*in0++), fabsf(*in1++)), vals, decay, comp_decay);
 }
-static void reduce_mag_squared(jack_nframes_t n, float *in0, float *in1, float *max, float *sum, float *decayed, float decay, float comp_decay) {
-  for (int i = 0; i < n; i += 1) reduce_val(squaref(*in0++) + squaref(*in1++), max, sum, decayed, decay, comp_decay);
+static void reduce_mag_squared(jack_nframes_t n, float *in0, float *in1, summary_t *vals, float decay, float comp_decay) {
+  for (int i = 0; i < n; i += 1) reduce_val(squaref(*in0++) + squaref(*in1++), vals, decay, comp_decay);
 }
 /*
 ** preconfigure a meter tap
@@ -99,31 +107,31 @@ static void *_preconfigure(_t *data) {
   preconf_t *prec = &data->prec;
   // process options
   if (opts->decay <= 0) return "decay constant must be greater than zero";
-  char *reduce_type_str = Tcl_GetString(opts->result_type_obj);
+  char *reduce_type_str = Tcl_GetString(opts->reduce_type_obj);
   if (strcmp(reduce_type_str, "") == 0 || strcmp(reduce_type_str, "mag2") == 0) prec->reduce = reduce_mag_squared;
   else if (strcmp(reduce_type_str, "abs_real") == 0) prec->reduce = reduce_abs_real;
   else if (strcmp(reduce_type_str, "abs_imag") == 0) prec->reduce = reduce_abs_imag;
   else if (strcmp(reduce_type_str, "max_abs") == 0) prec->reduce = reduce_max_abs;
   else return "reduce must be one of mag2, abs_real, abs_imag, or max_abs";
   data->modified = 1;
+  data->reset = 0;
   return data;
 }
 
 static void _configure(_t *data) {
-  preconf_t *prec = &data->prec;
-  data->reduce = prec->reduce;
-  data->decay = prec->decay;
+  data->reduce = data->prec.reduce;
+  data->decay = data->opts.decay;
   data->comp_decay = 1.0f - data->decay;
-  data->nframes = 0;
-  data->max_val = 0;
-  data->sum_val = 0;
-  data->decayed_val = 0;
+  data->stable = (summary_t){ 0 };
 }
 
 static void _update(_t *data) {
   if (data->modified) {
     _configure(data);
     data->modified = 0;
+  } else if (data->reset) {
+    data->stable = (summary_t){ 0 };
+    data->reset = 0;
   }
 }
 
@@ -139,9 +147,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
   float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
   _update(data);
-  data->reduce(nframes, in0, in1, &data->max_val, &data->sum_val, &data->decayed_val, data->decay, data->comp_decay);
-  data->frame = sdrkit_last_frame_time(arg)+nframes;
-  data->nframe += nframes;
+  data->working = data->stable;
+  data->reduce(nframes, in0, in1, &data->working, data->decay, data->comp_decay);
+  data->working.frame = sdrkit_last_frame_time(arg)+nframes;
+  data->working.nframes += nframes;
+  data->stable = data->working;
   return 0;
 }
 
@@ -154,36 +164,28 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
 
   // there's a race here.
   // double buffer the output
-  jack_nframes_t frame = data->frame;
-  jack_nframes_t nframes = data->nframes;
-  float max_val = data->max_val;
-  float sum_val = data->sum_val;
-  float decayed_val = data->decayed_val;
-  data->nframes = 0;
-  data->max_val = 0.0f;
-  data->sum_val = 0.0f;
-  data->decayed_val = 0.0f;
+  summary_t result = data->stable;
+  data->reset = 1;
   return fw_success_obj(interp, Tcl_NewListObj(5, (Tcl_Obj *[]){
-	Tcl_NewLongObj(frame), Tcl_NewLongObj(nframes), Tcl_NewDoubleObj(max_val), Tcl_NewDoubleObj(sum_val), Tcl_NewDoubleObj(decayed_val), NULL
+	Tcl_NewLongObj(result.frame), Tcl_NewLongObj(result.nframes),
+	  Tcl_NewDoubleObj(result.max_val), Tcl_NewDoubleObj(result.sum_val), Tcl_NewDoubleObj(result.decayed_val),
+	  NULL
 	  }));
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
-  Tcl_IncrRefCount(save.result_type_obj);
+  Tcl_IncrRefCount(save.reduce_type_obj);
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (save.size != data->opts.size ||
-      save.planbits != data->opts.planbits ||
-      save.polyphase != data->opts.polyphase ||
-      save.direction != data->opts.direction ||
-      save.result_type_obj != data->opts.result_type_obj) {
+  if (save.reduce_type_obj != data->opts.reduce_type_obj ||
+      save.decay != data->opts.decay) {
     void *p = _preconfigure(data); if (p != data) {
-      Tcl_DecrRefCount(data->opts.result_type_obj);
+      Tcl_DecrRefCount(data->opts.reduce_type_obj);
       data->opts = save;
       return fw_error_str(interp, p);
     }
-    Tcl_DecrRefCount(save.result_type_obj);
+    Tcl_DecrRefCount(save.reduce_type_obj);
     if ( ! framework_is_active(data) )
       _update(data);
   }
@@ -192,17 +194,14 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-size",     "size",     "Samples",   "4096", fw_option_int, 0, offsetof(_t, opts.size),		"size of fft computed" },
-  { "-planbits", "planbits", "Planbits",  "0",	  fw_option_int, 0, offsetof(_t, opts.planbits),	"fftw plan bits" },
-  { "-direction","direction","Direction", "-1",	  fw_option_int, 0, offsetof(_t, opts.direction),	"fft direction, 1=inverse or -1=forward" },
-  { "-polyphase","polyphase","Polyphase", "1",    fw_option_int, 0, offsetof(_t, opts.polyphase),	"polyphase fft, multiple of size to filter" },
-  { "-result",   "result",   "Result",    "coeff",fw_option_obj, 0, offsetof(_t, opts.result_type_obj), "result type: coeff, mag, mag2, dB, short, char" },
+  { "-decay",    "decay",    "Decay",     "0.999", fw_option_float, 0, offsetof(_t, opts.decay),	   "amount of decayed average retained at each sample" },
+  { "-reduce",   "reduce",   "Reduce",    "mag2",  fw_option_obj,   0, offsetof(_t, opts.reduce_type_obj), "reduction applied to samples: abs_real, abs_imag, max_abs, mag2" },
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get,                    "get an audio buffer" },
+  { "get",	 _get,                    "get a meter record" },
   { NULL }
 };
 
@@ -211,17 +210,17 @@ static const framework_t _template = {
   _subcommands,			// subcommand table
   _init,			// initialization function
   _command,			// command function
-  _delete,			// delete function
+  NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
   2, 0, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "a component which taps baseband signals and computes a spectrum"
+  "a component which taps baseband signals and computes meter values"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
-int DLLEXPORT Spectrum_tap_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::spectrum-tap", "1.0.0", "sdrkit::spectrum-tap", _factory);
+int DLLEXPORT Meter_tap_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrkit::meter-tap", "1.0.0", "sdrkit::meter-tap", _factory);
 }

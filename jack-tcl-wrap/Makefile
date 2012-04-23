@@ -59,9 +59,10 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/jack_client.so \
 	$(LIBDIR)/jack_ctl.so \
 	$(LIBDIR)/lo_mixer.so \
+	$(LIBDIR)/meter_tap.so \
 	$(LIBDIR)/midi_insert.so \
-	$(LIBDIR)/mixer.so \
 	$(LIBDIR)/midi_tap.so \
+	$(LIBDIR)/mixer.so \
 	$(LIBDIR)/modul_am.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
@@ -157,13 +158,16 @@ $(LIBDIR)/jack_ctl.so: jack_ctl.c framework.h
 $(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../sdrkit/lo_mixer.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
+$(LIBDIR)/meter_tap.so: meter_tap.c framework.h
+	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
 $(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../sdrkit/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/mixer.so: mixer.c framework.h ../sdrkit/dmath.h
+$(LIBDIR)/midi_tap.so: midi_tap.c framework.h ../sdrkit/ring_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/midi_tap.so: midi_tap.c framework.h ../sdrkit/ring_buffer.h
+$(LIBDIR)/mixer.so: mixer.c framework.h ../sdrkit/dmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/modul_am.so: modul_am.c framework.h ../sdrkit/modul_am.h
