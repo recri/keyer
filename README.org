@@ -33,13 +33,14 @@
    | qjackctl           |
    | tk-dev             |
    | tcllib             |
+   | tkcon              |
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
    listed.
 
    The "apt-get" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt-get install build-essential git-core jackd2 libfftw3-dev libjack-jackd2-dev qjackctl tk-dev tcllib
+   sudo apt-get install build-essential git-core jackd2 libfftw3-dev libjack-jackd2-dev qjackctl tk-dev tcllib tkcon
    #+END_EXAMPLE
 
    Note that Ubuntu 11.10 has some confusion in the packaging of jackd.
@@ -58,7 +59,7 @@ PROGRAM="/usr/lib/qjackctl/qjackctl.real"
 ${PROGRAM} ${@}
 exit 0
    #+END_EXAMPLE
-   to avoid the problem.
+   to avoid the problem, or leave it as it is.  This project doesn't use PulseAudio.
 ** Getting the source
    The sources are archived at https://github.com/recri/keyer.
    Assuming that you installed the git packages and want the
