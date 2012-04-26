@@ -24,6 +24,7 @@ package provide sdrui::debounce 1.0.0
 package require Tk
 package require snit
 
+package require sdrctl::types
     
 snit::widgetadaptor sdrui::debounce {
     component wperiod
@@ -31,11 +32,13 @@ snit::widgetadaptor sdrui::debounce {
     component wsteps
     component steps
 
-    option -debounce -default 0 -type snit::boolean
-    option -period -default 0.1
-    option -steps -default 4
+    option -debounce -default 0 -type sdrctl::debounce
+    option -period -default 0.1 -type sdrctl::debounce-period
+    option -steps -default 4 -type sdrctl::debounce-steps
+
     option -command {}
-    option -controls {-steps -period}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -54,6 +57,11 @@ snit::widgetadaptor sdrui::debounce {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-debounce -period -steps} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
     method set-steps {} { if {$options(-command) ne {}} { {*}$options(-command) report -steps $options(-steps) } }

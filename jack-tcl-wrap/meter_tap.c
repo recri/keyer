@@ -50,6 +50,7 @@ typedef struct {
   // parameters
   Tcl_Obj * reduce_type_obj;	/* size of fft requested */
   float decay;
+  int period;
 } options_t;
 
 typedef struct {
@@ -70,10 +71,12 @@ typedef struct {
   framework_t fw;
   options_t opts;
   preconf_t prec;
-  int modified, reset;
+  int modified;
+  int period;
   reduce_function_t reduce;
   float decay, comp_decay;
-  summary_t stable, working;
+  summary_t results[4];
+  int n_results;
 } _t;
 
 /*
@@ -114,24 +117,22 @@ static void *_preconfigure(_t *data) {
   else if (strcmp(reduce_type_str, "max_abs") == 0) prec->reduce = reduce_max_abs;
   else return "reduce must be one of mag2, abs_real, abs_imag, or max_abs";
   data->modified = 1;
-  data->reset = 0;
   return data;
 }
 
 static void _configure(_t *data) {
+  data->period = data->opts.period;
   data->reduce = data->prec.reduce;
   data->decay = data->opts.decay;
   data->comp_decay = 1.0f - data->decay;
-  data->stable = (summary_t){ 0 };
+  data->n_results = 0;
+  data->results[data->n_results&3] = (summary_t){ 0 };
 }
 
 static void _update(_t *data) {
   if (data->modified) {
     _configure(data);
     data->modified = 0;
-  } else if (data->reset) {
-    data->stable = (summary_t){ 0 };
-    data->reset = 0;
   }
 }
 
@@ -147,25 +148,22 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
   float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
   _update(data);
-  data->working = data->stable;
-  data->reduce(nframes, in0, in1, &data->working, data->decay, data->comp_decay);
-  data->working.frame = sdrkit_last_frame_time(arg)+nframes;
-  data->working.nframes += nframes;
-  data->stable = data->working;
+  data->reduce(nframes, in0, in1, &data->results[data->n_results&3], data->decay, data->comp_decay);
+  data->results[data->n_results&3].frame = sdrkit_last_frame_time(arg)-data->results[data->n_results&3].nframes;
+  data->results[data->n_results&3].nframes += nframes;
+  if (data->results[data->n_results&3].nframes >= data->period) {
+    data->n_results += 1;
+    data->results[data->n_results&3] = (summary_t){ 0 };
+  }
   return 0;
 }
 
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   if ( ! framework_is_active(clientData)) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not active", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  if (data->modified) return fw_error_str(interp, "busy");
-
-  // there's a race here.
-  // double buffer the output
-  summary_t result = data->stable;
-  data->reset = 1;
+  if (data->modified || (data->n_results-1) < 0) return fw_error_str(interp, "busy");
+  summary_t result = data->results[(data->n_results-1)&3];
   return fw_success_obj(interp, Tcl_NewListObj(5, (Tcl_Obj *[]){
 	Tcl_NewLongObj(result.frame), Tcl_NewLongObj(result.nframes),
 	  Tcl_NewDoubleObj(result.max_val), Tcl_NewDoubleObj(result.sum_val), Tcl_NewDoubleObj(result.decayed_val),
@@ -194,6 +192,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+  { "-period",   "period",   "Period",    "4096",  fw_option_int,   0, offsetof(_t, opts.period),	   "samples to accumulate for meter measurement" },
   { "-decay",    "decay",    "Decay",     "0.999", fw_option_float, 0, offsetof(_t, opts.decay),	   "amount of decayed average retained at each sample" },
   { "-reduce",   "reduce",   "Reduce",    "mag2",  fw_option_obj,   0, offsetof(_t, opts.reduce_type_obj), "reduction applied to samples: abs_real, abs_imag, max_abs, mag2" },
   { NULL }

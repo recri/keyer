@@ -23,15 +23,18 @@ package provide sdrui::leveler-select 1.0.0
 
 package require Tk
 package require snit
-package require sdrui::ui-types
+
+package require sdrctl::types
     
 snit::widgetadaptor sdrui::leveler-select {
     component menubutton
     component menu
 
-    option -mode -default leveler -type sdrui::leveler-mode
+    option -mode -default leveler -type sdrctl::leveler-mode
+
     option -command {}
-    option -controls {-mode}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -40,7 +43,7 @@ snit::widgetadaptor sdrui::leveler-select {
 	installhull using ttk::labelframe
 	install menubutton using ttk::menubutton $win.b -textvar [myvar options(-mode)] -menu $win.b.m
 	install menu using menu $win.b.m -tearoff no
-	foreach mode [sdrui::leveler-mode cget -values] {
+	foreach mode [sdrctl::leveler-mode cget -values] {
 	    $win.b.m add radiobutton -label $mode -variable [myvar options(-mode)] -value $mode -command [mymethod set-mode $mode]
 	}
 	pack $win.b -fill x -expand true
@@ -48,9 +51,14 @@ snit::widgetadaptor sdrui::leveler-select {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-mode} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
-    method set-mode {val} { if {$options(-command) ne {}} { {*}$options(-command) report -mode $val } }
+    method set-mode {val} { {*}$options(-command) report -mode $val }
 }
 
 

@@ -17,30 +17,32 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrui::ui-command-line 1.0.0
+package provide sdrui::ui-control 1.0.0
 
+package require Tk
 package require snit
+package require tkcon
 
-snit::type sdrui::ui-command-line {
+package require sdrui::tree
+package require sdrui::connections
+
+# a notebook of control tree displays
+
+snit::type sdrui::ui-control {
 
     option -partof -readonly yes
     option -control -readonly yes
+    option -server -readonly yes
     
     constructor {args} {
-	#puts "ui-command-line $self constructor {$args}"
 	$self configure {*}$args
 	set options(-control) [$options(-partof) cget -control]
-	#puts "ui-command-line -control $options(-control) [$options(-partof) cget -control]"
+	pack [ttk::notebook .nb] -side top -fill both -expand true
+	.nb add [sdrui::connections .nb.ports -partof $self -connect ports] -text ports
+	.nb add [sdrui::connections .nb.opts -partof $self -connect opts] -text opts
+	.nb add [sdrui::tree .nb.tree -partof $self] -text controls
     }
 
-    method repl {} {
-	set c $options(-control)
-	#puts "options(-control) == $c"
-	while {1} {
-	    puts -nonewline stderr "sdr> "
-	    if {[gets stdin input] < 0} break
-	    catch {eval $input} result
-	    puts stderr [string trim $result]
-	}
-    }
+    method repl {} { }
+
 }

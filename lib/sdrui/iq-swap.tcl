@@ -24,13 +24,16 @@ package provide sdrui::iq-swap 1.0.0
 package require Tk
 package require snit
 
+package require sdrctl::types
     
 snit::widgetadaptor sdrui::iq-swap {
     component button
 
-    option -swap -default 0 -type snit::boolean
+    option -swap -default 0 -type sdrctl::iq-swap
+
     option -command {}
-    option -controls {-swap}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -43,7 +46,11 @@ snit::widgetadaptor sdrui::iq-swap {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
-
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-swap} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
     method set-swap {} { if {$options(-command) ne {}} { {*}$options(-command) report -swap $options(-swap) } }

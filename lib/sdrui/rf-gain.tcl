@@ -28,9 +28,11 @@ package require snit
 snit::widgetadaptor sdrui::rf-gain {
     component spinbox
 
-    option -gain -default 0
+    option -gain -default 0 -type sdrctl::gain
+
     option -command {}
-    option -controls {-gain}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -46,9 +48,14 @@ snit::widgetadaptor sdrui::rf-gain {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-gain} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
-    method set-gain {} { if {$options(-command) ne {}} { {*}$options(-command) report -gain $options(-gain) } }
+    method set-gain {} { {*}$options(-command) report -gain $options(-gain) }
 
 }
 

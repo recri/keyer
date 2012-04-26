@@ -24,13 +24,16 @@ package provide sdrui::iq-delay 1.0.0
 package require Tk
 package require snit
 
+package require sdrctl::types
     
 snit::widgetadaptor sdrui::iq-delay {
     component button
 
-    option -delay -default 0 -type {snit::enum -values {-1 0 1}}
+    option -delay -default 0 -type sdrctl::iq-delay
+
     option -command {}
-    option -controls {-delay}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -39,7 +42,7 @@ snit::widgetadaptor sdrui::iq-delay {
 	installhull using ttk::labelframe
 	install button using ttk::menubutton $win.delay -textvar [myvar options(-delay)] -menu $win.delay.m
 	install menu using menu $win.delay.m -tearoff no
-	foreach val {-1 0 1} {
+	foreach val [sdrctl::iq-delay cget -values] {
 	    $win.delay.m add radiobutton -label $val -value $val -variable [myvar options(-delay)] -command [mymethod set-delay]
 	}
 	pack $win.delay -fill x -expand true
@@ -47,6 +50,11 @@ snit::widgetadaptor sdrui::iq-delay {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-delay} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
     method set-delay {} { if {$options(-command) ne {}} { {*}$options(-command) report -delay $options(-delay) } }

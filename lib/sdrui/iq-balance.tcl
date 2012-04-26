@@ -23,16 +23,18 @@ package provide sdrui::iq-balance 1.0.0
 
 package require Tk
 package require snit
-
+package require sdrctl::types
     
 snit::widgetadaptor sdrui::iq-balance {
     component sinephase
     component lineargain
 
-    option -sine-phase -default 0
-    option -linear-gain -default 0
+    option -sine-phase -default 0 -type sdrctl::sine-phase
+    option -linear-gain -default 1.0 -type sdrctl::linear-gain
+
     option -command {}
-    option -controls {-sine-phase -linear-gain}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -47,6 +49,11 @@ snit::widgetadaptor sdrui::iq-balance {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-sine-phase -linear-gain} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
     method set-sine-phase {} { if {$options(-command) ne {}} { {*}$options(-command) report -sine-phase $options(-sine-phase) } }

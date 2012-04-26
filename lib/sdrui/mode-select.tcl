@@ -23,23 +23,29 @@ package provide sdrui::mode-select 1.0.0
 
 package require Tk
 package require snit
-package require sdrui::ui-types
+package require sdrctl::types
     
 snit::widgetadaptor sdrui::mode-select {
     
-    # second copy of list below, perhaps define an external snit::type for it
-    option -mode -default CWU -type sdrui::mode
+    option -mode -default CWU -type sdrctl::mode
+
     option -command {}
-    option -controls {-mode}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     constructor {args} {
 	installhull using ttk::labelframe -text Mode -labelanchor n
 	pack [ttk::menubutton $win.b -textvar [myvar options(-mode)] -menu $win.b.m] -fill x -expand true
 	menu $win.b.m -tearoff no
-	foreach mode [sdrui::mode cget -values] {
+	foreach mode [sdrctl::mode cget -values] {
 	    $win.b.m add radiobutton -label $mode -variable [myvar options(-mode)] -value $mode -command [mymethod set-mode $mode]
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-mode} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
     
     method set-mode {val} {

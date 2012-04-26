@@ -29,6 +29,13 @@ package require Tk
 package require snit
 package require sdrkit::jack
 
+proc sdrui::port-connections {name args} {
+    return [sdrui::connections $name -show port -filter 0 {*}$args]
+}
+proc sdrui::opt-connections {name args} {
+    return [sdrui::connections $name -show opt -filter 1 {*}$args]
+}
+
 snit::widget sdrui::connections {
     component sbl
     component lft
@@ -41,6 +48,8 @@ snit::widget sdrui::connections {
     option -control -readonly yes
     option -server -readonly yes -default default
     option -defer-ms -default 100
+    option -show -readonly yes -default port -type {snit::enum -values {opt port}}
+    option -filter -default 0 -type snit::boolean
 
     # delegate method * to treeview except {update}
     # delegate option * to treeview except {-partof -control}
@@ -56,10 +65,12 @@ snit::widget sdrui::connections {
     }
     
     constructor {args} {
+	$self configure {*}$args
+
 	install sbl using ttk::scrollbar $win.sbl -orient vertical -command [mymethod scroll yview lft]
-	install lft using ttk::treeview $win.lft -show tree -yscrollcommand [mymethod scroll set sbl] -selectmode browse
+	install lft using ttk::treeview $win.lft -show tree -yscrollcommand [mymethod scroll set sbl]
 	install ctr using canvas $win.ctr -width 100
-	install rgt using ttk::treeview $win.rgt -show tree -yscrollcommand [mymethod scroll set sbr] -selectmode browse
+	install rgt using ttk::treeview $win.rgt -show tree -yscrollcommand [mymethod scroll set sbr]
 	install sbr using ttk::scrollbar $win.sbr -orient vertical -command [mymethod scroll yview rgt]
 
 	grid [ttk::label $win.ll -text source] -row 0 -column 0 -columnspan 2
@@ -70,9 +81,9 @@ snit::widget sdrui::connections {
 	grid $win.ctr -row 1 -column 2 -sticky nsew
 	grid $win.rgt -row 1 -column 3 -sticky nsew
 	grid $win.sbr -row 1 -column 4 -sticky ns
+	grid [ttk::checkbutton $win.filter -text {filter by selection} -variable [myvar options(-filter)] -command [mymethod defer-update-canvas]] -row 2 -column 0 -columnspan 5
 	foreach c {1 2 3} { grid columnconfigure $win $c -weight 1 }
 	grid rowconfigure $win 1 -weight 1
-	$self configure {*}$args
 	set options(-control) [$options(-partof) cget -control]
 	set data(items) [dict create]
 
@@ -89,7 +100,7 @@ snit::widget sdrui::connections {
 	$pop add command -label configuration -command [mymethod pop-configuration]
 	$pop add command -label controls -command [mymethod pop-controls]
 
-	foreach w {lft ctr rgt} {
+	foreach w {lft rgt} {
 	    bind $win.$w <Button-3> [mymethod pop-up %W %x %y]
 	    bind $win.$w <<TreeviewOpen>> [mymethod defer-update-canvas]
 	    bind $win.$w <<TreeviewClose>> [mymethod defer-update-canvas]
@@ -122,16 +133,14 @@ snit::widget sdrui::connections {
 	return $parent
     }
 
-    proc find-ports {item ports} {
-	set cports {}
-	foreach port [dict keys $ports] {
-	    if {[string first ${item}: $port] == 0} {
-		lappend cports [list $port [dict get $ports $port]]
-	    }
-	}
-	return $cports
-    }
+    method find-ports {item} { return [$options(-control) part-cget $item -ports] }
 	
+    method find-opts {item} { return [$options(-control) part-cget $item -opts] }
+
+    method find-opt-connections {item} {
+	return [$options(-control) opt-connections-from {*}[split $item :]]
+    }
+
     proc trim-parent-prefix {parent item} {
 	if {[string first $parent- $item] == 0} {
 	    return [string range $item [string length $parent-] end]
@@ -150,13 +159,13 @@ snit::widget sdrui::connections {
     method update {} {
 	# insert system playback, capture, and midi ports
 	set ports [sdrkit::jack -server $options(-server) list-ports]
-	foreach item [$options(-control) list] {
-	    set enabled [string is true -strict [$options(-control) ccget $item -enable]]
-	    set activated [string is true -strict [$options(-control) ccget $item -activate]]
+	foreach item [$options(-control) part-list] {
+	    set enabled [string is true -strict [$options(-control) part-is-enabled $item]]
+	    set activated [string is true -strict [$options(-control) part-is-active $item ]]
 	    if { ! [dict exists $data(items) $item]} {
 		set parent [find-parent $item $data(items)]
 		set name [trim-parent-prefix $parent $item]
-		dict set data(items) $item [dict create item $item type [$options(-control) ccget $item -type] parent $parent name $name]
+		dict set data(items) $item [dict create item $item type [$options(-control) part-type $item] parent $parent name $name]
 		foreach w {lft rgt} {
 		    $win.$w insert $parent end -id $item -text $name -tag $item
 		}
@@ -178,18 +187,27 @@ snit::widget sdrui::connections {
 		    $win.$w tag configure $item -foreground grey -background white
 		}
 	    }
-	    foreach port [find-ports $item $ports] {
-		lassign $port pitem pdict
-		if { ! [dict exists $data(items) $pitem]} {
-		    set pname [lindex [split $pitem :] 1]
-		    dict set pdict item $item
-		    dict set pdict parent $item
-		    dict set pdict name $pname
-		    dict set data(items) $pitem $pdict
-		    switch [dict get $pdict direction] {
-			output { $win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
-			input { $win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
+	    if {$options(-show) eq {port}} {
+		foreach port [$self find-ports $item] {
+		    lassign $port pitem pdict
+		    if { ! [dict exists $data(items) $pitem]} {
+			set pname [lindex [split $pitem :] 1]
+			dict set pdict item $item
+			dict set pdict parent $item
+			dict set pdict name $pname
+			dict set data(items) $pitem $pdict
+			switch [dict get $pdict direction] {
+			    output { $win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
+			    input { $win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
+			}
 		    }
+		}
+	    } else {
+		foreach oname [$self find-opts $item] {
+		    set oitem $item:$oname
+		    dict set data(items) $oitem [dict create item $item parent $item name $oname type opt]
+		    $win.lft insert $item end -id $oitem -text $oname -tags [list $item $oitem]
+		    $win.rgt insert $item end -id $oitem -text $oname -tags [list $item $oitem]
 		}
 	    }
 	}
@@ -203,10 +221,26 @@ snit::widget sdrui::connections {
 			lappend data(connections) $item $o
 		    }
 		}
+	    } elseif {[dict get $idict type] eq {opt}} {
+		foreach dest [$self find-opt-connections $item] {
+		    # puts "adding connection $item -> $dest"
+		    lappend data(connections) $item [join $dest :]
+		}
 	    }
 	}
 	$self update-canvas
 	set data(update-pending) 0
+    }
+    
+    method find-selection {lor} {
+	set sel [$win.$lor selection]
+	# expand to recursively include children of selected
+	foreach item [dict keys $data(items)] {
+	    if {[dict get $data(items) $item parent] in $sel} {
+		lappend sel $item
+	    }
+	}
+	return $sel
     }
 
     method defer-update-canvas {} {
@@ -215,7 +249,7 @@ snit::widget sdrui::connections {
 	    after $options(-defer-ms) [mymethod update-canvas]
 	}
     }
-
+    
     method update-canvas {} {
 	foreach item [dict keys $data(items)] {
 	    foreach w {lft rgt} {
@@ -248,59 +282,66 @@ snit::widget sdrui::connections {
 	set x1 [expr {$wd/8.0}]
 	set x2 [expr {$wd-1-$wd/8.0}]
 	set x3 [expr {$wd-1}]
+	if {$options(-filter)} {
+	    set slft [$self find-selection lft]
+	    set srgt [$self find-selection rgt]
+	}
 	foreach {i o} $data(connections) {
-	    if {[dict exists $data(items) $i] && [dict exists $data(items) $o]} {
-		set ly [dict get $data(items) $i lft-y]
-		set ry [dict get $data(items) $o rgt-y]
-		if {$ly ne {} && $ry ne {}} {
-			    $win.ctr create line $x0 $ly $x1 $ly $x2 $ry $x3 $ry -smooth true -width 2
-		}
-	    }
+	    # puts "preparing to draw $i ([dict exists $data(items) $i]) -> $o ([dict exists $data(items) $o])"
+	    if {$options(-filter) && [lsearch $slft $i] < 0} continue
+	    if {$options(-filter) && [lsearch $srgt $o] < 0} continue
+	    if { ! [dict exists $data(items) $i] || ! [dict exists $data(items) $o]} continue
+	    set ly [dict get $data(items) $i lft-y]
+	    set ry [dict get $data(items) $o rgt-y]
+	    if {$ly eq {} || $ry eq {}} continue
+	    $win.ctr create line $x0 $ly $x1 $ly $x2 $ry $x3 $ry -smooth true -width 2
+
 	}
 	set data(update-canvas-pending) 0
     }
-
+    
     ##
     ## popup menu on right button
     ##
     method pop-enable {} {
 	if {$data(pop-enabled)} {
-	    $options(-control) enable $data(pop-item)
+	    $options(-control) part-enable $data(pop-item)
 	} else {
-	    $options(-control) disable $data(pop-item)
+	    $options(-control) part-disable $data(pop-item)
 	}
 	$self defer-update
     }
-
+    
     method pop-activate {} {
 	if {$data(pop-activated)} {
-	    $options(-control) activate $data(pop-item)
+	    $options(-control) part-activate $data(pop-item)
 	} else {
-	    $options(-control) deactivate $data(pop-item)
+	    $options(-control) part-deactivate $data(pop-item)
 	}
 	$self defer-update
     }
-
+    
     method pop-configuration {} {
-	if {[$options(-control) exists $data(pop-item)]} {
+	if {[$options(-control) part-exists $data(pop-item)]} {
 	    puts "-- $data(pop-item) -- configuration"
-	    foreach c [$options(-control) cconfigure $data(pop-item)] {
+	    foreach c [$options(-control) part-configure $data(pop-item)] {
 		puts "-- [lindex $c 0] {[lindex $c end]}"
 	    }
 	    puts "--"
 	}
     }
-
+    
     method pop-controls {} {
-	if {[$options(-control) exists $data(pop-item)]} {
-	    puts "-- $data(pop-item) -- controls"
-	    foreach c [$options(-control) controls $data(pop-item)] {
-		puts "-- [lindex $c 0] {[lindex $c end]}"
+	if {[$options(-control) part-exists $data(pop-item)]} {
+	    puts "-- $data(pop-item) -- opts"
+	    foreach c [$options(-control) opt-filter [list $data(pop-item) *]] {
+		set opt [lindex $c 1]
+		puts "-- $opt {[$options(-control) part-cget $data(pop-item) $opt]}"
 	    }
 	    puts "--"
 	}
     }
-
+    
     proc item-open {w item true recurse} {
 	$w item $item -open $true
 	if {$recurse} {
@@ -309,7 +350,7 @@ snit::widget sdrui::connections {
 	    }
 	}
     }
-
+    
     method pop-open {} { item-open $data(pop-window) $data(pop-item) true false }
     method pop-collapse {} { item-open $data(pop-window) $data(pop-item) false false }
     method pop-open-all {} { item-open $data(pop-window) $data(pop-item) true true }
@@ -342,8 +383,9 @@ snit::widget sdrui::connections {
 	}
 	tk_popup $pop {*}[winfo pointerxy $w]
     }
-
+    
     method item-select {w} {
 	# puts "item-select $w -- [$w selection]"
+	if {$options(-filter)} { $self defer-update-canvas }
     }
 }

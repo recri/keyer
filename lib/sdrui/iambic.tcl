@@ -24,13 +24,16 @@ package provide sdrui::iambic 1.0.0
 package require Tk
 package require snit
 
+package require sdrctl::types
     
 snit::widgetadaptor sdrui::iambic {
     component iambic
 
-    option -iambic -default ad5dz -type {snit::enum -values {none ad5dz dttsp nd7pa}}
+    option -iambic -default ad5dz -type sdrctl::iambic
+
     option -command {}
-    option -controls {-iambic}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -39,7 +42,7 @@ snit::widgetadaptor sdrui::iambic {
 	installhull using ttk::labelframe
 	install iambic using ttk::menubutton $win.m -textvar [myvar options(-iambic)] -menu $win.m.m
 	menu $win.m.m -tearoff no
-	foreach i {none ad5dz dttsp nd7pa} {
+	foreach i [sdrctl::iambic cget -values] {
 	    $win.m.m add radiobutton -label $i -value $i -variable [myvar options(-iambic)] -command [mymethod set-iambic]
 	}
 	pack $win.m -fill x -expand true -side top 
@@ -47,6 +50,11 @@ snit::widgetadaptor sdrui::iambic {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-iambic} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
     method set-iambic {} { if {$options(-command) ne {}} { {*}$options(-command) report -iambic $options(-iambic) } }

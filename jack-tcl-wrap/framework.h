@@ -130,6 +130,7 @@ typedef struct {
   jack_port_t **port;
   framework_midi_t *midi;
   int activated;
+  Tcl_Obj *method_list, *option_list, *port_list;
 } framework_t;
 
 /*
@@ -443,13 +444,26 @@ static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int arg
     return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info %s ...\" is not defined", cmd0, cmd3));
   }
   if (strcmp(cmd2, "type") == 0) return fw_success_obj(interp, fp->class_name);
-  if (strcmp(cmd2, "methods") == 0) {
-    // list of methods, optionally filtered by pattern
-    return fw_error_str(interp, "info methods not implemented");
+  if (strcmp(cmd2, "methods") == 0) { // list of methods
+    if (fp->method_list == NULL) {
+      fp->method_list = Tcl_NewListObj(0, NULL);
+      Tcl_IncrRefCount(fp->method_list);
+      for (int i = 0; fp->subcommands[i].name != NULL; i += 1)
+	Tcl_ListObjAppendElement(interp, fp->method_list, Tcl_NewStringObj(fp->subcommands[i].name, -1));
+    }
+    return fw_success_obj(interp, fp->method_list);
   }
-  if (strcmp(cmd2, "options") == 0) {
-    // list of options, optionally filtered by pattern
-    return fw_error_str(interp, "info options not implemented");
+  if (strcmp(cmd2, "options") == 0) { // list of options
+    if (fp->option_list == NULL) {
+      fp->option_list = Tcl_NewListObj(0, NULL);
+      Tcl_IncrRefCount(fp->option_list);
+      for (int i = 0; fp->options[i].name != NULL; i += 1)
+	Tcl_ListObjAppendElement(interp, fp->option_list, Tcl_NewStringObj(fp->options[i].name, -1));
+    }
+    return fw_success_obj(interp, fp->option_list);
+  }
+  if (strcmp(cmd2, "ports") == 0) { // list of ports
+    return fw_success_obj(interp, fp->port_list);
   }
   return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info %s ...\" is not defined", cmd0, cmd2));
 }
@@ -630,6 +644,9 @@ static void framework_delete2(void *arg, int outside_shutdown) {
   if (dsp->server_name != NULL) Tcl_DecrRefCount(dsp->server_name);
   if (dsp->client_name != NULL) Tcl_DecrRefCount(dsp->client_name);
   if (dsp->subcommands_string != NULL) Tcl_DecrRefCount(dsp->subcommands_string);
+  if (dsp->method_list != NULL) Tcl_DecrRefCount(dsp->method_list);
+  if (dsp->option_list != NULL) Tcl_DecrRefCount(dsp->option_list);
+  if (dsp->port_list != NULL) Tcl_DecrRefCount(dsp->port_list);
 
   Tcl_Free((char *)(void *)dsp);
 }
@@ -752,6 +769,8 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     }
 
     // create jack ports
+    data->port_list = Tcl_NewListObj(0, NULL);
+    Tcl_IncrRefCount(data->port_list);
     int n = data->n_inputs+data->n_outputs+data->n_midi_inputs+data->n_midi_outputs;
     if (n > 0) {
       data->port = (jack_port_t **)Tcl_Alloc(n*sizeof(jack_port_t *));
@@ -766,21 +785,25 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
 	if (data->n_inputs > 2) snprintf(buf, sizeof(buf), "in_%d_%c", i/2, i&1 ? 'q' : 'i');
 	else snprintf(buf, sizeof(buf), "in_%c", i&1 ? 'q' : 'i');
 	data->port[i] = jack_port_register(data->client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+	Tcl_ListObjAppendElement(interp, data->port_list, Tcl_NewStringObj(buf, -1));
       }
       for (int i = 0; i < data->n_outputs; i++) {
 	if (data->n_outputs > 2) snprintf(buf, sizeof(buf), "out_%d_%c", i/2, i&1 ? 'q' : 'i');
 	else snprintf(buf, sizeof(buf), "out_%c", i&1 ? 'q' : 'i');
 	data->port[i+data->n_inputs] = jack_port_register(data->client, buf, JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+	Tcl_ListObjAppendElement(interp, data->port_list, Tcl_NewStringObj(buf, -1));
       }
       for (int i = 0; i < data->n_midi_inputs; i++) {
 	if (data->n_midi_inputs > 1) snprintf(buf, sizeof(buf), "midi_in_%d", i);
 	else snprintf(buf, sizeof(buf), "midi_in");
 	data->port[i+data->n_inputs+data->n_outputs] = jack_port_register(data->client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsInput, 0);
+	Tcl_ListObjAppendElement(interp, data->port_list, Tcl_NewStringObj(buf, -1));
       }
       for (int i = 0; i < data->n_midi_outputs; i++) {
 	if (data->n_midi_inputs > 1) snprintf(buf, sizeof(buf), "midi_out_%d", i);
 	else snprintf(buf, sizeof(buf), "midi_out");
 	data->port[i+data->n_midi_inputs+data->n_inputs+data->n_outputs] = jack_port_register(data->client, buf, JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+	Tcl_ListObjAppendElement(interp, data->port_list, Tcl_NewStringObj(buf, -1));
       }
     }
 

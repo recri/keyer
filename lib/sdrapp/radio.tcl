@@ -21,7 +21,7 @@ package provide sdrapp::radio 1.0.0
 
 package require snit
 
-package require sdrctl::control
+package require sdrctl::radio-control
 package require sdrblk::rx
 package require sdrblk::tx
 package require sdrblk::keyer
@@ -53,7 +53,7 @@ snit::type sdrapp::radio {
 
     constructor {args} {
 	$self configure {*}$args
-	set options(-control) [::sdrctl::control ::sdrapp::ctl -partof $self]
+	set options(-control) [::sdrctl::radio-control ::radio-ctl -partof $self -server $options(-server)]
 	if {$options(-rx)} { ::sdrblk::rx ::radio-rx -partof $self -source $options(-rx-source) -sink $options(-rx-sink) }
 	if {$options(-tx)} { ::sdrblk::tx ::radio-tx -partof $self -source $options(-tx-source) -sink $options(-tx-sink) }
 	if {$options(-keyer)} { ::sdrblk::keyer ::radio-keyer -partof $self -source $options(-keyer-source) -sink $options(-keyer-sink) }
@@ -65,7 +65,7 @@ snit::type sdrapp::radio {
 	    package require sdrui::$options(-ui-type)
 	    ::sdrui::$options(-ui-type) ::radio-ui -partof $self
 	}
-	::sdrapp::ctl resolve
+	::radio-ctl part-resolve
 	if {$options(-activate-hw)} { {*}$options(-control) activate hw }
 	if {$options(-enable-rx)} {
 	    foreach name {rx-rf-gain rx-rf-iq-correct rx-if-mix rx-if-bpf rx-af-agc} {
@@ -84,7 +84,5 @@ snit::type sdrapp::radio {
 	catch {::sdrapp::ctl destroy}
     }
 
-    method repl {} {
-	catch {::sdrapp::ui repl}
-    }
+    method repl {} { catch {::radio-ui repl} }
 }

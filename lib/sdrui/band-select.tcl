@@ -34,18 +34,17 @@ package require sdrutil::band-data
 
 snit::widgetadaptor sdrui::band-select {
 
+    option -band {}
+    option -channel {}
+
     option -command {};			# script called to report band selection 
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     option -height 150;			# height of the band display
     option -width 200;			# width of the band display
     option -hover-time 250;		# milliseconds before popup
     
-    option -band {}
-    option -channel {}
-    option -controls {-band -channel}
-
-    component bands
-
     variable data -array {
 	hover-displayed 0
 	hover-text {}
@@ -53,18 +52,20 @@ snit::widgetadaptor sdrui::band-select {
 
     constructor {args} {
 	installhull using canvas
-	install bands using sdrutil::band-data %AUTO%
 	$self configure {*}$args
 	$hull configure -width $options(-width) -height $options(-height)
 	bind $win <Configure> [mymethod window-configure %w %h]
 	$self draw-bands
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-band -channel} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
     
     method ignore {args} { }
 
-    destructor {
-	catch {$bands destroy}
-    }
+    destructor {}
 
     proc x-for-frequency {f} {
 	return [expr {log10($f)-log10(30000)}]
@@ -73,26 +74,26 @@ snit::widgetadaptor sdrui::band-select {
     method draw-bands {} {
 	set xmin [x-for-frequency  2500000]
 	set xmax [x-for-frequency 25000000]
-	set nrows [$bands nrows]
+	set nrows [sdrutil::band-data-nrows]
 	set dy [expr {$options(-height)/(2+$nrows)}]
-	foreach service [$bands services] {
-	    set y0 [expr {[$bands row $service]*$dy}]
+	foreach service [sdrutil::band-data-services] {
+	    set y0 [expr {[sdrutil::band-data-row $service]*$dy}]
 	    set y1 [expr {$y0+$dy/2}]
 	    set y2 [expr {$y1+$dy/8}]
 	    set y3 [expr {$y2+$dy/4}]
-	    foreach band [$bands bands $service] {
-		lassign [$bands band-range-hertz $service $band] bmin bmax
-		set i [$hull create rectangle [x-for-frequency $bmin] $y0 [x-for-frequency $bmax] $y1 -fill [$bands color $service] -width 1 -activewidth 2]
+	    foreach band [sdrutil::band-data-bands $service] {
+		lassign [sdrutil::band-data-band-range-hertz $service $band] bmin bmax
+		set i [$hull create rectangle [x-for-frequency $bmin] $y0 [x-for-frequency $bmax] $y1 -fill [sdrutil::band-data-color $service] -width 1 -activewidth 2]
 		$hull bind $i <Button-1> [mymethod band-pick $service $band]
-		$hull bind $i <Enter> [mymethod hover-text "$service $band\n[join [$bands band-range $service $band]]"]
+		$hull bind $i <Enter> [mymethod hover-text "$service $band\n[join [sdrutil::band-data-band-range $service $band]]"]
 		$hull bind $i <Leave> [mymethod hover-text ""]
 	    }
-	    foreach channel [$bands channels $service] {
-		set freq [$bands channel-freq-hertz $service $channel]
+	    foreach channel [sdrutil::band-data-channels $service] {
+		set freq [sdrutil::band-data-channel-freq-hertz $service $channel]
 		set x [x-for-frequency $freq]
 		set i [$hull create rectangle $x $y2 $x $y3 -fill white -outline black -width 1 -activewidth 2]
 		$hull bind $i <Button-1> [mymethod channel-pick $service $channel]
-		$hull bind $i <Enter> [mymethod hover-text "$service $channel\n[join [$bands channel-freq $service $channel]]"]
+		$hull bind $i <Enter> [mymethod hover-text "$service $channel\n[join [sdrutil::band-data-channel-freq $service $channel]]"]
 		$hull bind $i <Leave> [mymethod hover-text ""]
 	    }
 	}
@@ -128,8 +129,8 @@ snit::widgetadaptor sdrui::band-select {
     method scan-dragto {x} { $hull scan dragto $x 0 }
 
     method no-pick {} { if {$data(hover-text) eq {}} { } }
-    method band-pick {service band} { if {$options(-command) ne {}} { {*}$options(-command) report -band [list $service $band] } }
-    method channel-pick {service channel} { if {$options(-command) ne {}} { {*}$options(-command) report -channel [list $service $channel] } }
+    method band-pick {service band} { {*}$options(-command) report -band [list $service $band] }
+    method channel-pick {service channel} { {*}$options(-command) report -channel [list $service $channel] }
     
     method window-configure {w h} {
 	if {$h != $options(-height)} {

@@ -17,14 +17,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrctl::controls 1.0.0
+package provide sdrui::ui-tkcon 1.0.0
 
+package require Tk
 package require snit
+package require tkcon
 
-snit::type sdrctl::control {
-    option -name -readonly yes
-    option -units -readonly yes
-    option -sdrkit -readonly yes
-    option -sdrblk -readonly yes
-    option -sdrui -readonly yes
+snit::type sdrui::ui-tkcon {
+
+    option -partof -readonly yes
+    option -control -readonly yes
+    
+    constructor {args} {
+	$self configure {*}$args
+	set options(-control) [$options(-partof) cget -control]
+    }
+
+    method repl {} {
+	tkcon show
+	tkcon title sdrkit:console
+	tkwait .
+    }
 }

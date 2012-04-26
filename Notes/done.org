@@ -108,3 +108,14 @@
    Well, used the sdrkit ring buffer.
 ** DONE - check for existing value when setting fw_option_dict and fw_option_obj
    options and decrement the reference counts.
+** DONE - normalize the output of spectrum to the size of the fft
+   The fft spectrum output taken from dttsp is unnormalized, it should
+   be weighted by 1/sqrt(size-of-fft) somewhere.
+** DONE - polyphase fft for spectrum
+** DONE - reexamine iq_noise to see if it's correct
+** DONE - convert the remaining users of atap to audio-tap.
+** DONE - add activate/deactivate to the common subcommands for Jack
+   commands, so a collection of modules can be put into standby.  But
+   they lose all port connections when deactivated.  For the moment,
+   just delete them if they aren't needed.
+

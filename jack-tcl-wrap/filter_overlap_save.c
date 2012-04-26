@@ -89,13 +89,8 @@ static int _modified(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Ob
   if (argc != 2)
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
-    Tcl_NewIntObj(data->modified),
-    NULL
-  };
-  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
-  return TCL_OK;
+  return fw_success_obj(interp, Tcl_NewListObj(2, (Tcl_Obj *[]){ Tcl_NewIntObj(jack_frame_time(data->fw.client)), Tcl_NewIntObj(data->modified) }));
+
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -103,8 +98,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   if (data->modified) {		// not safe to access
     if (argc == 2 && strcmp("modified", Tcl_GetString(objv[1])) == 0)
       return _modified(clientData, interp, argc, objv);
-    Tcl_SetResult(interp, "busy", TCL_STATIC);
-    return TCL_ERROR;
+    return fw_error_str(interp, "busy");
   }
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;

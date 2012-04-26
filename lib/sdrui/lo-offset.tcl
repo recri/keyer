@@ -28,8 +28,10 @@ snit::widgetadaptor sdrui::lo-offset {
     component spinbox
 
     option -freq -default 10000
+
     option -command {}
-    option -controls {-freq}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -45,6 +47,11 @@ snit::widgetadaptor sdrui::lo-offset {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-freq} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
     method set-freq {} { if {$options(-command) ne {}} { {*}$options(-command) report -freq $options(-freq) } }

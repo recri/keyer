@@ -1,3 +1,4 @@
+# -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
@@ -16,13 +17,30 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-##
-## ui-types - snit types for ui validation 
-##
-package provide sdrui::ui-types 1.0.0
+package provide sdrctl::control-stub 1.0.0
 
 package require snit
 
-snit::enum sdrui::mode -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}
-snit::enum sdrui::agc-mode -values {off long slow med fast}
-snit::enum sdrui::leveler-mode -values {off leveler}
+##
+## this is a stub for providing a default -factory for controllees
+## who have nothing in particular to control, just being there.
+##
+
+snit::type sdrctl::control-stub {
+    option -command {}
+    option -opts {}
+    option -ports {}
+    option -methods {}
+
+    constructor {args} {
+	$self configure {*}$args
+	#puts [$self info options]
+	return $self
+    }
+
+    destructor {
+    }
+
+    method resolve {} {}
+}
+

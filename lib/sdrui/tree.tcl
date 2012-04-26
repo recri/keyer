@@ -74,9 +74,9 @@ snit::widget sdrui::tree {
 
     method values {item} {
 	# puts "values for $options(-control) ccget $item -type"
-	set type [$options(-control) ccget $item -type]
-	set enabled [$options(-control) ccget $item -enable]
-	set activated [$options(-control) ccget $item -activate]
+	set type [$options(-control) part-type $item]
+	set enabled [$options(-control) part-is-enabled $item]
+	set activated [$options(-control) part-is-active $item]
 	#set inport [$options(-control) ccget $item -inport]
 	#set outport [$options(-control) ccget $item -outport]
 	#return [list $type $enabled $inport $outport {} {}]
@@ -91,20 +91,20 @@ snit::widget sdrui::tree {
     
     method control-values {item opt} {
 	#return [list {} {} {} {} $opt [$options(-control) controlget $item $opt]]
-	return [list [$options(-control) controlget $item $opt]]
+	return [list [$options(-control) part-cget $item $opt]]
     }
 
     method update {} {
 	catch {$hull delete all}
 	array set items {}
 	set labels {}
-	foreach label [$options(-control) list] {
-	    set enabled [$options(-control) ccget $label -enable]
-	    set activated [$options(-control) ccget $label -activate]
+	foreach label [$options(-control) part-list] {
+	    set enabled [$options(-control) part-is-enabled $label]
+	    set activated [$options(-control) part-is-active $label]
 	    set values [$self values $label]
 	    if { ! [info exists items($label)]} {
 		$win.t insert [find-parent [array names items] $label] end -id $label -text $label -values $values -tag $label
-		set items($label) [$options(-control) ccget $label -type]
+		set items($label) [$options(-control) part-type $label]
 	    } else {
 		$win.t item $label -values $values -tag $label
 	    }
@@ -115,9 +115,11 @@ snit::widget sdrui::tree {
 	    } else {
 		$win.t tag configure $label -foreground grey -background white
 	    }
-	    foreach option [$options(-control) controls $label] {
-		set optname [lindex $option 0]
+	    foreach option [$options(-control) opt-filter [list $label *]] {
+		set optname [lindex $option 1]
 		switch -- $optname {
+		    -opt-connect-to -
+		    -opt-connect-from -
 		    -verbose -
 		    -client -
 		    -server { }
@@ -125,7 +127,7 @@ snit::widget sdrui::tree {
 			set optlabel "$label:$optname"
 			set values [$self control-values $label $optname]
 			if { ! [info exists items($optlabel)]} {
-			    $win.t insert $label end -id $optlabel -text $optlabel -values $values -tag $label
+			    $win.t insert $label end -id $optlabel -text $optname -values $values -tag $label
 			    set items($optlabel) control
 			} else {
 			    $win.t item $optlabel -values $values
@@ -144,20 +146,20 @@ snit::widget sdrui::tree {
 	    switch $type {
 		sequence {
 		    if {$col eq {value}} {
-			if {[$options(-control) ccget $item -activate]} {
-			    $options(-control) deactivate $item
+			if {[$options(-control) part-is-active $item]} {
+			    $options(-control) part-deactivate $item
 			} else {
-			    $options(-control) activate $item
+			    $options(-control) part-activate $item
 			}
 			$self update
 		    }
 		}
 		jack {
 		    if {$col eq {value}} {
-			if {[$options(-control) ccget $item -enable]} {
-			    $options(-control) disable $item
+			if {[$options(-control) part-is-enabled $item]} {
+			    $options(-control) part-disable $item
 			} else { 
-			    $options(-control) enable $item
+			    $options(-control) part-enable $item
 			}
 			$self update
 		    }
@@ -179,8 +181,10 @@ snit::widget sdrui::tree {
 
     method inform {w x y} {
 	set item [$w identify item $x $y]
-	if {[$options(-control) exists $item]} {
-	    foreach c [$options(-control) cconfigure $item] {
+	puts "$item at $x $y"
+	if {[$options(-control) part-exists $item]} {
+	    puts "$item exists"
+	    foreach c [$options(-control) part-configure $item] {
 		puts "$item: [lindex $c 0] {[lindex $c end]}"
 	    }
 	}

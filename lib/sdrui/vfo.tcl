@@ -33,31 +33,37 @@ package require sdrui::freq-readout
 snit::widget sdrui::vfo {
 
     variable data -array {
-	turn-resolutions {10 100 1000 10000 100000}
+	turn-resolutions {1 10 100 1000 10000 100000}
     }
 
+    option -freq -default 7050000 -configuremethod Opt-handler
     option -turn-resolution 1000
-    option -freq -default 7050000 -configuremethod opt-handler
+
     option -command {}
-    option -controls {-freq}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
-    method turned {turns} { $self set-freq [expr {$options(-freq)+$turns*$options(-turn-resolution)}] }
+    method Turned {turns} { $self Set-freq [expr {$options(-freq)+$turns*$options(-turn-resolution)}] }
 
-    method {opt-handler -freq} {hertz} {
+    method {Opt-handler -freq} {hertz} {
 	set options(-freq) $hertz
 	$win.readout set-freq $hertz
     }
 
-    method set-freq {hertz} {
-	$self opt-handler -freq $hertz
-	if {$options(-command) ne {}} { {*}$options(-command) report -freq $hertz }
+    method Set-freq {hertz} {
+	$self Opt-handler -freq $hertz
+	{*}$options(-command) report -freq $hertz
     }
 
     constructor {args} {
 	$self configure {*}$args
 	pack [sdrui::freq-readout $win.readout] -side top
 	pack [ttk::separator $win.sep1 -orient horizontal] -side top -fill x
-	pack [sdrui::dial $win.dial -command [mymethod turned]] -side top -expand true -fill both
-	# $self set-freq $options(-freq)
+	pack [sdrui::dial $win.dial -command [mymethod Turned]] -side top -expand true -fill both
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-freq -turn-resolution} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }    
 }

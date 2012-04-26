@@ -19,356 +19,369 @@
 
 package provide sdrctl::control 1.0.0
 
-#
-# a radio is built of parts
-# there are three different kinds of parts:
-#
-#  1) parts which do dsp computations, ../sdrblk/block.tcl;
-#  2) parts which supply parameter values, ../sdrui/components.tcl;
-#  3) parts which convert parameter values into dsp parameter values,
-#  implemented here.
-#
-# all these parts register themselves here as they are created, and
-# register their control options.  The controller matches them up 
-# and then supplies the glue required to make the few that don't match
-# exactly align.
-#
 package require snit
-package require sdrutil::band-data
+
+package require sdrkit::jack
+package require sdrctl::types
 
 namespace eval sdrctl {}
 
+#
+# this is the control component that wraps every
+# user interface, dsp computation, and control transfer
+# component.
+# the controller is further down below
+#
 snit::type sdrctl::control {
-    variable data -array {}
+    typevariable typedata -array {
+	exclude-opts {-command -opts -methods -ports -opt-connect-to -opt-connect-from}
+    }
 
-    option -partof -readonly yes
+    component wrapped
+
+    option -type -default {}  -readonly yes -type sdrctl::ctype
+    option -control -default {} -readonly yes
+    option -container -default {} -readonly yes
+
+    option -root -default {} -readonly yes
+    option -prefix -default {} -readonly yes
+    option -suffix -default {} -readonly yes
+    option -name -default {} -readonly yes
+
+    option -server -default default -readonly yes
+    option -opts -default {} -readonly yes
+    option -ports -default {} -readonly yes
+
+    option -require -default {} -readonly yes
+    option -factory -default sdrctl::control-stub -readonly yes
+    option -factory-options -default {} -readonly yes
+    option -factory-require -default {} -readonly yes
+
+    option -opt-connect-to -default {} -readonly yes -cgetmethod Delegate
+    option -opt-connect-from -default {} -readonly yes -cgetmethod Delegate
+
+    option -enable -default yes -configuremethod Handler
+    option -activate -default yes -configuremethod Handler
+
+    delegate option * to wrapped
+    delegate method * to wrapped
 
     constructor {args} {
-	set data(parts) [dict create]
-	set data(vars) [dict create]
-	set data(reporting) [dict create]
+	# puts "sdrctl::controllee $self constructor {$args}"
 	$self configure {*}$args
-	sdrctl::controller-init $self
+	$self Inherit -prefix -name
+	$self Inherit -control -control
+	set options(-name) [string trim "$options(-prefix)-$options(-suffix)" -]
+	foreach pkg $options(-require) { package require $pkg }
+	foreach pkg $options(-factory-require) { package require $pkg }
+	switch $options(-type) {
+	    ctl {
+		#puts "create ctl component $options(-name)"
+		install wrapped using $options(-factory) ::sdrctlx::$options(-name) {*}$options(-factory-options) -command [mymethod command]
+		set options(-opts) [$self Exclude-opts [::sdrctlx::$options(-name) info options]]
+		set options(-methods) [::sdrctlx::$options(-name) info methods]
+		set options(-ports) {}
+	    }
+	    ui {
+		#puts "create ui component $options(-root).$options(-name)"
+		install wrapped using $options(-factory) $options(-root).$options(-name) {*}$options(-factory-options) -command [mymethod command]
+		set options(-opts) [$self Exclude-opts [$options(-root).$options(-name) info options]]
+		set options(-methods) [$options(-root).$options(-name) info methods]
+		set options(-ports) {}
+	    }
+	    dsp {
+		#puts "create dsp component $options(-name)"
+		install wrapped using $options(-factory) ::sdrctlx::$options(-name) {*}$options(-factory-options)
+		::sdrctlx::$options(-name) deactivate
+		set options(-enable) false
+		set options(-activate) false
+		set options(-opts) [$self Exclude-opts [::sdrctlx::$options(-name) info options]]
+		set options(-methods) [::sdrctlx::$options(-name) info methods]
+		set options(-ports) [::sdrctlx::$options(-name) info ports]
+	    }
+	}
+	{*}$options(-control) part-add $options(-name) $self
+	return $self
     }
 
-    method add {name block} {
-	# puts "installing $name"
-	if {[dict exists $data(parts) $name]} { error "control part $name already exists" }
-	dict set data(parts) $name $block
-	foreach opt [$self controls $name] {
-	    set opt [lindex $opt 0]
-	    if {[dict exists $data(vars) $name:$opt]} {
-		error "duplicate variable $name $opt"
-	    } elseif {$opt in {-server -client -verbose}} {
-		# ignore
-	    } else {
-		# puts "installing $name:$opt in vars"
-		dict set data(vars) $name:$opt {}
+    method resolve {} {
+	#puts "$self resolve $options(-type)"
+	switch $options(-type) {
+	    ctl - ui {
+		foreach conn [$self cget -opt-connect-to] {
+		    # puts "$self opt-connect-to $conn"
+		    $self opt-connect-to {*}$conn
+		}
+		foreach conn [$self cget -opt-connect-from] {
+		    # puts "$self opt-connect-from $conn"
+		    $self opt-connect-from {*}$conn
+		}
+	    }
+	    dsp {
 	    }
 	}
     }
 
-    method remove {name} {
-	if { ! [dict exists $data(parts) $name]} { error "control part $name does not exist" }
-	dict unset data(parts) $name
-    }
-
-    method part {name} { return [dict get $data(parts) $name] }
-    method exists {name} { return [dict exists $data(parts) $name] }
-    method list {} { return [dict keys $data(parts)] }
-    method show {name} { return [$self part $name] }
-    method controls {name} { return [[$self part $name] controls] }
-    method control {name args} { [$self part $name] control {*}$args }
-    method controlget {name opt} { return [[$self part $name] controlget $opt] }
-    method ccget {name opt} { return [[$self part $name] cget $opt] }
-    method cconfigure {name args} { return [[$self part $name] configure {*}$args] }
-    method enable {name} { [$self part $name] configure -enable yes }
-    method disable {name} { [$self part $name] configure -enable no }
-    method is-enabled {name} { return [[$self part $name] cget -enable] }
-    method activate {name} {
-	[$self part $name] configure -activate yes
-	[$self part $name] connect
-    }
-    method deactivate {name} {
-	[$self part $name] disconnect
-	[$self part $name] configure -activate no
-    }
-    method is-activated {name} { return [[$self part $name] cget -activate] }
-    method filter-parts {pred} { set list {}; foreach name $order { if {[$pred $name]} { lappend list $name } }; return $list }
-    method enabled {} { return [filter-parts [mymethod is-enabled]] }
-    method activated {} { return [filter-parts [mymethod is-activated]] }
-
-    ##
-    ## ui and control value reporters
-    ##
-    method report {name var value} {
-	if { ! [dict exists $data(vars) $name:$var]} { error "control report $name $var -- non-existent var" }
-	if {[dict exists $data(reporting) $name:$var] && [dict get $data(reporting) $name:$var]} {
-	    error "control report $name $var $value -- looping"
+    method {command report} {opt val args} { $self report $opt $val {*}$args }
+    method opt-connect-to {opt name2 opt2} { $options(-control) opt-connect $options(-name) $opt $name2 $opt2 }
+    method opt-connect-from {name2 opt2 opt} { $options(-control) opt-connect $name2 $opt2 $options(-name) $opt }
+    method port-connect-to {port name2 port2} { $options(-control) port-connect $options(-name) $port $name2 $port2 }
+    method port-connect-from {name2 opt2 opt} { $options(-control) port-connect $name2 $opt2 $options(-name) $opt }
+    method report {opt val args} { {*}$options(-control) part-report $options(-name) $opt $val {*}$args }
+    
+    method Inherit {opt from_opt} {
+	if {$options(-container) ne {} && $options($opt) eq {}} {
+	    set options($opt) [{*}$options(-container) cget -name]
 	}
-	# if { ! [string match *freq $var]} { puts "control report $name $var $value" }
-	dict set data(reporting) $name:$var true
-	# $self control $name $var $value
-	if {[catch {
-	    foreach {name2 var2} [dict get $data(vars) $name:$var] {
-		# if { ! [string match *freq $var]} { puts "control report forward to $name2 $var2 $value" }
-		$self control $name2 $var2 $value
-	    }
-	} error]} {
-	    puts $error
-	}
-	dict set data(reporting) $name:$var false
-    }
-
-    ##
-    ## control value delivery
-    ##
-    method deliver {name var value args} {
-	# puts "control deliver $name $var $value $args"
-	$self control $name $var $value {*}$args
-    }
-
-    ##
-    ## value listeners
-    ##
-    method add-listener {name1 var1 name2 var2} {
-	if { ! [dict exists $data(vars) $name1:$var1]} { error "control add-listener source $name1 $var1 -- no $name1:$var1 in data(vars)" }
-	if { ! [dict exists $data(vars) $name2:$var2]} { error "control add-listener destination $name2 $var2 -- no $name2:$var2 in data(vars)" }
-	# puts "control add-listener $name1 $var1 $name2 $var2"
-	dict lappend data(vars) $name1:$var1 $name2 $var2
     }
     
-    ##
-    ## resolve the 
-    ##
-    method resolve {} {
-	# resolve the controllers
-	foreach name [dict keys $data(parts) ctl-*] { [$self part $name] resolve }
-	# match up names to establish some transfers
-	dict for {name listeners} $data(vars) {
-	    set l [llength $listeners]
-	    # puts "$name listeners $listeners"
-	    foreach k [dict keys $data(vars) *$name] {
-		if {$name ne $k} {
-		    # puts "$name matches tail of $k"
-		    $self add-listener {*}[split $k :] {*}[split $name :]
+    method Exclude-opts {opts} {
+	set new {}
+	foreach o $opts { if {$o ni $typedata(exclude-opts)} { lappend new $o } }
+	return $new
+    }
+
+    method {Handler -enable} {val} {
+	set options(-enable) $val
+    }
+
+    method {Handler -activate} {val} {
+	set options(-activate) $val
+	switch $options(-type) {
+	    dsp {
+		::sdrctlx::$options(-name) activate
+	    }
+	}
+    }
+
+    method Delegate {opt} {
+	if {[catch {$wrapped cget $opt} value]} {
+	    #puts "$self Delegate $opt returns $options($opt)"
+	    return $options($opt)
+	} else {
+	    #puts "$self Delegate $opt returns $value"
+	    return $value
+	}
+    }
+}
+
+#
+# Okay, redo the controller so it handles both jack and control connections.
+# We do get multiple jack inputs and outputs managed for free.
+# We don't yet get the make-before-break insertion/deletion of jack components into/from
+# active computation graphs.
+# We don't yet get the radiobutton logic for alternates disciplines: at-most-one, zero-or-more,
+# exactly-one, one-or-more, etc.
+# We don't yet get the tap points in the dsp chain because they need to supply dummy ports.
+#
+
+snit::type sdrctl::controller {
+    option -partof -readonly yes
+    option -server -readonly yes
+
+    variable data -array {}
+    
+    constructor {args} {
+	set data(part) [dict create]
+	set data(opt) [dict create]
+	set data(invert-opt) [dict create]
+	set data(port) [dict create]
+	set data(invert-port) [dict create]
+	$self configure {*}$args
+    }
+
+    ## part methods
+    ## parts are components in the computation which supply
+    ## opts and ports that can be wired up
+    method part-exists {name} { return [$self X-exists part $name] }
+    method part-get {name} { return [$self X-get part $name] }
+    method part-add {name command} {
+	$self X-add part $name
+	dict set data(part) $name $command
+	foreach opt [$self part-opts $name] { $self opt-add $name $opt }
+	foreach port [$self part-ports $name] { $self port-add $name $port }
+    }
+    method part-remove {name} {
+	if { ! [$self exists part $name]} { error "part \"$name\" does not exist" }
+	foreach opt [$self opt filter $name *] { $self remove opt $name $opt }
+	foreach port [$self port filter $name *] { $self remove port $name $port }
+	dict unset data(parts) $name
+    }
+    method part-list {} { return [$self X-list part] }
+    method part-filter {glob} { return [$self X-filter part $glob] }
+
+    method part-configure {name args} { return [{*}[dict get $data(part) $name] configure {*}$args] }
+    method part-cget {name opt} { return [{*}[dict get $data(part) $name] cget $opt] }
+
+    method part-container {name} { return [$self part-cget $name -container] }
+    method part-opts {name} { return [$self part-cget $name -opts] }
+    method part-ports {name} { return [$self part-cget $name -ports] }
+    method part-type {name} { return [$self part-cget $name -type] }
+    method part-is-enabled {name} { return [$self part-cget $name -enable] }
+    method part-is-active {name} { return [$self part-cget $name -activate] }
+
+    ## now the tricky stuff
+    ## note that activate and deactivate need to work when starting and stopping whole subtrees
+    ## and also when enabling or disabling a single component inside an active subtree
+    method part-enable {name} {
+	if {[$self part-is-enabled $name]} { error "part \"$name\" is enabled" }
+	$self part-configure $name -enable true
+	if {[$self part-is-active [$self part-container $name]]} {
+	    $self part-activate $name
+	}
+    }
+    method part-disable {name} { $self part-configure $name -enable false }
+
+    method port-active-connections-to {pair} {
+	# chase each connections-to chain starting from port until you find an active component
+	set active {}
+	foreach source [$self port-connections-to $pair] {
+	    lassign $source part port
+	    if {[$self part-is-active $part]} {
+		lappend active $source
+	    } else {
+		lappend active {*}[$self port-active-connections-to $source]
+	    }
+	}
+	return $active
+    }
+    method port-active-connections-from {port} {
+	# chase each connections-from chain starting from port until you find an active component
+	set active {}
+	foreach sink [$self port-connections-from $pair] {
+	    lassign $sink part port
+	    if {[$self part-is-active $part]} {
+		lappend active $sink
+	    } else {
+		lappend active {*}[$self port-active-connections-from $sink]
+	    }
+	}
+	return $active
+    }
+
+    method part-activate {name} {
+	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
+	if {[$self part-is-enabled $name]} {
+	    set activated {}
+	    $self part-configure $name -activate true
+	    lappend activated $name
+	    foreach part [$self part-filter $name-*] {
+		if {[$self part-is-enabled $part]} {
+		    $self part-configure $part -activate true
+		    lappend activated $part
+		}
+	    }
+	    # now make the active connections
+	    foreach part $activated {
+		foreach port [$self part-ports $part] {
+		    set pair [list $part $port]
+		    set jackport [join $port :]
+		    foreach sink [$self port-active-connections-from $pair] {
+			sdrkit::jack -server $options(-server) connect $jackport [join $sink :]
+		    }
+		    foreach source [$self port-active-connections-to $pair] {
+			sdrkit::jack -server $options(-server) connect [join $source :] $jackport
+		    }
 		}
 	    }
 	}
     }
-}
-
-proc sdrctl::controller-init {control} {
-    foreach {name factory opts} {
-	ctl sdrctl::stub {}
-	ctl-mode sdrctl::mode {}
-	ctl-tune sdrctl::tune {}
-	ctl-rxtx sdrctl::rxtx {}
-	ctl-band sdrctl::band {}
-	ctl-filter sdrctl::filter {}
-    } {
-	sdrctl::controller ::$name -name $name -factory $factory -control $control -options $opts
-    }
-}
-
-proc sdrctl::filter-controls {omit conf} {
-    foreach element $conf {
-	if {[lindex $element 0] in $omit} continue
-	lappend controls $element
-    }
-    return $controls
-}
-
-snit::type sdrctl::controller {
-    option -control {}
-    option -name {}
-    option -factory {}
-    option -options {}
-    option -enable yes
-    option -activate yes
-    option -type ctl
-
-    constructor {args} {
-	$self configure {*}$args
-	$options(-factory) ::sdrctl::$options(-name) -command [mymethod command] {*}$options(-options)
-	$options(-control) add $options(-name) $self
-    }
-
-    method {command report} {opt val} { $options(-control) report $options(-name) $opt $val }
-    method {command deliver} {target opt val args} { $options(-control) deliver $target $opt $val {*}$args }
-    method {command listen-to} {name1 var1 var2} { $options(-control) add-listener $name1 $var1 $options(-name) $var2 }
-    method {command add-listener} {var1 name2 var2} { $options(-control) add-listener $options(-name) $var1 $name2 $var2 }
-    method resolve {} { ::sdrctl::$options(-name) resolve }
-    # these are the methods the radio controller uses
-    method controls {} { return [::sdrctl::$options(-name) controls] }
-    method control {args} { return [::sdrctl::$options(-name) control {*}$args] }
-    method controlget {opt} { return [::sdrctl::$options(-name) controlget $opt] }
-}
-
-snit::type sdrctl::stub {
-    option -command {}
-    method resolve {} {
-    }
-    method controls {} { return {} }
-}
-
-snit::type sdrctl::mode {
-    option -command {}
-    option -mode -default CWU -configuremethod opt-handler 
-    method resolve {} {
-	if {$options(-command) ne {}} {
-	    {*}$options(-command) listen-to ui-mode -mode -mode
-	    {*}$options(-command) add-listener -mode ui-mode -mode
+    method part-deactivate {name} {
+	if {[$self part-is-active $name]} {
+	    set deactivated {}
+	    $self part-configure $name -activate false
+	    foreach part [$self part-filter $name-*] {
+		if {[$self part-is-active $part]} {
+		    $self part-configure $part -activate false
+		}
+	    }
 	}
     }
-    method {opt-handler -mode} {val} {
-	set options(-mode) $val
-	# puts "sdrctl::mode -mode $val"
-	{*}$options(-command) report -mode $val
-    }
-    method controls {} { return [sdrctl::filter-controls {-command} [$self configure]] }
-    method control {args} { $self configure {*}$args }
-    method controlget {opt} { $self cget $opt }
-}
 
-snit::type sdrctl::tune {
-    option -command {}
-    option -mode -default CWU -configuremethod opt-handler 
-    option -freq -default 7050000 -configuremethod opt-handler
-    option -lo-freq -default 10000 -configuremethod opt-handler
-    option -cw-freq -default 600 -configuremethod opt-handler
-    option -carrier-freq -default 7040000 -configuremethod opt-handler
-    option -hw-freq -default 7039400 -configuremethod opt-handler
-    method resolve {} {
-	{*}$options(-command) listen-to ctl-mode -mode -mode
-	{*}$options(-command) listen-to ui-tuner -freq -freq
-	{*}$options(-command) listen-to ui-if-mix -freq -lo-freq
-	{*}$options(-command) listen-to ui-keyer-tone -freq -cw-freq
-	{*}$options(-command) add-listener -freq ui-tuner -freq
-	{*}$options(-command) add-listener -lo-freq ui-if-mix -freq
-	{*}$options(-command) add-listener -cw-freq ui-keyer-tone -freq
-	{*}$options(-command) add-listener -hw-freq hw -freq
-    }
-    method compute-carrier {} {
-	switch $options(-mode) {
-	    CWU { set options(-carrier-freq) [expr {$options(-freq)-$options(-cw-freq)}] }
-	    CWL { set options(-carrier-freq) [expr {$options(-freq)+$options(-cw-freq)}] }
-	    default { set options(-carrier-freq) [expr {$options(-freq)}] }
+    method part-report {name opt value args} {
+	foreach pair [$self opt-connections-from $name $opt] {
+	    $self part-configure {*}$pair $value {*}$args
 	}
-	set options(-hw-freq) [expr {$options(-carrier-freq)-$options(-lo-freq)}]
-	{*}$options(-command) report -carrier-freq $options(-carrier-freq)
-	{*}$options(-command) report -hw-freq $options(-hw-freq)
     }
-    method {opt-handler -mode} {val} {
-	set options(-mode) $val
-	$self compute-carrier
-    }
-    method {opt-handler -freq} {val} {
-	set options(-freq) $val
-	$self compute-carrier
-	{*}$options(-command) report -freq $options(-freq)
-    }
-    method {opt-handler -lo-freq} {val} {
-	set options(-lo-freq) $val
-	$self compute-carrier
-	{*}$options(-command) report -lo-freq $options(-lo-freq)
-    }
-    method {opt-handler -cw-freq} {val} {
-	set options(-cw-freq) $val
-	$self compute-carrier
-	{*}$options(-command) report -cw-freq $options(-cw-freq)
-    }
-    method {opt-handler -carrier-freq} {val} { }
-    method {opt-handler -hw-freq} {val} { }
-    method controls {} { return [sdrctl::filter-controls {-command} [$self configure]] }
-    method control {args} { $self configure {*}$args }
-    method controlget {opt} { $self cget $opt }
-}
 
-snit::type sdrctl::rxtx {
-    option -command {}
-    option -mode -default CWU -configuremethod opt-handler 
-    option -mox -default 0 -configuremethod opt-handler 
-    method resolve {} {
-    }
-    method {opt-handler -mode} {val} { }
-    method {opt-handler -mox} {val} { }
-    method controls {} { return [sdrctl::filter-controls {-command} [$self configure]] }
-    method control {args} { $self configure {*}$args }
-    method controlget {opt} { $self cget $opt }
-}
-
-snit::type sdrctl::band {
-    option -command {}
-    option -band -configuremethod opt-handler 
-    option -channel -configuremethod opt-handler 
-    option -band-low -configuremethod opt-handler
-    option -band-high -configuremethod opt-handler
-    option -band-mode -configuremethod opt-handler
-    option -band-filter -configuremethod opt-handler
-    option -freq 7050000
-
-    method resolve {} {
-	{*}$options(-command) listen-to ui-band-select -band -band
-	{*}$options(-command) listen-to ui-band-select -channel -channel
-	{*}$options(-command) add-listener -freq ctl-tune -freq
-    }
-    method {opt-handler -band} {val} {
-	set options(-band) $val
-	lassign [sdrutil::band-data-band-range-hertz {*}$val] options(-band-low) options(-band-high)
-	set freq [expr {($options(-band-low)+$options(-band-high))/2}]
-	{*}$options(-command) report -freq $freq
-    }
-    method {opt-handler -channel} {val} {
-	set options(-channel) $val
-	set freq [sdrutil::band-data-channel-freq-hertz {*}$val]
-	{*}$options(-command) report -freq $freq
-    }
-    method controls {} { return [sdrctl::filter-controls {-command} [$self configure]] }
-    method control {args} { $self configure {*}$args }
-    method controlget {opt} { $self cget $opt }
-}
-
-snit::type sdrctl::filter {
-    option -command {}
-    option -mode -default CWU -configuremethod opt-handler
-    option -width -default 400 -configuremethod opt-handler
-    option -cw-freq -default 600 -configuremethod opt-handler
-
-    method resolve {} {
-	{*}$options(-command) listen-to ui-if-bpf -width -width
-	{*}$options(-command) listen-to ctl-mode -mode -mode
-	{*}$options(-command) listen-to ctl-tune -cw-freq -cw-freq
-    }
-    method {opt-handler -mode} {val} {
-	set options(-mode) $val
-    }
-    method {opt-handler -width} {val} {
-	set options(-width) $val
-	$self compute-filter
-	{*}$options(-command) report -width $val
-    }
-    method compute-filter {} {
-	set c $options(-cw-freq)
-	set w $options(-width)
-	set h [expr {$options(-width)/2.0}]
-	switch $options(-mode) {
-	    CWL { set low [expr {-$c-$h}]; set high [expr {-$c+$h}] }
-	    CWU { set low [expr {+$c-$h}]; set high [expr {+$c+$h}] }
-	    AM -
-	    SAM -
-	    DSB -
-	    FMN { set low [expr {-$h}]; set high [expr {+$h}] }
-	    LSB -
-	    DIGL { set low [expr {-150-$w}]; set high -150 }
-	    USB -
-	    DIGU { set low 150; set high [expr {150+$w}] }
-	    default { error "missed mode $options(-mode)" }
+    method part-resolve {} {
+	foreach part [$self part-list] {
+	    {*}[$self part-get $part] resolve
 	}
-	{*}$options(-command) deliver rx-if-bpf -low $low -high $high
     }
-    method controls {} { return [sdrctl::filter-controls {-command} [$self configure]] }
-    method control {args} { $self configure {*}$args }
-    method controlget {opt} { $self cget $opt }
+
+    ## opt methods
+    ## opts are "configure options" in the tcl/tk sense which the components
+    ## expose for connection to opts of other components
+    method opt-exists {name opt} { return [$self X-exists opt [list $name $opt]] }
+    method opt-connected {name1 opt1 name2 opt2} { return [$self X-connected opt [list $name1 $opt1] [list $name2 $opt2]] }
+    method opt-add {name opt} { $self X-add opt [list $name $opt] }
+    method opt-remove {name opt} { $self X-remove opt [list $name $opt]} 
+    method opt-connect {name1 opt1 name2 opt2} { $self X-connect opt [list $name1 $opt1] [list $name2 $opt2] }
+    method opt-disconnect {name1 opt1 name2 opt2} { $self X-disconnect opt [list $name1 $opt1] [list $name2 $opt2] }
+    method opt-list {} { return [$self X-list opt] }
+    method opt-filter {glob} { return [$self X-filter opt $glob] }
+    method opt-connections-to {name opt} { return [$self X-connections-to opt [list $name $opt]] }
+    method opt-connections-from {name opt} { return [$self X-connections-from opt [list $name $opt]] }
+
+    ## port methods
+    ## ports are jack ports, both audio and midi, which the components
+    ## expose for connection to ports of other components
+    method port-exists {name port} { return [$self X-exists port [list $name $port]] }
+    method port-connected {name1 port1 name2 port2} { return [$self X-connected port [list $name1 $port1] [list $name2 $port2]] }
+    method port-add {name port} { $self X-add port [list $name $port] }
+    method port-remove {name port} { $self X-remove port [list $name $port] }
+    method port-connect {name1 port1 name2 port2} { $self X-connect port [list $name1 $port1] [list $name2 $port2] }
+    method port-disconnect {name1 port1 name2 port2} { $self X-disconnect port [list $name1 $port1] [list $name2 $port2] }
+    method port-list {} { return [$self X-list port] }
+    method port-filter {glob} { return [$self X-filter port $glob] }
+    method port-connections-to {name port} { return [$self X-connections-to port [list $name $port]] }
+    method port-connections-from {name port} { return [$self X-connections-from port [list $name $port]] }
+
+    ## X methods to handle common patterns
+    ## tag may be a simple part name, or a part name opt name pair, or part name port name pair 
+    ## pair will always be a part name opt name pair, or part name port name pair 
+    ##
+    method X-exists {x tag} { return [dict exists $data($x) $tag] }
+    method X-get {x tag} { return [dict get $data($x) $tag] }
+    method X-add {x tag} {
+	if {[dict exists $data($x) $tag]} { error "$x \"$tag\" exists" }
+	dict set data($x) $tag {}
+	if {$x in {opt port}} { dict set data(invert-$x) $tag {} }
+    }
+    method X-remove {x tag} {
+	if { ! [dict exists $data($x) $tag]} { error "$x \"$tag\" does not exist" }
+	if {$x in {opt port}} {
+	    # remove the connections
+	    foreach tag2 [dict get $data($x) $tag] { $self X-disconnect $x $tag $tag2 }
+	}
+	# remove the tag
+	dict unset data($x) $tag
+    }
+    method X-list {x} { return [dict keys $data($x)] }
+    method X-filter {x glob} { return [dict keys $data($x) $glob] }
+    method X-connected {x pair1 pair2} { return [expr {[lsearch -exact [dict get $data($x) $pair1] $pair2] >= 0}] }
+    method X-connect {x pair1 pair2} {
+	if { ! [dict exists $data($x) $pair1]} { error "$x \"$pair1\" does not exist" }
+	if { ! [dict exists $data($x) $pair2]} { error "$x \"$pair2\" does not exist" }
+	if {[$self X-connected $x $pair1 $pair2]} { error "${x}s \"$pair1\" \"$pair2\" are connected" }
+	dict lappend data($x) $pair1 $pair2
+	dict lappend data(invert-$x) $pair2 $pair1
+    }
+    method X-disconnect {x pair1 pair2} {
+	if { ! [dict exists $data($x) $pair1]} { error "$x \"$pair1\" does not exist" }
+	if { ! [dict exists $data($x) $pair2]} { error "$x \"$pair2\" does not exist" }
+	if { ! [$self X-connected $x $pair1 $pair2]} { error "${x}s \"$pair1\" \"$pair2\" are not connected" }
+	set list [dict get $data($x) $pair1]
+	set i [lsearch -exact $list $pair2]
+	dict set data($x) $pair1 [lreplace $list $i $i]
+	set list [dict get $data(invert-$x) $pair2]
+	set i [lsearch -exact $list $pair1]
+	dict set data(invert-$x) $pair2 [lreplace $list $i $i]
+    }
+    method X-connections-from {x pair} { return [$self X-get $x $pair] }
+    method X-connections-to {x pair} { return [$self X-get invert-$x $pair] }
+
 }
+
 

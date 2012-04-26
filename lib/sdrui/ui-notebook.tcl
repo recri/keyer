@@ -26,7 +26,7 @@ package require tkcon
 package require sdrui::ui-radio-panel
 package require sdrui::tree
 package require sdrui::connections
-package require sdrui::panadapter
+package require sdrui::spectrum
 package require sdrui::components
 
 # not a notebook anymore
@@ -35,7 +35,8 @@ snit::type sdrui::ui-notebook {
 
     variable data -array {
 	tree 0
-	connections 0
+	port-connections 0
+	opt-connections 0
 	console 0
 	spectrum 0
     }
@@ -47,43 +48,32 @@ snit::type sdrui::ui-notebook {
 	$self configure {*}$args
 	set options(-control) [$options(-partof) cget -control]
 	menu .menu -tearoff no
-	.menu add cascade -label File -menu .menu.file
-	menu .menu.file -tearoff no
-	.menu add cascade -label Edit -menu .menu.edit
-	menu .menu.edit -tearoff no
-	.menu add cascade -label View -menu .menu.view
-	menu .menu.view -tearoff no
-	foreach view {panadapter tree connections console} {
-	    .menu.view add checkbutton -label $view -variable [myvar data($view)] -command [mymethod view $view]
+	foreach label {file edit view} {
+	    .menu add cascade -label $label -menu .menu.$label
+	    menu .menu.$label -tearoff no
+	    if {$label eq {view}} {
+		foreach view {spectrum tree port-connections opt-connections console} {
+		    .menu.view add command -label $view -command [mymethod view $view]
+		}
+	    }
 	}
 	. configure -menu .menu
 	pack [sdrui::ui-radio-panel .radio -partof $self -control $options(-control)] -fill both -expand true
     }
 
-    method widget {foo} {
-    }
-
     method view {window} {
 	switch $window {
 	    console {
-		if {$data(console)} {
-		    tkcon show
-		    tkcon title sdrkit:console
-		} else {
-		    tkcon hide
-		}
+		tkcon show
+		tkcon title sdrkit:console
 	    }
 	    default {
 		if { ! [winfo exists .$window]} {
 		    toplevel .$window
 		    pack [$window .$window.t -partof $self -control $options(-control)] -fill both -expand true
-		    wm withdraw .$window
 		    wm title .$window sdrkit:$window
-		}
-		if {$data($window)} {
-		    wm deiconify .$window
 		} else {
-		    wm withdraw .$window
+		    wm deiconify .$window
 		}
 	    }
 	}

@@ -1,14 +1,36 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
+------------------------------------------------------------------------
+** TODO - Find the common sdrctl/control functionality.
+   That which all controllees in sdrui, sdrblk, and sdrctl will share,
+   and implement it once.
+** TODO - sdrctl/controllees should register the "true" names.
+   Those of the controls which they define and not know what exists
+   beyond that except as informed.
+** TODO - implement -alternates at-most-one, exactly-one, zero-or-more.
+   Do this by passing the constraint into the controller and letting
+   it enforce it.
+** TODO - sdrui/controllees should attach themselves to the "true" names.
+   Only those that they inform and are informed by, all the other
+   connections should be the responsibility of other controls.
+** TODO - sdrblk/controllees should attach to the controls which they need.
+** TODO - can the jack port structure of the sdrblk controls be represented
+   with the control ports used by sdrui/sdrctl?  Well, we can
+   certainly 
+** TODO - the sdrblk gets renamed to sdrdsp.
+** TODO - the sdrkit directory becomes dspmath, with a dspmath.h
+** TODO - the jack-tcl-wrap directory becomes sdrtcl
+** TODO - add the libusb interface necessary to handle softrock-dg8saq
+   directly from Tcl.
+** TODO - add the modified Togl which implements enough canvas like functions
+   to redo the spectrum and waterfall and meters in gl.
+------------------------------------------------------------------------
 ** TODO - get the gain controls correct,
    they should be implementing dB of power ratios by adjusting
    the linear magnitude of voltage signals.  Absolute levels
    should be referenced dBFS, full scale, so to the power of a sine
    wave that touches +1 and -1 peak-to-peak, 0.775 RMS.
 ** TODO - figure out where the bad values in duelling oscillators come from
-** TODO - normalize the output of spectrum to the size of the fft
-   The fft spectrum output taken from dttsp is unnormalized, it should
-   be weighted by 1/sqrt(size-of-fft) somewhere.
 ** TODO - get networked audio from the softrock
 ** TODO - build the input stage for the radio
    iq correct with visual metering and adaptive mu, panoramic display,
@@ -23,9 +45,7 @@
    so they don't use the wrong one in multi-rate setup.
 ** TODO - make all the components consistent with evolving conventions.
    This is a tough one since I haven't finished evolving the conventions.
-** TODO - polyphase fft for spectrum
 ** TODO - factor pileup so it can be used as a signal generator
-** TODO - reexamine iq_noise to see if it's correct
 ** TODO - check that command deletion cleans up object valued options
    or make a framework function to deal with it.
 ** TODO - check that failed configure doesn't lose object valued options
@@ -44,7 +64,6 @@
 ** TODO - keyer-scope: graticule doesn't track scrolling
 ** TODO - keyer-scope: time-scale and audio track canvases don't track
    the coordinates with the midi signal canvases after zoom and scroll.
-** TODO - convert the remaining users of atap to audio-tap.
 ** TODO - MidiKey: to support the AdaFruit atmega32u4breakout.
 ** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
@@ -65,7 +84,3 @@
 ** TODO - sdrkit_jack.c: provide missing jack status information.
 ** TODO - bin/invaders: callsign-invaders ear/key training game.
 ** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
-** TODO - add activate/deactivate to the common subcommands for Jack
-   commands, so a collection of modules can be put into standby.  But
-   they lose all port connections when deactivated.  For the moment,
-   just delete them if they aren't needed.

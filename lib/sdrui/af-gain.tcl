@@ -31,8 +31,10 @@ snit::widgetadaptor sdrui::af-gain {
 
     option -gain -default 0
     option -mute -default 0
+
     option -command {}
-    option -controls {-gain}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
@@ -50,10 +52,15 @@ snit::widgetadaptor sdrui::af-gain {
 	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
 	}
 	$self configure {*}$args
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-gain -mute} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
     }
 
-    method set-gain {} { if {$options(-command) ne {}} { {*}$options(-command) report -gain $options(-gain) } }
-    method set-mute {} { if {$options(-command) ne {}} { {*}$options(-command) report -mute $options(-mute) } }
+    method set-gain {} { {*}$options(-command) report -gain $options(-gain) }
+    method set-mute {} { {*}$options(-command) report -mute $options(-mute) }
 }
 
 

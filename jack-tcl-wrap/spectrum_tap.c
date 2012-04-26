@@ -227,7 +227,6 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   if ( ! framework_is_active(clientData)) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not active", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  if (data->modified) return fw_error_str(interp, "busy");
 
   // mark the fft as active
   data->computing = 1;
@@ -282,19 +281,19 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float));
     float *dB = (float *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1)
-      dB[i] = 10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i])) + lognorm2);
+      dB[i] = 10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i]) + 1e-16) + lognorm2);
     break;
   case as_decibel_shorts:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(short));
     short *shorts = (short *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1)
-      shorts[i] = (short)(100 * (10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i])) + lognorm2)));
+      shorts[i] = (short)(100 * (10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i]) + 1e-16) + lognorm2)));
     break;
   case as_decibel_chars:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(char));
     char *chars = (char *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1) {
-      short t = (short)(10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i])) + lognorm2));
+      short t = (short)(10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i]) + 1e-16) + lognorm2));
       chars[i] = (t < -128) ? -128 : (t > 127 ? 127 : t);
     }
     break;
@@ -310,8 +309,21 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_str(interp, "no result computed, how?");
 }
 
+static int _modified(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+  _t *data = (_t *)clientData;
+  return fw_success_obj(interp, Tcl_NewListObj(2, (Tcl_Obj *[]){ Tcl_NewIntObj(jack_frame_time(data->fw.client)), Tcl_NewIntObj(data->modified) }));
+
+}
+
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
+  if (data->modified) {		// not safe to access
+    if (argc == 2 && strcmp("modified", Tcl_GetString(objv[1])) == 0)
+      return _modified(clientData, interp, argc, objv);
+    return fw_error_str(interp, "busy");
+  }
   options_t save = data->opts;
   Tcl_IncrRefCount(save.result_type_obj);
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
@@ -338,13 +350,14 @@ static const fw_option_table_t _options[] = {
   { "-planbits", "planbits", "Planbits",  "0",	  fw_option_int, 0, offsetof(_t, opts.planbits),	"fftw plan bits" },
   { "-direction","direction","Direction", "-1",	  fw_option_int, 0, offsetof(_t, opts.direction),	"fft direction, 1=inverse or -1=forward" },
   { "-polyphase","polyphase","Polyphase", "1",    fw_option_int, 0, offsetof(_t, opts.polyphase),	"polyphase fft, multiple of size to filter" },
-  { "-result",   "result",   "Result",    "coeff",fw_option_obj, 0, offsetof(_t, opts.result_type_obj), "result type: coeff, mag, mag2, dB, short, char" },
+  { "-result",   "result",   "Result",    "dB",   fw_option_obj, 0, offsetof(_t, opts.result_type_obj), "result type: coeff, mag, mag2, dB, short, char" },
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get",	 _get,                    "get an audio buffer" },
+  { "modified", _modified, "fetch the current modified flag" },
   { NULL }
 };
 

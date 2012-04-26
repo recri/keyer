@@ -26,32 +26,55 @@ package require Tk
 package require snit
 
 snit::widgetadaptor sdrui::tk-spectrum {
-    option -width 250
-    option -height 100
-    option -offset -default 0.0 -configuremethod handle-option
-    option -scale -default 1.0 -configuremethod handle-option
-    option -max -default 0 -configuremethod handle-option
-    option -min -default -160 -configuremethod handle-option
-    # option -smooth ?
-    # option -multi
+    option -max -default 0 -configuremethod opt-handler
+    option -min -default -160 -configuremethod opt-handler
+    option -smooth -default true -configuremethod opt-handler
+    option -multi -default 1 -configuremethod opt-handler
+    option -center -default 0 -configuremethod opt-handler
+    option -size -default 4096 -configuremethod opt-handler
+    option -rate -default 48000 -configuremethod opt-handler
+    option -zoom -default 1 -configuremethod opt-handler
+    option -pan -default 0 -configuremethod opt-handler
 
+    variable data -array {
+	xscale 1.0
+	xoffset 0.5
+	multi 0
+    }
+    
     constructor {args} {
 	installhull using canvas
 	$self configure {*}$args
-	$hull configure -height $options(-height) -bg black
-	$hull create line 0 0 0 0 -fill white -tags spectrum
+	$hull configure -bg black
+	bind $hull <Configure> [mymethod rescale %w %h]
     }
     
-    method scale {tag} {
-	set yscale [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
-	$hull scale $tag 0 0 $options(-scale) $yscale
-	$hull move $tag $options(-offset) [expr {-$options(-max)*$yscale}]
+    method rescale {wd ht} {
     }
 
+    method scale {tag} {
+	set yscale [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
+	set yoffset [expr {-$options(-max)*$yscale}]
+	set xscale [expr {[winfo width $win]*$data(xscale)}]
+	set xoffset [expr {[winfo width $win]*$data(xoffset)}]
+	$hull scale $tag 0 0 $xscale $yscale
+	$hull move $tag $xoffset $yoffset
+	if {0} {
+	    puts "scale $tag 0 0 $xscale $yscale"
+	    puts "move $tag $xoffset $yoffset"
+	    puts "bbox $tag [$hull bbox $tag]"
+	}
+    }
+    
     method update {xy} {
-	$hull coords spectrum $xy
-	$self scale spectrum
-	# keep older copies fading to black?
+	$hull coords spectrum-$data(multi) $xy
+	$hull raise spectrum-$data(multi)
+	$self scale spectrum-$data(multi)
+	for {set i 0} {$i < $options(-multi)} {incr i} {
+	    set j [expr {($data(multi)+$i)%$options(-multi)}]
+	    $hull itemconfigure spectrum-$j -fill [lindex $data(multi-hues) $j]
+	}
+	set data(multi) [expr {($data(multi)-1+$options(-multi))%$options(-multi)}]
     }
 
     method adjust {} {
@@ -59,9 +82,9 @@ snit::widgetadaptor sdrui::tk-spectrum {
 	set dark \#888
 	set med \#AAA
 	set light \#CCC
-	set lo [expr {-double([winfo width $win])/$options(-scale)/2.0}]
+	set lo [expr {-double([winfo width $win])/$data(xscale)/2.0}]
 	set hi [expr {-$lo}]
-	#puts "scale $options(-scale) offset $options(-offset) width [winfo width $win], $lo .. $hi"
+	#puts "scale $data(xscale) offset $data(xoffset) width [winfo width $win], $lo .. $hi"
 	for {set l $options(-min)} {$l <= $options(-max)} {incr l 20} {
 	    # main db grid
 	    $hull create line $lo $l $hi $l -fill $dark -tags grid
@@ -78,9 +101,40 @@ snit::widgetadaptor sdrui::tk-spectrum {
 	$hull lower grid
 	$self scale grid
     }	
+	
+    method {opt-handler -max} {value} { set options(-max) $value; $self adjust }
 
-    method handle-option {option value} {
-	set options($option) $value
-	$self adjust
+    method {opt-handler -min} {value} { set options(-min) $value; $self adjust }
+
+    method {opt-handler -smooth} {value} { set options(-smooth) $value; catch {$hull configure spectrum -smooth $value} }
+
+    proc gray-scale {n} {
+	set scale {}
+	set intensity 0xFF
+	for {set i 0} {$i <= $n} {incr i} {
+	    lappend scale [string range [format {\#%02x%02x%02x} $intensity $intensity $intensity] 1 end]
+	    incr intensity [expr {-(0xFF/($n+1))}]
+	}
+	return $scale
     }
+
+    method {opt-handler -multi} {value} {
+	set options(-multi) $value
+	set data(multi) 0
+	set data(multi-hues) [gray-scale $options(-multi)]
+	catch {$hull delete spectrum}
+	for {set i 0} {$i < $options(-multi)} {incr i} {
+	    $hull create line 0 0 0 0 -tags [list spectrum spectrum-$i]
+	    
+	}
+    }
+    method {opt-handler -center} {value} { set options(-center) $value; $self adjust }
+    method {opt-handler -rate} {value} {
+	set options(-rate) $value
+	set data(xscale) [expr {1.0/$value}]
+	set data(xoffset) [expr {0.5}]
+    }
+    method {opt-handler -zoom} {value} { set options(-zoom) $value }
+    method {opt-handler -pan} {value} { set options(-pan) $value }
+
 }

@@ -9,4 +9,5 @@ RXSINK='system:playback_1 system:playback_2'
 #TXSOURCE='system:playback_1 system:playback_2'
 #TXSINK='audioadapter:capture_1 audioadapter:capture_2'
 #KEYSOURCE='system:midi_capture_1'
-$BIN/sdrkit-radio -rx-source "$RXSOURCE" -rx-sink "$RXSINK" -enable-rx yes -activate-rx yes
+#$BIN/sdrkit-radio -rx-source "$RXSOURCE" -rx-sink "$RXSINK" -enable-rx yes -activate-rx yes
+$BIN/sdrkit-radio -rx false -tx false -keyer false -hw false -ui true -ui-type ui-notebook
