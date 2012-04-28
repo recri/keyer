@@ -21,7 +21,7 @@
 # taken from unknown sources
 #
 # the dict returned by morse-misc-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-misc-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-misc-dict]
 # but that would be pretty silly, since it only defines 3 characters, better to
 # merge it into another dict.
 #

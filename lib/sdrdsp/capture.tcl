@@ -25,12 +25,12 @@ package provide sdrdsp::capture 1.0.0
 package require snit
 
 package require sdrkit
-package require sdrkit::audio-tap
-package require sdrkit::midi-tap
-package require sdrkit::fftw
-package require sdrkit::window
-package require sdrkit::window-polyphase
-package require sdrkit::jack
+package require sdrtcl::audio-tap
+package require sdrtcl::midi-tap
+package require sdrtcl::fftw
+package require sdrtcl::window
+package require sdrtcl::window-polyphase
+package require sdrtcl::jack
 
 ::snit::type ::sdrdsp::capture {
     typevariable taps 0
@@ -54,8 +54,8 @@ package require sdrkit::jack
     }
 
     proc log2-size {n} {
-	#puts "::capture::log2-size $n -> max([::sdrkit::log2-size $n],[::sdrkit::log2-size [::sdrkit::jack buffer-size]])"
-	return [expr {max([::sdrkit::log2-size $n],[::sdrkit::log2-size [::sdrkit::jack buffer-size]])}]
+	#puts "::capture::log2-size $n -> max([::sdrtcl::log2-size $n],[::sdrtcl::log2-size [::sdrtcl::jack buffer-size]])"
+	return [expr {max([::sdrtcl::log2-size $n],[::sdrtcl::log2-size [::sdrtcl::jack buffer-size]])}]
     }
 
     method connect {} { $self connection connect }
@@ -64,18 +64,18 @@ package require sdrkit::jack
 	switch $options(-type) {
 	    midi {
 		foreach x $options(-connect) {
-		    sdrkit::jack $onoff $x $data(midi):midi_in
+		    sdrtcl::jack $onoff $x $data(midi):midi_in
 		}
 	    }
 	    iq -
 	    spectrum {
 		foreach x $options(-connect) {
 		    if {$x eq {system}} {
-			sdrkit::jack $onoff $x:capture_1 $data($options(-type)):in_i
-			sdrkit::jack $onoff $x:capture_2 $data($options(-type)):in_q
+			sdrtcl::jack $onoff $x:capture_1 $data($options(-type)):in_i
+			sdrtcl::jack $onoff $x:capture_2 $data($options(-type)):in_q
 		    } else {
-			sdrkit::jack $onoff $x:out_i $data($options(-type)):in_i
-			sdrkit::jack $onoff $x:out_q $data($options(-type)):in_q
+			sdrtcl::jack $onoff $x:out_i $data($options(-type)):in_i
+			sdrtcl::jack $onoff $x:out_q $data($options(-type)):in_q
 		    }
 		}
 	    }
@@ -139,11 +139,11 @@ package require sdrkit::jack
 		# make sure the window is configured,
 		if {$options(-polyphase)} {
 		    if {[string length $data(fft-window)] != $ns*4} {
-			set data(fft-window) [sdrkit::window-polyphase $options(-polyphase) $options(-size)]
+			set data(fft-window) [sdrtcl::window-polyphase $options(-polyphase) $options(-size)]
 		    }
 		} else {
 		    if {[string length $data(fft-window)] != $ns*4} {
-			set data(fft-window) [sdrkit::window blackmanharris $options(-size)]
+			set data(fft-window) [sdrtcl::window blackmanharris $options(-size)]
 		    }
 		}
 	    }
@@ -169,8 +169,8 @@ package require sdrkit::jack
 		## they're ordered from 0 .. most positive, most negative .. just < 0
 		## k/T, T = total sample time, n * 1/sample_rate
 		set xy {}
-		set x [expr {-[sdrkit::jack sample-rate]/2.0}]
-		set dx [expr {[sdrkit::jack sample-rate]/double($n)}]
+		set x [expr {-[sdrtcl::jack sample-rate]/2.0}]
+		set dx [expr {[sdrtcl::jack sample-rate]/double($n)}]
 		set minp 1000
 		set maxp -1000
 		set avgp 0.0
@@ -241,15 +241,15 @@ package require sdrkit::jack
 	    switch $options(-type) {
 		spectrum {
 		    #puts "creating $data(fft)"
-		    ::sdrkit::fftw $data(fft) -size $options(-size)
+		    ::sdrtcl::fftw $data(fft) -size $options(-size)
 		    #puts "creating $data(tap)"
-		    ::sdrkit::audio-tap $data(spectrum) -server $options(-server) -log2n 2 -log2size [log2-size $options(-size)] -complex 1
+		    ::sdrtcl::audio-tap $data(spectrum) -server $options(-server) -log2n 2 -log2size [log2-size $options(-size)] -complex 1
 		}
 		iq {
-		    ::sdrkit::audio-tap $data(iq) -server $options(-server) -log2n 2 -log2size [log2-size $options(-size)] -complex 0
+		    ::sdrtcl::audio-tap $data(iq) -server $options(-server) -log2n 2 -log2size [log2-size $options(-size)] -complex 0
 		}
 		midi {
-		    ::sdrkit::midi-tap $data(midi) -server $options(-server)
+		    ::sdrtcl::midi-tap $data(midi) -server $options(-server)
 		}
 	    }
 	    # connect

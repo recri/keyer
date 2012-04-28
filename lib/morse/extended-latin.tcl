@@ -22,7 +22,7 @@
 # minor editing on pasted table
 #
 # the dict returned by morse-extended-latin-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-extended-latin-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-extended-latin-dict]
 #
 
 package provide morse::extended-latin 1.0.0

@@ -22,9 +22,9 @@
 package provide band-pass-control 1.0.0
 
 package require Tk
-package require sdrkit::jack
-package require sdrkit::filter-complex-bandpass
-package require sdrkit::filter-overlap-save
+package require sdrtcl::jack
+package require sdrtcl::filter-complex-bandpass
+package require sdrtcl::filter-overlap-save
 
 namespace eval ::band-pass-control {}
 
@@ -53,7 +53,7 @@ proc ::band-pass-control::set-filter-length {w} { set-filter $w }
 
 proc ::band-pass-control::toggle-filter {w} {
     upvar \#0 $w data
-    foreach {port connect} [sdrkit::jack list-ports] {
+    foreach {port connect} [sdrtcl::jack list-ports] {
 	if {[string first $data(-name) $port] == 0} {
 	    lappend connects $port $connect
 	}
@@ -61,11 +61,11 @@ proc ::band-pass-control::toggle-filter {w} {
     rename $data(-name) {}
     switch $data(label-filter) {
 	fir {
-	    set data(-filter) sdrkit::filter-overlap-save
+	    set data(-filter) sdrtcl::filter-overlap-save
 	    set data(label-filter) ovsv
 	}
 	ovsv {
-	    set data(-filter) sdrkit::filter-complex-bandpass
+	    set data(-filter) sdrtcl::filter-complex-bandpass
 	    set data(label-filter) fir
 	}
     }
@@ -76,8 +76,8 @@ proc ::band-pass-control::toggle-filter {w} {
 	puts "{$port} {$connect}"
 	foreach c $details(connections) {
 	    switch $details(direction) {
-		input { sdrkit::jack connect $c $port }
-		output { sdrkit::jack connect $port $c }
+		input { sdrtcl::jack connect $c $port }
+		output { sdrtcl::jack connect $port $c }
 	    }
 	}
 	array unset details
@@ -94,7 +94,7 @@ proc ::band-pass-control {w args} {
     ttk::frame $w
     upvar \#0 $w data
     array set data {
-	-filter sdrkit::filter-complex-bandpass
+	-filter sdrtcl::filter-complex-bandpass
 	label-filter fir
 	-server default
 	-name bandpass

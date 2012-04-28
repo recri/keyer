@@ -22,7 +22,7 @@
 package provide demod-block-control 1.0.0
 
 package require Tk
-package require sdrkit::demod-block
+package require sdrtcl::demod-block
 
 namespace eval ::demod-block-control {}
 
@@ -41,7 +41,7 @@ proc ::demod-block-control {w args} {
     upvar \#0 $w data
     array set data {-gain 0 -mode cw}
     array set data $args
-    sdrkit::demod-block $data(-name)
+    sdrtcl::demod-block $data(-name)
     grid [ttk::label $w.lm -text mode:] -row 0 -column 0
     grid [ttk::menubutton $w.mode -textvar ${w}(-mode) -menu $w.mode.m] -row 0 -column 1
     menu $w.mode.m -tearoff no

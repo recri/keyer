@@ -22,7 +22,7 @@
 # minor editing on pasted table
 #
 # the dict returned by morse-itu-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-itu-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-itu-dict]
 #
 
 package provide morse::itu 1.0.0

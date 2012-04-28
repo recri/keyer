@@ -27,7 +27,7 @@ package provide sdrui::connections 1.0.0
 #
 package require Tk
 package require snit
-package require sdrkit::jack
+package require sdrtcl::jack
 
 namespace eval sdrui {}
 namespace eval sdrui::connections {}
@@ -233,7 +233,7 @@ snit::widget sdrui::connections {
 
     method update {} {
 	# insert system playback, capture, and midi ports
-	set ports [sdrkit::jack -server $options(-server) list-ports]
+	set ports [sdrtcl::jack -server $options(-server) list-ports]
 	foreach item [$options(-control) part-list] {
 	    set enabled [string is true -strict [$options(-control) part-is-enabled $item]]
 	    set activated [string is true -strict [$options(-control) part-is-active $item ]]

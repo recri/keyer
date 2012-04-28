@@ -91,7 +91,7 @@ proc ::sdrkit_ui::make_binary {n} {
 proc ::sdrkit_ui::constant {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::constant ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::constant ::sdrkit_ui::cmd::$w]
     set data(real) 1.0
     set data(imag) 0.0
     pack [ttk::entry $w.real] -side left
@@ -107,7 +107,7 @@ proc ::sdrkit_ui::constant {w} {
 proc ::sdrkit_ui::oscillator {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::oscillator ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::oscillator ::sdrkit_ui::cmd::$w]
     set data(freq) 800
     pack [ttk::label $w.freq -textvar ${w}(freq)] -side left
     pack [ttk::scale $w.scale -length 300 -from 0 -to 10000 -variable ${w}(freq) -command [list ::sdrkit_ui::oscillator_update $w]] -side left
@@ -125,7 +125,7 @@ proc ::sdrkit_ui::oscillator_update {w scale} {
 proc ::sdrkit_ui::mixer {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::mixer ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::mixer ::sdrkit_ui::cmd::$w]
     return $w
 }
 
@@ -135,7 +135,7 @@ proc ::sdrkit_ui::mixer {w} {
 proc ::sdrkit_ui::gain {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::gain ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::gain ::sdrkit_ui::cmd::$w]
     set data(db-gain) 0.0
     pack [ttk::label $w.gain -width 5 -textvar ${w}(db-gain)] -side left
     pack [ttk::scale $w.scale -length 300 -from -1200 -to 600 -variable ${w}(raw-db-gain) -command [list ::sdrkit_ui::gain_update $w]] -side left
@@ -156,35 +156,35 @@ proc ::sdrkit_ui::gain_update {w scale} {
 proc ::sdrkit_ui::biquad {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::sdrkit_ui::cmd::$w]
     return $w
 }
 
 proc ::sdrkit_ui::bq_low_pass {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::sdrkit_ui::cmd::$w]
     return $w
 }
 
 proc ::sdrkit_ui::bq_band_pass {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::sdrkit_ui::cmd::$w]
     return $w
 }
 
 proc ::sdrkit_ui::bq_high_pass {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::sdrkit_ui::cmd::$w]
     return $w
 }
 
 proc ::sdrkit_ui::bq_notch {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::sdrkit_ui::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::sdrkit_ui::cmd::$w]
     return $w
 }
 
@@ -380,7 +380,7 @@ if {0} {
 proc ::sdrkit_ui::meter {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     return $w
 }
 
@@ -392,7 +392,7 @@ proc ::sdrkit_ui::meter {w} {
 proc ::sdrkit_ui::scope {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     
     bind $w <Configure> [list ::sdrkit_ui::scope_configure %W $w %w %h]
     grid [canvas $w.c -width 400 -height 320] -row 0 -column 0 -sticky nsew
@@ -471,7 +471,7 @@ proc ::sdrkit_ui::scope_update {w} {
     # the milliseconds displayed on screen, ms/div * 10div
     set ms_per_screen [expr {$data(hdivision)*10}]
     # the samples per millisecond, samples/sec / 1000ms/sec
-    set samples_per_ms [expr {[sdrkit::jack sample-rate]/1000.0}]
+    set samples_per_ms [expr {[sdrtcl::jack sample-rate]/1000.0}]
     # the number of samples on screen
     set samples_per_screen [expr {$ms_per_screen * $samples_per_ms}]
     # the number of pixels per sample
@@ -559,7 +559,7 @@ proc ::sdrkit_ui::scope_configure {bw w width height} {
 proc ::sdrkit_ui::spectrogram {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     return $w
 }
 
@@ -569,7 +569,7 @@ proc ::sdrkit_ui::spectrogram {w} {
 proc ::sdrkit_ui::waterfall {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     return $w
 }
 
@@ -586,7 +586,7 @@ proc ::sdrkit_ui::waterfall {w} {
 proc ::sdrkit_ui::iqbalance {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::sdrkit_ui::cmd::$w -complex 1]
     pack [ttk::label $w.l0 -textvar ${w}(l0)] -side top 
     pack [ttk::label $w.l1 -textvar ${w}(l1)] -side top
     pack [ttk::label $w.l2 -textvar ${w}(l2)] -side top

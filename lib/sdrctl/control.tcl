@@ -21,7 +21,7 @@ package provide sdrctl::control 1.0.0
 
 package require snit
 
-package require sdrkit::jack
+package require sdrtcl::jack
 package require sdrctl::types
 
 namespace eval sdrctl {}
@@ -399,7 +399,7 @@ snit::type sdrctl::controller {
 	    }
 	}
 	foreach connection $connections {
-	    sdrkit::jack -server $options(-server) connect {*}$connection
+	    sdrtcl::jack -server $options(-server) connect {*}$connection
 	}
     }
     

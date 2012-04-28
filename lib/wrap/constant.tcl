@@ -17,7 +17,7 @@
 # 
 package provide wrap::constant 1.0.0
 package require wrap
-package require sdrkit::constant
+package require sdrtcl::constant
 namespace eval ::wrap {}
 #
 # constant block, specify value
@@ -25,7 +25,7 @@ namespace eval ::wrap {}
 proc ::wrap::constant {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::constant ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::constant ::wrap::cmd::$w]
     set data(real) 1.0
     set data(imag) 0.0
     pack [ttk::entry $w.real] -side left

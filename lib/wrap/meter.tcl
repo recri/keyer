@@ -17,7 +17,7 @@
 # 
 package provide wrap::meter 1.0.0
 package require wrap
-package require sdrkit::audio-tap
+package require sdrtcl::audio-tap
 namespace eval ::wrap {}
 #
 # meter block
@@ -61,7 +61,7 @@ namespace eval ::wrap {}
 proc ::wrap::meter {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::wrap::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::wrap::cmd::$w -complex 1]
     return $w
 }
 

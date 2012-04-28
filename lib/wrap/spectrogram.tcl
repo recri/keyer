@@ -17,7 +17,7 @@
 # 
 package provide wrap::spectrogram 1.0.0
 package require wrap
-package require sdrkit::audio-tap
+package require sdrtcl::audio-tap
 namespace eval ::wrap {}
 #
 # spectrogram block
@@ -25,7 +25,7 @@ namespace eval ::wrap {}
 proc ::wrap::spectrogram {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::wrap::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::wrap::cmd::$w -complex 1]
     return $w
 }
 

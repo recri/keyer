@@ -30,7 +30,7 @@ proc sdrdsp::dsp-hw {name args} {
     if { ! [info exists options(-control)]} { set options(-control) [$options(-container) cget -control] }
     if { ! [info exists options(-server)]} { set options(-server) [$options(-container) cget -server] }
     set data [dict create]
-    foreach {pname pdict} [sdrkit::jack -server $options(-server) list-ports] {
+    foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
 	# pdict has type, direction, physical, and connections
 	# dict set data $pname $pdict
 	lassign [split $pname :] client port

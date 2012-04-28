@@ -22,7 +22,7 @@
 # minor editing on pasted table, translate &centerdot; into .
 #
 # the dict returned by morse-cyrillic-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-cyrillic-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-cyrillic-dict]
 #
 
 package provide morse::cyrillic 1.0.0

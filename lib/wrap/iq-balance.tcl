@@ -18,7 +18,7 @@
 package provide wrap::iq-balance 1.0.0
 
 package require wrap::sdrkit
-package require sdrkit::iq-balance
+package require sdrtcl::iq-balance
 namespace eval ::wrap {}
 
 #
@@ -34,7 +34,7 @@ namespace eval ::wrap {}
 proc ::wrap::iq-balance {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::audio-tap ::wrap::cmd::$w -complex 1]
+    cleanup_func $w [::sdrtcl::audio-tap ::wrap::cmd::$w -complex 1]
     pack [ttk::label $w.l0 -textvar ${w}(l0)] -side top 
     pack [ttk::label $w.l1 -textvar ${w}(l1)] -side top
     pack [ttk::label $w.l2 -textvar ${w}(l2)] -side top

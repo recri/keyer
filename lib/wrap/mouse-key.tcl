@@ -19,7 +19,7 @@
 package provide mouse-key 1.0.0
 
 package require Tk
-package require sdrkit::midi-insert
+package require sdrtcl::midi-insert
 
 # implement a key on mouse buttons or key presses
 
@@ -70,7 +70,7 @@ proc ::mouse-key::mouse-key {w args} {
 	}
     }
     set data(insert) ::mouse-key::cmd::$data(-name)
-    sdrkit::midi-insert $data(insert) -server $data(-server)
+    sdrtcl::midi-insert $data(insert) -server $data(-server)
     if {[winfo toplevel $w] eq $w} {
 	wm title $w $data(-name)
     }

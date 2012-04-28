@@ -16,53 +16,54 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide sdrkit::options 1.0.0
+package provide sdrtcl::options 1.0.0
 
 namespace eval ::sdrkit {}
-namespace eval ::sdrkit::options {
+namespace eval ::sdrtcl::options {
     
     array set modules {
-	agc {sdrkit::agc norm}
-	audio_tap {sdrkit::audio-tap atap}
-	constant {sdrkit::constant norm}
-	demod_am {sdrkit::demod-am norm}
-	demod_fm {sdrkit::demod-fm norm}
-	demod_sam {sdrkit::demod-sam norm}
-	fftw {sdrkit::fftw no-jack}
-	filter_fir {sdrkit::filter-fir filter}
-	filter_biquad {sdrkit::filter-biquad norm}
-	gain {sdrkit::gain norm}
-	iq_balance {sdrkit::iq-balance norm}
-	iq_correct {sdrkit::iq-correct norm}
-	iq_delay {sdrkit::iq-delay norm}
-	iq_noise {sdrkit::iq-noise norm}
-	iq_rotation {sdrkit::iq-rotation norm}
-	iq_swap {sdrkit::iq-swap norm}
-	jack_client {sdrkit::jack-client norm}
-	keyer_ascii {keyer::ascii norm}
-	keyer_debounce {keyer::debounce norm}
-	keyer_detime {keyer::detime norm}
-	keyer_detone {keyer::detone norm}
-	keyer_dttsp_iambic {keyer::dttsp-iambic norm}
-	keyer_iambic {keyer::iambic norm}
-	keyer_ptt {keyer::ptt norm}
-	keyer_ptt_mute {keyer::ptt-mute norm}
-	keyer_tone {keyer::tone norm}
-	lo_mixer {sdrkit::lo-mixer norm}
-	midi_insert {sdrkit::midi-insert norm}
-	midi_tap {sdrkit::midi-tap norm}
-	mixer {sdrkit::mixer norm}
-	mono_to_iq {sdrkit::mono-to-iq norm}
-	noise {sdrkit::noise norm}
-	oscillator {sdrkit::oscillator norm}
-	oscillator_f {sdrkit::oscillator-f norm}
-	oscillator_fd {sdrkit::oscillator-fd norm}
-	oscillator_t {sdrkit::oscillator-t norm}
-	oscillator_td {sdrkit::oscillator-td norm}
-	oscillator_z {sdrkit::oscillator-z norm}
-	oscillator_zd {sdrkit::oscillator-zd norm}
-	window {sdrkit::window window}
-	window_polyphase {sdrkit::window-polyphase window}
+	agc {sdrtcl::agc norm}
+	audio_tap {sdrtcl::audio-tap atap}
+	constant {sdrtcl::constant norm}
+	demod_am {sdrtcl::demod-am norm}
+	demod_fm {sdrtcl::demod-fm norm}
+	demod_sam {sdrtcl::demod-sam norm}
+	fftw {sdrtcl::fftw no-jack}
+	filter_fir {sdrtcl::filter-fir filter}
+	filter_biquad {sdrtcl::filter-biquad norm}
+	gain {sdrtcl::gain norm}
+	iq_balance {sdrtcl::iq-balance norm}
+	iq_correct {sdrtcl::iq-correct norm}
+	iq_delay {sdrtcl::iq-delay norm}
+	iq_noise {sdrtcl::iq-noise norm}
+	iq_rotation {sdrtcl::iq-rotation norm}
+	iq_swap {sdrtcl::iq-swap norm}
+	jack_client {sdrtcl::jack-client norm}
+	keyer_ascii {sdrtcl::keyer-ascii norm}
+	keyer_debounce {sdrtcl::keyer-debounce norm}
+	keyer_detime {sdrtcl::keyer-detime norm}
+	keyer_detone {sdrtcl::keyer-detone norm}
+	keyer_dttsp_iambic {sdrtcl::keyer-dttsp-iambic norm}
+	keyer_ad5dz_iambic {sdrtcl::keyer-ad5dz-iambic norm}
+	keyer_nd7pa_iambic {sdrtcl::keyer-nd7pa-iambic norm}
+	keyer_ptt {sdrtcl::keyer-ptt norm}
+	keyer_ptt_mute {sdrtcl::keyer-ptt-mute norm}
+	keyer_tone {sdrtcl::keyer-tone norm}
+	lo_mixer {sdrtcl::lo-mixer norm}
+	midi_insert {sdrtcl::midi-insert norm}
+	midi_tap {sdrtcl::midi-tap norm}
+	mixer {sdrtcl::mixer norm}
+	mono_to_iq {sdrtcl::mono-to-iq norm}
+	noise {sdrtcl::noise norm}
+	oscillator {sdrtcl::oscillator norm}
+	oscillator_f {sdrtcl::oscillator-f norm}
+	oscillator_fd {sdrtcl::oscillator-fd norm}
+	oscillator_t {sdrtcl::oscillator-t norm}
+	oscillator_td {sdrtcl::oscillator-td norm}
+	oscillator_z {sdrtcl::oscillator-z norm}
+	oscillator_zd {sdrtcl::oscillator-zd norm}
+	window {sdrtcl::window window}
+	window_polyphase {sdrtcl::window-polyphase window}
     }
 
     array set factories {
@@ -199,36 +200,36 @@ namespace eval ::sdrkit::options {
 }
 
 proc ::sdrkit-module-has-info {module} {
-    return [info exists ::sdrkit::options::modules($module)]
+    return [info exists ::sdrtcl::options::modules($module)]
 }
 proc ::sdrkit-module-factory {module} {
-    return [lindex $::sdrkit::options::modules($module) 0]
+    return [lindex $::sdrtcl::options::modules($module) 0]
 }
 proc ::sdrkit-module-type {module} {
-    return [lindex $::sdrkit::options::modules($module) 1]
+    return [lindex $::sdrtcl::options::modules($module) 1]
 }
 proc ::sdrkit-option-note-configure {factory configure} {
     lassign $configure opt dbname clname defval curval
 }
 proc ::sdrkit-option-has-info {opt} {
-    return [info exists ::sdrkit::options::options($opt)]
+    return [info exists ::sdrtcl::options::options($opt)]
 }
 proc ::sdrkit-option-mark-seen {opt} {
-    lappend ::sdrkit::options::options($opt) mark seen
+    lappend ::sdrtcl::options::options($opt) mark seen
 }
 proc ::sdrkit-dbname-has-info {dbname} {
-    return [info exists ::sdrkit::options::dbnames($dbname)]
+    return [info exists ::sdrtcl::options::dbnames($dbname)]
 }
 proc ::sdrkit-dbname-mark-seen {dbname} {
-    lappend ::sdrkit::options::dbnames($dbname) mark seen
+    lappend ::sdrtcl::options::dbnames($dbname) mark seen
 }
 proc ::sdrkit-clname-has-info {clname} {
-    return [info exists ::sdrkit::options::clnames($clname)]
+    return [info exists ::sdrtcl::options::clnames($clname)]
 }
 proc ::sdrkit-clname-mark-seen {clname} {
-    lappend ::sdrkit::options::clnames($clname) mark seen
+    lappend ::sdrtcl::options::clnames($clname) mark seen
 }
 proc ::sdrkit-get-props {factory opt dbname clname} {
-    return $::sdrkit::options::options($opt)
+    return $::sdrtcl::options::options($opt)
 }
 

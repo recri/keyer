@@ -17,7 +17,7 @@
 # 
 package provide wrap::gain 1.0.0
 package require wrap
-package require sdrkit::gain
+package require sdrtcl::gain
 namespace eval ::wrap {}
 #
 # gain block: specify scale factor
@@ -25,7 +25,7 @@ namespace eval ::wrap {}
 proc ::wrap::gain {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::gain ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::gain ::wrap::cmd::$w]
     set data(db-gain) 0.0
     pack [ttk::label $w.gain -width 5 -textvar ${w}(db-gain)] -side left
     pack [ttk::scale $w.scale -length 300 -from -160.0 -to 0.0 -variable ${w}(raw-db-gain) -command [list ::wrap::gain_update $w]] -side left

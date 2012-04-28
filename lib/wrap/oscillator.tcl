@@ -17,7 +17,7 @@
 # 
 package provide wrap::oscillator 1.0.0
 package require wrap
-package require sdrkit::oscillator
+package require sdrtcl::oscillator
 namespace eval ::wrap {}
 #
 # oscillator block, specify frequency
@@ -25,7 +25,7 @@ namespace eval ::wrap {}
 proc ::wrap::oscillator {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::oscillator ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::oscillator ::wrap::cmd::$w]
     set data(freq) 800
     pack [ttk::label $w.freq -textvar ${w}(freq)] -side left
     pack [ttk::scale $w.scale -length 300 -from 0 -to 10000 -variable ${w}(freq) -command [list ::wrap::oscillator_update $w]] -side left

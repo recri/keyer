@@ -22,7 +22,7 @@ package provide sdrdsp::block 1.0.0
 package require snit
 
 package require sdrdsp::comp-stub
-package require sdrkit::jack
+package require sdrtcl::jack
 
 #
 # The block represents a node or a subgraph of computational nodes.
@@ -303,8 +303,8 @@ snit::type sdrdsp::block {
 	    error "$options(-name) cannot $connect {$ins} and {$outs}: length mismatch"
 	}
 	foreach i $ins o $outs {
-	    set connection [list sdrkit::jack -server $options(-server) connect $i $o]
-	    set disconnection [list sdrkit::jack -server $options(-server) disconnect $i $o]
+	    set connection [list sdrtcl::jack -server $options(-server) connect $i $o]
+	    set disconnection [list sdrtcl::jack -server $options(-server) disconnect $i $o]
 	    if {$connect eq {connect}} {
 		if {$verbose(make-connect)} { $self verbose "make {$connection}" }
 		lappend data(connect) $connection
@@ -338,7 +338,7 @@ snit::type sdrdsp::block {
     
     method {jack constructor} {} {
 	set ports [dict create]
-	dict for {port desc} [sdrkit::jack -server $options(-server) list-ports] {
+	dict for {port desc} [sdrtcl::jack -server $options(-server) list-ports] {
 	    if {[string first ${options(-name)}: $port] == 0} {
 		dict set ports $port $desc
 	    }

@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-filter-overlap-save 1.0.0
 
 package require sdrctl::control
-package require sdrkit::filter-overlap-save
+package require sdrtcl::filter-overlap-save
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-filter-overlap-save {name args} {
-    return [sdrctl::control $name -type jack -suffix bpf -factory sdrkit::filter-overlap-save -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix bpf -factory sdrtcl::filter-overlap-save -enable no {*}$args]
 }    

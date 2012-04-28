@@ -17,7 +17,7 @@
 # 
 package provide wrap::biquad 1.0.0
 package require wrap
-package require sdrkit::biquad
+package require sdrtcl::biquad
 namespace eval ::wrap {}
 #
 # biquad block, specify coefficients
@@ -26,35 +26,35 @@ namespace eval ::wrap {}
 proc ::wrap::biquad {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::wrap::cmd::$w]
     return $w
 }
 
 proc ::wrap::bq_low_pass {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::wrap::cmd::$w]
     return $w
 }
 
 proc ::wrap::bq_band_pass {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::wrap::cmd::$w]
     return $w
 }
 
 proc ::wrap::bq_high_pass {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::wrap::cmd::$w]
     return $w
 }
 
 proc ::wrap::bq_notch {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::biquad ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::biquad ::wrap::cmd::$w]
     return $w
 }
 

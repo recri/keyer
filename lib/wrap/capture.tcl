@@ -24,12 +24,12 @@
 package provide capture 1.0.0
 
 package require sdrkit
-package require sdrkit::audio-tap
-package require sdrkit::midi-tap
-package require sdrkit::fftw
-package require sdrkit::window
-package require sdrkit::window-polyphase
-package require sdrkit::jack
+package require sdrtcl::audio-tap
+package require sdrtcl::midi-tap
+package require sdrtcl::fftw
+package require sdrtcl::window
+package require sdrtcl::window-polyphase
+package require sdrtcl::jack
 
 namespace eval ::capture {
     set ntap 0
@@ -42,8 +42,8 @@ namespace eval ::capture {
 }
 
 proc ::capture::log2-size {n} {
-    #puts "::capture::log2-size $n -> max([::sdrkit::log2-size $n],[::sdrkit::log2-size [::sdrkit::jack buffer-size]])"
-    return [expr {max([::sdrkit::log2-size $n],[::sdrkit::log2-size [::sdrkit::jack buffer-size]])}]
+    #puts "::capture::log2-size $n -> max([::sdrtcl::log2-size $n],[::sdrtcl::log2-size [::sdrtcl::jack buffer-size]])"
+    return [expr {max([::sdrtcl::log2-size $n],[::sdrtcl::log2-size [::sdrtcl::jack buffer-size]])}]
 }
 
 proc ::capture::configure {w args} {
@@ -71,13 +71,13 @@ proc ::capture::configure {w args} {
 		switch $data(type) {
 		    midi {
 			foreach x $value {
-			    catch {sdrkit::jack connect $x $data(tap):midi_in}
+			    catch {sdrtcl::jack connect $x $data(tap):midi_in}
 			}
 		    }
 		    iq - spectrum {
 			foreach x $value {
-			    catch {sdrkit::jack connect $x:out_i $data(tap):in_i}
-			    catch {sdrkit::jack connect $x:out_q $data(tap):in_q}
+			    catch {sdrtcl::jack connect $x:out_i $data(tap):in_i}
+			    catch {sdrtcl::jack connect $x:out_q $data(tap):in_q}
 			}
 		    }
 		}
@@ -109,7 +109,7 @@ proc ::capture::capture-spectrum {w} {
 	    }
 	    if { ! [info exists data(fft-window)] ||
 		 [string length $data(fft-window)] != $ns*4} {
-		set data(fft-window) [sdrkit::window-polyphase $data(-polyphase) $data(-size)]
+		set data(fft-window) [sdrtcl::window-polyphase $data(-polyphase) $data(-size)]
 	    }
 	} else {
 	    set ns $data(-size)
@@ -119,7 +119,7 @@ proc ::capture::capture-spectrum {w} {
 	    }
 	    if { ! [info exists data(fft-window)] ||
 		 [string length $data(fft-window)] != $ns*4} {
-		set data(fft-window) [sdrkit::window blackmanharris $data(-size)]
+		set data(fft-window) [sdrtcl::window blackmanharris $data(-size)]
 	    }
 	}
 	# capture a buffer
@@ -142,8 +142,8 @@ proc ::capture::capture-spectrum {w} {
 	    ## they're ordered from 0 .. most positive, most negative .. just < 0
 	    ## k/T, T = total sample time, n * 1/sample_rate
 	    set xy {}
-	    set x [expr {-[sdrkit::jack sample-rate]/2.0}]
-	    set dx [expr {[sdrkit::jack sample-rate]/double($n)}]
+	    set x [expr {-[sdrtcl::jack sample-rate]/2.0}]
+	    set dx [expr {[sdrtcl::jack sample-rate]/double($n)}]
 	    set minp 1000
 	    set maxp -1000
 	    set avgp 0.0
@@ -240,9 +240,9 @@ proc ::capture::spectrum {w args} {
     set data(tap) "capture_spectrum_[incr ::capture::ntap]"
     set data(fft) "capture_fft_[incr ::capture::ntap]"
     #puts "creating $data(fft)"
-    ::sdrkit::fftw $data(fft) -size $data(-size)
+    ::sdrtcl::fftw $data(fft) -size $data(-size)
     #puts "creating $data(tap)"
-    ::sdrkit::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 1
+    ::sdrtcl::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 1
     #puts "configuring $data(tap)"
     ::capture::configure $w {*}$args
 }
@@ -253,7 +253,7 @@ proc ::capture::iq {w args} {
     set data(started) 0
     set data(type) iq
     set data(tap) "capture_iq_[incr ::capture::ntap]"
-    ::sdrkit::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 0
+    ::sdrtcl::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 0
     ::capture::configure $w {*}$args
 }
 
@@ -263,7 +263,7 @@ proc ::capture::midi {w args} {
     set data(started) 0
     set data(type) midi
     set data(tap) "capture_midi_[incr ::capture::ntap]"
-    ::sdrkit::midi-tap $data(tap)
+    ::sdrtcl::midi-tap $data(tap)
     ::capture::configure $w {*}$args
 }
 

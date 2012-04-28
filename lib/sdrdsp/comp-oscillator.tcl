@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-oscillator 1.0.0
 
 package require sdrctl::control
-package require sdrkit::oscillator
+package require sdrtcl::oscillator
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-oscillator {name args} {
-    return [sdrctl::control $name -type jack -suffix osc -factory sdrkit::oscillator -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix osc -factory sdrtcl::oscillator -enable no {*}$args]
 }

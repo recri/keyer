@@ -20,7 +20,7 @@
 # morse code prosigns
 #
 # the dict returned by morse-prosigns-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-prosigns-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-prosigns-dict]
 #
 
 package provide morse::prosigns 1.0.0

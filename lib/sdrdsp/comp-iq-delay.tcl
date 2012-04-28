@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-iq-delay 1.0.0
 
 package require sdrctl::control
-package require sdrkit::iq-delay
+package require sdrtcl::iq-delay
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-iq-delay {name args} {
-    return [sdrctl::control $name -type jack -suffix iq-delay -factory sdrkit::iq-delay -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix iq-delay -factory sdrtcl::iq-delay -enable no {*}$args]
 }

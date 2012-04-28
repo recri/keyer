@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-iq-swap 1.0.0
 
 package require sdrctl::control
-package require sdrkit::iq-swap
+package require sdrtcl::iq-swap
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-iq-swap {name args} {
-    return [sdrctl::control $name -type jack -suffix iq-swap -factory sdrkit::iq-swap -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix iq-swap -factory sdrtcl::iq-swap -enable no {*}$args]
 }

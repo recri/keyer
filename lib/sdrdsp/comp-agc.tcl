@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-agc 1.0.0
 
 package require sdrctl::control
-package require sdrkit::agc
+package require sdrtcl::agc
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-agc {name args} {
-    return [sdrctl::control $name -type jack -suffix agc -factory sdrkit::agc -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix agc -factory sdrtcl::agc -enable no {*}$args]
 }

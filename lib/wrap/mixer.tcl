@@ -17,7 +17,7 @@
 # 
 package provide wrap::mixer 1.0.0
 package require wrap
-package require sdrkit::mixer
+package require sdrtcl::mixer
 namespace eval ::wrap {}
 #
 # mixer block, multiply inputs
@@ -25,7 +25,7 @@ namespace eval ::wrap {}
 proc ::wrap::mixer {w} {
     upvar #0 $w data
     default_window $w
-    cleanup_func $w [::sdrkit::mixer ::wrap::cmd::$w]
+    cleanup_func $w [::sdrtcl::mixer ::wrap::cmd::$w]
     return $w
 }
 

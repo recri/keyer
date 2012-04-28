@@ -16,28 +16,28 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrkit::jack 1.0.0
+package provide sdrtcl::jack 1.0.0
 
-package require sdrkit::jack-client
+package require sdrtcl::jack-client
 
 namespace eval ::sdrkit {
     if {[info exists ::env(JACK_SERVER)]} {
-	set jack(default) [sdrkit::jack-client jack-$::env(JACK_SERVER)-[pid] -server $::env(JACK_SERVER)]
+	set jack(default) [sdrtcl::jack-client jack-$::env(JACK_SERVER)-[pid] -server $::env(JACK_SERVER)]
     } else {
-	set jack(default) [sdrkit::jack-client jack-default-[pid]]
+	set jack(default) [sdrtcl::jack-client jack-default-[pid]]
     }
 }
 
-proc ::sdrkit::jack {args} {
+proc ::sdrtcl::jack {args} {
     set server default
     switch -- [lindex $args 0] {
 	-server {
 	    set server [lindex $args 1]
 	    set args [lrange $args 2 end]
-	    if { ! [info exists ::sdrkit::jack($server)]} {
-		set ::sdrkit::jack($server) [sdrkit::jack-client jack-$server-[pid] -server $server]
+	    if { ! [info exists ::sdrtcl::jack($server)]} {
+		set ::sdrtcl::jack($server) [sdrtcl::jack-client jack-$server-[pid] -server $server]
 	    }
 	}
     }
-    return [$::sdrkit::jack($server) {*}$args]
+    return [$::sdrtcl::jack($server) {*}$args]
 }
