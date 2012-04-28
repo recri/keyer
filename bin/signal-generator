@@ -30,11 +30,11 @@ lappend auto_path [file join [file dirname $script] .. lib]
 package require Tk
 
 package require sdrkit
-package require sdrkit::jack-client
-package require sdrkit::oscillator
-package require sdrkit::noise
-package require sdrkit::iq-noise
-package require sdrkit::gain
+package require sdrtcl::jack-client
+package require sdrtcl::oscillator
+package require sdrtcl::noise
+package require sdrtcl::iq-noise
+package require sdrtcl::gain
 
 #
 # some oscillators
@@ -123,7 +123,7 @@ proc main {argv} {
 	}
     }
     
-    start-client sdrkit::jack-client jack true
+    start-client sdrtcl::jack-client jack true
     if {$::data(max-freq) > [jack sample-rate]/2} {
 	set ::data(max-freq) [expr {[jack sample-rate]/2.01}]
 	set ::data(min-freq) [expr {-$::data(max-freq)}]
@@ -131,12 +131,12 @@ proc main {argv} {
 
     wm title . sdrkit:signal-generator
 
-    start-client sdrkit::gain signal-generator true
+    start-client sdrtcl::gain signal-generator true
     signal-generator configure -gain 0.0
 
     set row 0
     foreach i {0 1 2 3} {
-	start-client sdrkit::oscillator osc$i
+	start-client sdrtcl::oscillator osc$i
 	set ::data(osc$i-gain) $::data(gain)
 	set ::data(osc$i-freq) $::data(freq)
 	set ::data(osc$i-unmute) 0
@@ -158,7 +158,7 @@ proc main {argv} {
 	incr row
     }
 
-    foreach i {0 1} f {sdrkit::noise sdrkit::iq-noise} l {Noise {IQ Noise}} {
+    foreach i {0 1} f {sdrtcl::noise sdrtcl::iq-noise} l {Noise {IQ Noise}} {
 	start-client $f noise$i
 	set ::data(noise$i-noise) $::data(noise)
 	set ::data(noise$i-unmute) 0

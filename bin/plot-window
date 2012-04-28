@@ -22,7 +22,7 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::window
+package require sdrtcl::window
 
 proc draw {w} {
     set ::data(xoff) 0
@@ -64,7 +64,7 @@ proc validate-size {} {
 }
 
 proc main {argv} {
-    sdrkit::window win
+    sdrtcl::window win
     pack [canvas .c -background black] -side top -fill both -expand true
     .c create line 0 0 0 0 -fill white -tags window
     pack [ttk::frame .m] -side top -fill x

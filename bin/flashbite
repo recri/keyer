@@ -33,7 +33,7 @@ package require keyer::iambic
 package require keyer::tone
 package require keyer::debounce
 package require keyer::detime
-package require sdrkit::jack
+package require sdrtcl::jack
 
 package require keyer-control
 package require morse::morse
@@ -229,10 +229,10 @@ proc ::main::start_voice {voice} {
     keyer::tone tone$voice
     # keyer::detime detime$voice
     # connect
-    sdrkit::jack connect ascii$voice:midi_out tone$voice:midi_in
-    sdrkit::jack connect tone$voice:out_i pileup:in_i
-    sdrkit::jack connect tone$voice:out_q pileup:in_q
-    # sdrkit::jack connect ascii$voice:midi_out detime$voice:midi_in
+    sdrtcl::jack connect ascii$voice:midi_out tone$voice:midi_in
+    sdrtcl::jack connect tone$voice:out_i pileup:in_i
+    sdrtcl::jack connect tone$voice:out_q pileup:in_q
+    # sdrtcl::jack connect ascii$voice:midi_out detime$voice:midi_in
     # start loop until all sent
     after [expr {int(rand () * 3000)}] [list ::main::sound_voice $voice]
 }
@@ -771,7 +771,7 @@ proc ::main::main {argv} {
     
     # jack/sdrkit/keyer modules and cleanup
     foreach {module client opts} [list \
-				      sdrkit::jack-client jack {} \
+				      sdrtcl::jack-client jack {} \
 				      keyer::ascii ascii [list -wpm $::main::opts(wpm)] \
 				      keyer::tone ascii_tone [list -freq [expr {$::main::opts(tone)+$::main::opts(offs)}] -gain $::main::opts(gain)] \
 				      keyer::debounce debounce {} \

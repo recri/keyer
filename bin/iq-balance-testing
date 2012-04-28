@@ -24,13 +24,13 @@ lappend auto_path [file join [file dirname $script] .. lib]
 package require Tk
 package require panorama
 package require sdrkit
-package require sdrkit::jack
-package require sdrkit::oscillator
-## package require sdrkit::oscillator-zd
-package require sdrkit::noise
-package require sdrkit::iq-noise
-package require sdrkit::iq-balance
-package require sdrkit::iq-correct
+package require sdrtcl::jack
+package require sdrtcl::oscillator
+## package require sdrtcl::oscillator-zd
+package require sdrtcl::noise
+package require sdrtcl::iq-noise
+package require sdrtcl::iq-balance
+package require sdrtcl::iq-correct
 
 
 #
@@ -140,11 +140,11 @@ proc set-iq-noise {v} {
 }
 
 proc set-iq-sine-phase {v} {
-    iq-balance configure -sine-phase [expr {sin([sdrkit::radians $v])}]
+    iq-balance configure -sine-phase [expr {sin([sdrtcl::radians $v])}]
     set ::data(iq-sine-label) [format %6.2f $v]
 }
 proc set-iq-gain {v} {
-    iq-balance configure -linear-gain [sdrkit::dB-to-linear $v]
+    iq-balance configure -linear-gain [sdrtcl::dB-to-linear $v]
     set ::data(iq-gain-label) [format %6.2f $v]
 }
 
@@ -311,8 +311,8 @@ proc shutdown {w} {
 }
 
 proc main {argv} {
-    if {$::data(max-freq) > [sdrkit::jack sample-rate]/4} {
-	set ::data(max-freq) [expr {[sdrkit::jack sample-rate]/4.01}]
+    if {$::data(max-freq) > [sdrtcl::jack sample-rate]/4} {
+	set ::data(max-freq) [expr {[sdrtcl::jack sample-rate]/4.01}]
     }
     foreach {option value} $argv {
 	switch -- $option {
@@ -329,12 +329,12 @@ proc main {argv} {
 	}
     }
 
-    sdrkit::oscillator osc
-    ## sdrkit::oscillator-zd osc
-    sdrkit::noise noise
-    sdrkit::iq-noise iq-noise
-    sdrkit::iq-balance iq-balance
-    sdrkit::iq-correct iq-correct
+    sdrtcl::oscillator osc
+    ## sdrtcl::oscillator-zd osc
+    sdrtcl::noise noise
+    sdrtcl::iq-noise iq-noise
+    sdrtcl::iq-balance iq-balance
+    sdrtcl::iq-correct iq-correct
     
     wm title . sdrkit:balancer
     set-gain $::data(gain)
@@ -411,21 +411,21 @@ proc main {argv} {
     grid columnconfigure . 5 -weight 100
     grid rowconfigure . 0 -weight 100
 
-    sdrkit::jack connect osc:out_i iq-balance:in_i
-    sdrkit::jack connect osc:out_q iq-balance:in_q
-    sdrkit::jack connect noise:out_i iq-balance:in_i
-    sdrkit::jack connect noise:out_q iq-balance:in_q
-    sdrkit::jack connect iq-noise:out_i iq-balance:in_i
-    sdrkit::jack connect iq-noise:out_q iq-balance:in_q
-    sdrkit::jack connect iq-balance:out_i iq-correct:in_i
-    sdrkit::jack connect iq-balance:out_q iq-correct:in_q
-    sdrkit::jack connect iq-correct:out_i capture_spectrum_1:in_i
-    sdrkit::jack connect iq-correct:out_q capture_spectrum_1:in_q
-    sdrkit::jack connect iq-correct:out_i system:playback_1
-    sdrkit::jack connect iq-correct:out_q system:playback_2
+    sdrtcl::jack connect osc:out_i iq-balance:in_i
+    sdrtcl::jack connect osc:out_q iq-balance:in_q
+    sdrtcl::jack connect noise:out_i iq-balance:in_i
+    sdrtcl::jack connect noise:out_q iq-balance:in_q
+    sdrtcl::jack connect iq-noise:out_i iq-balance:in_i
+    sdrtcl::jack connect iq-noise:out_q iq-balance:in_q
+    sdrtcl::jack connect iq-balance:out_i iq-correct:in_i
+    sdrtcl::jack connect iq-balance:out_q iq-correct:in_q
+    sdrtcl::jack connect iq-correct:out_i capture_spectrum_1:in_i
+    sdrtcl::jack connect iq-correct:out_q capture_spectrum_1:in_q
+    sdrtcl::jack connect iq-correct:out_i system:playback_1
+    sdrtcl::jack connect iq-correct:out_q system:playback_2
     
-    set ::data(buffer-size) [sdrkit::jack buffer-size]
-    set ::data(sample-rate) [sdrkit::jack sample-rate]
+    set ::data(buffer-size) [sdrtcl::jack buffer-size]
+    set ::data(sample-rate) [sdrtcl::jack sample-rate]
 
     corrector-onoff
     update-ws

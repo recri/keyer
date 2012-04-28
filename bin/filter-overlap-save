@@ -22,7 +22,7 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::filter-overlap-save
+package require sdrtcl::filter-overlap-save
 
 array set data {
     server default
@@ -61,7 +61,7 @@ proc main {argv} {
 	}
     }
 
-    sdrkit::filter-overlap-save $::data(name) -length 512
+    sdrtcl::filter-overlap-save $::data(name) -length 512
     wm title . $::data(name)
     set-high $::data(high)
     set-low $::data(low)

@@ -29,7 +29,7 @@ package require keyer::iambic
 package require keyer::ptt
 package require keyer::tone
 package require keyer::dttsp-iambic
-package require sdrkit::jack
+package require sdrtcl::jack
 
 package require keyer-control
 
@@ -149,7 +149,7 @@ proc client-init {} {
     # start jack?
 
     # look for zombies
-    set ports [sdrkit::jack list-ports]
+    set ports [sdrtcl::jack list-ports]
     foreach port [dict keys $ports] {
 	foreach conn [dict get $ports $port connections] {
 	    switch -glob $conn {
@@ -183,9 +183,9 @@ proc client-init {} {
 	keyer::tone ascii_tone {*}[client-opts ascii_tone]
 	set clients(ascii) ascii
 	set clients(ascii_tone) ascii_tone
-	lappend connects {sdrkit::jack connect ascii:midi_out ascii_tone:midi_in}
-	lappend connects [list sdrkit::jack connect ascii_tone:out_i $picked(output-audio-1)]
-	lappend connects [list sdrkit::jack connect ascii_tone:out_q $picked(output-audio-2)]
+	lappend connects {sdrtcl::jack connect ascii:midi_out ascii_tone:midi_in}
+	lappend connects [list sdrtcl::jack connect ascii_tone:out_i $picked(output-audio-1)]
+	lappend connects [list sdrtcl::jack connect ascii_tone:out_q $picked(output-audio-2)]
     } else {
 	set clients(ascii) {}
 	set clients(ascii_tone) {}
@@ -194,8 +194,8 @@ proc client-init {} {
     if {$opts(iambic) || $opts(dttsp_iambic)} {
 	keyer::tone iambic_tone {*}[client-opts iambic_tone]
 	set clients(iambic_tone) iambic_tone
-	lappend connects [list sdrkit::jack connect iambic_tone:out_i $picked(output-audio-1)]
-	lappend connects [list sdrkit::jack connect iambic_tone:out_q $picked(output-audio-2)]
+	lappend connects [list sdrtcl::jack connect iambic_tone:out_i $picked(output-audio-1)]
+	lappend connects [list sdrtcl::jack connect iambic_tone:out_q $picked(output-audio-2)]
     } else {
 	set clients(iambic_tone) {}
     }
@@ -205,9 +205,9 @@ proc client-init {} {
 	keyer::iambic iambic {*}[client-opts iambic]
 	set clients(iambic) iambic
 	if {[info exists picked(input-midi)]} {
-	    lappend connects [list sdrkit::jack connect $picked(input-midi) iambic:midi_in]
+	    lappend connects [list sdrtcl::jack connect $picked(input-midi) iambic:midi_in]
 	}
-	lappend connects {sdrkit::jack connect iambic:midi_out iambic_tone:midi_in}
+	lappend connects {sdrtcl::jack connect iambic:midi_out iambic_tone:midi_in}
     } else {
 	set clients(iambic) {}
     }
@@ -217,9 +217,9 @@ proc client-init {} {
 	keyer::dttsp-iambic dttsp_iambic {*}[client-opts dttsp_iambic]
 	set clients(dttsp_iambic) dttsp_iambic
 	if {[info exists picked(input-midi)]} {
-	    lappend connects [list sdrkit::jack connect $picked(input-midi) dttsp_iambic:midi_in]
+	    lappend connects [list sdrtcl::jack connect $picked(input-midi) dttsp_iambic:midi_in]
 	}
-	lappend connects {sdrkit::jack connect dttsp_iambic:midi_out iambic_tone:midi_in}
+	lappend connects {sdrtcl::jack connect dttsp_iambic:midi_out iambic_tone:midi_in}
     } else {
 	set clients(dttsp_iambic) {}
     }
@@ -227,9 +227,9 @@ proc client-init {} {
     if {$opts(ptt)} {
 	keyer::ptt ptt {*}[client-opts ptt]
 	set clients(ptt) ptt
-	lappend connects {sdrkit::jack disconnect iambic:midi_out iambic_tone:midi_in}
-	lappend connects {sdrkit::jack connect iambic:midi_out ptt:midi_in}
-	lappend connects {sdrkit::jack connect ptt:midi_out iambic_tone:midi_in}
+	lappend connects {sdrtcl::jack disconnect iambic:midi_out iambic_tone:midi_in}
+	lappend connects {sdrtcl::jack connect iambic:midi_out ptt:midi_in}
+	lappend connects {sdrtcl::jack connect ptt:midi_out iambic_tone:midi_in}
     } else {
 	set clients(ptt) {}
     }
@@ -239,17 +239,17 @@ proc client-init {} {
 	set clients(debounce) debounce
 	if {$opts(iambic)} {
 	    if {[info exists picked(input-midi)]} {
-		lappend connects [list sdrkit::jack disconnect $picked(input-midi) iambic:midi_in]
+		lappend connects [list sdrtcl::jack disconnect $picked(input-midi) iambic:midi_in]
 	    }
-	    lappend connects {sdrkit::jack connect debounce:midi_out iambic:midi_in}
+	    lappend connects {sdrtcl::jack connect debounce:midi_out iambic:midi_in}
 	} elseif {$opts(dttsp_iambic)} {
 	    if {[info exists picked(input-midi)]} {
-		lappend connects [list sdrkit::jack disconnect $picked(input-midi) dttsp_iambic:midi_in]
+		lappend connects [list sdrtcl::jack disconnect $picked(input-midi) dttsp_iambic:midi_in]
 	    }
-	    lappend connects {sdrkit::jack connect debounce:midi_out dttsp_iambic:midi_in}
+	    lappend connects {sdrtcl::jack connect debounce:midi_out dttsp_iambic:midi_in}
 	}
 	if {[info exists picked(input-midi)]} {
-	    lappend connects [list sdrkit::jack connect $picked(input-midi) debounce:midi_in]
+	    lappend connects [list sdrtcl::jack connect $picked(input-midi) debounce:midi_in]
 	}
     } else {
 	set clients(debounce) {}

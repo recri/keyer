@@ -23,8 +23,8 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
-package require sdrkit::jack
-package require sdrkit::iq-correct
+package require sdrtcl::jack
+package require sdrtcl::iq-correct
 
 
 array set data {
@@ -268,7 +268,7 @@ proc main {argv} {
 	    default { error "unknown option \"$option\"" }
 	}
     }
-    sdrkit::iq-correct iq-correct
+    sdrtcl::iq-correct iq-correct
     
     wm title . sdrkit:iq-balance
     
@@ -305,8 +305,8 @@ proc main {argv} {
     grid columnconfigure . 5 -weight 100
     grid rowconfigure . 0 -weight 100
     
-    set ::data(buffer-size) [sdrkit::jack buffer-size]
-    set ::data(sample-rate) [sdrkit::jack sample-rate]
+    set ::data(buffer-size) [sdrtcl::jack buffer-size]
+    set ::data(sample-rate) [sdrtcl::jack sample-rate]
     
     corrector-onoff
     update-ws

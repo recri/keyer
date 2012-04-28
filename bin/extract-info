@@ -42,7 +42,7 @@ set options [dict create]
 set dbnames [dict create]
 set dbclasses [dict create]
 
-set clist [concat [info commands] [info commands ::sdrkit::*] [info commands ::keyer::*]]
+set clist [concat [info commands] [info commands ::sdrtcl::*] [info commands ::keyer::*]]
 
 foreach file [glob [file join $libdir *$so]] {
     set module [file root [file tail $file]]
@@ -50,7 +50,7 @@ foreach file [glob [file join $libdir *$so]] {
 	puts "load $file -> $error"
 	incr results(load-failed)
     }
-    set nclist [concat [info commands] [info commands ::sdrkit::*] [info commands ::keyer::*]]
+    set nclist [concat [info commands] [info commands ::sdrtcl::*] [info commands ::keyer::*]]
     set cmds [list-diff $nclist $clist]
     set clist $nclist
     dict set modules $module commands $cmds

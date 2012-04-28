@@ -21,7 +21,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require sdrkit::jack-client
+package require sdrtcl::jack-client
 
 proc main {argv} {
     array set ::data [list server default client jack[pid]]
@@ -34,7 +34,7 @@ proc main {argv} {
 	    }
 	}
     }
-    set jack [sdrkit::jack-client $::data(client) -server $::data(server) -client $::data(client)]
+    set jack [sdrtcl::jack-client $::data(client) -server $::data(server) -client $::data(client)]
     puts [$jack {*}$argv]
 }
 

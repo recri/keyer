@@ -36,10 +36,10 @@ lappend auto_path [file join [file dirname $script] .. lib]
 #
 package require Tk
 
-package require sdrkit::midi-tap
-package require sdrkit::midi-insert
+package require sdrtcl::midi-tap
+package require sdrtcl::midi-insert
 # package require keyer::debounce
-package require sdrkit::jack
+package require sdrtcl::jack
 
 array set data {
     track-x-origin 64 track-y-origin 64
@@ -221,14 +221,14 @@ proc main {argv} {
     .track create line 0 0 0 0 -tag vertical
     .track create line 0 0 0 0 -tag horizontal
     bind .track <Configure> [list draw-lines %W %w %h]
-    sdrkit::midi-tap midi-in
-    sdrkit::midi-insert midi-out
+    sdrtcl::midi-tap midi-in
+    sdrtcl::midi-insert midi-out
     # keyer::debounce debounce
-    # sdrkit::jack connect system:midi_capture_1 debounce:midi_in
-    # sdrkit::jack connect debounce:midi_out midi-in:midi_in
-    sdrkit::jack connect system:midi_capture_1 midi-in:midi_in
-    sdrkit::jack connect midi-out:midi_out system:midi_playback_1
-    sdrkit::jack connect midi-out:midi_out midi-in:midi_in
+    # sdrtcl::jack connect system:midi_capture_1 debounce:midi_in
+    # sdrtcl::jack connect debounce:midi_out midi-in:midi_in
+    sdrtcl::jack connect system:midi_capture_1 midi-in:midi_in
+    sdrtcl::jack connect midi-out:midi_out system:midi_playback_1
+    sdrtcl::jack connect midi-out:midi_out midi-in:midi_in
     midi-in start
     midi-poll midi-in midi-receiver
     green-led-pulse

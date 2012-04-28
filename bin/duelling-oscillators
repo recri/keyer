@@ -33,14 +33,14 @@ lappend auto_path [file join [file dirname [info script]] .. lib]
 
 #package require Tk
 
-package require sdrkit::oscillator-f
-package require sdrkit::oscillator-t
-package require sdrkit::oscillator-z
-package require sdrkit::oscillator-fd
-package require sdrkit::oscillator-td
-package require sdrkit::oscillator-zd
-package require sdrkit::audio-tap
-package require sdrkit::jack
+package require sdrtcl::oscillator-f
+package require sdrtcl::oscillator-t
+package require sdrtcl::oscillator-z
+package require sdrtcl::oscillator-fd
+package require sdrtcl::oscillator-td
+package require sdrtcl::oscillator-zd
+package require sdrtcl::audio-tap
+package require sdrtcl::jack
 
 array set oscillators {
     oscillator-f {filter based, internal float}
@@ -178,7 +178,7 @@ proc test-p {frame iq hertz} {
     return [concat [n-mu-and-sigma $p] [list $domain_error]]
 }
 proc test-dp {frame iq hertz} {
-    set expect [expr {2*$::pi*$hertz/[sdrkit::jack sample-rate]}]
+    set expect [expr {2*$::pi*$hertz/[sdrtcl::jack sample-rate]}]
     set dp {}
     foreach {i1 q1} [lrange $iq 0 end-2] {i2 q2} [lrange $iq 2 end] {
 	set dp [expr {atan2($q2,$i2)-atan2($q1,$i1)}]
@@ -197,12 +197,12 @@ proc test-dp {frame iq hertz} {
 proc run-test {osc term hertz} {
     if {$osc ne {baseline}} {
 	# start the oscillator
-	#sdrkit::$osc foo -freq $hertz -gain 0.0
-	sdrkit::$osc foo -freq $hertz
+	#sdrtcl::$osc foo -freq $hertz -gain 0.0
+	sdrtcl::$osc foo -freq $hertz
 	# start the audio tap
 	tap start
 	# connect it to the audio tap
-	sdrkit::jack connect foo:out_i tap:in_i foo:out_q tap:in_q
+	sdrtcl::jack connect foo:out_i tap:in_i foo:out_q tap:in_q
     }
     # get the start time
     set start [clock milliseconds]
@@ -216,7 +216,7 @@ proc run-test {osc term hertz} {
     while {1} {
 	# jack only updates once per second
 	if {[llength $load] <= $t/1000} {
-	    lappend load [sdrkit::jack cpu-load]
+	    lappend load [sdrtcl::jack cpu-load]
 	}
 	if {$osc ne {baseline}} {
 	    # grab a buffer of samples
@@ -270,9 +270,9 @@ proc main {argv} {
     set width 1 
     # pack user interface here
     # setup
-    sdrkit::audio-tap tap -complex 1
+    sdrtcl::audio-tap tap -complex 1
     while {1} {
-	set sr [sdrkit::jack sample-rate]
+	set sr [sdrtcl::jack sample-rate]
 	set work [shuffle [array names ::oscillators]]
 	set hertz [expr {(rand()-0.5)*$sr*0.5}]
 	set time 10000
