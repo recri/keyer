@@ -11,15 +11,13 @@
 export DISPLAY=:0
 OBDEV=hw:0			# 0 for onboard
 OBRATE=48000			# onboard rate
-HWDEV=hw:1			# 1 for sdr-widget
+HWDEV=hw:1			# 1 for sdr-widget, x-fi usb, etc
 HWRATE=48000			# hardware rate
 HWBUFFER=1024			# hardware buffer
-LPDEV=hw:2			# 2 for loopback
-LPRATE=48000			# loopback rate
 SI570="--si570"
-IQ="--qi"
+IQ="--qi"			# reversed on x-fi usb
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
-ADAPTER=1
+ADAPTER=0
 XFI=0
 
 case `hostname` in
