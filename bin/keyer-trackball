@@ -38,7 +38,7 @@ package require Tk
 
 package require sdrtcl::midi-tap
 package require sdrtcl::midi-insert
-# package require keyer::debounce
+# package require sdrtcl::keyer-debounce
 package require sdrtcl::jack
 
 array set data {
@@ -223,7 +223,7 @@ proc main {argv} {
     bind .track <Configure> [list draw-lines %W %w %h]
     sdrtcl::midi-tap midi-in
     sdrtcl::midi-insert midi-out
-    # keyer::debounce debounce
+    # sdrtcl::keyer-debounce debounce
     # sdrtcl::jack connect system:midi_capture_1 debounce:midi_in
     # sdrtcl::jack connect debounce:midi_out midi-in:midi_in
     sdrtcl::jack connect system:midi_capture_1 midi-in:midi_in

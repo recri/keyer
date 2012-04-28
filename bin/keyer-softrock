@@ -34,7 +34,7 @@ package require scrolled
 
 package require sdrtcl::midi-tap
 package require sdrtcl::midi-insert
-# package require keyer::debounce
+# package require sdrtcl::keyer-debounce
 package require sdrtcl::jack
 
 array set data {
@@ -235,7 +235,7 @@ proc main {argv} {
     grid [scrolled::text .log] -row 2 -column 0 -columnspan 2 -sticky nsew
     sdrtcl::midi-tap midi-in
     sdrtcl::midi-insert midi-out
-    # keyer::debounce debounce
+    # sdrtcl::keyer-debounce debounce
     # sdrtcl::jack connect system:midi_capture_1 debounce:midi_in
     # sdrtcl::jack connect debounce:midi_out midi-in:midi_in
     foreach p [split [exec jack_lsp] \n] {

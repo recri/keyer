@@ -28,11 +28,11 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 
-package require keyer::ascii
-package require keyer::iambic
-package require keyer::tone
-package require keyer::debounce
-package require keyer::detime
+package require sdrtcl::keyer-ascii
+package require sdrtcl::keyer-ad5dz-iambic
+package require sdrtcl::keyer-tone
+package require sdrtcl::keyer-debounce
+package require sdrtcl::keyer-detime
 package require sdrtcl::jack
 
 package require keyer-control
@@ -225,9 +225,9 @@ proc ::main::start_voice {voice} {
     incr ::main::data(active-voices)
     set ::main::data(voice-$voice) {}
     # start keyer
-    keyer::ascii ascii$voice
-    keyer::tone tone$voice
-    # keyer::detime detime$voice
+    sdrtcl::keyer-ascii ascii$voice
+    sdrtcl::keyer-tone tone$voice
+    # sdrtcl::keyer-detime detime$voice
     # connect
     sdrtcl::jack connect ascii$voice:midi_out tone$voice:midi_in
     sdrtcl::jack connect tone$voice:out_i pileup:in_i
@@ -772,12 +772,12 @@ proc ::main::main {argv} {
     # jack/sdrkit/keyer modules and cleanup
     foreach {module client opts} [list \
 				      sdrtcl::jack-client jack {} \
-				      keyer::ascii ascii [list -wpm $::main::opts(wpm)] \
-				      keyer::tone ascii_tone [list -freq [expr {$::main::opts(tone)+$::main::opts(offs)}] -gain $::main::opts(gain)] \
-				      keyer::debounce debounce {} \
-				      keyer::iambic iambic [list -wpm $::main::opts(wpm)] \
-				      keyer::tone iambic_tone [list -freq $::main::opts(tone) -gain $::main::opts(gain)] \
-				      keyer::detime iambic_detime {} \
+				      sdrtcl::keyer-ascii ascii [list -wpm $::main::opts(wpm)] \
+				      sdrtcl::keyer-tone ascii_tone [list -freq [expr {$::main::opts(tone)+$::main::opts(offs)}] -gain $::main::opts(gain)] \
+				      sdrtcl::keyer-debounce debounce {} \
+				      sdrtcl::keyer-ad5dz-iambic iambic [list -wpm $::main::opts(wpm)] \
+				      sdrtcl::keyer-tone iambic_tone [list -freq $::main::opts(tone) -gain $::main::opts(gain)] \
+				      sdrtcl::keyer-detime iambic_detime {} \
 				     ] {
 	$module $client {*}$opts
 	lappend ::main::data(on-exit) [list rename $client {}]

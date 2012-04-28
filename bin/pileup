@@ -63,13 +63,13 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 
-package require keyer::ascii
-package require keyer::detime
-package require keyer::iambic
-package require keyer::tone
-package require keyer::ptt
-package require keyer::ptt-mute
-package require keyer::debounce
+package require sdrtcl::keyer-ascii
+package require sdrtcl::keyer-detime
+package require sdrtcl::keyer-ad5dz-iambic
+package require sdrtcl::keyer-tone
+package require sdrtcl::keyer-ptt
+package require sdrtcl::keyer-ptt-mute
+package require sdrtcl::keyer-debounce
 package require sdrtcl::jack
 package require sdrtcl::gain
 package require sdrtcl::midi-tap
@@ -278,9 +278,9 @@ proc ::main::start_voice {voice} {
     incr ::main::data(active-voices)
     set ::main::data(voice-$voice) {}
     # start keyer
-    keyer::ascii ascii$voice
-    keyer::tone tone$voice
-    # keyer::detime detime$voice
+    sdrtcl::keyer-ascii ascii$voice
+    sdrtcl::keyer-tone tone$voice
+    # sdrtcl::keyer-detime detime$voice
     # connect
     sdrtcl::jack connect ascii$voice:midi_out tone$voice:midi_in
     sdrtcl::jack connect tone$voice:out_i pileup:in_i
@@ -729,13 +729,13 @@ proc ::main::main {argv} {
     sdrtcl::jack-client jack;					# jack of all trades
     sdrtcl::noise noise -level $::main::data(noise);		# noise floor
     sdrtcl::midi-tap ptt_mtap;					# midi tap to receive ptt
-    keyer::ptt-mute pileup -gain $::main::data(output-gain);	# mute receiver on transmit
-    keyer::ascii heckler;					# will be commenting on your progress
-    keyer::debounce debounce;					# key debouncer
-    keyer::iambic iambic;					# iambic keyer
-    keyer::tone iambic_tone;					# iambic tone
-    keyer::detime iambic_detime;				# iambic decoder to dits and dahs
-    keyer::ptt ptt;						# iambic ptt switch
+    sdrtcl::keyer-ptt-mute pileup -gain $::main::data(output-gain);	# mute receiver on transmit
+    sdrtcl::keyer-ascii heckler;					# will be commenting on your progress
+    sdrtcl::keyer-debounce debounce;					# key debouncer
+    sdrtcl::keyer-ad5dz-iambic iambic;					# iambic keyer
+    sdrtcl::keyer-tone iambic_tone;					# iambic tone
+    sdrtcl::keyer-detime iambic_detime;				# iambic decoder to dits and dahs
+    sdrtcl::keyer-ptt ptt;						# iambic ptt switch
 
     # non-persistent are the ascii keyers and tone generators which generate the pileup
     # they get built when the pileup starts and deleted as they finish their work
