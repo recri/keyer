@@ -111,5 +111,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Filter_biquad_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::filter-biquad", "1.0.0", "sdrkit::filter-biquad", _factory);
+  return framework_init(interp, "sdrtcl::filter-biquad", "1.0.0", "sdrtcl::filter-biquad", _factory);
 }

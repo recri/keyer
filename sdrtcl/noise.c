@@ -106,5 +106,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Noise_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::noise", "1.0.0", "sdrkit::noise", _factory);
+  return framework_init(interp, "sdrtcl::noise", "1.0.0", "sdrtcl::noise", _factory);
 }

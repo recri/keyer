@@ -119,6 +119,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Filter_fir_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::filter-fir", "1.0.0", "sdrkit::filter-fir", _command);
+  return framework_init(interp, "sdrtcl::filter-fir", "1.0.0", "sdrtcl::filter-fir", _command);
 }
 

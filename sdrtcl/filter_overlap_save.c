@@ -161,5 +161,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Filter_overlap_save_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::filter-overlap-save", "1.0.0", "sdrkit::filter-overlap-save", _factory);
+  return framework_init(interp, "sdrtcl::filter-overlap-save", "1.0.0", "sdrtcl::filter-overlap-save", _factory);
 }

@@ -90,5 +90,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Constant_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::constant", "1.0.0", "sdrkit::constant", _factory);
+  return framework_init(interp, "sdrtcl::constant", "1.0.0", "sdrtcl::constant", _factory);
 }

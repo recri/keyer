@@ -280,5 +280,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Audio_tap_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::audio-tap", "1.0.0", "sdrkit::audio-tap", _factory);
+  return framework_init(interp, "sdrtcl::audio-tap", "1.0.0", "sdrtcl::audio-tap", _factory);
 }

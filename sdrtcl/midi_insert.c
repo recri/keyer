@@ -115,5 +115,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Midi_insert_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::midi-insert", "1.0.0", "sdrkit::midi-insert", _factory);
+  return framework_init(interp, "sdrtcl::midi-insert", "1.0.0", "sdrtcl::midi-insert", _factory);
 }

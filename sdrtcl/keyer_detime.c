@@ -176,5 +176,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Keyer_detime_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::detime", "1.0.0", "keyer::detime", _factory);
+  return framework_init(interp, "sdrtcl::keyer-detime", "1.0.0", "sdrtcl::keyer-detime", _factory);
 }

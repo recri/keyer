@@ -161,6 +161,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Keyer_tone_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::tone", "1.0.0", "keyer::tone", _factory);
+  return framework_init(interp, "sdrtcl::keyer-tone", "1.0.0", "sdrtcl::keyer-tone", _factory);
 }
 

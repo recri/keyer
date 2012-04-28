@@ -114,5 +114,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Lo_mixer_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::lo-mixer", "1.0.0", "sdrkit::lo-mixer", _factory);
+  return framework_init(interp, "sdrtcl::lo-mixer", "1.0.0", "sdrtcl::lo-mixer", _factory);
 }

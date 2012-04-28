@@ -201,6 +201,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Keyer_ptt_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::ptt", "1.0.0", "keyer::ptt", _factory);
+  return framework_init(interp, "sdrtcl::keyer-ptt", "1.0.0", "sdrtcl::keyer-ptt", _factory);
 }
 

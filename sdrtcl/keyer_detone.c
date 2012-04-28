@@ -135,5 +135,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Keyer_detone_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::detone", "1.0.0", "keyer::detone", _factory);
+  return framework_init(interp, "sdrtcl::keyer-detone", "1.0.0", "sdrtcl::keyer-detone", _factory);
 }

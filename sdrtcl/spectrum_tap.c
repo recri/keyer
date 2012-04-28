@@ -378,5 +378,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Spectrum_tap_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::spectrum-tap", "1.0.0", "sdrkit::spectrum-tap", _factory);
+  return framework_init(interp, "sdrtcl::spectrum-tap", "1.0.0", "sdrtcl::spectrum-tap", _factory);
 }

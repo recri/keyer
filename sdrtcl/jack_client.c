@@ -216,6 +216,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which install the jack-client factory
 int DLLEXPORT Jack_client_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::jack-client", "1.0.0", "sdrkit::jack-client", _factory);
+  return framework_init(interp, "sdrtcl::jack-client", "1.0.0", "sdrtcl::jack-client", _factory);
 }
 

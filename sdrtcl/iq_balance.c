@@ -117,5 +117,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Iq_balance_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::iq-balance", "1.0.0", "sdrkit::iq-balance", _factory);
+  return framework_init(interp, "sdrtcl::iq-balance", "1.0.0", "sdrtcl::iq-balance", _factory);
 }

@@ -559,6 +559,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which install the jack-client factory
 int DLLEXPORT Jack_ctl_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::jack-ctl", "1.0.0", "sdrkit::jack-ctl", _command);
+  return framework_init(interp, "sdrtcl::jack-ctl", "1.0.0", "sdrtcl::jack-ctl", _command);
 }
 

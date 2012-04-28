@@ -116,5 +116,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Filter_complex_bandpass_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::filter-complex-bandpass", "1.0.0", "sdrkit::filter-complex-bandpass", _factory);
+  return framework_init(interp, "sdrtcl::filter-complex-bandpass", "1.0.0", "sdrtcl::filter-complex-bandpass", _factory);
 }

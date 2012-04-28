@@ -298,6 +298,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Keyer_ascii_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::ascii", "1.0.0", "keyer::ascii", _factory);
+  return framework_init(interp, "sdrtcl::keyer-ascii", "1.0.0", "sdrtcl::keyer-ascii", _factory);
 }
 

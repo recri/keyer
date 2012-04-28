@@ -65,6 +65,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Window_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::window", "1.0.0", "sdrkit::window", _command);
+  return framework_init(interp, "sdrtcl::window", "1.0.0", "sdrtcl::window", _command);
 }
 

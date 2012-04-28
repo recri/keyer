@@ -157,6 +157,6 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 // the initialization function which installs the adapter factory
 int DLLEXPORT Keyer_ptt_mute_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "keyer::ptt-mute", "1.0.0", "keyer::ptt-mute", _factory);
+  return framework_init(interp, "sdrtcl::keyer-ptt-mute", "1.0.0", "sdrtcl::keyer-ptt-mute", _factory);
 }
 

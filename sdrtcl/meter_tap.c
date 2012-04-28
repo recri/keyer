@@ -221,5 +221,5 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 int DLLEXPORT Meter_tap_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrkit::meter-tap", "1.0.0", "sdrkit::meter-tap", _factory);
+  return framework_init(interp, "sdrtcl::meter-tap", "1.0.0", "sdrtcl::meter-tap", _factory);
 }
