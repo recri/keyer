@@ -31,7 +31,7 @@
 ** error signal depends on the magnitude of the signals in the pass band.
 */
 
-#include "dmath.h"
+#include "dspmath.h"
 
 typedef struct {
   float mu;			/* update factor, a loop gain */

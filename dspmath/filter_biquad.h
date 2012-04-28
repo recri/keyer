@@ -23,7 +23,7 @@
 ** Biquad filter - rewritten from everywhere
 */
 
-#include "dmath.h"
+#include "dspmath.h"
 
 typedef struct {
   float a1, a2, b0, b1, b2;

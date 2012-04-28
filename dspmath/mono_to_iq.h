@@ -15,32 +15,35 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-
-#ifndef IQ_SWAP_H
-#define IQ_SWAP_H
+#ifndef MONO_TO_IQ_H
+#define MONO_TO_IQ_H
 
 /*
-** I/Q channel swap 
+** If you have a mono audio channel at sample_rate and you ran it through
+** a quadrature detector running at sample_rate/4, then the first
+** sample would go to I, the second sample to Q, the third sample to
+** I, the fourth sample to Q, and so on.  If you interpolated your I
+** and Q streams back to sample_rate, you'd get an approximation of
+** your original mono stream.
+**
+** So why not just take the original mono stream and the stream
+** delayed by one sample as your I/Q stream?
 */
 
-#include "dmath.h"
+#include "dspmath.h"
 
 typedef struct {
-} iq_swap_t;
-typedef struct {
-} iq_swap_options_t;
+  float delayed_sample;
+} mono_to_iq_t;
 
-void iq_swap_configure(iq_swap_t *p, iq_swap_options_t *q) {
-}
-
-void *iq_swap_init(iq_swap_t *p, iq_swap_options_t *q) {
+static void *mono_to_iq_init(mono_to_iq_t *p) {
+  p->delayed_sample = 0.0f;
   return p;
 }
 
-void iq_swap_preconfigure(iq_swap_t *p, iq_swap_options_t *q) {
-}
-
-static float _Complex iq_swap_process(const float _Complex in) {
-  return cimag(in) + creal(in) * I;
+static float _Complex mono_to_iq(mono_to_iq_t *p, float mono) {
+  float _Complex z = p->delayed_sample + mono * I;
+  p->delayed_sample = mono;
+  return z;
 }
 #endif

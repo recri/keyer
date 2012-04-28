@@ -18,7 +18,7 @@
 #ifndef OSCILLATOR_H
 #define OSCILLATOR_H
 
-#include "dmath.h"
+#include "dspmath.h"
 
 #if ! defined(OSCILLATOR_F) && ! defined(OSCILLATOR_T) && ! defined(OSCILLATOR_Z)
 #error "oscillator.h has no implementation selected"

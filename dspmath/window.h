@@ -27,7 +27,7 @@
   don't need to allocate and free arrays just to do one computation.
 */
 
-#include "dmath.h"
+#include "dspmath.h"
 
 typedef enum {
   WINDOW_RECTANGULAR = 0, 

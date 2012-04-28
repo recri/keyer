@@ -30,7 +30,7 @@
 */
 #define LHS 0			
 
-#include "dmath.h"
+#include "dspmath.h"
 #include "filter_FIR.h"
 #include <fftw3.h>
 

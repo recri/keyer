@@ -16,37 +16,42 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef DEMOD_AM_H
-#define DEMOD_AM_H
+#ifndef MODUL_AM_H
+#define MODUL_AM_H
 
 /*
-** AM demodulation - rewritten from dttsp
+** AM modulation - rewritten from dttsp
    Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
-#include "dmath.h"
+#include "dspmath.h"
 
 typedef struct {
-  float val;
-  float dc;
-  float smooth;
-} demod_am_t;
+  float carrier_level;
+  float one_m_carrier_level;
+} modul_am_t;
 
 typedef struct {
-} demod_am_options_t;
+  float carrier_level;
+} modul_am_options_t;
 
-static void *demod_am_init(demod_am_t *p) {
-  p->val = 0.0f;
-  p->dc = 0.0f;
-  p->smooth = 0.0f;
+static void modul_am_configure(modul_am_t *p, modul_am_options_t *q) {
+  p->carrier_level = q->carrier_level;
+  p->one_m_carrier_level = 1.0f - p->carrier_level;
+}
+
+static void *modul_am_preconfigure(modul_am_t *p, modul_am_options_t *q) {
   return p;
 }
 
-static float demod_am_process(demod_am_t *p, const float _Complex in) {
-  p->val = cabsf(in);
-  p->dc = 0.9999f * p->dc + 0.0001f * p->val;
-  p->smooth = 0.5f * p->smooth + 0.5f * (p->val - p->dc);
-  return p->smooth;
+static void *modul_am_init(modul_am_t *p, modul_am_options_t *q) {
+  void *e = modul_am_preconfigure(p,q); if (e != p) return e;
+  modul_am_configure(p, q);
+  return p;
+}
+
+static complex float modul_am_process(modul_am_t *p, const float in) {
+  return p->carrier_level + p->one_m_carrier_level * in;
 }
 
 #endif

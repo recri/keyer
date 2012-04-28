@@ -19,7 +19,7 @@
 #ifndef FILTER_GOERTZEL_H
 #define FILTER_GOERTZEL_H
 
-#include "dmath.h"
+#include "dspmath.h"
 
 /*
 ** The Goertzel filter detects the power of a specified frequency

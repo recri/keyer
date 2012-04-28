@@ -19,8 +19,7 @@
 #ifndef LO_MIXER_H
 #define LO_MIXER_H
 
-#include <complex.h>
-
+#include "dspmath.h"
 #include "oscillator.h"
 #include "mixer.h"
 

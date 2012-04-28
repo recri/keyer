@@ -23,7 +23,7 @@
 #ifndef PLL_H
 #define PLL_H
 
-#include "dmath.h"
+#include "dspmath.h"
 
 typedef struct {
     float alpha, beta;

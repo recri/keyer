@@ -23,7 +23,7 @@
 ** apply a complex FIR bandpass filter to a sample stream.
 */
 
-#include "dmath.h"
+#include "dspmath.h"
 #include "filter_FIR.h"
 
 #define FILTER_COMPLEX_BANDPASS_MAX_LENGTH 1024

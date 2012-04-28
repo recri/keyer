@@ -46,6 +46,7 @@
 ** for Weighted OverLap Add.
 **
 */
+#include "dspmath.h"
 #include "filter_FIR.h"
 
 static void *polyphase_fft_window(int polys, int size, float *coeff) {

@@ -27,7 +27,7 @@
 #define _BSD_SOURCE
 #include <stdlib.h>
 
-#include "dmath.h"
+#include "dspmath.h"
 
 #ifndef RANDOM_UNIFORM_STATE_SIZE
 #define RANDOM_UNIFORM_STATE_SIZE 32

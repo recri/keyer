@@ -19,7 +19,7 @@
 #ifndef FILTER_FIR_H
 #define FILTER_FIR_H
 
-#include "dmath.h"
+#include "dspmath.h"
 #include "window.h"
 
 /*

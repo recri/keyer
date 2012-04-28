@@ -24,9 +24,7 @@
 #ifndef DEMOD_SAM_H
 #define DEMOD_SAM_H
 
-#include <complex.h>
-#include <math.h>
-
+#include "dspmath.h"
 #include "pll.h"
 
 typedef struct {

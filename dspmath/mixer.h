@@ -16,26 +16,11 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
+#ifndef MIXER_H
+#define MIXER_H
 
-#ifndef NOISE_H
-#define NOISE_H
+#include "dspmath"
 
-#include "random_uniform.h"
-#include "dmath.h"
+static float _Complex mixer_process(const _Complex float a, const _Complex float b) { return a*b; }
 
-typedef random_uniform_options_t noise_options_t;
-
-typedef random_uniform_t noise_t;
-
-static void *noise_init(void *p) {
-  return random_uniform_init(p);
-}
-
-static void noise_configure(noise_t *p, noise_options_t *q) {
-  random_uniform_configure((random_uniform_t *)p, (random_uniform_options_t *)q);
-}
-
-static float _Complex noise_process(noise_t *p) {
-  return (2 * random_uniform_float(p) - 1) + I * (2 * random_uniform_float(p) - 1);
-}
 #endif

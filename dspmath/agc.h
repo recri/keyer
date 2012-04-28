@@ -36,7 +36,7 @@
 // The hang threshold level is specified directly as a level.
 //
 
-#include "dmath.h"
+#include "dspmath.h"
 #include <fftw3.h>
 
 // -agc long   = -attack 2 -decay 2000 -hangtime 750 -fasthangtime 100

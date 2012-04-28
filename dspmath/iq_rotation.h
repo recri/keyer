@@ -1,4 +1,3 @@
-/* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
@@ -16,10 +15,34 @@
   along with this program; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
-#ifndef MIXER_H
-#define MIXER_H
 
-#include <complex.h>
+#ifndef IQ_ROTATION_H
+#define IQ_ROTATION_H
 
-static float _Complex mixer_process(const _Complex float a, const _Complex float b) { return a*b; }
+/*
+** compute average I/Q channel rotation
+** add a little low pass filtering on x
+*/
+
+#include "dspmath.h"
+
+typedef struct {
+  float complex px;
+  float r;
+} iq_rotation_t;
+
+static void iq_rotation_process(iq_rotation_t *p, const float complex x) {
+#if IQ_ROTATION_LOWPASS_FILTER_INPUT
+  const float complex nx = x/8 + 7*p->px/8;
+  p->r = (p->r + crealf(p->px) * cimagf(nx) - cimagf(p->px) * crealf(nx)) / 2;
+  p->px = nx;
+#else
+#if 0
+  p->r = (p->r + crealf(p->px) * cimagf(x) - cimagf(p->px) * crealf(x)) / 2;
+  p->px = x;
+#endif
+  p->r = crealf(p->px) * cimagf(x) - cimagf(p->px) * crealf(x);
+  p->px = x;
+#endif
+}
 #endif

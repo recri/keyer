@@ -16,33 +16,37 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef IQ_ROTATION_H
-#define IQ_ROTATION_H
+#ifndef DEMOD_AM_H
+#define DEMOD_AM_H
 
 /*
-** compute average I/Q channel rotation
-** add a little low pass filtering on x
+** AM demodulation - rewritten from dttsp
+   Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
-#include "dmath.h"
+#include "dspmath.h"
 
 typedef struct {
-  float complex px;
-  float r;
-} iq_rotation_t;
+  float val;
+  float dc;
+  float smooth;
+} demod_am_t;
 
-static void iq_rotation_process(iq_rotation_t *p, const float complex x) {
-#if IQ_ROTATION_LOWPASS_FILTER_INPUT
-  const float complex nx = x/8 + 7*p->px/8;
-  p->r = (p->r + crealf(p->px) * cimagf(nx) - cimagf(p->px) * crealf(nx)) / 2;
-  p->px = nx;
-#else
-#if 0
-  p->r = (p->r + crealf(p->px) * cimagf(x) - cimagf(p->px) * crealf(x)) / 2;
-  p->px = x;
-#endif
-  p->r = crealf(p->px) * cimagf(x) - cimagf(p->px) * crealf(x);
-  p->px = x;
-#endif
+typedef struct {
+} demod_am_options_t;
+
+static void *demod_am_init(demod_am_t *p) {
+  p->val = 0.0f;
+  p->dc = 0.0f;
+  p->smooth = 0.0f;
+  return p;
 }
+
+static float demod_am_process(demod_am_t *p, const float _Complex in) {
+  p->val = cabsf(in);
+  p->dc = 0.9999f * p->dc + 0.0001f * p->val;
+  p->smooth = 0.5f * p->smooth + 0.5f * (p->val - p->dc);
+  return p->smooth;
+}
+
 #endif

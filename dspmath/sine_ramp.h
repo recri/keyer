@@ -18,7 +18,7 @@
 #ifndef SINE_RAMP_H
 #define SINE_RAMP_H
 
-#include "dmath.h"
+#include "dspmath.h"
 #include "oscillator.h"
 
 /*
