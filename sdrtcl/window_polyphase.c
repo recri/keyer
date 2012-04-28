@@ -34,7 +34,7 @@
 */
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 3)
-    return fw_error_str(interp, "usage: sdrkit::window-polyphase polyphase size");
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s polyphase size", Tcl_GetString(objv[0])));
   int polyphase, size;
   if (Tcl_GetIntFromObj(interp, objv[1], &polyphase) != TCL_OK ||
       Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK)

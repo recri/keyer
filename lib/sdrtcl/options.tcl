@@ -18,7 +18,7 @@
 # 
 package provide sdrtcl::options 1.0.0
 
-namespace eval ::sdrkit {}
+namespace eval ::sdrtcl {}
 namespace eval ::sdrtcl::options {
     
     array set modules {

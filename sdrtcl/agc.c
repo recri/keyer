@@ -54,7 +54,7 @@ typedef enum {
   LEVELER = 4
 } agc_mode_t;
 
-fw_option_custom_t agc_mode_custom_option[] = {
+static fw_option_custom_t agc_mode_custom_option[] = {
   { "long", LONG }, { "slow", SLOW }, { "medium", MEDIUM }, { "fast", FAST }, { "leveler", LEVELER },
   { NULL, -1 }
 };

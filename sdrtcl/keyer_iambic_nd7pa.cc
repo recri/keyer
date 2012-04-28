@@ -186,7 +186,7 @@ extern "C" {
 
   // okay, so tcl truncates the name before _Init at the first digit
   int DLLEXPORT Keyer_iambic_nd_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "keyer::iambic-nd7pa", "1.0.0", "keyer::iambic-nd7pa", _factory);
+    return framework_init(interp, "sdrtcl::keyer-iambic-nd7pa", "1.0.0", "sdrtcl::keyer-iambic-nd7pa", _factory);
   }
 
 }

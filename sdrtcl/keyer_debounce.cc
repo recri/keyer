@@ -199,7 +199,7 @@ extern "C" {
   }
 
   int DLLEXPORT Keyer_debounce_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "keyer::debounce", "1.0.0", "keyer::debounce", _factory);
+    return framework_init(interp, "sdrtcl::keyer-debounce", "1.0.0", "sdrtcl::keyer-debounce", _factory);
   }
 
 }

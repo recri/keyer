@@ -18,22 +18,22 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-set libdir [file normalize [file join [file dirname [info script]] .. lib sdrkit]]
+set libdir [file normalize [file join [file dirname [info script]] .. lib sdrtcl]]
 set so [info sharedlibextension]
 
 load [file join $libdir jack_ctl$so]
 
 proc print-parameter {p whose} {
-    set pname [sdrkit::jack-ctl parameter-get-name $p]
-    set sdesc [sdrkit::jack-ctl parameter-get-short-description $p]
-    set ldesc [sdrkit::jack-ctl parameter-get-long-description $p]
-    set ptype [sdrkit::jack-ctl parameter-get-type $p]
-    set pid [sdrkit::jack-ctl parameter-get-id $p]
-    set pset [sdrkit::jack-ctl parameter-is-set $p]
-    set pval [sdrkit::jack-ctl parameter-get-value $p]
-    set pdef [sdrkit::jack-ctl parameter-get-default-value $p]
-    if {[sdrkit::jack-ctl parameter-has-range-constraint $p]} {
-    } elseif {[sdrkit::jack-ctl parameter-has-enum-constraint $p]} {
+    set pname [sdrtcl::jack-ctl parameter-get-name $p]
+    set sdesc [sdrtcl::jack-ctl parameter-get-short-description $p]
+    set ldesc [sdrtcl::jack-ctl parameter-get-long-description $p]
+    set ptype [sdrtcl::jack-ctl parameter-get-type $p]
+    set pid [sdrtcl::jack-ctl parameter-get-id $p]
+    set pset [sdrtcl::jack-ctl parameter-is-set $p]
+    set pval [sdrtcl::jack-ctl parameter-get-value $p]
+    set pdef [sdrtcl::jack-ctl parameter-get-default-value $p]
+    if {[sdrtcl::jack-ctl parameter-has-range-constraint $p]} {
+    } elseif {[sdrtcl::jack-ctl parameter-has-enum-constraint $p]} {
     }
     if {$sdesc ne $ldesc} {
 	set desc "\n\t$sdesc\n\t$ldesc"
@@ -43,25 +43,25 @@ proc print-parameter {p whose} {
     puts "$whose: $pname $ptype $pid $pset $pval $pdef $desc"
 }
 
-set s [sdrkit::jack-ctl create]
+set s [sdrtcl::jack-ctl create]
 
-foreach p [sdrkit::jack-ctl get-parameters $s] {
+foreach p [sdrtcl::jack-ctl get-parameters $s] {
     print-parameter $p {server}
 }
-foreach d [sdrkit::jack-ctl get-drivers $s] {
-    set name [sdrkit::jack-ctl driver-get-name $d]
+foreach d [sdrtcl::jack-ctl get-drivers $s] {
+    set name [sdrtcl::jack-ctl driver-get-name $d]
     set type {}
-    if {0} { set type [sdrkit::jack-ctl driver-get-type $d] }
+    if {0} { set type [sdrtcl::jack-ctl driver-get-type $d] }
     puts "driver $name $type"
-    foreach p [sdrkit::jack-ctl driver-get-parameters $d] {
+    foreach p [sdrtcl::jack-ctl driver-get-parameters $d] {
 	print-parameter $p "driver $name"
     }
 }
 
-foreach i [sdrkit::jack-ctl get-internals $s] {
-    set name [sdrkit::jack-ctl internal-get-name $i]
+foreach i [sdrtcl::jack-ctl get-internals $s] {
+    set name [sdrtcl::jack-ctl internal-get-name $i]
     puts "internal $name"
-    foreach p [sdrkit::jack-ctl internal-get-parameters $i] {
+    foreach p [sdrtcl::jack-ctl internal-get-parameters $i] {
 	print-parameter $p "internal $name"
     }
 }

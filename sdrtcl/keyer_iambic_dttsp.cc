@@ -188,7 +188,7 @@ extern "C" {
   }
 
   int DLLEXPORT Keyer_iambic_dttsp_Init(Tcl_Interp *interp) {
-    return framework_init(interp, "keyer::iambic-dttsp", "1.0.0", "keyer::iambic-dttsp", _factory);
+    return framework_init(interp, "sdrtcl::keyer-iambic-dttsp", "1.0.0", "sdrtcl::keyer-iambic-dttsp", _factory);
   }
 
 }

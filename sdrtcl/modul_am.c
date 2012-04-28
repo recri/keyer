@@ -56,7 +56,19 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_command(clientData, interp, argc, objv);
+  _t *data = (_t *)clientData;
+  float carrier_level = data->opts.carrier_level;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  if (carrier_level != data->opts.carrier_level) {
+    void *e = modul_am_preconfigure(&data->am, &data->opts); if (e != &data->am) {
+      Tcl_SetResult(interp, e, TCL_STATIC);
+      data->opts.carrier_level = carrier_level;
+      return TCL_ERROR;
+    }
+    modul_am_configure(&data->am, &data->opts);
+  }
+  return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
@@ -83,19 +95,7 @@ static const framework_t _template = {
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  _t *data = (_t *)clientData;
-  float carrier_level = data->opts.carrier_level;
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
-    return TCL_ERROR;
-  if (carrier_level != data->opts.carrier_level) {
-    void *e = modul_am_preconfigure(&data->am, &data->opts); if (e != &data->am) {
-      Tcl_SetResult(interp, e, TCL_STATIC);
-      data->opts.carrier_level = carrier_level;
-      return TCL_ERROR;
-    }
-    modul_am_configure(&data->am, &data->opts);
-  }
-  return TCL_OK;
+  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
 // the initialization function which installs the adapter factory

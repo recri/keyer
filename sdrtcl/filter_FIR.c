@@ -52,7 +52,7 @@ static int _find_string_index(Tcl_Interp *interp, char *type, char **types, int 
   
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc < 6)
-    return fw_error_str(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size ...");
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s coeff-type filter-type sample-rate size ...", Tcl_GetString(objv[0])));
   int ctype, ftype, sample_rate, size;
   if (_find_string_index(interp, Tcl_GetString(objv[1]), ctypes, &ctype) != TCL_OK ||
       _find_string_index(interp, Tcl_GetString(objv[2]), ftypes, &ftype) != TCL_OK ||
@@ -65,7 +65,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   case BANDSTOP:
   case HILBERT:
     if (argc != 7)
-      return fw_error_str(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size low high");
+      return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s coeff-type filter-type sample-rate size low high", Tcl_GetString(objv[0])));
     if (Tcl_GetDoubleFromObj(interp, objv[5], &lo) != TCL_OK ||
 	Tcl_GetDoubleFromObj(interp, objv[6], &hi) != TCL_OK)
       return TCL_ERROR;
@@ -73,7 +73,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   case LOWPASS:
   case HIGHPASS:
     if (argc != 6)
-      return fw_error_str(interp, "usage: sdrkit::filter-fir coeff-type filter-type sample-rate size cutoff");
+      return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s coeff-type filter-type sample-rate size cutoff", Tcl_GetString(objv[0])));
     if (Tcl_GetDoubleFromObj(interp, objv[5], &cutoff) != TCL_OK)
       return TCL_ERROR;
     break;
