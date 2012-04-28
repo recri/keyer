@@ -266,13 +266,15 @@ snit::widget sdrui::connections {
 		port {
 		    foreach pname [$self find-ports $item] {
 			set pitem $item:$pname
-			set pdict [dict create type port item $item parent $item name $pname]
-			dict set data(items) $pitem $pdict
-			if {[llength [$self find-port-connections-from $pitem]] || [string match *capture* $pname]} {
-			    $win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem]
-			}
-			if {[llength [$self find-port-connections-to $pitem]] || [string match *playback* $pname]} {
-			    $win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem]
+			if { ! [dict exists $data(items) $pitem]} {
+			    set pdict [dict create type port item $item parent $item name $pname]
+			    dict set data(items) $pitem $pdict
+			    if {[llength [$self find-port-connections-from $pitem]] || [string match *capture* $pname]} {
+				$win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem]
+			    }
+			    if {[llength [$self find-port-connections-to $pitem]] || [string match *playback* $pname]} {
+				$win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem]
+			    }
 			}
 		    }
 		}
@@ -413,9 +415,9 @@ snit::widget sdrui::connections {
     
     method pop-activate {} {
 	if {$data(pop-activated)} {
-	    $options(-control) part-activate $data(pop-item)
+	    $options(-control) part-activate-tree $data(pop-item)
 	} else {
-	    $options(-control) part-deactivate $data(pop-item)
+	    $options(-control) part-deactivate-tree $data(pop-item)
 	}
 	$self defer-update
     }

@@ -8,7 +8,8 @@
   together. 
 * Prerequisites
   I've written these instructions as I use them on a laptop running
-  Ubuntu 11.10, the Oneiric Ocelot release.  Most of it is generic
+  Ubuntu 11.10, the Oneiric Ocelot release.  It is also being tested
+  on Ubuntu 12.04, the Precise Pangolin release.  Most of it is generic 
   enough to work on other current Linux systems with minor
   translations of package management tools and package names. It's
   also generic enough to port to MacOS or Windows.  But I don't run

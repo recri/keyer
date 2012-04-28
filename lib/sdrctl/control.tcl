@@ -195,7 +195,13 @@ snit::type sdrctl::control {
 
     method {Handler -activate} {val} {
 	set options(-activate) $val
-	if {$options(-type) eq {dsp}} { ::sdrctlx::$options(-name) [expr {$val?{activate}:{deactivate}}] }
+	if {$options(-type) eq {jack}} {
+	    if {$val} {
+		::sdrctlx::$options(-name) activate
+	    } else {
+		::sdrctlx::$options(-name) deactivate
+	    }
+	}
     }
 
     method Delegate {opt} {
@@ -252,103 +258,222 @@ snit::type sdrctl::controller {
     method part-configure {name args} { return [{*}[dict get $data(part) $name] configure {*}$args] }
     method part-cget {name opt} { return [{*}[dict get $data(part) $name] cget $opt] }
 
-    method part-container {name} { return [$self part-cget $name -container] }
+    method part-container {name} { return [[$self part-cget $name -container] cget -name] }
     method part-opts {name} { return [$self part-cget $name -opts] }
     method part-ports {name} { return [$self part-cget $name -ports] }
     method part-type {name} { return [$self part-cget $name -type] }
     method part-is-enabled {name} { return [$self part-cget $name -enable] }
     method part-is-active {name} { return [$self part-cget $name -activate] }
 
-    ## now the tricky stuff
-    ## note that activate and deactivate need to work when starting and stopping whole subtrees
-    ## and also when enabling or disabling a single component inside an active subtree
-    method part-enable {name} {
-	if {[$self part-is-enabled $name]} { error "part \"$name\" is enabled" }
-	$self part-configure $name -enable true
-	if {[$self part-is-active [$self part-container $name]]} {
-	    $self part-activate $name
+    ##
+    ## now the tricky stuff, which only applies to the dsp parts of the tree
+    ##
+    ## by convention, only the jack components are disabled and enabled.  The rest of the graph
+    ## is always enabled -- though alternates may effectively enable one or none of their alternate
+    ## paths.  Enabling by itself does nothing, it's only marking the component as ready for activation.
+    ## Until activated, the jack components are quiescent, they absorb parameters and allocate memory
+    ## but they do no processing.
+    ##
+    ## also by convention, activation is normally applied to the top nodes in the tree and percolates
+    ## down through the enabled subtree.  so we activate and deactivate the rx, tx, or keyer nodes to
+    ## turn them on and off in their currently enabled configuration.
+    ##
+    ## but the other thing that happens is that a single jack node can be enabled or disabled inside
+    ## an active tree.  this is extra tricky because we want to make the new connection before we
+    ## break the old connection, and either the old or new connection is going to be an arc that goes
+    ## around the component being enabled or disabled.
+    ##
+    ## the important thing is that we're not turning on/off arbitrary sub-graphs of the computation.
+    ## the two cases are a whole tree of the graph, or a single node of the graph.
+    ##
+    ## another, possibly misguided, convention is that the names of the parts are built hierarchically
+    ## so the sub-nodes of node are all names which extend the root node's name.  That's fine for the
+    ## basic radio graph, but it breaks if we make a spectrum or meter component that isn't in the
+    ## hierarchy.
+    ##
+    proc complement {port} {
+	switch -exact $port {
+	    in_i { return {out_i} }
+	    in_q { return {out_q} }
+	    out_i { return {in_i} }
+	    out_q { return {in_q} }
+	    midi_in { return {midi_out} }
+	    midi_out { return {midi_in} }
+	    default { error "unknown port \"$port\"" }
 	}
     }
-    method part-disable {name} { $self part-configure $name -enable false }
-
     method port-active-connections-to {pair} {
-	# chase each connections-to chain starting from port until you find an active component
+	# chase each connections-to chain starting from {part port} until you find an active component
+	# and return the list of {part port} pairs found.
+	# todo - avoid chasing through all the disabled alternates in an alternates block
 	set active {}
-	foreach source [$self port-connections-to $pair] {
+	foreach source [$self port-connections-to {*}$pair] {
 	    lassign $source part port
-	    if {[$self part-is-active $part]} {
-		lappend active $source
+	    set type [$self part-type $part]
+	    if {$type in {jack hw}} {
+		if {[$self part-is-active $part]} {
+		    # puts "port-active-connections-to: accepted source={$source}"
+		    lappend active $source
+		} elseif {$type eq {jack}} {
+		    set source [list $part [complement $port]]
+		    # puts "port-active-connections-to: searching source={$source}"
+		    lappend active {*}[$self port-active-connections-to $source]
+		}
 	    } else {
+		# puts "port-active-connections-to: searching source={$source}"
 		lappend active {*}[$self port-active-connections-to $source]
 	    }
 	}
 	return $active
     }
-    method port-active-connections-from {port} {
-	# chase each connections-from chain starting from port until you find an active component
+    method port-active-connections-from {pair} {
+	# chase each connections-from chain starting from {part port} until you find an active component
+	# and return the list of active {port part} pairs found
+	# todo - avoid chasing through all the disabled alternates in an alternates block
 	set active {}
-	foreach sink [$self port-connections-from $pair] {
+	foreach sink [$self port-connections-from {*}$pair] {
 	    lassign $sink part port
-	    if {[$self part-is-active $part]} {
-		lappend active $sink
+	    set type [$self part-type $part]
+	    if {$type in {jack hw}} {
+		if {[$self part-is-active $part]} {
+		    # puts "port-active-connections-from: accepted sink={$sink}"
+		    lappend active $sink
+		} elseif {$type eq {jack}} {
+		    set sink [list $part [complement $port]]
+		    # puts "port-active-connections-from: searching sink={$sink}"
+		    lappend active {*}[$self port-active-connections-from $sink]
+		}
 	    } else {
+		# puts "port-active-connections-from: searching sink={$sink}"
 		lappend active {*}[$self port-active-connections-from $sink]
 	    }
 	}
 	return $active
     }
 
-    method part-activate {name} {
+    method part-activate-tree {name} {
 	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
-	if {[$self part-is-enabled $name]} {
-	    set activated {}
-	    $self part-configure $name -activate true
+	if { ! [$self part-is-enabled $name]} return
+	set activated {}
+	$self part-configure $name -activate true
+	if {[$self part-type $name] in {jack hw}} {
 	    lappend activated $name
-	    foreach part [$self part-filter $name-*] {
-		if {[$self part-is-enabled $part]} {
-		    $self part-configure $part -activate true
+	}
+	# find the parts to be activated
+	foreach part [$self part-filter $name-*] {
+	    if {[$self part-is-enabled $part]} {
+		$self part-configure $part -activate true
+		if {[$self part-type $part] in {jack hw}} {
 		    lappend activated $part
 		}
 	    }
-	    # now make the active connections
-	    foreach part $activated {
-		foreach port [$self part-ports $part] {
-		    set pair [list $part $port]
-		    set jackport [join $port :]
-		    foreach sink [$self port-active-connections-from $pair] {
-			sdrkit::jack -server $options(-server) connect $jackport [join $sink :]
+	}
+	# now find the active connections to make
+	
+	# this doesn't quite work right, it finds
+	# extra paths through disabled alternates
+	# that go around the desired path.
+	
+	puts "parts to be connected: $activated"
+	set connections {}
+	foreach part $activated {
+	    foreach port [$self part-ports $part] {
+		set pair [list $part $port]
+		set jackport [join $pair :]
+		# puts "part-activate-tree: connections-from {$pair}"
+		foreach sink [$self port-active-connections-from $pair] {
+		    set connection [list $jackport [join $sink :]]
+		    if {[lsearch -exact $connections $connection] < 0} {
+			# puts "add connect $connection"
+			lappend connections $connection
 		    }
-		    foreach source [$self port-active-connections-to $pair] {
-			sdrkit::jack -server $options(-server) connect [join $source :] $jackport
+		}
+		# puts "part-activate-tree: connections-to {$pair}"
+		foreach source [$self port-active-connections-to $pair] {
+		    set connection [list [join $source :] $jackport]
+		    if {[lsearch -exact $connections $connection] < 0} {
+			# puts "add connect $connection"
+			lappend connections $connection
 		    }
 		}
 	    }
 	}
+	foreach connection $connections {
+	    sdrkit::jack -server $options(-server) connect {*}$connection
+	}
     }
-    method part-deactivate {name} {
+    
+    # deactivating a tree is simpler, because all the connections go away as each
+    # node is deactivated
+    method part-deactivate-tree {name} {
+	if { ! [$self part-is-active $name]} { error "part \"$name\" is not active" }
+	set deactivated {}
+	$self part-configure $name -activate false
+	foreach part [$self part-filter $name-*] {
+	    if {[$self part-is-active $part]} {
+		$self part-configure $part -activate false
+	    }
+	}
+    }
+    
+    method part-activate-node {name} {
+	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
+	if { ! [$self part-is-enabled $name]} return
+	set to {}
+	set from {}
+	foreach port [$self part-ports $name] {
+	    set pair [list $name $port]
+	    set jackport [join $pair :]
+	    foreach sink [$self port-active-connections-from $pair] {
+		set connection [list $jackport [join $sink :]]
+		if {[lsearch -exact $from $connection] < 0} {
+		    # puts "add connect $connection"
+		    lappend from $connection
+		}
+	    }
+	    foreach source [$self port-active-connections-to $pair] {
+		set connection [list [join $source :] $jackport]
+		if {[lsearch -exact $to $connection] < 0} {
+		    # puts "add connect $connection"
+		    lappend to $connection
+		}
+	    }
+	}
+	puts "part-activate-node: connections-from {$pair} are {$from}"
+	puts "part-activate-node: connections-to {$pair} are {$to}"
+	
+    }
+    
+    method part-deactivate-node {name} {
+	if { ! [$self part-is-active $name]} { error "part \"$name\" is not active" }
+    }
+    
+    method part-enable {name} {
+	if {[$self part-is-enabled $name]} { error "part \"$name\" is enabled" }
+	$self part-configure $name -enable true
+	if {[$self part-is-active [$self part-container $name]]} {
+	    $self part-activate-node $name
+	}
+    }
+    method part-disable {name} {
 	if {[$self part-is-active $name]} {
-	    set deactivated {}
-	    $self part-configure $name -activate false
-	    foreach part [$self part-filter $name-*] {
-		if {[$self part-is-active $part]} {
-		    $self part-configure $part -activate false
-		}
-	    }
+	    $self part-deactivate-node $name
 	}
+	$self part-configure $name -enable false
     }
-
+    
     method part-report {name opt value args} {
 	foreach pair [$self opt-connections-from $name $opt] {
 	    $self part-configure {*}$pair $value {*}$args
 	}
     }
-
+    
     method part-resolve {} {
 	foreach part [$self part-list] {
 	    {*}[$self part-get $part] resolve
 	}
     }
-
+    
     ## opt methods
     ## opts are "configure options" in the tcl/tk sense which the components
     ## expose for connection to opts of other components
@@ -362,7 +487,7 @@ snit::type sdrctl::controller {
     method opt-filter {glob} { return [$self X-filter opt $glob] }
     method opt-connections-to {name opt} { return [$self X-connections-to opt [list $name $opt]] }
     method opt-connections-from {name opt} { return [$self X-connections-from opt [list $name $opt]] }
-
+    
     ## port methods
     ## ports are jack ports, both audio and midi, which the components
     ## expose for connection to ports of other components
@@ -376,7 +501,7 @@ snit::type sdrctl::controller {
     method port-filter {glob} { return [$self X-filter port $glob] }
     method port-connections-to {name port} { return [$self X-connections-to port [list $name $port]] }
     method port-connections-from {name port} { return [$self X-connections-from port [list $name $port]] }
-
+    
     ## X methods to handle common patterns
     ## tag may be a simple part name, or a part name opt name pair, or part name port name pair 
     ## pair will always be a part name opt name pair, or part name port name pair 
@@ -420,7 +545,7 @@ snit::type sdrctl::controller {
     }
     method X-connections-from {x pair} { return [$self X-get $x $pair] }
     method X-connections-to {x pair} { return [$self X-get invert-$x $pair] }
-
+    
 }
 
 

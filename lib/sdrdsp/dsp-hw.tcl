@@ -43,7 +43,7 @@ proc sdrdsp::dsp-hw {name args} {
 	set ports [dict keys $cdict]
 	set fopt [list -ports $ports]
 	set part ::sdrctlw::$client
-	sdrctl::control $part -type hw -prefix {} -suffix $client -factory sdrdsp::dsp-hw-port -factory-options $fopt -container $options(-container)
+	sdrctl::control $part -type hw -prefix {} -suffix $client -factory sdrdsp::dsp-hw-port -factory-options $fopt -container $options(-container) -activate yes
 	dict set data $client client:ports $ports
 	dict set data $client client:part $part
     }
