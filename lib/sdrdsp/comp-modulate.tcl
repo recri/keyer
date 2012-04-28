@@ -17,15 +17,17 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-modulate 1.0.0
+package provide sdrdsp::comp-modulate 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
+package require sdrdsp::dsp-alternates
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-modulate {name args} {
-    #set alts {sdrblk::comp-modul-am sdrblk::comp-modul-fm}
+proc sdrdsp::comp-modulate {name args} {
+    #set alts {sdrdsp::comp-modul-am sdrdsp::comp-modul-fm}
     set alts {}
-    return [sdrblk::block $name -type alternate -suffix modulate -alternates $alts -require $alts {*}$args]
+    set fopt [list -alternates $alts]
+    return [sdrctl::control $name -type dsp -suffix modulate -factory sdrdsp::dsp-alternates -factory-options $fopt -require $alts {*}$args]
 }
 

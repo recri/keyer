@@ -20,7 +20,7 @@
 ## capture
 ##
 
-package provide sdrblk::capture 1.0.0
+package provide sdrdsp::capture 1.0.0
 
 package require snit
 
@@ -32,7 +32,7 @@ package require sdrkit::window
 package require sdrkit::window-polyphase
 package require sdrkit::jack
 
-::snit::type ::sdrblk::capture {
+::snit::type ::sdrdsp::capture {
     typevariable taps 0
 
     option -server {}

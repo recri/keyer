@@ -23,14 +23,14 @@ package require snit
 
 snit::type sdrui::ui-command-line {
 
-    option -partof -readonly yes
+    option -container -readonly yes
     option -control -readonly yes
     
     constructor {args} {
 	#puts "ui-command-line $self constructor {$args}"
 	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
-	#puts "ui-command-line -control $options(-control) [$options(-partof) cget -control]"
+	set options(-control) [$options(-container) cget -control]
+	#puts "ui-command-line -control $options(-control) [$options(-container) cget -control]"
     }
 
     method repl {} {

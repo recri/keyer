@@ -17,14 +17,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::keyer 1.0.0
+package provide sdrdsp::dsp-tap 1.0.0
 
-package require sdrblk::block
+package require snit
 
-namespace eval sdrblk {}
+snit::type sdrdsp::dsp-tap {
+    option -ports -default {tap_i tap_q}
+    option -opts -default {}
+    option -methods -default {}
 
-proc sdrblk::keyer {name args} {
-    set req {sdrblk::comp-keyer}
-    set seq {sdrblk::comp-keyer-debounce sdrblk::comp-keyer-iambic sdrblk::comp-keyer-ptt sdrblk::comp-keyer-tone}
-    return [sdrblk::block $name -type sequence -suffix keyer -sequence $seq -require $req {*}$args]
+    option -container -default {} -readonly true
+    
+    constructor {args} {
+	# puts "dsp-tap constructor $self {$args}"
+	$self configure {*}$args
+    }
+
+    method finish {} {}
+    method deactivate {} {}
+    method activate {} {}
+    
 }
+

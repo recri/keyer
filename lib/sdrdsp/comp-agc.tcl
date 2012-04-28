@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-agc 1.0.0
+package provide sdrdsp::comp-agc 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::agc
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-agc {name args} {
-    return [sdrblk::block $name -type jack -suffix agc -factory sdrkit::agc {*}$args]
+proc sdrdsp::comp-agc {name args} {
+    return [sdrctl::control $name -type jack -suffix agc -factory sdrkit::agc -enable no {*}$args]
 }

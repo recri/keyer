@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-leveler 1.0.0
+package provide sdrdsp::comp-leveler 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::agc
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-leveler {name args} {
-    return [sdrblk::block $name -type jack -suffix leveler -factory sdrkit::agc {*}$args]
+proc sdrdsp::comp-leveler {name args} {
+    return [sdrctl::control $name -type jack -suffix leveler -factory sdrkit::agc -enable no {*}$args]
 }

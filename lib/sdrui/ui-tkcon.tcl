@@ -25,12 +25,12 @@ package require tkcon
 
 snit::type sdrui::ui-tkcon {
 
-    option -partof -readonly yes
+    option -container -readonly yes
     option -control -readonly yes
     
     constructor {args} {
 	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
+	set options(-control) [$options(-container) cget -control]
     }
 
     method repl {} {

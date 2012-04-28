@@ -17,24 +17,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-spectrum 1.0.0
+package provide sdrdsp::comp-spectrum 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
+package require sdrdsp::dsp-tap
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-spectrum-semi-raw {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-semi-raw -enable yes {*}$args]
+proc sdrdsp::comp-spectrum-semi-raw {name args} {
+    return [sdrctl::control $name -type dsp -suffix spectrum-semi-raw -factory sdrdsp::dsp-tap {*}$args]
 }
-proc sdrblk::comp-spectrum-pre-filt {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-pre-filt -enable yes {*}$args]
+proc sdrdsp::comp-spectrum-pre-filt {name args} {
+    return [sdrctl::control $name -type dsp -suffix spectrum-pre-filt -factory sdrdsp::dsp-tap {*}$args]
 }
-proc sdrblk::comp-spectrum-post-filt {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-post-filt -enable yes {*}$args]
+proc sdrdsp::comp-spectrum-post-filt {name args} {
+    return [sdrctl::control $name -type dsp -suffix spectrum-post-filt -factory sdrdsp::dsp-tap {*}$args]
 }
-proc sdrblk::comp-spectrum-post-agc {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-post-agc -enable yes {*}$args]
+proc sdrdsp::comp-spectrum-post-agc {name args} {
+    return [sdrctl::control $name -type dsp -suffix spectrum-post-agc -factory sdrdsp::dsp-tap {*}$args]
 }
-proc sdrblk::comp-spectrum-tx {name args} {
-    return [sdrblk::block $name -type stub -suffix spectrum-tx -enable yes {*}$args]
+proc sdrdsp::comp-spectrum-tx {name args} {
+    return [sdrctl::control $name -type dsp -suffix spectrum-tx -factory sdrdsp::dsp-tap {*}$args]
 }

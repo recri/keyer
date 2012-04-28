@@ -45,7 +45,7 @@ snit::widget sdrui::spectrum {
     option -multi -default 1 -configuremethod Opt-handler
 
     option -server -default default -readonly true
-    option -partof -readonly yes
+    option -container -readonly yes
     option -control -readonly yes
     option -input -default {} -configuremethod Opt-handler
 

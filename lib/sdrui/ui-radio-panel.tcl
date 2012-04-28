@@ -32,7 +32,7 @@ package require sdrui::components
 
 snit::widget sdrui::ui-radio-panel {
 
-    option -partof {}
+    option -container {}
     option -control {}
 
     constructor {args} {
@@ -46,42 +46,57 @@ snit::widget sdrui::ui-radio-panel {
 	ttk::frame $win.set2
 	ttk::frame $win.set3
 	ttk::frame $win.set4
+
 	# build the components
-	sdrui::components %AUTO% -root $win -control $options(-control); # beware of name conflicts
+	sdrui::components %AUTO% -root $win -control $options(-control) -container $options(-container)
 
 	# assemble
-	pack $win.ui-rxtx-tuner -side top -expand true -fill both
+	grid $win.ui-rxtx-tuner -row 0 -column 0 -sticky nsew
+	grid $win.sep1 -row 1 -column 0 -sticky ew
+	grid $win.set1 -row 2 -column 0 -sticky ew
+	grid $win.sep2 -row 3 -column 0 -sticky ew
+	grid $win.notes -row 4 -column 0 -sticky nsew
+	grid rowconfigure $win 0 -weight 1
+	grid rowconfigure $win 4 -weight 1
+	grid columnconfigure $win 0 -weight 1
 
-	pack $win.sep1 -side top -fill x
-
-	grid $win.ui-rxtx-mode -in $win.set1 -row 0 -column 0 -sticky nsew
-	grid $win.ui-rxtx-if-bpf -in $win.set1 -row 0 -column 1 -sticky nsew
-	grid $win.ui-rx-af-agc -in $win.set1 -row 0 -column 2 -sticky nsew
-	grid $win.ui-rx-af-gain -in $win.set1 -row 0 -column 3 -sticky nsew
-	foreach c {0 1 2 3} { grid columnconfigure $win.set1 $c -weight 1 }
-	pack $win.set1 -side top -fill x
-
-	pack $win.sep2 -side top -fill x
-
-	pack $win.notes -side top -fill both -expand true
+	foreach {tail row column} {
+	    ui-rxtx-mode 0 0
+	    ui-rxtx-if-bpf 0 1
+	    ui-rx-af-agc 0 2
+	    ui-rx-af-gain 0 3
+	} {
+	    if {[winfo exists $win.$tail]} {
+		grid $win.$tail -in $win.set1 -row $row -column $column -sticky nsew
+		grid columnconfigure $win $column -weight 1
+	    }
+	}
 	$win.notes add $win.ui-rxtx-band-select -text Band
+
 	$win.notes add $win.set2 -text Keyer
 	foreach {row col ht tail} {1 0 2 ui-keyer-debounce 0 0 1 ui-keyer-iambic 0 1 1 ui-keyer-iambic-wpm 0 2 1 ui-keyer-iambic-dah 0 3 1 ui-keyer-iambic-space} {
-	    grid $win.$tail -in $win.set2 -row $row -column $col -rowspan $ht -sticky nsew
+	    if {[winfo exists $win.$tail]} {
+		grid $win.$tail -in $win.set2 -row $row -column $col -rowspan $ht -sticky nsew
+	    }
 	}
+
 	$win.notes add $win.set3 -text RX
 	foreach {row col ht tail} {
 	    0 0 1 ui-rx-rf-gain 0 1 1 ui-rx-rf-iq-swap 0 2 1 ui-rx-rf-iq-delay 0 3 1 ui-rx-rf-iq-correct
-	    1 0 1 ui-rx-af-gain
 	} {
-	    grid $win.$tail -in $win.set3 -row $row -column $col -rowspan $ht -sticky nsew
+	    if {[winfo exists $win.$tail]} {
+		grid $win.$tail -in $win.set3 -row $row -column $col -rowspan $ht -sticky nsew
+	    }
 	}
+
 	$win.notes add $win.set4 -text TX
 	foreach {row col ht tail} {
 	    0 0 2 ui-tx-rf-iq-balance
 	    2 0 1 ui-tx-af-gain
 	} {
-	    grid $win.$tail -in $win.set4 -row $row -column $col -rowspan $ht -sticky nsew
+	    if {[winfo exists $win.$tail]} {
+		grid $win.$tail -in $win.set4 -row $row -column $col -rowspan $ht -sticky nsew
+	    }
 	}
 	#add $win.band-pass -text Filter
     }    

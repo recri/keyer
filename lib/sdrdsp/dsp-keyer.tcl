@@ -17,22 +17,19 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrdsp::comp-demod 1.0.0
+package provide sdrdsp::dsp-keyer 1.0.0
 
 package require sdrctl::control
-package require sdrdsp::dsp-alternates
+package require sdrdsp::dsp-sequence
 
 namespace eval sdrdsp {}
 
-proc sdrdsp::comp-demod {name args} {
-    ## need to know which signal controls the selection
-    ## ctl-rxtx-mode:-mode
-    ## need to know the mapping between signal values and the alternates
-    ## AM SAM FMN *
-    ## need a component to select when * is the signal
-    ## dsp-stub or dsp-tap?
-    set alts {sdrdsp::comp-demod-am sdrdsp::comp-demod-sam sdrdsp::comp-demod-fm}
-    set fopt [list -alternates $alts -require $alts -map {AM SAM FMN *} -opt-connect-from {{ctl-rxtx-mode -mode -select}}]
-    return [sdrctl::control $name -type dsp -suffix mode -factory sdrdsp::dsp-alternates -factory-options $fopt {*}$args]
+proc sdrdsp::keyer {name args} {
+    set req {sdrdsp::comp-keyer}
+    # sdrdsp::comp-keyer-ptt between iambic and tone makes a mess of things
+    # since it might split the keyer midi signal into multiple streams
+    # leaving the sequence from multiple points
+    set seq {sdrdsp::comp-keyer-debounce sdrdsp::comp-keyer-iambic sdrdsp::comp-keyer-tone}
+    set fopt [list -sequence $seq -require $req -ports {seq_midi_in seq_out_i seq_out_q}]
+    return [sdrctl::control $name -type dsp -suffix keyer -factory sdrdsp::dsp-sequence -factory-options $fopt {*}$args]
 }
-

@@ -17,36 +17,37 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-meter 1.0.0
+package provide sdrdsp::comp-meter 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
+package require sdrdsp::dsp-tap
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-meter-pre-conv {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-pre-conv -enable yes {*}$args]
+proc sdrdsp::comp-meter-pre-conv {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-pre-conv {*}$args]
 }
-proc sdrblk::comp-meter-post-filt {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-post-filt -enable yes {*}$args]
+proc sdrdsp::comp-meter-post-filt {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-post-filt {*}$args]
 }
-proc sdrblk::comp-meter-post-agc {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-post-agc -enable yes {*}$args]
+proc sdrdsp::comp-meter-post-agc {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-post-agc {*}$args]
 }
-proc sdrblk::comp-meter-waveshape {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-waveshape -enable yes {*}$args]
+proc sdrdsp::comp-meter-waveshape {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-waveshape {*}$args]
 }
-proc sdrblk::comp-meter-graphic-eq {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-graphic-eq -enable yes {*}$args]
+proc sdrdsp::comp-meter-graphic-eq {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-graphic-eq {*}$args]
 }
-proc sdrblk::comp-meter-leveler {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-leveler -enable yes {*}$args]
+proc sdrdsp::comp-meter-leveler {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-leveler {*}$args]
 }
-proc sdrblk::comp-meter-speech-processor {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-speech-processor -enable yes {*}$args]
+proc sdrdsp::comp-meter-speech-processor {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-speech-processor {*}$args]
 }
-proc sdrblk::comp-meter-compand {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-compand -enable yes {*}$args]
+proc sdrdsp::comp-meter-compand {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-compand {*}$args]
 }
-proc sdrblk::comp-meter-power {name args} {
-    return [sdrblk::block $name -type stub -suffix meter-power -enable yes {*}$args]
+proc sdrdsp::comp-meter-power {name args} {
+    return [sdrctl::control $name -type dsp -factory sdrdsp::dsp-tap -suffix meter-power {*}$args]
 }

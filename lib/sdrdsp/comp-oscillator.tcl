@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-oscillator 1.0.0
+package provide sdrdsp::comp-oscillator 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::oscillator
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-oscillator {name args} {
-    return [sdrblk::block $name -type jack -suffix osc -factory sdrkit::oscillator {*}$args]
+proc sdrdsp::comp-oscillator {name args} {
+    return [sdrctl::control $name -type jack -suffix osc -factory sdrkit::oscillator -enable no {*}$args]
 }

@@ -24,7 +24,7 @@ package provide sdrctl::control 1.0.0
 # a radio is built of parts
 # there are three different kinds of parts:
 #
-#  1) parts which do dsp computations, ../sdrblk/block.tcl;
+#  1) parts which do dsp computations, ../sdrdsp/block.tcl;
 #  2) parts which supply parameter values, ../sdrui/components.tcl;
 #  3) parts which convert parameter values into dsp parameter values,
 #  implemented here.

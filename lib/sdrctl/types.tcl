@@ -25,7 +25,7 @@ package provide sdrctl::types 1.0.0
 
 package require snit
 
-snit::enum sdrctl::ctype -values {none ctl dsp tap seq alt ui}
+snit::enum sdrctl::type -values {none ctl dsp jack ui hw}
 
 snit::enum sdrctl::mode -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}
 snit::enum sdrctl::agc-mode -values {off long slow med fast}

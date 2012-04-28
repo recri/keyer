@@ -30,17 +30,17 @@ package require sdrui::connections
 
 snit::type sdrui::ui-control {
 
-    option -partof -readonly yes
+    option -container -readonly yes
     option -control -readonly yes
     option -server -readonly yes
     
     constructor {args} {
 	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
+	set options(-control) [$options(-container) cget -control]
 	pack [ttk::notebook .nb] -side top -fill both -expand true
-	.nb add [sdrui::connections .nb.ports -partof $self -connect ports] -text ports
-	.nb add [sdrui::connections .nb.opts -partof $self -connect opts] -text opts
-	.nb add [sdrui::tree .nb.tree -partof $self] -text controls
+	.nb add [sdrui::connections .nb.ports -container $self -connect ports] -text ports
+	.nb add [sdrui::connections .nb.opts -container $self -connect opts] -text opts
+	.nb add [sdrui::tree .nb.tree -container $self] -text controls
     }
 
     method repl {} { }

@@ -31,14 +31,17 @@ namespace eval sdrctlw {}
 
 snit::type sdrui::components {
     option -control -readonly yes
+    option -container -readonly yes
     option -root -readonly yes
     option -name {}
 
     constructor {args} {
+	# puts "sdrui::components constructor {$args}"
 	$self configure {*}$args
-	set need(rx) [$options(-control) part-exists rx]
-	set need(tx) [$options(-control) part-exists tx]
-	set need(keyer) [$options(-control) part-exists keyer]
+	set need(rx) [::radio cget -rx]
+	set need(tx) [::radio cget -tx]
+	set need(keyer) [::radio cget -keyer]
+	set common [list -type ui -root $options(-root) -control $options(-control) -container $options(-container)]
 	foreach {wantedby name require factory opts} {
 	    {rx tx keyer} ui {} sdrctl::control-stub {}
 	    {rx tx} ui-rxtx {} sdrctl::control-stub {}
@@ -77,12 +80,12 @@ snit::type sdrui::components {
 	    {keyer} ui-keyer-iambic-space sdrui::iambic sdrui::iambic-space {}
 	    {keyer rx tx} ui-keyer-tone sdrui::cw-pitch sdrui::cw-pitch {}
 	} {
-	    #foreach x $wantedby {
-		#if {$need($x)} {
-		    sdrctl::control ::sdrctlw::$name -type ui -root $options(-root) -control $options(-control) -suffix $name -factory-require $require -factory $factory -factory-options $opts
-		#    break
-		#}
-	    #}
+	    foreach x $wantedby {
+		if {$need($x)} {
+		    sdrctl::control ::sdrctlw::$name {*}$common -suffix $name -factory-require $require -factory $factory -factory-options $opts
+		    break
+		}
+	    }
 	}
     }
 }

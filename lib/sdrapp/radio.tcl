@@ -22,9 +22,6 @@ package provide sdrapp::radio 1.0.0
 package require snit
 
 package require sdrctl::radio-control
-package require sdrblk::rx
-package require sdrblk::tx
-package require sdrblk::keyer
 
 namespace eval sdrapp {}
 
@@ -41,47 +38,86 @@ snit::type sdrapp::radio {
     option -hw-type -readonly yes -default {hw-softrock-dg8saq}
     option -ui -readonly yes -default true
     option -ui-type -readonly yes -default {ui-notebook}
+    option -ports -readonly yes -default yes
+
     option -rx-source -readonly yes -default {system:capture_1 system:capture_2}
     option -rx-sink -readonly yes -default {system:playback_1 system:playback_2}
     option -tx-source -readonly yes -default {}
     option -tx-sink -readonly yes -default {}
     option -keyer-source -readonly yes -default {}
     option -keyer-sink -readonly yes -default {}
+
     option -activate-hw -readonly yes -default no
     option -enable-rx -readonly yes -default no
     option -activate-rx -readonly yes -default no
 
     constructor {args} {
 	$self configure {*}$args
-	set options(-control) [::sdrctl::radio-control ::radio-ctl -partof $self -server $options(-server)]
-	if {$options(-rx)} { ::sdrblk::rx ::radio-rx -partof $self -source $options(-rx-source) -sink $options(-rx-sink) }
-	if {$options(-tx)} { ::sdrblk::tx ::radio-tx -partof $self -source $options(-tx-source) -sink $options(-tx-sink) }
-	if {$options(-keyer)} { ::sdrblk::keyer ::radio-keyer -partof $self -source $options(-keyer-source) -sink $options(-keyer-sink) }
-	if {$options(-hw)} {
-	    package require sdrhw::$options(-hw-type)
-	    ::sdrhw::$options(-hw-type) ::radio-hw -partof $self
-	}
+	set options(-control) [::sdrctl::radio-controller ::radio-ctl -container $self -server $options(-server)]
 	if {$options(-ui)} {
 	    package require sdrui::$options(-ui-type)
-	    ::sdrui::$options(-ui-type) ::radio-ui -partof $self
+	    ::sdrui::$options(-ui-type) ::radio-ui -container $self
 	}
-	::radio-ctl part-resolve
-	if {$options(-activate-hw)} { {*}$options(-control) activate hw }
-	if {$options(-enable-rx)} {
-	    foreach name {rx-rf-gain rx-rf-iq-correct rx-if-mix rx-if-bpf rx-af-agc} {
-		{*}$options(-control) enable $name
+	::sdrctl::radio-controls -container $self
+	if {$options(-hw)} {
+	    sdrctl::control ::sdrctlw::hw -type hw -prefix {} -suffix hw -factory sdrctl::control-stub -container $self
+	    if {$options(-hw)} {
+		package require sdrhw::$options(-hw-type)
+		::sdrhw::$options(-hw-type) ::radio-hw -container ::sdrctlw::hw
 	    }
 	}
-	if {$options(-activate-rx)} { {*}$options(-control) activate rx }
+	if {$options(-ports)} {
+	    package require sdrdsp::dsp-hw
+	    ::sdrdsp::dsp-hw ::radio-ports -container $self
+	}
+	if {$options(-rx)} {
+	    package require sdrdsp::dsp-rx
+	    ::sdrdsp::rx ::radio-rx -container $self
+	    $self connect $options(-rx-source) rx $options(-rx-sink)
+	}
+	if {$options(-keyer)} {
+	    package require sdrdsp::dsp-keyer
+	    ::sdrdsp::keyer ::keyer -container $self
+	    $self connect $options(-keyer-source) keyer $options(-keyer-sink)
+	}
+	if {$options(-tx)} {
+	    package require sdrdsp::dsp-tx
+	    ::sdrdsp::tx ::radio-tx -container $self
+	    $self connect $options(-tx-source) tx $options(-tx-sink)
+	}
+	::radio-ctl part-resolve
+	#::radio-ctl part-configure ctl-rxtx-mode -mode CWU
+	if {$options(-activate-hw)} {
+	    {*}$options(-control) part-activate hw
+	}
+	if {$options(-enable-rx)} {
+	    foreach name {rx-rf-gain rx-rf-iq-correct rx-if-mix rx-if-bpf rx-af-agc} {
+		{*}$options(-control) part-enable $name
+	    }
+	}
+	if {$options(-activate-rx)} {
+	    {*}$options(-control) activate rx
+	}
     }
 
+    method connect {source part sink} {
+	set ports [$options(-control) port-filter [list $part *]]
+	if {[llength $source]+[llength $sink] == [llength $ports]} {
+	    foreach s $source t [lrange $ports 0 1] {
+		$options(-control) port-connect {*}[split $s :] {*}$t
+	    }
+	    foreach s [lrange $ports 2 end] t $sink {
+		$options(-control) port-connect {*}$s  {*}[split $t :]
+	    }
+	}
+    }
     destructor {
-	catch {::sdrapp::ui destroy}
-	catch {::sdrapp::hw destroy}
-	catch {::sdrapp::keyer destroy}
-	catch {::sdrapp::tx destroy}
-	catch {::sdrapp::rx destroy}
-	catch {::sdrapp::ctl destroy}
+	catch {::radio-ui destroy}
+	catch {::radio-hw destroy}
+	catch {::keyer destroy}
+	catch {::radio-tx destroy}
+	catch {::radio-rx destroy}
+	catch {::radio-ctl destroy}
     }
 
     method repl {} { catch {::radio-ui repl} }

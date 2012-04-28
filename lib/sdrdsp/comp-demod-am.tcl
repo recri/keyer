@@ -17,14 +17,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-demod-am 1.0.0
+package provide sdrdsp::comp-demod-am 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::demod-am
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-demod-am {name args} {
-    return [sdrblk::block $name -type jack -suffix am -factory sdrkit::demod-am {*}$args]
+proc sdrdsp::comp-demod-am {name args} {
+    return [sdrctl::control $name -type jack -suffix am -factory sdrkit::demod-am -enable no {*}$args]
 }
 

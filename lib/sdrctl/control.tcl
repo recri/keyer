@@ -33,23 +33,36 @@ namespace eval sdrctl {}
 # the controller is further down below
 #
 snit::type sdrctl::control {
+    typevariable verbose -array {
+	construct 0 inherit 0 configure 0 destroy 0 require 0
+	enable 0 activate 0 connect 0 disconnect 0 make-connect 0 make-disconnect 0
+	resolution 0 no-resolution 0
+    }
     typevariable typedata -array {
-	exclude-opts {-command -opts -methods -ports -opt-connect-to -opt-connect-from}
+	exclude-opts {
+	    -command -opts -methods -ports -opt-connect-to -opt-connect-from
+	    -server -client -verbose
+	}
+	exclude-methods {}
+	exclude-ports {}
     }
 
     component wrapped
 
-    option -type -default {}  -readonly yes -type sdrctl::ctype
+    option -type -default {}  -readonly yes -type sdrctl::type
     option -control -default {} -readonly yes
     option -container -default {} -readonly yes
 
-    option -root -default {} -readonly yes
+    option -root -default {} -readonly yes; # used by ui components only
+
     option -prefix -default {} -readonly yes
     option -suffix -default {} -readonly yes
     option -name -default {} -readonly yes
 
     option -server -default default -readonly yes
+
     option -opts -default {} -readonly yes
+    option -methods -default {} -readonly yes
     option -ports -default {} -readonly yes
 
     option -require -default {} -readonly yes
@@ -60,64 +73,103 @@ snit::type sdrctl::control {
     option -opt-connect-to -default {} -readonly yes -cgetmethod Delegate
     option -opt-connect-from -default {} -readonly yes -cgetmethod Delegate
 
-    option -enable -default yes -configuremethod Handler
-    option -activate -default yes -configuremethod Handler
+    option -enable -default yes
+    option -activate -default no -configuremethod Handler
 
     delegate option * to wrapped
     delegate method * to wrapped
 
     constructor {args} {
-	# puts "sdrctl::controllee $self constructor {$args}"
+	if {$verbose(construct)} { puts "sdrctl::controll $self constructor {$args}" }
 	$self configure {*}$args
 	$self Inherit -prefix -name
 	$self Inherit -control -control
+	$self Inherit -server -server
 	set options(-name) [string trim "$options(-prefix)-$options(-suffix)" -]
 	foreach pkg $options(-require) { package require $pkg }
 	foreach pkg $options(-factory-require) { package require $pkg }
-	switch $options(-type) {
-	    ctl {
-		#puts "create ctl component $options(-name)"
-		install wrapped using $options(-factory) ::sdrctlx::$options(-name) {*}$options(-factory-options) -command [mymethod command]
-		set options(-opts) [$self Exclude-opts [::sdrctlx::$options(-name) info options]]
-		set options(-methods) [::sdrctlx::$options(-name) info methods]
-		set options(-ports) {}
-	    }
-	    ui {
-		#puts "create ui component $options(-root).$options(-name)"
-		install wrapped using $options(-factory) $options(-root).$options(-name) {*}$options(-factory-options) -command [mymethod command]
-		set options(-opts) [$self Exclude-opts [$options(-root).$options(-name) info options]]
-		set options(-methods) [$options(-root).$options(-name) info methods]
-		set options(-ports) {}
-	    }
-	    dsp {
-		#puts "create dsp component $options(-name)"
-		install wrapped using $options(-factory) ::sdrctlx::$options(-name) {*}$options(-factory-options)
-		::sdrctlx::$options(-name) deactivate
-		set options(-enable) false
-		set options(-activate) false
-		set options(-opts) [$self Exclude-opts [::sdrctlx::$options(-name) info options]]
-		set options(-methods) [::sdrctlx::$options(-name) info methods]
-		set options(-ports) [::sdrctlx::$options(-name) info ports]
-	    }
-	}
-	{*}$options(-control) part-add $options(-name) $self
-	return $self
+	# puts "create $options(-type) component $options(-name)"
+	## okay, lots of abstraction here that m
+	install wrapped using $options(-factory) [$self Wrapped name] {*}$options(-factory-options) {*}[$self Wrapped extra-opts]
+	if {$options(-type) eq {jack}} { $wrapped deactivate }
+	set options(-opts) [$self Wrapped opts]
+	set options(-methods) [$self Wrapped methods]
+	set options(-ports) [$self Wrapped ports]
+	$options(-control) part-add $options(-name) $self
+	if {{finish} in [$wrapped info methods]} { $wrapped finish }
     }
-
+    method {Wrapped name} {} {
+	switch $options(-type) {
+	    ui { return $options(-root).$options(-name) }
+	    default { return ::sdrctlx::$options(-name) }
+	}
+    }
+    method {Wrapped extra-opts} {} {
+	switch $options(-type) {
+	    ctl - ui - hw { return [list -command [mymethod command]] }
+	    jack { return {} }
+	    dsp { return [list -container $self] }
+	}
+    }
+    method {Wrapped opts} {} {
+	if {{-opts} in [$wrapped info options]} {
+	    return [$wrapped cget -opts]
+	}
+	return [Filter-not-in [$wrapped info options] $typedata(exclude-opts)]
+    }
+    method {Wrapped methods} {} {
+	if {{-methods} in [$wrapped info options]} {
+	    return [$wrapped cget -methods]
+	}
+	return [Filter-not-in [$wrapped info methods] $typedata(exclude-methods)]
+    }
+    method {Wrapped ports} {} {
+	if {{-ports} in [$wrapped info options]} {
+	    return [$wrapped cget -ports]
+	} elseif {$options(-type) eq {jack}} {
+	    return [Filter-not-in [$wrapped info ports] $typedata(exclude-ports)]
+	}
+	return {}
+    }
     method resolve {} {
 	#puts "$self resolve $options(-type)"
 	switch $options(-type) {
-	    ctl - ui {
+	    ctl - ui - hw - dsp {
 		foreach conn [$self cget -opt-connect-to] {
-		    # puts "$self opt-connect-to $conn"
+		    if {$verbose(resolution)} { puts "$options(-name) opt-connect-to $conn" }
 		    $self opt-connect-to {*}$conn
 		}
 		foreach conn [$self cget -opt-connect-from] {
-		    # puts "$self opt-connect-from $conn"
+		    if {$verbose(resolution)} {  puts "$options(-name) opt-connect-from $conn" }
 		    $self opt-connect-from {*}$conn
 		}
 	    }
-	    dsp {
+	    jack {
+		foreach opt $options(-opts) {
+		    set candidates [$options(-control) opt-filter [list ctl*$options(-name) $opt]]
+		    if {[llength $candidates] > 1} {
+			error "multiple resolutions (1st pass) for $options(-name):$opt: $candidates"
+		    }
+		    if {[llength $candidates] == 1} {
+			set candidate [lindex $candidates 0]
+			if {$verbose(resolution)} { puts "$options(-name) opt-connect-from $candidate $opt" }
+			$self opt-connect-from {*}$candidate $opt
+			continue
+		    }
+		    if { ! [regexp {^[rt]x-(.*)$} $options(-name) all tail]} {
+			if {$verbose(no-resolution)} { puts "$options(-name): no resolution (1st pass) for $opt" }
+			continue
+		    }
+		    set candidates [$options(-control) opt-filter [list ctl-rxtx*$tail $opt]]
+		    if {[llength $candidates] > 1} { error "multiple resolutions (2nd pass) for $options(-name):$opt: $candidates" }
+		    if {[llength $candidates] == 1} {
+			set candidate [lindex $candidates 0]
+			if {$verbose(resolution)} { puts "$options(-name) opt-connect-from $candidate $opt" }
+			$self opt-connect-from {*}$candidate $opt
+			continue
+		    }
+		    if {$verbose(no-resolution)} { puts "$options(-name): no resolution (2nd pass) for $opt" }
+		}
 	    }
 	}
     }
@@ -127,41 +179,28 @@ snit::type sdrctl::control {
     method opt-connect-from {name2 opt2 opt} { $options(-control) opt-connect $name2 $opt2 $options(-name) $opt }
     method port-connect-to {port name2 port2} { $options(-control) port-connect $options(-name) $port $name2 $port2 }
     method port-connect-from {name2 opt2 opt} { $options(-control) port-connect $name2 $opt2 $options(-name) $opt }
-    method report {opt val args} { {*}$options(-control) part-report $options(-name) $opt $val {*}$args }
+    method report {opt val args} { $options(-control) part-report $options(-name) $opt $val {*}$args }
     
     method Inherit {opt from_opt} {
-	if {$options(-container) ne {} && $options($opt) eq {}} {
-	    set options($opt) [{*}$options(-container) cget -name]
+	if {$options($opt) eq {}} {
+	    set options($opt) [$options(-container) cget $from_opt]
 	}
     }
-    
-    method Exclude-opts {opts} {
-	set new {}
-	foreach o $opts { if {$o ni $typedata(exclude-opts)} { lappend new $o } }
-	return $new
-    }
 
-    method {Handler -enable} {val} {
-	set options(-enable) $val
+    proc Filter-not-in {list nilist} {
+	set new {}
+	foreach i $list { if {$i ni $nilist} { lappend new $i } }
+	return $new
     }
 
     method {Handler -activate} {val} {
 	set options(-activate) $val
-	switch $options(-type) {
-	    dsp {
-		::sdrctlx::$options(-name) activate
-	    }
-	}
+	if {$options(-type) eq {dsp}} { ::sdrctlx::$options(-name) [expr {$val?{activate}:{deactivate}}] }
     }
 
     method Delegate {opt} {
-	if {[catch {$wrapped cget $opt} value]} {
-	    #puts "$self Delegate $opt returns $options($opt)"
-	    return $options($opt)
-	} else {
-	    #puts "$self Delegate $opt returns $value"
-	    return $value
-	}
+	if {$opt in [$wrapped info options]} { return [$wrapped cget $opt] }
+	return $options($opt)
     }
 }
 
@@ -176,7 +215,7 @@ snit::type sdrctl::control {
 #
 
 snit::type sdrctl::controller {
-    option -partof -readonly yes
+    option -container -readonly yes
     option -server -readonly yes
 
     variable data -array {}

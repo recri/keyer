@@ -23,14 +23,14 @@ package require Tk
 package require snit
 
 snit::widget sdrui::tree {
-    option -partof -readonly yes
+    option -container -readonly yes
     option -control -readonly yes
     
     component treeview
     component scrollbar
 
     delegate method * to treeview except {update}
-    delegate option * to treeview except {-partof -control}
+    delegate option * to treeview except {-container -control}
 
     variable columns {value}
     variable items -array {}
@@ -55,7 +55,7 @@ snit::widget sdrui::tree {
 	    }
 	}
 	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
+	set options(-control) [$options(-container) cget -control]
 	$self update
 	bind $win.t <Button-1> [mymethod pick %W %x %y]
 	bind $win.t <Button-3> [mymethod inform %W %x %y]

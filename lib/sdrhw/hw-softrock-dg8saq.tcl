@@ -21,38 +21,38 @@ package provide sdrhw::hw-softrock-dg8saq 1.0.0
 
 package require snit
 
-snit::type sdrhw::hw-softrock-dg8saq {
+namespace eval sdrhw {}
 
-    option -partof -readonly true
-    option -freq -default 7.050 -configuremethod opt-handle
-    option -type hw
-    option -prefix {}
-    option -suffix hw
-    option -control {}
-    option -enable yes
-    option -activate no
+proc sdrhw::hw-softrock-dg8saq {name args} {
+    return [sdrctl::control $name -type hw -suffix softrock -factory sdrhw::softrock-dg8saq {*}$args]
+}
+
+snit::type sdrhw::softrock-dg8saq {
+    option -ports -default {}
+    option -opts -default {-freq}
+    option -methods -default {}
+
+    option -opt-connect-from { {ctl-rxtx-tuner -hw-freq -freq} }
+
+    option -freq -default 7.050 -configuremethod Handler
+
+    option -command {}
+
+    variable data -array {
+	activate 0
+    }
 
     constructor {args} {
 	# puts "radio-hw-softrock-dg8saq $self constructor $args"
-	array set tmp $args
-	set options(-partof) [from args -partof]
-	set options(-suffix) [from args -suffix]
-	set options(-prefix) [$options(-partof) cget -name]
-	set options(-name) [string trim $options(-prefix)-$options(-suffix) -]
-	set options(-control) [$options(-partof) cget -control]
 	$self configure {*}$args
-	$options(-control) add $options(-name) $self
     }
 
-    method controls {} { return {{-freq freq Freq 7050000 7050000 }} }
-    method control {args} { $self configure {*}$args }
-    method controlget {opt} { return [$self configure $opt] }
+    method activate {} { set data(activate) 1 }
+    method deactivate {} { set data(activate) 0 }
 
-    method connect {} {}
-
-    method {opt-handle -freq} {val} {
+    method {Handler -freq} {val} {
 	# puts "hw-softrock-dg8saq -freq $val"
 	set options(-freq) $val
-	if {$options(-activate)} { exec usbsoftrock set freq [expr {$val/1e6}] }
+	if {$data(activate)} { exec usbsoftrock set freq [expr {$val/1e6}] }
     }
 }

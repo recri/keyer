@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-gain 1.0.0
+package provide sdrdsp::comp-gain 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::gain
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-gain {name args} {
-    return [sdrblk::block $name -type jack -suffix gain -factory sdrkit::gain {*}$args]
+proc sdrdsp::comp-gain {name args} {
+    return [sdrctl::control $name -type jack -suffix gain -factory sdrkit::gain -enable no {*}$args]
 }

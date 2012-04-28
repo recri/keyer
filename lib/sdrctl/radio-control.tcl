@@ -33,9 +33,12 @@ namespace eval sdrctlw {}
 ##
 ## start the radio control components
 ##
-proc sdrctl::radio-control {name args} {
-    set control [sdrctl::controller $name {*}$args]
-    set root [sdrctl::control ::sdrctlw::ctl -type ctl -prefix {} -suffix ctl -factory sdrctl::control-stub -control $control]
+proc sdrctl::radio-controller {name args} {
+    return [sdrctl::controller $name {*}$args]
+}
+
+proc sdrctl::radio-controls {args} {
+    set root [sdrctl::control ::sdrctlw::ctl -type ctl -prefix {} -suffix ctl -factory sdrctl::control-stub {*}$args]
     foreach {suffix factory opts} {
 	rxtx sdrctl::control-stub {}
 	rx sdrctl::control-stub {}
@@ -65,9 +68,8 @@ proc sdrctl::radio-control {name args} {
 	keyer-iambic sdrctl::control-keyer-iambic {}
 	keyer-tone sdrctl::control-keyer-tone {}
     } {
-	sdrctl::control ::sdrctlw::$suffix -type ctl -suffix $suffix -factory $factory -control $control -factory-options $opts -container $root
+	sdrctl::control ::sdrctlw::$suffix -type ctl -suffix $suffix -factory $factory -factory-options $opts -container $root
     }
-    return $control
 }
 
 ##
@@ -75,11 +77,8 @@ proc sdrctl::radio-control {name args} {
 ##
 snit::type sdrctl::control-mode {
     option -command {}
+
     option -mode -default CWU -configuremethod Opt-handler -type sdrctl::mode
-    option -opts {-mode}
-    option -ports {}
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method {Opt-handler -mode} {val} {
 	set options(-mode) $val
@@ -92,17 +91,18 @@ snit::type sdrctl::control-mode {
 ##
 snit::type sdrctl::control-tune {
     option -command {}
-    option -mode -default CWU -configuremethod Opt-handler -type sdrctl::mode
-    option -turn-resolution -default 1000 -configuremethod Opt-handler
-    option -freq -default 7050000 -configuremethod Opt-handler
-    option -lo-freq -default 10000 -configuremethod Opt-handler
-    option -cw-freq -default 600 -configuremethod Opt-handler
-    option -carrier-freq -default 7040000 -configuremethod Opt-handler
-    option -hw-freq -default 7039400 -configuremethod Opt-handler
-    option -opt-connect-to {}
     option -opt-connect-from {{ctl-rxtx-mode -mode -mode}}
 
-    method compute-carrier {} {
+    option -mode -default CWU -configuremethod Retune -type sdrctl::mode
+    option -turn-resolution -default 1000 -configuremethod Opt-handler
+    option -freq -default 7050000 -configuremethod Retune
+    option -lo-freq -default 10000 -configuremethod Retune
+    option -cw-freq -default 600 -configuremethod Retune
+    option -carrier-freq -default 7040000 -configuremethod Opt-handler
+    option -hw-freq -default 7039400 -configuremethod Opt-handler
+
+    method Retune {opt val} {
+	set options($opt) $val
 	switch $options(-mode) {
 	    CWU { set options(-carrier-freq) [expr {$options(-freq)-$options(-cw-freq)}] }
 	    CWL { set options(-carrier-freq) [expr {$options(-freq)+$options(-cw-freq)}] }
@@ -111,28 +111,12 @@ snit::type sdrctl::control-tune {
 	set options(-hw-freq) [expr {$options(-carrier-freq)-$options(-lo-freq)}]
 	{*}$options(-command) report -carrier-freq $options(-carrier-freq)
 	{*}$options(-command) report -hw-freq $options(-hw-freq)
+	{*}$options(-command) report $opt $val
     }
-    method {Opt-handler -mode} {val} {
-	set options(-mode) $val
-	$self compute-carrier
+    method {Opt-handler} {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
     }
-    method {Opt-handler -freq} {val} {
-	set options(-freq) $val
-	$self compute-carrier
-	{*}$options(-command) report -freq $options(-freq)
-    }
-    method {Opt-handler -lo-freq} {val} {
-	set options(-lo-freq) $val
-	$self compute-carrier
-	{*}$options(-command) report -lo-freq $options(-lo-freq)
-    }
-    method {Opt-handler -cw-freq} {val} {
-	set options(-cw-freq) $val
-	$self compute-carrier
-	{*}$options(-command) report -cw-freq $options(-cw-freq)
-    }
-    method {Opt-handler -carrier-freq} {val} { }
-    method {Opt-handler -hw-freq} {val} { }
 }
 
 ##
@@ -140,47 +124,48 @@ snit::type sdrctl::control-tune {
 ##
 snit::type sdrctl::control-rxtx {
     option -command {}
+
     option -mode -default CWU -configuremethod Opt-handler -type sdrctl::mode
     option -mox -default 0 -configuremethod Opt-handler 
 
-    option -opt-connect-to {}
-    option -opt-connect-from {}
-
-    method {Opt-handler -mode} {val} { }
-    method {Opt-handler -mox} {val} { }
+    method {Opt-handler} {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
+    }
 }
 
 ##
 ## handle band setting controls
 ##
 snit::type sdrctl::control-band {
-    # incoming options
-    option -band -configuremethod Opt-handler 
-    option -channel -configuremethod Opt-handler 
-    # outgoing options
-    option -label -readonly true
-    option -low -readonly true
-    option -high -readonly true
-    option -mode -default CWU -readonly true -type sdrctl::mode
-    option -filter-width -readonly true
-    option -freq -readonly true
-    # required options
-    option -opts -default {-band -channel -label -low -high -mode -filter -freq} -readonly true
-    option -ports -default {} -readonly true
     option -command -default {} -readonly true
     option -opt-connect-to { {-mode ctl-rxtx-mode -mode} {-filter-width ctl-rxtx-if-bpf -width} {-freq ctl-rxtx-tuner -freq} }
-    option -opt-connect-from {}
+    # incoming options
+    option -band -configuremethod Band-handler 
+    option -channel -configuremethod Channel-handler 
+    # outgoing options
+    option -label -readonly true -configuremethod Opt-handler
+    option -low -readonly true -configuremethod Opt-handler
+    option -high -readonly true -configuremethod Opt-handler
+    option -mode -default CWU -readonly true -type sdrctl::mode -configuremethod Opt-handler
+    option -filter-width -readonly true -configuremethod Opt-handler
+    option -freq -readonly true -configuremethod Opt-handler
 
-    method {Opt-handler -band} {val} {
-	set options(-band) $val
-	lassign [sdrutil::band-data-band-range-hertz {*}$val] options(-band-low) options(-band-high)
-	set freq [expr {($options(-band-low)+$options(-band-high))/2}]
-	{*}$options(-command) report -freq $freq
+    method Band-handler {opt val} {
+	set options($opt) $val
+	# could also extract label, mode, filter width, and channel step
+	lassign [sdrutil::band-data-band-range-hertz {*}$val] low high
+	$self configure -freq [expr {($options(-band-low)+$options(-band-high))/2}] -low $low -high $high
+	{*}$options(-command) report $opt $val
     }
-    method {Opt-handler -channel} {val} {
-	set options(-channel) $val
-	set freq [sdrutil::band-data-channel-freq-hertz {*}$val]
-	{*}$options(-command) report -freq $freq
+    method Channel-handler {opt val} {
+	set options($opt) $val
+	$self configure -freq [sdrutil::band-data-channel-freq-hertz {*}$val]
+	{*}$options(-command) report $opt $val
+    }
+    method {Opt-handler} {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
     }
 }
 
@@ -188,42 +173,23 @@ snit::type sdrctl::control-band {
 ## handle filter controls
 ##
 snit::type sdrctl::control-filter {
+    option -command -default {} -readonly true
+    option -opt-connect-from {{ctl-rxtx-mode -mode -mode} {ctl-rxtx-tuner -cw-freq -cw-freq}}
     # incoming opts
-    option -mode -default CWU -configuremethod Opt-handler -type sdrctl::mode
-    option -width -default 400 -configuremethod Opt-handler
-    option -cw-freq -default 600 -configuremethod Opt-handler
+    option -mode -default CWU -configuremethod Retune -type sdrctl::mode
+    option -width -default 400 -configuremethod Retune
+    option -cw-freq -default 600 -configuremethod Retune
     option -length -default 128 -configuremethod Opt-handler
     # outgoing opts
-    option -bpf-low -default 400 -readonly true
-    option -bpf-high -default 800 -readonly true
-    option -bpf-length -default 128 -readonly true
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-mode -width -cw-freq -bpf-low -bpf-high} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {{ctl-rxtx-mode -mode -mode} {ctl-rxtx-tuner -cw-freq -cw-freq}}
+    option -low -default 400 -configuremethod Opt-handler
+    option -high -default 800 -configuremethod Opt-handler
 
-    method {Opt-handler -mode} {val} {
-	set options(-mode) $val
-	{*}$options(-command) report -mode $val
+    method {Opt-handler} {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
     }
-    method {Opt-handler -width} {val} {
-	set options(-width) $val
-	$self Compute-filter
-	{*}$options(-command) report -width $val
-    }
-    method {Opt-handler -cw-freq} {val} {
-	set options(-cw-freq) $val
-	$self Compute-filter
-	{*}$options(-command) report -cw-freq $val
-    }
-    method {Opt-handler -length} {val} {
-	set options(-length) $val
-	{*}$options(-command) report -length $val
-	{*}$options(-command) report -bpf-length $val
-    }
-    method Compute-filter {} {
+    method Retune {opt val} {
+	set options($opt) $val
 	set c $options(-cw-freq)
 	set w $options(-width)
 	set h [expr {$options(-width)/2.0}]
@@ -240,7 +206,8 @@ snit::type sdrctl::control-filter {
 	    DIGU { set low 150; set high [expr {150+$w}] }
 	    default { error "missed mode $options(-mode)" }
 	}
-	{*}$options(-command) report -bpf-low $low -bpf-high $high
+	{*}$options(-command) report $opt $val
+	$self configure -low $low -high $high
     }
 }
 
@@ -248,16 +215,10 @@ snit::type sdrctl::control-filter {
 ## handle gain controls
 ##
 snit::type sdrctl::control-af-gain {
+    option -command -default {} -readonly true
     # incoming opts
     option -gain -default 0 -configuremethod Opt-handler -type sdrctl::gain
     option -mute -default false -configuremethod Opt-handler -type sdrctl::mute
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-gain -mute} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
-    option -command {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -269,14 +230,9 @@ snit::type sdrctl::control-af-gain {
 ## handle agc controls
 ##
 snit::type sdrctl::control-agc {
+    option -command -default {} -readonly true
     # incoming opts
     option -mode -default med -configuremethod Opt-handler -type sdrctl::agc-mode
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-mode} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -288,14 +244,9 @@ snit::type sdrctl::control-agc {
 ## handle leveler controls
 ##
 snit::type sdrctl::control-leveler {
+    option -command -default {} -readonly true
     # incoming opts
     option -mode -default leveler -configuremethod Opt-handler -type sdrctl::leveler-mode
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-mode} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -307,15 +258,12 @@ snit::type sdrctl::control-leveler {
 ## handle keyer sidetone controls
 ##
 snit::type sdrctl::control-keyer-tone {
+    option -command -default {} -readonly true
+    option -opt-connect-to { {-freq ctl-rxtx-tuner -cw-freq} }
+    option -opt-connect-from { {ctl-rxtx-tuner -cw-freq -freq} }
     # incoming opts
     option -freq -default 600 -configuremethod Opt-handler -type sdrctl::hertz
     option -spot -default 0 -configuremethod Opt-handler -type sdrctl::spot
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-freq -spot} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to { {-freq ctl-rxtx-tuner -cw-freq} }
-    option -opt-connect-from { {ctl-rxtx-tuner -cw-freq -freq} }
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -327,16 +275,11 @@ snit::type sdrctl::control-keyer-tone {
 ## handle keyer debounce controls
 ##
 snit::type sdrctl::control-keyer-debounce {
+    option -command -default {} -readonly true
     # incoming opts
     option -debounce -default 0 -configuremethod Opt-handler -type sdrctl::debounce
     option -period -default 0.1 -configuremethod Opt-handler -type sdrctl::debounce-period
     option -steps -default 4 -configuremethod Opt-handler -type sdrctl::debounce-steps
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-freq -spot} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -348,14 +291,9 @@ snit::type sdrctl::control-keyer-debounce {
 ## handle keyer iambic controls
 ##
 snit::type sdrctl::control-keyer-iambic {
+    option -command -default {} -readonly true
     # incoming opts
     option -iambic -default ad5dz -configuremethod Opt-handler -type sdrctl::iambic
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-iambic} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -367,15 +305,9 @@ snit::type sdrctl::control-keyer-iambic {
 ## handle rf gain controls
 ##
 snit::type sdrctl::control-rf-gain {
+    option -command -default {} -readonly true
     # incoming opts
     option -gain -default 0 -configuremethod Opt-handler -type sdrctl::gain
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-gain} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
-    option -command {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -387,15 +319,10 @@ snit::type sdrctl::control-rf-gain {
 ## handle iq-balance controls
 ##
 snit::type sdrctl::control-iq-balance {
+    option -command -default {} -readonly true
     # incoming opts
     option -sine-phase -default 0 -configuremethod Opt-handler -type sdrctl::sine-phase
     option -linear-gain -default 1.0 -configuremethod Opt-handler -type sdrctl::linear-gain
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-sine-phase -linear-gain} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -407,14 +334,9 @@ snit::type sdrctl::control-iq-balance {
 ## handle iq-correct controls
 ##
 snit::type sdrctl::control-iq-correct {
+    option -command -default {} -readonly true
     # incoming opts
     option -mu -default 0 -configuremethod Opt-handler -type sdrctl::iq-correct
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-mu} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -426,14 +348,9 @@ snit::type sdrctl::control-iq-correct {
 ## handle iq-delay controls
 ##
 snit::type sdrctl::control-iq-delay {
+    option -command -default {} -readonly true
     # incoming opts
     option -delay -default 0 -configuremethod Opt-handler -type sdrctl::iq-delay
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-delay} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -445,14 +362,9 @@ snit::type sdrctl::control-iq-delay {
 ## handle iq-swap controls
 ##
 snit::type sdrctl::control-iq-swap {
+    option -command -default {} -readonly true
     # incoming opts
     option -swap -default 0 -configuremethod Opt-handler -type sdrctl::iq-swap
-    # required opts
-    option -command -default {} -readonly true
-    option -opts -default {-swap} -readonly true
-    option -ports -default {} -readonly true
-    option -opt-connect-to {}
-    option -opt-connect-from {}
 
     method Opt-handler {opt val} {
 	set options($opt) $val
@@ -464,14 +376,11 @@ snit::type sdrctl::control-iq-swap {
 ## handle local oscillator controls
 ##
 snit::type sdrctl::control-if-mix {
-    # incoming opts
-    option -freq -default 10000 -configuremethod Opt-handler -type sdrctl::hertz
-    # required opts
     option -command -default {} -readonly true
-    option -opts -default {-freq} -readonly true
-    option -ports -default {} -readonly true
     option -opt-connect-to { {-freq ctl-rxtx-tuner -lo-freq} }
     option -opt-connect-from { {ctl-rxtx-tuner -lo-freq -freq} }
+    # incoming opts
+    option -freq -default 10000 -configuremethod Opt-handler -type sdrctl::hertz
 
     method Opt-handler {opt val} {
 	set options($opt) $val

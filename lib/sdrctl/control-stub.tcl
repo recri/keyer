@@ -35,11 +35,10 @@ snit::type sdrctl::control-stub {
     constructor {args} {
 	$self configure {*}$args
 	#puts [$self info options]
-	return $self
+	#return $self
     }
 
-    destructor {
-    }
+    destructor {}
 
     method resolve {} {}
 }

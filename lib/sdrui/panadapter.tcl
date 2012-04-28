@@ -30,7 +30,7 @@ snit::widget sdrui::panadapter {
     option -max 0
     option -connect {}
     option -server -default default -readonly true
-    option -partof -readonly yes
+    option -container -readonly yes
     option -control -readonly yes
     option -input -default {} -configuremethod opt-handler
 
@@ -64,7 +64,7 @@ snit::widget sdrui::panadapter {
 
     constructor {args} {
 	$self configure {*}$args
-	pack [sdrui::tk-panadapter $win.p {*}[filter-options {-partof -control -input} [array get options]]] -side top -fill both -expand true
+	pack [sdrui::tk-panadapter $win.p {*}[filter-options {-container -control -input} [array get options]]] -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
 
 	# spectrum selection

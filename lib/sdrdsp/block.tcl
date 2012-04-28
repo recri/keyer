@@ -17,11 +17,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::block 1.0.0
+package provide sdrdsp::block 1.0.0
 
 package require snit
 
-package require sdrblk::comp-stub
+package require sdrdsp::comp-stub
 package require sdrkit::jack
 
 #
@@ -50,7 +50,7 @@ package require sdrkit::jack
 
 namespace eval sdrblx {}
 
-snit::type sdrblk::block {
+snit::type sdrdsp::block {
     ##
     ## this type variable, shared among all instances, enables verbose messages
     ##
@@ -149,7 +149,7 @@ snit::type sdrblk::block {
 	if {$options(-factory) ne {}} {
 	    $options(-factory) ::sdrblx::$options(-name) -server $options(-server)
 	} else {
-	    sdrblk::comp-stub ::sdrblx::$options(-name)
+	    sdrdsp::comp-stub ::sdrblx::$options(-name)
 	}
 	$options(-control) add $options(-name) $self
 	$self $options(-type) constructor

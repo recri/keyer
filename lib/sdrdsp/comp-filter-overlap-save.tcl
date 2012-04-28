@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-filter-overlap-save 1.0.0
+package provide sdrdsp::comp-filter-overlap-save 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::filter-overlap-save
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-filter-overlap-save {name args} {
-    return [sdrblk::block $name -type jack -suffix bpf -factory sdrkit::filter-overlap-save {*}$args]
+proc sdrdsp::comp-filter-overlap-save {name args} {
+    return [sdrctl::control $name -type jack -suffix bpf -factory sdrkit::filter-overlap-save -enable no {*}$args]
 }    

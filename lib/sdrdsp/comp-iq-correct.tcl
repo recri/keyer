@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-iq-correct 1.0.0
+package provide sdrdsp::comp-iq-correct 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::iq-correct
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-iq-correct {name args} {
-    return [sdrblk::block $name -type jack -suffix iq-correct -factory sdrkit::iq-correct {*}$args]
+proc sdrdsp::comp-iq-correct {name args} {
+    return [sdrctl::control $name -type jack -suffix iq-correct -factory sdrkit::iq-correct -enable no {*}$args]
 }

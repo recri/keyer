@@ -28,7 +28,7 @@ package require sdrkit::jack
 package require sdrui::tk-waterfall
 package require sdrui::tk-spectrum
 package require sdrui::tk-frequency
-package require sdrblk::capture
+package require sdrdsp::capture
 
 snit::widgetadaptor sdrui::tk-panadapter {
     option -zoom 1.0
@@ -118,7 +118,7 @@ snit::widgetadaptor sdrui::tk-panadapter {
 	install spectrum using sdrui::tk-spectrum $win.s
 	install frequency using sdrui::tk-frequency $win.f
 	install waterfall using sdrui::tk-waterfall $win.w
-	install capture using sdrblk::capture %AUTO% -type spectrum -server $options(-server) -period $options(-period) -size $options(-size) -update [mymethod update]
+	install capture using sdrdsp::capture %AUTO% -type spectrum -server $options(-server) -period $options(-period) -size $options(-size) -update [mymethod update]
 	$hull add $win.s -weight 1
 	$hull add $win.f -weight 0
 	$hull add $win.w -weight 1

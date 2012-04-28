@@ -41,24 +41,25 @@ snit::type sdrui::ui-notebook {
 	spectrum 0
     }
 
-    option -partof -readonly yes
+    option -container -readonly yes
     option -control -readonly yes
+    option -name {}
     
     constructor {args} {
 	$self configure {*}$args
-	set options(-control) [$options(-partof) cget -control]
+	set options(-control) [$options(-container) cget -control]
 	menu .menu -tearoff no
 	foreach label {file edit view} {
 	    .menu add cascade -label $label -menu .menu.$label
 	    menu .menu.$label -tearoff no
 	    if {$label eq {view}} {
-		foreach view {spectrum tree port-connections opt-connections console} {
+		foreach view {spectrum tree connections console} {
 		    .menu.view add command -label $view -command [mymethod view $view]
 		}
 	    }
 	}
 	. configure -menu .menu
-	pack [sdrui::ui-radio-panel .radio -partof $self -control $options(-control)] -fill both -expand true
+	pack [sdrui::ui-radio-panel .radio -container $self -control $options(-control)] -fill both -expand true
     }
 
     method view {window} {
@@ -70,7 +71,7 @@ snit::type sdrui::ui-notebook {
 	    default {
 		if { ! [winfo exists .$window]} {
 		    toplevel .$window
-		    pack [$window .$window.t -partof $self -control $options(-control)] -fill both -expand true
+		    pack [$window .$window.t -container $self -control $options(-control)] -fill both -expand true
 		    wm title .$window sdrkit:$window
 		} else {
 		    wm deiconify .$window

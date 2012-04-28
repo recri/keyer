@@ -17,13 +17,13 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-iq-balance 1.0.0
+package provide sdrdsp::comp-iq-balance 1.0.0
 
-package require sdrblk::block
+package require sdrctl::control
 package require sdrkit::iq-balance
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-proc sdrblk::comp-iq-balance {name args} {
-    return [sdrblk::block $name -type jack -suffix iq-balance -factory sdrkit::iq-balance {*}$args]
+proc sdrdsp::comp-iq-balance {name args} {
+    return [sdrctl::control $name -type jack -suffix iq-balance -factory sdrkit::iq-balance -enable no {*}$args]
 }

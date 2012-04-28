@@ -26,12 +26,12 @@ package provide sdrapp::signal-generator 1.0.0
 
 package require snit
 
-package require sdrblk::signal-generator-control
-package require sdrblk::block
+package require sdrdsp::signal-generator-control
+package require sdrdsp::block
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-snit::type sdrblk::signal-generator {
+snit::type sdrdsp::signal-generator {
     component control
     component sg
     component ui
@@ -44,12 +44,12 @@ snit::type sdrblk::signal-generator {
 
     constructor {args} {
 	$self configure {*}$args
-	install control using ::sdrblk::signal-generator-control %AUTO% -partof $self
+	install control using ::sdrdsp::signal-generator-control %AUTO% -container $self
 	set options(-control) $control
-	install sg using ::sdrblk::sg %AUTO% -partof $self
+	install sg using ::sdrdsp::sg %AUTO% -container $self
 	if {$options(-ui)} {
-	    package require sdrblk::signal-generator-ui-$options(-ui-type)
-	    install ui using ::sdrblk::radio-ui-$options(-ui-type) %AUTO% -partof $self
+	    package require sdrdsp::signal-generator-ui-$options(-ui-type)
+	    install ui using ::sdrdsp::radio-ui-$options(-ui-type) %AUTO% -container $self
 	}
     }
 
@@ -66,18 +66,18 @@ snit::type sdrblk::signal-generator {
 
 proc sdrapp::sg {name args} {
     set seq {sdrapp::sg-source sdrapp::sg-gain}
-    return [sdrblk::block $name -type sequence -suffix sg -sequence $seq {*}$args]    
+    return [sdrdsp::block $name -type sequence -suffix sg -sequence $seq {*}$args]    
 }
 proc sdrapp::sg-source {name args} {
-    set par {sdrapp::sg-osc1 sdrapp::sg-osc2 sdrblk::comp-noise sdrblk::comp-iq-noise}
-    return [sdrblk::block $name -type parallel -suffix src -parallel $par {*}$args]
+    set par {sdrapp::sg-osc1 sdrapp::sg-osc2 sdrdsp::comp-noise sdrdsp::comp-iq-noise}
+    return [sdrdsp::block $name -type parallel -suffix src -parallel $par {*}$args]
 }
 proc sdrapp::sg-osc1 {name args} {
-    set seq {sdrblk::comp-oscillator}
-    return [sdrblk::block $name -type jack -suffix osc1 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
+    set seq {sdrdsp::comp-oscillator}
+    return [sdrdsp::block $name -type jack -suffix osc1 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
 }
-proc sdrblk::sg-osc1 {name args} {
-    return [sdrblk::block $name -type jack -suffix osc2 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
+proc sdrdsp::sg-osc1 {name args} {
+    return [sdrdsp::block $name -type jack -suffix osc2 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
 }
 
 if {0} {

@@ -72,6 +72,7 @@ snit::widgetadaptor sdrui::filter-select {
 	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
 	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
 	}
+	after 100 [mymethod configure -mode $options(-mode)]
     }
     
     method {opt-handler -mode} {val} {

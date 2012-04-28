@@ -17,12 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrblk::comp-stub 1.0.0
+package provide sdrdsp::comp-stub 1.0.0
 
 package require snit
 
-namespace eval sdrblk {}
+namespace eval sdrdsp {}
 
-snit::type sdrblk::comp-stub {
+snit::type sdrdsp::comp-stub {
     option -verbose 0
 }
