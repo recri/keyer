@@ -20,7 +20,7 @@ package provide sdrtcl::jack 1.0.0
 
 package require sdrtcl::jack-client
 
-namespace eval ::sdrkit {
+namespace eval ::sdrtcl {
     if {[info exists ::env(JACK_SERVER)]} {
 	set jack(default) [sdrtcl::jack-client jack-$::env(JACK_SERVER)-[pid] -server $::env(JACK_SERVER)]
     } else {

@@ -12,6 +12,14 @@
    Replace the thumb with a line and thumb.  Grabbing the thumb allows
    the scale to be zoomed in and out.  Grabbing the dial anywhere else
    allows the dial to be turned.
+** TODO - Another multi-dial idea, different thumbs for different functions
+   The dial could have alternate thumbs on it.  Touching an alternate
+   thumb, or even hovering, switches the dial and readout to other
+   functions.  So all the tuneable controls are available on the dial.
+   The dial could change shape as different functions are accessed.
+   The alternate thumbs could hold their dialed locations, rather than
+   rotating when another function is being tuned, so they provide a
+   visual cue to their tuned values.
 ** TODO - Make the bottom notebook collapsable.
    One tab can unpack the notebook contents, or each tab can pack on
    select.
