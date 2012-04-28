@@ -22,7 +22,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/demod_am.h"
+#include "../dspmath/demod_am.h"
 #include "framework.h"
 
 /*

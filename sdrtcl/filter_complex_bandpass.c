@@ -21,8 +21,8 @@
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/dmath.h"
-#include "../sdrkit/filter_complex_bandpass.h"
+#include "../dspmath/dspmath.h"
+#include "../dspmath/filter_complex_bandpass.h"
 #include "framework.h"
 
 typedef filter_complex_bandpass_options_t options_t;

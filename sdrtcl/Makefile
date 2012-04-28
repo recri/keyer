@@ -95,7 +95,7 @@ libdir-clean::
 libdir-all-clean::
 	cd $(LIBDIR) && make all-clean
 
-$(LIBDIR)/agc.so: agc.c framework.h ../sdrkit/dmath.h ../sdrkit/agc.h
+$(LIBDIR)/agc.so: agc.c framework.h ../dspmath/dspmath.h ../dspmath/agc.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(FFTW3_LIBS) $(LIBS)
 
 $(LIBDIR)/audio_tap.so: audio_tap.c framework.h
@@ -104,46 +104,46 @@ $(LIBDIR)/audio_tap.so: audio_tap.c framework.h
 $(LIBDIR)/constant.so: constant.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_am.so: demod_am.c framework.h ../sdrkit/demod_am.h
+$(LIBDIR)/demod_am.so: demod_am.c framework.h ../dspmath/demod_am.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_fm.so: demod_fm.c framework.h ../sdrkit/demod_fm.h
+$(LIBDIR)/demod_fm.so: demod_fm.c framework.h ../dspmath/demod_fm.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_sam.so: demod_sam.c framework.h ../sdrkit/demod_sam.h
+$(LIBDIR)/demod_sam.so: demod_sam.c framework.h ../dspmath/demod_sam.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_complex_bandpass.so: filter_complex_bandpass.c framework.h ../sdrkit/filter_complex_bandpass.h
+$(LIBDIR)/filter_complex_bandpass.so: filter_complex_bandpass.c framework.h ../dspmath/filter_complex_bandpass.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../sdrkit/filter_biquad.h
+$(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../dspmath/filter_biquad.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_fir.so: filter_FIR.c framework.h ../sdrkit/filter_FIR.h
+$(LIBDIR)/filter_fir.so: filter_FIR.c framework.h ../dspmath/filter_FIR.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_overlap_save.so: filter_overlap_save.c framework.h ../sdrkit/filter_overlap_save.h ../sdrkit/filter_FIR.h
+$(LIBDIR)/filter_overlap_save.so: filter_overlap_save.c framework.h ../dspmath/filter_overlap_save.h ../dspmath/filter_FIR.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(FFTW3_LIBS) $(LIBS)
 
-$(LIBDIR)/fftw.so: fftw.c framework.h ../sdrkit/dmath.h
+$(LIBDIR)/fftw.so: fftw.c framework.h ../dspmath/dspmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/gain.so: gain.c framework.h ../sdrkit/dmath.h
+$(LIBDIR)/gain.so: gain.c framework.h ../dspmath/dspmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/iq_balance.so: iq_balance.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_balance.h
+$(LIBDIR)/iq_balance.so: iq_balance.c framework.h ../dspmath/dspmath.h ../dspmath/iq_balance.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/iq_correct.so: iq_correct.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_correct.h
+$(LIBDIR)/iq_correct.so: iq_correct.c framework.h ../dspmath/dspmath.h ../dspmath/iq_correct.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/iq_delay.so: iq_delay.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/iq_noise.so: iq_noise.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_noise.h
+$(LIBDIR)/iq_noise.so: iq_noise.c framework.h ../dspmath/dspmath.h ../dspmath/iq_noise.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/iq_rotation.so: iq_rotation.c framework.h ../sdrkit/dmath.h ../sdrkit/iq_rotation.h
+$(LIBDIR)/iq_rotation.so: iq_rotation.c framework.h ../dspmath/dspmath.h ../dspmath/iq_rotation.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/iq_swap.so: iq_swap.c framework.h
@@ -155,84 +155,84 @@ $(LIBDIR)/jack_client.so: jack_client.c framework.h
 $(LIBDIR)/jack_ctl.so: jack_ctl.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACKSERVER_LIBS) $(LIBS)
 
-$(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../sdrkit/lo_mixer.h
+$(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../dspmath/lo_mixer.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/meter_tap.so: meter_tap.c framework.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../sdrkit/midi_buffer.h
+$(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../dspmath/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/midi_tap.so: midi_tap.c framework.h ../sdrkit/ring_buffer.h
+$(LIBDIR)/midi_tap.so: midi_tap.c framework.h ../dspmath/ring_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/mixer.so: mixer.c framework.h ../sdrkit/dmath.h
+$(LIBDIR)/mixer.so: mixer.c framework.h ../dspmath/dspmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/modul_am.so: modul_am.c framework.h ../sdrkit/modul_am.h
+$(LIBDIR)/modul_am.so: modul_am.c framework.h ../dspmath/modul_am.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/noise.so: noise.c framework.h ../sdrkit/dmath.h ../sdrkit/noise.h
+$(LIBDIR)/noise.so: noise.c framework.h ../dspmath/dspmath.h ../dspmath/noise.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator_f.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_f.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCF_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator_t.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_t.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCT_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator_z.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_z.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCZ_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator_fd.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_fd.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCFD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator_td.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_td.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCTD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../sdrkit/dmath.h ../sdrkit/oscillator.h
+$(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCZD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/spectrum_tap.so: spectrum_tap.c framework.h ../sdrkit/window.h ../sdrkit/polyphase_fft.h
+$(LIBDIR)/spectrum_tap.so: spectrum_tap.c framework.h ../dspmath/window.h ../dspmath/polyphase_fft.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/window.so: window.c framework.h ../sdrkit/window.h
+$(LIBDIR)/window.so: window.c framework.h ../dspmath/window.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/window_polyphase.so: window_polyphase.c framework.h ../sdrkit/polyphase_fft.h
+$(LIBDIR)/window_polyphase.so: window_polyphase.c framework.h ../dspmath/polyphase_fft.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/morse_timing.h ../sdrkit/morse_coding.h
+$(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/morse_timing.h ../dspmath/morse_coding.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../sdrkit/midi.h ../sdrkit/debouncer.h
+$(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../dspmath/midi.h ../dspmath/debouncer.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/ring_buffer.h
+$(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/ring_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_detone.so: keyer_detone.c framework.h ../sdrkit/midi.h ../sdrkit/filter_goertzel.h
+$(LIBDIR)/keyer_detone.so: keyer_detone.c framework.h ../dspmath/midi.h ../dspmath/filter_goertzel.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_iambic_ad5dz.so: keyer_iambic_ad5dz.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/iambic_ad5dz.h
+$(LIBDIR)/keyer_iambic_ad5dz.so: keyer_iambic_ad5dz.cc framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_ad5dz.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_iambic_nd7pa.so: keyer_iambic_nd7pa.cc framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/iambic_nd7pa.h
+$(LIBDIR)/keyer_iambic_nd7pa.so: keyer_iambic_nd7pa.cc framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_nd7pa.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_iambic_dttsp.so: keyer_iambic_dttsp.cc framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h ../sdrkit/iambic_dttsp.h
+$(LIBDIR)/keyer_iambic_dttsp.so: keyer_iambic_dttsp.cc framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_dttsp.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_ptt.so: keyer_ptt.c framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h
+$(LIBDIR)/keyer_ptt.so: keyer_ptt.c framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../sdrkit/midi.h ../sdrkit/midi_buffer.h
+$(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../sdrkit/midi.h ../sdrkit/keyed_tone.h
+$(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/keyed_tone.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 

@@ -22,7 +22,7 @@
 
 #define FRAMEWORK_USES_JACK 0
 
-#include "../sdrkit/dmath.h"
+#include "../dspmath/dspmath.h"
 #include "framework.h"
 #include <fftw3.h>
 

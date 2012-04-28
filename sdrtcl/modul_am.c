@@ -22,11 +22,11 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/modul_am.h"
+#include "../dspmath/modul_am.h"
 #include "framework.h"
 
 /*
-** demodulate AM.
+** modulate AM.
 */
 typedef struct {
   framework_t fw;

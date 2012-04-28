@@ -25,8 +25,8 @@
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 
-#include "../sdrkit/filter_goertzel.h"
-#include "../sdrkit/midi.h"
+#include "../dspmath/filter_goertzel.h"
+#include "../dspmath/midi.h"
 #include "framework.h"
 
 typedef struct {

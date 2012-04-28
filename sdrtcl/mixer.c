@@ -23,7 +23,7 @@
 #define FRAMEWORK_USES_JACK 1
 
 #include "framework.h"
-#include "../sdrkit/dmath.h"
+#include "../dspmath/dspmath.h"
 
 /*
 ** create a mixer module which combines its inputs into an output

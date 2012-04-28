@@ -23,7 +23,7 @@
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/iq_balance.h"
+#include "../dspmath/iq_balance.h"
 #include "framework.h"
 
 typedef iq_balance_options_t options_t;

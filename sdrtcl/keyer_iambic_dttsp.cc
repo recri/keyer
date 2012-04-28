@@ -21,7 +21,7 @@ embed the dttsp_keyer, more work to do.
 */
 
 
-#include "../sdrkit/iambic_dttsp.h"
+#include "../dspmath/iambic_dttsp.h"
 
 extern "C" {
 
@@ -29,7 +29,7 @@ extern "C" {
 #define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "framework.h"
-#include "../sdrkit/midi.h"
+#include "../dspmath/midi.h"
 
   typedef struct {
 #include "framework_options_vars.h"

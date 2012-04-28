@@ -22,11 +22,11 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/dmath.h"
+#include "../dspmath/dspmath.h"
 #include "framework.h"
 #include <fftw3.h>
-#include "../sdrkit/window.h"
-#include "../sdrkit/polyphase_fft.h"
+#include "../dspmath/window.h"
+#include "../dspmath/polyphase_fft.h"
 
 /*
 ** Tap an audio stream to produce a spectrum.

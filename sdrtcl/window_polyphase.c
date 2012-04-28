@@ -25,8 +25,8 @@
 #define FRAMEWORK_USES_OPTIONS 0
 #define FRAMEWORK_USES_SUBCOMMANDS 0
 
-#include "../sdrkit/dmath.h"
-#include "../sdrkit/polyphase_fft.h"
+#include "../dspmath/dspmath.h"
+#include "../dspmath/polyphase_fft.h"
 #include "framework.h"
 
 /*

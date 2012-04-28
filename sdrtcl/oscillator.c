@@ -22,7 +22,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/oscillator.h"
+#include "../dspmath/oscillator.h"
 #include "framework.h"
 
 typedef struct {

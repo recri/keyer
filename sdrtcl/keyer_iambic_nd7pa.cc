@@ -23,7 +23,7 @@
 
 */
 
-#include "../sdrkit/iambic_nd7pa.h"
+#include "../dspmath/iambic_nd7pa.h"
 
 extern "C" {
 
@@ -31,7 +31,7 @@ extern "C" {
 #define FRAMEWORK_OPTIONS_MIDI	1
 
 #include "framework.h"
-#include "../sdrkit/midi.h"
+#include "../dspmath/midi.h"
 
   typedef struct {
 #include "framework_options_vars.h"

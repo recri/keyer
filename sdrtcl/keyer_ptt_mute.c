@@ -21,8 +21,8 @@
 */
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
-#include "../sdrkit/dmath.h"
-#include "../sdrkit/midi.h"
+#include "../dspmath/dspmath.h"
+#include "../dspmath/midi.h"
 #include "framework.h"
 
 /*

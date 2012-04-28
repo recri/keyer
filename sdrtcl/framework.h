@@ -38,7 +38,7 @@
 #include <jack/midiport.h>
 #include <tcl.h>
 
-#include "../sdrkit/midi_buffer.h"
+#include "../dspmath/midi_buffer.h"
 
 /*
 ** option definitions

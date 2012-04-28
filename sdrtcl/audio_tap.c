@@ -22,7 +22,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/dmath.h"
+#include "../dspmath/dspmath.h"
 #include "framework.h"
 
 /*

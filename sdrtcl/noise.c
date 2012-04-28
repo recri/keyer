@@ -22,7 +22,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/noise.h"
+#include "../dspmath/noise.h"
 #include "framework.h"
 
 /*

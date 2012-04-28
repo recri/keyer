@@ -21,7 +21,7 @@
 */
 #define FRAMEWORK_USES_JACK 0
 
-#include "../sdrkit/filter_FIR.h"
+#include "../dspmath/filter_FIR.h"
 #include "framework.h"
 
 /*

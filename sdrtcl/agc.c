@@ -40,7 +40,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/agc.h"
+#include "../dspmath/agc.h"
 #include "framework.h"
 
 /*

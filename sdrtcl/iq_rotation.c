@@ -24,7 +24,7 @@
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/iq_rotation.h"
+#include "../dspmath/iq_rotation.h"
 #include "framework.h"
 
 typedef struct {

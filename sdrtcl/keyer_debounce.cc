@@ -28,11 +28,11 @@ typedef unsigned char byte;
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 
-#include "../sdrkit/debouncer.h"
+#include "../dspmath/debouncer.h"
 
 extern "C" {
 
-#include "../sdrkit/midi.h"
+#include "../dspmath/midi.h"
 #include "framework.h"
 
 #ifndef DEBOUNCE_N_NOTES

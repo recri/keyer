@@ -27,7 +27,7 @@
     
 */
 
-#include "../sdrkit/iambic_ad5dz.h"
+#include "../dspmath/iambic_ad5dz.h"
 
 extern "C" {
 
@@ -38,7 +38,7 @@ extern "C" {
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS	1
 
 #include "framework.h"
-#include "../sdrkit/midi.h"
+#include "../dspmath/midi.h"
 
   typedef struct {
 #include "framework_options_vars.h"

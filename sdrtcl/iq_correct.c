@@ -23,7 +23,7 @@
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/iq_correct.h"
+#include "../dspmath/iq_correct.h"
 #include "framework.h"
 
 typedef iq_correct_options_t options_t;

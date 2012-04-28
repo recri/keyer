@@ -40,10 +40,10 @@
 #define FRAMEWORK_OPTIONS_KEYER_SPEED	1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING	1
 
-#include "../sdrkit/midi.h"
-#include "../sdrkit/midi_buffer.h"
-#include "../sdrkit/morse_timing.h"
-#include "../sdrkit/morse_coding.h"
+#include "../dspmath/midi.h"
+#include "../dspmath/midi_buffer.h"
+#include "../dspmath/morse_timing.h"
+#include "../dspmath/morse_coding.h"
 #include "framework.h"
 
 typedef struct {

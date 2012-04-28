@@ -19,7 +19,7 @@
 #ifndef MIXER_H
 #define MIXER_H
 
-#include "dspmath"
+#include "dspmath.h"
 
 static float _Complex mixer_process(const _Complex float a, const _Complex float b) { return a*b; }
 

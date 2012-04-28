@@ -32,9 +32,9 @@
 #define FRAMEWORK_OPTIONS_KEYER_SPEED	1
 
 #include "framework.h"
-#include "../sdrkit/midi.h"
-#include "../sdrkit/ring_buffer.h"
-#include "../sdrkit/detime.h"
+#include "../dspmath/midi.h"
+#include "../dspmath/ring_buffer.h"
+#include "../dspmath/detime.h"
 
 typedef struct {
 #include "framework_options_vars.h"

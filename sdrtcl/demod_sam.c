@@ -21,7 +21,7 @@
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/demod_sam.h"
+#include "../dspmath/demod_sam.h"
 #include "framework.h"
 
 /*

@@ -41,8 +41,8 @@
 #define FRAMEWORK_OPTIONS_MIDI 1
 #define FRAMEWORK_OPTIONS_KEYER_TONE 1
 
-#include "../sdrkit/keyed_tone.h"
-#include "../sdrkit/midi.h"
+#include "../dspmath/keyed_tone.h"
+#include "../dspmath/midi.h"
 #include "framework.h"
 
 typedef struct {

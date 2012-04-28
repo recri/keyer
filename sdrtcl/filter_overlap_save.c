@@ -21,8 +21,8 @@
 */
 #define FRAMEWORK_USES_JACK 1
 
-#include "../sdrkit/dmath.h"
-#include "../sdrkit/filter_overlap_save.h"
+#include "../dspmath/dspmath.h"
+#include "../dspmath/filter_overlap_save.h"
 #include "framework.h"
 
 typedef filter_overlap_save_options_t options_t;

@@ -35,8 +35,8 @@
 #define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "framework.h"
-#include "../sdrkit/midi.h"
-#include "../sdrkit/midi_buffer.h"
+#include "../dspmath/midi.h"
+#include "../dspmath/midi_buffer.h"
 
 typedef struct {
 #include "framework_options_vars.h"
