@@ -84,12 +84,27 @@ snit::type sdrctl::control {
 
     # these always come in pairs, and the snit per option processing breaks the 
     # this is for band pass filter limits
+    # there are many more updates coming, mostly duplicates, so I'm filtering here
+    # until I can get them sorted out
+    # also dealing with the filter being busy changing
     method {Handler2 -low} {val} {
 	set options(-low) $val
     }
     method {Handler2 -high} {val} {
-	set options(-high) $val
-	$wrapped configure -low $options(-low) -high $options(-high)
+	if {[lindex [$wrapped modified] 1]} {
+	    puts "deferred $wrapped configure -low $options(-low) -high $val"
+	    after 10 [mymethod Handler2 -high $val]
+	} else {
+	    set options(-high) $val
+	    set xlow [$wrapped cget -low]
+	    set xhigh [$wrapped cget -high]
+	    if {$xlow != $options(-low) || $xhigh != $options(-high)} {
+		$wrapped configure -low $options(-low) -high $options(-high)
+		puts "performed $wrapped configure -low $options(-low) -high $options(-high) were $xlow $xhigh"
+	    } else {
+		# puts "ignored $wrapped configure -low $options(-low) -high $options(-high)"
+	    }
+	}
 	#puts "$wrapped configure -low $options(-low) -high $options(-high)"
     }
 
@@ -200,9 +215,21 @@ snit::type sdrctl::control {
     method port-connect-to {port name2 port2} { $options(-control) port-connect $options(-name) $port $name2 $port2 }
     method port-connect-from {name2 opt2 opt} { $options(-control) port-connect $name2 $opt2 $options(-name) $opt }
     method report {opt val args} { $options(-control) part-report $options(-name) $opt $val {*}$args }
-    # these are only used for the dsp alternates
-    method rewrite-connections-to {port candidates} { return [::sdrctlx::$options(-name) rewrite-connections-to $port $candidates] }
-    method rewrite-connections-from {port candidates} { return [::sdrctlx::$options(-name) rewrite-connections-from $port $candidates] }
+    # these are only used for the dsp alternates, in general, only if they're present
+    method rewrite-connections-to {port candidates} {
+	if {{rewrite-connections-to} in $options(-methods)} {
+	    return [::sdrctlx::$options(-name) rewrite-connections-to $port $candidates]
+	} else {
+	    return $candidates
+	}
+    }
+    method rewrite-connections-from {port candidates} {
+	if {{rewrite-connections-from} in $options(-methods)} {
+	    return [::sdrctlx::$options(-name) rewrite-connections-from $port $candidates]
+	} else {
+	    return $candidates
+	}
+    }
     
     method Inherit {opt from_opt} {
 	if {$options($opt) eq {}} {
@@ -277,6 +304,7 @@ snit::type sdrctl::controller {
     }
     method part-list {} { return [$self X-list part] }
     method part-filter {glob} { return [$self X-filter part $glob] }
+    method part-filter-pred {glob pred} { return [$self X-filter-pred part $glob $pred] }
 
     method part-configure {name args} { return [{*}[dict get $data(part) $name] configure {*}$args] }
     method part-cget {name opt} { return [{*}[dict get $data(part) $name] cget $opt] }
@@ -328,26 +356,16 @@ snit::type sdrctl::controller {
 	}
     }
 
-    # this is hacky, too, special call into a dsp alternates component to filter the connections
-    # of a port according to the select state of the component
-    method part-rewrite-connections-to {part port candidates} {
-	return [[$self part-get $part] rewrite-connections-to $port $candidates]
-    }
-    method part-rewrite-connections-from {part port candidates} {
-	return [[$self part-get $part] rewrite-connections-from $port $candidates]
-    }
+    method part-rewrite-connections-to {part port candidates} { return [[$self part-get $part] rewrite-connections-to $port $candidates] }
+    method part-rewrite-connections-from {part port candidates} { return [[$self part-get $part] rewrite-connections-from $port $candidates] }
+
     # chase each connections-to chain starting from {part port} until you find an active component
     # and return the list of {part port} pairs found.
     # this is looking up the sample computation graph at the inputs to port
     # todo - avoid chasing through all the disabled alternates in an alternates block
     method port-active-connections-to {pair} {
 	set active {}
-	set candidates [$self port-connections-to {*}$pair]
-	if {[string match *alt_out* $pair]} {
-	    # hack, alternates name their ports like this
-	    lassign $pair part port
-	    set candidates [$self part-rewrite-connections-to $part $port $candidates]
-	}
+	set candidates [$self part-rewrite-connections-to {*}$pair [$self port-connections-to {*}$pair]]
 	foreach source $candidates {
 	    lassign $source part port
 	    set type [$self part-type $part]
@@ -374,12 +392,7 @@ snit::type sdrctl::controller {
     # todo - avoid chasing through all the disabled alternates in an alternates block
     method port-active-connections-from {pair} {
 	set active {}
-	set candidates [$self port-connections-from {*}$pair]
-	if {[string match *alt_in* $pair]} {
-	    # hack, alternates name their ports like this
-	    lassign $pair part port
-	    set candidates [$self part-rewrite-connections-from $part $port $candidates]
-	}
+	set candidates [$self part-rewrite-connections-from {*}$pair [$self port-connections-from {*}$pair]]
 	foreach sink [$self port-connections-from {*}$pair] {
 	    lassign $sink part port
 	    set type [$self part-type $part]
@@ -401,112 +414,161 @@ snit::type sdrctl::controller {
     }
 
     method part-activate-tree {name} {
+	# puts "activate tree $name"
 	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
 	if { ! [$self part-is-enabled $name]} return
-	set activated {}
-	$self part-configure $name -activate true
-	if {[$self part-type $name] in {jack hw}} {
-	    lappend activated $name
+
+	# find the parts to activate
+	set subtree [$self part-filter-pred $name* [mymethod part-is-enabled]]
+
+	# activate the parts
+	foreach part $subtree {
+	    # puts "activate $part"
+	    $self part-configure $part -activate true
 	}
-	# find the parts to be activated
-	foreach part [$self part-filter $name-*] {
-	    if {[$self part-is-enabled $part]} {
-		$self part-configure $part -activate true
-		if {[$self part-type $part] in {jack hw}} {
-		    lappend activated $part
-		}
-	    }
-	}
-	# now find the active connections to make
-	
-	# this doesn't quite work right, it finds
-	# extra paths through disabled alternates
-	# that go around the desired path.
-	
-	puts "parts to be connected: $activated"
-	set connections {}
-	foreach part $activated {
+	    
+	# find the connections to make
+	set subgraph [dict create]
+	foreach part $subtree {
+	    if {[$self part-type $part] ni {jack hw}} continue
+	    #puts "activate ports $part"
 	    foreach port [$self part-ports $part] {
 		set pair [list $part $port]
-		set jackport [join $pair :]
-		# puts "part-activate-tree: connections-from {$pair}"
 		foreach sink [$self port-active-connections-from $pair] {
-		    set connection [list $jackport [join $sink :]]
-		    if {[lsearch -exact $connections $connection] < 0} {
-			# puts "add connect $connection"
-			lappend connections $connection
-		    }
+		    dict set subgraph $pair $sink 1
 		}
-		# puts "part-activate-tree: connections-to {$pair}"
 		foreach source [$self port-active-connections-to $pair] {
-		    set connection [list [join $source :] $jackport]
-		    if {[lsearch -exact $connections $connection] < 0} {
-			# puts "add connect $connection"
-			lappend connections $connection
-		    }
+		    dict set subgraph $source $pair 1
 		}
 	    }
 	}
-	foreach connection $connections {
-	    sdrtcl::jack -server $options(-server) connect {*}$connection
+
+	# now make the activated connections
+	dict for {src dstdict} $subgraph {
+	    foreach dst [dict keys $dstdict] {
+		# puts "activate connect $src $dst"
+		sdrtcl::jack -server $options(-server) connect [join $src :] [join $dst :]
+	    }
 	}
     }
     
-    # deactivating a tree is simpler, because all the connections go away as each
-    # node is deactivated
+    # deactivating a tree could be simpler, because all the jack connections just
+    # go away as each node is deactivated, but we do it by hand
     method part-deactivate-tree {name} {
 	if { ! [$self part-is-active $name]} { error "part \"$name\" is not active" }
-	set deactivated {}
-	$self part-configure $name -activate false
-	foreach part [$self part-filter $name-*] {
-	    if {[$self part-is-active $part]} {
-		$self part-configure $part -activate false
+
+	# find the set to deactivate
+	set subtree [$self part-filter-pred $name* [mymethod part-is-active]]
+
+	# find the connections to break
+	set subgraph [dict create]
+	foreach part $subtree {
+	    if {[$self part-type $part] ni {jack hw}} continue
+	    foreach port [$self part-ports $part] {
+		set pair [list $part $port]
+		foreach sink [$self port-active-connections-from $pair] {
+		    dict set subgraph $pair $sink 1
+		}
+		foreach source [$self port-active-connections-to $pair] {
+		    dict set subgraph $source $pair 1
+		}
 	    }
 	}
+
+	# break the active connections
+	dict for {src dstdict} $subgraph {
+	    foreach dst [dict keys $dstdict] {
+		sdrtcl::jack -server $options(-server) disconnect [join $src :] [join $dst :]
+	    }
+	}
+
+	# deactivate the nodes 
+	foreach part $subtree { $self part-configure $part -activate false }
     }
     
     # activating a node needs to make the new connections before breaking the old
-    # to keep the samples flowing.
-    # this is straight-forward, until we mess it up with alternates again, though
-    # that should work if we disable the old alternate before enabling the new
-    # one should work -- the alternate will be shorted out in none mode between
-    method part-activate-node {name} {
-	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
-	if { ! [$self part-is-enabled $name]} return
+    # to keep the samples flowing without hiccups.
+
+    method part-node-connections {name} {
+	# find the connections which the node makes when activated, the makes,
+	# and the connections which route around the node when deactivated, the breaks.
+	# these cannot be cached because they depend on which neighbors are active.
+	# both activate-node and deactivate-node use the same lists of connections
+	# but in reverse senses
+	# puts "part-node-connections $name"
 	array set to {}
 	array set from {}
 	set makes {}
 	set breaks {}
 	foreach port [$self part-ports $name] {
+	    # puts "part-activate-node $name port $port"
 	    set pair [list $name $port]
 	    set jackport [join $pair :]
 	    # find the connections from node
 	    set from($port) {}
 	    foreach sink [$self port-active-connections-from $pair] {
 		set connection [list $jackport [join $sink :]]
-		if {[lsearch -exact $from $connection] < 0} {
+		if {[lsearch -exact $from($port) $connection] < 0} {
 		    # puts "add connect $connection"
 		    lappend from($port) $connection
+		    lappend makes $connection
 		}
 	    }
 	    # find the connections to node
 	    set to($port) {}
 	    foreach source [$self port-active-connections-to $pair] {
 		set connection [list [join $source :] $jackport]
-		if {[lsearch -exact $to $connection] < 0} {
+		if {[lsearch -exact $to($port) $connection] < 0} {
 		    # puts "add connect $connection"
 		    lappend to($port) $connection
+		    lappend makes $connection
 		}
 	    }
-	    puts "part-activate-node: connections-from {$pair} are {$from($port)}"
-	    puts "part-activate-node: connections-to {$pair} are {$to($port)}"
+	    # in ports will have connections-to but no connections-from
+	    # out ports will have connections-from but no connections-to
+	    # the short circuit connections will match the source of the in port connections-to
+	    # with the sinks of the out port connections from
+	    if {$from($port) ne {} && $to($port) ne {}} {
+		error "activating $pair finds connections both ways"
+	    }
 	}
-	foreach conn $makes { sdrkit::jack -server $options(-server) connect {*}$conn }
-	foreach conn $breaks { sdrkit::jack -server $options(-server) disconnect {*}$conn }
+	# that found the makes, and left the per port information in to and from
+	# now match the non-empty to's to the non-empty from's to generate the
+	# break list
+	foreach to_port [array names to] {
+	    if {$to($to_port) ne {}} {
+		set from_port [complement $to_port]
+		foreach to_conn $to($to_port) {
+		    lassign $to_conn to_source to_me
+		    foreach from_conn $from($from_port) {
+			lassign $from_conn from_me from_sink
+			lappend breaks [list $to_source $from_sink]
+		    }
+		}
+	    }
+	}
+	# puts "part-node-connections $name: makes {$makes}"
+	# puts "part-node-connections $name: breaks {$breaks}"
+	return [list $makes $breaks]
+    }
+
+    method part-activate-node {name} {
+	# puts "part-activate-node $name"
+	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
+	if { ! [$self part-is-enabled $name]} return
+	lassign [$self part-node-connections $name] makes breaks
+	$self part-configure $name -activate true
+	foreach conn $makes { sdrtcl::jack -server $options(-server) connect {*}$conn }
+	foreach conn $breaks { sdrtcl::jack -server $options(-server) disconnect {*}$conn }
     }
     
     method part-deactivate-node {name} {
+	# puts "part-deactivate-node $name"
 	if { ! [$self part-is-active $name]} { error "part \"$name\" is not active" }
+	lassign [$self part-node-connections $name] breaks makes
+	foreach conn $makes { sdrtcl::jack -server $options(-server) connect {*}$conn }
+	foreach conn $breaks { sdrtcl::jack -server $options(-server) disconnect {*}$conn }
+	$self part-configure $name -activate false
     }
     
     method part-enable {name} {
@@ -517,6 +579,7 @@ snit::type sdrctl::controller {
 	}
     }
     method part-disable {name} {
+	if { ! [$self part-is-enabled $name]} { error "part \"$name\" is not enabled" }
 	if {[$self part-is-active $name]} {
 	    $self part-deactivate-node $name
 	}
@@ -585,6 +648,15 @@ snit::type sdrctl::controller {
     }
     method X-list {x} { return [dict keys $data($x)] }
     method X-filter {x glob} { return [dict keys $data($x) $glob] }
+    method X-filter-pred {x glob pred} {
+	set list {}
+	foreach y [dict keys $data($x) $glob] {
+	    if {[{*}$pred $y]} {
+		lappend list $y
+	    }
+	}
+	return $list
+    }
     method X-connected {x pair1 pair2} { return [expr {[lsearch -exact [dict get $data($x) $pair1] $pair2] >= 0}] }
     method X-connect {x pair1 pair2} {
 	if { ! [dict exists $data($x) $pair1]} { error "$x \"$pair1\" does not exist" }

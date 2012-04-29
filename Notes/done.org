@@ -141,3 +141,19 @@
    it should take a window as parameter to the fftw exec.  A FIR needs a window
    to build, and would need one to resize.
    Maybe fftw/filter size/window should be create only?
+** DONE - to make the change in mode work,
+   with rewiring that does not disrupt the sample flow,
+   the dsp-alternate needs to control the disable/enable when the mode
+   changes.
+   In general, most components can decide to enable/disable their
+   dsp modules based on the option values.
+*** lo-mix disables when -freq is 0.
+*** gain disables when the -gain is 0.
+*** iq-correct disables when -mu is 0.
+*** iq-swap disables when -swap is 0.
+*** iq-delay disables when -delay is 0.    
+** DONE - figure out why the initial mode setting isn't getting to
+   the demodulation/modulation mode switch.
+** DONE - the sdrblk gets renamed to sdrdsp.
+** DONE - the sdrkit directory becomes dspmath, with a dspmath.h
+** DONE - the jack-tcl-wrap directory becomes sdrtcl

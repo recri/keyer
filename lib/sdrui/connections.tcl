@@ -140,22 +140,30 @@ snit::widget sdrui::connections {
 	install lft using connections::treeview $win.lft -scrollbar left -width 100 -show tree -container $self
 	install ctr using connections::labelcanvas $win.ctr -width 100 -container $self
 	install rgt using connections::treeview $win.rgt -scrollbar right -width 100 -show tree -container $self
-	grid $pane -row 0 -column 0 -sticky nsew
+
+	grid [ttk::frame $win.top] -row 0 -column 0
+	pack [ttk::label $win.top.l -text "connections of "] -side left
+	pack [ttk::menubutton $win.top.show -textvar [myvar data(show)] -menu $win.top.show.m] -side left
+	menu $win.top.show.m -tearoff no
+	foreach v {opt port active} l {{option value graph} {potential dsp graph} {active dsp graph}}  {
+	    $win.top.show.m add radiobutton -label $l -variable [myvar data(show)] -value $l -command [mymethod do-over $v]
+	    if {$v eq $options(-show)} { set data(show) $l }
+	}
+
+	grid $pane -row 1 -column 0 -sticky nsew
 	$pane add $lft -weight 1
 	$pane add $ctr -weight 2
 	$pane add $rgt -weight 1
 	$lft configure -text source -labelanchor n
 	$ctr configure -text connect -labelanchor n
 	$rgt configure -text sink -labelanchor n
-	grid [ttk::checkbutton $win.ctl] -row 1 -column 0
+
+	grid [ttk::checkbutton $win.ctl] -row 2 -column 0
 	grid [ttk::checkbutton $win.filter -text {filter by selection} -variable [myvar options(-filter)] -command [mymethod defer-update-canvas]] -in $win.ctl -row 0 -column 0
-	grid [ttk::menubutton $win.show -textvar [myvar options(-show)] -menu $win.show.m] -in $win.ctl -row 0 -column 1
-	menu $win.show.m -tearoff no
-	foreach v {opt port active} {
-	    $win.show.m add radiobutton -label $v -variable [myvar options(-show)] -value $v -command [mymethod do-over]
-	}
+	grid [ttk::button $win.update -text {update view} -command [mymethod update]] -in $win.ctl -row 0 -column 1
+
 	grid columnconfigure $win 0 -weight 1
-	grid rowconfigure $win 0 -weight 1
+	grid rowconfigure $win 1 -weight 1
 
 	install pop using menu $win.pop -tearoff no
 	$pop add checkbutton -label enable -variable [myvar data(pop-enabled)] -command [mymethod pop-enable]
@@ -214,7 +222,8 @@ snit::widget sdrui::connections {
 	}
     }
 
-    method do-over {} {
+    method do-over {v} {
+	set options(-show) $v
 	foreach item [dict keys $data(items)] {
 	    switch [dict get $data(items) $item type] {
 		ctl - ui - hw - dsp - jack {}
@@ -474,6 +483,8 @@ snit::widget sdrui::connections {
 		}
 	    }
 	    jack {
+		# how do I decide if this is an alternate entry which must be
+		# enabled via select?
 		$pop entryconfigure 0 -state normal
 		$pop entryconfigure 1 -state disabled
 	    }

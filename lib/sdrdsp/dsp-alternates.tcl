@@ -27,7 +27,7 @@ snit::type sdrdsp::dsp-alternates {
 
     option -ports -default {alt_in_i alt_in_q alt_out_i alt_out_q}
     option -opts -default {-select}
-    option -methods -default {}
+    option -methods -default {rewrite-connections-to rewrite-connections-from}
 
     option -container -default {} -readonly true
     option -control -default {} -readonly true
@@ -41,13 +41,18 @@ snit::type sdrdsp::dsp-alternates {
 
     option -select -default {} -configuremethod Select
 
-    variable data -array {}
+    variable data -array {
+	selected-client {}
+	old-selected-client {}
+	new-selected-client {}
+    }
 
     constructor {args} {
 	# puts "dsp-alternates constructor $self {$args}"
 	$self configure {*}$args
 	set options(-control) [$options(-container) cget -control]
 	set options(-name) [$options(-container) cget -name]
+	set data(map) [dict create {*}$options(-map)]
 	install ports using sdrdsp::dsp-ports %AUTO% -control $options(-control)
     }
 
@@ -62,9 +67,20 @@ snit::type sdrdsp::dsp-alternates {
 	foreach element $options(-alternates) {
 	    set element [$element %AUTO% -container $options(-container)]
 	    lappend data(alternates) $element
-	    # connect the components of the sequence
+	    # want an enable callback to catch undisciplined manipulations?
+	    # "connect" the components of the sequence
 	    $ports connect [$ports inputs $options(-container)] [$ports inputs $element]
 	    $ports connect [$ports outputs $element] [$ports outputs $options(-container)]
+	}
+	set data(map) [dict create]
+	foreach {value index} $options(-map) {
+	    if {$index < 0} {
+		dict set data(map) $value {}
+	    } elseif {$index < [llength $data(alternates)]} {
+		dict set data(map) $value [[lindex $data(alternates) $index] cget -name]
+	    } else {
+		error "map contains \"$index\" which is out of range"
+	    }
 	}
     }
     
@@ -77,6 +93,8 @@ snit::type sdrdsp::dsp-alternates {
     }
 
     method rewrite-connections-to {port candidates} {
+	#puts "$options(-name) rewrite-connections-to $port {$candidates}"
+	if {$port ni {alt_out_i alt_out_q alt_midi_out}} { return $candidates }
 	if {$data(selected-client) eq {}} {
 	    switch $port {
 		alt_out_q { return [list [list $port alt_in_i]] }
@@ -86,7 +104,7 @@ snit::type sdrdsp::dsp-alternates {
 	    }
 	} else {
 	    foreach c $candidates {
-		if {[string match [list $selected_client *] $c]} {
+		if {[string match [list $data(selected-client) *] $c]} {
 		    return [list $c]
 		}
 	    }
@@ -95,6 +113,8 @@ snit::type sdrdsp::dsp-alternates {
     }
 
     method rewrite-connections-from {port candidates} {
+	#puts "$options(-name) rewrite-connections-from $port {$candidates}"
+	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
 	if {$data(selected-client) eq {}} {
 	    switch $port {
 		alt_in_i { return [list [list $port alt_out_q]] }
@@ -104,7 +124,7 @@ snit::type sdrdsp::dsp-alternates {
 	    }
 	} else {
 	    foreach c $candidates {
-		if {[string match [list $selected_client *] $c]} {
+		if {[string match [list $data(selected-client) *] $c]} {
 		    return [list $c]
 		}
 	    }
@@ -114,24 +134,24 @@ snit::type sdrdsp::dsp-alternates {
 
     method {Select -select} {val} {
 	set options(-select) $val
-	array set map $options(-map)
-	if {[info exists map($val)]} {
-	    set i $map($val)
-	    if {$i >= 0} {
-		set data(selected-index) $i
-		set data(selected-factory) [lindex $options(-alternates) $i]
-		set data(selected-client) [[lindex $data(alternates) $i] cget -name]
-		#puts "dsp-alternates $self select $val -> $data(selected-factory) and $data(selected-client)"
-	    } else {
-		#puts "dsp-alternates $self select $val -> off"
-		set data(selected-index) -1
-		set data(selected-factory) {}
+	if {[dict exists $data(map) $val]} {
+	    set data(new-selected-client) [dict get $data(map) $val]
+	    #puts "dsp-alternates $self select $val -> $data(new-selected-client)"
+	    if {$data(selected-client) eq $data(new-selected-client)} return
+	    if {$data(selected-client) ne {}} {
+		set data(old-selected-client) $data(selected-client)
 		set data(selected-client) {}
+		$options(-control) part-disable $data(old-selected-client)
+	    }
+	    set data(selected-client) $data(new-selected-client)
+	    if {$data(selected-client) ne {}} {
+		$options(-control) part-enable $data(new-selected-client)
 	    }
 	} else {
 	    error "dsp-alternates $self select $val -> nomatch"
 	}
     }
+
     method deactivate {} {}
     method activate {} {}
     
