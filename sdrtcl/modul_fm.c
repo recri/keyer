@@ -22,44 +22,59 @@
 
 #define FRAMEWORK_USES_JACK 1
 
+#include "../dspmath/modul_fm.h"
 #include "framework.h"
 
 /*
-** create a constant module which produces constant samples
-** two scalar parameters, the real and imaginary
+** modulate FM.
 */
 typedef struct {
   framework_t fw;
-  float real, imag;
+  modul_fm_t fm;
+  modul_fm_options_t opts;
 } _t;
 
 static void *_init(void *arg) {
-  _t * data = (_t *)arg;
-  // data->real = 1.0f;
-  // data->imag = 0.0f;
+  _t *data = (_t *)arg;
+  data->opts.sample_rate = sdrkit_sample_rate(arg);
+  void *e = modul_fm_init(&data->fm, &data->opts); if (e != &data->fm) return e;
   return arg;
 }
 
 static int _process(jack_nframes_t nframes, void *arg) {
-  const _t * const data = (_t *)arg;
+  _t *data = (_t *)arg;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes);
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
   float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    *out0++ = data->real;
-    *out1++ = data->imag;
+    complex float z = modul_fm_process(&data->fm, (*in0++ + *in1++)/2.0f);
+    *out0++ = crealf(z);
+    *out1++ = cimagf(z);
   }
   return 0;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  // fprintf(stderr, "%s:_command(%lx, %lx, %d, %lx)\n", __FILE__, (long)clientData, (long)interp, argc, (long)objv);
-  return framework_command(clientData, interp, argc, objv);
+  _t *data = (_t *)clientData;
+  float deviation = data->opts.deviation;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  if (deviation != data->opts.deviation) {
+    void *e = modul_fm_preconfigure(&data->fm, &data->opts); if (e != &data->fm) {
+      Tcl_SetResult(interp, e, TCL_STATIC);
+      data->opts.deviation = deviation;
+      return TCL_ERROR;
+    }
+    modul_fm_configure(&data->fm, &data->opts);
+  }
+  return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-real",   "real",   "Real",   "1.0",      fw_option_float,	0,		     offsetof(_t, real),	   "real part of constant produced" },
-  { "-imag",   "imag",   "Imag",   "0.0",      fw_option_float,	0,		     offsetof(_t, imag),	   "imaginary part of constant produced" },
+  { "-deviation", "deviation", "Deviation", "5000", fw_option_float, 0, offsetof(_t, opts.deviation), "deviation (Hz)" },
   { NULL }
 };
 
@@ -77,15 +92,15 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "implement a constant audio stream component"
+  "an FM modulation component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  // fprintf(stderr, "%s: _command = %lx, template.command = %lx\n", __FILE__, (long)_command, (long)_template.command);
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
-}  
+}
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Constant_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrtcl::constant", "1.0.0", "sdrtcl::constant", _factory);
+int DLLEXPORT Modul_fm_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrtcl::modul-fm", "1.0.0", "sdrtcl::modul-fm", _factory);
 }
+

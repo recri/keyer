@@ -66,7 +66,11 @@ proc sdrdsp::comp-keyer-tone {name args} {
     return [sdrctl::control $name -type jack -suffix tone -factory sdrtcl::keyer-tone -enable no {*}$args]
 }
 proc sdrdsp::comp-keyer-iambic {name args} {
-    set alts {sdrdsp::comp-keyer-iambic-ad5dz sdrdsp::comp-keyer-iambic-dttsp sdrdsp::comp-keyer-iambic-nd7pa}
-    set fopt [list -alternates $alts -map {ad5dz dttsp nd7pa} -signal ctl-keyer-iambic:-iambic -ports {alt_midi_in alt_midi_out}]
-    return [sdrctl::control $name -type dsp -suffix iambic -factory sdrdsp::dsp-alternates -factory-options $fopt {*}$args]
+    array set fopt {
+	-alternates {sdrdsp::comp-keyer-iambic-ad5dz sdrdsp::comp-keyer-iambic-dttsp sdrdsp::comp-keyer-iambic-nd7pa}
+	-map {ad5dz 0 dttsp 1 nd7pa 2 none -1 straight -1}
+	-opt-connect-from {{ctl-keyer-iambic -iambic -select}}
+	-ports {alt_midi_in alt_midi_out}
+    }
+    return [sdrctl::control $name -type dsp -suffix iambic -factory sdrdsp::dsp-alternates -factory-options [array get fopt] {*}$args]
 }

@@ -17,27 +17,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrctl::radio-control 1.0.0
+package provide sdrctl::vfo-control 1.0.0
 
 package require snit
 
 package require sdrctl::types
 package require sdrctl::control
+package require sdrctl::control-stub
 
 namespace eval sdrctl {}
 namespace eval sdrctlw {}
 
 ##
-## start the radio controller
+## start the radio control components
 ##
-proc sdrctl::radio-controller {name args} {
+proc sdrctl::vfo-controller {name args} {
     return [sdrctl::controller $name {*}$args]
 }
 
-##
-## start the radio control components
-##
-proc sdrctl::radio-controls {args} {
+proc sdrctl::vfo-controls {args} {
     set root [sdrctl::control ::sdrctlw::ctl -type ctl -prefix {} -suffix ctl -factory sdrctl::control-stub {*}$args]
     foreach {suffix factory opts} {
 	rxtx sdrctl::control-stub {}
@@ -72,4 +70,3 @@ proc sdrctl::radio-controls {args} {
 	sdrctl::control ::sdrctlw::$suffix -type ctl -suffix $suffix -factory $factory -factory-options $opts -container $root
     }
 }
-

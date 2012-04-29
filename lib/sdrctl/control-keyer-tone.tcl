@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,17 +17,26 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# a simple test/demo script of the vfo widget
-#
-
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package provide sdrctl::control-keyer-tone 1.0.0
 
 package require snit
 
-package require sdrapp::vfo
+package require sdrctl::types
 
-::sdrapp::vfo ::vfo {*}$argv
-::vfo repl
+##
+## handle keyer sidetone controls
+##
+snit::type sdrctl::control-keyer-tone {
+    option -command -default {} -readonly true
+    option -opt-connect-to { {-freq ctl-rxtx-tuner -cw-freq} }
+    option -opt-connect-from { {ctl-rxtx-tuner -cw-freq -freq} }
+    # incoming opts
+    option -freq -default 600 -configuremethod Opt-handler -type sdrctl::hertz
+    option -spot -default 0 -configuremethod Opt-handler -type sdrctl::spot
+
+    method Opt-handler {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
+    }
+}
 

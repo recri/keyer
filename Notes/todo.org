@@ -1,10 +1,24 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - figure out how to deal with filter -low low -high high
+   If the configuration gets split into option at a time passing, then
+   eventually the filter gets a -low that's incompatible with its
+   current -high, or vice versa, leading to an error message that's an
+   accident and would not a problem except that the incompatible value
+   gets discarded, leaving you with a weird filter envelope.
+** TODO - figure out why the initial mode setting isn't getting to
+   the demodulation/modulation mode switch.
+** TODO - tracing the filter -low -high issue shows a lot of repetition
+   The configured values get transmitted to the filter multiple times
+   without modification, should stop that, it's going to be expensive.
 ** TODO - implement -alternates at-most-one, exactly-one, zero-or-more.
    Do this by passing the constraint into the controller and letting
    it enforce it.  Yes, if the controller knew the constraint, then it
    wouldn't go chasing through the dead links.
+** TODO - implement -alternates with function specific factories.
+   There are only the modulation/demodulation and the variant iambic
+   keyers to be done at the moment, why not just write them out.
 ** TODO - Make the dial/readout multipurpose
    Put a menubutton to the left of the readout which selects the
    purpose.  Build a radiobutton menu of dial-able controls.

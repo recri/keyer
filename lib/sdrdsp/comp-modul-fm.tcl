@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,17 +17,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# a simple test/demo script of the vfo widget
-#
+package provide sdrdsp::comp-modul-fm 1.0.0
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package require sdrctl::control
+package require sdrtcl::modul-fm
 
-package require snit
+namespace eval sdrdsp {}
 
-package require sdrapp::vfo
-
-::sdrapp::vfo ::vfo {*}$argv
-::vfo repl
+proc sdrdsp::comp-modul-fm {name args} {
+    return [sdrctl::control $name -type jack -suffix fm -factory sdrtcl::modul-fm -enable no {*}$args]
+}
 

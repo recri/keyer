@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,17 +17,29 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# a simple test/demo script of the vfo widget
-#
+package provide sdrui::ui-vfo 1.0.0
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
-
+package require Tk
 package require snit
 
-package require sdrapp::vfo
+package require sdrui::vfo
 
-::sdrapp::vfo ::vfo {*}$argv
-::vfo repl
+snit::type sdrui::ui-vfo {
 
+    option -container -readonly yes
+    option -control -readonly yes
+    option -name {}
+    option -root {}
+    
+    constructor {args} {
+	$self configure {*}$args
+	pack [ttk::frame .vfo] -fill both -expand true
+	set options(-control) [$options(-container) cget -control]
+	sdrctl::control ::sdrctlw::ui-rxtx-tuner -suffix ui-rxtx-tuner -factory sdrui::vfo \
+	    -type ui -root .vfo -control $options(-control) -container $options(-container)
+	pack .vfo.ui-rxtx-tuner -fill both -expand true
+    }
+
+    method repl {} { }
+
+}

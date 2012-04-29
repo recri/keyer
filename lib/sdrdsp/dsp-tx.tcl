@@ -30,46 +30,46 @@ proc sdrdsp::tx {name args} {
 }
 
 proc sdrdsp::tx-af {name args} {
-    set seq {sdrdsp::comp-gain}
-    set req {sdrdsp::comp-gain}
-    # lappend seq sdrdsp::comp-real sdrdsp::comp-waveshape
-    # lappend req sdrdsp::comp-real sdrdsp::comp-waveshape
-    lappend seq sdrdsp::comp-meter-waveshape
-    lappend req sdrdsp::comp-meter
-    # lappend seq sdrdsp::comp-dc-block sdrdsp::comp-tx-squelch sdrdsp::comp-grapic-eq
-    # lappend req sdrdsp::comp-dc-block sdrdsp::comp-tx-squelch sdrdsp::comp-grapic-eq
-    lappend seq sdrdsp::comp-meter-graphic-eq sdrdsp::comp-leveler sdrdsp::comp-meter-leveler
-    lappend req sdrdsp::comp-meter sdrdsp::comp-leveler
-    # lappend seq sdrdsp::comp-speech-processor
-    # lappend req sdrdsp::comp-speech-processor
-    lappend seq sdrdsp::comp-meter-speech-processor
-    lappend req sdrdsp::comp-meter
-    # lappend seq sdrdsp::comp-modulate
-    # lappend req sdrdsp::comp-modulate
-
     # a lot of this is voice specific
     # CW only has a keyed oscillator feeding into the LO mixer
     # hw-softrock-dg8saq should have an option to poll keystate and insert as midi
     # hw-softrock-dg8saq should by default convert midi control to dg8saq, both directions
-    set fopt [list -sequence $seq -require $req]
-    return [sdrctl::control $name -type dsp -suffix af -factory sdrdsp::dsp-sequence -factory-options $fopt {*}$args]
+    array set fopt {
+	-sequence sdrdsp::comp-gain
+	-require sdrdsp::comp-gain
+    }
+    # lappend fopt(-sequence) sdrdsp::comp-real sdrdsp::comp-waveshape
+    # lappend req sdrdsp::comp-real sdrdsp::comp-waveshape
+    lappend fopt(-sequence) sdrdsp::comp-meter-waveshape
+    lappend fopt(-require) sdrdsp::comp-meter
+    # lappend fopt(-sequence) sdrdsp::comp-dc-block sdrdsp::comp-tx-squelch sdrdsp::comp-grapic-eq
+    # lappend fopt(-require) sdrdsp::comp-dc-block sdrdsp::comp-tx-squelch sdrdsp::comp-grapic-eq
+    lappend fopt(-sequence) sdrdsp::comp-meter-graphic-eq sdrdsp::comp-leveler sdrdsp::comp-meter-leveler
+    lappend fopt(-require) sdrdsp::comp-meter sdrdsp::comp-leveler
+    # lappend fopt(-sequence) sdrdsp::comp-speech-processor
+    # lappend fopt(-require) sdrdsp::comp-speech-processor
+    lappend fopt(-sequence) sdrdsp::comp-meter-speech-processor sdrdsp::comp-modul
+    lappend fopt(-require) sdrdsp::comp-meter sdrdsp::comp-modul
+    return [sdrctl::control $name -type dsp -suffix af -factory sdrdsp::dsp-sequence -factory-options [array get fopt] {*}$args]
 }
 
 proc sdrdsp::tx-if {name args} {
-    set seq {sdrdsp::comp-filter-overlap-save}
-    set req {sdrdsp::comp-filter-overlap-save}
+    array set fopt {
+	-sequence sdrdsp::comp-filter-overlap-save
+	-require sdrdsp::comp-filter-overlap-save
+    }
     # lappend seq sdrdsp::comp-compand
-    # lappend req sdrdsp::comp-compand
-    lappend seq sdrdsp::comp-meter-compand sdrdsp::comp-spectrum-tx sdrdsp::comp-lo-mixer
-    lappend req sdrdsp::comp-meter sdrdsp::comp-spectrum sdrdsp::comp-lo-mixer
-    set fopt [list -sequence $seq -require $req]
-    return [sdrctl::control $name -type dsp -suffix if -factory sdrdsp::dsp-sequence -factory-options $fopt {*}$args]
+    # lappend fopt(-require) sdrdsp::comp-compand
+    lappend fopt(-sequence) sdrdsp::comp-meter-compand sdrdsp::comp-spectrum-tx sdrdsp::comp-lo-mixer
+    lappend fopt(-require) sdrdsp::comp-meter sdrdsp::comp-spectrum sdrdsp::comp-lo-mixer
+    return [sdrctl::control $name -type dsp -suffix if -factory sdrdsp::dsp-sequence -factory-options [array get fopt] {*}$args]
 }
 
 proc sdrdsp::tx-rf {name args} {
-    set seq {sdrdsp::comp-iq-balance sdrdsp::comp-gain sdrdsp::comp-meter-power}
-    set req {sdrdsp::comp-iq-balance sdrdsp::comp-gain sdrdsp::comp-meter}
-    set fopt [list -sequence $seq -require $req]
-    return [sdrctl::control $name -type dsp -suffix rf -factory sdrdsp::dsp-sequence -factory-options $fopt {*}$args]
+    array set fopt {
+	-sequence {sdrdsp::comp-iq-balance sdrdsp::comp-gain sdrdsp::comp-meter-power}
+	-require {sdrdsp::comp-iq-balance sdrdsp::comp-gain sdrdsp::comp-meter}
+    }
+    return [sdrctl::control $name -type dsp -suffix rf -factory sdrdsp::dsp-sequence -factory-options [array get fopt] {*}$args]
 }
 

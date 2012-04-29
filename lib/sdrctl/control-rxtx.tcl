@@ -17,17 +17,24 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrdsp::comp-modulate 1.0.0
+package provide sdrctl::control-rxtx 1.0.0
 
-package require sdrctl::control
-package require sdrdsp::dsp-alternates
+package require snit
 
-namespace eval sdrdsp {}
+package require sdrctl::types
 
-proc sdrdsp::comp-modulate {name args} {
-    #set alts {sdrdsp::comp-modul-am sdrdsp::comp-modul-fm}
-    set alts {}
-    set fopt [list -alternates $alts]
-    return [sdrctl::control $name -type dsp -suffix modulate -factory sdrdsp::dsp-alternates -factory-options $fopt -require $alts {*}$args]
+##
+## handle mox/vox/ptt controls
+##
+snit::type sdrctl::control-rxtx {
+    option -command {}
+
+    option -mode -default CWU -configuremethod Opt-handler -type sdrctl::mode
+    option -mox -default 0 -configuremethod Opt-handler 
+
+    method {Opt-handler} {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
+    }
 }
 

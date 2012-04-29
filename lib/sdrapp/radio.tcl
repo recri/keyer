@@ -25,6 +25,12 @@ package require sdrctl::radio-control
 
 namespace eval sdrapp {}
 
+proc sdrapp::radio-configure {} {
+    return {
+	ctl-rxtx-mode -mode CWU
+    }
+}
+
 snit::type sdrapp::radio {
 
     option -server -readonly yes -default default
@@ -86,7 +92,6 @@ snit::type sdrapp::radio {
 	    $self connect $options(-tx-source) tx $options(-tx-sink)
 	}
 	::radio-ctl part-resolve
-	#::radio-ctl part-configure ctl-rxtx-mode -mode CWU
 	if {$options(-activate-hw)} {
 	    {*}$options(-control) part-activate hw
 	}
@@ -94,6 +99,9 @@ snit::type sdrapp::radio {
 	    foreach name {rx-rf-gain rx-rf-iq-correct rx-if-mix rx-if-bpf rx-af-agc} {
 		{*}$options(-control) part-enable $name
 	    }
+	}
+	foreach {part option value} [radio-configure] {
+	    ::radio-ctl part-configure $part $option $value
 	}
 	if {$options(-activate-rx)} {
 	    {*}$options(-control) activate rx

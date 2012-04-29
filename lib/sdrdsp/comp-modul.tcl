@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,17 +17,20 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# a simple test/demo script of the vfo widget
-#
+package provide sdrdsp::comp-modul 1.0.0
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package require sdrctl::control
+package require sdrdsp::dsp-alternates
 
-package require snit
+namespace eval sdrdsp {}
 
-package require sdrapp::vfo
-
-::sdrapp::vfo ::vfo {*}$argv
-::vfo repl
+proc sdrdsp::comp-modul {name args} {
+    array set fopt {
+	-alternates {sdrdsp::comp-modul-am sdrdsp::comp-modul-fm sdrdsp::comp-modul-ssb}
+	-require {sdrdsp::comp-modul-am sdrdsp::comp-modul-fm sdrdsp::comp-modul-ssb}
+	-map {USB 2 LSB 2 DSB -1 CWU -1 CWL -1 AM 0 SAM 0 FMN 1 DIGU 2 DIGL 2}
+	-opt-connect-from {{ctl-rxtx-mode -mode -select}}
+    }
+    return [sdrctl::control $name -type dsp -suffix mode -factory sdrdsp::dsp-alternates -factory-options [array get fopt] {*}$args]
+}
 

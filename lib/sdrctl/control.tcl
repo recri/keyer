@@ -76,8 +76,22 @@ snit::type sdrctl::control {
     option -enable -default yes
     option -activate -default no -configuremethod Handler
 
+    option -low -default {} -configuremethod Handler2
+    option -high -default {} -configuremethod Handler2
+    
     delegate option * to wrapped
     delegate method * to wrapped
+
+    # these always come in pairs, and the snit per option processing breaks the 
+    # this is for band pass filter limits
+    method {Handler2 -low} {val} {
+	set options(-low) $val
+    }
+    method {Handler2 -high} {val} {
+	set options(-high) $val
+	$wrapped configure -low $options(-low) -high $options(-high)
+	#puts "$wrapped configure -low $options(-low) -high $options(-high)"
+    }
 
     constructor {args} {
 	if {$verbose(construct)} { puts "sdrctl::controll $self constructor {$args}" }
@@ -98,12 +112,14 @@ snit::type sdrctl::control {
 	$options(-control) part-add $options(-name) $self
 	if {{finish} in [$wrapped info methods]} { $wrapped finish }
     }
+
     method {Wrapped name} {} {
 	switch $options(-type) {
 	    ui { return $options(-root).$options(-name) }
 	    default { return ::sdrctlx::$options(-name) }
 	}
     }
+
     method {Wrapped extra-opts} {} {
 	switch $options(-type) {
 	    ctl - ui - hw { return [list -command [mymethod command]] }
@@ -111,18 +127,21 @@ snit::type sdrctl::control {
 	    dsp { return [list -container $self] }
 	}
     }
+
     method {Wrapped opts} {} {
 	if {{-opts} in [$wrapped info options]} {
 	    return [$wrapped cget -opts]
 	}
 	return [Filter-not-in [$wrapped info options] $typedata(exclude-opts)]
     }
+
     method {Wrapped methods} {} {
 	if {{-methods} in [$wrapped info options]} {
 	    return [$wrapped cget -methods]
 	}
 	return [Filter-not-in [$wrapped info methods] $typedata(exclude-methods)]
     }
+
     method {Wrapped ports} {} {
 	if {{-ports} in [$wrapped info options]} {
 	    return [$wrapped cget -ports]
@@ -131,6 +150,7 @@ snit::type sdrctl::control {
 	}
 	return {}
     }
+
     method resolve {} {
 	#puts "$self resolve $options(-type)"
 	switch $options(-type) {
@@ -180,6 +200,9 @@ snit::type sdrctl::control {
     method port-connect-to {port name2 port2} { $options(-control) port-connect $options(-name) $port $name2 $port2 }
     method port-connect-from {name2 opt2 opt} { $options(-control) port-connect $name2 $opt2 $options(-name) $opt }
     method report {opt val args} { $options(-control) part-report $options(-name) $opt $val {*}$args }
+    # these are only used for the dsp alternates
+    method rewrite-connections-to {port candidates} { return [::sdrctlx::$options(-name) rewrite-connections-to $port $candidates] }
+    method rewrite-connections-from {port candidates} { return [::sdrctlx::$options(-name) rewrite-connections-from $port $candidates] }
     
     method Inherit {opt from_opt} {
 	if {$options($opt) eq {}} {
@@ -291,6 +314,8 @@ snit::type sdrctl::controller {
     ## basic radio graph, but it breaks if we make a spectrum or meter component that isn't in the
     ## hierarchy.
     ##
+
+    # this is hacky, finding the corresponding port leaving the other side of a jack component
     proc complement {port} {
 	switch -exact $port {
 	    in_i { return {out_i} }
@@ -302,12 +327,28 @@ snit::type sdrctl::controller {
 	    default { error "unknown port \"$port\"" }
 	}
     }
+
+    # this is hacky, too, special call into a dsp alternates component to filter the connections
+    # of a port according to the select state of the component
+    method part-rewrite-connections-to {part port candidates} {
+	return [[$self part-get $part] rewrite-connections-to $port $candidates]
+    }
+    method part-rewrite-connections-from {part port candidates} {
+	return [[$self part-get $part] rewrite-connections-from $port $candidates]
+    }
+    # chase each connections-to chain starting from {part port} until you find an active component
+    # and return the list of {part port} pairs found.
+    # this is looking up the sample computation graph at the inputs to port
+    # todo - avoid chasing through all the disabled alternates in an alternates block
     method port-active-connections-to {pair} {
-	# chase each connections-to chain starting from {part port} until you find an active component
-	# and return the list of {part port} pairs found.
-	# todo - avoid chasing through all the disabled alternates in an alternates block
 	set active {}
-	foreach source [$self port-connections-to {*}$pair] {
+	set candidates [$self port-connections-to {*}$pair]
+	if {[string match *alt_out* $pair]} {
+	    # hack, alternates name their ports like this
+	    lassign $pair part port
+	    set candidates [$self part-rewrite-connections-to $part $port $candidates]
+	}
+	foreach source $candidates {
 	    lassign $source part port
 	    set type [$self part-type $part]
 	    if {$type in {jack hw}} {
@@ -326,11 +367,19 @@ snit::type sdrctl::controller {
 	}
 	return $active
     }
+
+    # chase each connections-from chain starting from {part port} until you find an active component
+    # and return the list of active {port part} pairs found
+    # this is looking down the sample computation graph at the outputs from port
+    # todo - avoid chasing through all the disabled alternates in an alternates block
     method port-active-connections-from {pair} {
-	# chase each connections-from chain starting from {part port} until you find an active component
-	# and return the list of active {port part} pairs found
-	# todo - avoid chasing through all the disabled alternates in an alternates block
 	set active {}
+	set candidates [$self port-connections-from {*}$pair]
+	if {[string match *alt_in* $pair]} {
+	    # hack, alternates name their ports like this
+	    lassign $pair part port
+	    set candidates [$self part-rewrite-connections-from $part $port $candidates]
+	}
 	foreach sink [$self port-connections-from {*}$pair] {
 	    lassign $sink part port
 	    set type [$self part-type $part]
@@ -416,32 +465,44 @@ snit::type sdrctl::controller {
 	}
     }
     
+    # activating a node needs to make the new connections before breaking the old
+    # to keep the samples flowing.
+    # this is straight-forward, until we mess it up with alternates again, though
+    # that should work if we disable the old alternate before enabling the new
+    # one should work -- the alternate will be shorted out in none mode between
     method part-activate-node {name} {
 	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
 	if { ! [$self part-is-enabled $name]} return
-	set to {}
-	set from {}
+	array set to {}
+	array set from {}
+	set makes {}
+	set breaks {}
 	foreach port [$self part-ports $name] {
 	    set pair [list $name $port]
 	    set jackport [join $pair :]
+	    # find the connections from node
+	    set from($port) {}
 	    foreach sink [$self port-active-connections-from $pair] {
 		set connection [list $jackport [join $sink :]]
 		if {[lsearch -exact $from $connection] < 0} {
 		    # puts "add connect $connection"
-		    lappend from $connection
+		    lappend from($port) $connection
 		}
 	    }
+	    # find the connections to node
+	    set to($port) {}
 	    foreach source [$self port-active-connections-to $pair] {
 		set connection [list [join $source :] $jackport]
 		if {[lsearch -exact $to $connection] < 0} {
 		    # puts "add connect $connection"
-		    lappend to $connection
+		    lappend to($port) $connection
 		}
 	    }
+	    puts "part-activate-node: connections-from {$pair} are {$from($port)}"
+	    puts "part-activate-node: connections-to {$pair} are {$to($port)}"
 	}
-	puts "part-activate-node: connections-from {$pair} are {$from}"
-	puts "part-activate-node: connections-to {$pair} are {$to}"
-	
+	foreach conn $makes { sdrkit::jack -server $options(-server) connect {*}$conn }
+	foreach conn $breaks { sdrkit::jack -server $options(-server) disconnect {*}$conn }
     }
     
     method part-deactivate-node {name} {

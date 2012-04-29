@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,17 +17,24 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# a simple test/demo script of the vfo widget
-#
-
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package provide sdrctl::control-af-gain 1.0.0
 
 package require snit
 
-package require sdrapp::vfo
+package require sdrctl::types
 
-::sdrapp::vfo ::vfo {*}$argv
-::vfo repl
+##
+## handle gain controls
+##
+snit::type sdrctl::control-af-gain {
+    option -command -default {} -readonly true
+    # incoming opts
+    option -gain -default 0 -configuremethod Opt-handler -type sdrctl::gain
+    option -mute -default false -configuremethod Opt-handler -type sdrctl::mute
+
+    method Opt-handler {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
+    }
+}
 

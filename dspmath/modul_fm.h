@@ -51,6 +51,11 @@ static void *modul_fm_init(modul_fm_t *p, modul_fm_options_t *q) {
   return p;
 }
 
+/*
+** yuck, sin_cos per sample, must be a better way.
+** if crealf(in) * p->cvtmod2freq were complex, then
+** it could be multiplied into a complex phase
+*/
 static complex float modul_fm_process(modul_fm_t *p, const float complex in) {
   p->phase += crealf(in) * p->cvtmod2freq;
   return cexpf(I * p->phase);
