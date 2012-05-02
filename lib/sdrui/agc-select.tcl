@@ -23,13 +23,13 @@ package provide sdrui::agc-select 1.0.0
 
 package require Tk
 package require snit
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::agc-select {
     component menubutton
     component menu
 
-    option -mode -default med -type sdrctl::agc-mode
+    option -mode -default med -type sdrtype::agc-mode
 
     option -command {}
     option -opt-connect-to {}
@@ -42,7 +42,7 @@ snit::widgetadaptor sdrui::agc-select {
 	installhull using ttk::labelframe
 	install menubutton using ttk::menubutton $win.b -textvar [myvar options(-mode)] -menu $win.b.m
 	install menu using menu $win.b.m -tearoff no
-	foreach mode [sdrctl::agc-mode cget -values] {
+	foreach mode [sdrtype::agc-mode cget -values] {
 	    $win.b.m add radiobutton -label $mode -variable [myvar options(-mode)] -value $mode -command [mymethod set-mode $mode]
 	}
 	pack $win.b -fill x -expand true

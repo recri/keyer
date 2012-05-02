@@ -21,7 +21,7 @@ package provide sdrctl::vfo-control 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 package require sdrctl::control
 package require sdrctl::control-stub
 
@@ -29,7 +29,13 @@ namespace eval sdrctl {}
 namespace eval sdrctlw {}
 
 ##
-## start the radio control components
+## start the vfo control components
+##
+## this is an experiment in building just part of the radio, it's not very
+## satisfactory as I end up building most of the radio.
+## the problem is not knowing exactly what's needed
+##
+## I guess it's not clear exactly who's in charge of deciding what's needed.
 ##
 proc sdrctl::vfo-controller {name args} {
     return [sdrctl::controller $name {*}$args]

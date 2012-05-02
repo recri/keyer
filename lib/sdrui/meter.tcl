@@ -17,46 +17,52 @@
 # 
 
 ##
-## rf-gain - rf-gain control
+## meter - meter display
 ##
-package provide sdrui::rf-gain 1.0.0
+package provide sdrui::meter 1.0.0
 
 package require Tk
 package require snit
+package require sdrui::tk-meter
 
-    
-snit::widgetadaptor sdrui::rf-gain {
-    component spinbox
+snit::widget sdrui::meter {
+    component display
 
-    option -gain -default 0 -type sdrtype::gain
+    # options controlling this component directly
+    option -period -default 100 -type sdrtype::milliseconds -configuremethod Opt-handler
+
+    # options for interfacing to jack, the hierarchy, the controller
+    option -server -default default -readonly true
+    option -container -readonly yes
+    option -control -readonly yes
 
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
-
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
-    delegate option -gain-min to spinbox as -from
-    delegate option -gain-max to spinbox as -to
-    delegate option -gain-step to spinbox as -increment
+    option -method-connect-from {}
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install spinbox using ttk::spinbox $win.gain -width 4 -textvar [myvar options(-gain)] -command [mymethod set-gain]
-	pack $win.gain -side right -fill x -expand true
-	foreach {opt val} { -gain-min -100 -gain-max 200 -gain-step 1 -label {RF Gain} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	# puts "sdrui::meter constructor {$args}"
+	set options(-control) [from args -control [::radio cget -control]]
 	$self configure {*}$args
+	install display using sdrui::tk-meter $win.s
+	pack $win.s -side top -fill both -expand true
+	pack [ttk::frame $win.m] -side top
+	# connections to option controls
 	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-gain} {
+	foreach opt {-period} {
 	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
 	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
 	}
+	lappend options(-method-connect-from) [list ctl-$tail get [mymethod update]]
     }
-
-    method set-gain {} { {*}$options(-command) report -gain $options(-gain) }
-
-}
-
-
+    
+    method update {frame meter} {
+	$win.s update [sdrtcl::power-to-dB [expr {1.0-$meter}]]
+    }
+    
+    method Opt-handler {opt val} {
+	set options($opt) $val
+	$options(-command) report $opt $val
+    }
+}    

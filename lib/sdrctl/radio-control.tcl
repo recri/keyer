@@ -21,52 +21,52 @@ package provide sdrctl::radio-control 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 package require sdrctl::control
 
 namespace eval sdrctl {}
 namespace eval sdrctlw {}
 
 ##
-## start the radio controller
-##
-proc sdrctl::radio-controller {name args} {
-    return [sdrctl::controller $name {*}$args]
-}
-
-##
 ## start the radio control components
+##
+## this is basically the list of all the controls needed for a radio, or at least all the controls
+## that I've implemented and/or found necessary to this point.
 ##
 proc sdrctl::radio-controls {args} {
     set root [sdrctl::control ::sdrctlw::ctl -type ctl -prefix {} -suffix ctl -factory sdrctl::control-stub {*}$args]
     foreach {suffix factory opts} {
-	rxtx sdrctl::control-stub {}
-	rx sdrctl::control-stub {}
-	rx-af sdrctl::control-stub {}
-	rx-rf sdrctl::control-stub {}
-	tx sdrctl::control-stub {}
-	tx-af sdrctl::control-stub {}
-	tx-rf sdrctl::control-stub {}
-	keyer sdrctl::control-stub {}
-	rxtx-band-select sdrctl::control-band {}
-	rxtx-if-bpf sdrctl::control-filter {}
-	rxtx-if-mix sdrctl::control-if-mix {}
-	rxtx-mode sdrctl::control-mode {}
-	rxtx-mox sdrctl::control-rxtx {}
-	rxtx-tuner sdrctl::control-tune {}
-	rx-af-agc sdrctl::control-agc {}
-	rx-af-gain sdrctl::control-af-gain {}
-	rx-rf-gain sdrctl::control-rf-gain {}
-	rx-rf-iq-correct sdrctl::control-iq-correct {}
-	rx-rf-iq-delay sdrctl::control-iq-delay {}
-	rx-rf-iq-swap sdrctl::control-iq-swap {}
-	tx-af-gain sdrctl::control-af-gain {}
-	tx-af-leveler sdrctl::control-leveler {}
-	tx-rf-gain sdrctl::control-rf-gain {}
-	tx-rf-iq-balance sdrctl::control-iq-balance {}
-	keyer-debounce sdrctl::control-keyer-debounce {}
-	keyer-iambic sdrctl::control-keyer-iambic {}
-	keyer-tone sdrctl::control-keyer-tone {}
+	rxtx			sdrctl::control-stub {}
+	rx			sdrctl::control-stub {}
+	rx-af			sdrctl::control-stub {}
+	rx-rf			sdrctl::control-stub {}
+	tx			sdrctl::control-stub {}
+	tx-af			sdrctl::control-stub {}
+	tx-rf			sdrctl::control-stub {}
+	keyer			sdrctl::control-stub {}
+	rxtx-band-select	sdrctl::control-band {}
+	rxtx-if-bpf		sdrctl::control-filter {}
+	rxtx-if-mix		sdrctl::control-if-mix {}
+	rxtx-mode		sdrctl::control-mode {}
+	rxtx-mox		sdrctl::control-rxtx {}
+	rxtx-tuner		sdrctl::control-tune {}
+	rx-af-agc		sdrctl::control-agc {}
+	rx-af-gain		sdrctl::control-af-gain {}
+	rx-rf-gain		sdrctl::control-rf-gain {}
+	rx-rf-iq-correct	sdrctl::control-iq-correct {}
+	rx-rf-iq-delay		sdrctl::control-iq-delay {}
+	rx-rf-iq-swap		sdrctl::control-iq-swap {}
+	tx-af-gain		sdrctl::control-af-gain {}
+	tx-af-leveler		sdrctl::control-leveler {}
+	tx-rf-gain		sdrctl::control-rf-gain {}
+	tx-rf-iq-balance	sdrctl::control-iq-balance {}
+	keyer-debounce		sdrctl::control-keyer-debounce {}
+	keyer-iambic		sdrctl::control-keyer-iambic {}
+	keyer-tone		sdrctl::control-keyer-tone {}
+	rx-spectrum		sdrctl::control-spectrum {}
+	rx-meter		sdrctl::control-meter {}
+	tx-spectrum		sdrctl::control-spectrum {}
+	tx-meter		sdrctl::control-meter {}
     } {
 	package require $factory
 	sdrctl::control ::sdrctlw::$suffix -type ctl -suffix $suffix -factory $factory -factory-options $opts -container $root

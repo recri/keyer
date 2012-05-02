@@ -21,7 +21,7 @@ package provide sdrctl::control-if-mix 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle local oscillator controls
@@ -31,7 +31,7 @@ snit::type sdrctl::control-if-mix {
     option -opt-connect-to { {-freq ctl-rxtx-tuner -lo-freq} }
     option -opt-connect-from { {ctl-rxtx-tuner -lo-freq -freq} }
     # incoming opts
-    option -freq -default 10000 -configuremethod Opt-handler -type sdrctl::hertz
+    option -freq -default 10000 -configuremethod Opt-handler -type sdrtype::hertz
 
     method Opt-handler {opt val} {
 	set options($opt) $val

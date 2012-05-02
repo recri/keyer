@@ -26,15 +26,15 @@ package require Tk
 package require snit
 
 snit::widgetadaptor sdrui::tk-spectrum {
-    option -max -default 0 -configuremethod opt-handler
-    option -min -default -160 -configuremethod opt-handler
-    option -smooth -default true -configuremethod opt-handler
-    option -multi -default 1 -configuremethod opt-handler
-    option -center -default 0 -configuremethod opt-handler
-    option -size -default 4096 -configuremethod opt-handler
-    option -rate -default 48000 -configuremethod opt-handler
-    option -zoom -default 1 -configuremethod opt-handler
-    option -pan -default 0 -configuremethod opt-handler
+    option -max -default 0 -type sdrtype::decibel -configuremethod opt-handler
+    option -min -default -160 -type sdrtype::decibel -configuremethod opt-handler
+    option -smooth -default true -type sdrtype::smooth -configuremethod opt-handler
+    option -multi -default 1 -type sdrtype::multi -configuremethod opt-handler
+    option -center -default 0 -type sdrtype::hertz -configuremethod opt-handler
+    option -size -default 4096 -type sdrtype::spec-size -configuremethod opt-handler
+    option -rate -default 48000 -type sdrtype::sample-rate -configuremethod opt-handler
+    option -zoom -default 1 -type sdrtype::zoom -configuremethod opt-handler
+    option -pan -default 0 -type sdrtype::pan -configuremethod opt-handler
 
     variable data -array {
 	xscale 1.0

@@ -21,7 +21,7 @@ package provide sdrctl::control-iq-correct 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle iq-correct controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-iq-correct {
     option -command -default {} -readonly true
     # incoming opts
-    option -mu -default 0 -configuremethod Opt-handler -type sdrctl::iq-correct
+    option -mu -default 0 -configuremethod Opt-handler -type sdrtype::iq-correct
 
     method Opt-handler {opt val} {
 	set options($opt) $val

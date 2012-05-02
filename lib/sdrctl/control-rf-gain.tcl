@@ -21,7 +21,7 @@ package provide sdrctl::control-rf-gain 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle rf gain controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-rf-gain {
     option -command -default {} -readonly true
     # incoming opts
-    option -gain -default 0 -configuremethod Opt-handler -type sdrctl::gain
+    option -gain -default 0 -configuremethod Opt-handler -type sdrtype::gain
 
     method Opt-handler {opt val} {
 	set options($opt) $val

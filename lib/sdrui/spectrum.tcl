@@ -16,38 +16,49 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+##
+## af-gain - af-gain control for agc off
+##
 package provide sdrui::spectrum 1.0.0
 
 package require Tk
 package require snit
 package require sdrui::tk-spectrum
-package require sdrtcl::spectrum-tap
-package require sdrtcl::jack
 
 snit::widget sdrui::spectrum {
-    component capture
     component display
 
-    option -rate -default 48000 -configuremethod Opt-handler
+    option -rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-handler
 
-    option -polyphase -default 1
-    option -size -default 128 -configuremethod Opt-handler
-    option -result -default dB -configuremethod Opt-handler
+    option -period -default 100 -type sdrtype::milliseconds
+    option -polyphase -default 1 -type sdrtype::spec-polyphase
+    option -size -default 128 -type sdrtype::spec-size -configuremethod Opt-handler
+    option -result -default dB -type sdrtype::spec-result -configuremethod Opt-handler
 
-    option -pal -default 0 -configuremethod Opt-handler
+    option -pal -default 0 -type sdrtype::spec-palette -configuremethod Opt-handler
+    option -min -default -150 -type sdrtype::decibel -configuremethod Opt-handler
+    option -max -default -0 -type sdrtype::decibel -configuremethod Opt-handler
+    option -zoom -default 1 -type sdrtype::zoom -configuremethod Opt-handler
+    option -pan -default 0 -type sdrtype::pan -configuremethod Opt-handler
+    option -smooth -default false -type sdrtype::smooth -configuremethod Opt-handler
+    option -center -default 0 -type sdrtype::hertz -configuremethod Opt-handler
+    option -multi -default 1 -type sdrtype::multi -configuremethod Opt-handler
 
-    option -min -default -150 -configuremethod Opt-handler
-    option -max -default -0 -configuremethod Opt-handler
-    option -zoom -default 1 -configuremethod Opt-handler
-    option -pan -default 0 -configuremethod Opt-handler
-    option -smooth -default false -configuremethod Opt-handler
-    option -center -default 0 -configuremethod Opt-handler
-    option -multi -default 1 -configuremethod Opt-handler
+    option -tap -default {} -configuremethod Opt-handler
+    option -instance -default 1 -type sdrtype::instance
 
     option -server -default default -readonly true
     option -container -readonly yes
     option -control -readonly yes
+    option -enable -default no -type snit::boolean -configuremethod Enable -cgetmethod IsEnabled
+    option -activate -default no -type snit::boolean -configuremethod Activate -cgetmethod IsActivated
+    
+    option -command {}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
+    option -method-connect-from {}
     option -input -default {} -configuremethod Opt-handler
+
 
     variable data -array {
 	frequencies {}
@@ -55,80 +66,24 @@ snit::widget sdrui::spectrum {
 	display-options {-min -max -smooth -multi -center -rate -zoom -pan}
     }
 
-    method {filter-options} {target} {
-	set new {}
-	foreach {name val} [array get options] {
-	    if {$name in $data($target-options)} {
-		lappend new $name $val
-	    }
-	}
-	return $new
-    }
-    
-    method Opt-delegate {opt val} {
-	if {$display ne {} && $opt in $data(display-options)} { $display configure $opt $val }
-	if {$capture ne {} && $opt in $data(capture-options)} {
-	    while {[lindex [$capture modified] 1]} { after 1 }
-	    $capture configure $opt $val
-	}
-    }
-
-    method {Opt-handler -rate} {value} { set options(-rate) $value; $self Opt-delegate -rate $value }
-
-    method {Opt-handler -size} {value} { set options(-size) $value; $self Opt-delegate -size $value; set data(frequencies) {} }
-
-    method {Opt-handler -result} {value} { set options(-result) $value; $self Opt-delegate -result $value }
-
-    method {Opt-handler -pal} {value} { set options(-pal) $value; $self Opt-delegate -pal $value }
-
-    method {Opt-handler -min} {value} { set options(-min) $value; $self Opt-delegate -min $value }
-    method {Opt-handler -max} {value} { set options(-max) $value; $self Opt-delegate -max $value }
-    method {Opt-handler -zoom} {value} { set options(-zoom) $value; $self Opt-delegate -zoom $value }
-    method {Opt-handler -pan} {value} { set options(-pan) $value; $self Opt-delegate -pan $value }
-    method {Opt-handler -smooth} {value} { set options(-smooth) $value; $self Opt-delegate -smooth $value }
-    method {Opt-handler -center} {value} { set options(-center) $value; $self Opt-delegate -center $value }
-    method {Opt-handler -multi} {value} { set options(-multi) $value; $self Opt-delegate -multi $value }
-
-    method {Opt-handler -input} {input} {
-	set options(-input) $input
-	if {$input ne {}} {
-	    set ports [$options(-control) ccget $input -inport]
-	    set input [lindex [split [lindex $ports 0] :] 0]
-	}
-	$self Opt-delegate -connect $input
-    }
-
-    method update {} {
-	if { ! [lindex [$capture modified] 1]} {
-	    lassign [$capture get] frame dB
-	    binary scan $dB f* dB
-	    set n [llength $dB]
-	    if {[llength $data(frequencies)] != $n} {
-		set data(frequencies) {}
-		set maxf [expr {$options(-rate)/2.0}]
-		set minf [expr {-$maxf}]
-		set df [expr {double($options(-rate))/$options(-size)}]
-		for {set f $minf} {$f < $maxf} {set f [expr {$f+$df}]} {
-		    lappend data(frequencies) $f
-		}
-	    }
-	    foreach x $data(frequencies) y [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {$n/2-1}]]] {
-		lappend xy $x $y
-	    }
-	    #puts "$xy"
-	    $display update $xy
-	}
-	set data(after) [after 100 [mymethod update]]
-    }
-    
     constructor {args} {
 	set options(-rate) [from args -rate [sdrtcl::jack -server $options(-server) sample-rate]] 
+	set options(-control) [from args -control [::radio cget -control]]
 	$self configure {*}$args
-	install capture using sdrtcl::spectrum-tap ::spectrum {*}[$self filter-options capture]
+	regexp {^.[rt]x-spectrum.ui-(.*)$} $win all data(name)
+	#puts "spectrum capture $capture: -size = [$capture cget -size]"
 	install display using sdrui::tk-spectrum $win.s {*}[$self filter-options display]
 	pack $win.s -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
 	
+	# connections to option controls
+	regexp {^.*ui-(.*)$} $win all tail
+	foreach opt {-size -polyphase -result -period} {
+	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
+	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	}
+	lappend options(-method-connect-from) [list ctl-$tail get [mymethod update]]
+
 	# spectrum selection
 	#puts "making input selector: -input {$options(-input)}"
 	pack [ttk::menubutton $win.m.i -textvar [myvar data(input)] -menu $win.m.i.m] -side left
@@ -215,11 +170,102 @@ snit::widget sdrui::spectrum {
 	# scroll/pan
 	
 	# start capturing
-	set data(after) [after 100 [mymethod update]]
+	#set data(after) [after 100 [mymethod update]]
     }
 
     destructor {
 	catch {after cancel $data(after)}
     }
-}
 
+    method filter-options {target} {
+	set new {}
+	foreach {name val} [array get options] {
+	    if {$name in $data($target-options)} {
+		lappend new $name $val
+	    }
+	}
+	return $new
+    }
+    
+    method capture-is-busy {} {
+	# should go through $options(-command) method, or something
+	if { ! [$options(-control) part-exists $capture]} {
+	    return 1
+	}
+	return [lindex [::sdrctlx::$capture modified] 1]
+    }
+
+    method capture-configure {} {
+	if {[$self capture-is-busy]} {
+	    after 50 [mymethod capture-configure]
+	} else {
+	    # should go through $options(-command) report
+	    $options(-control) part-configure $capture {*}[$self filter-options capture]
+	}
+    }
+	
+    method update {} {
+	if { ! [$self capture-is-busy]} {
+	    lassign [$capture get] frame dB
+	    binary scan $dB f* dB
+	    set n [llength $dB]
+	    if {[llength $data(frequencies)] != $n} {
+		set data(frequencies) {}
+		set maxf [expr {$options(-rate)/2.0}]
+		set minf [expr {-$maxf}]
+		set df [expr {double($options(-rate))/$options(-size)}]
+		for {set f $minf} {$f < $maxf} {set f [expr {$f+$df}]} {
+		    lappend data(frequencies) $f
+		}
+	    }
+	    foreach x $data(frequencies) y [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {$n/2-1}]]] {
+		lappend xy $x $y
+	    }
+	    #puts "$xy"
+	    $display update $xy
+	}
+	set data(after) [after 100 [mymethod update]]
+    }
+    
+
+    method Opt-delegate {opt val} {
+	if {$display ne {} && $opt in $data(display-options) && [$options(-control) part-exists $display]} {
+	    $display configure $opt $val
+	}
+	if {$capture ne {} && $opt in $data(capture-options)} {
+	    while {[$self capture-is-busy]} { after 1 }
+	    $options(-control) part-configure $capture $opt $val
+	}
+    }
+
+    method {Opt-handler -rate} {value} { set options(-rate) $value; $self Opt-delegate -rate $value }
+    method {Opt-handler -size} {value} { set options(-size) $value; $self Opt-delegate -size $value; set data(frequencies) {} }
+    method {Opt-handler -result} {value} { set options(-result) $value; $self Opt-delegate -result $value }
+    method {Opt-handler -pal} {value} { set options(-pal) $value; $self Opt-delegate -pal $value }
+    method {Opt-handler -min} {value} { set options(-min) $value; $self Opt-delegate -min $value }
+    method {Opt-handler -max} {value} { set options(-max) $value; $self Opt-delegate -max $value }
+    method {Opt-handler -zoom} {value} { set options(-zoom) $value; $self Opt-delegate -zoom $value }
+    method {Opt-handler -pan} {value} { set options(-pan) $value; $self Opt-delegate -pan $value }
+    method {Opt-handler -smooth} {value} { set options(-smooth) $value; $self Opt-delegate -smooth $value }
+    method {Opt-handler -center} {value} { set options(-center) $value; $self Opt-delegate -center $value }
+    method {Opt-handler -multi} {value} { set options(-multi) $value; $self Opt-delegate -multi $value }
+    method {Opt-handler -tap} {value} { set options(-tap) $value; $self Opt-delegate -multi $value }
+    method {Opt-handler -input} {input} {
+	set options(-input) $input
+	if {$input ne {}} {
+	    set ports [$options(-control) ccget $input -inport]
+	    set input [lindex [split [lindex $ports 0] :] 0]
+	}
+	$self Opt-delegate -connect $input
+    }
+
+    method {Enable -enable} {val} { set options(-enable) $val }
+    method {IsEnabled -enable} {} { return $options(-enable) }
+    method {Activate -activate} {val} { set options(-activate) $val }
+    method {IsActivated -activate} {} { return $options(-activate) $val }
+
+    ## typical option setters
+    method set-gain {} { {*}$options(-command) report -gain $options(-gain) }
+    method set-mute {} { {*}$options(-command) report -mute $options(-mute) }
+
+}    

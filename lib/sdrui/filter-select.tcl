@@ -23,11 +23,11 @@ package provide sdrui::filter-select 1.0.0
 
 package require Tk
 package require snit
-package require sdrctl::types
+package require sdrtype::types
 
 snit::widgetadaptor sdrui::filter-select {
 
-    option -mode -default CWU -type sdrctl::mode -configuremethod opt-handler
+    option -mode -default CWU -type sdrtype::mode -configuremethod opt-handler
     option -width {}
 
     option -command {}

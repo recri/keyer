@@ -1,6 +1,13 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - my own code is confusing me, and I only wrote it last week
+   okay, so the spectrum and meter components in the ui need to
+   execute a method on the jack component in the dsp graph, the get
+   method, possibly protected by the modify method.  They naturally do
+   this from an after timeout at the desired update frequency.  But as
+   I've set things up, and probably correctly, they don't know the
+   jack component, it's on the other side of the controller.
 ** TODO - so a CW sdr is just one keyed oscillator running at LO+CW offset.
 ** TODO - would my life be simpler if I just used Tk virtual events?
    Maybe, but I wouldn't be able to watch.

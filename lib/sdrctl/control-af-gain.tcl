@@ -21,7 +21,7 @@ package provide sdrctl::control-af-gain 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle gain controls
@@ -29,8 +29,8 @@ package require sdrctl::types
 snit::type sdrctl::control-af-gain {
     option -command -default {} -readonly true
     # incoming opts
-    option -gain -default 0 -configuremethod Opt-handler -type sdrctl::gain
-    option -mute -default false -configuremethod Opt-handler -type sdrctl::mute
+    option -gain -default 0 -configuremethod Opt-handler -type sdrtype::gain
+    option -mute -default false -configuremethod Opt-handler -type sdrtype::mute
 
     method Opt-handler {opt val} {
 	set options($opt) $val

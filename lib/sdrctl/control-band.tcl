@@ -20,7 +20,7 @@
 package provide sdrctl::control-band 1.0.0
 
 package require snit
-package require sdrctl::types
+package require sdrtype::types
 package require sdrutil::band-data
 
 ##
@@ -36,7 +36,7 @@ snit::type sdrctl::control-band {
     option -label -configuremethod Opt-handler
     option -low -configuremethod Opt-handler
     option -high -configuremethod Opt-handler
-    option -mode -default CWU -type sdrctl::mode -configuremethod Opt-handler
+    option -mode -default CWU -type sdrtype::mode -configuremethod Opt-handler
     option -filter-width -configuremethod Opt-handler
     option -freq -configuremethod Opt-handler
 

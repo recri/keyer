@@ -21,7 +21,7 @@ package provide sdrctl::control-iq-swap 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle iq-swap controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-iq-swap {
     option -command -default {} -readonly true
     # incoming opts
-    option -swap -default 0 -configuremethod Opt-handler -type sdrctl::iq-swap
+    option -swap -default 0 -configuremethod Opt-handler -type sdrtype::iq-swap
 
     method Opt-handler {opt val} {
 	set options($opt) $val

@@ -21,7 +21,7 @@ package provide sdrctl::control-mode 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle mode setting controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-mode {
     option -command {}
 
-    option -mode -default CWU -configuremethod Opt-handler -type sdrctl::mode
+    option -mode -default CWU -configuremethod Opt-handler -type sdrtype::mode
 
     method {Opt-handler -mode} {val} {
 	set options(-mode) $val

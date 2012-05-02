@@ -28,7 +28,7 @@ package provide sdrui::ui-radio-panel 1.0
 package require Tk
 package require snit
 
-package require sdrui::components
+package require sdrui::ui-components
 
 snit::widget sdrui::ui-radio-panel {
 
@@ -39,7 +39,9 @@ snit::widget sdrui::ui-radio-panel {
 	$self configure {*}$args
 
 	# build the containers
-	ttk::separator $win.sep1 -orient horizontal
+	ttk::separator $win.sep1a -orient horizontal
+	ttk::frame $win.mtr
+	ttk::separator $win.sep1b -orient horizontal
 	ttk::frame $win.set1
 	ttk::separator $win.sep2 -orient horizontal
 	ttk::notebook $win.notes
@@ -47,18 +49,38 @@ snit::widget sdrui::ui-radio-panel {
 	ttk::frame $win.set3
 	ttk::frame $win.set4
 
+	foreach x {.rx-spectrum .tx-spectrum} { toplevel $x }
+
 	# build the components
-	sdrui::components %AUTO% -root $win -control $options(-control) -container $options(-container)
+	sdrui::ui-components %AUTO% -root $win -rx-spectrum-root .rx-spectrum -tx-spectrum-root .tx-spectrum -control $options(-control) -container $options(-container)
 
 	# assemble
-	grid $win.ui-rxtx-tuner -row 0 -column 0 -sticky nsew
-	grid $win.sep1 -row 1 -column 0 -sticky ew
-	grid $win.set1 -row 2 -column 0 -sticky ew
-	grid $win.sep2 -row 3 -column 0 -sticky ew
-	grid $win.notes -row 4 -column 0 -sticky nsew
+	set row -1
+	grid $win.ui-rxtx-tuner -row [incr row] -column 0 -sticky nsew
+	grid $win.sep1a -row [incr row] -column 0 -sticky ew
+	grid $win.mtr -row [incr row]
+	grid $win.sep1b -row [incr row] -column 0 -sticky ew
+	grid $win.set1 -row [incr row] -column 0 -sticky ew
+	grid $win.sep2 -row [incr row] -column 0 -sticky ew
+	grid $win.notes -row [incr row] -column 0 -sticky nsew
 	grid rowconfigure $win 0 -weight 1
 	grid rowconfigure $win 4 -weight 1
 	grid columnconfigure $win 0 -weight 1
+
+	foreach x {rx-spectrum tx-spectrum} {
+	    if {[winfo exists .$x.ui-$x]} {
+		pack .$x.ui-$x -fill both -expand true
+		if {$x ne {rx-spectrum}} {
+		    wm withdraw .$x
+		}
+	    } else {
+		destroy .$x
+	    }
+	}
+
+	if {[winfo exists $win.ui-rx-meter]} {
+	    pack $win.ui-rx-meter -in $win.mtr -fill x -expand true
+	}
 
 	foreach {tail row column} {
 	    ui-rxtx-mode 0 0

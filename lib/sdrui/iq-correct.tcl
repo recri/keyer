@@ -24,12 +24,12 @@ package provide sdrui::iq-correct 1.0.0
 package require Tk
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::iq-correct {
     component button
 
-    option -mu -default 0 -type sdrctl::iq-correct
+    option -mu -default 0 -type sdrtype::iq-correct
 
     option -command {}
     option -opt-connect-to {}

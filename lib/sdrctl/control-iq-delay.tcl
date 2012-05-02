@@ -21,7 +21,7 @@ package provide sdrctl::control-iq-delay 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle iq-delay controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-iq-delay {
     option -command -default {} -readonly true
     # incoming opts
-    option -delay -default 0 -configuremethod Opt-handler -type sdrctl::iq-delay
+    option -delay -default 0 -configuremethod Opt-handler -type sdrtype::iq-delay
 
     method Opt-handler {opt val} {
 	set options($opt) $val

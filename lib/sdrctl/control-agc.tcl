@@ -21,7 +21,7 @@ package provide sdrctl::control-agc 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle agc controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-agc {
     option -command -default {} -readonly true
     # incoming opts
-    option -mode -default med -configuremethod Opt-handler -type sdrctl::agc-mode
+    option -mode -default med -configuremethod Opt-handler -type sdrtype::agc-mode
 
     method Opt-handler {opt val} {
 	set options($opt) $val

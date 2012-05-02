@@ -21,7 +21,7 @@ package provide sdrctl::control-leveler 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle leveler controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-leveler {
     option -command -default {} -readonly true
     # incoming opts
-    option -mode -default leveler -configuremethod Opt-handler -type sdrctl::leveler-mode
+    option -mode -default leveler -configuremethod Opt-handler -type sdrtype::leveler-mode
 
     method Opt-handler {opt val} {
 	set options($opt) $val

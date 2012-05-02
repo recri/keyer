@@ -71,7 +71,8 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/spectrum_tap.so \
 	$(LIBDIR)/window.so \
 	$(LIBDIR)/window_polyphase.so \
-	$(KEYERS)
+	$(KEYERS) \
+	$(LIBDIR)/usb.so
 
 OSC_VARIANTS=$(LIBDIR)/oscillator_f.so \
 	$(LIBDIR)/oscillator_t.so \
@@ -244,3 +245,5 @@ $(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../dspmath/midi.h ../d
 $(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/keyed_tone.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
+$(LIBDIR)/usb.so: usb.c
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(LIBUSB_CFLAGS) $< $(LIBUSB_LIBS) $(LIBS)

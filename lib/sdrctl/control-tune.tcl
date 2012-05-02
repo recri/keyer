@@ -21,7 +21,7 @@ package provide sdrctl::control-tune 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle tuning controls
@@ -30,7 +30,7 @@ snit::type sdrctl::control-tune {
     option -command {}
     option -opt-connect-from {{ctl-rxtx-mode -mode -mode}}
 
-    option -mode -default CWU -configuremethod Retune -type sdrctl::mode
+    option -mode -default CWU -configuremethod Retune -type sdrtype::mode
     option -turn-resolution -default 1000 -configuremethod Opt-handler
     option -freq -default 7050000 -configuremethod Retune
     option -lo-freq -default 10000 -configuremethod Retune

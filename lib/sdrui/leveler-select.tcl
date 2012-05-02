@@ -24,13 +24,13 @@ package provide sdrui::leveler-select 1.0.0
 package require Tk
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::leveler-select {
     component menubutton
     component menu
 
-    option -mode -default leveler -type sdrctl::leveler-mode
+    option -mode -default leveler -type sdrtype::leveler-mode
 
     option -command {}
     option -opt-connect-to {}
@@ -43,7 +43,7 @@ snit::widgetadaptor sdrui::leveler-select {
 	installhull using ttk::labelframe
 	install menubutton using ttk::menubutton $win.b -textvar [myvar options(-mode)] -menu $win.b.m
 	install menu using menu $win.b.m -tearoff no
-	foreach mode [sdrctl::leveler-mode cget -values] {
+	foreach mode [sdrtype::leveler-mode cget -values] {
 	    $win.b.m add radiobutton -label $mode -variable [myvar options(-mode)] -value $mode -command [mymethod set-mode $mode]
 	}
 	pack $win.b -fill x -expand true

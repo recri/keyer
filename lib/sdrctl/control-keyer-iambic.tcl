@@ -21,7 +21,7 @@ package provide sdrctl::control-keyer-iambic 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle keyer iambic controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-keyer-iambic {
     option -command -default {} -readonly true
     # incoming opts
-    option -iambic -default ad5dz -configuremethod Opt-handler -type sdrctl::iambic
+    option -iambic -default ad5dz -configuremethod Opt-handler -type sdrtype::iambic
 
     method Opt-handler {opt val} {
 	set options($opt) $val

@@ -21,7 +21,7 @@ package provide sdrctl::control-keyer-tone 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle keyer sidetone controls
@@ -31,8 +31,8 @@ snit::type sdrctl::control-keyer-tone {
     option -opt-connect-to { {-freq ctl-rxtx-tuner -cw-freq} }
     option -opt-connect-from { {ctl-rxtx-tuner -cw-freq -freq} }
     # incoming opts
-    option -freq -default 600 -configuremethod Opt-handler -type sdrctl::hertz
-    option -spot -default 0 -configuremethod Opt-handler -type sdrctl::spot
+    option -freq -default 600 -configuremethod Opt-handler -type sdrtype::hertz
+    option -spot -default 0 -configuremethod Opt-handler -type sdrtype::spot
 
     method Opt-handler {opt val} {
 	set options($opt) $val

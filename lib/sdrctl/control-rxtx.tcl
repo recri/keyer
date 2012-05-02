@@ -21,7 +21,7 @@ package provide sdrctl::control-rxtx 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle mox/vox/ptt controls
@@ -29,7 +29,7 @@ package require sdrctl::types
 snit::type sdrctl::control-rxtx {
     option -command {}
 
-    option -mode -default CWU -configuremethod Opt-handler -type sdrctl::mode
+    option -mode -default CWU -configuremethod Opt-handler -type sdrtype::mode
     option -mox -default 0 -configuremethod Opt-handler 
 
     method {Opt-handler} {opt val} {

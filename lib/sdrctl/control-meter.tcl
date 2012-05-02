@@ -17,21 +17,30 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrctl::control-keyer-debounce 1.0.0
+package provide sdrctl::control-meter 1.0.0
 
 package require snit
 
 package require sdrtype::types
 
 ##
-## handle keyer debounce controls
+## handle meter controls, both capture and display
 ##
-snit::type sdrctl::control-keyer-debounce {
+## meters share the peculiarities of spectrums, and there's
+## 5) the s-meter derives its signal from the agc component via a "get" method.
+##
+
+snit::type sdrctl::control-meter {
     option -command -default {} -readonly true
-    # incoming opts
-    option -debounce -default 0 -configuremethod Opt-handler -type sdrtype::debounce
-    option -period -default 0.1 -configuremethod Opt-handler -type sdrtype::debounce-period
-    option -steps -default 4 -configuremethod Opt-handler -type sdrtype::debounce-steps
+    # meter-tap opts
+    option -period -default 50 -type sdrtype::milliseconds -configuremethod Opt-handler
+    option -decay -default 0.999 -type sdrtype::decay -configuremethod Opt-handler
+    option -reduce -default mag2 -type sdrtype::meter-reduce -configuremethod Opt-handler
+    # meter-display opts
+    option -style -default s-meter -type sdrtype::meter-style -configuremethod Opt-display
+    # control opts
+    option -tap -default {}
+    option -instance -default 1 -type sdrtype::instance
 
     method Opt-handler {opt val} {
 	set options($opt) $val

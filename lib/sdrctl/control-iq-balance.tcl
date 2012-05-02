@@ -21,7 +21,7 @@ package provide sdrctl::control-iq-balance 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle iq-balance controls
@@ -29,8 +29,8 @@ package require sdrctl::types
 snit::type sdrctl::control-iq-balance {
     option -command -default {} -readonly true
     # incoming opts
-    option -sine-phase -default 0 -configuremethod Opt-handler -type sdrctl::sine-phase
-    option -linear-gain -default 1.0 -configuremethod Opt-handler -type sdrctl::linear-gain
+    option -sine-phase -default 0 -configuremethod Opt-handler -type sdrtype::sine-phase
+    option -linear-gain -default 1.0 -configuremethod Opt-handler -type sdrtype::linear-gain
 
     method Opt-handler {opt val} {
 	set options($opt) $val

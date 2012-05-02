@@ -21,7 +21,7 @@ package provide sdrctl::control-filter 1.0.0
 
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
 
 ##
 ## handle filter controls
@@ -31,7 +31,7 @@ snit::type sdrctl::control-filter {
     option -command -default {} -readonly true
     option -opt-connect-from {{ctl-rxtx-mode -mode -mode} {ctl-rxtx-tuner -cw-freq -cw-freq}}
     # incoming opts
-    option -mode -default CWU -configuremethod Retune -type sdrctl::mode
+    option -mode -default CWU -configuremethod Retune -type sdrtype::mode
     option -width -default 400 -configuremethod Retune
     option -cw-freq -default 600 -configuremethod Retune
     option -length -default 128 -configuremethod Opt-handler
