@@ -63,10 +63,6 @@ proc sdrctl::radio-controls {args} {
 	keyer-debounce		sdrctl::control-keyer-debounce {}
 	keyer-iambic		sdrctl::control-keyer-iambic {}
 	keyer-tone		sdrctl::control-keyer-tone {}
-	rx-spectrum		sdrctl::control-spectrum {}
-	rx-meter		sdrctl::control-meter {}
-	tx-spectrum		sdrctl::control-spectrum {}
-	tx-meter		sdrctl::control-meter {}
     } {
 	package require $factory
 	sdrctl::control ::sdrctlw::$suffix -type ctl -suffix $suffix -factory $factory -factory-options $opts -container $root

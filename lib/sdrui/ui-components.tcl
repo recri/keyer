@@ -33,19 +33,13 @@ snit::type sdrui::ui-components {
     option -control -readonly yes
     option -container -readonly yes
     option -root -readonly yes
-    option -rx-spectrum-root -readonly yes
-    option -tx-spectrum-root -readonly yes
     option -name {}
 
     constructor {args} {
 	# puts "sdrui::components constructor {$args}"
 	$self configure {*}$args
 	set need(rx) [::radio cget -rx]
-	set need(rx-meter) [::radio cget -rx-meter]
-	set need(rx-spectrum) [::radio cget -rx-spectrum]
 	set need(tx) [::radio cget -tx]
-	set need(tx-meter) [::radio cget -tx-meter]
-	set need(tx-spectrum) [::radio cget -tx-spectrum]
 	set need(keyer) [::radio cget -keyer]
 	set common [list -type ui -root $options(-root) -control $options(-control) -container $options(-container)]
 	foreach {wantedby name require factory opts} {
@@ -85,33 +79,11 @@ snit::type sdrui::ui-components {
 	    {keyer} ui-keyer-iambic-dah sdrui::iambic sdrui::iambic-dah {}
 	    {keyer} ui-keyer-iambic-space sdrui::iambic sdrui::iambic-space {}
 	    {keyer rx tx} ui-keyer-tone sdrui::cw-pitch sdrui::cw-pitch {}
-	    {rx-meter} ui-rx-meter sdrui::meter sdrui::meter {}
-	    {tx-meter} ui-tx-meter sdrui::meter sdrui::meter {}
 	} {
 	    foreach x $wantedby {
 		if {$need($x)} {
 		    sdrctl::control ::sdrctlw::$name {*}$common -suffix $name -factory-require $require -factory $factory -factory-options $opts
 		    break
-		}
-	    }
-	}
-	foreach {wantedby name require factory opts} {
-	    {rx-spectrum} ui-rx-spectrum sdrui::spectrum sdrui::spectrum {}
-	} {
-	    foreach x $wantedby {
-		if {$need($x)} {
-		    set common [list -type ui -root $options(-rx-spectrum-root) -control $options(-control) -container $options(-container)]
-		    sdrctl::control ::sdrctlw::$name {*}$common -suffix $name -factory-require $require -factory $factory -factory-options $opts
-		}
-	    }
-	}
-	foreach {wantedby name require factory opts} {
-	    {tx-spectrum} ui-tx-spectrum sdrui::spectrum sdrui::spectrum {}
-	} {
-	    foreach x $wantedby {
-		if {$need($x)} {
-		    set common [list -type ui -root $options(-tx-spectrum-root) -control $options(-control) -container $options(-container)]
-		    sdrctl::control ::sdrctlw::$name {*}$common -suffix $name -factory-require $require -factory $factory -factory-options $opts
 		}
 	    }
 	}

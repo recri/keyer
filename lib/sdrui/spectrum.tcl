@@ -24,9 +24,11 @@ package provide sdrui::spectrum 1.0.0
 package require Tk
 package require snit
 package require sdrui::tk-spectrum
+package require sdrtcl::spectrum-tap
 
 snit::widget sdrui::spectrum {
     component display
+    component capture
 
     option -rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-handler
 
@@ -70,20 +72,12 @@ snit::widget sdrui::spectrum {
 	set options(-rate) [from args -rate [sdrtcl::jack -server $options(-server) sample-rate]] 
 	set options(-control) [from args -control [::radio cget -control]]
 	$self configure {*}$args
-	regexp {^.[rt]x-spectrum.ui-(.*)$} $win all data(name)
-	#puts "spectrum capture $capture: -size = [$capture cget -size]"
 	install display using sdrui::tk-spectrum $win.s {*}[$self filter-options display]
+	install capture using ::sdrtcl::spectrum-tap ::sdrctlx::spectrum {*}[$self filter-options capture]
+	if {[$capture is-active]} { $capture deactivate }
 	pack $win.s -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
 	
-	# connections to option controls
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-size -polyphase -result -period} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
-	}
-	lappend options(-method-connect-from) [list ctl-$tail get [mymethod update]]
-
 	# spectrum selection
 	#puts "making input selector: -input {$options(-input)}"
 	pack [ttk::menubutton $win.m.i -textvar [myvar data(input)] -menu $win.m.i.m] -side left
@@ -170,7 +164,7 @@ snit::widget sdrui::spectrum {
 	# scroll/pan
 	
 	# start capturing
-	#set data(after) [after 100 [mymethod update]]
+	set data(after) [after 100 [mymethod update]]
     }
 
     destructor {
@@ -187,25 +181,21 @@ snit::widget sdrui::spectrum {
 	return $new
     }
     
-    method capture-is-busy {} {
-	# should go through $options(-command) method, or something
-	if { ! [$options(-control) part-exists $capture]} {
-	    return 1
-	}
-	return [lindex [::sdrctlx::$capture modified] 1]
-    }
+    method capture-is-active {} { return [$capture is-active] }
+    method capture-is-busy {} { return [lindex [$capture modified] 1] }
+    method capture-exists {} { return [expr {[info command $capture] ne {}}] }
 
     method capture-configure {} {
-	if {[$self capture-is-busy]} {
+	if { ! [$self capture-exists] || [$self capture-is-busy]} {
 	    after 50 [mymethod capture-configure]
 	} else {
 	    # should go through $options(-command) report
-	    $options(-control) part-configure $capture {*}[$self filter-options capture]
+	    $capture configure {*}[$self filter-options capture]
 	}
     }
 	
     method update {} {
-	if { ! [$self capture-is-busy]} {
+	if {[$self capture-exists] && ! [$self capture-is-busy] && [$self capture-is-active]} {
 	    lassign [$capture get] frame dB
 	    binary scan $dB f* dB
 	    set n [llength $dB]
@@ -224,7 +214,7 @@ snit::widget sdrui::spectrum {
 	    #puts "$xy"
 	    $display update $xy
 	}
-	set data(after) [after 100 [mymethod update]]
+	set data(after) [after $options(-period) [mymethod update]]
     }
     
 

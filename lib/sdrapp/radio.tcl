@@ -39,11 +39,7 @@ snit::type sdrapp::radio {
     option -name -readonly yes -default {}
     option -enable -readonly yes -default true
     option -rx -readonly yes -default true
-    option -rx-spectrum -readonly yes -default true
-    option -rx-meter -readonly yes -default true
     option -tx -readonly yes -default true
-    option -tx-spectrum -readonly yes -default false
-    option -tx-meter -readonly yes -default false
     option -keyer -readonly yes -default true
     option -hw -readonly yes -default true
     option -hw-type -readonly yes -default {hw-softrock-dg8saq}
@@ -87,12 +83,6 @@ snit::type sdrapp::radio {
 	    package require sdrdsp::dsp-rx
 	    ::sdrdsp::rx ::radio-rx -container $self
 	    $self connect $options(-rx-source) rx $options(-rx-sink)
-	    if {$options(-rx-spectrum)} {
-		::sdrdsp::rx-spectrum ::radio-rx-spectrum -container $self
-	    }
-	    if {$options(-rx-meter)} {
-		::sdrdsp::rx-meter ::radio-rx-meter -container $self
-	    }
 	}
 	if {$options(-keyer)} {
 	    package require sdrdsp::dsp-keyer
@@ -103,12 +93,6 @@ snit::type sdrapp::radio {
 	    package require sdrdsp::dsp-tx
 	    ::sdrdsp::tx ::radio-tx -container $self
 	    $self connect $options(-tx-source) tx $options(-tx-sink)
-	    if {$options(-tx-spectrum)} {
-		::sdrdsp::tx-spectrum ::radio-tx-spectrum -container $self
-	    }
-	    if {$options(-tx-meter)} {
-		::sdrdsp::tx-meter ::radio-tx-meter -container $self
-	    }
 	}
 	::radio-ctl part-resolve
 	if {$options(-activate-hw)} {
@@ -139,10 +123,6 @@ snit::type sdrapp::radio {
 	}
     }
     destructor {
-	catch {::radio-rx-spectrum}
-	catch {::radio-rx-meter destroy}
-	catch {::radio-tx-spectrum}
-	catch {::radio-tx-meter destroy}
 	catch {::radio-ui destroy}
 	catch {::radio-hw destroy}
 	catch {::keyer destroy}

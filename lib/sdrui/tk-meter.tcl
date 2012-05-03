@@ -49,8 +49,8 @@ package require Tk
 package require snit
 
 snit::widgetadaptor sdrui::tk-meter {
-    option -max -default -13 -configuremethod opt-handler
-    option -min -default -127 -configuremethod opt-handler
+    option -max -default -13.0 -configuremethod opt-handler
+    option -min -default -127.0 -configuremethod opt-handler
 
     variable data -array {
 	width 1
@@ -61,15 +61,19 @@ snit::widgetadaptor sdrui::tk-meter {
 	$self configure {*}$args
 	$hull configure -bg white
 	$hull create line 0 2.5 0 2.5 -width 5 -fill red -tag meter
-	bind $hull <Configure> [mymethod rescale %w %h]
+	bind $win <Configure> [mymethod rescale %w %h]
+	#$self rescale [winfo width $win] [winfo height $hull]
     }
     
     method rescale {wd ht} {
+	#puts "rescale $wd $ht"
 	set data(width) $wd
     }
 
     method update {dB} {
-	$hull coords meter 0 2.5 [expr {-($db-$options(-min))*$data(width)/($options(-max)-$options(-min))}] 2.5
+	set x [expr {($dB-$options(-min))*$data(width)/($options(-max)-$options(-min))}]
+	puts "tk-meter $x"
+	$hull coords meter 0 2.5 $x 2.5
     }
 
     method {opt-handler -max} {value} { set options(-max) $value }

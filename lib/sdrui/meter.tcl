@@ -18,18 +18,23 @@
 
 ##
 ## meter - meter display
+## actually, the s-meter
 ##
+
 package provide sdrui::meter 1.0.0
 
 package require Tk
 package require snit
 package require sdrui::tk-meter
+package require sdrtcl::meter-tap
+package require sdrtcl
 
 snit::widget sdrui::meter {
     component display
+    component capture
 
     # options controlling this component directly
-    option -period -default 100 -type sdrtype::milliseconds -configuremethod Opt-handler
+    option -period -default 50 -type sdrtype::milliseconds -configuremethod Opt-handler
 
     # options for interfacing to jack, the hierarchy, the controller
     option -server -default default -readonly true
@@ -48,17 +53,25 @@ snit::widget sdrui::meter {
 	install display using sdrui::tk-meter $win.s
 	pack $win.s -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
-	# connections to option controls
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-period} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
-	}
-	lappend options(-method-connect-from) [list ctl-$tail get [mymethod update]]
+	# I guess I need to know if the agc is off
+	set capture ::sdrctlx::rx-af-agc
+	after $options(-period) [mymethod update]
     }
     
-    method update {frame meter} {
-	$win.s update [sdrtcl::power-to-dB [expr {1.0-$meter}]]
+    method capture-is-active {} { return [$capture is-active] }
+    method capture-is-busy {} { return false }
+    method capture-exists {} { return [expr {[info command $capture] ne {}}] }
+
+    method update {} {
+	if { [$self capture-exists] &&
+	     ! [$self capture-is-busy] &&
+	     [$self capture-is-active]} {
+	    lassign [::sdrctlx::$capture get] frame level
+	    set dB [sdrtcl::linear-to-dB [expr {1.0/($level+1e-16)}]]
+	    $win.s update $dB
+	    # puts "meter update $frame $level $dB busy=[$self capture-is-busy] active=[$self capture-is-active]"
+	}
+	after $options(-period) [mymethod update]
     }
     
     method Opt-handler {opt val} {

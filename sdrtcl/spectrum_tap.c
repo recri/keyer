@@ -356,8 +356,8 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get,                    "get an audio buffer" },
-  { "modified", _modified, "fetch the current modified flag" },
+  { "get",	 _get,		"get a spectrum" },
+  { "modified", _modified,	"fetch the current modified flag" },
   { NULL }
 };
 

@@ -29,6 +29,8 @@ package require Tk
 package require snit
 
 package require sdrui::ui-components
+package require sdrui::meter
+package require sdrui::spectrum
 
 snit::widget sdrui::ui-radio-panel {
 
@@ -40,7 +42,7 @@ snit::widget sdrui::ui-radio-panel {
 
 	# build the containers
 	ttk::separator $win.sep1a -orient horizontal
-	ttk::frame $win.mtr
+	#ttk::frame $win.mtr
 	ttk::separator $win.sep1b -orient horizontal
 	ttk::frame $win.set1
 	ttk::separator $win.sep2 -orient horizontal
@@ -48,17 +50,21 @@ snit::widget sdrui::ui-radio-panel {
 	ttk::frame $win.set2
 	ttk::frame $win.set3
 	ttk::frame $win.set4
+	toplevel .spectrum
 
-	foreach x {.rx-spectrum .tx-spectrum} { toplevel $x }
 
 	# build the components
-	sdrui::ui-components %AUTO% -root $win -rx-spectrum-root .rx-spectrum -tx-spectrum-root .tx-spectrum -control $options(-control) -container $options(-container)
+	sdrui::meter $win.mtr -control $options(-control) -container $options(-container)
+	sdrui::spectrum .spectrum.s -control $options(-control) -container $options(-container)
+	# not quite right, it hangs the whole application close
+	#bind .spectrum <Destroy> [list wm iconify .spectrum]
+	sdrui::ui-components %AUTO% -root $win -control $options(-control) -container $options(-container)
 
 	# assemble
 	set row -1
 	grid $win.ui-rxtx-tuner -row [incr row] -column 0 -sticky nsew
 	grid $win.sep1a -row [incr row] -column 0 -sticky ew
-	grid $win.mtr -row [incr row]
+	grid $win.mtr -row [incr row] -sticky ew
 	grid $win.sep1b -row [incr row] -column 0 -sticky ew
 	grid $win.set1 -row [incr row] -column 0 -sticky ew
 	grid $win.sep2 -row [incr row] -column 0 -sticky ew
@@ -67,20 +73,7 @@ snit::widget sdrui::ui-radio-panel {
 	grid rowconfigure $win 4 -weight 1
 	grid columnconfigure $win 0 -weight 1
 
-	foreach x {rx-spectrum tx-spectrum} {
-	    if {[winfo exists .$x.ui-$x]} {
-		pack .$x.ui-$x -fill both -expand true
-		if {$x ne {rx-spectrum}} {
-		    wm withdraw .$x
-		}
-	    } else {
-		destroy .$x
-	    }
-	}
-
-	if {[winfo exists $win.ui-rx-meter]} {
-	    pack $win.ui-rx-meter -in $win.mtr -fill x -expand true
-	}
+	grid .spectrum.s -sticky nsew
 
 	foreach {tail row column} {
 	    ui-rxtx-mode 0 0

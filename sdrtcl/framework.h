@@ -486,7 +486,7 @@ static int fw_subcommand_activate(ClientData clientData, Tcl_Interp *interp, int
 }
 static int fw_subcommand_deactivate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
-  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot activate");
+  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot deactivate");
   if ( ! fp->activated) return fw_error_str(interp, "command is not active");
   jack_status_t status = (jack_status_t)jack_deactivate(fp->client);
   if (status) return fw_error_str(interp, "command failed to deactivate");

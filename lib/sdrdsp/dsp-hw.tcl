@@ -33,6 +33,10 @@ proc sdrdsp::dsp-hw {name args} {
     foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
 	# pdict has type, direction, physical, and connections
 	# dict set data $pname $pdict
+	if { ! [dict get $pdict physical]} {
+	    # may need more finesse at some point, but for now just the physical ports
+	    continue
+	}
 	lassign [split $pname :] client port
 	if { ! [dict exists $data $client]} {
 	    dict set data $client {}
