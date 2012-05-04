@@ -22,7 +22,7 @@
 # minor editing on pasted table, translate &centerdot; into .
 #
 # the dict returned by morse-farsi-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-farsi-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-farsi-dict]
 #
 
 package provide morse::farsi 1.0.0

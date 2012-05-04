@@ -23,7 +23,7 @@
 # minor editing on pasted table
 #
 # the dict returned by morse-cut-numbers-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-itu-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-itu-dict]
 # but that would be pretty silly, since it only defines 10 characters, better to
 # merge it into another dict.
 #

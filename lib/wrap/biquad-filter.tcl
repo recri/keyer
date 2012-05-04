@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 package provide biquad-filter 1.0.0
-package require sdrkit::biquad
+package require sdrtcl::biquad
 
 namespace eval ::biquad-filter {
     array set default_data {
@@ -149,7 +149,7 @@ proc ::biquad-filter::coeffs {w} {
     upvar #0 ::biquad-filter::$w data
     ## compute rbj coefficients
     ## convert rbj coefficients to biquad coefficients
-    foreach {a0 a1 a2 b0 b1 b2} [::biquad-filter::filtercoeff $data(-type) $data(-f) $data(-q) $data(-gain) [sdrkit::jack sample-rate]] break
+    foreach {a0 a1 a2 b0 b1 b2} [::biquad-filter::filtercoeff $data(-type) $data(-f) $data(-q) $data(-gain) [sdrtcl::jack sample-rate]] break
     ## return option list for filter implementation
     return [list -b0 [expr {$b0/$a0}] -b1 [expr {$b1/$a0}] -b2 [expr {$b2/$a0}] -a1 [expr {-$a1/$a0}] -a2 [expr {-$a2/$a0}]]
 }
@@ -164,7 +164,7 @@ proc ::biquad-filter::configure {w args} {
 
 proc ::biquad-filter::biquad-filter {w args} {
     upvar #0 ::biquad-filter::$w data
-    sdrkit::biquad $w
+    sdrtcl::biquad $w
     ::biquad-filter::configure $w {*}[::biquad-filter::defaults]
     ::biquad-filter::configure $w {*}$args
 }

@@ -20,11 +20,11 @@
 package provide sdrdsp::comp-demod-fm 1.0.0
 
 package require sdrctl::control
-package require sdrkit::demod-fm
+package require sdrtcl::demod-fm
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-demod-fm {name args} {
-    return [sdrctl::control $name -type jack -suffix fm -factory sdrkit::demod-fm -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix fm -factory sdrtcl::demod-fm -enable no {*}$args]
 }
 

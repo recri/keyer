@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-iq-correct 1.0.0
 
 package require sdrctl::control
-package require sdrkit::iq-correct
+package require sdrtcl::iq-correct
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-iq-correct {name args} {
-    return [sdrctl::control $name -type jack -suffix iq-correct -factory sdrkit::iq-correct -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix iq-correct -factory sdrtcl::iq-correct -enable no {*}$args]
 }

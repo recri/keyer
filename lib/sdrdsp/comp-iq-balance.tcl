@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-iq-balance 1.0.0
 
 package require sdrctl::control
-package require sdrkit::iq-balance
+package require sdrtcl::iq-balance
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-iq-balance {name args} {
-    return [sdrctl::control $name -type jack -suffix iq-balance -factory sdrkit::iq-balance -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix iq-balance -factory sdrtcl::iq-balance -enable no {*}$args]
 }

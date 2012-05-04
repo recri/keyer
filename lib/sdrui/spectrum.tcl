@@ -21,8 +21,8 @@ package provide sdrui::spectrum 1.0.0
 package require Tk
 package require snit
 package require sdrui::tk-spectrum
-package require sdrkit::spectrum-tap
-package require sdrkit::jack
+package require sdrtcl::spectrum-tap
+package require sdrtcl::jack
 
 snit::widget sdrui::spectrum {
     component capture
@@ -122,9 +122,9 @@ snit::widget sdrui::spectrum {
     }
     
     constructor {args} {
-	set options(-rate) [from args -rate [sdrkit::jack -server $options(-server) sample-rate]] 
+	set options(-rate) [from args -rate [sdrtcl::jack -server $options(-server) sample-rate]] 
 	$self configure {*}$args
-	install capture using sdrkit::spectrum-tap ::spectrum {*}[$self filter-options capture]
+	install capture using sdrtcl::spectrum-tap ::spectrum {*}[$self filter-options capture]
 	install display using sdrui::tk-spectrum $win.s {*}[$self filter-options display]
 	pack $win.s -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top

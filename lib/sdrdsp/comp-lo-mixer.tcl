@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-lo-mixer 1.0.0
 
 package require sdrctl::control
-package require sdrkit::lo-mixer 
+package require sdrtcl::lo-mixer 
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-lo-mixer {name args} {
-    return [sdrctl::control $name -type jack -suffix mix -factory sdrkit::lo-mixer -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix mix -factory sdrtcl::lo-mixer -enable no {*}$args]
 }

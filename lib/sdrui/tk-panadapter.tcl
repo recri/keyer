@@ -24,7 +24,7 @@ package provide sdrui::tk-panadapter 1.0.0
 package require Tk
 package require snit
 
-package require sdrkit::jack
+package require sdrtcl::jack
 package require sdrui::tk-waterfall
 package require sdrui::tk-spectrum
 package require sdrui::tk-frequency
@@ -96,7 +96,7 @@ snit::widgetadaptor sdrui::tk-panadapter {
 	# puts "panadapter::window-configure $w $cw $width $height"
 	# puts "::capture::configure $w -size $width"
 	$capture configure -size $width
-	set srate [sdrkit::jack sample-rate]
+	set srate [sdrtcl::jack sample-rate]
 	set scale [expr {$options(-zoom)*double($width)/$srate}]
 	set offset [expr {double($width)/2}]
 	$waterfall configure -scale $scale -offset $offset

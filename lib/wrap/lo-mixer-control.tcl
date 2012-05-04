@@ -22,8 +22,8 @@
 package provide lo-mixer-control 1.0.0
 
 package require Tk
-package require sdrkit::jack
-package require sdrkit::lo-mixer
+package require sdrtcl::jack
+package require sdrtcl::lo-mixer
 
 namespace eval ::lo-mixer-control {}
 
@@ -41,11 +41,11 @@ proc ::lo-mixer-control::shutdown {cw w} {
 proc ::lo-mixer-control {w args} {
     ttk::frame $w
     upvar \#0 $w data
-    set plim [expr {int([sdrkit::jack sample-rate]/200.0)*100}]
+    set plim [expr {int([sdrtcl::jack sample-rate]/200.0)*100}]
     set nlim [expr {-$plim}]
     array set data [list -freq 10000 -min-freq $nlim -max-freq $plim -name lo-mixer]
     array set data $args
-    sdrkit::lo-mixer $data(-name)
+    sdrtcl::lo-mixer $data(-name)
     grid [ttk::label $w.lm -text freq:] -row 0 -column 0
     grid [ttk::spinbox $w.mode -textvar ${w}(-mode) -command [list ::lo-mixer-control::set-freq $w] -textvar ${w}(-freq) \
 	      -from $data(-min-freq) -to $data(-max-freq) -increment 100 -width 6 \

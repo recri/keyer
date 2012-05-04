@@ -20,11 +20,11 @@
 package provide sdrdsp::comp-demod-am 1.0.0
 
 package require sdrctl::control
-package require sdrkit::demod-am
+package require sdrtcl::demod-am
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-demod-am {name args} {
-    return [sdrctl::control $name -type jack -suffix am -factory sdrkit::demod-am -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix am -factory sdrtcl::demod-am -enable no {*}$args]
 }
 

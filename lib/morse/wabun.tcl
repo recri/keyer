@@ -22,7 +22,7 @@
 # minor editing on pasted table, translate &centerdot; into .
 #
 # the dict returned by morse-wabun-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-wabun-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-wabun-dict]
 #
 
 package provide morse::wabun 1.0.0

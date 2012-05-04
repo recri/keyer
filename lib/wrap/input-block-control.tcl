@@ -21,7 +21,7 @@
 ##
 package provide input-block-control 1.0.0
 
-package require sdrkit::input-block
+package require sdrtcl::input-block
 
 namespace eval ::input-block-control {}
 
@@ -51,7 +51,7 @@ proc ::input-block-control {w args} {
     upvar \#0 $w data
     array set data {-gain 0 -swap 0 -delay 0 -correct 0 -log2mu -6}
     array set data $args
-    sdrkit::input-block $data(-name)
+    sdrtcl::input-block $data(-name)
 
     set row 0
     grid [ttk::label $w.ls -text swap:] -row $row -column 0

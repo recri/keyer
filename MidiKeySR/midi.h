@@ -1,1 +1,1 @@
-../sdrkit/midi.h
+../dspmath/midi.h

@@ -20,10 +20,10 @@
 
 lappend auto_path  [file normalize [file join [file dirname [info script]] .. lib]]
 
-package require keyer::ascii
+package require sdrtcl::keyer-ascii
 package require morse::morse
 
-keyer::ascii ascii
+sdrtcl::keyer-ascii ascii
 set dict [ascii cget -dict]
 
 dict for {key value} $dict {

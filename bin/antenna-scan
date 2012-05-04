@@ -27,8 +27,8 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::jack
-package require sdrkit::audio-tap
+package require sdrtcl::jack
+package require sdrtcl::audio-tap
 
 array set levels {}
 array set data {}
@@ -237,14 +237,14 @@ proc main {argv} {
     #
     # get the jack sample rate
     #
-    set ::data(sample-rate) [sdrkit::jack sample-rate]
+    set ::data(sample-rate) [sdrtcl::jack sample-rate]
     #
     # configure the audio tap to maintain 2^3 buffers of 2^12 samples each
     # with the IQ samples interleaved in complex format
     # so each tap get will fetch 4096 audio samples
     # from the least recently filled buffer of 8
     #
-    sdrkit::audio-tap tap -log2n 3 -log2size 12 -complex 1
+    sdrtcl::audio-tap tap -log2n 3 -log2size 12 -complex 1
     #
     # the delay for one buffer to fill
     #
@@ -256,8 +256,8 @@ proc main {argv} {
     #
     # connect the audio tap to the system capture device
     #
-    sdrkit::jack connect system:capture_1 tap:in_i
-    sdrkit::jack connect system:capture_2 tap:in_q
+    sdrtcl::jack connect system:capture_1 tap:in_i
+    sdrtcl::jack connect system:capture_2 tap:in_q
     #
     # start the tap collecting samples
     #

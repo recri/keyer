@@ -29,10 +29,10 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
-package require sdrkit::jack
-package require sdrkit::iq-balance
-package require sdrkit::iq-delay
-package require sdrkit::gain
+package require sdrtcl::jack
+package require sdrtcl::iq-balance
+package require sdrtcl::iq-delay
+package require sdrtcl::gain
 
 #
 # just take input iq through a gain block
@@ -79,12 +79,12 @@ proc set-iq-delay {} {
 }
 
 proc set-iq-phase {v} {
-    iq-balance configure -sine-phase [expr {sin([sdrkit::radians $v])}]
+    iq-balance configure -sine-phase [expr {sin([sdrtcl::radians $v])}]
     set ::data(iq-phase-label) [format %6.2f $v]
 }
 
 proc set-iq-gain {v} {
-    iq-balance configure -linear-gain [sdrkit::dB-to-linear $v]
+    iq-balance configure -linear-gain [sdrtcl::dB-to-linear $v]
     set ::data(iq-gain-label) [format %6.2f $v]
 }
 
@@ -111,13 +111,13 @@ proc main {argv} {
 	}
     }
 
-    start-client sdrkit::jack-client jack -client jack[pid]
+    start-client sdrtcl::jack-client jack -client jack[pid]
 
-    start-client sdrkit::gain iq-unbal-in
+    start-client sdrtcl::gain iq-unbal-in
     iq-unbal-in configure -gain 0.0
-    start-client sdrkit::iq-delay iq-delay
-    start-client sdrkit::iq-balance iq-balance
-    start-client sdrkit::gain iq-unbal-out
+    start-client sdrtcl::iq-delay iq-delay
+    start-client sdrtcl::iq-balance iq-balance
+    start-client sdrtcl::gain iq-unbal-out
     iq-unbal-out configure -gain 0.0
     
     wm title . sdrkit:iq-unbal

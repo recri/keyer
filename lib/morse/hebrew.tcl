@@ -22,7 +22,7 @@
 # minor editing on pasted table, translate &centerdot; into .
 #
 # the dict returned by morse-hebrew-dict can be used to initialize a unicode keyer
-#   ::keyer::unicode foo -dict [morse-hebrew-dict]
+#   ::sdrtcl::keyer-unicode foo -dict [morse-hebrew-dict]
 #
 
 package provide morse::hebrew 1.0.0

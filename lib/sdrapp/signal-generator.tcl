@@ -74,10 +74,10 @@ proc sdrapp::sg-source {name args} {
 }
 proc sdrapp::sg-osc1 {name args} {
     set seq {sdrdsp::comp-oscillator}
-    return [sdrdsp::block $name -type jack -suffix osc1 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
+    return [sdrdsp::block $name -type jack -suffix osc1 -factory sdrtcl::oscillator -require sdrtcl::oscillator {*}$args]
 }
 proc sdrdsp::sg-osc1 {name args} {
-    return [sdrdsp::block $name -type jack -suffix osc2 -factory sdrkit::oscillator -require sdrkit::oscillator {*}$args]
+    return [sdrdsp::block $name -type jack -suffix osc2 -factory sdrtcl::oscillator -require sdrtcl::oscillator {*}$args]
 }
 
 if {0} {
@@ -143,7 +143,7 @@ if {0} {
 	    }
 	}
 	
-	start-client sdrkit::jack-client jack
+	start-client sdrtcl::jack-client jack
 	if {$::data(max-freq) > [jack sample-rate]/2} {
 	    set ::data(max-freq) [expr {[jack sample-rate]/2.01}]
 	    set ::data(min-freq) [expr {-$::data(max-freq)}]
@@ -151,13 +151,13 @@ if {0} {
 	
 	wm title . sdrkit:signal-generator
 	
-	start-client sdrkit::gain signal-generator
+	start-client sdrtcl::gain signal-generator
 	signal-generator configure -gain 0.0
 	
 	set row 0
 	foreach i {0 1 2 3} {
-	    start-client sdrkit::oscillator-zd osc$i
-	    start-client sdrkit::gain osc$i-gain
+	    start-client sdrtcl::oscillator-zd osc$i
+	    start-client sdrtcl::gain osc$i-gain
 	    foreach iq {i q} { jack connect osc$i:out_$iq osc$i-gain:in_$iq }
 	    set ::data(osc$i-gain) $::data(gain)
 	    set ::data(osc$i-freq) $::data(freq)
@@ -180,7 +180,7 @@ if {0} {
 	    incr row
 	}
 	
-	foreach i {0 1} f {sdrkit::noise sdrkit::iq-noise} l {Noise {IQ Noise}} {
+	foreach i {0 1} f {sdrtcl::noise sdrtcl::iq-noise} l {Noise {IQ Noise}} {
 	    start-client $f noise$i
 	    set ::data(noise$i-noise) $::data(noise)
 	    set ::data(noise$i-unmute) 0

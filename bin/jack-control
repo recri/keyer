@@ -23,27 +23,27 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 
-package require sdrkit::jack-ctl
-package require sdrkit::jack-client
+package require sdrtcl::jack-ctl
+package require sdrtcl::jack-client
 
 array set data {}
 
 proc get-parameter-by-name {ps name} {
     foreach p $ps {
-	if {[sdrkit::jack-ctl parameter-get-name $p] eq {name}} {
+	if {[sdrtcl::jack-ctl parameter-get-name $p] eq {name}} {
 	    return $p
 	}
     }
     error "parameter $name not found"
 }
 proc get-server-parameter-by-name {obj name} {
-    return [get-parameter-by-name [sdrkit::jack-ctl get-parameters $obj] $name]
+    return [get-parameter-by-name [sdrtcl::jack-ctl get-parameters $obj] $name]
 }
 proc get-driver-parameter-by-name {drv name} {
-    return [get-parameter-by-name [sdrkit::jack-ctl driver-get-parameters $drv] $name]
+    return [get-parameter-by-name [sdrtcl::jack-ctl driver-get-parameters $drv] $name]
 }
 proc get-internal-parameter-by-name {int name} {
-    return [get-parameter-by-name [sdrkit::jack-ctl internal-get-parameters $int] $name]
+    return [get-parameter-by-name [sdrtcl::jack-ctl internal-get-parameters $int] $name]
 }
 
 proc config-panel {w} {
@@ -68,7 +68,7 @@ proc server-destroy {w wd} {
     upvar #0 $w data
     if {$w eq $wd} {
 	switch $data(state) {
-	    created { sdrkit::jack-ctl destroy $data(obj) }
+	    created { sdrtcl::jack-ctl destroy $data(obj) }
 	}
     }
 }
@@ -76,9 +76,9 @@ proc server-destroy {w wd} {
 proc server-panel {w server} {
     upvar #0 $w data
     set data(server) $server
-    set data(obj) [sdrkit::jack-ctl create]
+    set data(obj) [sdrtcl::jack-ctl create]
     puts "create $data(obj)"
-    puts "set server name -> [sdrkit::jack-ctl parameter-set-value [get-server-parameter-by-name $data(obj) name] $server]"
+    puts "set server name -> [sdrtcl::jack-ctl parameter-set-value [get-server-parameter-by-name $data(obj) name] $server]"
     set data(state) created
     ttk::notebook $w
     set p 0

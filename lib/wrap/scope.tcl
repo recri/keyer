@@ -18,8 +18,8 @@
 package provide scope 1.0.0
 
 package require wrap
-package require sdrkit::audio-tap
-package require sdrkit::jack
+package require sdrtcl::audio-tap
+package require sdrtcl::jack
 
 namespace eval ::scope {}
 namespace eval ::scope::cmd {}
@@ -34,7 +34,7 @@ proc ::scope::update {w} {
     # the milliseconds displayed on screen, ms/div * 10div
     set ms_per_screen [expr {$data(hdivision)*10}]
     # the samples per millisecond, samples/sec / 1000ms/sec
-    set samples_per_ms [expr {[sdrkit::jack sample-rate]/1000.0}]
+    set samples_per_ms [expr {[sdrtcl::jack sample-rate]/1000.0}]
     # the number of samples on screen
     set samples_per_screen [expr {$ms_per_screen * $samples_per_ms}]
     # the number of pixels per sample
@@ -123,7 +123,7 @@ proc ::scope::configure {bw w width height} {
 proc ::scope::scope {w} {
     upvar #0 $w data
     ::wrap::default_window $w
-    ::wrap::cleanup_func $w [::sdrkit::audio-tap ::scope::cmd::$w -complex 1]
+    ::wrap::cleanup_func $w [::sdrtcl::audio-tap ::scope::cmd::$w -complex 1]
     
     bind $w <Configure> [list ::scope::configure %W $w %w %h]
     grid [canvas $w.c -width 400 -height 320] -row 0 -column 0 -sticky nsew

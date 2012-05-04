@@ -23,9 +23,9 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrkit
-package require sdrkit::jack
-package require sdrkit::iq-correct
-package require sdrkit::iq-rotation
+package require sdrtcl::jack
+package require sdrtcl::iq-correct
+package require sdrtcl::iq-rotation
 
 #
 # and an iq-correct to rebalance the oscillator
@@ -188,8 +188,8 @@ proc main {argv} {
 	}
     }
 
-    sdrkit::iq-correct iq-correct
-    sdrkit::iq-rotation iq-rotation
+    sdrtcl::iq-correct iq-correct
+    sdrtcl::iq-rotation iq-rotation
 
     wm title . sdrkit:rebal
 

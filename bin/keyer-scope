@@ -215,7 +215,7 @@ proc ::time-scale::update-scale {w} {
     set x1 [expr {max(($data(-x-finish)-$data(-x-start)), $wd/$data(-x-scale))}]
 
     # now the width of the scale is ($x1-$x0) in frames, so ($x1-$x0)/sample-rate in seconds
-    set sr [sdrkit::jack sample-rate]
+    set sr [sdrtcl::jack sample-rate]
     set tx [expr {double($x1-$x0)/$sr}]
     set tw [expr {$wd/$data(-x-scale)/$sr}]
     # choose the unit for tick marks
@@ -327,7 +327,7 @@ proc ::keyer-scope::configure {w args} {
 	switch -- $option {
 	    -zoom {
 		set data(-zoom) $value
-		set srate [sdrkit::jack sample-rate]
+		set srate [sdrtcl::jack sample-rate]
 		set scale [expr {$data(-zoom)/$srate}]
 		foreach scope {iq keyer key1 key0 ptt0 ptt1 raw0 raw1} {
 		    ::scope::configure $w.$scope -x-scale $scale
@@ -391,7 +391,7 @@ proc ::keyer-scope::window-configure {w cw width height} {
     # puts "keyer-scope::window-configure $w $cw $width $height"
     upvar #0 ::keyer-scope::$w data
     # ::capture::configure $w -size $width
-    set srate [sdrkit::jack sample-rate]
+    set srate [sdrtcl::jack sample-rate]
     set scale [expr {$data(-zoom)/$srate}]
     foreach scope {iq keyer key0 key1 ptt0 ptt1 raw0 raw1} {
 	::scope::configure $w.$scope -x-scale $scale -height [winfo height $w.$scope]
@@ -416,7 +416,7 @@ proc ::keyer-scope::defaults {} {
 
 proc ::keyer-scope::start {w} {
     upvar #0 ::keyer-scope::$w data
-    set data(start-frame) [sdrkit::jack frame-time]
+    set data(start-frame) [sdrtcl::jack frame-time]
     ::scope::start-iq $w.iq 0
     foreach scope {keyer key0 key1 ptt0 ptt1 raw0 raw1} {
 	::scope::start-event $w.$scope 0
@@ -429,7 +429,7 @@ proc ::keyer-scope::start {w} {
 
 proc ::keyer-scope::stop {w} {
     upvar #0 ::keyer-scope::$w data
-    set data(last-frame) [sdrkit::jack frame-time]
+    set data(last-frame) [sdrtcl::jack frame-time]
     set frames [expr {$data(last-frame)-$data(start-frame)}]
     foreach capture {iq keyer key0 ptt0 raw0} {
 	::capture::stop $w.$capture
@@ -503,8 +503,8 @@ proc ::keyer-scope::keyer-scope {w args} {
     bind $w.t <Leave> [list ::keyer-scope::leave $w $w.t]
     $w add [ttk::scrollbar $w.x -orient horizontal -command [list ::keyer-scope::xview $w]] -weight 0
     # period and size must add up to most of the data
-    set data(sample-rate) [sdrkit::jack sample-rate]
-    set data(buffer-size) [sdrkit::jack buffer-size]
+    set data(sample-rate) [sdrtcl::jack sample-rate]
+    set data(buffer-size) [sdrtcl::jack buffer-size]
     # whatever rate I capture at, I should capture a little sooner and expect to get overlaps
     for {set n 1} {1} {set n [expr {$n+$n}]} {
 	set ns [expr {$n*$data(buffer-size)}]

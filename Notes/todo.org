@@ -1,22 +1,31 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
-** TODO - Find the common sdrctl/control functionality.
-   That which all controllees in sdrui, sdrblk, and sdrctl will share,
-   and implement it once.
-** TODO - sdrctl/controllees should register the "true" names.
-   Those of the controls which they define and not know what exists
-   beyond that except as informed.
 ** TODO - implement -alternates at-most-one, exactly-one, zero-or-more.
    Do this by passing the constraint into the controller and letting
-   it enforce it.
-** TODO - sdrui/controllees should attach themselves to the "true" names.
-   Only those that they inform and are informed by, all the other
-   connections should be the responsibility of other controls.
-** TODO - sdrblk/controllees should attach to the controls which they need.
-** TODO - can the jack port structure of the sdrblk controls be represented
-   with the control ports used by sdrui/sdrctl?  Well, we can
-   certainly 
+   it enforce it.  Yes, if the controller knew the constraint, then it
+   wouldn't go chasing through the dead links.
+** TODO - Make the dial/readout multipurpose
+   Put a menubutton to the left of the readout which selects the
+   purpose.  Build a radiobutton menu of dial-able controls.
+** TODO - Make the dial multi-scale.
+   Replace the thumb with a line and thumb.  Grabbing the thumb allows
+   the scale to be zoomed in and out.  Grabbing the dial anywhere else
+   allows the dial to be turned.
+** TODO - Another multi-dial idea, different thumbs for different functions
+   The dial could have alternate thumbs on it.  Touching an alternate
+   thumb, or even hovering, switches the dial and readout to other
+   functions.  So all the tuneable controls are available on the dial.
+   The dial could change shape as different functions are accessed.
+   The alternate thumbs could hold their dialed locations, rather than
+   rotating when another function is being tuned, so they provide a
+   visual cue to their tuned values.
+** TODO - Make the bottom notebook collapsable.
+   One tab can unpack the notebook contents, or each tab can pack on
+   select.
+** TODO - Make a collapsable settings pane, one column of settings
+   along the left edge that unfolds to spinboxes.
+** TODO - Style the spinboxes with bigger spin buttons.
 ** TODO - the sdrblk gets renamed to sdrdsp.
 ** TODO - the sdrkit directory becomes dspmath, with a dspmath.h
 ** TODO - the jack-tcl-wrap directory becomes sdrtcl
@@ -35,14 +44,11 @@
 ** TODO - build the input stage for the radio
    iq correct with visual metering and adaptive mu, panoramic display,
 ** TODO - interface with hamlib for rig control
+** TODO - interface with hamlib as a rig, use grig to run sdrkit
 ** TODO - build an adaptive adaptive filter IQ corrector
    Increases mu to increase convergence when the filter is adapting, then
    decreases mu to refine convergence when the filter has found the vicinity
    of the solution.
-** TODO - figure out how to share a jack client connection among the
-   commands that aren't jack clients but sometimes need to find a jack
-   data item?  NO!  Make them require the sample rate as a parameter,
-   so they don't use the wrong one in multi-rate setup.
 ** TODO - make all the components consistent with evolving conventions.
    This is a tough one since I haven't finished evolving the conventions.
 ** TODO - factor pileup so it can be used as a signal generator
@@ -52,11 +58,6 @@
    The save = opts; if fail then opts = save pattern doesn't deal with
    ref counts; the options handler may have decr'ed the saved option
    that we're trying to restore.
-** TODO - fft/filter windows are tricky
-   the fftw holds a window type and rebuilds the window to the new size, but
-   it should take a window as parameter to the fftw exec.  A FIR needs a window
-   to build, and would need one to resize.
-   Maybe fftw/filter size/window should be create only?
 ** TODO - test for memory leaks.
 ** TODO - keyer_binaural.c: to spread a monoaural audio spectrum out spatially
    using DJ5IL's CodePhaser circuit.
@@ -68,6 +69,7 @@
 ** TODO - convert all jack SDR modules to take parameters via MIDI sysex
 ** TODO - build a character trie to decode sysex parameter settings.
 ** TODO - keyer_detone.c: to convert keyed cw into midi note on/off events.
+   done but untested.
 ** TODO - keyer-control: build, save, and restore custom configurations.
 ** TODO - keyer-control: ascii input/output window
 ** TODO - keyer-control: jack launching panel.

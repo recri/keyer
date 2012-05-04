@@ -27,7 +27,7 @@ package provide sdrui::connections 1.0.0
 #
 package require Tk
 package require snit
-package require sdrkit::jack
+package require sdrtcl::jack
 
 namespace eval sdrui {}
 namespace eval sdrui::connections {}
@@ -233,7 +233,7 @@ snit::widget sdrui::connections {
 
     method update {} {
 	# insert system playback, capture, and midi ports
-	set ports [sdrkit::jack -server $options(-server) list-ports]
+	set ports [sdrtcl::jack -server $options(-server) list-ports]
 	foreach item [$options(-control) part-list] {
 	    set enabled [string is true -strict [$options(-control) part-is-enabled $item]]
 	    set activated [string is true -strict [$options(-control) part-is-active $item ]]
@@ -266,13 +266,15 @@ snit::widget sdrui::connections {
 		port {
 		    foreach pname [$self find-ports $item] {
 			set pitem $item:$pname
-			set pdict [dict create type port item $item parent $item name $pname]
-			dict set data(items) $pitem $pdict
-			if {[llength [$self find-port-connections-from $pitem]] || [string match *capture* $pname]} {
-			    $win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem]
-			}
-			if {[llength [$self find-port-connections-to $pitem]] || [string match *playback* $pname]} {
-			    $win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem]
+			if { ! [dict exists $data(items) $pitem]} {
+			    set pdict [dict create type port item $item parent $item name $pname]
+			    dict set data(items) $pitem $pdict
+			    if {[llength [$self find-port-connections-from $pitem]] || [string match *capture* $pname]} {
+				$win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem]
+			    }
+			    if {[llength [$self find-port-connections-to $pitem]] || [string match *playback* $pname]} {
+				$win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem]
+			    }
 			}
 		    }
 		}
@@ -413,9 +415,9 @@ snit::widget sdrui::connections {
     
     method pop-activate {} {
 	if {$data(pop-activated)} {
-	    $options(-control) part-activate $data(pop-item)
+	    $options(-control) part-activate-tree $data(pop-item)
 	} else {
-	    $options(-control) part-deactivate $data(pop-item)
+	    $options(-control) part-deactivate-tree $data(pop-item)
 	}
 	$self defer-update
     }

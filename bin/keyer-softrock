@@ -32,10 +32,10 @@ package require Tk
 package require vfo
 package require scrolled
 
-package require sdrkit::midi-tap
-package require sdrkit::midi-insert
-# package require keyer::debounce
-package require sdrkit::jack
+package require sdrtcl::midi-tap
+package require sdrtcl::midi-insert
+# package require sdrtcl::keyer-debounce
+package require sdrtcl::jack
 
 array set data {
 }
@@ -233,20 +233,20 @@ proc main {argv} {
     grid [canvas .dah -width 32 -height 32] -row 0 -column 1 -sticky ew
     grid [vfo::vfo .vfo] -row 1 -column 0 -columnspan 2 -sticky nsew
     grid [scrolled::text .log] -row 2 -column 0 -columnspan 2 -sticky nsew
-    sdrkit::midi-tap midi-in
-    sdrkit::midi-insert midi-out
-    # keyer::debounce debounce
-    # sdrkit::jack connect system:midi_capture_1 debounce:midi_in
-    # sdrkit::jack connect debounce:midi_out midi-in:midi_in
+    sdrtcl::midi-tap midi-in
+    sdrtcl::midi-insert midi-out
+    # sdrtcl::keyer-debounce debounce
+    # sdrtcl::jack connect system:midi_capture_1 debounce:midi_in
+    # sdrtcl::jack connect debounce:midi_out midi-in:midi_in
     foreach p [split [exec jack_lsp] \n] {
 	switch -glob $p {
 	    system:midi_capture_* { set capture $p }
 	    system:midi_playback_* { set playback $p }
 	}
     }
-    sdrkit::jack connect $capture midi-in:midi_in
-    sdrkit::jack connect midi-out:midi_out $playback
-    sdrkit::jack connect midi-out:midi_out midi-in:midi_in
+    sdrtcl::jack connect $capture midi-in:midi_in
+    sdrtcl::jack connect midi-out:midi_out $playback
+    sdrtcl::jack connect midi-out:midi_out midi-in:midi_in
     midi-in start
     midi-poll midi-in midi-receiver
     initialize

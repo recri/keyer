@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-gain 1.0.0
 
 package require sdrctl::control
-package require sdrkit::gain
+package require sdrtcl::gain
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-gain {name args} {
-    return [sdrctl::control $name -type jack -suffix gain -factory sdrkit::gain -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix gain -factory sdrtcl::gain -enable no {*}$args]
 }

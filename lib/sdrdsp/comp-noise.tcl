@@ -20,10 +20,10 @@
 package provide sdrdsp::comp-noise 1.0.0
 
 package require sdrctl::control
-package require sdrkit::noise
+package require sdrtcl::noise
 
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-noise {name args} {
-    return [sdrctl::control $name -type jack -suffix noise -factory sdrkit::noise -enable no {*}$args]
+    return [sdrctl::control $name -type jack -suffix noise -factory sdrtcl::noise -enable no {*}$args]
 }

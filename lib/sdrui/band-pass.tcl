@@ -32,12 +32,12 @@ package require Tk
 package require snit
 
 package require sdrkit
-package require sdrkit::jack
-package require sdrkit::filter-overlap-save
+package require sdrtcl::jack
+package require sdrtcl::filter-overlap-save
 
-package require sdrkit::filter-fir
-package require sdrkit::window
-package require sdrkit::fftw
+package require sdrtcl::filter-fir
+package require sdrtcl::window
+package require sdrtcl::fftw
 
 snit::widget sdrui::band-pass {
     option -server default
@@ -98,7 +98,7 @@ snit::widget sdrui::band-pass {
 	# convert to magnitudes in dB, negated
 	set c [dict create]
 	foreach {r i} $filter {
-	    set p [sdrkit::power-to-dB [expr {1e-16+$r*$r+$i*$i}]]
+	    set p [sdrtcl::power-to-dB [expr {1e-16+$r*$r+$i*$i}]]
 	    dict set c $f [expr {-$p}]
 	    set f [expr {$f+$df}]
 	}
@@ -184,15 +184,15 @@ snit::widget sdrui::band-pass {
 	set lo [expr {$options(-center)-$options(-width)/2}]
 	set hi [expr {$options(-center)+$options(-width)/2}]
 	# build the FIR
-	# usage: sdrkit::filter-fir coeff-type filter-type sample-rate size ...
+	# usage: sdrtcl::filter-fir coeff-type filter-type sample-rate size ...
 	# complex|real bandpass|bandstop|lowpass|highpass|hilbert rate n-coefficients 
-	binary scan [sdrkit::filter-fir complex bandpass $options(-sample-rate) $options(-filter-length) $lo $hi] f* data(coeffs)
+	binary scan [sdrtcl::filter-fir complex bandpass $options(-sample-rate) $options(-filter-length) $lo $hi] f* data(coeffs)
 	# pad with zeroes on the left to make fft fodder
 	set data(coeffs) [binary format f* [concat [lrepeat [expr {($options(-filter-length)-2)*2}] 0.0] $data(coeffs)]]
 	# rebuild the fft if it's not the right size
 	if {$data(old-filter-length) != $options(-filter-length)} {
 	    catch {rename $data(fftw) {}}
-	    sdrkit::fftw $data(fftw) -size [expr {2*$options(-filter-length)-2}] -direction -1
+	    sdrtcl::fftw $data(fftw) -size [expr {2*$options(-filter-length)-2}] -direction -1
 	    set data(old-filter-length) $options(-filter-length)
 	}
 	# run the fft
@@ -222,7 +222,7 @@ snit::widget sdrui::band-pass {
 	# get the new filter
 	lassign [$options(-name) get] frame data(filter)
 	# get the sample rate
-	set options(-sample-rate) [sdrkit::jack -server $options(-server) sample-rate]
+	set options(-sample-rate) [sdrtcl::jack -server $options(-server) sample-rate]
 	# draw the new filter
 	$self draw-filter [winfo width $win.c] [winfo height $win.c]
     }
@@ -247,7 +247,7 @@ snit::widget sdrui::band-pass {
     constructor {args} {
 	$self configure {*}$args
 
-	sdrkit::filter-overlap-save $options(-name) -server $options(-server)
+	sdrtcl::filter-overlap-save $options(-name) -server $options(-server)
 
 	set row 0
 	grid [ttk::label $win.lw -text {filter width}] -row $row -column 0

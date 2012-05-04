@@ -21,7 +21,7 @@
 ##
 package provide panorama 1.0.0
 
-package require sdrkit::jack
+package require sdrtcl::jack
 
 package require waterfall
 package require spectrum
@@ -87,7 +87,7 @@ proc ::panorama::window-configure {w cw width height} {
     upvar #0 ::panorama::$w data
     # puts "::capture::configure $w -size $width"
     ::capture::configure $w -size $width
-    set srate [sdrkit::jack sample-rate]
+    set srate [sdrtcl::jack sample-rate]
     set scale [expr {$data(-zoom)*double($width)/$srate}]
     set offset [expr {double($width)/2}]
     ::waterfall::configure $w.w -scale $scale -offset $offset
