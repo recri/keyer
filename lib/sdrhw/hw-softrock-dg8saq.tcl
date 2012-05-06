@@ -20,6 +20,7 @@
 package provide sdrhw::hw-softrock-dg8saq 1.0.0
 
 package require snit
+package require handle
 
 namespace eval sdrhw {}
 
@@ -45,6 +46,13 @@ snit::type sdrhw::softrock-dg8saq {
     constructor {args} {
 	# puts "radio-hw-softrock-dg8saq $self constructor $args"
 	$self configure {*}$args
+	if {[catch {
+	    foreach handle [handle::find_handles usb] {
+		puts "$handle"
+	    }
+	} error]} {
+	    puts "error handling handles: $error"
+	}
     }
 
     method activate {} { set data(activate) 1 }

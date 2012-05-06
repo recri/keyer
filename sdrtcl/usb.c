@@ -11,10 +11,10 @@
 
 /* Compatibility version for TCL stubs */
 #ifndef MY_TCL_STUBS_VERSION
-#define MY_TCL_STUBS_VERSION "8.6"
+#define MY_TCL_STUBS_VERSION "8.5"
 #endif
 #ifndef MY_TK_STUBS_VERSION
-#define MY_TK_STUBS_VERSION "8.6"
+#define MY_TK_STUBS_VERSION "8.5"
 #endif
 
 /*
