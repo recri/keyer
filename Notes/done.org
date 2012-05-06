@@ -157,3 +157,13 @@
 ** DONE - the sdrblk gets renamed to sdrdsp.
 ** DONE - the sdrkit directory becomes dspmath, with a dspmath.h
 ** DONE - the jack-tcl-wrap directory becomes sdrtcl
+** DONE - make sure that spectrum update only gets one after loop
+   guarded restarting agains existence of data(after), probably a race
+** DONE - make sure that spectrum is aligned correctly in window
+   the rx-if-mix component had the wrong -freq by default and wasn't
+   reset at startup.
+** DONE - make sure that spectrum after loop doesn't get busy error
+   there was a missing return, rewrote it for better testing
+** DONE - figure out why rf-gain comes up essentially muted
+   same reason the if-mixer frequency was off, not initialized when
+   enabled.

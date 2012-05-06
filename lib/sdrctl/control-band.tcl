@@ -44,7 +44,7 @@ snit::type sdrctl::control-band {
 	set options($opt) $val
 	# could also extract label, mode, filter width, and channel step
 	lassign [sdrutil::band-data-band-range-hertz {*}$val] low high
-	$self configure -freq [expr {($options(-band-low)+$options(-band-high))/2}] -low $low -high $high
+	$self configure -freq [expr {($low+$high)/2}] -low $low -high $high
 	{*}$options(-command) report $opt $val
     }
     method Channel-handler {opt val} {

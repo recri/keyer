@@ -1,11 +1,8 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
-** TODO - make sure that spectrum update only gets one after loop
-** TODO - make sure that spectrum is aligned correctly in window
+** TODO - missing options(-band-low) in band-select code
 ** TODO - figure out why my spectrum is so noisy, missing windowing?
-** TODO - make sure that spectrum after loop doesn't get busy error
-** TODO - figure out why rf-gain comes up essentially muted
 ** TODO - elevate this desk, clear it off, and make space underneath it.
 ** TODO - my own code is confusing me, and I only wrote it last week
    okay, so the spectrum and meter components in the ui need to
