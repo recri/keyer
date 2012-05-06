@@ -1,10 +1,35 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - my own code is confusing me, and I only wrote it last week
+   okay, so the spectrum and meter components in the ui need to
+   execute a method on the jack component in the dsp graph, the get
+   method, possibly protected by the modify method.  They naturally do
+   this from an after timeout at the desired update frequency.  But as
+   I've set things up, and probably correctly, they don't know the
+   jack component, it's on the other side of the controller.
+** TODO - so a CW sdr is just one keyed oscillator running at LO+CW offset.
+** TODO - would my life be simpler if I just used Tk virtual events?
+   Maybe, but I wouldn't be able to watch.
+** TODO - the connections pane needs option/enable/activate notification.
+   So it needs to hook into the opt chain.
+** TODO - figure out how to deal with filter -low low -high high
+   If the configuration gets split into option at a time passing, then
+   eventually the filter gets a -low that's incompatible with its
+   current -high, or vice versa, leading to an error message that's an
+   accident and would not a problem except that the incompatible value
+   gets discarded, leaving you with a weird filter envelope.
+   Done in a hacky way, needs a better solution.
+** TODO - tracing the filter -low -high issue shows a lot of repetition
+   The configured values get transmitted to the filter multiple times
+   without modification, should stop that, it's going to be expensive.
 ** TODO - implement -alternates at-most-one, exactly-one, zero-or-more.
    Do this by passing the constraint into the controller and letting
    it enforce it.  Yes, if the controller knew the constraint, then it
    wouldn't go chasing through the dead links.
+** TODO - implement -alternates with function specific factories.
+   There are only the modulation/demodulation and the variant iambic
+   keyers to be done at the moment, why not just write them out.
 ** TODO - Make the dial/readout multipurpose
    Put a menubutton to the left of the readout which selects the
    purpose.  Build a radiobutton menu of dial-able controls.
@@ -12,23 +37,12 @@
    Replace the thumb with a line and thumb.  Grabbing the thumb allows
    the scale to be zoomed in and out.  Grabbing the dial anywhere else
    allows the dial to be turned.
-** TODO - Another multi-dial idea, different thumbs for different functions
-   The dial could have alternate thumbs on it.  Touching an alternate
-   thumb, or even hovering, switches the dial and readout to other
-   functions.  So all the tuneable controls are available on the dial.
-   The dial could change shape as different functions are accessed.
-   The alternate thumbs could hold their dialed locations, rather than
-   rotating when another function is being tuned, so they provide a
-   visual cue to their tuned values.
 ** TODO - Make the bottom notebook collapsable.
    One tab can unpack the notebook contents, or each tab can pack on
    select.
 ** TODO - Make a collapsable settings pane, one column of settings
    along the left edge that unfolds to spinboxes.
 ** TODO - Style the spinboxes with bigger spin buttons.
-** TODO - the sdrblk gets renamed to sdrdsp.
-** TODO - the sdrkit directory becomes dspmath, with a dspmath.h
-** TODO - the jack-tcl-wrap directory becomes sdrtcl
 ** TODO - add the libusb interface necessary to handle softrock-dg8saq
    directly from Tcl.
 ** TODO - add the modified Togl which implements enough canvas like functions

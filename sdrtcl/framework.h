@@ -425,26 +425,34 @@ static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int arg
   framework_t *fp = (framework_t *)clientData;
   char *cmd0 = Tcl_GetString(objv[0]);
   if (argc <= 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info command ...\"", cmd0));
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info (doc|methods|options|ports) ...\"", cmd0));
   char *cmd2 = Tcl_GetString(objv[2]);
   if (strcmp(cmd2, "doc") == 0) {
     if (argc <= 3)
-      return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info doc command ...\"", Tcl_GetString(objv[0])));
+      return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info doc (type|method|option) ...\"", Tcl_GetString(objv[0])));
     char *cmd3 = Tcl_GetString(objv[3]);
-    if (strcmp(cmd3, "type") == 0)
+    if (strcmp(cmd3, "type") == 0) // return doc_string for type
       return fw_success_str(interp, fp->doc_string);
-    if (strcmp(cmd3, "method") == 0) {
-      // return doc_string for method
-      return fw_error_str(interp, "info doc method ... not implemented");
+    if (argc <= 4)
+      return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info doc (method|option) name\"", Tcl_GetString(objv[0])));
+    char *arg4 = Tcl_GetString(objv[4]);
+    if (strcmp(cmd3, "method") == 0) { // return doc_string for method
+      for (int i = 0; fp->subcommands[i].name; i += 1)
+	if (strcmp(arg4, fp->subcommands[i].name) == 0)
+	  return fw_success_str(interp, fp->subcommands[i].doc_string);
+      return fw_error_obj(interp, Tcl_ObjPrintf("method \"%s\" not found", arg4));
     }
-    if (strcmp(cmd3, "option") == 0) {
-      // return doc_string for option
-      return fw_error_str(interp, "info doc option ... not implemented");
+    if (strcmp(cmd3, "option") == 0) { // return doc_string for option
+      for (int i = 0; fp->options[i].name; i += 1)
+	if (strcmp(arg4, fp->options[i].name) == 0)
+	  return fw_success_str(interp, fp->options[i].doc_string);
+      return fw_error_obj(interp, Tcl_ObjPrintf("option \"%s\" not found", arg4));
     }
-    return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info %s ...\" is not defined", cmd0, cmd3));
+    return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info doc %s ...\" is not defined", cmd0, cmd3));
   }
-  if (strcmp(cmd2, "type") == 0) return fw_success_obj(interp, fp->class_name);
-  if (strcmp(cmd2, "methods") == 0) { // list of methods
+  if (strcmp(cmd2, "type") == 0) // return type name
+    return fw_success_obj(interp, fp->class_name);
+  if (strcmp(cmd2, "methods") == 0) { // return list of methods
     if (fp->method_list == NULL) {
       fp->method_list = Tcl_NewListObj(0, NULL);
       Tcl_IncrRefCount(fp->method_list);
@@ -453,7 +461,7 @@ static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int arg
     }
     return fw_success_obj(interp, fp->method_list);
   }
-  if (strcmp(cmd2, "options") == 0) { // list of options
+  if (strcmp(cmd2, "options") == 0) { // return list of options
     if (fp->option_list == NULL) {
       fp->option_list = Tcl_NewListObj(0, NULL);
       Tcl_IncrRefCount(fp->option_list);
@@ -462,7 +470,7 @@ static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int arg
     }
     return fw_success_obj(interp, fp->option_list);
   }
-  if (strcmp(cmd2, "ports") == 0) { // list of ports
+  if (strcmp(cmd2, "ports") == 0) { // return list of ports
     return fw_success_obj(interp, fp->port_list);
   }
   return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info %s ...\" is not defined", cmd0, cmd2));
@@ -478,7 +486,7 @@ static int fw_subcommand_activate(ClientData clientData, Tcl_Interp *interp, int
 }
 static int fw_subcommand_deactivate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
-  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot activate");
+  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot deactivate");
   if ( ! fp->activated) return fw_error_str(interp, "command is not active");
   jack_status_t status = (jack_status_t)jack_deactivate(fp->client);
   if (status) return fw_error_str(interp, "command failed to deactivate");

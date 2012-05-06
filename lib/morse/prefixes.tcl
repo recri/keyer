@@ -15,9 +15,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide callsigns 1.0.0
+package provide prefixes 1.0.0
 
-namespace eval ::callsigns {
+namespace eval ::prefixes {
     foreach {country data} {
 	{Afghanistan}	{{YA, T6}	{AS}}
 	{Agalega & St. Brandon Is.}	{{3B6, 3B7}	{AF}}	

@@ -25,7 +25,8 @@ package require Tk
 package require snit
 
     
-snit::widgetadaptor sdrui::af-gain {
+snit::widget sdrui::af-gain {
+    hulltype ttk::labelframe
     component button
     component spinbox
 
@@ -43,7 +44,6 @@ snit::widgetadaptor sdrui::af-gain {
     delegate option -gain-step to spinbox as -increment
 
     constructor {args} {
-	installhull using ttk::labelframe
 	install button using ttk::checkbutton $win.mute -text Mute -variable [myvar options(-mute)] -command [mymethod set-mute]
 	install spinbox using ttk::spinbox $win.gain -width 4 -textvar [myvar options(-gain)] -command [mymethod set-gain]
 	pack $win.mute -side left

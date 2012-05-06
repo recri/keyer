@@ -31,8 +31,8 @@ snit::widgetadaptor sdrui::cw-pitch {
     component button
     component spinbox
 
-    option -freq -default 600 -type sdrctl::hertz
-    option -spot -default 0 -type sdrctl::spot
+    option -freq -default 600 -type sdrtype::hertz
+    option -spot -default 0 -type sdrtype::spot
 
     option -command {}
     option -opt-connect-to {}

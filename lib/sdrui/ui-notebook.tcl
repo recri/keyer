@@ -27,7 +27,7 @@ package require sdrui::ui-radio-panel
 package require sdrui::tree
 package require sdrui::connections
 package require sdrui::spectrum
-package require sdrui::components
+#package require sdrui::components
 
 # not a notebook anymore
 

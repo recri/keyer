@@ -57,8 +57,8 @@ snit::type sdrdsp::dsp-ports {
     method outputs {element} { return [filter $element {output either}] }
     method connect {inports outports} {
 	foreach {ipart iport} $inports {opart oport} $outports {
-	    # puts "$options(-control) port-connect $ipart $iport $opart $oport"
-	    $options(-control) port-connect $ipart $iport $opart $oport
+	    # puts "$options(-control) port-connect [list $ipart $iport] [list $opart $oport]"
+	    $options(-control) port-connect [list $ipart $iport] [list $opart $oport]
 	}
     }
 

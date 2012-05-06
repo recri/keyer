@@ -115,6 +115,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       return TCL_ERROR;
     }
     data->modified = 1;
+    if (data->fw.verbose) {
+      fprintf(stderr, "configuration to -low %.1f -high %.1f from -low %.1f -high %.1f succeeded\n",
+	      data->opts.low_frequency, data->opts.high_frequency, save.low_frequency, save.high_frequency);
+    }
     if ( ! framework_is_active(clientData))
       _update(data);
   }

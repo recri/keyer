@@ -1,0 +1,71 @@
+* The radio, by way of the radio controller
+** The radio is built of:
+   DSP computations,
+   UI controls,
+   and miscellaneous computations,
+   all of which need to be tied together into a harmonious whole.
+   The scripts in this directory supply miscellaneous computations and
+   the means to tie everything together.
+** Each DSP component:
+*** is built with a core of C code that does the per sample computations.
+    The core computations are defined in their essentials in
+    ../../dspmath/*.h.  The computations are defined as static
+    functions operating on samples with a structure pointer to
+    maintain state.  This is a little unusual, but if you look at the
+    keyed_tone computation, you'll see how it can work.  The
+    keyed_tone uses three instances of the oscillator to create a
+    keyed tone with a sine ramp on and off, computing all samples with
+    multiplies and adds.
+*** The core computation is wrapped into a Tcl command
+    that handles configuration for the component, with attention to
+    not interrupting or disrupting the ongoing per sample computation
+    during the configuration. The Tcl wrappers are defined in
+    ../../sdrtcl/*.c.  The framework used to build the Tcl commands is
+    another unusual construction, it may perhaps be overdoing the
+    pattern.
+*** The Tcl wrapped computations use the Jack audio connection kit
+    to transfer baseband sample streams and midi events between
+    components.  You could build a more efficient radio by eliminating
+    the Jack connections between components and simply hooking them up
+    directly.
+*** The Tcl modules can be wired up directly
+    and I built a few radios like that.  But in the end, you don't
+    want all of the components running all the time.  So you need some
+    way to specify how they ought to connect if they're running, but
+    only connect them if they're running.
+*** Each Tcl wrapped computation can be activated or deactivated.
+    When deactivated, the computation can be configured, but it
+    has no connections to Jack and doesn't process any samples.  So it
+    consumes memory to keep its data structures and buffers, but it
+    does not consume any cpu resources.
+** UI components depend on which UI you run.
+   The base ui is a command line interpreter.
+   The whole radio could be run from a script with no ui at all.
+   The default ui builds the radio I like.
+** Each UI component     
+** Each control component
+   This is the control component that wraps every sdrui component,
+   sdrdsp computation, and sdrctl control transfer component in the
+   radio.
+*** This started as a way for the dsp components to declare their
+    input and output ports and define in what order the components
+    needed to be hooked up.  It still does that.
+*** Then it evolved into a way to connect ui controls to the dsp
+    options they were supposed to adjust.  It still does that, too,
+    but with an extra level of indirection.
+*** It turned out to helpful to create a control level in between
+   the ui controls and the dsp options, especially since more than
+   one ui control might need to know or to alter a particular option
+** The single controller component
+   is mostly a crossbar switch.
+*** all the controls, whether from sdrui, sdrdsp, or sdrdsp,
+    register themselves with this component using part-add,
+    giving a unique control name and their command procedure.
+    the rest of their essential information is discovered
+    by looking at their configuration options.
+*** the sdrctl components supply well known names for controls
+    that a radio needs to have.  the sdrui and sdrdsp components
+    supply whatever name they have for their controls, and then
+    supply connections to the control component names.
+
+

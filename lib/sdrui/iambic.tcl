@@ -24,12 +24,12 @@ package provide sdrui::iambic 1.0.0
 package require Tk
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::iambic {
     component iambic
 
-    option -iambic -default ad5dz -type sdrctl::iambic
+    option -iambic -default ad5dz -type sdrtype::iambic
 
     option -command {}
     option -opt-connect-to {}
@@ -42,7 +42,7 @@ snit::widgetadaptor sdrui::iambic {
 	installhull using ttk::labelframe
 	install iambic using ttk::menubutton $win.m -textvar [myvar options(-iambic)] -menu $win.m.m
 	menu $win.m.m -tearoff no
-	foreach i [sdrctl::iambic cget -values] {
+	foreach i [sdrtype::iambic cget -values] {
 	    $win.m.m add radiobutton -label $i -value $i -variable [myvar options(-iambic)] -command [mymethod set-iambic]
 	}
 	pack $win.m -fill x -expand true -side top 

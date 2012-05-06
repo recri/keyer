@@ -243,8 +243,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 static const fw_option_table_t _options[] = {
-  { "-server",   "server",   "Server",   "default", fw_option_obj, fw_flag_create_only,	offsetof(_t, fw.server_name),      "jack server name" },
-  { "-client",   "client",   "Client",   NULL,      fw_option_obj, fw_flag_create_only,	offsetof(_t, fw.client_name),      "jack client name" },
+#include "framework_options.h"
   { "-log2n",    "log2n",    "Log2n",    "8",	    fw_option_int, 0,			offsetof(_t, opts.log2_buff_n),    "log base 2 of the number of buffers to allocate" },
   { "-log2size", "log2size", "Log2size", "12",	    fw_option_int, 0,			offsetof(_t, opts.log2_buff_size), "log base 2 of the number of samples per buffer" },
   { "-complex",  "complex",  "Complex",  "0",	    fw_option_boolean, 0,		offsetof(_t, opts.as_complex),     "should the samples be returned as an array of complex values"
@@ -253,9 +252,7 @@ static const fw_option_table_t _options[] = {
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
-  { "configure", fw_subcommand_configure, "configure option values, or get list of options" },
-  { "cget",      fw_subcommand_cget,      "get an option value" },
-  { "cdoc",      fw_subcommand_cdoc,      "get the doc string for a command, a subcommand, or an option" },
+#include "framework_subcommands.h"
   { "get",	 _get,                    "get an audio buffer" },
   { "start",	 _start,		  "start collecting audio" },
   { "state",     _state,		  "are we started?" },

@@ -1,0 +1,13 @@
+[Desktop Entry]
+# this file should be copied to ~/.local/share/applications/sdrkit-radio.desktop
+# and the sdrkit-radio command should be linked into ~/bin
+# and ~/bin should be in your PATH
+Version=1.0
+Name=SDRkit Radio
+GenericName=SDR
+Comment=Receive and transmit radio signals
+Exec=sdrkit-radio
+Icon=sdrkit
+Type=Application
+Terminal=false
+Categories=HamRadio;

@@ -17,17 +17,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrdsp::comp-modulate 1.0.0
+package provide sdrctl::control-keyer-debounce 1.0.0
 
-package require sdrctl::control
-package require sdrdsp::dsp-alternates
+package require snit
 
-namespace eval sdrdsp {}
+package require sdrtype::types
 
-proc sdrdsp::comp-modulate {name args} {
-    #set alts {sdrdsp::comp-modul-am sdrdsp::comp-modul-fm}
-    set alts {}
-    set fopt [list -alternates $alts]
-    return [sdrctl::control $name -type dsp -suffix modulate -factory sdrdsp::dsp-alternates -factory-options $fopt -require $alts {*}$args]
+##
+## handle keyer debounce controls
+##
+snit::type sdrctl::control-keyer-debounce {
+    option -command -default {} -readonly true
+    # incoming opts
+    option -debounce -default 0 -configuremethod Opt-handler -type sdrtype::debounce
+    option -period -default 0.1 -configuremethod Opt-handler -type sdrtype::debounce-period
+    option -steps -default 4 -configuremethod Opt-handler -type sdrtype::debounce-steps
+
+    method Opt-handler {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
+    }
 }
 

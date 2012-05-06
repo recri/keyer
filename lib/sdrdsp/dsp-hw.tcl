@@ -23,45 +23,61 @@ package require snit
 
 namespace eval sdrdsp {}
 
-proc sdrdsp::dsp-hw {name args} {
+snit::type sdrdsp::dsp-hw {
     #puts "dsp-hw $name {$args}"
-    array set options $args
-    if { ! [info exists options(-container)]} { error "no container to leech off" }
-    if { ! [info exists options(-control)]} { set options(-control) [$options(-container) cget -control] }
-    if { ! [info exists options(-server)]} { set options(-server) [$options(-container) cget -server] }
-    set data [dict create]
-    foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
-	# pdict has type, direction, physical, and connections
-	# dict set data $pname $pdict
-	lassign [split $pname :] client port
-	if { ! [dict exists $data $client]} {
-	    dict set data $client {}
+    option -container {}
+    option -control {}
+    option -server {}
+
+    variable data [dict create]
+
+    constructor {args} {
+	$self configure {*}$args
+
+	if {$options(-container) eq {}} { error "no container to leech off" }
+	if {$options(-control) eq {}} { set options(-control) [$options(-container) cget -control] }
+	if {$options(-server) eq {}} { set options(-server) [$options(-container) cget -server] }
+
+	foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
+	    # pdict has type, direction, physical, and connections
+	    # dict set data $pname $pdict
+	    if { ! [dict get $pdict physical]} {
+		# may need more finesse at some point, but for now just the physical ports
+		continue
+	    }
+	    lassign [split $pname :] client port
+	    if { ! [dict exists $data $client]} {
+		dict set data $client {}
+	    }
+	    dict set data $client $port $pdict
 	}
-	dict set data $client $port $pdict
+	dict for {client cdict} $data {
+	    set ports [dict keys $cdict]
+	    set fopt [list -ports $ports]
+	    set part ::sdrctlw::$client
+	    sdrctl::control $part -type hw -prefix {} -suffix $client -factory sdrdsp::dsp-hw-port -factory-options $fopt -container $options(-container) -activate yes
+	    dict set data $client client:ports $ports
+	    dict set data $client client:part $part
+	}
     }
-    dict for {client cdict} $data {
-	set ports [dict keys $cdict]
-	set fopt [list -ports $ports]
-	set part ::sdrctlw::$client
-	sdrctl::control $part -type hw -prefix {} -suffix $client -factory sdrdsp::dsp-hw-port -factory-options $fopt -container $options(-container) -activate yes
-	dict set data $client client:ports $ports
-	dict set data $client client:part $part
-    }
-}
-if {0} {
-    # missing cleanup
+    
+    method activate {} {}
+    method deactivate {} {}
+
     destructor {
 	dict for {client cdict} $data {
-	    if {[catch {[dict get $cdict $client client:part] destroy} error]} {
+	    #puts "cleaning up ports for $client -> [dict get $cdict client:part]"
+	    if {[catch {[dict get $cdict client:part] destroy} error]} {
 		puts "error cleaning up ports for $client: $error"
 	    }
 	}
     }
-}
+}    
 
 snit::type sdrdsp::dsp-hw-port {
-    option -command {}
     option -ports {}
     option -opts {}
     option -methods {}
+    option -command {}
 }
+

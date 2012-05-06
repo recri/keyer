@@ -24,12 +24,12 @@ package provide sdrui::iq-swap 1.0.0
 package require Tk
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::iq-swap {
     component button
 
-    option -swap -default 0 -type sdrctl::iq-swap
+    option -swap -default 0 -type sdrtype::iq-swap
 
     option -command {}
     option -opt-connect-to {}

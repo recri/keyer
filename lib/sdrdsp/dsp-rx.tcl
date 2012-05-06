@@ -63,3 +63,12 @@ proc sdrdsp::rx-af {name args} {
     return [sdrctl::control $name -type dsp -suffix af -factory sdrdsp::dsp-sequence -factory-options $fopt {*}$args]
 }
 
+proc sdrdsp::rx-spectrum {name args} {
+    package require sdrdsp::comp-spectrum-tap
+    return [sdrdsp::comp-spectrum-tap $name -prefix rx {*}$args]
+}
+
+proc sdrdsp::rx-meter {name args} {
+    package require sdrdsp::comp-meter-tap
+    return [sdrdsp::comp-meter-tap $name -prefix rx {*}$args]
+}

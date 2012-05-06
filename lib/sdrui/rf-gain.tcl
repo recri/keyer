@@ -28,7 +28,7 @@ package require snit
 snit::widgetadaptor sdrui::rf-gain {
     component spinbox
 
-    option -gain -default 0 -type sdrctl::gain
+    option -gain -default 0 -type sdrtype::gain
 
     option -command {}
     option -opt-connect-to {}

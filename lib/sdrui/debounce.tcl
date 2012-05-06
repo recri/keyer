@@ -24,7 +24,7 @@ package provide sdrui::debounce 1.0.0
 package require Tk
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::debounce {
     component wperiod
@@ -32,9 +32,9 @@ snit::widgetadaptor sdrui::debounce {
     component wsteps
     component steps
 
-    option -debounce -default 0 -type sdrctl::debounce
-    option -period -default 0.1 -type sdrctl::debounce-period
-    option -steps -default 4 -type sdrctl::debounce-steps
+    option -debounce -default 0 -type sdrtype::debounce
+    option -period -default 0.1 -type sdrtype::debounce-period
+    option -steps -default 4 -type sdrtype::debounce-steps
 
     option -command {}
     option -opt-connect-to {}

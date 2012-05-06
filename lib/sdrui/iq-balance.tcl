@@ -23,14 +23,14 @@ package provide sdrui::iq-balance 1.0.0
 
 package require Tk
 package require snit
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::iq-balance {
     component sinephase
     component lineargain
 
-    option -sine-phase -default 0 -type sdrctl::sine-phase
-    option -linear-gain -default 1.0 -type sdrctl::linear-gain
+    option -sine-phase -default 0 -type sdrtype::sine-phase
+    option -linear-gain -default 1.0 -type sdrtype::linear-gain
 
     option -command {}
     option -opt-connect-to {}

@@ -24,12 +24,12 @@ package provide sdrui::iq-delay 1.0.0
 package require Tk
 package require snit
 
-package require sdrctl::types
+package require sdrtype::types
     
 snit::widgetadaptor sdrui::iq-delay {
     component button
 
-    option -delay -default 0 -type sdrctl::iq-delay
+    option -delay -default 0 -type sdrtype::iq-delay
 
     option -command {}
     option -opt-connect-to {}
@@ -42,7 +42,7 @@ snit::widgetadaptor sdrui::iq-delay {
 	installhull using ttk::labelframe
 	install button using ttk::menubutton $win.delay -textvar [myvar options(-delay)] -menu $win.delay.m
 	install menu using menu $win.delay.m -tearoff no
-	foreach val [sdrctl::iq-delay cget -values] {
+	foreach val [sdrtype::iq-delay cget -values] {
 	    $win.delay.m add radiobutton -label $val -value $val -variable [myvar options(-delay)] -command [mymethod set-delay]
 	}
 	pack $win.delay -fill x -expand true

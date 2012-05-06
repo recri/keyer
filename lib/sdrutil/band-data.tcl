@@ -107,7 +107,7 @@ namespace eval sdrutil::band-data {
 	}
 	foreach {name value} $args {
 	    switch $name {
-		note - name - mode  {}
+		note - name - mode - codec {}
 		filter - freq { sdrutil::hertz $value }
 		default {
 		    error "unknown channel $name = {$value}"
@@ -261,6 +261,22 @@ namespace eval sdrutil::band-data {
     add-band Amateur {2.5mm} low 119.98GHz high 120.02GHz mode NFM
     add-band Amateur {2mm} low 142GHz high 149GHz mode NFM
     add-band Amateur {1mm} low 241GHz high 250GHz mode NFM
+    
+    # wspr channels, dial frequency usb
+    add-channel Amateur wspr600m freq 0.5024MHz mode DIGU codec WSPR
+    add-channel Amateur wspr160m freq 1.8366MHz mode DIGU codec WSPR
+    add-channel Amateur wspr80m freq 3.5926MHz mode DIGU codec WSPR
+    add-channel Amateur wspr60m freq 5.2872MHz mode DIGU codec WSPR
+    add-channel Amateur wspr40m freq 7.0386MHz mode DIGU codec WSPR
+    add-channel Amateur wspr30m freq 10.1387MHz mode DIGU codec WSPR
+    add-channel Amateur wspr20m freq 14.0956MHz mode DIGU codec WSPR
+    add-channel Amateur wspr17m freq 18.1046MHz mode DIGU codec WSPR
+    add-channel Amateur wspr15m freq 21.0946MHz mode DIGU codec WSPR
+    add-channel Amateur wspr12m freq 24.9246MHz mode DIGU codec WSPR
+    add-channel Amateur wspr10m freq 28.1246MHz mode DIGU codec WSPR
+    add-channel Amateur wspr6m freq 50.2930MHz mode DIGU  codec WSPR
+    add-channel Amateur wspr4m freq 70.0286MHz mode DIGU codec WSPR
+    add-channel Amateur wspr2m freq 144.4890MHz mode DIGU codec WSPR
 
     ##
     ## WWV channels

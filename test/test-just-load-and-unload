@@ -58,11 +58,23 @@ foreach file [glob [file join $libdir *$so]] {
 		*window -
 		*filter-fir -
 		*jack-ctl {
+		    puts "skipping factory for $cmd"
 		    rename $cmd {}
 		}
 		default {
 		    if {[catch {$cmd foo} error]} {
 			puts "$cmd foo threw $error"
+		    } else {
+			foreach tail {{info type} {info doc type} {info methods} {info options} {info ports}} {
+			    catch {foo {*}$tail} result
+			    puts "* $cmd $tail -> $result"
+			}
+			foreach o [foo info options] {
+			    puts "* $cmd info doc option $o -> [foo info doc option $o]"
+			}
+			foreach m [foo info methods] {
+			    puts "* $cmd info doc method $m -> [foo info doc method $m]"
+			}
 		    }
 		    rename foo {}
 		    rename $cmd {}

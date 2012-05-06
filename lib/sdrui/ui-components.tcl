@@ -19,7 +19,7 @@
 ##
 ## build the suite of ui components for a radio
 ##
-package provide sdrui::components 1.0.0
+package provide sdrui::ui-components 1.0.0
 
 package require Tk
 
@@ -29,7 +29,7 @@ package require sdrctl::control-stub
 namespace eval sdrui {}
 namespace eval sdrctlw {}
 
-snit::type sdrui::components {
+snit::type sdrui::ui-components {
     option -control -readonly yes
     option -container -readonly yes
     option -root -readonly yes

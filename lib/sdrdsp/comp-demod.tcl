@@ -25,14 +25,12 @@ package require sdrdsp::dsp-alternates
 namespace eval sdrdsp {}
 
 proc sdrdsp::comp-demod {name args} {
-    ## need to know which signal controls the selection
-    ## ctl-rxtx-mode:-mode
-    ## need to know the mapping between signal values and the alternates
-    ## AM SAM FMN *
-    ## need a component to select when * is the signal
-    ## dsp-stub or dsp-tap?
-    set alts {sdrdsp::comp-demod-am sdrdsp::comp-demod-sam sdrdsp::comp-demod-fm}
-    set fopt [list -alternates $alts -require $alts -map {AM SAM FMN *} -opt-connect-from {{ctl-rxtx-mode -mode -select}}]
-    return [sdrctl::control $name -type dsp -suffix mode -factory sdrdsp::dsp-alternates -factory-options $fopt {*}$args]
+    array set fopt {
+	-alternates {sdrdsp::comp-demod-am sdrdsp::comp-demod-sam sdrdsp::comp-demod-fm}
+	-require {sdrdsp::comp-demod-am sdrdsp::comp-demod-sam sdrdsp::comp-demod-fm}
+	-map {USB -1 LSB -1 DSB -1 CWU -1 CWL -1 AM 0 SAM 1 FMN 2 DIGU -1 DIGL -1}
+	-opt-connect-from {{ctl-rxtx-mode -mode -select}}
+    }
+    return [sdrctl::control $name -type dsp -suffix mode -factory sdrdsp::dsp-alternates -factory-options [array get fopt] {*}$args]
 }
 

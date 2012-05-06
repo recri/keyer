@@ -27,8 +27,13 @@ package provide sdrui::ui-radio-panel 1.0
 
 package require Tk
 package require snit
+package require tkcon
 
-package require sdrui::components
+package require sdrui::ui-components
+package require sdrui::meter
+package require sdrui::connections
+package require sdrui::tree
+package require sdrui::spectrum
 
 snit::widget sdrui::ui-radio-panel {
 
@@ -39,7 +44,9 @@ snit::widget sdrui::ui-radio-panel {
 	$self configure {*}$args
 
 	# build the containers
-	ttk::separator $win.sep1 -orient horizontal
+	ttk::separator $win.sep1a -orient horizontal
+	#ttk::frame $win.mtr
+	ttk::separator $win.sep1b -orient horizontal
 	ttk::frame $win.set1
 	ttk::separator $win.sep2 -orient horizontal
 	ttk::notebook $win.notes
@@ -48,14 +55,18 @@ snit::widget sdrui::ui-radio-panel {
 	ttk::frame $win.set4
 
 	# build the components
-	sdrui::components %AUTO% -root $win -control $options(-control) -container $options(-container)
+	sdrui::meter $win.mtr -control $options(-control) -container $options(-container)
+	sdrui::ui-components %AUTO% -root $win -control $options(-control) -container $options(-container)
 
 	# assemble
-	grid $win.ui-rxtx-tuner -row 0 -column 0 -sticky nsew
-	grid $win.sep1 -row 1 -column 0 -sticky ew
-	grid $win.set1 -row 2 -column 0 -sticky ew
-	grid $win.sep2 -row 3 -column 0 -sticky ew
-	grid $win.notes -row 4 -column 0 -sticky nsew
+	set row -1
+	grid $win.ui-rxtx-tuner -row [incr row] -column 0 -sticky nsew
+	grid $win.sep1a -row [incr row] -column 0 -sticky ew
+	grid $win.mtr -row [incr row] -sticky ew
+	grid $win.sep1b -row [incr row] -column 0 -sticky ew
+	grid $win.set1 -row [incr row] -column 0 -sticky ew
+	grid $win.sep2 -row [incr row] -column 0 -sticky ew
+	grid $win.notes -row [incr row] -column 0 -sticky nsew
 	grid rowconfigure $win 0 -weight 1
 	grid rowconfigure $win 4 -weight 1
 	grid columnconfigure $win 0 -weight 1
@@ -99,5 +110,39 @@ snit::widget sdrui::ui-radio-panel {
 	    }
 	}
 	#add $win.band-pass -text Filter
-    }    
+	$win.notes add [ttk::frame $win.view] -text View
+	foreach view {spectrum tree connections console} {
+	    pack [ttk::button $win.view.$view -text $view -command [mymethod view $view]]
+	}
+	bind $win.notes <<NotebookTabChanged>> [mymethod notebook-tab]
+    }
+
+    method notebook-tab {} {
+	#puts "notebook-tab [$win.notes select]"
+    }
+
+    method {view} {window} {
+	switch $window {
+	    console {
+		tkcon show
+		tkcon title sdrkit:console
+	    }
+	    spectrum {
+		if { ! [winfo exists .$window]} {
+		    spectrum .spectrum -container $self -control $options(-control)
+		} else {
+		    wm deiconify .spectrum
+		}
+	    }
+	    default {
+		if { ! [winfo exists .$window]} {
+		    toplevel .$window
+		    pack [$window .$window.t -container $self -control $options(-control)] -fill both -expand true
+		    wm title .$window sdrkit:$window
+		} else {
+		    wm deiconify .$window
+		}
+	    }
+	}
+    }
 }

@@ -37,7 +37,7 @@ snit::widget sdrui::vfo {
     }
 
     option -freq -default 7050000 -configuremethod Opt-handler
-    option -turn-resolution 1000
+    option -turn-resolution 100
 
     option -command {}
     option -opt-connect-to {}

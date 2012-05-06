@@ -40,7 +40,7 @@ static void *modul_ssb_preconfigure(modul_ssb_t *p, modul_ssb_options_t *q) {
   return p;
 }
 
-static void *modul_ssb_init(modul_ssb_t *p) {
+static void *modul_ssb_init(modul_ssb_t *p, modul_ssb_options_t *q) {
   void *e = modul_ssb_preconfigure(p,q); if (e != p) return e;
   modul_ssb_configure(p, q);
   return p;
