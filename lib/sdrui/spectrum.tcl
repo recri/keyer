@@ -95,7 +95,7 @@ snit::widget sdrui::spectrum {
     # imported for here and display
     option -rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-display
 
-    option -period -default 100 -type sdrtype::milliseconds
+    option -period -default 50 -type sdrtype::milliseconds
 
     # from here for capture
     option -polyphase -default 1 -type sdrtype::spec-polyphase -configuremethod Opt-capture
@@ -284,10 +284,7 @@ snit::widget sdrui::spectrum {
     method capture-is-busy {} { return [lindex [$capture modified] 1] }
 
     method update {} {
-	if {[$self capture-is-busy]} {
-	    set data(after) [after $options(-period) [mymethod update]]
-	}
-	if {[$capture is-active]} {
+	if { ! [$self capture-is-busy] && [$capture is-active]} {
 	    lassign [$capture get] frame dB
 	    binary scan $dB f* dB
 	    set n [llength $dB]
@@ -305,12 +302,13 @@ snit::widget sdrui::spectrum {
 	    }
 	    #puts "$xy"
 	    $display update $xy
-	    set data(after) [after $options(-period) [mymethod update]]
 	}
+	set data(after) [after $options(-period) [mymethod update]]
     }
     
     method Deactivate {} {
 	catch {after cancel $data(after)}
+	unset data(after)
 	if {[$capture is-active]} { $capture deactivate }
 	set data(pairs) {}
     }
@@ -320,32 +318,32 @@ snit::widget sdrui::spectrum {
 	if {$input eq {} ||
 	    ! [$options(-control) part-is-active $input]} {
 	    $self Deactivate
-	    return
-	}
-	# puts "$input is-active"
-	set ports [$capture info ports]
-	set pairs {}
-	foreach port [$options(-control) part-ports $input] {
-	    lappend pairs {*}[$options(-control) port-active-connections-to [list $input $port]]
-	}
-	# puts "$input active-connections-to $pairs"
-	if {$pairs ne $data(pairs)} {
-	    if {[llength $pairs] != [llength $ports]} {
-		puts "port mismatch between {$pairs} and {$ports}"
-		$self Deactivate
-		return
+	} else {
+	    # puts "$input is-active"
+	    set ports [$capture info ports]
+	    set pairs {}
+	    foreach port [$options(-control) part-ports $input] {
+		lappend pairs {*}[$options(-control) port-active-connections-to [list $input $port]]
 	    }
-	    if { ! [$capture is-active]} { $capture activate }
-	    foreach port $ports pair $pairs old $data(pairs) {
-		puts "sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port"
-		sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port
-		if {$old ne {}} {
-		    puts "sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port"
-		    sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port
+	    # puts "$input active-connections-to $pairs"
+	    if {$pairs ne $data(pairs)} {
+		if {[llength $pairs] != [llength $ports]} {
+		    error "port mismatch between {$pairs} and {$ports}"
+		}
+		if { ! [$capture is-active]} { $capture activate }
+		foreach port $ports pair $pairs old $data(pairs) {
+		    puts "sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port"
+		    sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port
+		    if {$old ne {}} {
+			puts "sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port"
+			sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port
+		    }
+		}
+		set data(pairs) $pairs
+		if { ! [info exists data(after)]} {
+		    set data(after) [after $options(-period) [mymethod update]]
 		}
 	    }
-	    set data(pairs) $pairs
-	    set data(after) [after $options(-period) [mymethod update]]
 	}
     }
 

@@ -106,7 +106,7 @@ snit::type sdrapp::radio {
 	    {*}$options(-control) part-activate hw
 	}
 	if {$options(-enable-rx)} {
-	    foreach name {rx-rf-gain rx-rf-iq-correct rx-if-mix rx-if-bpf rx-af-agc} {
+	    foreach name {rx-if-mix rx-if-bpf rx-af-agc} {
 		{*}$options(-control) part-enable $name
 	    }
 	}
