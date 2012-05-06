@@ -79,38 +79,12 @@ snit::type sdrctl::control {
     delegate option * to wrapped
     delegate method * to wrapped
 
-    # these always come in pairs, and the snit per option processing breaks the 
-    # this is for band pass filter limits
-    # there are many more updates coming, mostly duplicates, so I'm filtering here
-    # until I can get them sorted out
-    # also dealing with the filter being busy changing
-    method {Handler2 -low} {val} {
-	set options(-low) $val
-    }
-    method {Handler2 -high} {val} {
-	if {[lindex [$wrapped modified] 1]} {
-	    puts "deferred $wrapped configure -low $options(-low) -high $val"
-	    after 10 [mymethod Handler2 -high $val]
-	} else {
-	    set options(-high) $val
-	    set xlow [$wrapped cget -low]
-	    set xhigh [$wrapped cget -high]
-	    if {$xlow != $options(-low) || $xhigh != $options(-high)} {
-		$wrapped configure -low $options(-low) -high $options(-high)
-		# puts "performed $wrapped configure -low $options(-low) -high $options(-high) were $xlow $xhigh"
-	    } else {
-		# puts "ignored $wrapped configure -low $options(-low) -high $options(-high)"
-	    }
-	}
-	#puts "$wrapped configure -low $options(-low) -high $options(-high)"
-    }
-
     constructor {args} {
 	if {$verbose(construct)} { puts "sdrctl::controll $self constructor {$args}" }
 	$self configure {*}$args
-	$self Inherit -prefix -name
-	$self Inherit -control -control
-	$self Inherit -server -server
+	foreach {local parent} {-prefix -name -control -control -server -server} {
+	    $self Inherit $local $parent
+	}
 	set options(-name) [string trim "$options(-prefix)-$options(-suffix)" -]
 	foreach pkg $options(-require) { package require $pkg }
 	foreach pkg $options(-factory-require) { package require $pkg }
@@ -123,6 +97,14 @@ snit::type sdrctl::control {
 	set options(-ports) [$self Wrapped ports]
 	$options(-control) part-add $options(-name) $self
 	if {{finish} in [$wrapped info methods]} { $wrapped finish }
+    }
+
+    destructor {
+	# puts "control destructor called"
+	$options(-control) part-remove $options(-name)
+	if {$options(-factory) ne {} && $wrapped ne {}} {
+	    rename $wrapped {}
+	}
     }
 
     method {Wrapped name} {} {
@@ -163,8 +145,43 @@ snit::type sdrctl::control {
 	return {}
     }
 
+    # these always come in pairs, and the snit per option processing
+    # breaks the band pass filter limits
+    # there are many more updates coming, mostly duplicates, so I'm filtering here
+    # until I can get them sorted out
+    # also dealing with the filter being busy changing
+    method {Handler2 -low} {val} {
+	if {$options(-type) eq {jack}} {
+	    set options(-low) $val
+	} else {
+	    $wrapped configure -low $val
+	}
+    }
+
+    method {Handler2 -high} {val} {
+	if {$options(-type) eq {jack}} {
+	    if {[lindex [$wrapped modified] 1]} {
+		# puts "deferred $wrapped configure -low $options(-low) -high $val"
+		after 10 [mymethod Handler2 -high $val]
+	    } else {
+		set options(-high) $val
+		set xlow [$wrapped cget -low]
+		set xhigh [$wrapped cget -high]
+		if {$xlow != $options(-low) || $xhigh != $options(-high)} {
+		    $wrapped configure -low $options(-low) -high $options(-high)
+		    # puts "performed $wrapped configure -low $options(-low) -high $options(-high) were $xlow $xhigh"
+		} else {
+		    # puts "ignored $wrapped configure -low $options(-low) -high $options(-high)"
+		}
+	    }
+	} else {
+	    $wrapped configure -high $val
+	}
+    }
+
     method resolve {} {
 	#puts "$self resolve $options(-type)"
+	if {{resolve} in $options(-methods)} { $wrapped resolve }
 	switch $options(-type) {
 	    ctl - ui - hw - dsp {
 		foreach conn [$self cget -opt-connect-to] {
@@ -205,24 +222,32 @@ snit::type sdrctl::control {
 	    }
 	}
     }
-
+    
     method {command report} {opt val args} { $self report $opt $val {*}$args }
-    method opt-connect-to {opt name2 opt2} { $options(-control) opt-connect $options(-name) $opt $name2 $opt2 }
-    method opt-connect-from {name2 opt2 opt} { $options(-control) opt-connect $name2 $opt2 $options(-name) $opt }
-    method port-connect-to {port name2 port2} { $options(-control) port-connect $options(-name) $port $name2 $port2 }
-    method port-connect-from {name2 opt2 opt} { $options(-control) port-connect $name2 $opt2 $options(-name) $opt }
+    method {command configure} {args} { return [$self configure {*}$args] }
+    method {command cget} {opt} { return [$self cget $opt] }
+    method {command get-wrapped-command} {} { return [$self get-wrapped-command] }
+    method {command destroy} {} { $self destroy }
+    
+    method opt-connect-to {opt name2 opt2} { $options(-control) opt-connect [list $options(-name) $opt] [list $name2 $opt2] }
+    method opt-connect-from {name2 opt2 opt} { $options(-control) opt-connect [list $name2 $opt2] [list $options(-name) $opt] }
+    method port-connect-to {port name2 port2} { $options(-control) port-connect [list $options(-name) $port] [list $name2 $port2] }
+    method port-connect-from {name2 opt2 opt} { $options(-control) port-connect [list $name2 $opt2] [list $options(-name) $opt] }
+    method get-wrapped-command {} { return $wrapped }
     method report {opt val args} { $options(-control) part-report $options(-name) $opt $val {*}$args }
-    # these are only used for the dsp alternates, in general, only if they're present
+    
+    # these are only used for the dsp alternates
+    # or, in general, only if they're present in the wrapped command
     method rewrite-connections-to {port candidates} {
 	if {{rewrite-connections-to} in $options(-methods)} {
-	    return [::sdrctlx::$options(-name) rewrite-connections-to $port $candidates]
+	    return [$wrapped rewrite-connections-to $port $candidates]
 	} else {
 	    return $candidates
 	}
     }
     method rewrite-connections-from {port candidates} {
 	if {{rewrite-connections-from} in $options(-methods)} {
-	    return [::sdrctlx::$options(-name) rewrite-connections-from $port $candidates]
+	    return [$wrapped rewrite-connections-from $port $candidates]
 	} else {
 	    return $candidates
 	}
@@ -233,24 +258,24 @@ snit::type sdrctl::control {
 	    set options($opt) [$options(-container) cget $from_opt]
 	}
     }
-
+    
     proc Filter-not-in {list nilist} {
 	set new {}
 	foreach i $list { if {$i ni $nilist} { lappend new $i } }
 	return $new
     }
-
+    
     method {Handler -activate} {val} {
 	set options(-activate) $val
 	if {$options(-type) eq {jack}} {
 	    if {$val} {
-		::sdrctlx::$options(-name) activate
+		$wrapped activate
 	    } else {
-		::sdrctlx::$options(-name) deactivate
+		$wrapped deactivate
 	    }
 	}
     }
-
+    
     method Delegate {opt} {
 	if {$opt in [$wrapped info options]} { return [$wrapped cget $opt] }
 	return $options($opt)

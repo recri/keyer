@@ -42,40 +42,30 @@
    The base ui is a command line interpreter.
    The whole radio could be run from a script with no ui at all.
    The default ui builds the radio I like.
-***    
-** A way to connect UI controls to DSP computations
-##
-## This is the control component that wraps every sdrui component,
-## sdrdsp computation, and sdrctl control transfer component in the
-## radio.
-##
-## This started as a way for the dsp components to declare their
-## input and output ports and define in what order the components
-## needed to be hooked up.  It still does that.
-##
-## Then it evolved into a way to connect ui controls to the dsp
-## options they were supposed to adjust.  It still does that, too,
-## but with an extra level of indirection.
-##
-## It turned out to helpful to create a control level in between
-## the ui controls and the dsp options, especially since more than
-## one ui control might need to know or to alter a particular option
-## 
-## So all the control-*.tcl in this 
-##
+** Each UI component     
+** Each control component
+   This is the control component that wraps every sdrui component,
+   sdrdsp computation, and sdrctl control transfer component in the
+   radio.
+*** This started as a way for the dsp components to declare their
+    input and output ports and define in what order the components
+    needed to be hooked up.  It still does that.
+*** Then it evolved into a way to connect ui controls to the dsp
+    options they were supposed to adjust.  It still does that, too,
+    but with an extra level of indirection.
+*** It turned out to helpful to create a control level in between
+   the ui controls and the dsp options, especially since more than
+   one ui control might need to know or to alter a particular option
+** The single controller component
+   is mostly a crossbar switch.
+*** all the controls, whether from sdrui, sdrdsp, or sdrdsp,
+    register themselves with this component using part-add,
+    giving a unique control name and their command procedure.
+    the rest of their essential information is discovered
+    by looking at their configuration options.
+*** the sdrctl components supply well known names for controls
+    that a radio needs to have.  the sdrui and sdrdsp components
+    supply whatever name they have for their controls, and then
+    supply connections to the control component names.
 
-##
-## the "controller", which is mostly a crossbar switch.
-##
-## all the controls, whether from sdrui, sdrdsp, or sdrdsp,
-## register themselves with this component using part-add,
-## giving a unique control name and their command procedure.
-## the rest of their essential information is discovered
-## by looking at their configuration options.
-##
-## the sdrctl components supply well known names for controls
-## that a radio needs to have.  the sdrui and sdrdsp components
-## supply whatever name they have for their controls, and then
-## supply connections to the control component names.
-##
 

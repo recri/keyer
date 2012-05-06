@@ -1,0 +1,12 @@
+* The real issue is how to get the right antenna connected
+** How about a dipole that adjusts its length
+   The basic manpack dipole consists of feedline, center adapter, two
+   lengths of wire wound on shuttles, and two lengths of rope wound on
+   shuttles.
+   To set it you unwind the rope from the shuttles, unwind the wires
+   to the correct lengths, and tie the ropes up to suspend the wire to
+   height.
+   Now, replace the shuttles with microprocessor controlled spools.
+   Unwind the rope, tie the rope up to suspend everything at height,
+   and now instruct the spools to unwind their wires along the
+   suspended rope, taking up the slack in the ropes as they go.

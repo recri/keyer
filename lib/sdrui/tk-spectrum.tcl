@@ -26,50 +26,50 @@ package require Tk
 package require snit
 
 snit::widgetadaptor sdrui::tk-spectrum {
-    option -max -default 0 -type sdrtype::decibel -configuremethod opt-handler
-    option -min -default -160 -type sdrtype::decibel -configuremethod opt-handler
-    option -smooth -default true -type sdrtype::smooth -configuremethod opt-handler
-    option -multi -default 1 -type sdrtype::multi -configuremethod opt-handler
-    option -center -default 0 -type sdrtype::hertz -configuremethod opt-handler
-    option -size -default 4096 -type sdrtype::spec-size -configuremethod opt-handler
-    option -rate -default 48000 -type sdrtype::sample-rate -configuremethod opt-handler
-    option -zoom -default 1 -type sdrtype::zoom -configuremethod opt-handler
-    option -pan -default 0 -type sdrtype::pan -configuremethod opt-handler
+    option -max -default 0 -type sdrtype::decibel -configuremethod Readjust
+    option -min -default -160 -type sdrtype::decibel -configuremethod Readjust
+
+    option -smooth -default true -type sdrtype::smooth -configuremethod Resmooth
+
+    option -multi -default 1 -type sdrtype::multi -configuremethod Remulti
+
+    option -size -default 4096 -type sdrtype::spec-size
+    option -rate -default 48000 -type sdrtype::sample-rate
+    option -zoom -default 1 -type sdrtype::zoom
+    option -pan -default 0 -type sdrtype::pan
+
+    # from ctl-rxtx-mode
+    option -mode -default CWU -type sdrtype::mode -configuremethod Retune
+
+    # from ctl-rxtx-tune
+    option -freq -default 7050000 -configuremethod Retune
+    option -lo-freq -default 10000 -configuremethod Retune
+    option -cw-freq -default 600 -configuremethod Retune
+    option -carrier-freq -default 7040000 -configuremethod Retune
+
+    # from ctl-rxtx-if-bpf
+    option -low -default 400 -configuremethod Retune
+    option -high -default 800 -configuremethod Retune
 
     variable data -array {
-	xscale 1.0
-	xoffset 0.5
 	multi 0
+	center-freq 0
+	filter-low 0
+	filter-high 0
+	tuned-freq 0
     }
     
     constructor {args} {
 	installhull using canvas
 	$self configure {*}$args
 	$hull configure -bg black
-	bind $hull <Configure> [mymethod rescale %w %h]
-    }
-    
-    method rescale {wd ht} {
-    }
-
-    method scale {tag} {
-	set yscale [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
-	set yoffset [expr {-$options(-max)*$yscale}]
-	set xscale [expr {[winfo width $win]*$data(xscale)}]
-	set xoffset [expr {[winfo width $win]*$data(xoffset)}]
-	$hull scale $tag 0 0 $xscale $yscale
-	$hull move $tag $xoffset $yoffset
-	if {0} {
-	    puts "scale $tag 0 0 $xscale $yscale"
-	    puts "move $tag $xoffset $yoffset"
-	    puts "bbox $tag [$hull bbox $tag]"
-	}
+	bind $win <Configure> [mymethod Adjust]
     }
     
     method update {xy} {
 	$hull coords spectrum-$data(multi) $xy
 	$hull raise spectrum-$data(multi)
-	$self scale spectrum-$data(multi)
+	$self Scale spectrum-$data(multi)
 	for {set i 0} {$i < $options(-multi)} {incr i} {
 	    set j [expr {($data(multi)+$i)%$options(-multi)}]
 	    $hull itemconfigure spectrum-$j -fill [lindex $data(multi-hues) $j]
@@ -77,36 +77,102 @@ snit::widgetadaptor sdrui::tk-spectrum {
 	set data(multi) [expr {($data(multi)-1+$options(-multi))%$options(-multi)}]
     }
 
-    method adjust {} {
+    method VerticalScale {tag} {
+	set yscale [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
+	set yoffset [expr {-$options(-max)*$yscale}]
+	$hull scale $tag 0 0 1 $yscale
+	$hull move $tag 0 $yoffset
+    }
+
+    method HorizontalScale {tag} {
+	set xscale [expr {[winfo width $win]/double($options(-rate))}]
+	set xoffset [expr {[winfo width $win]/2.0}]
+	$hull scale $tag 0 0 $xscale 1
+	$hull move $tag $xoffset 0
+    }
+    
+    method Scale {tag} {
+	$self VerticalScale $tag
+	$self HorizontalScale $tag
+    }
+
+    method Adjust {} {
 	catch {$hull delete grid}
-	set dark \#888
-	set med \#AAA
-	set light \#CCC
-	set lo [expr {-double([winfo width $win])/$data(xscale)/2.0}]
-	set hi [expr {-$lo}]
-	#puts "scale $data(xscale) offset $data(xoffset) width [winfo width $win], $lo .. $hi"
+	catch {$hull delete label}
+	lassign {\#444 \#666 \#888 \#AAA \#CCC \#EEE \#FFF} darkest darker dark med light lighter lightest
+	#lassign {\#FFF \#FFF \#FFF \#FFF \#FFF} darkest darker dark med light
+	
+	# filter rectangle
+	$hull create rectangle $data(filter-low) $options(-min) $data(filter-high) $options(-max) -fill $darker -outline $darker -tag grid
+	# carrier tuning line
+	$hull create line $data(tuned-freq) $options(-min) $data(tuned-freq) $options(-max) -fill red -tag {grid vgrid}
+	set lo [expr {-$options(-rate)/2.0}]
+	set hi [expr {$options(-rate)/2.0}]
+	set xy {}
 	for {set l $options(-min)} {$l <= $options(-max)} {incr l 20} {
 	    # main db grid
-	    $hull create line $lo $l $hi $l -fill $dark -tags grid
-	    $hull create text $lo $l -text "$l dB" -anchor nw -fill $dark -tags grid
+	    lappend xy $lo $l $hi $l $lo $l
+	    $hull create text 0 $l -text " $l" -font {Helvetica 8} -anchor nw -fill $light -tags {label vlabel}
 	    # sub grid
 	    if {0} {
 		for {set ll [expr {$l-10}]} {$ll > $l-20} {incr ll -10} {
 		    if {$ll >= $options(-min) && $ll <= $options(-max)} {
-			$hull create line $lo $ll $hi $ll -fill $med -tags grid
+			$hull create line $lo $ll $hi $ll -fill $med -tags {grid vgrid}
 		    }
 		}
 	    }
 	}
+	$hull create line $xy -fill $darkest -tags {grid vgrid}
+	# offset of tuning from grid
+	set frnd [expr {int($data(center-freq)/10000)*10000}]
+	set foff [expr {$data(center-freq)-$frnd}]
+	set fmax [expr {int($options(-rate)/20000+1)*10000}]
+	set fmin [expr {-$fmax}]
+	set xy {}
+	for {set f $fmin} {$f <= $fmax} {incr f 10000} {
+	    set label [format { %.2f} [expr {($f+$frnd)*1e-6}]]
+	    set fo [expr {$f-$foff}]
+	    lappend xy $fo $options(-min) $fo $options(-max) $fo $options(-min)
+	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $light -tags {label hlabel}
+	}
+	$hull create line $xy -fill $darkest -tags {grid hgrid}
 	$hull lower grid
-	$self scale grid
+	$self Scale grid
+	$self VerticalScale vlabel
+	$self Scale hlabel
     }	
 	
-    method {opt-handler -max} {value} { set options(-max) $value; $self adjust }
+    method Retune {opt val} {
+	set options($opt) $val
+	# the frequency at the center of the spectrum
+	set data(center-freq) [expr {$options(-carrier-freq)-$options(-lo-freq)}]
+	# the limits of the band pass filter in the spectrum
+	set data(filter-low) [expr {$options(-lo-freq)+$options(-low)}]
+	set data(filter-high) [expr {$options(-lo-freq)+$options(-high)}]
+	# the frequency tuned in the spectrum
+	switch $options(-mode) {
+	    CWU {
+		set data(tuned-freq) [expr {$options(-lo-freq)+$options(-cw-freq)}]
+	    }
+	    CWL {
+		set data(tuned-freq) [expr {$options(-lo-freq)-$options(-cw-freq)}]
+	    }
+	    default {
+		set data(tuned-freq) $options(-lo-freq)
+	    }
+	}
+	$self Adjust
+    }
+    
+    method Readjust {opt value} {
+	set options($opt) $value
+	$self Adjust
+    }
 
-    method {opt-handler -min} {value} { set options(-min) $value; $self adjust }
-
-    method {opt-handler -smooth} {value} { set options(-smooth) $value; catch {$hull configure spectrum -smooth $value} }
+    method Resmooth {opt value} {
+	set options($opt) $value
+	catch {$hull configure spectrum -smooth $value}
+    }
 
     proc gray-scale {n} {
 	set scale {}
@@ -118,23 +184,14 @@ snit::widgetadaptor sdrui::tk-spectrum {
 	return $scale
     }
 
-    method {opt-handler -multi} {value} {
-	set options(-multi) $value
+    method Remulti {opt value} {
+	set options($opt) $value
 	set data(multi) 0
 	set data(multi-hues) [gray-scale $options(-multi)]
 	catch {$hull delete spectrum}
 	for {set i 0} {$i < $options(-multi)} {incr i} {
 	    $hull create line 0 0 0 0 -tags [list spectrum spectrum-$i]
-	    
 	}
     }
-    method {opt-handler -center} {value} { set options(-center) $value; $self adjust }
-    method {opt-handler -rate} {value} {
-	set options(-rate) $value
-	set data(xscale) [expr {1.0/$value}]
-	set data(xoffset) [expr {0.5}]
-    }
-    method {opt-handler -zoom} {value} { set options(-zoom) $value }
-    method {opt-handler -pan} {value} { set options(-pan) $value }
 
 }

@@ -2,7 +2,8 @@
 BIN=/home/rec/Projects/keyer/bin
 RXSOURCE='system:capture_1 system:capture_2'
 RXSINK='audioadapter:playback_1 audioadapter:playback_2'
-TXSOURCE='system:playback_1 system:playback_2'
-TXSINK='audioadapter:capture_1 audioadapter:capture_2'
+TXSINK='system:playback_1 system:playback_2'
+TXSOURCE='audioadapter:capture_1 audioadapter:capture_2'
 KEYSOURCE='system:midi_capture_1'
+JACK=...
 $BIN/sdrkit-radio -rx-source "$RXSOURCE" -rx-sink "$RXSINK" -activate-hw yes -enable-rx yes -activate-rx yes

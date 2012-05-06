@@ -30,8 +30,10 @@ package require sdrtcl::meter-tap
 package require sdrtcl
 
 snit::widget sdrui::meter {
+    hulltype tk::frame
     component display
     component capture
+    variable data -array {}
 
     # options controlling this component directly
     option -period -default 50 -type sdrtype::milliseconds -configuremethod Opt-handler
@@ -55,9 +57,13 @@ snit::widget sdrui::meter {
 	pack [ttk::frame $win.m] -side top
 	# I guess I need to know if the agc is off
 	set capture ::sdrctlx::rx-af-agc
-	after $options(-period) [mymethod update]
+	set data(after) [after $options(-period) [mymethod update]]
     }
     
+    destructor {
+	catch {after cancel $data(after)}
+    }
+
     method capture-is-active {} { return [$capture is-active] }
     method capture-is-busy {} { return false }
     method capture-exists {} { return [expr {[info command $capture] ne {}}] }
@@ -66,12 +72,12 @@ snit::widget sdrui::meter {
 	if { [$self capture-exists] &&
 	     ! [$self capture-is-busy] &&
 	     [$self capture-is-active]} {
-	    lassign [::sdrctlx::$capture get] frame level
+	    lassign [$capture get] frame level
 	    set dB [sdrtcl::linear-to-dB [expr {1.0/($level+1e-16)}]]
 	    $win.s update $dB
 	    # puts "meter update $frame $level $dB busy=[$self capture-is-busy] active=[$self capture-is-active]"
 	}
-	after $options(-period) [mymethod update]
+	set data(after) [after $options(-period) [mymethod update]]
     }
     
     method Opt-handler {opt val} {

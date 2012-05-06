@@ -36,6 +36,7 @@ namespace eval sdrctlw {}
 proc sdrctl::radio-controls {args} {
     set root [sdrctl::control ::sdrctlw::ctl -type ctl -prefix {} -suffix ctl -factory sdrctl::control-stub {*}$args]
     foreach {suffix factory opts} {
+	notify			sdrctl::control-notify {}
 	rxtx			sdrctl::control-stub {}
 	rx			sdrctl::control-stub {}
 	rx-af			sdrctl::control-stub {}

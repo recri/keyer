@@ -17,37 +17,116 @@
 # 
 
 ##
-## af-gain - af-gain control for agc off
+## spectrum - spectrum, and waterfall, display
 ##
 package provide sdrui::spectrum 1.0.0
 
 package require Tk
 package require snit
+package require sdrtcl::jack
 package require sdrui::tk-spectrum
 package require sdrtcl::spectrum-tap
 
+snit::type sdrui::spectrum-control {
+    option -command {}
+    option -opts {
+	-any-activate
+	-any-deactivate
+	-any-enable
+	-any-disable
+	-mode
+	-freq
+	-lo-freq
+	-cw-freq
+	-carrier-freq
+	-low
+	-high
+    }
+    option -ports {}
+    option -methods {}
+    option -opt-connect-from {
+	{ctl-notify -any-activate -any-activate}
+	{ctl-notify -any-deactivate -any-deactivate}
+	{ctl-notify -any-enable -any-enable}
+	{ctl-notify -any-disable -any-disable}
+	{ctl-rxtx-mode -mode -mode}
+	{ctl-rxtx-tuner -freq -freq}
+	{ctl-rxtx-tuner -lo-freq -lo-freq}
+	{ctl-rxtx-tuner -cw-freq -cw-freq}
+	{ctl-rxtx-tuner -carrier-freq -carrier-freq}
+	{ctl-rxtx-if-bpf -low -low}
+	{ctl-rxtx-if-bpf -high -high}
+    }
+    option -opt-connect-to {}
+    # from ctl-notify
+    option -any-activate -configuremethod Opt-handler
+    option -any-deactivate -configuremethod Opt-handler
+    option -any-enable -configuremethod Opt-handler
+    option -any-disable -configuremethod Opt-handler
+    # from ctl-rxtx-mode
+    option -mode -default CWU -type sdrtype::mode -configuremethod Opt-handler
+    # from ctl-rxtx-tune
+    option -freq -default 7050000 -type sdrtype::hertz -configuremethod Opt-handler
+    option -lo-freq -default 10000 -type sdrtype::hertz -configuremethod Opt-handler
+    option -cw-freq -default 600 -type sdrtype::hertz -configuremethod Opt-handler
+    option -carrier-freq -default 7040000 -type sdrtype::hertz -configuremethod Opt-handler
+    # from ctl-rxtx-if-bpf
+    option -low -default 400 -configuremethod Opt-handler
+    option -high -default 800 -configuremethod Opt-handler
+
+    constructor {args} {
+	$self configure {*}$args
+	set options(-container) [{*}$options(-command) cget -container]
+    }
+
+    destructor {}
+
+    method resolve {} {}
+    
+    method Opt-handler {opt val} { $options(-container) configure $opt $val }
+}
+
 snit::widget sdrui::spectrum {
+    hulltype toplevel
     component display
     component capture
+    component control
 
-    option -rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-handler
+    # imported for here and display
+    option -rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-display
 
     option -period -default 100 -type sdrtype::milliseconds
-    option -polyphase -default 1 -type sdrtype::spec-polyphase
-    option -size -default 128 -type sdrtype::spec-size -configuremethod Opt-handler
-    option -result -default dB -type sdrtype::spec-result -configuremethod Opt-handler
 
-    option -pal -default 0 -type sdrtype::spec-palette -configuremethod Opt-handler
-    option -min -default -150 -type sdrtype::decibel -configuremethod Opt-handler
-    option -max -default -0 -type sdrtype::decibel -configuremethod Opt-handler
-    option -zoom -default 1 -type sdrtype::zoom -configuremethod Opt-handler
-    option -pan -default 0 -type sdrtype::pan -configuremethod Opt-handler
-    option -smooth -default false -type sdrtype::smooth -configuremethod Opt-handler
-    option -center -default 0 -type sdrtype::hertz -configuremethod Opt-handler
-    option -multi -default 1 -type sdrtype::multi -configuremethod Opt-handler
+    # from here for capture
+    option -polyphase -default 1 -type sdrtype::spec-polyphase -configuremethod Opt-capture
+    option -size -default 128 -type sdrtype::spec-size -configuremethod Opt-capture
+    option -result -default dB -type sdrtype::spec-result -configuremethod Opt-capture
+    # from here for display
+    option -pal -default 0 -type sdrtype::spec-palette -configuremethod Opt-display
+    option -min -default -150 -type sdrtype::decibel -configuremethod Opt-display
+    option -max -default -0 -type sdrtype::decibel -configuremethod Opt-display
+    option -zoom -default 1 -type sdrtype::zoom -configuremethod Opt-display
+    option -pan -default 0 -type sdrtype::pan -configuremethod Opt-display
+    option -smooth -default false -type sdrtype::smooth -configuremethod Opt-display
+    option -multi -default 1 -type sdrtype::multi -configuremethod Opt-display
+    # from ctl-rxtx-mode for display
+    option -mode -default CWU -type sdrtype::mode -configuremethod Opt-display
+    # from ctl-rxtx-tune for display
+    option -freq -default 7050000 -configuremethod Opt-display
+    option -lo-freq -default 10000 -configuremethod Opt-display
+    option -cw-freq -default 600 -configuremethod Opt-display
+    option -carrier-freq -default 7040000 -configuremethod Opt-display
+    # from ctl-rxtx-if-bpf for display
+    option -low -default 400 -configuremethod Opt-display
+    option -high -default 800 -configuremethod Opt-display
 
-    option -tap -default {} -configuremethod Opt-handler
-    option -instance -default 1 -type sdrtype::instance
+    # from ctl-notify
+    option -any-activate -configuremethod Opt-any
+    option -any-deactivate -configuremethod Opt-any
+    option -any-enable -configuremethod Opt-any
+    option -any-disable -configuremethod Opt-any
+
+    option -input -default rx-if-spectrum-pre-filt -configuremethod Opt-input
 
     option -server -default default -readonly true
     option -container -readonly yes
@@ -55,42 +134,36 @@ snit::widget sdrui::spectrum {
     option -enable -default no -type snit::boolean -configuremethod Enable -cgetmethod IsEnabled
     option -activate -default no -type snit::boolean -configuremethod Activate -cgetmethod IsActivated
     
-    option -command {}
-    option -opt-connect-to {}
-    option -opt-connect-from {}
-    option -method-connect-from {}
-    option -input -default {} -configuremethod Opt-handler
-
-
     variable data -array {
 	frequencies {}
 	capture-options {-polyphase -size -result}
 	display-options {-min -max -smooth -multi -center -rate -zoom -pan}
+	pairs {}
     }
 
     constructor {args} {
+	#puts "spectrum constructor {$args}"
+	set options(-server) [from args -server [::radio cget -server]]
 	set options(-rate) [from args -rate [sdrtcl::jack -server $options(-server) sample-rate]] 
-	set options(-control) [from args -control [::radio cget -control]]
+
 	$self configure {*}$args
+
 	install display using sdrui::tk-spectrum $win.s {*}[$self filter-options display]
-	install capture using ::sdrtcl::spectrum-tap ::sdrctlx::spectrum {*}[$self filter-options capture]
+	install capture using sdrtcl::spectrum-tap ::sdrctlx::spectrum-tap {*}[$self filter-options capture]
 	if {[$capture is-active]} { $capture deactivate }
+	install control using sdrctl::control ::sdrctlw::spectrum-control -type ctl -prefix spectrum -suffix {} -factory sdrui::spectrum-control -container $self
+
 	pack $win.s -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
-	
-	# spectrum selection
-	#puts "making input selector: -input {$options(-input)}"
+	wm title $win sdrkit:spectrum
+	# spectrum selection menu
+	# puts "making input selector: -input {$options(-input)}"
+	# too early to do this, there aren't any parts to match yet
 	pack [ttk::menubutton $win.m.i -textvar [myvar data(input)] -menu $win.m.i.m] -side left
 	menu $win.m.i.m -tearoff no
-	$win.m.i.m add radiobutton -label none -variable [myvar data(input)] -value none -command [mymethod configure -input {}]
+	$win.m.i.m add radiobutton -label none -variable [myvar data(input)] -value none -command [mymethod Opt-input -input {}]
 	if {$options(-input) eq {}} { set data(input) none }
-	foreach i [{*}$options(-control) part-list] {
-	    if {[regexp {^dsp-(rx|tx|rxtx)-.*spectrum-(.*)$} $i input prefix suffix]} {
-		set label $prefix-$suffix
-		$win.m.i.m add radiobutton -label $label -variable [myvar data(input)] -value $label -command [mymethod configure -input $input]
-		if {$options(-input) eq $input} { set data(input) $label }
-	    }
-	}
+	# defer rest of menu until resolve
 
 	# spectrum fft size control
 	pack [ttk::menubutton $win.m.size -textvar [myvar data(size)] -menu $win.m.size.m] -side left
@@ -162,13 +235,40 @@ snit::widget sdrui::spectrum {
 	}
 	
 	# scroll/pan
-	
-	# start capturing
-	set data(after) [after 100 [mymethod update]]
     }
 
     destructor {
-	catch {after cancel $data(after)}
+	# note, snit::widgets and snit::widgetadapters do not have a destroy method
+	# call tk::destroy $win to destroy them and their widget children
+	# the destructor will be called as part of the tk::destroy sequence
+	# anything that won't be cleared up as part of the widget hierarchy
+	# needs to happen here
+	#puts "spectrum destructor called"
+	catch { after cancel $data(after) }
+	if {$capture ne {}} {
+	    #puts "rename $capture {}"
+	    rename $capture {}
+	}
+	if {$control ne {}} {
+	    #puts "$control destroy"
+	    # note, destroying a snit instance with rename $instance {}
+	    # does not call the destructor of the instance
+	    $control destroy
+	}
+    }
+
+    method resolve {} {
+	#puts "spectrum resolve"
+	foreach i [{*}$options(-control) part-filter *spectrum*] {
+	    #puts "spectrum try match $i"
+	    if {[regexp {^(rx|tx)-.*spectrum-(.*)$} $i input prefix suffix]} {
+		set label $prefix-$suffix
+		if {$label eq {tx-tx}} { set label tx }
+		#puts "spectrum matched $i reduced to $label"
+		$win.m.i.m add radiobutton -label $label -variable [myvar data(input)] -value $label -command [mymethod Opt-input -input $input]
+		if {$options(-input) eq $input} { set data(input) $label }
+	    }
+	}
     }
 
     method filter-options {target} {
@@ -181,21 +281,13 @@ snit::widget sdrui::spectrum {
 	return $new
     }
     
-    method capture-is-active {} { return [$capture is-active] }
     method capture-is-busy {} { return [lindex [$capture modified] 1] }
-    method capture-exists {} { return [expr {[info command $capture] ne {}}] }
 
-    method capture-configure {} {
-	if { ! [$self capture-exists] || [$self capture-is-busy]} {
-	    after 50 [mymethod capture-configure]
-	} else {
-	    # should go through $options(-command) report
-	    $capture configure {*}[$self filter-options capture]
-	}
-    }
-	
     method update {} {
-	if {[$self capture-exists] && ! [$self capture-is-busy] && [$self capture-is-active]} {
+	if {[$self capture-is-busy]} {
+	    set data(after) [after $options(-period) [mymethod update]]
+	}
+	if {[$capture is-active]} {
 	    lassign [$capture get] frame dB
 	    binary scan $dB f* dB
 	    set n [llength $dB]
@@ -213,49 +305,69 @@ snit::widget sdrui::spectrum {
 	    }
 	    #puts "$xy"
 	    $display update $xy
+	    set data(after) [after $options(-period) [mymethod update]]
 	}
-	set data(after) [after $options(-period) [mymethod update]]
     }
     
+    method Deactivate {} {
+	catch {after cancel $data(after)}
+	if {[$capture is-active]} { $capture deactivate }
+	set data(pairs) {}
+    }
 
-    method Opt-delegate {opt val} {
-	if {$display ne {} && $opt in $data(display-options) && [$options(-control) part-exists $display]} {
-	    $display configure $opt $val
+    method TryActivate {} {
+	set input $options(-input)
+	if {$input eq {} ||
+	    ! [$options(-control) part-is-active $input]} {
+	    $self Deactivate
+	    return
 	}
-	if {$capture ne {} && $opt in $data(capture-options)} {
-	    while {[$self capture-is-busy]} { after 1 }
-	    $options(-control) part-configure $capture $opt $val
+	# puts "$input is-active"
+	set ports [$capture info ports]
+	set pairs {}
+	foreach port [$options(-control) part-ports $input] {
+	    lappend pairs {*}[$options(-control) port-active-connections-to [list $input $port]]
+	}
+	# puts "$input active-connections-to $pairs"
+	if {$pairs ne $data(pairs)} {
+	    if {[llength $pairs] != [llength $ports]} {
+		puts "port mismatch between {$pairs} and {$ports}"
+		$self Deactivate
+		return
+	    }
+	    if { ! [$capture is-active]} { $capture activate }
+	    foreach port $ports pair $pairs old $data(pairs) {
+		puts "sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port"
+		sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port
+		if {$old ne {}} {
+		    puts "sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port"
+		    sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port
+		}
+	    }
+	    set data(pairs) $pairs
+	    set data(after) [after $options(-period) [mymethod update]]
 	}
     }
 
-    method {Opt-handler -rate} {value} { set options(-rate) $value; $self Opt-delegate -rate $value }
-    method {Opt-handler -size} {value} { set options(-size) $value; $self Opt-delegate -size $value; set data(frequencies) {} }
-    method {Opt-handler -result} {value} { set options(-result) $value; $self Opt-delegate -result $value }
-    method {Opt-handler -pal} {value} { set options(-pal) $value; $self Opt-delegate -pal $value }
-    method {Opt-handler -min} {value} { set options(-min) $value; $self Opt-delegate -min $value }
-    method {Opt-handler -max} {value} { set options(-max) $value; $self Opt-delegate -max $value }
-    method {Opt-handler -zoom} {value} { set options(-zoom) $value; $self Opt-delegate -zoom $value }
-    method {Opt-handler -pan} {value} { set options(-pan) $value; $self Opt-delegate -pan $value }
-    method {Opt-handler -smooth} {value} { set options(-smooth) $value; $self Opt-delegate -smooth $value }
-    method {Opt-handler -center} {value} { set options(-center) $value; $self Opt-delegate -center $value }
-    method {Opt-handler -multi} {value} { set options(-multi) $value; $self Opt-delegate -multi $value }
-    method {Opt-handler -tap} {value} { set options(-tap) $value; $self Opt-delegate -multi $value }
-    method {Opt-handler -input} {input} {
+    method Opt-display {opt value} {
+	set options($opt) $value
+	if {$display ne {}} { $display configure $opt $value }
+    }
+
+    method Opt-capture {opt value} {
+	set options($opt) $value
+	if {$capture ne {}} { $capture configure $opt $value }
+    }
+
+    method Opt-input {opt input} {
+	puts "spectrum configure -input $input"
 	set options(-input) $input
-	if {$input ne {}} {
-	    set ports [$options(-control) ccget $input -inport]
-	    set input [lindex [split [lindex $ports 0] :] 0]
-	}
-	$self Opt-delegate -connect $input
+	$self TryActivate
     }
 
-    method {Enable -enable} {val} { set options(-enable) $val }
-    method {IsEnabled -enable} {} { return $options(-enable) }
-    method {Activate -activate} {val} { set options(-activate) $val }
-    method {IsActivated -activate} {} { return $options(-activate) $val }
-
-    ## typical option setters
-    method set-gain {} { {*}$options(-command) report -gain $options(-gain) }
-    method set-mute {} { {*}$options(-command) report -mute $options(-mute) }
-
+    # incoming reports
+    method Opt-any {opt val} {
+	set options($opt) $val
+	$self TryActivate
+    }
 }    

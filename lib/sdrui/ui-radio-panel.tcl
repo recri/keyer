@@ -27,9 +27,12 @@ package provide sdrui::ui-radio-panel 1.0
 
 package require Tk
 package require snit
+package require tkcon
 
 package require sdrui::ui-components
 package require sdrui::meter
+package require sdrui::connections
+package require sdrui::tree
 package require sdrui::spectrum
 
 snit::widget sdrui::ui-radio-panel {
@@ -50,14 +53,9 @@ snit::widget sdrui::ui-radio-panel {
 	ttk::frame $win.set2
 	ttk::frame $win.set3
 	ttk::frame $win.set4
-	toplevel .spectrum
-
 
 	# build the components
 	sdrui::meter $win.mtr -control $options(-control) -container $options(-container)
-	sdrui::spectrum .spectrum.s -control $options(-control) -container $options(-container)
-	# not quite right, it hangs the whole application close
-	#bind .spectrum <Destroy> [list wm iconify .spectrum]
 	sdrui::ui-components %AUTO% -root $win -control $options(-control) -container $options(-container)
 
 	# assemble
@@ -72,8 +70,6 @@ snit::widget sdrui::ui-radio-panel {
 	grid rowconfigure $win 0 -weight 1
 	grid rowconfigure $win 4 -weight 1
 	grid columnconfigure $win 0 -weight 1
-
-	grid .spectrum.s -sticky nsew
 
 	foreach {tail row column} {
 	    ui-rxtx-mode 0 0
@@ -114,5 +110,39 @@ snit::widget sdrui::ui-radio-panel {
 	    }
 	}
 	#add $win.band-pass -text Filter
-    }    
+	$win.notes add [ttk::frame $win.view] -text View
+	foreach view {spectrum tree connections console} {
+	    pack [ttk::button $win.view.$view -text $view -command [mymethod view $view]]
+	}
+	bind $win.notes <<NotebookTabChanged>> [mymethod notebook-tab]
+    }
+
+    method notebook-tab {} {
+	#puts "notebook-tab [$win.notes select]"
+    }
+
+    method {view} {window} {
+	switch $window {
+	    console {
+		tkcon show
+		tkcon title sdrkit:console
+	    }
+	    spectrum {
+		if { ! [winfo exists .$window]} {
+		    spectrum .spectrum -container $self -control $options(-control)
+		} else {
+		    wm deiconify .spectrum
+		}
+	    }
+	    default {
+		if { ! [winfo exists .$window]} {
+		    toplevel .$window
+		    pack [$window .$window.t -container $self -control $options(-control)] -fill both -expand true
+		    wm title .$window sdrkit:$window
+		} else {
+		    wm deiconify .$window
+		}
+	    }
+	}
+    }
 }

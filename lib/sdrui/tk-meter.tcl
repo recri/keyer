@@ -50,17 +50,22 @@ package require snit
 
 snit::widgetadaptor sdrui::tk-meter {
     option -max -default -13.0 -configuremethod opt-handler
-    option -min -default -127.0 -configuremethod opt-handler
+    option -min -default -121.0 -configuremethod opt-handler
 
     variable data -array {
 	width 1
+	height 10
+	y 5
+	s-meter-points {-121 -115 -109 -103 -97 -91 -85 -79 -73 -53 -33}
     }
     
+    method xfordB {dB} {
+	return [expr {($dB-$options(-min))*$data(width)/($options(-max)-$options(-min))}]
+    }
     constructor {args} {
-	installhull using canvas -height 5
+	installhull using canvas -height $data(height)
 	$self configure {*}$args
 	$hull configure -bg white
-	$hull create line 0 2.5 0 2.5 -width 5 -fill red -tag meter
 	bind $win <Configure> [mymethod rescale %w %h]
 	#$self rescale [winfo width $win] [winfo height $hull]
     }
@@ -68,12 +73,16 @@ snit::widgetadaptor sdrui::tk-meter {
     method rescale {wd ht} {
 	#puts "rescale $wd $ht"
 	set data(width) $wd
+	$hull delete all
+	$hull create line 0 $data(y) 0 $data(y) -width $data(y) -fill red -tag meter
+	foreach dB $data(s-meter-points) {
+	    set x [$self xfordB $dB]
+	    $hull create line $x 0 $x $data(height) -fill black -width 1
+	}
     }
 
     method update {dB} {
-	set x [expr {($dB-$options(-min))*$data(width)/($options(-max)-$options(-min))}]
-	puts "tk-meter $x"
-	$hull coords meter 0 2.5 $x 2.5
+	$hull coords meter 0 $data(y) [$self xfordB $dB] $data(y)
     }
 
     method {opt-handler -max} {value} { set options(-max) $value }

@@ -193,8 +193,8 @@ snit::widget sdrui::connections {
     }
 
     method find-ports {item} { return [$options(-control) part-cget $item -ports] }
-    method find-port-connections-from {item} { return [$options(-control) port-connections-from {*}[split $item :]] }
-    method find-port-connections-to {item} { return [$options(-control) port-connections-to {*}[split $item :]] }
+    method find-port-connections-from {item} { return [$options(-control) port-connections-from [split $item :]] }
+    method find-port-connections-to {item} { return [$options(-control) port-connections-to [split $item :]] }
 
     method find-active {item ports} {
 	set active {}

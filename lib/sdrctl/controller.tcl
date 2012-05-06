@@ -31,6 +31,7 @@ package require sdrtype::types
 snit::type sdrctl::controller {
     option -container -readonly yes
     option -server -readonly yes
+    option -notifier {}
 
     variable data -array {}
     
@@ -51,20 +52,26 @@ snit::type sdrctl::controller {
     method part-add {name command} {
 	$self X-add part $name
 	dict set data(part) $name $command
-	foreach opt [$self part-opts $name] { $self opt-add $name $opt }
-	foreach port [$self part-ports $name] { $self port-add $name $port }
+	foreach opt [$self part-opts $name] { $self opt-add [list $name $opt] }
+	foreach port [$self part-ports $name] { $self port-add [list $name $port] }
     }
     method part-remove {name} {
-	if { ! [$self exists part $name]} { error "part \"$name\" does not exist" }
-	foreach opt [$self opt filter $name *] { $self remove opt $name $opt }
-	foreach port [$self port filter $name *] { $self remove port $name $port }
-	dict unset data(parts) $name
+	#puts "part-remove $name"
+	if { ! [$self part-exists $name]} { error "part \"$name\" does not exist" }
+	#if {[$self part-is-active $name]} { $self part-deactivate }
+	#if {[$self part-is-enabled $name]} { $self part-disable }
+	foreach pair [$self opt-filter [list $name *]] { $self opt-remove $pair }
+	foreach pair [$self port-filter [list $name *]] { $self port-remove $pair }
+	$self X-remove part $name
     }
     method part-list {} { return [$self X-list part] }
     method part-filter {glob} { return [$self X-filter part $glob] }
     method part-filter-pred {glob pred} { return [$self X-filter-pred part $glob $pred] }
 
-    method part-configure {name args} { return [{*}[dict get $data(part) $name] configure {*}$args] }
+    method part-configure {name args} {
+	if {$options(-notifier) ne {}} { {*}$options(-notifier) $name {*}$args }
+	return [{*}[dict get $data(part) $name] configure {*}$args]
+    }
     method part-cget {name opt} { return [{*}[dict get $data(part) $name] cget $opt] }
 
     method part-container {name} { return [[$self part-cget $name -container] cget -name] }
@@ -123,7 +130,7 @@ snit::type sdrctl::controller {
     # todo - avoid chasing through all the disabled alternates in an alternates block
     method port-active-connections-to {pair} {
 	set active {}
-	set candidates [$self part-rewrite-connections-to {*}$pair [$self port-connections-to {*}$pair]]
+	set candidates [$self part-rewrite-connections-to {*}$pair [$self port-connections-to $pair]]
 	foreach source $candidates {
 	    lassign $source part port
 	    set type [$self part-type $part]
@@ -150,8 +157,8 @@ snit::type sdrctl::controller {
     # todo - avoid chasing through all the disabled alternates in an alternates block
     method port-active-connections-from {pair} {
 	set active {}
-	set candidates [$self part-rewrite-connections-from {*}$pair [$self port-connections-from {*}$pair]]
-	foreach sink [$self port-connections-from {*}$pair] {
+	set candidates [$self part-rewrite-connections-from {*}$pair [$self port-connections-from $pair]]
+	foreach sink [$self port-connections-from $pair] {
 	    lassign $sink part port
 	    set type [$self part-type $part]
 	    if {$type in {jack hw}} {
@@ -329,6 +336,9 @@ snit::type sdrctl::controller {
 	$self part-configure $name -activate false
     }
     
+    method part-activate {name} { $self part-activate-tree $name }
+    method part-deactivate {name} { $self part-deactivate-tree $name }
+
     method part-enable {name} {
 	if {[$self part-is-enabled $name]} { error "part \"$name\" is enabled" }
 	$self part-configure $name -enable true
@@ -345,7 +355,7 @@ snit::type sdrctl::controller {
     }
     
     method part-report {name opt value args} {
-	foreach pair [$self opt-connections-from $name $opt] {
+	foreach pair [$self opt-connections-from [list $name $opt]] {
 	    $self part-configure {*}$pair $value {*}$args
 	}
     }
@@ -359,30 +369,30 @@ snit::type sdrctl::controller {
     ## opt methods
     ## opts are "configure options" in the tcl/tk sense which the components
     ## expose for connection to opts of other components
-    method opt-exists {name opt} { return [$self X-exists opt [list $name $opt]] }
-    method opt-connected {name1 opt1 name2 opt2} { return [$self X-connected opt [list $name1 $opt1] [list $name2 $opt2]] }
-    method opt-add {name opt} { $self X-add opt [list $name $opt] }
-    method opt-remove {name opt} { $self X-remove opt [list $name $opt]} 
-    method opt-connect {name1 opt1 name2 opt2} { $self X-connect opt [list $name1 $opt1] [list $name2 $opt2] }
-    method opt-disconnect {name1 opt1 name2 opt2} { $self X-disconnect opt [list $name1 $opt1] [list $name2 $opt2] }
+    method opt-exists {pair} { return [$self X-exists opt $pair] }
+    method opt-connected {pair1 pair2} { return [$self X-connected opt $pair1 $pair2] }
+    method opt-add {pair} { $self X-add opt $pair }
+    method opt-remove {pair} { $self X-remove opt $pair} 
+    method opt-connect {pair1 pair2} { $self X-connect opt $pair1 $pair2 }
+    method opt-disconnect {pair1 pair2} { $self X-disconnect opt $pair1 $pair2 }
     method opt-list {} { return [$self X-list opt] }
     method opt-filter {glob} { return [$self X-filter opt $glob] }
-    method opt-connections-to {name opt} { return [$self X-connections-to opt [list $name $opt]] }
-    method opt-connections-from {name opt} { return [$self X-connections-from opt [list $name $opt]] }
+    method opt-connections-to {pair} { return [$self X-connections-to opt $pair] }
+    method opt-connections-from {pair} { return [$self X-connections-from opt $pair] }
     
     ## port methods
     ## ports are jack ports, both audio and midi, which the components
     ## expose for connection to ports of other components
-    method port-exists {name port} { return [$self X-exists port [list $name $port]] }
-    method port-connected {name1 port1 name2 port2} { return [$self X-connected port [list $name1 $port1] [list $name2 $port2]] }
-    method port-add {name port} { $self X-add port [list $name $port] }
-    method port-remove {name port} { $self X-remove port [list $name $port] }
-    method port-connect {name1 port1 name2 port2} { $self X-connect port [list $name1 $port1] [list $name2 $port2] }
-    method port-disconnect {name1 port1 name2 port2} { $self X-disconnect port [list $name1 $port1] [list $name2 $port2] }
+    method port-exists {pair} { return [$self X-exists port $pair] }
+    method port-connected {pair1 pair2} { return [$self X-connected port $pair1 $pair2] }
+    method port-add {pair} { $self X-add port $pair }
+    method port-remove {pair} { $self X-remove port $pair }
+    method port-connect {pair1 pair2} { $self X-connect port $pair1 $pair2 }
+    method port-disconnect {pair1 pair2} { $self X-disconnect port $pair1 $pair2 }
     method port-list {} { return [$self X-list port] }
     method port-filter {glob} { return [$self X-filter port $glob] }
-    method port-connections-to {name port} { return [$self X-connections-to port [list $name $port]] }
-    method port-connections-from {name port} { return [$self X-connections-from port [list $name $port]] }
+    method port-connections-to {pair} { return [$self X-connections-to port $pair] }
+    method port-connections-from {pair} { return [$self X-connections-from port $pair] }
     
     ## X methods to handle common patterns
     ## tag may be a simple part name, or a part name opt name pair, or part name port name pair 
@@ -396,10 +406,20 @@ snit::type sdrctl::controller {
 	if {$x in {opt port}} { dict set data(invert-$x) $tag {} }
     }
     method X-remove {x tag} {
+	#puts "X-remove $x $tag"
 	if { ! [dict exists $data($x) $tag]} { error "$x \"$tag\" does not exist" }
 	if {$x in {opt port}} {
 	    # remove the connections
-	    foreach tag2 [dict get $data($x) $tag] { $self X-disconnect $x $tag $tag2 }
+	    foreach tag2 [dict get $data($x) $tag] {
+		#puts "X-disconnect $x $tag $tag2"
+		$self X-disconnect $x $tag $tag2
+	    }
+	    foreach tag2 [dict get $data(invert-$x) $tag] {
+		#puts "X-disconnect $x $tag2 $tag"
+		$self X-disconnect $x $tag2 $tag
+	    }
+	    dict unset data($x) $tag
+	    dict unset data(invert-$x) $tag
 	}
 	# remove the tag
 	dict unset data($x) $tag
