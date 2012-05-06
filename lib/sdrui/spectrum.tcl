@@ -20,16 +20,22 @@
 ## spectrum - spectrum, and waterfall, display
 ##
 ## this needs to be sorted out better.
+##
 ## The spectrum manager should be a control type control.
 ## The spectrum tap should be a dsp type control.
 ## The spectrum display should be a ui type control.
-## The tap and display should be supervised by the manager.
+## The spectrum control panel should be a ui type control.
+## The waterfall display should be a ui type control.
+## The waterfall control panel should be a ui type control.
 ##
-## now I'm getting into all sorts of contortions by trying
-## to make the capture component use a size defined by the
-## width of the display window.  That leads to reconfiguring
-## the capture component and running into the problem that
-## it is busy when I want to configure it
+## So we end up with four possible ui windows, two of which
+## run displays and supply tuning controls, and two of which
+## alter the parameters of the displays.  The spectrum and
+## waterfall displays should be directly wired to the tuning
+## and other controls that they display.  They should also
+## be directly wired back to the tuning controls they can
+## manipulate.
+##
 ##
 package provide sdrui::spectrum 1.0.0
 
@@ -200,12 +206,12 @@ snit::widget sdrui::spectrum {
 	# defer rest of menu until resolve
 
 	# spectrum fft size control
-	pack [ttk::menubutton $win.m.size -textvar [myvar data(size)] -menu $win.m.size.m] -side left
+	pack [ttk::menubutton $win.m.size -textvar [myvar data(label-size)] -menu $win.m.size.m] -side left
 	menu $win.m.size.m -tearoff no
 	foreach x [sdrtype::spec-size cget -values] {
 	    set label "size $x"
-	    if {$options(-size) == $x} { set data(size) $label }
-	    $win.m.size.m add radiobutton -label $label -variable [myvar data(size)] -value $label -command [mymethod configure -size $x]
+	    if {$options(-size) == $x} { set data(label-size) $label }
+	    $win.m.size.m add radiobutton -label $label -variable [myvar data(label-size)] -value $label -command [mymethod configure -size $x]
 	}
 	
 	# polyphase spectrum control
