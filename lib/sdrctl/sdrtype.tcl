@@ -50,7 +50,7 @@ snit::double	sdrtype::linear-gain	-min 0.125 -max 8.0
 
 snit::integer	sdrtype::instance	-min 1 -max 10
 snit::double	sdrtype::decibel	-min -200.0 -max 200.0
-snit::integer	sdrtype::spec-size	-min 32 -max 8192
+snit::enum	sdrtype::spec-size	-values {width/8 width/4 width/2 width width*2 width*4 width*8}
 snit::integer	sdrtype::fftw-planbits	-min 0 -max 127
 snit::enum	sdrtype::fftw-direction	-values {-1 1}
 snit::integer	sdrtype::spec-polyphase	-min 1 -max 32

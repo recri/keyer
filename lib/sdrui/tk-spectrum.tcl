@@ -33,7 +33,7 @@ snit::widgetadaptor sdrui::tk-spectrum {
 
     option -multi -default 1 -type sdrtype::multi -configuremethod Remulti
 
-    option -size -default 4096 -type sdrtype::spec-size
+    option -size -default width -type sdrtype::spec-size
     option -rate -default 48000 -type sdrtype::sample-rate
     option -zoom -default 1 -type sdrtype::zoom
     option -pan -default 0 -type sdrtype::pan

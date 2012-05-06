@@ -167,3 +167,20 @@
 ** DONE - figure out why rf-gain comes up essentially muted
    same reason the if-mixer frequency was off, not initialized when
    enabled.
+** DONE - missing options(-band-low) in band-select code
+** DONE - figure out why my spectrum is so noisy, missing windowing?
+   No, at least part because the spectrum resolution didn't match the
+   window size.
+** DONE - my own code is confusing me, and I only wrote it last week
+   okay, so the spectrum and meter components in the ui need to
+   execute a method on the jack component in the dsp graph, the get
+   method, possibly protected by the modify method.  They naturally do
+   this from an after timeout at the desired update frequency.  But as
+   I've set things up, and probably correctly, they don't know the
+   jack component, it's on the other side of the controller.
+   The meter is better, though it reads nonsense.  But the spectrum is
+   very messy and about to get messier.
+   This isn't fixed, I just don't know how to make it work better.
+** DONE - would my life be simpler if I just used Tk virtual events?
+   Maybe, but I wouldn't be able to watch.
+

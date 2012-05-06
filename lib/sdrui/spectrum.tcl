@@ -19,6 +19,18 @@
 ##
 ## spectrum - spectrum, and waterfall, display
 ##
+## this needs to be sorted out better.
+## The spectrum manager should be a control type control.
+## The spectrum tap should be a dsp type control.
+## The spectrum display should be a ui type control.
+## The tap and display should be supervised by the manager.
+##
+## now I'm getting into all sorts of contortions by trying
+## to make the capture component use a size defined by the
+## width of the display window.  That leads to reconfiguring
+## the capture component and running into the problem that
+## it is busy when I want to configure it
+##
 package provide sdrui::spectrum 1.0.0
 
 package require Tk
@@ -27,6 +39,9 @@ package require sdrtcl::jack
 package require sdrui::tk-spectrum
 package require sdrtcl::spectrum-tap
 
+##
+## this is the control appendage, a component in sdrui::spectrum
+##
 snit::type sdrui::spectrum-control {
     option -command {}
     option -opts {
@@ -86,6 +101,9 @@ snit::type sdrui::spectrum-control {
     method Opt-handler {opt val} { $options(-container) configure $opt $val }
 }
 
+##
+## this is the spectrum manager window
+##
 snit::widget sdrui::spectrum {
     hulltype toplevel
     component display
@@ -95,12 +113,17 @@ snit::widget sdrui::spectrum {
     # imported for here and display
     option -rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-display
 
-    option -period -default 50 -type sdrtype::milliseconds
+    # from here for here to time updates
+    option -period -default 200 -type sdrtype::milliseconds
+
+    # frome here for here to connect capture
+    option -input -default rx-if-spectrum-pre-filt -configuremethod Opt-input
 
     # from here for capture
     option -polyphase -default 1 -type sdrtype::spec-polyphase -configuremethod Opt-capture
-    option -size -default 128 -type sdrtype::spec-size -configuremethod Opt-capture
+    option -size -default width -type sdrtype::spec-size -configuremethod Opt-capture
     option -result -default dB -type sdrtype::spec-result -configuremethod Opt-capture
+
     # from here for display
     option -pal -default 0 -type sdrtype::spec-palette -configuremethod Opt-display
     option -min -default -150 -type sdrtype::decibel -configuremethod Opt-display
@@ -109,24 +132,26 @@ snit::widget sdrui::spectrum {
     option -pan -default 0 -type sdrtype::pan -configuremethod Opt-display
     option -smooth -default false -type sdrtype::smooth -configuremethod Opt-display
     option -multi -default 1 -type sdrtype::multi -configuremethod Opt-display
+
     # from ctl-rxtx-mode for display
     option -mode -default CWU -type sdrtype::mode -configuremethod Opt-display
+
     # from ctl-rxtx-tune for display
     option -freq -default 7050000 -configuremethod Opt-display
     option -lo-freq -default 10000 -configuremethod Opt-display
     option -cw-freq -default 600 -configuremethod Opt-display
     option -carrier-freq -default 7040000 -configuremethod Opt-display
+
     # from ctl-rxtx-if-bpf for display
     option -low -default 400 -configuremethod Opt-display
     option -high -default 800 -configuremethod Opt-display
 
-    # from ctl-notify
+    # from ctl-notify for noticing changes
     option -any-activate -configuremethod Opt-any
     option -any-deactivate -configuremethod Opt-any
     option -any-enable -configuremethod Opt-any
     option -any-disable -configuremethod Opt-any
 
-    option -input -default rx-if-spectrum-pre-filt -configuremethod Opt-input
 
     option -server -default default -readonly true
     option -container -readonly yes
@@ -135,10 +160,16 @@ snit::widget sdrui::spectrum {
     option -activate -default no -type snit::boolean -configuremethod Activate -cgetmethod IsActivated
     
     variable data -array {
+	size -1
 	frequencies {}
 	capture-options {-polyphase -size -result}
-	display-options {-min -max -smooth -multi -center -rate -zoom -pan}
-	pairs {}
+	display-options { -rate -min -max -zoom -pan -smooth -multi -mode -freq -lo-freq -cw-freq -carrier-freq -low -high }
+	waterfall-options { -pal }
+	capture-ports {}
+	capture-pairs {}
+	capture-old-pairs {}
+	capture-queue {}
+	capture-queued-configuration {}
     }
 
     constructor {args} {
@@ -148,10 +179,13 @@ snit::widget sdrui::spectrum {
 
 	$self configure {*}$args
 
-	install display using sdrui::tk-spectrum $win.s {*}[$self filter-options display]
-	install capture using sdrtcl::spectrum-tap ::sdrctlx::spectrum-tap {*}[$self filter-options capture]
-	if {[$capture is-active]} { $capture deactivate }
+	bind $win <Configure> [mymethod Window-configure]
+	install display using sdrui::tk-spectrum $win.s {*}[$self Display-options]
+	install capture using sdrtcl::spectrum-tap ::sdrctlx::spectrum-tap {*}[$self Capture-options]
+	$capture deactivate
+	set data(capture-ports) [$capture info ports]
 	install control using sdrctl::control ::sdrctlw::spectrum-control -type ctl -prefix spectrum -suffix {} -factory sdrui::spectrum-control -container $self
+	set data(after) [after $options(-period) [mymethod Update]]
 
 	pack $win.s -side top -fill both -expand true
 	pack [ttk::frame $win.m] -side top
@@ -168,7 +202,7 @@ snit::widget sdrui::spectrum {
 	# spectrum fft size control
 	pack [ttk::menubutton $win.m.size -textvar [myvar data(size)] -menu $win.m.size.m] -side left
 	menu $win.m.size.m -tearoff no
-	foreach x {64 128 256 512 1024 2048 4096 8192} {
+	foreach x [sdrtype::spec-size cget -values] {
 	    set label "size $x"
 	    if {$options(-size) == $x} { set data(size) $label }
 	    $win.m.size.m add radiobutton -label $label -variable [myvar data(size)] -value $label -command [mymethod configure -size $x]
@@ -235,6 +269,7 @@ snit::widget sdrui::spectrum {
 	}
 	
 	# scroll/pan
+	# puts "spectrum constructor returns"
     }
 
     destructor {
@@ -271,101 +306,173 @@ snit::widget sdrui::spectrum {
 	}
     }
 
-    method filter-options {target} {
-	set new {}
+    method Display-options {} {
+	set data(display-configuration) {}
 	foreach {name val} [array get options] {
-	    if {$name in $data($target-options)} {
-		lappend new $name $val
+	    if {$name in $data(display-options)} {
+		$self configure $name $val
 	    }
 	}
-	return $new
+	set config $data(display-configuration)
+	unset data(display-configuration)
+	return $config
     }
     
-    method capture-is-busy {} { return [lindex [$capture modified] 1] }
-
-    method update {} {
-	if { ! [$self capture-is-busy] && [$capture is-active]} {
-	    lassign [$capture get] frame dB
-	    binary scan $dB f* dB
-	    set n [llength $dB]
-	    if {[llength $data(frequencies)] != $n} {
-		set data(frequencies) {}
-		set maxf [expr {$options(-rate)/2.0}]
-		set minf [expr {-$maxf}]
-		set df [expr {double($options(-rate))/$options(-size)}]
-		for {set f $minf} {$f < $maxf} {set f [expr {$f+$df}]} {
-		    lappend data(frequencies) $f
-		}
-	    }
-	    foreach x $data(frequencies) y [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {$n/2-1}]]] {
-		lappend xy $x $y
-	    }
-	    #puts "$xy"
-	    $display update $xy
-	}
-	set data(after) [after $options(-period) [mymethod update]]
-    }
-    
-    method Deactivate {} {
-	catch {after cancel $data(after)}
-	unset data(after)
-	if {[$capture is-active]} { $capture deactivate }
-	set data(pairs) {}
-    }
-
-    method TryActivate {} {
-	set input $options(-input)
-	if {$input eq {} ||
-	    ! [$options(-control) part-is-active $input]} {
-	    $self Deactivate
-	} else {
-	    # puts "$input is-active"
-	    set ports [$capture info ports]
-	    set pairs {}
-	    foreach port [$options(-control) part-ports $input] {
-		lappend pairs {*}[$options(-control) port-active-connections-to [list $input $port]]
-	    }
-	    # puts "$input active-connections-to $pairs"
-	    if {$pairs ne $data(pairs)} {
-		if {[llength $pairs] != [llength $ports]} {
-		    error "port mismatch between {$pairs} and {$ports}"
-		}
-		if { ! [$capture is-active]} { $capture activate }
-		foreach port $ports pair $pairs old $data(pairs) {
-		    puts "sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port"
-		    sdrtcl::jack -server $options(-server) connect [join $pair :] spectrum-tap:$port
-		    if {$old ne {}} {
-			puts "sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port"
-			sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port
-		    }
-		}
-		set data(pairs) $pairs
-		if { ! [info exists data(after)]} {
-		    set data(after) [after $options(-period) [mymethod update]]
-		}
-	    }
-	}
-    }
-
     method Opt-display {opt value} {
 	set options($opt) $value
-	if {$display ne {}} { $display configure $opt $value }
+	if {[info exists data(display-configuration)]} {
+	    lappend data(display-configuration) $opt $value
+	} else {
+	    $display configure $opt $value
+	}
     }
 
+    method Capture-options {} {
+	set data(capture-configuration) {}
+	foreach {name val} [array get options] {
+	    if {$name in $data(capture-options)} {
+		$self configure $name $val
+	    }
+	}
+	set config $data(capture-configuration)
+	unset data(capture-configuration)
+	return $config
+    }
+	
     method Opt-capture {opt value} {
 	set options($opt) $value
-	if {$capture ne {}} { $capture configure $opt $value }
+	if {$opt eq {-size}} {
+	    if {$display ne {}} {
+		set size [expr [regsub width $value [winfo width $win.s]]]
+		if {$size < 128} { set size 128 }
+		if {$size == $data(size)} return
+		set data(size) $size
+		#puts "$value -> $size"
+		set value $size
+	    }
+	}
+	if {[info exists data(capture-configuration)]} {
+	    lappend data(capture-configuration) $opt $value
+	} else {
+	    lappend data(capture-queued-configuration) $opt $value
+	}
     }
 
-    method Opt-input {opt input} {
-	puts "spectrum configure -input $input"
-	set options(-input) $input
-	$self TryActivate
-    }
+    method Window-configure {} { $self configure -size $options(-size) }
 
-    # incoming reports
-    method Opt-any {opt val} {
+    method Capture-is-busy {} { return [lindex [$capture modified] 1] }
+
+    method Capture-deactivate {} { lappend data(capture-queue) deactivate }
+    method Capture-activate {} { lappend data(capture-queue) activate }
+    method Capture-reconnect {} { lappend data(capture-queue) reconnect }
+
+    method Capture-try-activate {} {
+	set input $options(-input)
+	if {$options(-input) eq {} } {
+	    # puts "$options(-input) is empty"
+	    $self Capture-deactivate
+	} elseif { ! [$options(-control) part-is-active $options(-input)]} {
+	    #puts "$options(-input) is not active"
+	    $self Capture-deactivate
+	} else {
+	    #puts "$options(-input) is-active"
+	    set pairs {}
+	    foreach port [$options(-control) part-ports $options(-input)] {
+		lappend pairs {*}[$options(-control) port-active-connections-to [list $options(-input) $port]]
+	    }
+	    #puts "$options(-input) active-connections-to $pairs"
+	    if {$pairs ne $data(capture-pairs)} {
+		if {[llength $pairs] != [llength $data(capture-ports)]} {
+		    error "port mismatch between {$pairs} and {$ports}"
+		}
+		set data(capture-old-pairs) $data(capture-pairs)
+		set data(capture-pairs) $pairs
+		$self Capture-activate
+		$self Capture-reconnect
+	    }
+	}
+    }
+    
+    # change of input
+    method Opt-input {opt val} {
+	#puts "spectrum configure $opt $val"
 	set options($opt) $val
-	$self TryActivate
+	$self Capture-try-activate
     }
+    
+    # incoming activate/enable reports
+    method Opt-any {opt val} {
+	#puts "spectrum configure $opt $val"
+	set options($opt) $val
+	$self Capture-try-activate
+    }
+
+    method Update {} {
+	while { ! [$self Capture-is-busy]} {
+	    # handle configuration
+	    if {$data(capture-queued-configuration) ne {}} {
+		set config $data(capture-queued-configuration)
+		set data(capture-queued-configuration) {}
+		#puts "Update configure $config"
+		$capture configure {*}$config
+		continue
+	    }
+	    # handle activate/deactivate/connect
+	    if {$data(capture-queue) ne {}} {
+		set item [lindex $data(capture-queue) 0]
+		set data(capture-queue) [lrange $data(capture-queue) 1 end]
+		#puts "Update item $item"
+		switch $item {
+		    deactivate {
+			if {[$capture is-active]} { $capture deactivate }
+			set data(capture-pairs) {}
+			set data(capture-old-pairs) {}
+		    }
+		    activate {
+			if { ! [$capture is-active]} { $capture activate }
+		    }
+		    reconnect {
+			foreach port $data(capture-ports) new $data(capture-pairs) old $data(capture-old-pairs) {
+			    # puts "sdrtcl::jack -server $options(-server) connect [join $new :] spectrum-tap:$port"
+			    sdrtcl::jack -server $options(-server) connect [join $new :] spectrum-tap:$port
+			    if {$old ne {}} {
+				# puts "sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port"
+				sdrtcl::jack -server $options(-server) disconnect [join $old :] spectrum-tap:$port
+			    }
+			}
+		    }
+		    default { error "unknown tag \"$item\" in spectrum Update" }
+		}
+		continue
+	    }
+	    # capture spectrum and pass to display
+	    if {[$capture is-active]} {
+		lassign [$capture get] frame dB
+		binary scan $dB f* dB
+		set n [llength $dB]
+		#puts "Update capture got $n bins"
+		if {[llength $data(frequencies)] != $n} {
+		    #puts "recomputing frequencies for length $n from [llength $data(frequencies)]"
+		    set data(frequencies) {}
+		    set maxf [expr {$options(-rate)/2.0}]
+		    set minf [expr {-$maxf}]
+		    set df [expr {double($options(-rate))/$n}]
+		    for {set i 0} {$i < $n} {incr i} {
+			lappend data(frequencies) [expr {$minf+$i*$df}]
+		    }
+		    #puts "recomputed [llength $data(frequencies)] frequencies"
+		}
+		foreach x $data(frequencies) y [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {$n/2-1}]]] {
+		    lappend xy $x $y
+		}
+		#puts "$xy"
+		$display update $xy
+		# always break loop after capture and display update
+	    }
+	    break
+	}
+	# start the next
+	set data(after) [after $options(-period) [mymethod Update]]
+    }
+    
 }    

@@ -1,19 +1,8 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
-** TODO - missing options(-band-low) in band-select code
-** TODO - figure out why my spectrum is so noisy, missing windowing?
 ** TODO - elevate this desk, clear it off, and make space underneath it.
-** TODO - my own code is confusing me, and I only wrote it last week
-   okay, so the spectrum and meter components in the ui need to
-   execute a method on the jack component in the dsp graph, the get
-   method, possibly protected by the modify method.  They naturally do
-   this from an after timeout at the desired update frequency.  But as
-   I've set things up, and probably correctly, they don't know the
-   jack component, it's on the other side of the controller.
 ** TODO - so a CW sdr is just one keyed oscillator running at LO+CW offset.
-** TODO - would my life be simpler if I just used Tk virtual events?
-   Maybe, but I wouldn't be able to watch.
 ** TODO - the connections pane needs option/enable/activate notification.
    So it needs to hook into the opt chain.
 ** TODO - figure out how to deal with filter -low low -high high
@@ -23,6 +12,8 @@
    accident and would not a problem except that the incompatible value
    gets discarded, leaving you with a weird filter envelope.
    Done in a hacky way, needs a better solution.
+   And the hack bit me when I tried to translate the option names into
+   another component.
 ** TODO - tracing the filter -low -high issue shows a lot of repetition
    The configured values get transmitted to the filter multiple times
    without modification, should stop that, it's going to be expensive.
