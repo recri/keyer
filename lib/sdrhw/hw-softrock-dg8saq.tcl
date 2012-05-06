@@ -53,6 +53,6 @@ snit::type sdrhw::softrock-dg8saq {
     method {Handler -freq} {val} {
 	puts "hw-softrock-dg8saq -freq $val"
 	set options(-freq) $val
-	if {$data(activate)} { exec usbsoftrock set freq [expr {$val/1e6}] }
+	if {[{*}$options(-command) cget -activate]} { exec usbsoftrock set freq [expr {$val/1e6}] }
     }
 }
