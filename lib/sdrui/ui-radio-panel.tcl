@@ -40,6 +40,8 @@ snit::widget sdrui::ui-radio-panel {
     option -container {}
     option -control {}
 
+    variable data -array {}
+
     constructor {args} {
 	$self configure {*}$args
 
@@ -47,12 +49,24 @@ snit::widget sdrui::ui-radio-panel {
 	ttk::separator $win.sep1a -orient horizontal
 	#ttk::frame $win.mtr
 	ttk::separator $win.sep1b -orient horizontal
-	ttk::frame $win.set1
+	ttk::frame $win.modes
 	ttk::separator $win.sep2 -orient horizontal
-	ttk::notebook $win.notes
-	ttk::frame $win.set2
-	ttk::frame $win.set3
-	ttk::frame $win.set4
+	ttk::notebook $win.notes1
+	ttk::notebook $win.notes2
+	ttk::frame $win.band-tab
+	#ttk::frame $win.band-frame
+	ttk::frame $win.keyer-tab
+	ttk::frame $win.keyer-frame
+	ttk::frame $win.rx-tab
+	ttk::frame $win.rx-frame
+	ttk::frame $win.tx-tab
+	ttk::frame $win.tx-frame
+	ttk::frame $win.spectrum-tab
+	ttk::frame $win.spectrum-frame
+	ttk::frame $win.view-tab
+	ttk::frame $win.view-frame
+	ttk::frame $win.collapse-tab
+	ttk::frame $win.collapse-frame
 
 	# build the components
 	sdrui::meter $win.mtr -control $options(-control) -container $options(-container)
@@ -64,9 +78,10 @@ snit::widget sdrui::ui-radio-panel {
 	grid $win.sep1a -row [incr row] -column 0 -sticky ew
 	grid $win.mtr -row [incr row] -sticky ew
 	grid $win.sep1b -row [incr row] -column 0 -sticky ew
-	grid $win.set1 -row [incr row] -column 0 -sticky ew
+	grid $win.modes -row [incr row] -column 0 -sticky ew
 	grid $win.sep2 -row [incr row] -column 0 -sticky ew
-	grid $win.notes -row [incr row] -column 0 -sticky nsew
+	grid $win.notes1 -row [incr row] -column 0 -sticky nsew
+	set data(notes-row) $row
 	grid rowconfigure $win 0 -weight 1
 	grid rowconfigure $win 4 -weight 1
 	grid columnconfigure $win 0 -weight 1
@@ -78,47 +93,84 @@ snit::widget sdrui::ui-radio-panel {
 	    ui-rx-af-gain 0 3
 	} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.set1 -row $row -column $column -sticky nsew
+		grid $win.$tail -in $win.modes -row $row -column $column -sticky nsew
 		grid columnconfigure $win $column -weight 1
 	    }
 	}
-	$win.notes add $win.ui-rxtx-band-select -text Band
 
-	$win.notes add $win.set2 -text Keyer
+	$win.notes1 add $win.ui-rxtx-band-select -text Band
+	$win.notes2 add $win.band-tab -text Band
+	
+	$win.notes2 add $win.keyer-frame -text Keyer
+	$win.notes2 add $win.keyer-tab -text Keyer
 	foreach {row col ht tail} {1 0 2 ui-keyer-debounce 0 0 1 ui-keyer-iambic 0 1 1 ui-keyer-iambic-wpm 0 2 1 ui-keyer-iambic-dah 0 3 1 ui-keyer-iambic-space} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.set2 -row $row -column $col -rowspan $ht -sticky nsew
+		grid $win.$tail -in $win.keyer-frame -row $row -column $col -rowspan $ht -sticky nsew
 	    }
 	}
 
-	$win.notes add $win.set3 -text RX
+	$win.notes1 add $win.rx-frame -text RX
+	$win.notes2 add $win.rx-tab -text RX
 	foreach {row col ht tail} {
 	    0 0 1 ui-rx-rf-gain 0 1 1 ui-rx-rf-iq-swap 0 2 1 ui-rx-rf-iq-delay 0 3 1 ui-rx-rf-iq-correct
 	} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.set3 -row $row -column $col -rowspan $ht -sticky nsew
+		grid $win.$tail -in $win.rx-frame -row $row -column $col -rowspan $ht -sticky nsew
 	    }
 	}
 
-	$win.notes add $win.set4 -text TX
+	$win.notes1 add $win.tx-frame -text TX
+	$win.notes2 add $win.tx-tab -text TX
 	foreach {row col ht tail} {
 	    0 0 2 ui-tx-rf-iq-balance
 	    2 0 1 ui-tx-af-gain
 	} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.set4 -row $row -column $col -rowspan $ht -sticky nsew
+		grid $win.$tail -in $win.tx-frame -row $row -column $col -rowspan $ht -sticky nsew
 	    }
 	}
+
 	#add $win.band-pass -text Filter
-	$win.notes add [ttk::frame $win.view] -text View
+
+	$win.notes1 add $win.spectrum-frame -text Spectrum
+	$win.notes2 add $win.spectrum-tab -text Spectrum
+
+	$win.notes1 add $win.view-frame -text View
+	$win.notes2 add $win.view-tab -text View
+	set col 0
 	foreach view {spectrum tree connections console} {
-	    pack [ttk::button $win.view.$view -text $view -command [mymethod view $view]]
+	    grid [ttk::button $win.view-frame.$view -text $view -command [mymethod view $view]] -row 0 -column [incr col] -sticky ew
 	}
-	bind $win.notes <<NotebookTabChanged>> [mymethod notebook-tab]
+
+	$win.notes1 add $win.collapse-frame -text Collapse
+	$win.notes2 add $win.collapse-tab -text Collapse
+
+	bind $win.notes1 <<NotebookTabChanged>> [mymethod notes1-select]
+	bind $win.notes2 <<NotebookTabChanged>> [mymethod notes2-select]
     }
 
-    method notebook-tab {} {
-	#puts "notebook-tab [$win.notes select]"
+    method notes1-select {} {
+	puts "notes1-select [$win.notes1 select]"
+	if {[string match *collapse* [$win.notes1 select]]} {
+	    # collapse
+	    puts "collapsing"
+	    grid remove $win.notes1
+	    grid $win.notes2 -row $data(notes-row) -column 0 -sticky ew
+	} else {
+	    # stay expanded
+	}
+    }
+
+    method notes2-select {} {
+	puts "notes2-select [$win.notes2 select]"
+	if {[string match *collapse* [$win.notes2 select]]} {
+	    # stay collapsed
+	} else {
+	    # expand
+	    puts "expanding"
+	    grid remove $win.notes2
+	    grid $win.notes1 -row $data(notes-row) -column 0 -sticky nsew
+	}
     }
 
     method {view} {window} {
