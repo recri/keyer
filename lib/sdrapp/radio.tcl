@@ -29,6 +29,9 @@ namespace eval sdrapp {}
 proc sdrapp::radio-configure {} {
     return {
 	ctl-rxtx-mode -mode CWU
+	ctl-rxtx-tuner -freq 7050000
+	ctl-rxtx-tuner -lo-freq 10000
+	ctl-rxtx-tuner -cw-freq 600
     }
 }
 

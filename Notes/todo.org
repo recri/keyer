@@ -1,6 +1,11 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - the RXMeter signal from ghpsdr
+   is post filter 10 log10(sum of squared magnitude+smidgen)
+   then offset by multimeterCalibrationOffset, which has a series
+   of canned adjustments to various soundcards, then offset by
+   getFilterSizeCalibrationOffset(), which is 3.0f*(11.0f-log10(buffer-size))
 ** TODO - elevate this desk, clear it off, and make space underneath it.
 ** TODO - so a CW sdr is just one keyed oscillator running at LO+CW offset.
 ** TODO - the connections pane needs option/enable/activate notification.

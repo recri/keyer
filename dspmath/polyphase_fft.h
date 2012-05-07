@@ -58,7 +58,7 @@ static void *polyphase_fft_window(int polys, int size, float *coeff) {
   float maxTap = 0.0f;
   for (int i = 0; i < fsize+adjust; i += 1)
     maxTap = maxf(maxTap, coeff[i]);
-  float normTap = 1.0f/maxTap;
+  float normTap = 0.707107f/maxTap;
   for (int i = 0; i < polys*size-1; i += 1)
     coeff[i] *= normTap;
   return (void *)coeff;

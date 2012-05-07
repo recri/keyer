@@ -41,7 +41,8 @@ snit::type sdrdsp::dsp-hw {
 	foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
 	    # pdict has type, direction, physical, and connections
 	    # dict set data $pname $pdict
-	    if { ! [dict get $pdict physical]} {
+	    if { ! [dict get $pdict physical] && ! [string match audioadapter:* $pname]} {
+		#puts "dropping $pname -> $pdict"
 		# may need more finesse at some point, but for now just the physical ports
 		continue
 	    }
@@ -50,6 +51,7 @@ snit::type sdrdsp::dsp-hw {
 		dict set data $client {}
 	    }
 	    dict set data $client $port $pdict
+	    #puts "keeping $pname -> $pdict"
 	}
 	dict for {client cdict} $data {
 	    set ports [dict keys $cdict]

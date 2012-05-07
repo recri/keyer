@@ -65,6 +65,8 @@ static float DamPlus(float x0, float x1) { return 0.9995 * x0 + 0.0005 * x1; }
 
 static double sqr(double x) { return (x * x); }
 
+static double cabs2f(float complex x) { return sqrf(crealf(x))+sqrf(cimagf(x)); }
+
 // round log2(n) up to integer
 static int npoof2(int n) { int i; for (i = 0, n -= 1; n > 0; i += 1, n >>= 1); return i; }
 // exp2(log2(n)) rounded up to a block.

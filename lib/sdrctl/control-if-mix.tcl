@@ -28,7 +28,7 @@ package require sdrtype::types
 ##
 snit::type sdrctl::control-if-mix {
     option -command -default {} -readonly true
-    option -opt-connect-to { {-freq ctl-rxtx-tuner -lo-freq} }
+    option -opt-connect-to {}
     option -opt-connect-from { {ctl-rxtx-tuner -lo-freq -freq} }
     # incoming opts
     option -freq -default 10000 -configuremethod Opt-handler -type sdrtype::hertz

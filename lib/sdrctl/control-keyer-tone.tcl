@@ -28,7 +28,7 @@ package require sdrtype::types
 ##
 snit::type sdrctl::control-keyer-tone {
     option -command -default {} -readonly true
-    option -opt-connect-to { {-freq ctl-rxtx-tuner -cw-freq} }
+    option -opt-connect-to {}
     option -opt-connect-from { {ctl-rxtx-tuner -cw-freq -freq} }
     # incoming opts
     option -freq -default 600 -configuremethod Opt-handler -type sdrtype::hertz

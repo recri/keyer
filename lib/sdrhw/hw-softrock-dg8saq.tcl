@@ -48,7 +48,7 @@ snit::type sdrhw::softrock-dg8saq {
 	$self configure {*}$args
 	if {[catch {
 	    foreach handle [handle::find_handles usb] {
-		puts "$handle"
+		puts "[handle::getdict $handle]"
 	    }
 	} error]} {
 	    puts "error handling handles: $error"

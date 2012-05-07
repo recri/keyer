@@ -139,7 +139,8 @@ proc handle::find_handles {class} {
 	}
     }
 }
-
+# everything at once to refresh my memory
+proc handle::getdict {h} { return $handle::handles($h) }
 # the parts we inserted
 proc handle::type {h} { return [dict get $handle::handles($h) type] }
 proc handle::class {h} { return [dict get $handle::handles($h) class] }

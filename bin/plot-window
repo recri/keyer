@@ -23,6 +23,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrtcl::window
+package require sdrtcl::spectrum-tap
 
 proc draw {w} {
     set ::data(xoff) 0
@@ -38,8 +39,18 @@ proc draw {w} {
 }
 
 proc replot {} {
-    win configure -type $::data(type) -size $::data(size)
-    binary scan [win get] f* ys
+    switch -glob $::data(type) {
+	polyphase* {
+	    regexp {^polyphase(\d+)$} $::data(type) all polyphase
+	    spectrum-tap configure -polyphase $polyphase -size $::data(size)
+	    while {[lindex [spectrum-tap modified] 1]} { after 1 }
+	    set ys [spectrum-tap get-window]
+	}
+	default {
+	    set ys [sdrtcl::window $::data(type) $::data(size)]
+	}
+    }
+    binary scan $ys f* ys
     puts "scanned [llength $ys] items"
     set ::data(xy) {}
     set x 0
@@ -63,21 +74,46 @@ proc validate-size {} {
     }
 }
 
+set windowtypes {
+  "rectangular" 
+  "hanning"
+  "welch"
+  "parzen"
+  "bartlett"
+  "hamming"
+  "blackman2"
+  "blackman3"
+  "blackman4"
+  "exponential"
+  "riemann"
+  "blackmanharris"
+  "nuttall"
+}
+
+set spectrumtypes {
+    "polyphase1"
+    "polyphase2"
+    "polyphase3"
+    "polyphase4"
+    "polyphase8"
+    "polyphase16"
+}
+
 proc main {argv} {
-    sdrtcl::window win
+    sdrtcl::spectrum-tap spectrum-tap
     pack [canvas .c -background black] -side top -fill both -expand true
     .c create line 0 0 0 0 -fill white -tags window
     pack [ttk::frame .m] -side top -fill x
     pack [ttk::label .m.wl -text {window type: }] -side left
     pack [ttk::menubutton .m.w -textvar ::data(type) -menu .m.w.m] -side left
     menu .m.w.m -tearoff no
-    foreach t [lsort [win types]] {
-	.m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot
-    }
-    set ::data(type) [win cget -type]
+    foreach t $::windowtypes { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
+    .m.w.m add separator
+    foreach t $::spectrumtypes { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
+    set ::data(type) [lindex $::windowtypes 0]
     pack [ttk::label .m.el -text {window size}] -side left
     pack [ttk::entry .m.e -textvar ::data(size) -validate all -validatecommand validate-size] -side left
-    set ::data(size) [win cget -size]
+    set ::data(size) 128
     pack [ttk::button .m.p -text plot -command replot]
     bind .c <Configure> [list draw %W]
     replot

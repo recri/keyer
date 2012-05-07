@@ -222,6 +222,14 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
+static int _get_window(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get-window", Tcl_GetString(objv[0])));
+  _t *data = (_t *)clientData;
+  options_t *opts = &data->opts;
+  preconf_t *prec = &data->prec;
+  return fw_success_obj(interp, Tcl_NewByteArrayObj((unsigned char *)prec->window, opts->polyphase*opts->size*sizeof(float)));
+}
+
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
 
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
@@ -254,6 +262,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   fftwf_execute(plan);
 
   // reduce the results
+  // should probably reorder the coefficients here, too
   Tcl_Obj *result = NULL;
   float norm2 = 1.0f/opts->size;
   float norm = sqrtf(norm2);
@@ -275,26 +284,26 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float));
     float *mag2 = (float *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1)
-      mag2[i] = norm2 * (crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i]));
+      mag2[i] = norm2 * cabs2f(inout[i]);
     break;
   case as_decibels:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float));
     float *dB = (float *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1)
-      dB[i] = 10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i]) + 1e-16) + lognorm2);
+      dB[i] = 10 * (log10f(cabs2f(inout[i]) + 1e-16) + lognorm2);
     break;
   case as_decibel_shorts:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(short));
     short *shorts = (short *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1)
-      shorts[i] = (short)(100 * (10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i]) + 1e-16) + lognorm2)));
+      shorts[i] = (short)(100 * 10 * (log10f(cabs2f(inout[i]) + 1e-16) + lognorm2));
     break;
   case as_decibel_chars:
-    result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(char));
-    char *chars = (char *)Tcl_GetByteArrayFromObj(result, NULL);
+    result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(unsigned char));
+    unsigned char *chars = (unsigned char *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1) {
-      short t = (short)(10 * (log10f(crealf(inout[i]) * crealf(inout[i]) + cimagf(inout[i]) * cimagf(inout[i]) + 1e-16) + lognorm2));
-      chars[i] = (t < -128) ? -128 : (t > 127 ? 127 : t);
+      short t = (short)(10 * (log10f(cabs2f(inout[i]) + 1e-16) + lognorm2));
+      chars[i] = (t > 0) ? 0 : (t < -255 ? 255 : -t);
     }
     break;
   } 
@@ -356,6 +365,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
+  { "get-window",_get_window,   "get the window used to compute the spectrum" },
   { "get",	 _get,		"get a spectrum" },
   { "modified", _modified,	"fetch the current modified flag" },
   { NULL }

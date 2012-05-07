@@ -66,7 +66,6 @@ typedef struct {
 } agc_options_t;
 
 typedef struct {
-  float raw_linear;			// raw linear gain for s-metering
   float target_level;			// target sample level
   float attack, one_m_attack;		// attack interpolation coefficients
   float decay, one_m_decay;		// decay interpolation coefficients
@@ -179,8 +178,6 @@ static float _Complex agc_process(agc_t *p, float _Complex z) {
 
   if (lin >= p->now_linear) {
     // the linear gain is greater than the current gain
-    // compute the raw decayed linear gain
-    p->raw_linear = p->one_m_decay * p->now_linear + p->decay * lin;
     if (--p->hang_count < 0) {
       // hang time window expired, compute decayed linear gain
       p->now_linear = p->one_m_decay * p->now_linear + p->decay * minf(p->max_linear, lin);
@@ -189,8 +186,6 @@ static float _Complex agc_process(agc_t *p, float _Complex z) {
     }
   } else {
     // if the linear gain is less than the current gain
-    // compute the raw attacked linear gain
-    p->raw_linear = p->one_m_attack * p->now_linear + p->attack * lin;
     // restart the hang time window
     p->hang_count = p->hang_samples;
     // compute the attacked linear gain

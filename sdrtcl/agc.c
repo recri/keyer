@@ -112,7 +112,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
     Tcl_NewIntObj(jack_frame_time(data->fw.client)),
-    Tcl_NewDoubleObj(data->agc.raw_linear),
+    Tcl_NewDoubleObj(data->agc.now_linear),
     NULL
   };
   Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));

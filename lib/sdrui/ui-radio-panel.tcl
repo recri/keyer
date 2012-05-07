@@ -53,20 +53,20 @@ snit::widget sdrui::ui-radio-panel {
 	ttk::separator $win.sep2 -orient horizontal
 	ttk::notebook $win.notes1
 	ttk::notebook $win.notes2
-	ttk::frame $win.band-tab
-	#ttk::frame $win.band-frame
-	ttk::frame $win.keyer-tab
-	ttk::frame $win.keyer-frame
-	ttk::frame $win.rx-tab
-	ttk::frame $win.rx-frame
-	ttk::frame $win.tx-tab
-	ttk::frame $win.tx-frame
-	ttk::frame $win.spectrum-tab
-	ttk::frame $win.spectrum-frame
-	ttk::frame $win.view-tab
-	ttk::frame $win.view-frame
-	ttk::frame $win.collapse-tab
-	ttk::frame $win.collapse-frame
+	ttk::frame $win.band1
+	ttk::frame $win.band2
+	ttk::frame $win.keyer1
+	ttk::frame $win.keyer2
+	ttk::frame $win.rx1
+	ttk::frame $win.rx2
+	ttk::frame $win.tx1
+	ttk::frame $win.tx2
+	ttk::frame $win.spectrum1
+	ttk::frame $win.spectrum2
+	ttk::frame $win.view1
+	ttk::frame $win.view2
+	ttk::frame $win.collapse1
+	ttk::frame $win.collapse2
 
 	# build the components
 	sdrui::meter $win.mtr -control $options(-control) -container $options(-container)
@@ -98,78 +98,83 @@ snit::widget sdrui::ui-radio-panel {
 	    }
 	}
 
-	$win.notes1 add $win.ui-rxtx-band-select -text Band
-	$win.notes2 add $win.band-tab -text Band
+	$win.notes1 add $win.band1 -text Band
+	$win.notes2 add $win.band2 -text Band
+	pack $win.ui-rxtx-band-select -in $win.band1 -fill both -expand true
 	
-	$win.notes2 add $win.keyer-frame -text Keyer
-	$win.notes2 add $win.keyer-tab -text Keyer
+	$win.notes1 add $win.keyer1 -text Keyer
+	$win.notes2 add $win.keyer2 -text Keyer
 	foreach {row col ht tail} {1 0 2 ui-keyer-debounce 0 0 1 ui-keyer-iambic 0 1 1 ui-keyer-iambic-wpm 0 2 1 ui-keyer-iambic-dah 0 3 1 ui-keyer-iambic-space} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.keyer-frame -row $row -column $col -rowspan $ht -sticky nsew
+		grid $win.$tail -in $win.keyer1 -row $row -column $col -rowspan $ht -sticky nsew
 	    }
 	}
 
-	$win.notes1 add $win.rx-frame -text RX
-	$win.notes2 add $win.rx-tab -text RX
+	$win.notes1 add $win.rx1 -text RX
+	$win.notes2 add $win.rx2 -text RX
 	foreach {row col ht tail} {
 	    0 0 1 ui-rx-rf-gain 0 1 1 ui-rx-rf-iq-swap 0 2 1 ui-rx-rf-iq-delay 0 3 1 ui-rx-rf-iq-correct
 	} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.rx-frame -row $row -column $col -rowspan $ht -sticky nsew
+		grid $win.$tail -in $win.rx1 -row $row -column $col -rowspan $ht -sticky nsew
 	    }
 	}
 
-	$win.notes1 add $win.tx-frame -text TX
-	$win.notes2 add $win.tx-tab -text TX
+	$win.notes1 add $win.tx1 -text TX
+	$win.notes2 add $win.tx2 -text TX
 	foreach {row col ht tail} {
 	    0 0 2 ui-tx-rf-iq-balance
 	    2 0 1 ui-tx-af-gain
 	} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.tx-frame -row $row -column $col -rowspan $ht -sticky nsew
+		grid $win.$tail -in $win.tx1 -row $row -column $col -rowspan $ht -sticky nsew
 	    }
 	}
 
 	#add $win.band-pass -text Filter
 
-	$win.notes1 add $win.spectrum-frame -text Spectrum
-	$win.notes2 add $win.spectrum-tab -text Spectrum
+	$win.notes1 add $win.spectrum1 -text Spectrum
+	$win.notes2 add $win.spectrum2 -text Spectrum
 
-	$win.notes1 add $win.view-frame -text View
-	$win.notes2 add $win.view-tab -text View
+	$win.notes1 add $win.view1 -text View
+	$win.notes2 add $win.view2 -text View
 	set col 0
 	foreach view {spectrum tree connections console} {
-	    grid [ttk::button $win.view-frame.$view -text $view -command [mymethod view $view]] -row 0 -column [incr col] -sticky ew
+	    grid [ttk::button $win.view1.$view -text $view -command [mymethod view $view]] -row 0 -column [incr col] -sticky ew
 	}
 
-	$win.notes1 add $win.collapse-frame -text Collapse
-	$win.notes2 add $win.collapse-tab -text Collapse
+	$win.notes1 add $win.collapse1 -text Collapse
+	$win.notes2 add $win.collapse2 -text Collapse
 
 	bind $win.notes1 <<NotebookTabChanged>> [mymethod notes1-select]
 	bind $win.notes2 <<NotebookTabChanged>> [mymethod notes2-select]
     }
 
     method notes1-select {} {
-	puts "notes1-select [$win.notes1 select]"
-	if {[string match *collapse* [$win.notes1 select]]} {
+	#puts "notes1-select [$win.notes1 select]"
+	set select [$win.notes1 select]
+	if {[string match *collapse* $select]} {
 	    # collapse
-	    puts "collapsing"
+	    #puts "collapsing"
 	    grid remove $win.notes1
 	    grid $win.notes2 -row $data(notes-row) -column 0 -sticky ew
+	    $win.notes2 select [regsub {1$} $select 2]
 	} else {
 	    # stay expanded
 	}
     }
 
     method notes2-select {} {
-	puts "notes2-select [$win.notes2 select]"
-	if {[string match *collapse* [$win.notes2 select]]} {
+	#puts "notes2-select [$win.notes2 select]"
+	set select [$win.notes2 select]
+	if {[string match *collapse* $select]} {
 	    # stay collapsed
 	} else {
 	    # expand
-	    puts "expanding"
+	    #puts "expanding"
 	    grid remove $win.notes2
 	    grid $win.notes1 -row $data(notes-row) -column 0 -sticky nsew
+	    $win.notes1 select [regsub {2$} $select 1]
 	}
     }
 
