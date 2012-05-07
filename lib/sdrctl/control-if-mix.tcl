@@ -34,6 +34,9 @@ snit::type sdrctl::control-if-mix {
     option -freq -default 10000 -configuremethod Opt-handler -type sdrtype::hertz
 
     method Opt-handler {opt val} {
+	# the LO offset sets the LO frequency for tx,
+	# but the negative LO frequency for rx
+	if {[string match *rx-if-mix $self]} { set val [expr {-$val}] }
 	set options($opt) $val
 	{*}$options(-command) report $opt $val
     }

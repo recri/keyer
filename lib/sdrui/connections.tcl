@@ -205,7 +205,7 @@ snit::widget sdrui::connections {
     }
 	
     method find-opts {item} { return [$options(-control) part-cget $item -opts] }
-    method find-opt-connections {item} { return [$options(-control) opt-connections-from {*}[split $item :]] }
+    method find-opt-connections {item} { return [$options(-control) opt-connections-from [split $item :]] }
 
     proc trim-parent-prefix {parent item} {
 	if {[string first $parent- $item] == 0} {

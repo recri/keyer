@@ -47,18 +47,19 @@ proc sdrctl::radio-controls {args} {
 	keyer			sdrctl::control-stub {}
 	rxtx-band-select	sdrctl::control-band {}
 	rxtx-if-bpf		sdrctl::control-filter {}
-	rxtx-if-mix		sdrctl::control-if-mix {}
 	rxtx-mode		sdrctl::control-mode {}
 	rxtx-mox		sdrctl::control-rxtx {}
 	rxtx-tuner		sdrctl::control-tune {}
 	rx-af-agc		sdrctl::control-agc {}
 	rx-af-gain		sdrctl::control-af-gain {}
+	rx-if-mix		sdrctl::control-if-mix {}
 	rx-rf-gain		sdrctl::control-rf-gain {}
 	rx-rf-iq-correct	sdrctl::control-iq-correct {}
 	rx-rf-iq-delay		sdrctl::control-iq-delay {}
 	rx-rf-iq-swap		sdrctl::control-iq-swap {}
 	tx-af-gain		sdrctl::control-af-gain {}
 	tx-af-leveler		sdrctl::control-leveler {}
+	tx-if-mix		sdrctl::control-if-mix {}
 	tx-rf-gain		sdrctl::control-rf-gain {}
 	tx-rf-iq-balance	sdrctl::control-iq-balance {}
 	keyer-debounce		sdrctl::control-keyer-debounce {}
