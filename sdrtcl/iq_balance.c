@@ -57,9 +57,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _update(data);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = iq_balance_process(&data->iqb, *in0++ + *in1++ * I);
-    *out0++ = creal(y);
-    *out1++ = cimag(y);
+    float complex y = iq_balance_process(&data->iqb, *in0++ + *in1++ * I);
+    *out0++ = crealf(y);
+    *out1++ = cimagf(y);
   }
   return 0;
 }

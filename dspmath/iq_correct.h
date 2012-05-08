@@ -59,12 +59,9 @@ static void *iq_correct_init(iq_correct_t *p, iq_correct_options_t *q) {
 }
 
 static float complex iq_correct_process(iq_correct_t *p, const float complex z0) {
-  // compute corrected sample
-  const float complex z1 = z0 + p->w * conjf(z0);
-  // filter update: coefficients += -mu * error
-  p->w -= p->mu * z1 * z1;
-  // return corrected sample
-  return z1;
+  const float complex z1 = z0 + p->w * conjf(z0); // compute corrected sample
+  p->w -= p->mu * z1 * z1;			  // filter update: coefficients += -mu * error
+  return z1;					  // return corrected sample
 }
 
 #endif

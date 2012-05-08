@@ -56,9 +56,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
   AVOID_DENORMALS;
   _update(data);
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = filter_biquad_process(&data->bq, *in0++ + I * *in1++);
-    *out0++ = creal(y);
-    *out1++ = cimag(y);
+    float complex y = filter_biquad_process(&data->bq, *in0++ + I * *in1++);
+    *out0++ = crealf(y);
+    *out1++ = cimagf(y);
   }
 }
 

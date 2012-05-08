@@ -116,9 +116,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
       }
     }
     /* compute samples */
-    float _Complex z = keyed_tone_process(&dp->tone);
-    *out_i++ = creal(z);
-    *out_q++ = cimag(z);
+    float complex z = keyed_tone_process(&dp->tone);
+    *out_i++ = crealf(z);
+    *out_q++ = cimagf(z);
 
     /* increment frame counter */
     dp->frame += 1;

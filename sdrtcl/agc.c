@@ -99,9 +99,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
   AVOID_DENORMALS;
   _update(data);
   for (int i = nframes; --i >= 0; ) {
-    float _Complex y = agc_process(&data->agc, *in0++ + *in1++ * I);
-    *out0++ = creal(y);
-    *out1++ = cimag(y);
+    float complex y = agc_process(&data->agc, *in0++ + *in1++ * I);
+    *out0++ = crealf(y);
+    *out1++ = cimagf(y);
   }
   return 0;
 }

@@ -67,8 +67,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 #ifndef NO_GAIN
     z *= data->gain;
 #endif
-    *out0++ = creal(z);
-    *out1++ = cimag(z);
+    *out0++ = crealf(z);
+    *out1++ = cimagf(z);
   }
   return 0;
 }

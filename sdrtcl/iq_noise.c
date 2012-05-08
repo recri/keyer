@@ -57,9 +57,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(data,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float _Complex z = data->gain * iq_noise_process(&data->iq_noise);
-    *out0++ = creal(z);
-    *out1++ = cimag(z);
+    float complex z = data->gain * iq_noise_process(&data->iq_noise);
+    *out0++ = crealf(z);
+    *out1++ = cimagf(z);
   }
   return 0;
 }
