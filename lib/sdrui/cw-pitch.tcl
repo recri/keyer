@@ -25,15 +25,19 @@ package provide sdrui::cw-pitch 1.0.0
 
 package require Tk
 package require snit
+package require sdrui::common
 
+namespace eval ::sdrui {}
     
-snit::widgetadaptor sdrui::cw-pitch {
+snit::widget sdrui::cw-pitch {
+    hulltype ttk::labelframe
     component button
     component spinbox
 
     option -freq -default 600 -type sdrtype::hertz
     option -spot -default 0 -type sdrtype::spot
 
+    option -options {-freq -spot}
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
@@ -45,24 +49,22 @@ snit::widgetadaptor sdrui::cw-pitch {
     delegate option -pitch-step to spinbox as -increment
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install button using ttk::checkbutton $win.spot -text Spot -variable [myvar options(-spot)] -command [mymethod set-spot]
-	install spinbox using ttk::spinbox $win.pitch -width 3 -textvar [myvar options(-pitch)] -command [mymethod set-pitch]
+	install button using ttk::checkbutton $win.spot -text Spot -variable [myvar options(-spot)] -command [mymethod Altered -spot]
+	install spinbox using ttk::spinbox $win.pitch -width 3 -textvar [myvar options(-pitch)] -command [mymethod Altered -pitch]
+
 	pack $win.spot -side left
 	pack $win.pitch -side right -fill x -expand true
-	foreach {opt val} { -pitch-min 300 -pitch-max 900 -pitch-step 10 -label {CW Pitch} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
-	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-freq -spot} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+
+	$self configure {*}[sdrui::common::merge $args -pitch-min 300 -pitch-max 900 -pitch-step 10 -label {CW Pitch} -labelanchor n]
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-pitch {} { if {$options(-command) ne {}} { {*}$options(-command) report -freq $options(-pitch) } }
-    method set-spot {args} { if {$options(-command) ne {}} { {*}$options(-command) report -spot $options(-spot) } }
+    method Altered {opt} { {*}$options(-command) report $opt $options($opt) }
 
 }
 

@@ -21,121 +21,76 @@ package provide sdrui::tree 1.0.0
 
 package require Tk
 package require snit
+package require sdrtk::vtreeview
 
-snit::widget sdrui::tree {
+snit::widgetadaptor sdrui::tree {
     option -container -readonly yes
     option -control -readonly yes
     
-    component treeview
-    component scrollbar
+    delegate method * to hull
+    delegate option * to hull
 
-    delegate method * to treeview except {update}
-    delegate option * to treeview except {-container -control}
-
-    variable columns {value}
-    variable items -array {}
+    variable data -array {
+    }
     
     constructor {args} {
-	install treeview using ttk::treeview $win.t -show tree -columns $columns -displaycolumns $columns -yscrollcommand [list $win.v set]
-	install scrollbar using ttk::scrollbar $win.v -orient vertical -command [list $win.t yview]
-	$win.t heading #0 -text module
-	$win.t column #0 -width [expr {30*8}] -stretch no -anchor w
-	pack $win.t -side left -fill both -expand true
-	pack $win.v -side left -fill y
-	foreach c $columns {
-	    $win.t heading $c -text $c
-	    switch $c {
-		type { $win.t column $c -width [expr {7*8}] -stretch no -anchor center }
-		enabled { $win.t column $c -width [expr {7*8}] -stretch no -anchor center }
-		inport -
-		outport { $win.t column $c -width [expr {30*8}] }
-		control { $win.t column $c -width [expr {10*8}] -anchor e}
-		value { $win.t column $c -width [expr {10*8}] -anchor e }
-		default { $win.t column $c -width [expr {10*8}] -anchor center }
-	    }
-	}
+	installhull using sdrtk::vtreeview -columns {value}
+
+	$hull heading #0 -text module/option
+	$hull heading #1 -text {option value}
+	$hull bind <Button-1> [mymethod pick %W %x %y]
+	$hull bind <Button-3> [mymethod inform %W %x %y]
+	set data(items) [dict create]
 	$self configure {*}$args
 	set options(-control) [$options(-container) cget -control]
 	$self update
-	bind $win.t <Button-1> [mymethod pick %W %x %y]
-	bind $win.t <Button-3> [mymethod inform %W %x %y]
     }
 
-    proc find-parent {candidates child} {
+    proc find-parent {child items} {
 	set parent {}
-	foreach c $candidates {
-	    if {[string first $c $child] == 0 &&
-		[string length $parent] < [string length $c]} {
+	foreach c [dict keys $items] {
+	    if {[string first $c $child] == 0 && [string length $parent] < [string length $c]} {
 		set parent $c
 	    }
 	}
 	return $parent
     }
-
-    method values {item} {
-	# puts "values for $options(-control) ccget $item -type"
-	set type [$options(-control) part-type $item]
-	set enabled [$options(-control) part-is-enabled $item]
-	set activated [$options(-control) part-is-active $item]
-	#set inport [$options(-control) ccget $item -inport]
-	#set outport [$options(-control) ccget $item -outport]
-	#return [list $type $enabled $inport $outport {} {}]
-	if {$enabled && $activated} {
-	    return [list {on}]
-	} elseif {$enabled} {
-	    return [list {ready}]
+    proc trim-parent-prefix {parent item} {
+	if {[string first $parent- $item] == 0} {
+	    return [string range $item [string length $parent-] end]
 	} else {
-	    return [list {off}]
+	    return $item
 	}
     }
-    
-    method control-values {item opt} {
-	#return [list {} {} {} {} $opt [$options(-control) controlget $item $opt]]
-	return [list [$options(-control) part-cget $item $opt]]
-    }
+	
+    method find-opts {item} { return [$options(-control) part-cget $item -opts] }
 
     method update {} {
-	catch {$hull delete all}
-	array set items {}
-	set labels {}
-	foreach label [$options(-control) part-list] {
-	    set enabled [$options(-control) part-is-enabled $label]
-	    set activated [$options(-control) part-is-active $label]
-	    set values [$self values $label]
-	    if { ! [info exists items($label)]} {
-		$win.t insert [find-parent [array names items] $label] end -id $label -text $label -values $values -tag $label
-		set items($label) [$options(-control) part-type $label]
-	    } else {
-		$win.t item $label -values $values -tag $label
-	    }
-	    if {$activated} {
-		$win.t tag configure $label -foreground black -background white
-	    } elseif {$enabled} {
-		$win.t tag configure $label -foreground black -background white
-	    } else {
-		$win.t tag configure $label -foreground grey -background white
-	    }
-	    foreach option [$options(-control) opt-filter [list $label *]] {
-		set optname [lindex $option 1]
-		switch -- $optname {
-		    -opt-connect-to -
-		    -opt-connect-from -
-		    -verbose -
-		    -client -
-		    -server { }
-		    default {
-			set optlabel "$label:$optname"
-			set values [$self control-values $label $optname]
-			if { ! [info exists items($optlabel)]} {
-			    $win.t insert $label end -id $optlabel -text $optname -values $values -tag $label
-			    set items($optlabel) control
-			} else {
-			    $win.t item $optlabel -values $values
-			}
-		    }
+	foreach item [$options(-control) part-list] {
+	    set enabled [string is true -strict [$options(-control) part-is-enabled $item]]
+	    set activated [string is true -strict [$options(-control) part-is-active $item ]]
+	    if { ! [dict exists $data(items) $item]} {
+		set parent [find-parent $item $data(items)]
+		set name [trim-parent-prefix $parent $item]
+		$hull insert $parent end -id $item -text $name -tag $item
+		dict set data(items) $item [dict create item $item type [$options(-control) part-type $item] parent $parent name $name]
+		foreach oname [$self find-opts $item] {
+		    set oitem $item:$oname
+		    $hull insert $item end -id $oitem -text $oname -tag $oitem -values [list [$options(-control) part-cget $item $oname]]
+		    dict set data(items) $oitem [dict create item $oitem type option parent $item name $oname]
 		}
 	    }
+	    dict set data(items) $item enabled $enabled
+	    dict set data(items) $item activated $activated
+	    if {$activated} {
+		$hull tag configure $item -foreground darkgreen
+	    } elseif {$enabled} {
+		$hull tag configure $item -foreground black
+	    } else {
+		$hull tag configure $item -foreground grey
+	    }
 	}
+	set data(update-pending) 0
     }
 
     method pick {w x y} {

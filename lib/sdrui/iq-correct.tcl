@@ -24,13 +24,18 @@ package provide sdrui::iq-correct 1.0.0
 package require Tk
 package require snit
 
+package require sdrui::common
 package require sdrtype::types
-    
-snit::widgetadaptor sdrui::iq-correct {
-    component button
+package require sdrtk::radiomenubutton
 
-    option -mu -default 0 -type sdrtype::iq-correct
+namespace eval ::sdrui {}
 
+snit::widget sdrui::iq-correct {
+    hulltype ttk::labelframe
+
+    option -mu -default 0 -type sdrtype::iq-correct -configuremethod Configure
+
+    option -options {-mu}
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
@@ -39,21 +44,38 @@ snit::widgetadaptor sdrui::iq-correct {
     delegate option -labelanchor to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install button using ttk::checkbutton $win.correct -text correct -variable [myvar options(-mu)] -command [mymethod set-mu]
-	pack $win.correct -fill x -expand true
-	foreach {opt val} { -label {IQ correct} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
+
+	set values {}
+	set labels {}
+	foreach v {0 1/128 1/64 1/32 1/16 1/8 1/4 1/2 1 2 4 8 16 32 64 128} {
+	    lappend labels $v
+	    lappend values [expr $v.0]
 	}
-	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-mu} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+
+	sdrtk::radiomenubutton $win.correct -defaultvalue 0 -command [mymethod Set -mu] -values $values -labels $labels
+	pack $win.correct -fill x -expand true
+
+	$self configure {*}[sdrui::common::merge $args -label {IQ correct} -labelanchor n]
+
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-mu {} { if {$options(-command) ne {}} { {*}$options(-command) report -mu $options(-mu) } }
+    method Configure {opt val} {
+	set options($opt) $val
+	switch -exact -- $opt {
+	    -mu { $win.correct set-value $val }
+	}
+    }
+
+    method Set {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $options($val)
+    }
 }
 
 

@@ -23,14 +23,18 @@ package provide sdrui::agc-select 1.0.0
 
 package require Tk
 package require snit
+package require sdrui::common
 package require sdrtype::types
+package require sdrtk::radiomenubutton
+
+namespace eval ::sdrui {}
     
-snit::widgetadaptor sdrui::agc-select {
-    component menubutton
-    component menu
+snit::widget sdrui::agc-select {
+    hulltype ttk::labelframe
 
-    option -mode -default med -type sdrtype::agc-mode
+    option -mode -default med -type sdrtype::agc-mode -configuremethod Configure
 
+    option -options {-mode}
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
@@ -39,25 +43,30 @@ snit::widgetadaptor sdrui::agc-select {
     delegate option -labelanchor to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install menubutton using ttk::menubutton $win.b -textvar [myvar options(-mode)] -menu $win.b.m
-	install menu using menu $win.b.m -tearoff no
-	foreach mode [sdrtype::agc-mode cget -values] {
-	    $win.b.m add radiobutton -label $mode -variable [myvar options(-mode)] -value $mode -command [mymethod set-mode $mode]
-	}
-	pack $win.b -fill x -expand true
-	foreach {opt val} { -label {AGC} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
-	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-mode} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	sdrtk::radiomenubutton $win.agc -defaultvalue med -command [mymethod Set -mode] \
+	    -values [sdrtype::agc-mode cget -values] \
+	    -labels [sdrtype::agc-mode cget -values]
+
+	pack $win.agc -fill x -expand true
+
+	$self configure {*}[sdrui::common::merge $args -label {AGC} -labelanchor n]
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-mode {val} { if {$options(-command) ne {}} { {*}$options(-command) report -mode $val } }
+    method Configure {opt val} {
+	set options($opt) $val
+	$win.agc set-value $val
+    }
+    method Report {opt val} { {*}$options(-command) report $opt $val }
+    method Set {opt val} {
+	set options($opt) $val
+	$self Report $opt $val
+    }
 }
 
 

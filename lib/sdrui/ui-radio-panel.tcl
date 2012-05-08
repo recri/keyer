@@ -33,6 +33,7 @@ package require sdrui::ui-components
 package require sdrui::meter
 package require sdrui::connections
 package require sdrui::tree
+package require sdrui::option-tree
 package require sdrui::spectrum
 
 snit::widget sdrui::ui-radio-panel {
@@ -139,9 +140,10 @@ snit::widget sdrui::ui-radio-panel {
 	$win.notes1 add $win.view1 -text View
 	$win.notes2 add $win.view2 -text View
 	set col 0
-	foreach view {spectrum tree connections console} {
-	    grid [ttk::button $win.view1.$view -text $view -command [mymethod view $view]] -row 0 -column [incr col] -sticky ew
+	foreach view {spectrum tree connections option-tree console} {
+	    lappend views [ttk::button $win.view1.$view -text $view -command [mymethod view $view]]
 	}
+	grid {*}$views -sticky ew
 
 	$win.notes1 add $win.collapse1 -text Collapse
 	$win.notes2 add $win.collapse2 -text Collapse
@@ -178,7 +180,7 @@ snit::widget sdrui::ui-radio-panel {
 	}
     }
 
-    method {view} {window} {
+    method view {window} {
 	switch $window {
 	    console {
 		tkcon show

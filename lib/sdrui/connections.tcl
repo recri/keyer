@@ -28,82 +28,11 @@ package provide sdrui::connections 1.0.0
 package require Tk
 package require snit
 package require sdrtcl::jack
+package require sdrtk::lvtreeview
+package require sdrtk::lcanvas
 
 namespace eval sdrui {}
 namespace eval sdrui::connections {}
-
-#
-# a scrolling treeview with scrollbar to left or right
-#
-snit::widgetadaptor sdrui::connections::treeview {
-    component treeview
-    component scrollbar
-
-    option -scrollbar -default right -readonly true -type {snit::enum -values {left right}}
-    option -container {}
-    option -width -configuremethod Width
-
-    delegate option -text to hull
-    delegate option -labelanchor to hull
-
-    delegate method * to treeview
-    delegate option * to treeview
-
-    constructor {args} {
-	installhull using ttk::labelframe
-	install treeview using ttk::treeview $win.t -yscrollcommand [mymethod Scroll set $win.v]
-	install scrollbar using ttk::scrollbar $win.v -orient vertical -command [mymethod Scroll yview $win.t]
-	$self configure {*}$args
-	if {$options(-scrollbar) eq {left}} {
-	    pack $win.t -side right -fill both -expand true
-	    pack $win.v -side right -fill y
-	} else {    
-	    pack $win.t -side left -fill both -expand true
-	    pack $win.v -side left -fill y
-	}
-	bind $win.t <Button-3> [list $options(-container) pop-up %W %x %y]
-	bind $win.t <<TreeviewOpen>> [list $options(-container) defer-update-canvas]
-	bind $win.t <<TreeviewClose>> [list $options(-container) defer-update-canvas]
-	bind $win.t <<TreeviewSelect>> [list $options(-container) item-select %W]
-    }
-
-    method {Width -width} {val} {
-	$treeview column #0 -width $val
-    }
-
-    method {Scroll set} {w args} {
-	$w set {*}$args
-	$options(-container) defer-update-canvas
-    }
-
-    method {Scroll yview} {w args} {
-	$w yview {*}$args
-	$options(-container) defer-update-canvas
-    }
-}
- 
-##
-## a canvas in a labelled frame
-##
-snit::widgetadaptor sdrui::connections::labelcanvas {
-    component canvas
-    
-    option -container {}
-
-    delegate option -text to hull
-    delegate option -labelanchor to hull
-    
-    delegate option * to canvas
-    delegate method * to canvas
-
-    constructor {args} {
-	installhull using ttk::labelframe
-	install canvas using canvas $win.c
-	pack $canvas -fill both -expand true
-	$self configure {*}$args
-	bind $canvas <Configure> [list $options(-container) defer-update-canvas]
-    }
-}
 
 snit::widget sdrui::connections {
     component pane
@@ -118,9 +47,6 @@ snit::widget sdrui::connections {
     option -defer-ms -default 100
     option -show -default port -type {snit::enum -values {opt port active}}
     option -filter -default 0 -type snit::boolean
-
-    # delegate method * to treeview except {update}
-    # delegate option * to treeview except {-container -control}
 
     variable data -array {
 	items {}
@@ -137,9 +63,18 @@ snit::widget sdrui::connections {
 	set options(-control) [$options(-container) cget -control]
 
 	install pane using ttk::panedwindow $win.pane -orient horizontal
-	install lft using connections::treeview $win.lft -scrollbar left -width 100 -show tree -container $self
-	install ctr using connections::labelcanvas $win.ctr -width 100 -container $self
-	install rgt using connections::treeview $win.rgt -scrollbar right -width 100 -show tree -container $self
+	install lft using sdrtk::lvtreeview $win.lft -scrollbar left -width 100 -show tree
+	install ctr using sdrtk::lcanvas $win.ctr -width 100 -container $self
+	install rgt using sdrtk::lvtreeview $win.rgt -scrollbar right -width 100 -show tree
+
+	$ctr bind <Configure> [mymethod defer-update-canvas]
+	foreach w [list $lft $rgt] {
+	    $w bind <Button-3> [mymethod pop-up %W %x %y]
+	    $w bind <<TreeviewSelect>> [mymethod item-select %W]
+	    foreach e {<<TreeviewOpen>> <<TreeviewClose>> <<TreeviewScroll>>} {
+		$w bind $e [mymethod defer-update-canvas]
+	    }
+	}
 
 	grid [ttk::frame $win.top] -row 0 -column 0
 	pack [ttk::label $win.top.l -text "connections of "] -side left

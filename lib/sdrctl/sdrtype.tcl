@@ -41,7 +41,7 @@ snit::double	sdrtype::debounce-period
 snit::integer	sdrtype::debounce-steps	-min 1 -max 32
 
 snit::boolean	sdrtype::iq-swap
-snit::boolean	sdrtype::iq-correct
+snit::double	sdrtype::iq-correct	-min -1e6 -max 1e6
 snit::boolean	sdrtype::mute
 snit::boolean	sdrtype::spot
 

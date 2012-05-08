@@ -23,16 +23,18 @@ package provide sdrui::af-gain 1.0.0
 
 package require Tk
 package require snit
-
+package require sdrui::common
+package require sdrtype::types
     
 snit::widget sdrui::af-gain {
     hulltype ttk::labelframe
     component button
     component spinbox
 
-    option -gain -default 0
-    option -mute -default 0
+    option -gain -default 0 -type sdrtype::gain -configuremethod Configure
+    option -mute -default 0 -type sdrtype::mute -configuremethod Configure
 
+    option -options {-gain -mute}
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
@@ -44,23 +46,23 @@ snit::widget sdrui::af-gain {
     delegate option -gain-step to spinbox as -increment
 
     constructor {args} {
-	install button using ttk::checkbutton $win.mute -text Mute -variable [myvar options(-mute)] -command [mymethod set-mute]
-	install spinbox using ttk::spinbox $win.gain -width 4 -textvar [myvar options(-gain)] -command [mymethod set-gain]
+	install button using ttk::checkbutton $win.mute -text Mute -variable [myvar options(-mute)] -command [mymethod Altered -mute]
+	install spinbox using ttk::spinbox $win.gain -width 4 -textvar [myvar options(-gain)] -command [mymethod Altered -gain]
+
 	pack $win.mute -side left
 	pack $win.gain -side right -fill x -expand true
-	foreach {opt val} { -gain-min -100 -gain-max 200 -gain-step 1 -label {AF gain} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
-	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-gain -mute} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+
+	$self configure {*}[sdrui::common::merge $args  -gain-min -100 -gain-max 200 -gain-step 1 -label {AF gain} -labelanchor n]
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-gain {} { {*}$options(-command) report -gain $options(-gain) }
-    method set-mute {} { {*}$options(-command) report -mute $options(-mute) }
+    method Configure {opt val} { set options($opt) $val }
+    method Altered {opt} { {*}$options(-command) report $opt $options($opt) }
 }
 
 
