@@ -64,6 +64,9 @@ proc sdrctl::radio-controls {args} {
 	tx-rf-iq-balance	sdrctl::control-iq-balance {}
 	keyer-debounce		sdrctl::control-keyer-debounce {}
 	keyer-iambic		sdrctl::control-keyer-iambic {}
+	keyer-iambic-wpm	sdrctl::control-keyer-iambic-wpm {}
+	keyer-iambic-dah	sdrctl::control-keyer-iambic-dah {}
+	keyer-iambic-space	sdrctl::control-keyer-iambic-space {}
 	keyer-tone		sdrctl::control-keyer-tone {}
     } {
 	package require $factory

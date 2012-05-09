@@ -52,6 +52,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
 	$(LIBDIR)/iq_correct.so \
+	$(LIBDIR)/iq_correct_train.so \
 	$(LIBDIR)/iq_delay.so \
 	$(LIBDIR)/iq_noise.so \
 	$(LIBDIR)/iq_rotation.so \
@@ -138,6 +139,9 @@ $(LIBDIR)/iq_balance.so: iq_balance.c framework.h ../dspmath/dspmath.h ../dspmat
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/iq_correct.so: iq_correct.c framework.h ../dspmath/dspmath.h ../dspmath/iq_correct.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/iq_correct_train.so: iq_correct_train.c framework.h ../dspmath/dspmath.h ../dspmath/iq_correct.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/iq_delay.so: iq_delay.c framework.h

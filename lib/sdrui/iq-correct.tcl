@@ -26,37 +26,35 @@ package require snit
 
 package require sdrui::common
 package require sdrtype::types
-package require sdrtk::radiomenubutton
+package require sdrtk::lradiomenubutton
 
 namespace eval ::sdrui {}
 
-snit::widget sdrui::iq-correct {
-    hulltype ttk::labelframe
+snit::widgetadaptor sdrui::iq-correct {
 
     option -mu -default 0 -type sdrtype::iq-correct -configuremethod Configure
 
     option -options {-mu}
+
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    delegate option * to hull
+    delegate method * to hull
+
+    variable data -array {
+	labels {0 1/128 1/64 1/32 1/16 1/8 1/4 1/2 1 2 4 8 16 32 64 128}
+	values {}
+    }
 
     constructor {args} {
+	installhull using sdrtk::lradiomenubutton -label {IQ correct} -labelanchor n
 
-	set values {}
-	set labels {}
-	foreach v {0 1/128 1/64 1/32 1/16 1/8 1/4 1/2 1 2 4 8 16 32 64 128} {
-	    lappend labels $v
-	    lappend values [expr $v.0]
-	}
+	foreach l $data(labels) { lappend data(values) [expr $l.0] }
+	$hull configure -defaultvalue 0 -values $data(values) -labels $data(labels) -command [mymethod Set -mu]
 
-	sdrtk::radiomenubutton $win.correct -defaultvalue 0 -command [mymethod Set -mu] -values $values -labels $labels
-	pack $win.correct -fill x -expand true
-
-	$self configure {*}[sdrui::common::merge $args -label {IQ correct} -labelanchor n]
-
+	$self configure {*}$args
     }
 
     method resolve {} {
@@ -68,13 +66,13 @@ snit::widget sdrui::iq-correct {
     method Configure {opt val} {
 	set options($opt) $val
 	switch -exact -- $opt {
-	    -mu { $win.correct set-value $val }
+	    -mu { $hull set-value $val }
 	}
     }
 
     method Set {opt val} {
 	set options($opt) $val
-	{*}$options(-command) report $opt $options($val)
+	{*}$options(-command) report $opt $options($opt)
     }
 }
 

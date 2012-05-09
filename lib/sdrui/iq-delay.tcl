@@ -25,39 +25,45 @@ package require Tk
 package require snit
 
 package require sdrtype::types
+package require sdrtk::lradiomenubutton
     
 snit::widgetadaptor sdrui::iq-delay {
-    component button
 
-    option -delay -default 0 -type sdrtype::iq-delay
+    option -delay -default 0 -type sdrtype::iq-delay -configuremethod Configure
+
+    option -options {-delay}
 
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install button using ttk::menubutton $win.delay -textvar [myvar options(-delay)] -menu $win.delay.m
-	install menu using menu $win.delay.m -tearoff no
-	foreach val [sdrtype::iq-delay cget -values] {
-	    $win.delay.m add radiobutton -label $val -value $val -variable [myvar options(-delay)] -command [mymethod set-delay]
-	}
-	pack $win.delay -fill x -expand true
-	foreach {opt val} { -label {IQ delay} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	installhull using sdrtk::lradiomenubutton -label {IQ delay} -labelanchor n \
+	    -defaultvalue 0 -values [sdrtype::iq-delay cget -values] -labels [sdrtype::iq-delay cget -values] \
+	    -variable [myvar options(-delay)]
 	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-delay} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+    }
+    
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-delay {} { if {$options(-command) ne {}} { {*}$options(-command) report -delay $options(-delay) } }
+    method Configure {opt val} {
+	set options($opt) $val
+	switch -exact -- $opt {
+	    -delay { $hull set-value $val }
+	}
+    }
+
+    method Set {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $options($val)
+    }
 }
 
 

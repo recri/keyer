@@ -55,4 +55,9 @@ proc sdrui::common::connect {tofrom w opts} {
 }
 
 
-
+proc sdrui::common::trap {cmd} {
+    if {[catch {uplevel $cmd} error]} {
+	puts "trap {$cmd} caught:\n$error\n$::errorInfo"
+	exit 1
+    }
+}

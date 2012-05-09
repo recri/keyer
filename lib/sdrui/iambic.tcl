@@ -25,106 +25,132 @@ package require Tk
 package require snit
 
 package require sdrtype::types
+package require sdrtk::lradiomenubutton
+package require sdrtk::lspinbox
     
 snit::widgetadaptor sdrui::iambic {
-    component iambic
 
-    option -iambic -default ad5dz -type sdrtype::iambic
+    option -iambic -default ad5dz -type sdrtype::iambic -configuremethod Configure
+
+    option -options {-iambic}
 
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install iambic using ttk::menubutton $win.m -textvar [myvar options(-iambic)] -menu $win.m.m
-	menu $win.m.m -tearoff no
-	foreach i [sdrtype::iambic cget -values] {
-	    $win.m.m add radiobutton -label $i -value $i -variable [myvar options(-iambic)] -command [mymethod set-iambic]
-	}
-	pack $win.m -fill x -expand true -side top 
-	foreach {opt val} { -label {Iambic} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	installhull using sdrtk::lradiomenubutton -label {Iambic} -labelanchor n \
+	    -defaultvalue ad5dz -command [mymethod Set -iambic] \
+	    -values [sdrtype::iambic cget -values]
 	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-iambic} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-iambic {} { if {$options(-command) ne {}} { {*}$options(-command) report -iambic $options(-iambic) } }
+    method Configure {opt val} {
+	set options($opt) $val
+	$hull set-value $val
+    }
+
+    method Report {opt val} { {*}$options(-command) report $opt $val }
+
+    method Set {opt val} {
+	set options($opt) $val
+	$self Report $opt $val
+    }
 }
 
 snit::widgetadaptor sdrui::iambic-wpm {
-    component wpm
 
-    option -wpm -default 15
+    option -wpm -default 15 -configuremethod Configure
+
+    option -options {-wpm}
+
     option -command {}
-    option -controls {-wpm}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install wpm using ttk::spinbox $win.w -from 5 -to 60 -increment 1 -width 4 -textvariable [myvar options(-wpm)] -command [mymethod set-wpm]
-	pack $win.w -fill x -expand true -side top 
-	foreach {opt val} { -label {WPM} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	installhull using sdrtk::lspinbox -label WPM -labelanchor n \
+	    -from 5 -to 60 -increment 1 -width 4 -textvariable [myvar options(-wpm)] \
+	    -command [mymethod Set -wpm]
 	$self configure {*}$args
     }
 
-    method set-wpm {} { if {$options(-command) ne {}} { {*}$options(-command) report -wpm $options(-wpm) } }
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
+	}
+    }
+
+    method Configure {opt val} { set options($opt) $val }
+    method Report {opt val} { {*}$options(-command) report $opt $val }
+    method Set {opt} { $self Report $opt $options($opt) }
 }
 
 snit::widgetadaptor sdrui::iambic-dah {
-    component dah
 
-    option -dah -default 3
+    option -dah -default 3 -configuremethod Configure
+
+    option -options {-dah}
+
     option -command {}
-    option -controls {-dah}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install dah using ttk::spinbox $win.d -from 2.5 -to 3.5 -increment 0.1 -width 4 -textvariable [myvar options(-dah)] -command [mymethod set-dah]
-	pack $win.d -fill x -expand true
-	foreach {opt val} { -label {Dah} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	installhull using sdrtk::lspinbox -label {Dah} -labelanchor n \
+	    -from 2.5 -to 3.5 -increment 0.1 -width 4 \
+	    -textvariable [myvar options(-dah)] -command [mymethod Set -dah]
 	$self configure {*}$args
     }
 
-    method set-dah {} { if {$options(-command) ne {}} { {*}$options(-command) report -dah $options(-dah) } }
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
+	}
+    }
+
+    method Configure {opt val} { set options($opt) $val }
+    method Report {opt val} { {*}$options(-command) report $opt $val }
+    method Set {opt} { $self Report $opt $options($opt) }
 }
 
 snit::widgetadaptor sdrui::iambic-space {
-    component space
 
     option -space -default 1
-    option -command {}
+
     option -controls {-space}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    option -command {}
+    option -opt-connect-to {}
+    option -opt-connect-from {}
+
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install space using ttk::spinbox $win.d -from 0.7 -to 1.3 -increment 0.1 -width 4 -textvariable [myvar options(-space)] -command [mymethod set-space]
-	pack $win.d -fill x -expand true
-	foreach {opt val} { -label {Space} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	installhull using sdrtk::lspinbox -label {Space} -labelanchor n \
+	    -from 0.7 -to 1.3 -increment 0.1 -width 4 \
+	    -textvariable [myvar options(-space)] -command [mymethod Set -space]
 	$self configure {*}$args
     }
 
-    method set-space {} { if {$options(-command) ne {}} { {*}$options(-command) report -space $options(-space) } }
+    method Configure {opt val} { set options($opt) $val }
+    method Report {opt val} { {*}$options(-command) report $opt $val }
+    method Set {opt} { $self Report $opt $options($opt) }
+
 }

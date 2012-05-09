@@ -25,35 +25,34 @@ package require Tk
 package require snit
 
 package require sdrtype::types
+package require sdrtk::lcheckbutton
     
 snit::widgetadaptor sdrui::iq-swap {
-    component button
 
     option -swap -default 0 -type sdrtype::iq-swap
+
+    option -options {-swap}
 
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install button using ttk::checkbutton $win.swap -text Swap -variable [myvar options(-swap)] -command [mymethod set-swap]
-	pack $win.swap -fill x -expand true
-	foreach {opt val} { -label {IQ swap} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	installhull using sdrtk::lcheckbutton -label {IQ swap} -labelanchor n -text Swap -variable [myvar options(-swap)] -command [mymethod Set -swap]
 	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-swap} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-swap {} { if {$options(-command) ne {}} { {*}$options(-command) report -swap $options(-swap) } }
+    method Configure {opt val} { set options($opt) $val }
+    method Set {opt} { {*}$options(-command) report $opt $options($opt) }
 }
 
 

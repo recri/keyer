@@ -1,6 +1,32 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - looking and thinking about the sdrsharp IQ balancing,
+   it's running off-line, it takes a buffer of samples and repeatedly
+   adjusts the IQ balance, runs an fft, computes the utility, accepts
+   or rejects the adjustment, and iterates until it maximizes the
+   utility.
+   The dttsp iq-correct could be structured the same way: take a
+   buffer of samples, run the filter until it converges, discarding the
+   adjusted samples, reusing the same buffer over and over again, plug
+   the converged filter coefficient into the online filter.
+** TODO - rewriting the ui components, refactoring and simplifying,
+   trying to recover from the trauma of the spectrum coding.  So new
+   rules:
+*** each of the plain ui components needs to be created with a
+   -name option that defines which control part it is;
+*** multiple ui components may share that control part;
+*** the control part has nothing to do with the window name;
+*** the ui components get created at will;
+*** there needs to be a central registry of control names;
+*** there needs to be a central registry of control name options;    
+*** there needs to be a map showing how dsp components are mapped
+    onto control names;
+*** the configuration names and classes from the dsp components
+    should be in one-to-one correspondance with the sdr::types;
+*** or are they sdrkit::types;
+*** a lot of this stuff should not be created until it's actually
+    needed to be used.
 ** TODO - the RXMeter signal from ghpsdr
    is post filter 10 log10(sum of squared magnitude+smidgen)
    then offset by multimeterCalibrationOffset, which has a series
@@ -8,6 +34,8 @@
    getFilterSizeCalibrationOffset(), which is 3.0f*(11.0f-log10(buffer-size))
 ** TODO - elevate this desk, clear it off, and make space underneath it.
 ** TODO - so a CW sdr is just one keyed oscillator running at LO+CW offset.
+   No need to run a lo-mixer for that.  Also discovered that the RX lo-mixer
+   actually runs at the negative of the specified offset.
 ** TODO - the connections pane needs option/enable/activate notification.
    So it needs to hook into the opt chain.
 ** TODO - figure out how to deal with filter -low low -high high

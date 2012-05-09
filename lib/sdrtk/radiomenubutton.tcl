@@ -34,10 +34,11 @@ snit::widgetadaptor sdrtk::radiomenubutton {
 	label {}
     }
     
-    option -values {}
-    option -labels {}
-    option -defaultvalue {}
+    option -values -default {} -configuremethod Configure
+    option -labels -default {} -configuremethod Configure
+    option -defaultvalue -default {} -configuremethod Configure
     option -command {}
+    option -variable {}
 
     delegate method * to hull
     delegate option * to hull
@@ -45,21 +46,44 @@ snit::widgetadaptor sdrtk::radiomenubutton {
     constructor {args} {
 	installhull using ttk::menubutton -textvar [myvar data(label)] -menu $win.m
 	$self configure {*}$args
-	menu $win.m -tearoff no
+    }
+    
+    method {Configure -values} {val} {
+	set options(-values) $val
+	if {[llength $val] ne [llength $options(-labels)]} { set options(-labels) $val }
+	$self Rebuild
+    }
+    method {Configure -labels} {val} {
+	set options(-labels) $val
+	if {[llength $val] ne [llength $options(-values)]} { set options(-values) $val }
+	$self Rebuild
+    }
+    method {Configure -defaultvalue} {val} {
+	set options(-defaultvalue) $val
+    }
+    method Rebuild {} {
 	set values $options(-values)
 	set labels $options(-labels)
-	if {$values eq {} && $labels ne {}} { set values $labels }
-	if {$values ne {} && $labels eq {}} { set labels $values }
-	if {[llength $values] != [llength $labels]} { error "different numbers of values and labels" }
+	array unset data
+	destroy $win.m
+	menu $win.m -tearoff no
 	set data(label) [lindex $labels 0]
 	foreach v $values l $labels {
-	    $win.m add radiobutton -label $l -value $l -variable [myvar data(label)] -command [list {*}$options(-command) $v]
-	    if {$v eq $options(-defaultvalue)} { set data(label) $l }
+	    $win.m add radiobutton -label $l -value $l -variable [myvar data(label)] -command [mymethod Set $v]
 	    set data(value-$l) $v
 	    set data(label-$v) $l
 	}
+	if {[info exists data(label-$options(-defaultvalue))]} {
+	    set data(label) $data(label-$options(-defaultvalue))
+	}
     }
-    
+
+    method Set {val} {
+	if {$options(-variable) ne {}} { set $options(-variable) $val }
+	if {$options(-command) ne {}} { {*}$options(-command) $val }
+    }
+
+    # should be tracing the value of $options(-variable)
     method set-value {val} {
 	set data(label) $data(label-$val)
     }

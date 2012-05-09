@@ -25,31 +25,29 @@ package require Tk
 package require snit
 package require sdrui::common
 package require sdrtype::types
-package require sdrtk::radiomenubutton
+package require sdrtk::lradiomenubutton
 
 namespace eval ::sdrui {}
     
-snit::widget sdrui::agc-select {
-    hulltype ttk::labelframe
+snit::widgetadaptor sdrui::agc-select {
 
-    option -mode -default med -type sdrtype::agc-mode -configuremethod Configure
+    option -mode -default medium -type sdrtype::agc-mode -configuremethod Configure
 
     option -options {-mode}
+
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	sdrtk::radiomenubutton $win.agc -defaultvalue med -command [mymethod Set -mode] \
+	installhull using sdrtk::lradiomenubutton -label AGC -labelanchor n \
+	    -defaultvalue medium -command [mymethod Set -mode] \
 	    -values [sdrtype::agc-mode cget -values] \
-	    -labels [sdrtype::agc-mode cget -values]
-
-	pack $win.agc -fill x -expand true
-
-	$self configure {*}[sdrui::common::merge $args -label {AGC} -labelanchor n]
+	    -labels {off long slow med fast}
+	$self configure {*}$args
     }
 
     method resolve {} {
@@ -60,9 +58,11 @@ snit::widget sdrui::agc-select {
 
     method Configure {opt val} {
 	set options($opt) $val
-	$win.agc set-value $val
+	$hull set-value $val
     }
+
     method Report {opt val} { {*}$options(-command) report $opt $val }
+
     method Set {opt val} {
 	set options($opt) $val
 	$self Report $opt $val

@@ -41,18 +41,18 @@ snit::widget sdrui::af-gain {
 
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
-    delegate option -gain-min to spinbox as -from
-    delegate option -gain-max to spinbox as -to
-    delegate option -gain-step to spinbox as -increment
+    delegate option * to spinbox
+    delegate method * to spinbox
 
     constructor {args} {
 	install button using ttk::checkbutton $win.mute -text Mute -variable [myvar options(-mute)] -command [mymethod Altered -mute]
-	install spinbox using ttk::spinbox $win.gain -width 4 -textvar [myvar options(-gain)] -command [mymethod Altered -gain]
+	install spinbox using ttk::spinbox $win.gain -width 4  -from [sdrtype::gain cget -min] -to [sdrtype::gain cget -max] \
+	    -textvar [myvar options(-gain)] -command [mymethod Altered -gain]
 
 	pack $win.mute -side left
 	pack $win.gain -side right -fill x -expand true
 
-	$self configure {*}[sdrui::common::merge $args  -gain-min -100 -gain-max 200 -gain-step 1 -label {AF gain} -labelanchor n]
+	$self configure -label {AF gain} -labelanchor n {*}$args
     }
 
     method resolve {} {

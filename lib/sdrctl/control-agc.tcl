@@ -29,11 +29,16 @@ package require sdrtype::types
 snit::type sdrctl::control-agc {
     option -command -default {} -readonly true
     # incoming opts
-    option -mode -default med -configuremethod Opt-handler -type sdrtype::agc-mode
+    option -mode -default medium -configuremethod Opt-handler -type sdrtype::agc-mode
 
     method Opt-handler {opt val} {
 	set options($opt) $val
-	{*}$options(-command) report $opt $val
+	if {$opt eq {-mode} && $val in {long slow medium fast}} {
+	    {*}$options(-command) report $opt $val
+	    # enable
+	} else {
+	    # disable
+	}
     }
 }
 

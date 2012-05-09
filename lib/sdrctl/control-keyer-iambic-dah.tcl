@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrctl::control-keyer-iambic 1.0.0
+package provide sdrctl::control-keyer-iambic-dah 1.0.0
 
 package require snit
 
@@ -26,10 +26,10 @@ package require sdrtype::types
 ##
 ## handle keyer iambic controls
 ##
-snit::type sdrctl::control-keyer-iambic {
+snit::type sdrctl::control-keyer-iambic-dah {
     option -command -default {} -readonly true
     # incoming opts
-    option -iambic -default ad5dz -configuremethod Configure -type sdrtype::iambic
+    option -dah -default 3 -configuremethod Configure
     
     method Configure {opt val} {
 	set options($opt) $val

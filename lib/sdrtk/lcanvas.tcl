@@ -34,9 +34,7 @@ snit::widget sdrtk::lcanvas {
     hulltype ttk::labelframe
     component canvas
     
-    option -container {}
-
-    delegate option -text to hull
+    delegate option -label to hull as -text
     delegate option -labelanchor to hull
     
     delegate option * to canvas

@@ -28,25 +28,27 @@ package require snit
 snit::enum	sdrtype::type		-values {none ctl dsp jack ui hw}
 
 snit::enum	sdrtype::mode		-values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}
-snit::enum	sdrtype::agc-mode	-values {off long slow med fast}
+snit::enum	sdrtype::agc-mode	-values {off long slow medium fast}
 snit::enum	sdrtype::leveler-mode	-values {off leveler}
+
 snit::enum	sdrtype::iambic		-values {none ad5dz dttsp nd7pa}
-snit::enum	sdrtype::iq-delay	-values {-1 0 1}
-
-snit::double	sdrtype::gain		-min -200.0 -max 200.0; # gain in decibels
-snit::double	sdrtype::hertz
-
 snit::boolean	sdrtype::debounce
 snit::double	sdrtype::debounce-period
 snit::integer	sdrtype::debounce-steps	-min 1 -max 32
 
 snit::boolean	sdrtype::iq-swap
+snit::enum	sdrtype::iq-delay	-values {-1 0 1}
 snit::double	sdrtype::iq-correct	-min -1e6 -max 1e6
+snit::double	sdrtype::sine-phase	-min -1.0 -max 1.0
+snit::double	sdrtype::linear-gain	-min 0.125 -max 8.0
+
+snit::double	sdrtype::gain		-min -200.0 -max 200.0; # gain in decibels
+snit::double	sdrtype::hertz
+
+
 snit::boolean	sdrtype::mute
 snit::boolean	sdrtype::spot
 
-snit::double	sdrtype::sine-phase	-min -1.0 -max 1.0
-snit::double	sdrtype::linear-gain	-min 0.125 -max 8.0
 
 snit::integer	sdrtype::instance	-min 1 -max 10
 snit::double	sdrtype::decibel	-min -200.0 -max 200.0

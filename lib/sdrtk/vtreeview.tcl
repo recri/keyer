@@ -31,7 +31,7 @@ snit::widget sdrtk::vtreeview {
     component treeview
     component scrollbar
 
-    option -scrollbar -default right -readonly true -type {snit::enum -values {left right}}
+    option -scrollbar -default right -type {snit::enum -values {left right}} -configuremethod Configure
     option -scrollnotify {}
     option -width -configuremethod Width
 
@@ -42,15 +42,24 @@ snit::widget sdrtk::vtreeview {
 	install treeview using ttk::treeview $win.t -yscrollcommand [mymethod Scroll set $win.v]
 	install scrollbar using ttk::scrollbar $win.v -orient vertical -command [mymethod Scroll yview $win.t]
 	$self configure {*}$args
-	if {$options(-scrollbar) eq {left}} {
-	    pack $win.t -side right -fill both -expand true
-	    pack $win.v -side right -fill y
-	} else {    
-	    pack $win.t -side left -fill both -expand true
-	    pack $win.v -side left -fill y
-	}
     }
 
+    method {Configure -scrollbar} {side} {
+	puts "$self Configure -scrollbar $side"
+	set options(-scrollbar) $side
+	catch {pack forget $win.t $win.v}
+	switch $options(-scrollbar) {
+	    left {
+		pack $win.t -side right -fill both -expand true
+		pack $win.v -side right -fill y
+	    }
+	    right {    
+		pack $win.t -side left -fill both -expand true
+		pack $win.v -side left -fill y
+	    }
+	}
+    }
+				   
     method bind {pattern command} {
 	bind $win.t $pattern $command
     }

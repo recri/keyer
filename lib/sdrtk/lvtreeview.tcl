@@ -21,6 +21,7 @@ package provide sdrtk::lvtreeview 1.0.0
 
 package require Tk
 package require snit
+package require sdrtk::vtreeview
 
 namespace eval ::sdrtk {}
 
@@ -30,10 +31,6 @@ namespace eval ::sdrtk {}
 snit::widget sdrtk::lvtreeview {
     hulltype ttk::labelframe
     component treeview
-    component scrollbar
-
-    option -scrollbar -default right -readonly true -type {snit::enum -values {left right}}
-    option -width -configuremethod Width
 
     delegate option -text to hull
     delegate option -labelanchor to hull
@@ -42,37 +39,9 @@ snit::widget sdrtk::lvtreeview {
     delegate option * to treeview
 
     constructor {args} {
-	install treeview using ttk::treeview $win.t -yscrollcommand [mymethod Scroll set $win.v]
-	install scrollbar using ttk::scrollbar $win.v -orient vertical -command [mymethod Scroll yview $win.t]
+	install treeview using sdrtk::vtreeview $win.t
+	pack $win.t -fill both -expand true
 	$self configure {*}$args
-	if {$options(-scrollbar) eq {left}} {
-	    pack $win.t -side right -fill both -expand true
-	    pack $win.v -side right -fill y
-	} else {    
-	    pack $win.t -side left -fill both -expand true
-	    pack $win.v -side left -fill y
-	}
-	if {[event info <<TreeviewScroll>>] eq {}} {
-	    event add <<TreeviewScroll>> <Prior> <Next>
-	}
-    }
-
-    method bind {pattern command} {
-	bind $win.t $pattern $command
-    }
-
-    method {Width -width} {val} {
-	$treeview column #0 -width $val
-    }
-
-    method {Scroll set} {w args} {
-	$w set {*}$args
-	event generate $w <<TreeviewScroll>> 
-    }
-
-    method {Scroll yview} {w args} {
-	$w yview {*}$args
-	event generate $w <<TreeviewScroll>> 
     }
 }
  

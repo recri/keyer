@@ -80,7 +80,7 @@ snit::type sdrctl::control {
     delegate method * to wrapped
 
     constructor {args} {
-	if {$verbose(construct)} { puts "sdrctl::controll $self constructor {$args}" }
+	if {$verbose(construct)} { puts "sdrctl::control $self constructor {$args}" }
 	$self configure {*}$args
 	foreach {local parent} {-prefix -name -control -control -server -server} {
 	    $self Inherit $local $parent
@@ -90,18 +90,26 @@ snit::type sdrctl::control {
 	foreach pkg $options(-factory-require) { package require $pkg }
 	# puts "create $options(-type) component $options(-name)"
 	## okay, lots of abstraction here that m
+	if {$verbose(construct)} { puts "sdrctl::control $self installing [$self Wrapped name]" }
 	install wrapped using $options(-factory) [$self Wrapped name] {*}$options(-factory-options) {*}[$self Wrapped extra-opts]
+	if {$verbose(construct)} { puts "sdrctl::control $self $wrapped installed" }
 	if {$options(-type) eq {jack}} { $wrapped deactivate }
+	if {$verbose(construct)} { puts "sdrctl::control $self $wrapped deactivated" }
 	set options(-opts) [$self Wrapped opts]
+	if {$verbose(construct)} { puts "sdrctl::control $self $wrapped opts $options(-opts)" }
 	set options(-methods) [$self Wrapped methods]
+	if {$verbose(construct)} { puts "sdrctl::control $self $wrapped methods $options(-methods)" }
 	set options(-ports) [$self Wrapped ports]
+	if {$verbose(construct)} { puts "sdrctl::control $self $wrapped ports $options(-ports)" }
 	$options(-control) part-add $options(-name) $self
 	if {{finish} in [$wrapped info methods]} { $wrapped finish }
     }
 
     destructor {
 	# puts "control destructor called"
-	$options(-control) part-remove $options(-name)
+	if {[$options(-control) part-exists $options(-name)]} {
+	    $options(-control) part-remove $options(-name)
+	}
 	if {$options(-factory) ne {} && $wrapped ne {}} {
 	    rename $wrapped {}
 	}

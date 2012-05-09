@@ -23,38 +23,36 @@ package provide sdrui::lo-offset 1.0.0
 
 package require Tk
 package require snit
+package require sdrtk::lspinbox
 
 snit::widgetadaptor sdrui::lo-offset {
-    component spinbox
 
     option -freq -default 10000
+
+    option -options {-freq}
 
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
 
-    delegate option -label to hull as -text
-    delegate option -labelanchor to hull
-    delegate option -freq-min to spinbox as -from
-    delegate option -freq-max to spinbox as -to
-    delegate option -freq-step to spinbox as -increment
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install spinbox using ttk::spinbox $win.freq -width 4 -textvar [myvar options(-freq)] -command [mymethod set-freq]
-	pack $win.freq -side right -fill x -expand true
-	foreach {opt val} { -freq-min -24000 -freq-max 24000 -freq-step 1000 -label {LO freq} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
+	installhull using sdrtk::lspinbox -label {LO freq} -labelanchor n \
+	    -from -24000 -to 24000 -increment 1000 \
+	    -width 6 -textvar [myvar options(-freq)] \
+	    -command [mymethod Set -freq]
 	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-freq} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-freq {} { if {$options(-command) ne {}} { {*}$options(-command) report -freq $options(-freq) } }
+    method Set {opt} { {*}$options(-command) report $opt $options($opt) }
 }
 
 

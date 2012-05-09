@@ -69,11 +69,14 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   return TCL_OK;
 }
 
-static int _reset(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s reset", Tcl_GetString(objv[0])));
+static int _set(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 4)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s set wreal wimag", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  data->iqb.w = 0.0f;
+  double wreal, wimag;
+  if (Tcl_GetDoubleFromObj(interp, objv[2], &wreal) != TCL_OK) return TCL_ERROR;
+  if (Tcl_GetDoubleFromObj(interp, objv[3], &wimag) != TCL_OK) return TCL_ERROR;
+  data->iqb.w = wreal + I * wimag;
   return TCL_OK;
 }
 
@@ -106,8 +109,8 @@ static const fw_option_table_t _options[] = {
 // the subcommands implemented by this command
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",   _get,   "fetch the current adaptive filter coefficients" },
-  { "reset", _reset, "reset the current adaptive filter coefficients to zero" },
+  { "get", _get, "fetch the current adaptive filter coefficients" },
+  { "set", _set, "set the current adaptive filter coefficients" },
   { NULL }
 };
 

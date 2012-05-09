@@ -25,12 +25,15 @@ package require Tk
 package require snit
 package require sdrtype::types
     
-snit::widgetadaptor sdrui::iq-balance {
+snit::widget sdrui::iq-balance {
+    hulltype ttk::labelframe
     component sinephase
     component lineargain
 
     option -sine-phase -default 0 -type sdrtype::sine-phase
     option -linear-gain -default 1.0 -type sdrtype::linear-gain
+
+    option -options {-sine-phase -linear-gain}
 
     option -command {}
     option -opt-connect-to {}
@@ -40,24 +43,25 @@ snit::widgetadaptor sdrui::iq-balance {
     delegate option -labelanchor to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install sinephase using ttk::spinbox $win.sinephase -from -1 -to 1 -increment 0.001 -width 6 -textvariable [myvar options(-sine-phase)] -command [mymethod set-sine-phase]
-	install lineargain using ttk::spinbox $win.lineargain -from 0.25 -to 4 -increment 0.001 -width 6 -textvariable [myvar options(-linear-gain)] -command [mymethod set-linear-gain]
+	install sinephase using ttk::spinbox $win.sinephase -from -1 -to 1 -increment 0.001 -width 6 \
+	    -textvariable [myvar options(-sine-phase)] -command [mymethod Set -sine-phase]
+	install lineargain using ttk::spinbox $win.lineargain -from 0.25 -to 4 -increment 0.001 -width 6 \
+	    -textvariable [myvar options(-linear-gain)] -command [mymethod Set -linear-gain]
+
 	pack $win.sinephase -side top -fill x -expand true
 	pack $win.lineargain -side top -fill x -expand true
-	foreach {opt val} { -label {IQ balance } -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
-	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-sine-phase -linear-gain} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+
+	$self configure -label {IQ balance } -labelanchor n {*}$args
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-sine-phase {} { if {$options(-command) ne {}} { {*}$options(-command) report -sine-phase $options(-sine-phase) } }
-    method set-linear-gain {} { if {$options(-command) ne {}} { {*}$options(-command) report -linear-gain $options(-linear-gain) } }
+    method Configure {opt val} { set options($opt) $val }
+    method Set {opt} { {*}$options(-command) report $opt $options($opt) }
 }
 
 

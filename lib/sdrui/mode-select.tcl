@@ -24,32 +24,41 @@ package provide sdrui::mode-select 1.0.0
 package require Tk
 package require snit
 package require sdrtype::types
+package require sdrtk::lradiomenubutton
     
 snit::widgetadaptor sdrui::mode-select {
     
-    option -mode -default CWU -type sdrtype::mode
+    option -mode -default CWU -type sdrtype::mode -configuremethod Configure
+
+    option -options {-mode}
 
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
 
+    delegate option * to hull
+    delegate method * to hull
+
     constructor {args} {
-	installhull using ttk::labelframe -text Mode -labelanchor n
-	pack [ttk::menubutton $win.b -textvar [myvar options(-mode)] -menu $win.b.m] -fill x -expand true
-	menu $win.b.m -tearoff no
-	foreach mode [sdrtype::mode cget -values] {
-	    $win.b.m add radiobutton -label $mode -variable [myvar options(-mode)] -value $mode -command [mymethod set-mode $mode]
-	}
+	installhull using sdrtk::lradiomenubutton -label Mode -labelanchor n \
+	    -variable [myvar options(-mode)] -command [mymethod Set -mode] \
+	    -defaultvalue CWU -values [sdrtype::mode cget -values]
 	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-mode} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
-	}
     }
     
-    method set-mode {val} {
-	if {$options(-command) ne {}} { {*}$options(-command) report -mode $val }
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
+	}
+    }
+
+    method Configure {opt val} {
+	set options($opt) $val
+	$hull set-value $val
+    }
+    method Set {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $options($opt)
     }
 }
 

@@ -25,17 +25,18 @@ package require Tk
 package require snit
 
 package require sdrtype::types
-    
-snit::widgetadaptor sdrui::debounce {
-    component wperiod
+package require sdrtk::lspinbox
+
+snit::widget sdrui::debounce {
+    hulltype ttk::labelframe
     component period
-    component wsteps
     component steps
 
     option -debounce -default 0 -type sdrtype::debounce
     option -period -default 0.1 -type sdrtype::debounce-period
     option -steps -default 4 -type sdrtype::debounce-steps
 
+    option -options {-debounce -period -steps}
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
@@ -44,28 +45,24 @@ snit::widgetadaptor sdrui::debounce {
     delegate option -labelanchor to hull
 
     constructor {args} {
-	installhull using ttk::labelframe
-	install wperiod using ttk::labelframe $win.p -text Period(ms)
-	install period using ttk::spinbox $win.p.s -from 0.1 -to 1 -increment 0.1 -width 4 -textvariable [myvar options(-period)] -command [mymethod set-period]
-	install wsteps using ttk::labelframe $win.s -text Steps
-	install steps using ttk::spinbox $win.s.s -from 0 -to 64 -increment 1 -width 4 -textvariable [myvar options(-steps)] -command [mymethod set-steps]
-	pack $win.p.s -fill x -expand true
-	pack $win.p -fill x -expand true -side top
-	pack $win.s.s -fill x -expand true
-	pack $win.s -fill x -expand true -side top
-	foreach {opt val} { -label {Debounce} -labelanchor n } {
-	    if {[lsearch $args $opt] < 0} { lappend args $opt $val }
-	}
-	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-debounce -period -steps} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
+	install debounce using ttk::checkbutton $win.d -text Enable -variable [myvar options(-debounce)] -command [mymethod Set -debounce]
+	install period using sdrtk::lspinbox $win.p -label Period(ms) -from 0.1 -to 1 -increment 0.1 -width 4 -textvariable [myvar options(-period)] -command [mymethod Set -period]
+	install steps using sdrtk::lspinbox $win.s -label Steps -from 0 -to 64 -increment 1 -width 4 -textvariable [myvar options(-steps)] -command [mymethod Set -steps]
+
+	pack $win.d -fill x -expand true -side left
+	pack $win.p -fill x -expand true -side left
+	pack $win.s -fill x -expand true -side left
+
+	$self configure {*}[::sdrui::common::merge $args -label {Debounce} -labelanchor n]
+    }
+
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
 	}
     }
 
-    method set-steps {} { if {$options(-command) ne {}} { {*}$options(-command) report -steps $options(-steps) } }
-    method set-period {} { if {$options(-command) ne {}} { {*}$options(-command) report -period $options(-period) } }
+    method Set {opt args} { {*}$options(-command) report $opt $options($opt) }
 }
 
 

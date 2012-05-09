@@ -76,6 +76,7 @@ snit::widget sdrui::ui-radio-panel {
 	# assemble
 	set row -1
 	grid $win.ui-rxtx-tuner -row [incr row] -column 0 -sticky nsew
+	grid rowconfigure $win $row -weight 1
 	grid $win.sep1a -row [incr row] -column 0 -sticky ew
 	grid $win.mtr -row [incr row] -sticky ew
 	grid $win.sep1b -row [incr row] -column 0 -sticky ew
@@ -83,8 +84,7 @@ snit::widget sdrui::ui-radio-panel {
 	grid $win.sep2 -row [incr row] -column 0 -sticky ew
 	grid $win.notes1 -row [incr row] -column 0 -sticky nsew
 	set data(notes-row) $row
-	grid rowconfigure $win 0 -weight 1
-	grid rowconfigure $win 4 -weight 1
+	grid rowconfigure $win $row -weight 1
 	grid columnconfigure $win 0 -weight 1
 
 	foreach {tail row column} {
@@ -94,8 +94,8 @@ snit::widget sdrui::ui-radio-panel {
 	    ui-rx-af-gain 0 3
 	} {
 	    if {[winfo exists $win.$tail]} {
-		grid $win.$tail -in $win.modes -row $row -column $column -sticky nsew
-		grid columnconfigure $win $column -weight 1
+		grid $win.$tail -in $win.modes -row $row -column $column -sticky ew
+		grid columnconfigure $win.modes $column -weight 1 -uniform xxx
 	    }
 	}
 

@@ -24,15 +24,29 @@ package provide sdrui::filter-select 1.0.0
 package require Tk
 package require snit
 package require sdrtype::types
+package require sdrtk::lradiomenubutton
 
 snit::widgetadaptor sdrui::filter-select {
 
-    option -mode -default CWU -type sdrtype::mode -configuremethod opt-handler
+    option -mode -default CWU -type sdrtype::mode -configuremethod Configure
     option -width {}
+
+    option -options {-mode -width}
 
     option -command {}
     option -opt-connect-to {}
     option -opt-connect-from {}
+
+    constructor {args} {
+	installhull using sdrtk::lradiomenubutton -label Filter -labelanchor n -command [mymethod Set -width]
+	$self configure {*}$args
+    }
+    
+    method resolve {} {
+	foreach tf {to from} {
+	    lappend options(-opt-connect-$tf) {*}[sdrui::common::connect $tf $win $options(-options)]
+	}
+    }
 
     ##
     ## QtRadio filter settings simplified.
@@ -44,17 +58,10 @@ snit::widgetadaptor sdrui::filter-select {
     ## Modes with identical widths are aliased.
     ##
     typevariable aliases [dict create {*}{
-	CWU CWU
-	CWL CWU
-	USB USB
-	LSB USB
-	DIGL USB
-	DIGU USB
-	AM AM
-	DSB AM
-	SAM AM
-	FMN AM
+	CWU CWU		CWL CWU		USB USB		LSB USB		DIGL USB
+	DIGU USB	AM AM		DSB AM		SAM AM		FMN AM
     }]
+
     typevariable filters [dict create {*}{
 	CWU-default 400  CWU { 1000   800   750  600  500  400  250  100   50   25}
 	USB-default 3300 USB { 5000  4400  3800 3300 2900 2700 2400 2100 1800 1000}
@@ -62,35 +69,18 @@ snit::widgetadaptor sdrui::filter-select {
 	
     }]
 
-    constructor {args} {
-	installhull using ttk::labelframe -text Filter -labelanchor n
-	pack [ttk::menubutton $win.b -textvar [myvar options(-width)] -menu $win.b.m] -fill x -expand true
-	menu $win.b.m -tearoff no
-	$self configure {*}$args
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-mode -width} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
-	}
-	after 100 [mymethod configure -mode $options(-mode)]
-    }
-    
-    method {opt-handler -mode} {val} {
+    method {Configure -mode} {val} {
 	set options(-mode) $val
 	if { ! [dict exists $aliases $val]} { error "no filter mode alias for \"$val\"" }
 	set x [dict get $aliases $val]
 	if { ! [dict exists $filters $x]} { error "no filter set for mode $val, aliased as $x" }
 	if { ! [dict exists $filters $x-default]} { error "no filter set default for mode $val, aliased as $x" }
-	set data(widths) [dict get $filters $x]
 	set options(-width) [dict get $filters $x-default]
-	$win.b.m delete 0 end
-	foreach width $data(widths) {
-	    $win.b.m add radiobutton -label $width -value $width -variable [myvar options(-width)] -command [mymethod set-filter $width]
-	}
-	$self set-filter $options(-width)
+	$hull configure -defaultvalue $options(-width) -values [dict get $filters $x]
     }
 
-    method set-filter {width} {
-	if {$options(-command) ne {}} { {*}$options(-command) report -width $width }
+    method Set {opt val} {
+	set options($opt) $val
+	{*}$options(-command) report $opt $val
     }
 }
