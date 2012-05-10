@@ -22,7 +22,8 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit
+package require snit
+package require sdrtcl
 package require sdrtcl::jack
 package require sdrtcl::iq-correct-train
 package require sdrtcl::audio-tap
@@ -45,22 +46,128 @@ package require sdrtcl::audio-tap
 # convergence.  Start with a large mu and relax down.
 #
 
+snit::widgetadaptor graph {
+    
+    proc min {args} { return [tcl::mathfunc::min {*}$args] }
+    proc max {args} { return [tcl::mathfunc::max {*}$args] }
+
+    proc bbox-empty {} { return {inf inf -inf -inf} }
+    proc bbox-add-point {bbox x y} {
+	lassign $bbox x0 y0 x1 y1
+	set nbbox [list [min $x0 $x] [min $y0 $y] [max $x1 $x] [max $y1 $y]]
+	#puts "bbox-add-point {$bbox} $x $y -> $nbbox"
+	return $nbbox
+    }
+    proc bbox-union {bbox1 bbox2} {
+	lassign $bbox1 x10 y10 x11 y11
+	lassign $bbox2 x20 y20 x21 y21
+	set nbbox [list [min $x10 $x20] [min $y10 $y20] [max $x11 $x21] [max $y11 $y21]]
+	#puts "bbox-union $bbox1 $bbox2 -> $nbbox"
+	return $nbbox
+    }
+
+    option -inset 10
+
+    variable data {}
+
+    constructor {args} {
+	installhull using canvas
+	set data [dict create lines {} bbox [bbox-empty]]
+	$self configure {*}$args
+	bind $win <Configure> [mymethod redraw]
+    }
+	
+    method lines {} { return [dict get $data lines] }
+    method bbox {} { return [dict get $data bbox] }
+
+    method rescale {} {
+	set n 0
+	foreach name [dict get $data lines] {
+	    if {[llength [$self line points $name]] >= 4} {
+		$self line redraw $name
+		incr n
+	    }
+	}
+	if {$n == 0} return
+
+	set wd [winfo width $win]
+	set ht [winfo height $win]
+	set wx0 [expr {double($wd)*$options(-inset)/100.0}]
+	set wy0 [expr {double($ht)*$options(-inset)/100.0}]
+	set wwd [expr {double($wd)-2*$wx0}]
+	set wht [expr {double($ht)-2*$wy0}]
+	lassign [$self bbox] x0 y0 x1 y1
+	set xoff [expr {-$x0+$wx0}]
+	set yoff [expr {-$y0+$wy0}]
+	set xsca [expr {double($wwd)/($x1-$x0)}]
+	set ysca [expr {double($wht)/($y1-$y0)}]
+
+	#puts "$hull move plotted $xoff $yoff"
+	$hull move plotted $xoff $yoff
+	#puts "$hull scale plotted $wx0 $wy0 $xsca $ysca"
+	$hull scale plotted $wx0 $wy0 $xsca $ysca
+    }
+
+    method redraw {} {
+	foreach name [dict get $data lines] { $self line redraw $name }
+	$self rescale
+    }
+	
+    method {bbox-add-point} {x y} {
+	dict set data bbox [bbox-add-point [$self bbox] $x $y]
+    }
+
+    method {add line} {name args} {
+	dict lappend data lines $name
+	dict set data line $name [dict create]
+	dict set data line $name index [$hull create line 0 0 0 0 -tags [list plotted line line-$name]]
+	dict set data line $name points {}
+	dict set data line $name bbox [bbox-empty]
+	$self line add point $name {*}$args
+    }
+    
+    method {line points} {name} { return [dict get $data line $name points] }
+    method {line bbox} {name} { return [dict get $data line $name bbox] }
+    method {line index} {name} { return [dict get $data line $name index] }
+
+    method {line add point} {name args} {
+	set points [$self line points $name]
+	set bbox [$self line bbox $name]
+	foreach {x y} $args {
+	    lappend points $x $y
+	    set bbox [bbox-add-point $bbox $x $y]
+	    $self bbox-add-point $x $y
+	}
+	dict set data line $name points $points
+	dict set data line $name bbox $bbox
+	$self redraw
+    }
+
+    method {line redraw} {name} {
+	if {[llength [$self line points $name]] > 4} {
+	    $hull coords [$self line index $name] [$self line points $name]
+	}
+    }
+}
+
 array set data {
     -server default
     -name iq
     -tap {system:capture_2 system:capture_1}
-    -iterations 500
-    -mu-set {1024 256 64 16 4 1 1.0/4 1.0/16 1.0/64 1.0/256 1.0/1024}
+    -iterations 50
+    -mu-set {1024 16 1 1.0/16 1.0/1024}
+    -mu-set {65536 32768 16384 8192 4096 2048 1024 512 256 128 64 32 16 8 4 2 1 1.0/4 1.0/16 1.0/64 1.0/256 1.0/1024}
 }
 
 # get the current frequency from the softrock
 proc usbsoftrock-getfreq {} {
-    foreach line [split [exec usbsoftrock getfreq] \n] {
-	if {[regexp {^Frequency *: *(\d+.\d+) \(x 4.00\)$} all frequency]} {
+    set result [exec usbsoftrock getfreq]
+    foreach line [split $result \n] {
+	if {[regexp {^Frequency\s*:\s*(\d+.\d+)\s+.*$} $line all frequency]} {
 	    return $frequency
 	}
     }
-    error "no frequency found"
+    error "no frequency found in {$result}"
 }
 
 # get a buffer of samples from the tap and format as a list of floats
@@ -85,7 +192,6 @@ proc compute-power {buffer} {
     }
     set mean2 [expr {$sum/$n}]
     set dBFS [expr {10 * log10($mean2+1e-16)}]
-    puts "$n samples, $mean2 mean-square, dBFS $dBFS"
     return $dBFS
 }
 
@@ -97,45 +203,59 @@ proc compute-power {buffer} {
 # and y will vary between 0 and 1, unless we blow up
 #
 proc init-plot {session} {
-    catch {.c delete all}
+    .t.title configure -text "[dict get $session date] [format {%.2f MHz %.1f dBFS} [dict get $session freq] [dict get $session dBFS]]"
+    catch {destroy .c}
+    catch {destroy .d}
+    pack [graph .c] -side top -fill both -expand true
+    set i [dict get $session iterations]
+    .c add line box 0 0 $i 0 $i 1.0 0 1.0 0 0
+    pack [graph .d] -side top -fill both -expand true
     foreach mu [dict get $session mus] {
-	.c create line 0 0 0 0 -tag mu-$mu
+	.c add line $mu
+	.d add line $mu
     }
 }
 
-proc update-plot {mu session} {
-    set i 0
-    set xy {}
-    foreach w [dict get $session mu $mu] {
-	lassign $w r i
-	lappend xy $i [expr {sqrt($r*$r+$i*$i)}]
-    }
-    .c coords mu-$mu $xy
+proc update-plot {mu i re im} {
+    set r [expr {$re*$re+$im*$im}]
+    .c line add point $mu $i $r
+    .d line add point $mu $re $im
+}
+
+proc finish-plot {} {
+    puts "finish-plot: [.c bbox]"
 }
 
 # train over a buffer of samples
 proc train {iterations mus} {
     set session [dict create]
-    dict set session iterations $iterations
-    dict set session mus $mus
     dict set session date [clock format [clock seconds]]
     dict set session freq [usbsoftrock-getfreq]
     dict set session buffer [acquire-buffer]
-    dict set session binary [format-buffer [dict get $session buffer]]
     dict set session dBFS [compute-power [dict get $session buffer]]
+    dict set session iterations $iterations
+    dict set session mus $mus
+    puts "session [dict get $session date] [dict get $session freq] [dict get $session dBFS]"
     dict set session mu [dict create]
     init-plot $session
     foreach mu $mus {
-	dict set session mu $mu [list {0 0}]
+	dict set session mu $mu 0 [list 0 0]
+	update-plot $mu 0 0 0
     }
-    for {set i 0} {$i < $iterations} {
+    set binary [format-buffer [dict get $session buffer]]
+    for {set i 1} {$i < $iterations} {incr i} {
 	foreach mu $mus {
-	    set w [lindex [dict get session mu $mu] end]
-	    lassign [$::data(-name) $mu {*}$w [dict get $session binary]] frame r i
-	    dict lappend session mu $mu [list $r $i]
-	    update-plot $mu $session
+	    set w [lindex [dict get $session mu $mu] end]
+	    lassign [sdrtcl::iq-correct-train [expr $mu] {*}$w $binary] re im
+	    #puts "sdrtcl::iq-correct-train $mu $w ... -> $re $im"
+	    dict set session mu $mu $i [list $re $im]
+	    update-plot $mu $i $re $im
 	}
+	update idletasks
     }
+    puts "session finished"
+    # foreach mu $mus { puts "$mu [dict get $session mu $mu]" }
+    finish-plot
 }
 
 # start the training
@@ -148,9 +268,7 @@ proc shutdown {w} {
     if {$w eq {.}} {
 	$::data(-name)-tap stop
 	$::data(-name)-tap deactivate
-	$::data(-name) deactivate
 	rename $::data(-name)-tap {}
-	rename $::data(-name) {}
     }
 }
 
@@ -164,7 +282,6 @@ proc main {argv} {
 	    default { error "unknown option \"$option\"" }
 	}
     }
-    sdrtcl::iq-correct-train $::data(-name) -server $::data(-server)
     sdrtcl::audio-tap $::data(-name)-tap -server $::data(-server) -log2size 10 -log2n 2 -complex 1
     $::data(-name)-tap start
     if {$::data(-tap) ne {}} {
@@ -175,7 +292,9 @@ proc main {argv} {
     wm title . sdrkit:$::data(-name)
     pack [ttk::frame .t] -side top -fill x
     pack [ttk::button .t.train -text Train -command [list start-train]] -side left
-    pack [canvas .c] -side top -fill both -expand true
+    pack [ttk::label .t.title -text {}] -side left
+    pack [graph .c] -side top -fill both -expand true
+    pack [graph .d] -side top -fill both -expand true
     bind . <Destroy> [list shutdown %W]
 }
 
