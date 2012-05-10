@@ -58,7 +58,7 @@ static void *iq_balance_init(iq_balance_t *p, iq_balance_options_t *q) {
 ** the indicated gain and phase corrections.
 ** See iq_correct* for an adaptive balancer.
 */
-static float _Complex iq_balance_process(iq_balance_t *p, const float _Complex x) {
-  return p->linear_gain * crealf(x) + (cimagf(x) + p->sine_phase * crealf(x)) * I;
+static float complex iq_balance_process(iq_balance_t *p, const float complex z0) {
+  return p->linear_gain * crealf(z0) + (cimagf(z0) + p->sine_phase * crealf(z0)) * I;
 }
 #endif

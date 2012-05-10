@@ -1,0 +1,182 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require sdrkit
+package require sdrtcl::jack
+package require sdrtcl::iq-correct-train
+package require sdrtcl::audio-tap
+
+#
+# data collection plan.
+# 1) collect one buffer of data
+# 2) for a variety of values of mu, starting from w = 0
+# run iq-correct-train over the buffer repeatedly and collect
+# the trajectories of w.
+# 2a) note the raw signal strength of the buffer as a potential
+# parameter.
+# 3) initially run for a fixed number of iterations, but be alert
+# for patterns in the trajectories which should be obvious:
+# 3a) convergence
+# 3b) oscillation
+# 3c) blow up
+# 4) the goal is to find a collection of pattern recognizers that
+# allow you to run a fixed sequence of mu to drive the filter to
+# convergence.  Start with a large mu and relax down.
+#
+
+array set data {
+    -server default
+    -name iq
+    -tap {system:capture_2 system:capture_1}
+    -iterations 500
+    -mu-set {1024 256 64 16 4 1 1.0/4 1.0/16 1.0/64 1.0/256 1.0/1024}
+}
+
+# get the current frequency from the softrock
+proc usbsoftrock-getfreq {} {
+    foreach line [split [exec usbsoftrock getfreq] \n] {
+	if {[regexp {^Frequency *: *(\d+.\d+) \(x 4.00\)$} all frequency]} {
+	    return $frequency
+	}
+    }
+    error "no frequency found"
+}
+
+# get a buffer of samples from the tap and format as a list of floats
+proc acquire-buffer {} {
+    lassign [$::data(-name)-tap get] frame buffer
+    binary scan $buffer f* buffer
+    return $buffer
+}
+
+# format the list of floats back into a binary byte array
+proc format-buffer {buffer} {
+    return [binary format f* $buffer]
+}
+
+# compute the average power dBFS of the samples
+proc compute-power {buffer} {
+    set sum 0
+    set n 0
+    foreach {r i} $buffer {
+	set sum [expr {$sum+$r*$r+$i*$i}]
+	incr n
+    }
+    set mean2 [expr {$sum/$n}]
+    set dBFS [expr {10 * log10($mean2+1e-16)}]
+    puts "$n samples, $mean2 mean-square, dBFS $dBFS"
+    return $dBFS
+}
+
+#
+# initialize the plot
+# we're going to plot the magnitude of w against time
+# for each mu.
+# so x is going to be iteration * scale
+# and y will vary between 0 and 1, unless we blow up
+#
+proc init-plot {session} {
+    catch {.c delete all}
+    foreach mu [dict get $session mus] {
+	.c create line 0 0 0 0 -tag mu-$mu
+    }
+}
+
+proc update-plot {mu session} {
+    set i 0
+    set xy {}
+    foreach w [dict get $session mu $mu] {
+	lassign $w r i
+	lappend xy $i [expr {sqrt($r*$r+$i*$i)}]
+    }
+    .c coords mu-$mu $xy
+}
+
+# train over a buffer of samples
+proc train {iterations mus} {
+    set session [dict create]
+    dict set session iterations $iterations
+    dict set session mus $mus
+    dict set session date [clock format [clock seconds]]
+    dict set session freq [usbsoftrock-getfreq]
+    dict set session buffer [acquire-buffer]
+    dict set session binary [format-buffer [dict get $session buffer]]
+    dict set session dBFS [compute-power [dict get $session buffer]]
+    dict set session mu [dict create]
+    init-plot $session
+    foreach mu $mus {
+	dict set session mu $mu [list {0 0}]
+    }
+    for {set i 0} {$i < $iterations} {
+	foreach mu $mus {
+	    set w [lindex [dict get session mu $mu] end]
+	    lassign [$::data(-name) $mu {*}$w [dict get $session binary]] frame r i
+	    dict lappend session mu $mu [list $r $i]
+	    update-plot $mu $session
+	}
+    }
+}
+
+# start the training
+proc start-train {} {
+    after 1 [list train $::data(-iterations) $::data(-mu-set)]
+}
+
+# shutdown the jack components
+proc shutdown {w} {
+    if {$w eq {.}} {
+	$::data(-name)-tap stop
+	$::data(-name)-tap deactivate
+	$::data(-name) deactivate
+	rename $::data(-name)-tap {}
+	rename $::data(-name) {}
+    }
+}
+
+# set up with a go button
+proc main {argv} {
+    foreach {option value} $argv {
+	switch -- $option {
+	    -n - -name - --name { set ::data(-name) $value }
+	    -s - -server - --server { set ::data(-server) $value }
+	    -t - -tap - --tap { set ::data(-tap) $value }
+	    default { error "unknown option \"$option\"" }
+	}
+    }
+    sdrtcl::iq-correct-train $::data(-name) -server $::data(-server)
+    sdrtcl::audio-tap $::data(-name)-tap -server $::data(-server) -log2size 10 -log2n 2 -complex 1
+    $::data(-name)-tap start
+    if {$::data(-tap) ne {}} {
+	foreach in $::data(-tap) out [$::data(-name)-tap info ports] {
+	    sdrtcl::jack connect $in [join [list $::data(-name)-tap $out] :]
+	}
+    }
+    wm title . sdrkit:$::data(-name)
+    pack [ttk::frame .t] -side top -fill x
+    pack [ttk::button .t.train -text Train -command [list start-train]] -side left
+    pack [canvas .c] -side top -fill both -expand true
+    bind . <Destroy> [list shutdown %W]
+}
+
+main $argv
