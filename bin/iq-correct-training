@@ -208,7 +208,7 @@ proc init-plot {session} {
     catch {destroy .d}
     pack [graph .c] -side top -fill both -expand true
     set i [dict get $session iterations]
-    .c add line box 0 0 $i 0 $i 1.0 0 1.0 0 0
+    #.c add line box 0 0 $i 0 $i 1.0 0 1.0 0 0
     pack [graph .d] -side top -fill both -expand true
     foreach mu [dict get $session mus] {
 	.c add line $mu
@@ -227,6 +227,15 @@ proc finish-plot {} {
 }
 
 # train over a buffer of samples
+#
+# consequence is that all mu's go directly somewhere
+# larger mu's get where they're going faster
+# mu's that are too large blow up
+# I think I should implement the filter in Tcl so I can
+# watch the progress in more detail
+# larger buffers of samples might be a good idea, too.
+# and drawing the graph borders with labelled ticks would help.
+#
 proc train {iterations mus} {
     set session [dict create]
     dict set session date [clock format [clock seconds]]
