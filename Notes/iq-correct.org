@@ -1,0 +1,21 @@
+* IQ Correction
+  As Dr. Ettus says, you're much better off fixing this in the hardware
+  because fixing it in the software is messy.
+  So in the best case, get yourself one fast ADC and make IQ streams by
+  resampling its output.
+  But we can't all buy $100 ADC boards, so we muddle on.
+* The IQ channels coming from a Softrock or similar design are unbalanced.
+** The CMOS switch sampling RF at our desired frequency is not perfect.
+   Its on switch and off switch speeds are different, so it doesn't
+   chop the RF exactly as design.
+** The baseband channels are not precisely balanced either.
+   They're built from separate components
+   and though they're closely matched, they won't match exactly.
+** The IQ channels have a gain imbalance and a phase error.
+   The signal coming through one may be a fraction of a dB lower or
+   higher than the other.
+   The signal coming through the Q channel may be a few degress off of
+   90 degrees.
+** And the SDR software will see images.
+* Youssef's SDR# optimizes away image power
+* The dttsp adaptive filter rounds the raw signal

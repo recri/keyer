@@ -32,7 +32,7 @@ snit::widget sdrtk::lvtreeview {
     hulltype ttk::labelframe
     component treeview
 
-    delegate option -text to hull
+    delegate option -label to hull as -text
     delegate option -labelanchor to hull
 
     delegate method * to treeview
