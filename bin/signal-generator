@@ -29,7 +29,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 
-package require sdrkit
+package require sdrtcl
 package require sdrtcl::jack-client
 package require sdrtcl::oscillator
 package require sdrtcl::noise

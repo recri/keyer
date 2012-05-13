@@ -34,8 +34,47 @@ package require sdrtcl::jack
 package require sdrtcl::iq-correct-train
 package require sdrtcl::audio-tap
 
-
 #
+# the dttsp formula for apply phase and gain correction:
+#
+# return linear_gain * creal(z0) + I * (cimag(z0) + sine_phase * crealf(z0));
+#
+# rewritten as a matrix multiplication:
+#
+# [ i_out ]   [ linear_gain  0 ]   [ i_in ]
+#           =                    x 
+# [ q_out ]   [ sine_phase   1 ]   [ q_in ]
+#
+# compared to the dttsp adaptive filter update, which also corrects phase and gain:
+#
+# z += w * conj(z) = (wr * zr + wi * zi) + i (- wr * zi + wi * zr)
+#
+# rewritten as a matrix multiplication:
+#
+# [ i_out ]   [ wreal   wimag ]   [ i_in ]
+#           =                   x 
+# [ q_out ]   [ wimag  -wreal ]   [ q_in ]
+#
+# aren't immediately recognizable as the same thing.
+#
+# So figure out how they do the same thing
+# and figure out what phase and gain correction the adaptive filter applies.
+# 
+# Also, the sdr# formula for correction, rewritten without recursion and simplified:
+#
+# real = real - imag * gain * sine_phase;
+# imag = imag * gain * cos_phase;
+#
+# rewritten as a matrix multiplication
+#
+# [ i_out ]   [ 1      -gain * sine_phase ]   [ i_in ]
+#           =                   x 
+# [ q_out ]   [ 0       gain * cos_phase  ]   [ q_in ]
+#
+# isn't recognizable as the same thing, either.
+#
+
+
 # data collection plan.
 # 1) collect one buffer of data
 # 2) for a variety of values of mu, starting from w = 0

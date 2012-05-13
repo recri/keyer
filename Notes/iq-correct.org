@@ -18,4 +18,25 @@
    90 degrees.
 ** And the SDR software will see images.
 * Youssef's SDR# optimizes away image power
+** take a buffer of raw samples
+** repeat:
+*** apply a candidate gain/phase correction
+   which is differently computed than the dttsp version
+   buffer[i].Imag = (float)(buffer[i].Imag * (1.0 + gain) * Math.Cos(phase));
+   buffer[i].Real = (float)(buffer[i].Real - buffer[i].Imag * Math.Tan(phase));
+*** apply an FFT to the corrected samples
+*** computes a utility function which rewards unbalanced energy
+   result += Math.Abs(spectrumPtr[i] - spectrumPtr[FFTBins - 2 - i]);
+*** and accepts the candidate if it improves the utility function.
 * The dttsp adaptive filter rounds the raw signal
+** the filter coefficient(s) maintain the state of the filter
+   float complex w;
+** the learning coefficient adjusts the adaptation rate 
+   float mu;
+** for each input sample
+   float complex z;
+** we compute an adjusted sample   
+   z += w * conj(z)
+** and update the filter coefficient   
+   w -= mu * z^2
+
