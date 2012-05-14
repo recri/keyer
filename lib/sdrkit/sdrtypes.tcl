@@ -17,9 +17,10 @@
 # 
 
 ##
-## types - snit types for option validation 
-## these are also used to supply values for selection menues
-## via [sdrctl::<enum-type> cget -values]
+## sdrtypes - snit types for option validation 
+## and to supply values for selection menues
+## via [sdrtype::<enum-type> cget -values]
+## or [sdrtype::<range-type> cget -min/-max]
 ##
 package provide sdrtype::types 1.0.0
 
@@ -62,7 +63,7 @@ snit::double	sdrtype::zoom		-min 0.5 -max 64
 snit::double	sdrtype::pan		-min -200000 -max 200000
 snit::boolean	sdrtype::smooth	
 snit::integer	sdrtype::multi		-min 1 -max 64
-snit::integer	sdrtype::sample-rate	-min 4000 -max 2000000
+snit::integer	sdrtype::sample-rate	-min 3000 -max 6144000
 snit::integer	sdrtype::milliseconds	-min 0 -max 30000
 snit::integer	sdrtype::samples	-min 1 -max 32000
 snit::double	sdrtype::decay		-min 0.0001 -max 0.9999

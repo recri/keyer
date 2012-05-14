@@ -2,7 +2,10 @@ VSN_FFTW3=3.2.2
 VSN_JACK=1.9.7
 VSN_TCL=8.5
 VSN_TK=8.5
-SUBDIRS=sdrtcl bin lib/wrap lib/morse lib/sdrapp lib/sdrctl lib/sdrdsp lib/sdrhw lib/sdrtk lib/sdrui lib/sdrutil
+CURSUBDIRS=sdrtcl bin lib/morse lib/sdrhw lib/sdrkit lib/sdrtk lib/sdrutil
+OLDSUBDIRS= lib/wrap lib/sdrapp lib/sdrctl lib/sdrdsp lib/sdrui
+SUBDIRS=$(CURSUBDIRS) $(OLDSUBDIRS)
+
 all::
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 

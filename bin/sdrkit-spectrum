@@ -19,7 +19,7 @@
 # 
 
 #
-# an sdrkit embeddable gain component
+# an sdrkit spectrum with embeddable controls
 #
 
 #
@@ -66,6 +66,7 @@ snit::type sdrkit::spectrum {
 
     option -zoom -default 1 -configuremethod TkConfigure
     option -pan -default 0 -configuremethod TkConfigure
+
     # tuning mode
     option -mode -default CWU -configuremethod TkConfigure
     # tuning
@@ -119,73 +120,46 @@ snit::type sdrkit::spectrum {
     }
     method BuildUI {w} {
 	# spectrum fft size control
-	pack [ttk::menubutton $win.m.size -textvar [myvar data(label-size)] -menu $win.m.size.m] -side left
-	menu $win.m.size.m -tearoff no
-	foreach x [sdrtype::spec-size cget -values] {
-	    set label "size $x"
-	    if {$options(-size) == $x} { set data(label-size) $label }
-	    $win.m.size.m add radiobutton -label $label -variable [myvar data(label-size)] -value $label -command [mymethod configure -size $x]
-	}
-	
+	lassign {[sdrtype::spec-size cget -values] {}} values labels
+	foreach x $values { lappend labels "size $x" }
+	sdrtk::radiomenubutton $w.size -defaultvalue $options(-size) -values $values -labels $labels \
+	    -variable [myvar options(-size)] -command [mymethod Set -size]
+
 	# polyphase spectrum control
-	pack [ttk::menubutton $win.m.s -textvar [myvar data(polyphase)] -menu $win.m.s.m] -side left
-	menu $win.m.s.m -tearoff no
-	foreach x {1 2 4 8 16 32} {
-	    if {$x == 1} {
-		set label {no polyphase}
-	    } else {
-		set label "polyphase $x"
-	    }
-	    if {$options(-polyphase) == $x} { set data(polyphase) $label }
-	    $win.m.s.m add radiobutton -label $label -variable [myvar data(polyphase)] -value $label -command [mymethod configure -polyphase $x]
-	}
+	lassign { {1 2 4 8 16 32} {} } values labels
+	foreach x $values { lappend labels [expr {$x==1?{no polyphase}:"polyphase $x"}] }
+	sdrtk::radiomenubutton $w.polyphase -defaultvalue $options(-polyphase) -values $values -labels $labels \
+	    -variable [myvar options(-polyphase)] -command [mymethod Set -polyphase]
 	
 	# multi-trace spectrum control
-	pack [ttk::menubutton $win.m.multi -textvar [myvar data(multi)] -menu $win.m.multi.m] -side left
-	menu $win.m.multi.m -tearoff no
-	foreach p {1 2 4 6 8 10 12} {
-	    set label "multi $p"
-	    if {$options(-multi) == $p} { set data(multi) $label }
-	    $win.m.multi.m add radiobutton -label $label -variable [myvar data(multi)] -value $label -command [mymethod configure -multi $p]
-	}
+	lassign { {1 2 4 6 8 10 12} {} } values labels
+	foreach x $values { lappend labels "multi $x" }
+	sdrtk::radiomenubutton $w.multi -defaultvalue $options(-multi) -values $values -labels $labels \
+	    -variable [myvar options(-multi)] -command [mymethod Set -multi]
 
-	if {0} {
-	    # waterfall palette control
-	    pack [ttk::menubutton $win.m.p -textvar [myvar data(pal)] -menu $win.m.p.m] -side left
-	    menu $win.m.p.m -tearoff no
-	    foreach p {0 1 2 3 4 5} {
-		set label "palette $p"
-		if {$options(-pal) == $p} { set data(pal) $label }
-		$win.m.p.m add radiobutton -label $label -variable [myvar data(pal)] -value $label -command [mymethod configure -pal $p]
-	    }
-	}
+	# waterfall palette control
+	lassign { {0 1 2 3 4 5} {} } values labels
+	foreach x $values { lappend labels "palette $x" }
+	sdrtk::radiomenubutton $w.palette -defaultvalue $options(-pal) -values $values -labels $labels \
+	    -variable [myvar options(-pal)] -command [mymethod Set -pal]
 
 	# waterfall/spectrum min dB
-	pack [ttk::menubutton $win.m.min -textvar [myvar data(min)] -menu $win.m.min.m] -side left
-	menu $win.m.min.m -tearoff no
-	foreach min {-160 -150 -140 -130 -120 -110 -100 -90 -80} {
-	    set label "min $min dB"
-	    if {$options(-min) == $min} { set data(min) $label }
-	    $win.m.min.m add radiobutton -label $label -variable [myvar data(min)] -value $label -command [mymethod configure -min $min]
-	}
+	lassign { {-160 -150 -140 -130 -120 -110 -100 -90 -80} {} } values labels
+	foreach x $values { lappend labels "min $x dB" }
+	sdrtk::radiomenubutton $w.min -defaultvalue $options(-min) -values $values -labels $labels \
+	    -variable [myvar options(-min)] -command [mymethod Set -min]
 	
 	# waterfall/spectrum max dB
-	pack [ttk::menubutton $win.m.max -textvar [myvar data(max)] -menu $win.m.max.m] -side left
-	menu $win.m.max.m -tearoff no
-	foreach max {0 -10 -20 -30 -40 -50 -60 -70 -80} {
-	    set label "max $max dB"
-	    if {$options(-max) == $max} { set data(max) $label }
-	    $win.m.max.m add radiobutton -label $label -variable [myvar data(max)] -value $label -command [mymethod configure -max $max]
-	}
+	lassign { {0 -10 -20 -30 -40 -50 -60 -70 -80} {} } values labels
+	foreach x $values { lappend labels "max $x dB" }
+	sdrtk::radiomenubutton $w.max -defaultvalue $options(-max) -values $values -labels $labels \
+	    -variable [myvar options(-max)] -command [mymethod Set -max]
 	
 	# zoom in/out
-	pack [ttk::menubutton $win.m.zoom -textvar [myvar data(zoom)] -menu $win.m.zoom.m] -side left
-	menu $win.m.zoom.m -tearoff no
-	foreach zoom {1 2.5 5 10 25 50 100} {
-	    set label "zoom $zoom x"
-	    if {$options(-zoom) == $zoom} { set data(zoom) $label }
-	    $win.m.zoom.m add radiobutton -label $label -variable [myvar data(zoom)] -value $label -command [mymethod configure -zoom $zoom]
-	}
+	lassign { {1 2.5 5 10 25 50 100} {} } values labels
+	foreach x $values { lappend labels "zoom $x x" }
+	sdrtk::radiomenubutton $w.zoom -defaultvalue $options(-zoom) -values $values -labels $labels \
+	    -variable [myvar options(-zoom)] -command [mymethod Set -zoom]
 	
 	# scroll/pan
     }
