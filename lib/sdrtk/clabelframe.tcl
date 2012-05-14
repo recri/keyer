@@ -31,7 +31,7 @@ snit::widget sdrtk::clabelframe {
     hulltype ttk::labelframe
 
     option -state -default open -type { snit::enum -values {open closed} } -configuremethod Configure -readonly 1
-    option -text -default ""  -configuremethod Configure
+    option -label -default ""  -configuremethod Configure
     
     component label
     
@@ -65,8 +65,8 @@ snit::widget sdrtk::clabelframe {
 	$self configurelist $args               
     }
     
-    method {Configure -text} {value} {
-	set options(-text) $value
+    method {Configure -label} {value} {
+	set options(-label) $value
 	$self UpdateLabel
     }
     
@@ -76,7 +76,7 @@ snit::widget sdrtk::clabelframe {
 	}
     }
     
-    method UpdateLabel {} { set data(text) "$data($options(-state)_symbol) $options(-text)" }
+    method UpdateLabel {} { set data(text) "$data($options(-state)_symbol) $options(-label)" }
     
     
     method toggle {} {

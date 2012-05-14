@@ -23,12 +23,58 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require snit
+
+package require sdrtk::graph
+package require sdrtk::checkmenubutton
+package require sdrtk::radiomenubutton
+package require math::complexnumbers
+
 package require sdrtcl
 package require sdrtcl::jack
 package require sdrtcl::iq-correct-train
 package require sdrtcl::audio-tap
 
 #
+# the dttsp formula for apply phase and gain correction:
+#
+# return linear_gain * creal(z0) + I * (cimag(z0) + sine_phase * crealf(z0));
+#
+# rewritten as a matrix multiplication:
+#
+# [ i_out ]   [ linear_gain  0 ]   [ i_in ]
+#           =                    x 
+# [ q_out ]   [ sine_phase   1 ]   [ q_in ]
+#
+# compared to the dttsp adaptive filter update, which also corrects phase and gain:
+#
+# z += w * conj(z) = (wr * zr + wi * zi) + i (- wr * zi + wi * zr)
+#
+# rewritten as a matrix multiplication:
+#
+# [ i_out ]   [ wreal   wimag ]   [ i_in ]
+#           =                   x 
+# [ q_out ]   [ wimag  -wreal ]   [ q_in ]
+#
+# aren't immediately recognizable as the same thing.
+#
+# So figure out how they do the same thing
+# and figure out what phase and gain correction the adaptive filter applies.
+# 
+# Also, the sdr# formula for correction, rewritten without recursion and simplified:
+#
+# real = real - imag * gain * sine_phase;
+# imag = imag * gain * cos_phase;
+#
+# rewritten as a matrix multiplication
+#
+# [ i_out ]   [ 1      -gain * sine_phase ]   [ i_in ]
+#           =                   x 
+# [ q_out ]   [ 0       gain * cos_phase  ]   [ q_in ]
+#
+# isn't recognizable as the same thing, either.
+#
+
+
 # data collection plan.
 # 1) collect one buffer of data
 # 2) for a variety of values of mu, starting from w = 0
@@ -45,136 +91,112 @@ package require sdrtcl::audio-tap
 # allow you to run a fixed sequence of mu to drive the filter to
 # convergence.  Start with a large mu and relax down.
 #
-
-snit::widgetadaptor graph {
-    
-    proc min {args} { return [tcl::mathfunc::min {*}$args] }
-    proc max {args} { return [tcl::mathfunc::max {*}$args] }
-
-    proc bbox-empty {} { return {inf inf -inf -inf} }
-    proc bbox-add-point {bbox x y} {
-	lassign $bbox x0 y0 x1 y1
-	set nbbox [list [min $x0 $x] [min $y0 $y] [max $x1 $x] [max $y1 $y]]
-	#puts "bbox-add-point {$bbox} $x $y -> $nbbox"
-	return $nbbox
-    }
-    proc bbox-union {bbox1 bbox2} {
-	lassign $bbox1 x10 y10 x11 y11
-	lassign $bbox2 x20 y20 x21 y21
-	set nbbox [list [min $x10 $x20] [min $y10 $y20] [max $x11 $x21] [max $y11 $y21]]
-	#puts "bbox-union $bbox1 $bbox2 -> $nbbox"
-	return $nbbox
-    }
-
-    option -inset 10
-
-    variable data {}
-
-    constructor {args} {
-	installhull using canvas
-	set data [dict create lines {} bbox [bbox-empty]]
-	$self configure {*}$args
-	bind $win <Configure> [mymethod redraw]
-    }
-	
-    method lines {} { return [dict get $data lines] }
-    method bbox {} { return [dict get $data bbox] }
-
-    method rescale {} {
-	set n 0
-	foreach name [dict get $data lines] {
-	    if {[llength [$self line points $name]] >= 4} {
-		$self line redraw $name
-		incr n
-	    }
-	}
-	if {$n == 0} return
-
-	set wd [winfo width $win]
-	set ht [winfo height $win]
-	set wx0 [expr {double($wd)*$options(-inset)/100.0}]
-	set wy0 [expr {double($ht)*$options(-inset)/100.0}]
-	set wwd [expr {double($wd)-2*$wx0}]
-	set wht [expr {double($ht)-2*$wy0}]
-	lassign [$self bbox] x0 y0 x1 y1
-	set xoff [expr {-$x0+$wx0}]
-	set yoff [expr {-$y0+$wy0}]
-	set xsca [expr {double($wwd)/($x1-$x0)}]
-	set ysca [expr {double($wht)/($y1-$y0)}]
-
-	#puts "$hull move plotted $xoff $yoff"
-	$hull move plotted $xoff $yoff
-	#puts "$hull scale plotted $wx0 $wy0 $xsca $ysca"
-	$hull scale plotted $wx0 $wy0 $xsca $ysca
-    }
-
-    method redraw {} {
-	foreach name [dict get $data lines] { $self line redraw $name }
-	$self rescale
-    }
-	
-    method {bbox-add-point} {x y} {
-	dict set data bbox [bbox-add-point [$self bbox] $x $y]
-    }
-
-    method {add line} {name args} {
-	dict lappend data lines $name
-	dict set data line $name [dict create]
-	dict set data line $name index [$hull create line 0 0 0 0 -tags [list plotted line line-$name]]
-	dict set data line $name points {}
-	dict set data line $name bbox [bbox-empty]
-	$self line add point $name {*}$args
-    }
-    
-    method {line points} {name} { return [dict get $data line $name points] }
-    method {line bbox} {name} { return [dict get $data line $name bbox] }
-    method {line index} {name} { return [dict get $data line $name index] }
-
-    method {line add point} {name args} {
-	set points [$self line points $name]
-	set bbox [$self line bbox $name]
-	foreach {x y} $args {
-	    lappend points $x $y
-	    set bbox [bbox-add-point $bbox $x $y]
-	    $self bbox-add-point $x $y
-	}
-	dict set data line $name points $points
-	dict set data line $name bbox $bbox
-	$self redraw
-    }
-
-    method {line redraw} {name} {
-	if {[llength [$self line points $name]] > 4} {
-	    $hull coords [$self line index $name] [$self line points $name]
-	}
-    }
-}
+# data collection results
+# the trajectories in w blow up for large enough mu, that is the
+# magnitude of w exceeds 1 or even becomes a NaN.
+# For smaller mu we get fixed trajectories, the filter takes the same
+# trajectory on each pass through the samples.
+# For still smaller mu we get noisy orbits that get smaller on each pass.
+# For still smaller mu we progressively damp the excursions in the orbit
+# until we get fairly smooth, but slow, progress toward convergence.
+#
+# My sense is that the ultimate w for a buffer should be independent of
+# the order of the samples, that only changes the exact trajectory taken.
+# In fact, I think that you could look at the samples independently, see
+# the correction they apply to w = 0, and immediately see where it's going
+#
+# The correction to w when w is 0 and mu is 1 is exactly -z^2.
+# If z = cos(phi)+i sin(phi), a perfectly balanced IQ signal,
+# then z^2 is cos(phi)^2 - sin(phi)^2 + i 2 cos(phi) sin(phi)
+# 
+# cos(phi)^2 - sin(phi)^2 is a sine wave at twice the frequency of phi
+# which is 1 when abs(cos(phi)) is 1 and -1 when abs(sin(phi)) is 1.
+#
+# 2 cos(phi) sin(phi) is a sine wave at twice the frequency of phi
+# which is 0 when abs(cos(phi)) or abs(sin(phi)) is 1
+#
+# so the initial correction to w sets it to
+#  - cos(phi)^2 + sin(phi)^2 - i 2 cos(phi) sin(phi)
+#
+# now look at the other part of the correction, z += w z'
+# when z = cos(phi) + i sin(phi) then z' = cos(phi) - i sin(phi),
+# and w z' = (- cos(phi-1)^2 + sin(phi-1)^2 - i 2 cos(phi-1) sin(phi-1)) * (cos(phi) - i sin(phi))
+#          = ((- cos(phi-1)^2 + sin(phi-1)^2) cos(phi) - (2 cos(phi-1) sin(phi-1) sin(phi))) +
+#	      i (((- cos(phi-1)^2 + sin(phi-1)^2) sin(phi)) + (2 cos(phi-1) sin(phi-1) cos(phi)))
+# which is a mess.
+#
 
 array set data {
+    -loop false
     -server default
     -name iq
     -tap {system:capture_2 system:capture_1}
-    -iterations 50
-    -mu-set {1024 16 1 1.0/16 1.0/1024}
-    -mu-set {65536 32768 16384 8192 4096 2048 1024 512 256 128 64 32 16 8 4 2 1 1.0/4 1.0/16 1.0/64 1.0/256 1.0/1024}
+    -usbsoftrock true
+    -iteration-set {1 2 4 8 16 32 64 128}
+    -mu-set {}
+    -trainer-set {::trainer1 ::trainer2 ::trainer3 ::trainer4 ::trainer5}
+    -buffer 10
+    selected-trainer {::trainer5}
+    selected-iterations 32
+    selected-mus {}
+    samples {}
+    
+}
+for {set i 26} {$i >= -10} {incr i -1} {
+    lappend data(-mu-set) [expr {2.0**$i}]
+    lappend data(selected-mus) [expr {2.0**$i}]
+}
+
+# get the current date and time
+proc acquire-date {} {
+    set millis [clock milliseconds]
+    set seconds [expr {$millis/1000}]
+    set millis [format {.%03d} [expr {$millis%1000}]]
+    set format "%C%y-%m-%d %H:%M:%S$millis UTC"
+    return [clock format [clock seconds] -timezone :UTC -format $format]
+}
+
+# get a consistent title
+proc acquire-title {type session} {
+    set n [expr {[llength [dict get $session buffer]]/2}]
+    return [format {%s %s %6.3f MHz %.2f dBFS %4d} $type [dict get $session date] [dict get $session freq] [dict get $session dBFS] $n]
 }
 
 # get the current frequency from the softrock
 proc usbsoftrock-getfreq {} {
-    set result [exec usbsoftrock getfreq]
-    foreach line [split $result \n] {
-	if {[regexp {^Frequency\s*:\s*(\d+.\d+)\s+.*$} $line all frequency]} {
-	    return $frequency
+    if {$::data(-usbsoftrock)} {
+	set result [exec usbsoftrock getfreq]
+	foreach line [split $result \n] {
+	    if {[regexp {^Frequency\s*:\s*(\d+.\d+)\s+.*$} $line all frequency]} {
+		return $frequency
+	    }
 	}
+	error "no frequency found in {$result}"
+    } else {
+	return 0.0
     }
-    error "no frequency found in {$result}"
 }
 
 # get a buffer of samples from the tap and format as a list of floats
+# make sure we get a very fresh buffer of samples
 proc acquire-buffer {} {
-    lassign [$::data(-name)-tap get] frame buffer
-    binary scan $buffer f* buffer
-    return $buffer
+    while {1} {
+	# get the oldest buffer available
+	lassign [$::data(-name)-tap get] frame buffer
+	# if there is no such buffer
+	if {$frame == 0} {
+	    # use the last buffer we read
+	    if {[info exists lbuffer]} {
+		binary scan $lbuffer f* lbuffer
+		return $lbuffer
+	    }
+	    # sleep and try again
+	    after 1
+	} else {
+	    # remember the last buffer we read
+	    set lbuffer $buffer
+	}
+    }
 }
 
 # format the list of floats back into a binary byte array
@@ -195,82 +217,710 @@ proc compute-power {buffer} {
     return $dBFS
 }
 
-#
-# initialize the plot
-# we're going to plot the magnitude of w against time
-# for each mu.
-# so x is going to be iteration * scale
-# and y will vary between 0 and 1, unless we blow up
-#
-proc init-plot {session} {
-    .t.title configure -text "[dict get $session date] [format {%.2f MHz %.1f dBFS} [dict get $session freq] [dict get $session dBFS]]"
-    catch {destroy .c}
-    catch {destroy .d}
-    pack [graph .c] -side top -fill both -expand true
-    set i [dict get $session iterations]
-    #.c add line box 0 0 $i 0 $i 1.0 0 1.0 0 0
-    pack [graph .d] -side top -fill both -expand true
-    foreach mu [dict get $session mus] {
-	.c add line $mu
-	.d add line $mu
-    }
-}
-
-proc update-plot {mu i re im} {
-    set r [expr {$re*$re+$im*$im}]
-    .c line add point $mu $i $r
-    .d line add point $mu $re $im
-}
-
-proc finish-plot {} {
-    puts "finish-plot: [.c bbox]"
-}
-
-# train over a buffer of samples
-#
-# consequence is that all mu's go directly somewhere
-# larger mu's get where they're going faster
-# mu's that are too large blow up
-# I think I should implement the filter in Tcl so I can
-# watch the progress in more detail
-# larger buffers of samples might be a good idea, too.
-# and drawing the graph borders with labelled ticks would help.
-#
-proc train {iterations mus} {
-    set session [dict create]
-    dict set session date [clock format [clock seconds]]
-    dict set session freq [usbsoftrock-getfreq]
-    dict set session buffer [acquire-buffer]
-    dict set session dBFS [compute-power [dict get $session buffer]]
-    dict set session iterations $iterations
-    dict set session mus $mus
-    puts "session [dict get $session date] [dict get $session freq] [dict get $session dBFS]"
-    dict set session mu [dict create]
-    init-plot $session
-    foreach mu $mus {
-	dict set session mu $mu 0 [list 0 0]
-	update-plot $mu 0 0 0
-    }
-    set binary [format-buffer [dict get $session buffer]]
-    for {set i 1} {$i < $iterations} {incr i} {
-	foreach mu $mus {
-	    set w [lindex [dict get $session mu $mu] end]
-	    lassign [sdrtcl::iq-correct-train [expr $mu] {*}$w $binary] re im
-	    #puts "sdrtcl::iq-correct-train $mu $w ... -> $re $im"
-	    dict set session mu $mu $i [list $re $im]
-	    update-plot $mu $i $re $im
+##
+## iq-correct-train in Tcl
+## import the tcllib complex package
+##
+snit::type iq-correct-train {
+    # import complex arithmetic
+    constructor {args} {
+	foreach x {complex real imag conj + - * mod} {
+	    namespace import ::math::complexnumbers::$x
 	}
-	update idletasks
     }
-    puts "session finished"
-    # foreach mu $mus { puts "$mu [dict get $session mu $mu]" }
-    finish-plot
+    
+    # train
+    # z += w * 'z
+    # w -= mu * z * z
+    # z1 = z0 + w * [conj z0]
+    #    = z0 + (w.r + i w.i) * (z0.r - i z0.i)
+    #    = z0 + (w.r * z0.r + w.i * z0.i) + i (- w.r * z0.i + w.i * z0.r)
+    #    = (z0.r + w.r * z0.r + w.i * z0.i) + i (z0.i - w.r * z0.i + w.i * z0.r)
+    # w  = w - mu * z1 * z1
+    #    = w - mu * ((z1.r * z1.r - z1.i * z1.i) + i (2 * z1.r * z1.i)
+    #    = w - (mu * z1.r * z1.r - mu * z1.i * z1.i) + i (mu * 2 * z1.r * z1.i)
+    # how was I going to translate w into gain + degrees phase?
+    # 
+    # I suppose you could multiply some z by w and see what happens?
+    #
+    proc train {mu wreal wimag samples} {
+	set wlist {}
+	set w [complex $wreal $wimag]
+	set zmu [complex $mu 0]
+	foreach {i q} $samples {
+	    set z0 [complex $i $q]
+	    set z1 [+ $z0 [* $w [conj $z0]]]
+	    set w [- $w [* $zmu [* $z1 $z1]]]
+	    if {[real $w] != [real $w] || [imag $w] != [imag $w] || [mod $w] > 1} break
+	    lappend wlist $w
+	}
+	return $wlist
+    }
+    
+    variable ws
+
+    method train {mu wreal wimag samples} {
+	set ws [train $mu $wreal $wimag $samples]
+	set n [llength $ws]
+	if {$n == 0} { return [list $wreal $wimag $wreal $wimag 0] }
+	lassign [lindex $ws end] re im
+	foreach w $ws {
+	    lassign $w r i
+	    lappend wr $r
+	    lappend wi $i
+	    set mod [mod $w]
+	    lappend m $mod
+	    lappend m2 [tcl::mathop::* $mod $mod]
+	}
+	set avg_real [tcl::mathop::/ [tcl::mathop::+ {*}$wr] $n]
+	set avg_imag [tcl::mathop::/ [tcl::mathop::+ {*}$wi] $n]
+	set avg_mag [tcl::mathop::/ [tcl::mathop::+ {*}$m] $n]
+	set var_mag [tcl::mathop::- [tcl::mathop::/ [tcl::mathop::+ {*}$m2] $n] [tcl::mathop::* $avg_mag $avg_mag]]
+	set disp_mag [tcl::mathop::/ $var_mag $avg_mag]
+	return [list $re $im $avg_real $avg_imag $avg_mag $var_mag $disp_mag $n]
+    }
+    
+    method trace {} { return $ws }
 }
 
-# start the training
-proc start-train {} {
-    after 1 [list train $::data(-iterations) $::data(-mu-set)]
+namespace eval puretcl {}
+iq-correct-train ::puretcl::iq-correct-trainer
+
+## first training, iterating the sdrtcl trainer over a series of mus
+## reporting the cabs(w) vs t and creal(w) vs cimag(w) at the end of
+## each scan over the buffer
+snit::type train1 {
+    variable session
+
+    proc init-plot {session} {
+	.t.title configure -text [dict get $session title]
+	.c delete all
+	.d delete all
+	.e delete all
+	.f delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	}
+    }
+
+    proc update-plot {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.c line add point $mu $i $r
+	.d line add point $mu $re $im
+    }
+
+    proc finish-plot {} {
+	puts "finish-plot"
+    }
+			      
+    # train over a buffer of samples
+    proc train {type iterations mus buffer} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	dict set session mu2 [dict create]
+	init-plot $session
+	foreach mu $mus {
+	    dict set session mu $mu 0 [list 0 0]
+	    update-plot $mu 0 0 0
+	}
+	set binary [format-buffer $buffer]
+	array set dead {}
+
+	puts [dict get $session title]
+
+	for {set i 1} {$i < $iterations} {incr i} {
+	    puts "iteration $i"
+	    foreach mu $mus {
+		if { ! [info exists dead($mu)]} {
+		    set w [dict get $session mu $mu [expr {$i-1}]]
+		    lassign [sdrtcl::iq-correct-train [expr $mu] {*}$w $binary] re im avg_re avg_im avg_mag var_mag disp_mag n
+		    # puts "sdrtcl::iq-correct-train $mu $w ... -> $re $im $avg_re $avg_im $avg_mag"
+		    if {$n == 0} {
+			puts "mu $mu blew up immediately"
+			set dead($mu) 1
+		    } elseif {$n < [dict get $session n-samples]} {
+			puts "mu $mu blew up at sample $n"
+			set dead($mu) 1
+		    } elseif {$re != $re || $im != $im} {
+			puts "mu $mu blew up"
+			set dead($mu) 1
+		    } elseif {abs($re) > 1 || abs($im) > 1} {
+			puts "mu $mu overflow"
+			set dead($mu) 1
+		    } else {
+			dict set session mu $mu $i [list $re $im]
+			update-plot $mu $i $re $im
+		    }
+		}
+		update
+	    }
+	}
+	puts "session finished"
+	# foreach mu $mus { puts "$mu [dict get $session mu $mu]" }
+	finish-plot
+    }
+    method train {iterations mus samples} {
+	return [train [$self info type] $iterations $mus $samples]
+    }
 }
+train1 ::trainer1
+    
+## second training, run the sdrtcl trainer in parallel with the pure tcl implementation
+snit::type train2 {
+    variable session
+
+    proc init-plot {session} {
+	.t.title configure -text [dict get $session title]
+	.c delete all
+	.d delete all
+	.e delete all
+	.f delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	    .e add line $mu
+	    .f add line $mu
+	}
+    }
+
+    proc update-plot {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.c line add point $mu $i $r
+	.d line add point $mu $re $im
+    }
+    proc update-plot2 {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.e line add point $mu $i $r
+	.f line add point $mu $re $im
+    }
+
+    proc finish-plot {} {
+	#puts "finish-plot"
+    }
+			      
+    # train over a buffer of samples
+    proc train {type iterations mus buffer} {
+	set session [dict create]
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power $buffer]
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	dict set session mu2 [dict create]
+	init-plot $session
+	foreach mu $mus {
+	    dict set session mu $mu 0 [list 0 0]
+	    dict set session mu2 $mu 0 [list 0 0]
+	    update-plot $mu 0 0 0
+	    update-plot2 $mu 0 0 0
+	    set dead1($mu) 0
+	    set dead2($mu) 0
+	}
+	set binary [format-buffer $buffer]
+
+	puts [dict get $session title]
+
+	for {set i 1} {$i < $iterations} {incr i} {
+	    puts "iteration $i"
+	    foreach mu $mus {
+		if { ! $dead1($mu)} {
+		    lassign [sdrtcl::iq-correct-train $mu {*}[dict get $session mu $mu [expr {$i-1}]] $binary] re im avg_re avg_im avg_mag var_mag disp_mag n
+		    puts "$i 1 $mu -> $re $im $avg_re $avg_im $avg_mag $var_mag $disp_mag $n"
+		    if {$n < [dict get $session n-samples]} {
+			puts "mu1 $mu blew up at sample $n"
+			set dead1($mu) 1
+		    } else {
+			dict set session mu $mu $i [list $re $im]
+			update-plot $mu $i $re $im
+		    }
+		}
+		if { ! $dead2($mu)} {
+		    lassign [puretcl::iq-correct-trainer train $mu {*}[dict get $session mu2 $mu [expr {$i-1}]] $buffer] re im avg_re avg_im avg_mag var_mag disp_mag n
+		    puts "$i 2 $mu -> $re $im $avg_re $avg_im $avg_mag $var_mag $disp_mag $n"
+		    if {$n < [dict get $session n-samples]} {
+			puts "mu2 $mu blew up at sample $n"
+			set dead2($mu) 1
+		    } else {
+			dict set session mu2 $mu $i [list $re $im]
+			update-plot2 $mu $i $re $im
+			update
+		    }
+		}
+	    }
+	}
+	puts "session finished"
+	finish-plot
+    }
+    method train {iterations mus samples} {
+	return [train [$self info type] $iterations $mus $samples]
+    }
+}
+train2 ::trainer2
+
+# third training, run the pure tcl implementation and watch the detailed "progress"   
+snit::type train3 {
+    variable session
+    
+    proc init-plot3 {session} {
+	.t.title configure -text [dict get $session title]
+	.c delete all
+	.d delete all
+	.e delete all
+	.f delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	    .e add line $mu
+	    .f add line $mu
+	}
+    }
+    proc reinit-plot3 {session} {
+	.c delete all
+	.d delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	}
+    }    
+    proc update-plot3a {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.c line add point $mu $i $r
+	.d line add point $mu $re $im
+    }
+    proc update-plot3b {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.e line add point $mu $i $r
+	.f line add point $mu $re $im
+    }    
+    proc finish-plot3 {} {
+	puts "finish-plot"
+    }
+    # mean and variance of magnitude w over list of w
+    proc mean-and-var-of-mag {ws} {
+	foreach w $ws {
+	    lassign $w r i
+	    set mag2 [expr {$r*$r+$i*$i}]
+	    lappend mags [tcl::mathfunc::sqrt $mag2]
+	    lappend mag2s $mag2
+	}
+	set n [llength $ws]
+	set meanmag [tcl::mathop::/ [tcl::mathop::+ {*}$mags] $n]
+	set varmag [tcl::mathop::- [tcl::mathop::/ [tcl::mathop::+ {*}$mag2s] $n] [tcl::mathop::* $meanmag $meanmag]]
+	return [list $n $meanmag $varmag]
+    }
+
+    # train over a buffer of samples
+    proc train {type iterations mus buffer} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	init-plot3 $session
+	foreach mu $mus {
+	    dict set session mu $mu 0 [list 0 0]
+	    update-plot3a $mu 0 0 0
+	    update-plot3b $mu 0 0 0
+	    set dead($mu) 0
+	}
+
+	puts [dict get $session title]
+
+	for {set i 1} {$i < $iterations} {incr i} {
+	    puts "iteration $i"
+	    foreach mu $mus {
+		if {$dead($mu)} continue
+		lassign [puretcl::iq-correct-trainer train $mu {*}[dict get $session mu $mu [expr {$i-1}]] $buffer] re im avg_re avg_im avg_mag var_mag disp_mag n
+		if {$n < [dict get $session n-samples]} {
+		    puts "mu $mu blew up at sample $n"
+		    set dead($mu) 1
+		    continue
+		}
+		set ws [puretcl::iq-correct-trainer trace]
+		# puts "ws is [llength $ws] coefficients vs $n reported"
+		lassign [mean-and-var-of-mag $ws] nn mean var
+		set disp [expr {$var/$mean}]
+		puts "mu $mu mean $mean var $var disp $disp"
+		if {$disp > 0.01} {
+		    puts "mu $mu too disperse"
+		    set dead($mu) 1
+		    continue
+		}
+		set j [expr {($i-1)*1024}]
+		foreach w $ws {
+		    lassign $w re im
+		    update-plot3a $mu $j $re $im
+		    incr j
+		    update
+		}
+		update-plot3b $mu $i $re $im
+		dict set session mu $mu $i [list $re $im]
+	    }
+	}
+	puts "session3 finished"
+	# foreach mu $mus { puts "$mu [dict get $session mu $mu]" }
+	finish-plot3
+    }
+    method train {iterations mus samples} {
+	return [train [$self info type] $iterations $mus $samples]
+    }
+}
+train3 ::trainer3
+
+# fourth training, run the pure tcl implementation
+snit::type train4 {
+    variable session
+    
+    proc init-plot3 {session} {
+	.t.title configure -text [dict get $session title]
+	.c delete all
+	.d delete all
+	.e delete all
+	.f delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	    .e add line $mu
+	    .f add line $mu
+	}
+    }
+    proc reinit-plot3 {session} {
+	.c delete all
+	.d delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	}
+    }    
+    proc update-plot3a {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.c line add point $mu $i $r
+	.d line add point $mu $re $im
+    }
+    proc update-plot3b {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.e line add point $mu $i $r
+	.f line add point $mu $re $im
+    }    
+    proc finish-plot3 {} {
+	puts "finish-plot"
+    }
+
+    proc converged {session mu} {
+	# has this series of evaluations with $mu as adaptation factor converged
+	return 0
+    }
+
+    # train over a buffer of samples
+    proc train {type iterations mus buffer} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	init-plot3 $session
+	foreach mu $mus {
+	    dict set session mu $mu 0 [list 0 0]
+	    update-plot3a $mu 0 0 0
+	    update-plot3b $mu 0 0 0
+	    set dead($mu) 0
+	}
+
+	puts [dict get $session title]
+
+	set w [list 0 0]
+	foreach mu $mus {
+	    if {$dead($mu)} continue
+	    puts "start mu $mu at $w"
+	    for {set i 1} {$i < $iterations} {incr i} {
+		lassign [puretcl::iq-correct-trainer train $mu {*}$w $buffer] re im avg_re avg_im avg_mag var_mag disp_mag n
+		if {$n < [dict get $session n-samples]} {
+		    puts "mu $mu blew up at sample $n"
+		    # start the next mu at the same place
+		    set dead($mu) 1
+		    break
+		}
+		set ws [puretcl::iq-correct-trainer trace]
+		puts "iteration $i over mu $mu w {$re $im} disp $disp_mag"
+		if {$disp_mag > 0.01} {
+		    puts "mu $mu too disperse"
+		    set dead($mu) 1
+		    # start the next iteration at the average of this one
+		    set w [list $avg_re $avg_im]
+		    break
+		}
+		set j [expr {($i-1)*1024}]
+		foreach wsi $ws {
+		    lassign $wsi wsi_re wsi_im
+		    update-plot3a $mu $j $wsi_re $wsi_im
+		    incr j
+		    update
+		}
+		update-plot3b $mu $i $re $im
+		dict set session mu $mu $i [list $re $im]
+		# start the next iteration where this one ended
+		set w [list $re $im]
+		if {[converged $session $mu]} break
+	    }
+	}
+	puts "session finished"
+	# foreach mu $mus { puts "$mu [dict get $session mu $mu]" }
+	finish-plot3
+    }
+    method train {iterations mus samples} {
+	return [train [$self info type] $iterations $mus $samples]
+    }
+}
+train4 ::trainer4
+
+# fifth training, revert to the sdrtcl implementation
+snit::type train5 {
+    variable session
+    
+    proc init-plot {session} {
+	.t.title configure -text [dict get $session title]
+	.c delete all
+	.d delete all
+	.e delete all
+	.f delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	}
+    }
+    proc update-plot {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.c line add point $mu $i $r
+	.d line add point $mu $re $im
+    }
+    proc finish-plot {} {
+	#puts "finish-plot"
+    }
+
+    proc converged {re0 im0 re1 im1} {
+	# if we're down to 1/1000th change, drop to the next lower mu
+	if {abs($re0-$re1) < 0.0001 && abs($im0-$im1) < 0.0001} {
+	    return 1
+	} else {
+	    return 0
+	}
+    }
+
+    # train over a buffer of samples
+    proc train {type iterations mus buffer} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	init-plot $session
+	foreach mu $mus {
+	    dict set session mu $mu 0 [list 0 0]
+	}
+
+	# puts "mus: {$mus}"
+	# puts [dict get $session title]
+
+	set binary [format-buffer $buffer]
+	set w [list 0 0]
+	set ntotal 0
+	set nparts {}
+	foreach mu $mus {
+	    # puts [format "i %2d mu %.6f w %.6f %.6f" 0 $mu {*}$w]
+	    update-plot $mu 0 {*}$w
+	    for {set i 1} {$i <= $iterations} {incr i} {
+		lassign [sdrtcl::iq-correct-train $mu {*}$w $binary] re im avg_re avg_im avg_mag var_mag disp_mag n
+		if {$n < [dict get $session n-samples]} {
+		    # puts "mu $mu blew up at sample $n"
+		    # start the next mu at the same place
+		    lappend nparts 0
+		    incr ntotal 0
+		    break
+		}
+		if {$disp_mag > 0.01} {
+		    # puts "mu $mu too disperse"
+		    # puts [format "i %2d mu %.6f w %.6f %.6f disp %.5f delta %.6f %.6f" $i $mu $re $im $disp_mag [expr {abs([lindex $w 0]-$re)}] [expr {abs([lindex $w 1]-$im)}]]
+		    # start the next iteration at the average of this one
+		    set w [list $avg_re $avg_im]
+		    lappend nparts 1
+		    incr ntotal 1
+		    break
+		}
+		update-plot $mu $i $re $im
+		dict set session mu $mu $i [list $re $im]
+		# start the next iteration where this one ended
+		set xw $w
+		set w [list $re $im]
+		if {$i == $iterations || [converged {*}$xw {*}$w]} {
+		    #puts [format "i %2d mu %.6f w %.6f %.6f disp %.5f delta %.6f %.6f" $i $mu $re $im $disp_mag [expr {abs([lindex $w 0]-$re)}] [expr {abs([lindex $w 1]-$im)}]]
+		    lappend nparts $i
+		    incr ntotal $i
+		    break
+		}
+	    }
+	}
+	puts [format "%s w {%10.7f %10.7f} {%s} %3d" [dict get $session title] {*}$w $nparts $ntotal]
+	# foreach mu $mus { puts "$mu [dict get $session mu $mu]" }
+	finish-plot
+    }
+    method train {iterations mus samples} {
+	return [train [$self info type] $iterations $mus $samples]
+    }
+}
+train5 ::trainer5
+
+# sixth training, detailed analysis of samples
+snit::type train6 {
+    variable session
+    
+    proc init-plot {session} {
+	.t.title configure -text [dict get $session title]
+	.c delete all
+	.d delete all
+	.e delete all
+	.f delete all
+	foreach mu [dict get $session mus] {
+	    .c add line $mu
+	    .d add line $mu
+	}
+    }
+    proc update-plot {mu i re im} {
+	set r [expr {$re*$re+$im*$im}]
+	.c line add point $mu $i $r
+	.d line add point $mu $re $im
+    }
+    proc finish-plot {} {
+	#puts "finish-plot"
+    }
+
+    proc converged {re0 im0 re1 im1} {
+	# if we're down to 1/1000th change, drop to the next lower mu
+	if {abs($re0-$re1) < 0.0001 && abs($im0-$im1) < 0.0001} {
+	    return 1
+	} else {
+	    return 0
+	}
+    }
+
+    # train over a buffer of samples
+    proc train {type iterations mus buffer} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	init-plot $session
+	foreach mu $mus {
+	    dict set session mu $mu 0 [list 0 0]
+	}
+
+	# puts "mus: {$mus}"
+	# puts [dict get $session title]
+
+	set binary [format-buffer $buffer]
+	set w [list 0 0]
+	set ntotal 0
+	set nparts {}
+	foreach mu $mus {
+	    # puts [format "i %2d mu %.6f w %.6f %.6f" 0 $mu {*}$w]
+	    update-plot $mu 0 {*}$w
+	    for {set i 1} {$i <= $iterations} {incr i} {
+		lassign [sdrtcl::iq-correct-train $mu {*}$w $binary] re im avg_re avg_im avg_mag var_mag disp_mag n
+		if {$n < [dict get $session n-samples]} {
+		    # puts "mu $mu blew up at sample $n"
+		    # start the next mu at the same place
+		    lappend nparts 0
+		    incr ntotal 0
+		    break
+		}
+		if {$disp_mag > 0.01} {
+		    # puts "mu $mu too disperse"
+		    # puts [format "i %2d mu %.6f w %.6f %.6f disp %.5f delta %.6f %.6f" $i $mu $re $im $disp_mag [expr {abs([lindex $w 0]-$re)}] [expr {abs([lindex $w 1]-$im)}]]
+		    # start the next iteration at the average of this one
+		    set w [list $avg_re $avg_im]
+		    lappend nparts 1
+		    incr ntotal 1
+		    break
+		}
+		update-plot $mu $i $re $im
+		dict set session mu $mu $i [list $re $im]
+		# start the next iteration where this one ended
+		set xw $w
+		set w [list $re $im]
+		if {$i == $iterations || [converged {*}$xw {*}$w]} {
+		    #puts [format "i %2d mu %.6f w %.6f %.6f disp %.5f delta %.6f %.6f" $i $mu $re $im $disp_mag [expr {abs([lindex $w 0]-$re)}] [expr {abs([lindex $w 1]-$im)}]]
+		    lappend nparts $i
+		    incr ntotal $i
+		    break
+		}
+	    }
+	}
+	puts [format "%s w {%10.7f %10.7f} {%s} %3d" [dict get $session title] {*}$w $nparts $ntotal]
+	# foreach mu $mus { puts "$mu [dict get $session mu $mu]" }
+	finish-plot
+    }
+    method train {iterations mus samples} {
+	return [train [$self info type] $iterations $mus $samples]
+    }
+}
+train6 ::trainer6
+
+proc do-train {} { $::data(selected-trainer) train $::data(selected-iterations) $::data(selected-mus) $::data(samples) }
+proc start-train {} { after 1 do-train }
 
 # shutdown the jack components
 proc shutdown {w} {
@@ -280,31 +930,69 @@ proc shutdown {w} {
 	rename $::data(-name)-tap {}
     }
 }
+proc new-samples {} {
+    set ::data(samples) [acquire-buffer]
+}
 
 # set up with a go button
 proc main {argv} {
     foreach {option value} $argv {
+	puts "$option $value"
 	switch -- $option {
+	    -b - -buffer - --buffer { set ::data(-buffer) $value }
+	    -l - -loop - --loop { set ::data(-loop) $value }
 	    -n - -name - --name { set ::data(-name) $value }
 	    -s - -server - --server { set ::data(-server) $value }
 	    -t - -tap - --tap { set ::data(-tap) $value }
+	    -u - -usb - --usb { set ::data(-usbsoftrock) $value }
 	    default { error "unknown option \"$option\"" }
 	}
     }
-    sdrtcl::audio-tap $::data(-name)-tap -server $::data(-server) -log2size 10 -log2n 2 -complex 1
+    sdrtcl::audio-tap $::data(-name)-tap -server $::data(-server) -log2size $::data(-buffer) -log2n 2 -complex 1
     $::data(-name)-tap start
     if {$::data(-tap) ne {}} {
 	foreach in $::data(-tap) out [$::data(-name)-tap info ports] {
 	    sdrtcl::jack connect $in [join [list $::data(-name)-tap $out] :]
 	}
     }
+    after 50
+    set ::data(samples) [acquire-buffer]
     wm title . sdrkit:$::data(-name)
-    pack [ttk::frame .t] -side top -fill x
-    pack [ttk::button .t.train -text Train -command [list start-train]] -side left
-    pack [ttk::label .t.title -text {}] -side left
-    pack [graph .c] -side top -fill both -expand true
-    pack [graph .d] -side top -fill both -expand true
+    grid [ttk::frame .t] -row 0 -column 0 -columnspan 2
+    grid [ttk::button .t.acquire -text {New Samples} -command new-samples] -row 0 -column 0
+    grid [ttk::button .t.train -text Train -command [list start-train]] -row 0 -column 1
+    grid [sdrtk::radiomenubutton .t.trainer -defaultvalue $::data(selected-trainer) \
+	      -values $::data(-trainer-set) -command [list set ::data(selected-trainer)] \
+	     ] -row 0 -column 2
+    grid [sdrtk::radiomenubutton .t.iterations -defaultvalue $::data(selected-iterations) \
+	      -values $::data(-iteration-set) -command [list set ::data(selected-iterations)] \
+	     ] -row 0 -column 3
+    grid [sdrtk::checkmenubutton .t.mu -text mu -defaultselected $::data(selected-mus) \
+	      -values $::data(-mu-set) -command [list set ::data(selected-mus)] \
+	     ] -row 0 -column 4
+    grid [ttk::label .t.title -text {}] -row 1 -column 0 -columnspan 5
+    grid [sdrtk::graph .c] [sdrtk::graph .e] -row 1 -sticky nsew
+    grid [sdrtk::graph .d] [sdrtk::graph .f] -row 2 -sticky nsew
+    grid rowconfigure . 1 -weight 1
+    grid rowconfigure . 2 -weight 1
+    grid columnconfigure . 0 -weight 1
+    grid columnconfigure . 1 -weight 1
     bind . <Destroy> [list shutdown %W]
+    if {$::data(-loop)} {
+	# repeat
+	for {set x 0} {$x < 100000} {incr x} {
+	    # randomly tune 1.5-30MHz
+	    set freq [format %.6f [expr {1.5+(30-1.5)*rand()}]]
+	    exec usbsoftrock set freq $freq
+	    after 500
+	    for {set i 0} {$i < 5} {incr i} {
+		after 10
+		set ::data(samples) [acquire-buffer]
+		$::data(selected-trainer) train $::data(selected-iterations) $::data(selected-mus) $::data(samples)
+	    }
+	}
+	exit 0
+    }
 }
-
+    
 main $argv

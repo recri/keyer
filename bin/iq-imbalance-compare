@@ -1,0 +1,101 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+
+package require sdrtk::graph
+package require sdrtk::lscale
+
+#
+# compare the sdr#
+# buffer[i].Imag = (float)(buffer[i].Imag * (1.0 + gain) * Math.Cos(phase));
+# buffer[i].Real = (float)(buffer[i].Real - buffer[i].Imag * Math.Tan(phase));
+# and dttsp
+# return linear_gain * crealf(z0) + I * (cimagf(z0) + p->sine_phase * crealf(z0));
+# iq imbalance formulas
+#
+
+array set data {
+    phase 0
+    gain 1
+    phase_error_degrees 0
+    db_gain_imbalance 0
+}
+
+proc update-graphs {args} {
+    # clean up old graph
+    .c delete all
+    .d delete all
+    
+    # got pi?
+    set pi [tcl::mathfunc::atan2 0 -1]
+
+    # make a circle
+    for {set i 0} {$i < 256} {incr i} {
+	set p [expr {$i*2*$pi/256}]
+	lappend xy [expr {cos($p)}] [expr {sin($p)}]
+    }
+
+    # get parameters
+    set gain [expr {10.0**($::data(db_gain_imbalance)/20.0)}]
+    set phase [expr {2*$pi*$::data(phase_error_degrees)/360.0}]
+
+    # adjust according to sdr#
+    set im_adjust [expr {$gain*cos($phase)}]
+    set tan_phase [expr {tan($phase)}]
+    foreach {re im} $xy {
+	set im [expr {$im * $im_adjust}]
+	set re [expr {$re - $im * $tan_phase}]
+	lappend sdrsharp_xy $re $im
+    }
+
+    # adjust according to dttsp
+    set sin_phase [expr {sin($phase)}]
+    foreach {re im} $xy {
+	lappend dttsp_xy [expr {$re*$gain}] [expr {$im+$sin_phase*$re}]
+    }
+
+    # update coordinates
+    .c add line pts {*}$sdrsharp_xy
+    .d add line pts {*}$dttsp_xy
+}
+    
+proc main {argv} {
+    foreach {option value} $argv {
+	switch -- $option {
+	    default { error "unknown option \"$option\"" }
+	}
+    }
+    grid [ttk::frame .t] -row 0
+    pack [sdrtk::lscale .t.phase_error_degrees -label {Phase(degrees)} -from -90 -to 90 -variable ::data(phase_error_degrees) -command update-graphs] -side left
+    pack [sdrtk::lscale .t.db_gain_imbalance -label {Imbalance(decibels)} -from -100 -to 100 -variable ::data(db_gain_imbalance) -command update-graphs] -side left
+
+    grid [sdrtk::graph .c] -row 1 -sticky nsew
+    grid [sdrtk::graph .d] -row 2 -sticky nsew
+    grid rowconfigure . 1 -weight 1
+    grid rowconfigure . 2 -weight 1
+    grid columnconfigure . 0 -weight 1
+    bind . <Configure> update-graphs
+}
+    
+main $argv

@@ -39,17 +39,15 @@ package require snit
 
 namespace eval sdrkit {}
 
-snit::type sdrkit::signal-generator {
+snit::type sdrkit::iq-unbalance {
     option -server -default default -readonly true
-    option -name -default sdr-sg -readonly true
+    option -name -default sdr-iqu -readonly true
     option -control -default {} -readonly true
     option -enable -default 1 -configuremethod Configure
     option -activate -default 1 -configuremethod Configure
-    option -title -default {Signal Generator} -readonly true
+    option -title -default {IQ Unbalancer} -readonly true
     option -minsizes -default {100 200} -readonly true
     option -weights -default {1 3} -readonly true
-
-    option -n-osc -default 3 -readonly true
 
     variable data -array {
     }
@@ -85,12 +83,9 @@ snit::type sdrkit::signal-generator {
 	}
     }
     method Components {} {
-	for {set i 1} {$i <= $options(-n-osc)} {incr i} {
-	    lappend components osc$i "Oscillator $i" sdrkit-oscillator
-	}
-	lappend components noise Noise sdrkit-noise
-	lappend components iq-noise "IQ Noise" sdrkit-iq-noise
-	lappend components out "Master Gain" sdrkit-gain
+	lappend components swap {IQ Swap} sdrkit-iq-swap
+	lappend components delay "IQ Delay" sdrkit-iq-delay
+	lappend components balance "IQ Balance" sdrkit-iq-balance
 	return $components
     }
     method Configure {opt val} {
@@ -108,6 +103,6 @@ snit::type sdrkit::signal-generator {
     }
 }
 
-sdrkit::signal-generator ::sdrkit {*}$argv
+sdrkit::iq-unbalance ::sdrkit {*}$argv
 
 

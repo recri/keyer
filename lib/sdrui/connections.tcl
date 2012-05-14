@@ -64,7 +64,7 @@ snit::widget sdrui::connections {
 
 	install pane using ttk::panedwindow $win.pane -orient horizontal
 	install lft using sdrtk::lvtreeview $win.lft -scrollbar left -width 100 -show tree
-	install ctr using sdrtk::lcanvas $win.ctr -width 100 -container $self
+	install ctr using sdrtk::lcanvas $win.ctr -width 100
 	install rgt using sdrtk::lvtreeview $win.rgt -scrollbar right -width 100 -show tree
 
 	$ctr bind <Configure> [mymethod defer-update-canvas]
@@ -89,9 +89,9 @@ snit::widget sdrui::connections {
 	$pane add $lft -weight 1
 	$pane add $ctr -weight 2
 	$pane add $rgt -weight 1
-	$lft configure -text source -labelanchor n
-	$ctr configure -text connect -labelanchor n
-	$rgt configure -text sink -labelanchor n
+	$lft configure -label source -labelanchor n
+	$ctr configure -label connect -labelanchor n
+	$rgt configure -label sink -labelanchor n
 
 	grid [ttk::checkbutton $win.ctl] -row 2 -column 0
 	grid [ttk::checkbutton $win.filter -text {filter by selection} -variable [myvar options(-filter)] -command [mymethod defer-update-canvas]] -in $win.ctl -row 0 -column 0

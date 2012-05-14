@@ -40,11 +40,46 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   samples = (float complex *)Tcl_GetByteArrayFromObj(objv[4], &n_samples);
   if ((n_samples % sizeof(float complex)) != 0)
     return fw_error_obj(interp, Tcl_ObjPrintf("sample object is %d bytes, not a complex array", n_samples));
-  iqb.mu = mu;
-  iqb.w = wreal + I*wimag;
-  for (n_samples /= sizeof(float complex); --n_samples >= 0; )
-    iq_correct_process(&iqb, *samples++);
-  return fw_success_obj(interp, Tcl_NewListObj(2, (Tcl_Obj *[]){ Tcl_NewDoubleObj(crealf(iqb.w)), Tcl_NewDoubleObj(cimagf(iqb.w)) }));
+  n_samples /= sizeof(float complex);
+
+  // do the computation in double precision to match the pure tcl version
+  // also no reason to discard precision while training
+  double complex w = wreal + I*wimag;
+  double complex sum_w = 0;
+  double complex mean_w = 0;
+  double sum_mag = 0;
+  double sum_mag2 = 0;
+  double mean_mag = 0;
+  double var_mag = 0;
+  double dispersion_mag = 0;
+  int i;
+  for (i = 0; i < n_samples; i += 1) {
+    const double complex z1 = *samples + w * conjf(*samples);	// compute corrected sample
+    const double complex w_new = w - mu * z1 * z1;		// filter update: coefficients += -mu * error
+    if (isnan(creal(w_new)) || isnan(cimag(w_new)) || cabs(w_new) > 1) break;
+    w = w_new;
+    sum_w += w;
+    double mag2 = cabs2(w);
+    sum_mag2 += mag2;
+    sum_mag += sqrt(mag2);
+    samples += 1;						// next sample
+  }
+  if (i > 0) {
+    mean_w = sum_w / i;
+    mean_mag = sum_mag / i;
+    var_mag = sum_mag2 / i - mean_mag * mean_mag;
+    dispersion_mag = var_mag / mean_mag;
+  } else {
+    mean_w = w;
+    mean_mag = cabs(w);
+    var_mag = 0;
+    dispersion_mag = 0;
+  }
+  return fw_success_obj(interp, Tcl_NewListObj(8, (Tcl_Obj *[]){
+	Tcl_NewDoubleObj(creal(w)), Tcl_NewDoubleObj(cimag(w)),
+	  Tcl_NewDoubleObj(creal(mean_w)), Tcl_NewDoubleObj(cimag(mean_w)),
+	  Tcl_NewDoubleObj(mean_mag), Tcl_NewDoubleObj(var_mag), Tcl_NewDoubleObj(dispersion_mag),
+	  Tcl_NewIntObj(i) }));
 }
 
 // the initialization function which installs the adapter factory

@@ -18,6 +18,186 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+#
+# an sdrkit embeddable gain component
+#
+
+#
+# find the script file
+# and add the lib directory to the automatic package search path
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+#
+# require Tk for graphical UI and communications
+# sdrtcl::spectrum-tap to capture and compute the spectrum
+# sdrui::tk-spectrum to draw the spectrum
+#
+package require Tk
+package require sdrtcl::spectrum-tap
+package require sdrui::tk-spectrum
+
+#
+# on the fly implementation of control interface
+#
+package require snit
+
+namespace eval sdrkit {}
+
+snit::type sdrkit::spectrum {    
+    option -server -default default -readonly true
+    option -name -default sdr-gain -readonly true
+    option -minsizes -default {100 200} -readonly true
+    option -weights -default {1 3} -readonly true
+    option -control -default {} -readonly true
+    option -enable -default 1 -configuremethod Configure
+    option -activate -default 1 -configuremethod Configure
+
+    option -size -default 1024 -configuremethod TapConfigure
+    option -polyphase -default 1 -configuremethod TapConfigure
+    option -result -default dB -configuremethod TapConfigure
+
+    option -pal -default 0 -configuremethod TkConfigure
+    option -max -default 0 -configuremethod TkConfigure
+    option -min -default -160 -configuremethod TkConfigure
+    option -smooth -default false -configuremethod TkConfigure
+    option -multi -default 1 -configuremethod TkConfigure
+
+    option -zoom -default 1 -configuremethod TkConfigure
+    option -pan -default 0 -configuremethod TkConfigure
+    # tuning mode
+    option -mode -default CWU -configuremethod TkConfigure
+    # tuning
+    option -freq -default 7050000 -configuremethod Retune
+    option -lo-freq -default 10000 -configuremethod Retune
+    option -cw-freq -default 600 -configuremethod Retune
+    option -carrier-freq -default 7040000 -configuremethod Retune
+    # band pass filter
+    option -low -default 400 -configuremethod Retune
+    option -high -default 800 -configuremethod Retune
+
+    variable data -array {
+	sample-rate 48000
+    }
+
+    constructor {args} {
+
+	$self configure {*}$args
+
+	wm title . $options(-name)
+	tk appname $options(-name)
+
+	toplevel .spectrum-$options(-name)
+	pack [sdrui::tk-spectrum .spectrum-$options(-name) {*}[TkOptions]] -side top -fill both -expand true
+	sdrtcl::spectrum-tap $options(-name) -server $options(-server) {*}[TapOptions]
+
+	if {$options(-control) ne {}} {
+	    set options(-enable) 0
+	    set options(-activate) 0
+	    if {[$options(-name) is-active]} { $options(-name) deactivate }
+	} else {
+	    set options(-enable) 1
+	    set options(-activate) 1
+	    if { ! [$options(-name) is-active]} { $options(-name) activate }
+	}
+
+	$self BuildUI .
+    }
+    destructor {
+	catch {after cancel $data(after)}
+	catch {$options(-name) stop}
+	catch {$options(-name) deactivate}
+	catch {rename $options(-name) {}}
+    }
+    method Configure {opt val} {
+	set options($opt) $val
+	switch -- $opt {
+	    -activate { $options(-name) [expr {$val?{activate}:{deactivate}}] }
+	    default {}
+	}
+    }
+    method BuildUI {w} {
+	# spectrum fft size control
+	pack [ttk::menubutton $win.m.size -textvar [myvar data(label-size)] -menu $win.m.size.m] -side left
+	menu $win.m.size.m -tearoff no
+	foreach x [sdrtype::spec-size cget -values] {
+	    set label "size $x"
+	    if {$options(-size) == $x} { set data(label-size) $label }
+	    $win.m.size.m add radiobutton -label $label -variable [myvar data(label-size)] -value $label -command [mymethod configure -size $x]
+	}
+	
+	# polyphase spectrum control
+	pack [ttk::menubutton $win.m.s -textvar [myvar data(polyphase)] -menu $win.m.s.m] -side left
+	menu $win.m.s.m -tearoff no
+	foreach x {1 2 4 8 16 32} {
+	    if {$x == 1} {
+		set label {no polyphase}
+	    } else {
+		set label "polyphase $x"
+	    }
+	    if {$options(-polyphase) == $x} { set data(polyphase) $label }
+	    $win.m.s.m add radiobutton -label $label -variable [myvar data(polyphase)] -value $label -command [mymethod configure -polyphase $x]
+	}
+	
+	# multi-trace spectrum control
+	pack [ttk::menubutton $win.m.multi -textvar [myvar data(multi)] -menu $win.m.multi.m] -side left
+	menu $win.m.multi.m -tearoff no
+	foreach p {1 2 4 6 8 10 12} {
+	    set label "multi $p"
+	    if {$options(-multi) == $p} { set data(multi) $label }
+	    $win.m.multi.m add radiobutton -label $label -variable [myvar data(multi)] -value $label -command [mymethod configure -multi $p]
+	}
+
+	if {0} {
+	    # waterfall palette control
+	    pack [ttk::menubutton $win.m.p -textvar [myvar data(pal)] -menu $win.m.p.m] -side left
+	    menu $win.m.p.m -tearoff no
+	    foreach p {0 1 2 3 4 5} {
+		set label "palette $p"
+		if {$options(-pal) == $p} { set data(pal) $label }
+		$win.m.p.m add radiobutton -label $label -variable [myvar data(pal)] -value $label -command [mymethod configure -pal $p]
+	    }
+	}
+
+	# waterfall/spectrum min dB
+	pack [ttk::menubutton $win.m.min -textvar [myvar data(min)] -menu $win.m.min.m] -side left
+	menu $win.m.min.m -tearoff no
+	foreach min {-160 -150 -140 -130 -120 -110 -100 -90 -80} {
+	    set label "min $min dB"
+	    if {$options(-min) == $min} { set data(min) $label }
+	    $win.m.min.m add radiobutton -label $label -variable [myvar data(min)] -value $label -command [mymethod configure -min $min]
+	}
+	
+	# waterfall/spectrum max dB
+	pack [ttk::menubutton $win.m.max -textvar [myvar data(max)] -menu $win.m.max.m] -side left
+	menu $win.m.max.m -tearoff no
+	foreach max {0 -10 -20 -30 -40 -50 -60 -70 -80} {
+	    set label "max $max dB"
+	    if {$options(-max) == $max} { set data(max) $label }
+	    $win.m.max.m add radiobutton -label $label -variable [myvar data(max)] -value $label -command [mymethod configure -max $max]
+	}
+	
+	# zoom in/out
+	pack [ttk::menubutton $win.m.zoom -textvar [myvar data(zoom)] -menu $win.m.zoom.m] -side left
+	menu $win.m.zoom.m -tearoff no
+	foreach zoom {1 2.5 5 10 25 50 100} {
+	    set label "zoom $zoom x"
+	    if {$options(-zoom) == $zoom} { set data(zoom) $label }
+	    $win.m.zoom.m add radiobutton -label $label -variable [myvar data(zoom)] -value $label -command [mymethod configure -zoom $zoom]
+	}
+	
+	# scroll/pan
+    }
+
+    method {Set gain} {v} {
+	$options(-name) configure -gain $v
+	set data(gain-label) [format {%.1f dBFS} $v]
+    }
+}
+
+sdrkit::gain ::sdrkit {*}$argv
+
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 

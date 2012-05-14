@@ -39,17 +39,14 @@ package require snit
 
 namespace eval sdrkit {}
 
-snit::type sdrkit::signal-generator {
+snit::type sdrkit::iq-source {
     option -server -default default -readonly true
-    option -name -default sdr-sg -readonly true
+    option -name -default sdr-src -readonly true
     option -control -default {} -readonly true
-    option -enable -default 1 -configuremethod Configure
-    option -activate -default 1 -configuremethod Configure
-    option -title -default {Signal Generator} -readonly true
+    option -title -default {IQ Source} -readonly true
     option -minsizes -default {100 200} -readonly true
     option -weights -default {1 3} -readonly true
 
-    option -n-osc -default 3 -readonly true
 
     variable data -array {
     }
@@ -66,9 +63,10 @@ snit::type sdrkit::signal-generator {
 	    set data($name-enable) 0
 	    grid [frame .$name.container -container true]
 	    set cmd [list \
-			 [file join [file dirname $::script] $command] \
+			 [file join [file dirname $::script] [lindex $command 0]] \
 			 -use [winfo id .$name.container] \
 			 -- \
+			 {*}[lrange $command 1 end] \
 			 -server $options(-server) \
 			 -name $options(-name)-$name \
 			 -control $options(-name) \
@@ -85,12 +83,8 @@ snit::type sdrkit::signal-generator {
 	}
     }
     method Components {} {
-	for {set i 1} {$i <= $options(-n-osc)} {incr i} {
-	    lappend components osc$i "Oscillator $i" sdrkit-oscillator
-	}
-	lappend components noise Noise sdrkit-noise
-	lappend components iq-noise "IQ Noise" sdrkit-iq-noise
-	lappend components out "Master Gain" sdrkit-gain
+	lappend components sg {Signal Generator} {sdrkit-signal-generator -n-osc 4}
+	lappend components iq "IQ Imbalance" sdrkit-iq-unbalance
 	return $components
     }
     method Configure {opt val} {
@@ -108,6 +102,6 @@ snit::type sdrkit::signal-generator {
     }
 }
 
-sdrkit::signal-generator ::sdrkit {*}$argv
+sdrkit::iq-source ::sdrkit {*}$argv
 
 

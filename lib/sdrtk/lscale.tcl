@@ -17,32 +17,30 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrtk::lvtreeview 1.0.0
+package provide sdrtk::lscale 1.0.0
 
 package require Tk
 package require snit
-package require sdrtk::vtreeview
 
 namespace eval ::sdrtk {}
 
-#
-# a labeled treeview with vertical scrollbar to left or right
-#
-snit::widget sdrtk::lvtreeview {
-    hulltype ttk::labelframe
-    component treeview
+##
+## a ttk::scale in a labelled frame
+##
 
+snit::widget sdrtk::lscale {
+    hulltype ttk::labelframe
+    component xxx
+    
     delegate option -label to hull as -text
     delegate option -labelanchor to hull
-
-    delegate method * to treeview
-    delegate option * to treeview
+    
+    delegate option * to xxx
+    delegate method * to xxx
 
     constructor {args} {
-	install treeview using sdrtk::vtreeview $win.t
-	pack $win.t -fill both -expand true
+	install xxx using ttk::scale $win.xxx
+	pack $xxx -fill both -expand true
 	$self configure {*}$args
     }
 }
- 
-

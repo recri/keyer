@@ -6,24 +6,24 @@
    My basic gripe with existing SDR code is that it's hard to see what
    it does because it's usually buried inside some baroque mechanism
    for putting it together into the radio.  I can't see the parts
-   because they've been potted in hot glue to stick them together.
-   And that's a pity, because the parts are really simple when you get
-   to see them clearly.
+   because they've been potted in hot glue to stick them together. And
+   that's a pity, because the parts are really simple when you get to
+   see them clearly.
 
    I've extracted the bits that do the work into one library, and
    settled on using Tcl/Tk and Jack as the glue to put the parts
    together.  So you can see the computations without the glue, and
    then glue them together in a script to see how they work.
-** sdrkit - just the bits
-    Sdrkit is plain SDR implementations in c and c++ without
-    any distracting details.  Oscillators, filters, mixers,
-    demodulation, modulation, keyers, debouncers, and so on.
-    I'll include as many alternate implementations as I find the time
-    to excavate for comparison. This is where you go to figure out how
-    a particular computation is performed or to steal code for your
-    own use.
 
-    I'm doing sdrkit entirely as header files.  This is a bit
+** dspmath - just the bits
+    dspmath is plain SDR implementations in c and c++ without any
+    distracting details.  Oscillators, filters, mixers, demodulation,
+    modulation, keyers, debouncers, and so on. I'll include as many
+    alternate implementations as I find the time to excavate for
+    comparison. This is where you go to figure out how a particular
+    computation is performed or to steal code for your own use.
+
+    I'm doing dspmath entirely as header files.  This is a bit
     different from the usual hide the implementation one place and
     expose an interface someplace else, but I've got nothing to hide
     and I get tired of groveling all over the place trying to figure
@@ -33,54 +33,132 @@
     and use it. The code is all static to the file that includes it,
     so the unused parts can be optimized to nothing and the used parts
     can be inlined.
-** jack-tcl-wrap - the bits wrapped for use
-    This code is my own baroque implementation of software hot glue.
-    It wraps sdrkit components into Tcl so they can be loaded and
-    executed within a Tcl/Tk application. This covers mostly boring
-    stuff like command creation and deletion, options handling,
-    subcommand processing, and the gory details of being a Jack
-    component.  And it's all done through an evolving framework that
-    abstracts out the common code, making it very terse and cryptic.
+
+** sdrtcl - the bits wrapped for use
+    This code is my personal choice of software hot glue. It wraps
+    dspmath components into Tcl so they can be loaded and executed
+    within a Tcl/Tk application. This covers mostly boring stuff like
+    command creation and deletion, options handling, subcommand
+    processing, and the gory details of being a Jack component.  And
+    it's all done through an evolving framework that abstracts out the
+    common code, making it very terse and cryptic.
+
+    Most of the commands implemented in sdrtcl are command factories,
+    they produce commands themselves so there can be more than one of
+    each kind of dsp component active within an application.
+
+    Thus the sdrtcl::oscillator command is not an oscillator itself,
+    it is a factory which creates a new oscillator with specified name
+    and options each time it is called.  All of the oscillators
+    created can them be activated, deactivated, connected to other
+    components, and configured independently.
+
+    Other sdrtcl commands are just plain commands which take arguments
+    and return results.
+    
+    Thus sdrtcl::window is a command which creates a "window"
+    function, as an array of floats of specified length and shape, for
+    scaling the samples supplied to an FFT.  And
+    sdrtcl::iq-correct-training is a command which takes a buffer of
+    samples, as an array of complex float, and computes the IQ phase
+    and gain correction for the samples.
+
 ** lib/* - tcl code and compiled loadable modules
     The lib directory is structured as a collection of sub-directories
     which could be safely installed into a system lib directory.
-*** lib/sdrkit - where sdrkit installs loadable modules
-    The lib/sdrkit directory contains, after you make them, a
-    collection of shared object files.  The lib/sdrkit/pkgIndex.tcl
-    file contains a catalog of the packages.
-*** lib/wrap - Tcl code for wrapping up loadable modules
-    The commands implemented by sdrkit are barebones computational
-    modules.  The code in lib/wrap makes larger functional units.
+
+*** lib/hamlib - interfaces hamlib front and back ends
+    Currently unimplemented, but there's no reason that sdrkit
+    shouldn't be a hamlib radio or use hamlib to control another
+    radio.
+
 *** lib/morse - Tcl code for morse code dictionaries
-    I made a simple change to the interface for the ascii keyer, and
-    it magically became a unicode enabled keyer.  So I copied the
-    morse code tables for arabic, cyrillic, farsi, greek, hebrew and
-    wabun and converted them into Tcl dicts which can be used to
-    configure the ascii keyer.  There are also dicts for the ITU
-    standard code, latin extensions, punctuation, and prosigns.
+    The sdrtcl::keyer-ascii component turns out to actually implement
+    a Unicode keyer.  lib/morse contains morse code tables for arabic,
+    cyrillic, farsi, greek, hebrew and wabun as Tcl dicts which can be
+    used to configure the ascii keyer.  There are also dicts for the ITU
+    standard code, latin extensions, punctuation, and prosigns. 
+
+*** lib/sdrapp - Tcl code to implement applications.
+    These sources create complete applications.
+
+*** lib/sdrctl - Tcl code to implement controls.
+   Radios have components that need to change together, most obviously
+   when a transceiver switches between receive and transmit.
+   This code implements a layer of controls that is independent of the
+   user interface and the dsp implementation.
+   In addition to switching the components on, off, or in tune
+   together, it allows for different user interfaces to control the
+   same computational engines.
+   Sdrkit supports multiple traditional window user interfaces, a
+   command line interface, and pure scripting.
+
+*** lib/sdrdsp - Tcl code to wrap dsp components.
+    This code interfaces the dsp components to the sdrctl components.
+
+*** lib/sdrhw - Tcl code to wrap hardware components.
+    This code interfaces hardware interfaces to the sdrctl components.
+
+*** lib/sdrtcl - Loadable sdrtcl modules.
+    The lib/sdrtcl directory contains, after you make them, a
+    collection of shared object files compiled for your computer's
+    architecture.  The lib/sdrtcl/pkgIndex.tcl file contains a catalog
+    of the packages.
+    There are also a few \*.tcl files in lib/sdrtcl.
+
+*** lib/sdrtk - Tcl code tk widgets
+    These tcl sources implement tk widgets which are independent of
+    the mechanisms used to control and organize the sdrkit modules.
+
+*** lib/sdrui - User interfaces for applications
+    These sources implement user interfaces which work through the
+    sdrctl components.
+
+*** lib/sdrutil - Utility functions.
+    These source didn't fit into any other category.
+
+*** lib/wrap - Tcl code for wrapping up loadable modules
+    lib/wrap is obsolete, but still hanging around until I'm sure
+    everything has been collected from it.
+
 ** bin/* - tcl scripts implementing full applications.
     These are a mixed bag of Tcl/Tk applications which work pretty
     well in some cases and not at all in others.  The collection will
     evolve, I'll describe the ones I'm happiest with when I get around
     to it.
+*** Bespoke applications
+    The first series of applications essentially try to do it all in
+    one script, perhaps with the help of some library code from
+    lib/wrap.  These applications will go away.
+*** lib/sdrapp applications
+    The second series of applications call scripts in lib/sdrapp to do
+    the work, using the lib/sdrctl abstraction to connect parts up.
+    This is also going away.
+*** embeddable applications
+    The simplest applications simply instantiate an sdrtcl component
+    and provide a rough tk user interface.  These can be run as stand
+    alone applications or embedded into more complicated combinations.
+    They use the tk send command to establish a control net.
+
 * Second abstraction
   The modules used to build radios should be skinnable, meaning that
   the interface for controlling them should be clear and with no
-  commitment to user interface. 
-  This is true for the jack-tcl-wrap components, but when I start
-  gluing them together into larger pieces, I'm not preserving the
-  widget interface, I'm letting things wander all over the place.
-** So bin/demodulate lets you switch receive modulations
-   It needs to be a jack module that knows its inputs and outputs, and
-   when no demodulation is required, it simply connects the two.  When
-   demodulation is required, it instantiates the necessary module and
-   inserts it between the inputs and the outputs.
-   As written, it is a command with a user interface.
-   But it should be first of all a component with no user interface.
-   Then that should be wrapped into a user interface in a specified
-   window.
-   Then that should be wrapped into a command that puts the user
-   interface into a top-level window.
+  commitment to any particular user interface.
+
+  This is true for the sdrtcl components, they use the Tk style
+  command factory with configurable options, and the commands support
+  a modest number of standard methods and a few custom methods. 
+
+  When I started gluing sdrtcl components together into larger pieces,
+  I found it hard to preserve that basic architecture.  Tcl, by
+  itself, doesn't provide a simple mechanism for writing command
+  factories with configurable options and methods.
+
+  I've adopted snit, one of the many object frameworks that have been
+  implemented for Tcl and Tk.  Snit is a pure tcl library, and it
+  allows me to write plain types and user interface widgets that adapt
+  simpler components to more complicated structures.
+
 * Third abstraction
 **  Looking at the frequency control we have multiple frequency setting
     controls and multiple frequency display controls.
@@ -99,5 +177,12 @@
     to keep each notch centered on a specific interferer.
 ** How should all of these work together?
 *** The frequency tuned is a combination of transverter, local oscillator,
-    and second LO offset.  In the simplest case we're looking at the Si570
-    frequency and an offset added in the dsp chain.
+    and second LO offset.  In the simplest case we're looking at the
+    Si570 frequency and an offset added in the dsp chain.  But that
+    immediately gets more complicated if we're tuning CW with a
+    specified offset, or tuning AM with a synchronous detector, both
+    of which introduce another frequency offset to manage.
+*** The key is to abstract the controller, which manages all these details
+    away from the UI components which specify the details and away
+    from the dsp components which implement the details, especially
+    since the exact set of details may be different 

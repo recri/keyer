@@ -53,7 +53,7 @@ static const double dtwo_pi = 2*3.14159265358979323846;		/* 2*pi */
 ** these functions are from dttsp/banal.h
 */
 #define MONDO 1e16
-#define BITSY 1e-16
+#define BITSY 1e-16		/* very close to 64bit machine epsilon at 1.11e-16 */
 #define KINDA 2.56e2
 
 static float sqrf(float x) { return (x * x); }
@@ -62,10 +62,11 @@ static float Log10P(float x) { return +10.0 * log10(x + BITSY); }
 static float Log10Q(float x) { return -10.0 * log10(x + BITSY); }
 static float dBP(float x) { return 20.0 * log10(x + BITSY); }
 static float DamPlus(float x0, float x1) { return 0.9995 * x0 + 0.0005 * x1; }
+static float cabs2f(float complex x) { return sqrf(crealf(x))+sqrf(cimagf(x)); }
 
 static double sqr(double x) { return (x * x); }
+static double cabs2(double complex x) { return sqr(creal(x))+sqr(cimag(x)); }
 
-static double cabs2f(float complex x) { return sqrf(crealf(x))+sqrf(cimagf(x)); }
 
 // round log2(n) up to integer
 static int npoof2(int n) { int i; for (i = 0, n -= 1; n > 0; i += 1, n >>= 1); return i; }
