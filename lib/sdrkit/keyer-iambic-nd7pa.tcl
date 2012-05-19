@@ -36,7 +36,7 @@ snit::type sdrkit::keyer-iambic-nd7pa {
     option -weights {1 3}
 
     option -in-ports {midi_in}
-    option -out-ports {out_i out_q}
+    option -out-ports {midi_out}
     option -in-options {-chan -note -wpm -dah -ies -swap}
     option -out-options {-chan -note -wpm -dah -ies -swap}
 

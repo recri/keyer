@@ -35,7 +35,7 @@ snit::type sdrkit::keyer-debounce {
     option -weights {1 3}
 
     option -in-ports {midi_in}
-    option -out-ports {out_i out_q}
+    option -out-ports {midi_out}
     option -in-options {-chan -note -freq -gain -rise -fall}
     option -out-options {}
 

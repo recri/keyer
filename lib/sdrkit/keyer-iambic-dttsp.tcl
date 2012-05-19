@@ -36,7 +36,7 @@ snit::type sdrkit::keyer-iambic-dttsp {
     option -weights {1 3}
 
     option -in-ports {midi_in}
-    option -out-ports {out_i out_q}
+    option -out-ports {midi_out}
     option -in-options {-chan -note -word -wpm -day -ies -ils -iws -swap -alsp -awsp -mode}
     option -out-options {-chan -note -word -wpm -day -ies -ils -iws -swap -alsp -awsp -mode}
 

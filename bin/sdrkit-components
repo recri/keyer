@@ -52,9 +52,9 @@ exec [file join $bin keyer-ptt] &
 exec [file join $bin keyer-tone] &
 exec [file join $bin sdrkit-lo-mixer] &
 # [ ] - sdrkit-mixer
-# [ ] - sdrkit-modul-am
-# [ ] - sdrkit-modul-fm
-# [ ] - sdrkit-modul-ssb
+exec [file join $bin sdrkit-modul-am] &
+exec [file join $bin sdrkit-modul-fm] &
+exec [file join $bin sdrkit-modul-ssb] &
 exec [file join $bin sdrkit-noise] &
 exec [file join $bin sdrkit-oscillator] &
 #
@@ -98,3 +98,12 @@ exec [file join $bin keyer-detime] &; # actually a meter component
 # [-] - sdrkit-jack-ctl
 # [-] - sdrkit-jack
 # [-] - sdrkit-usb
+
+#
+# and some components are composites of other components
+#
+exec [file join $bin keyer] &
+exec [file join $bin keyer-iambic] &
+exec [file join $bin sdrkit-signal-generator] &
+exec [file join $bin sdrkit-iq-unbalance] &
+exec [file join $bin sdrkit-iq-source] &

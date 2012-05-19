@@ -67,21 +67,21 @@ snit::type sdrkit::keyer-ptt-mute {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	foreach opt {chan note} title {{Midi Channel} {Midi Note}} min {1 0} max {16 127} {
-	    ttk::label $w.l-$opt -text $title -anchor e
-	    ttk::spinbox $w.s-$opt -width 3 -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+	foreach {opt type format min max} {
+	    chan spinbox {Midi Channel} 1 16
+	    note spinbox {Midi Note} 0 127
+	    gain scale {Gain %.1f dBFS} -200 200
+	} {
+	    set data(format-$opt) $format
+	    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+	    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+	    switch $type {
+		spinbox { ttk::spinbox $w.s-$opt -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt] }
+		scale { ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)] }
+	    }
 	    grid $w.l-$opt $w.s-$opt -sticky ew
 	}
-
-	foreach opt {gain} {
-	    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -width 10 -anchor e
-	    ttk::scale $w.s-$opt -from 0.1 -to 10 -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
-	    $self Set -$opt $options(-$opt)
-	    grid $w.l-$opt $w.s-$opt -sticky ew
-	}
-
 	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    puts "grid columnconfigure $pw $col -minsize $ms -weight $wt"
 	    grid columnconfigure $pw $col -minsize $ms -weight $wt
 	}
     }

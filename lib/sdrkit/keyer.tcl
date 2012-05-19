@@ -27,7 +27,7 @@ package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
-snit::type sdrkit::iq-unbalance {
+snit::type sdrkit::keyer {
     option -name keyer
     option -title {Keyer}
     option -in-ports {midi_in}
@@ -77,7 +77,12 @@ snit::type sdrkit::iq-unbalance {
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
-	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
+	    set ports1 [$options(-component) $ports1 $name1]
+	    set ports2 [$options(-component) $ports2 $name2]
+	    if {[llength $ports1] != [llength $ports2]} {
+		puts "need to match $ports1 to $ports2"
+	    }
+	    foreach p1 $ports1 p2 $ports2 {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
 	}
