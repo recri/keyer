@@ -19,16 +19,14 @@
 # 
 
 #
-# a noise generator
+# an iambic keyer component by ad5dz
 #
 
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::noise
+package require sdrkit::keyer-iambic-ad5dz
 package require sdrkit::component
 
-namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-noise -window {} -subsidiary sdrkit::noise -name sdr-noise {*}$argv
+sdrkit::component ::sdrkit -window {} -name keyer-iambic-ad5dz -subsidiary sdrkit::keyer-iambic-ad5dz {*}$argv

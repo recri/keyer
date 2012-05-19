@@ -30,78 +30,12 @@ lappend auto_path [file join [file dirname $script] .. lib]
 # require Tk for graphical UI and communications
 #
 package require Tk
-package require sdrtk::clabelframe
 
-#
-# on the fly implementation of control interface
-#
-package require snit
+package require sdrkit::component
+package require sdrkit::iq-source
 
-namespace eval sdrkit {}
+namespace eval sdrkitv {}
 
-snit::type sdrkit::iq-source {
-    option -server -default default -readonly true
-    option -name -default sdr-src -readonly true
-    option -control -default {} -readonly true
-    option -title -default {IQ Source} -readonly true
-    option -minsizes -default {100 200} -readonly true
-    option -weights -default {1 3} -readonly true
-
-
-    variable data -array {
-    }
-
-    constructor {args} {
-	$self configure {*}$args
-
-	tk appname $options(-name)
-	wm title . $options(-title)
-
-	foreach {name title command} [$self Components] {
-	    grid [sdrtk::clabelframe .$name -label $title] -sticky ew
-	    grid [ttk::checkbutton .$name.enable -text Enable -variable [myvar data($name-enable)] -command [mymethod Set enable $name]] -sticky w
-	    set data($name-enable) 0
-	    grid [frame .$name.container -container true]
-	    set cmd [list \
-			 [file join [file dirname $::script] [lindex $command 0]] \
-			 -use [winfo id .$name.container] \
-			 -- \
-			 {*}[lrange $command 1 end] \
-			 -server $options(-server) \
-			 -name $options(-name)-$name \
-			 -control $options(-name) \
-			 -minsizes $options(-minsizes) \
-			 -weights $options(-weights) \
-			]
-		     set data($name-pid) [exec {*}$cmd &]
-	}
-	grid columnconfigure . 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-    }
-    destructor {
-	foreach {name title command} [$self Components] {
-	    catch {send $options(-name)-$name ::sdrkit destroy}
-	}
-    }
-    method Components {} {
-	lappend components sg {Signal Generator} {sdrkit-signal-generator -n-osc 4}
-	lappend components iq "IQ Imbalance" sdrkit-iq-unbalance
-	return $components
-    }
-    method Configure {opt val} {
-	set options($opt) $val
-	switch -- $opt {
-	    default {}
-	}
-    }
-    method {Set enable} {name} {
-	if {$data($name-enable)} {
-	    send $options(-name)-$name ::sdrkit configure -enable 1 -activate 1
-	} else {
-	    send $options(-name)-$name ::sdrkit configure -activate 0 -enable 0
-	}
-    }
-}
-
-sdrkit::iq-source ::sdrkit {*}$argv
+sdrkit::component sdrkitv::iq-source -window {} -name sdr-iq-src -subsidiary sdrkit::iq-source {*}$argv
 
 

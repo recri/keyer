@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,17 +17,18 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# a noise generator
-#
+package provide sdrkit::comm 1.0.0
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package require comm
 
-package require Tk
-package require sdrkit::noise
-package require sdrkit::component
+namespace eval sdrkit {}
+namespace eval sdrkit::comm {}
 
-namespace eval sdrkitv {}
+proc sdrkit::comm::send {target args} {
+    return [comm::comm send {*}$target {*}$args]
+}
 
-sdrkit::component ::sdrkitv::sdr-noise -window {} -subsidiary sdrkit::noise -name sdr-noise {*}$argv
+proc sdrkit::comm::wrap {command} {
+    return [list [comm::comm self] {*}$command]
+}
+

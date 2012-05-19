@@ -117,7 +117,7 @@ snit::widget sdrui::spectrum {
     component control
 
     # imported for here and display
-    option -rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-display
+    option -sample-rate -default 48000 -type sdrtype::sample-rate -configuremethod Opt-display
 
     # from here for here to time updates
     option -period -default 200 -type sdrtype::milliseconds
@@ -169,7 +169,7 @@ snit::widget sdrui::spectrum {
 	size -1
 	frequencies {}
 	capture-options {-polyphase -size -result}
-	display-options { -rate -min -max -zoom -pan -smooth -multi -mode -freq -lo-freq -cw-freq -carrier-freq -low -high }
+	display-options { -sample-rate -min -max -zoom -pan -smooth -multi -mode -freq -lo-freq -cw-freq -carrier-freq -low -high }
 	waterfall-options { -pal }
 	capture-ports {}
 	capture-pairs {}
@@ -181,7 +181,7 @@ snit::widget sdrui::spectrum {
     constructor {args} {
 	#puts "spectrum constructor {$args}"
 	set options(-server) [from args -server [::radio cget -server]]
-	set options(-rate) [from args -rate [sdrtcl::jack -server $options(-server) sample-rate]] 
+	set options(-sample-rate) [from args -sample-rate [sdrtcl::jack -server $options(-server) sample-rate]] 
 
 	$self configure {*}$args
 
@@ -460,9 +460,9 @@ snit::widget sdrui::spectrum {
 		if {[llength $data(frequencies)] != $n} {
 		    #puts "recomputing frequencies for length $n from [llength $data(frequencies)]"
 		    set data(frequencies) {}
-		    set maxf [expr {$options(-rate)/2.0}]
+		    set maxf [expr {$options(-sample-rate)/2.0}]
 		    set minf [expr {-$maxf}]
-		    set df [expr {double($options(-rate))/$n}]
+		    set df [expr {double($options(-sample-rate))/$n}]
 		    for {set i 0} {$i < $n} {incr i} {
 			lappend data(frequencies) [expr {$minf+$i*$df}]
 		    }

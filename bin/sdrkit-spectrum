@@ -19,7 +19,12 @@
 # 
 
 #
-# an sdrkit spectrum with embeddable controls
+# a spectrum component
+#
+# not a pure component, a kind of meter with interactive feedbacks
+#
+# missing callbacks to adjust spectrum size to window width
+# it's a mess, and it isn't even calling back tuning events, yet
 #
 
 #
@@ -35,8 +40,10 @@ lappend auto_path [file join [file dirname $script] .. lib]
 # sdrui::tk-spectrum to draw the spectrum
 #
 package require Tk
+package require sdrtcl::jack
 package require sdrtcl::spectrum-tap
 package require sdrui::tk-spectrum
+package require sdrtk::radiomenubutton
 
 #
 # on the fly implementation of control interface
@@ -46,18 +53,24 @@ package require snit
 namespace eval sdrkit {}
 
 snit::type sdrkit::spectrum {    
-    option -server -default default -readonly true
-    option -name -default sdr-gain -readonly true
-    option -minsizes -default {100 200} -readonly true
-    option -weights -default {1 3} -readonly true
-    option -control -default {} -readonly true
+    option -server -default default -readonly true;	# jack server
+    option -name -default sdr-spectrum -readonly true;	# jack client and sdrkit module name
+    option -control -default {} -readonly true;		# sdrkit controller
+    option -window -default {} -readonly true;		# root window for ui controls
+    option -minsizes -default {100 200} -readonly true;	# grid layout for ui controls
+    option -weights -default {1 3} -readonly true;	# grid layout for ui controls
+    option -no-window -default false -readonly true;	# do not make ui controls
     option -enable -default 1 -configuremethod Configure
     option -activate -default 1 -configuremethod Configure
+
+    option -period -default 100 -configuremethod Configure
 
     option -size -default 1024 -configuremethod TapConfigure
     option -polyphase -default 1 -configuremethod TapConfigure
     option -result -default dB -configuremethod TapConfigure
+    option -tap -default {} -configuremethod TapConfigure
 
+    option -sample-rate -default 48000 -configuremethod TkConfigure
     option -pal -default 0 -configuremethod TkConfigure
     option -max -default 0 -configuremethod TkConfigure
     option -min -default -160 -configuremethod TkConfigure
@@ -79,19 +92,27 @@ snit::type sdrkit::spectrum {
     option -high -default 800 -configuremethod Retune
 
     variable data -array {
-	sample-rate 48000
+	tap-deferred-opts {}
+	after {}
+	frequencies {}
     }
 
     constructor {args} {
+	set options(-server) [from args -server default]
+	set options(-sample-rate) [sdrtcl::jack -server $options(-server) sample-rate]
 
 	$self configure {*}$args
 
-	wm title . $options(-name)
-	tk appname $options(-name)
+	if {$options(-window) eq {} && ! $options(-no-window)} {
+	    wm title . $options(-name)
+	    tk appname $options(-name)
+	}
 
-	toplevel .spectrum-$options(-name)
-	pack [sdrui::tk-spectrum .spectrum-$options(-name) {*}[TkOptions]] -side top -fill both -expand true
-	sdrtcl::spectrum-tap $options(-name) -server $options(-server) {*}[TapOptions]
+	set data(display) .spectrum-$options(-name)
+	toplevel $data(display)
+	append data(display) .s
+	pack [sdrui::tk-spectrum $data(display) {*}[$self TkOptions]] -side top -fill both -expand true
+	sdrtcl::spectrum-tap $options(-name) {*}[$self TapOptions]
 
 	if {$options(-control) ne {}} {
 	    set options(-enable) 0
@@ -103,7 +124,10 @@ snit::type sdrkit::spectrum {
 	    if { ! [$options(-name) is-active]} { $options(-name) activate }
 	}
 
-	$self BuildUI .
+	if {! $options(-no-window)} {
+	    $self BuildUI $options(-window)
+	}
+	set data(after) [after $options(-period) [mymethod Update]]
     }
     destructor {
 	catch {after cancel $data(after)}
@@ -111,6 +135,21 @@ snit::type sdrkit::spectrum {
 	catch {$options(-name) deactivate}
 	catch {rename $options(-name) {}}
     }
+
+    method TapOptions {} {
+	foreach opt {-server -size -polyphase -result} {
+	    lappend opts $opt $options($opt)
+	}
+	return $opts
+    }
+
+    method TkOptions {} {
+	foreach opt {-sample-rate -pal -max -min -smooth -multi -zoom -pan -mode -freq -lo-freq -cw-freq -carrier-freq -low -high} {
+	    lappend opts $opt $options($opt)
+	}
+	return $opts
+    }
+    
     method Configure {opt val} {
 	set options($opt) $val
 	switch -- $opt {
@@ -118,13 +157,93 @@ snit::type sdrkit::spectrum {
 	    default {}
 	}
     }
+    method TapConfigure {opt val} {
+	lappend data(tap-deferred-opts) $opt $val
+    }
+    method TkConfigure {opt val} {
+	set options($opt) $val
+	.spectrum-$options(-name) configure $opt $val
+    }
+
+    method Tap-is-busy {} {
+	return [lindex [$options(-name) modified] 1]
+    }
+
+    method UpdateFrequencies {} {
+	#puts "recomputing frequencies for length $n from [llength $data(frequencies)]"
+	set data(frequencies) {}
+	set maxf [expr {$options(-sample-rate)/2.0}]
+	set minf [expr {-$maxf}]
+	set df [expr {double($options(-sample-rate))/$options(-size)}]
+	for {set i 0} {$i < $options(-size)} {incr i} {
+	    lappend data(frequencies) [expr {$minf+$i*$df}]
+	}
+	#puts "recomputed [llength $data(frequencies)] frequencies"
+    }
+
+    method BlankUpdate {} {
+	if {[llength $data(frequencies)] != $options(-size)} {
+	    $self UpdateFrequencies
+	}
+	foreach x $data(frequencies) {
+	    lappend xy $x $options(-min)
+	}
+	$data(display) update $xy
+	# start the next
+	set data(after) [after $options(-period) [mymethod Update]]
+    }
+    
+    method Update {} {
+	if {[$self Tap-is-busy]} {
+	    # if busy, then supply a blank
+	    $self BlankUpdate
+	    # finished
+	    return
+	}
+	# handle configuration
+	if {$data(tap-deferred-opts) ne {}} {
+	    set config $data(tap-deferred-opts)
+	    set data(tap-deferred-opts) {}
+	    #puts "Update configure $config"
+	    $capture configure {*}$config
+	    # supply a blank
+	    $self BlankUpdate
+	    # finished
+	    return
+	}
+	# if not active
+	if { ! [$options(-name) is-active]} {
+	    # supply a blank
+	    $self BlankUpdate
+	    # finished
+	    return
+	}
+	# capture spectrum and pass to display
+	lassign [$options(-name) get] frame dB
+	binary scan $dB f* dB
+	#puts "Update capture got $n bins"
+	if {[llength $data(frequencies)] != $options(-size)} {
+	    $self UpdateFrequencies
+	}
+	foreach x $data(frequencies) y [concat [lrange $dB [expr {$options(-size)/2}] end] [lrange $dB 0 [expr {$options(-size)/2-1}]]] {
+	    lappend xy $x $y
+	}
+	#puts "$xy"
+	$data(display) update $xy
+	
+	# start the next
+	set data(after) [after $options(-period) [mymethod Update]]
+    }
+    
     method BuildUI {w} {
-	# spectrum fft size control
-	lassign {[sdrtype::spec-size cget -values] {}} values labels
+	# no spectrum source tap control
+	
+	# spectrum fft size control, use scale?
+	lassign [list [sdrtype::spec-size cget -values] {}] values labels
 	foreach x $values { lappend labels "size $x" }
 	sdrtk::radiomenubutton $w.size -defaultvalue $options(-size) -values $values -labels $labels \
 	    -variable [myvar options(-size)] -command [mymethod Set -size]
-
+	
 	# polyphase spectrum control
 	lassign { {1 2 4 8 16 32} {} } values labels
 	foreach x $values { lappend labels [expr {$x==1?{no polyphase}:"polyphase $x"}] }
@@ -136,50 +255,48 @@ snit::type sdrkit::spectrum {
 	foreach x $values { lappend labels "multi $x" }
 	sdrtk::radiomenubutton $w.multi -defaultvalue $options(-multi) -values $values -labels $labels \
 	    -variable [myvar options(-multi)] -command [mymethod Set -multi]
-
+	
 	# waterfall palette control
 	lassign { {0 1 2 3 4 5} {} } values labels
 	foreach x $values { lappend labels "palette $x" }
 	sdrtk::radiomenubutton $w.palette -defaultvalue $options(-pal) -values $values -labels $labels \
 	    -variable [myvar options(-pal)] -command [mymethod Set -pal]
-
-	# waterfall/spectrum min dB
-	lassign { {-160 -150 -140 -130 -120 -110 -100 -90 -80} {} } values labels
-	foreach x $values { lappend labels "min $x dB" }
+	
+	# waterfall/spectrum min dB, use scale?
+	lassign { {} {} } values labels
+	for {set x 0} {$x >= -80} {incr x -10} { lappend values $x; lappend labels "min $x dB" }
 	sdrtk::radiomenubutton $w.min -defaultvalue $options(-min) -values $values -labels $labels \
 	    -variable [myvar options(-min)] -command [mymethod Set -min]
 	
-	# waterfall/spectrum max dB
-	lassign { {0 -10 -20 -30 -40 -50 -60 -70 -80} {} } values labels
+	# waterfall/spectrum max dB, use scale?
+	lassign { {} {} } values labels
+	for {set x -80} {$x >= -160} {incr x -10} { lappend values $x; lappend labels "max $x dB" }
 	foreach x $values { lappend labels "max $x dB" }
 	sdrtk::radiomenubutton $w.max -defaultvalue $options(-max) -values $values -labels $labels \
 	    -variable [myvar options(-max)] -command [mymethod Set -max]
 	
-	# zoom in/out
+	# zoom in/out, use scale?
 	lassign { {1 2.5 5 10 25 50 100} {} } values labels
 	foreach x $values { lappend labels "zoom $x x" }
 	sdrtk::radiomenubutton $w.zoom -defaultvalue $options(-zoom) -values $values -labels $labels \
 	    -variable [myvar options(-zoom)] -command [mymethod Set -zoom]
 	
-	# scroll/pan
+	# pan left/right
+	
+	# assemble grid
+	grid $w.size $w.polyphase -sticky ew
+	grid $w.multi $w.palette -sticky ew
+	grid $w.min $w.max -sticky ew
+	grid $w.zoom -sticky ew
+	grid columnconfigure [winfo parent $w.zoom] 0 -weight 1
+	grid columnconfigure [winfo parent $w.zoom] 1 -weight 1
     }
-
+    
     method {Set gain} {v} {
 	$options(-name) configure -gain $v
 	set data(gain-label) [format {%.1f dBFS} $v]
     }
 }
 
-sdrkit::gain ::sdrkit {*}$argv
+sdrkit::spectrum ::sdrkit -window {} {*}$argv
 
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
-
-package require sdrui::spectrum
-
-proc main {argv} {
-    pack [::sdrui::spectrum .p {*}$argv] -fill both -expand true
-    wm title . sdrkit:spectrum
-}
-
-main $argv

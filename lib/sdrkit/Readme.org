@@ -1,0 +1,194 @@
+* Revised, revised basic application architecture
+  The basic issues that we're dealing with in these revisions.
+** Simple components are easy to build and test.
+   They do one thing as fast as they can.  Their code is as simple as
+   the computation requires.
+** They need to be activated and deactivated as required.
+   An active Jack component is always processing samples and consuming
+   CPU resources, even if it isn't connected.  They should be only
+   activated when needed.
+** They need to be connected together into useful composites.
+** Composites need to connect jack ports between active components.
+   This allows the flow of samples to proceed from ulimate source to
+   ultimate sinks.  Jack port connections only exist between activated
+   components, so the connections need to be created when components
+   are activated and they are lost when the components are deactivated.
+** Composites need to connect option settings between active components.
+   An option selected in one UI component may need to update multiple
+   other UI components.
+   A selected option may affect multiple dsp components.
+   A selected option may be synthetic, not directly controlling any
+   dsp component, but indirectly affecting several.
+** Composites may need to switch between different connection sets.
+   When a radio switches between receive and transmit, for instance.
+* First we had free form scripts
+   which had to do all the option and jack port connections on their
+   own.
+* Second we had separate sdrdsp, sdrui, and sdrctl directories
+   which automated option and port connections, but scattered the
+   logic over multiple directories and required massive efforts on my
+   part to remember how things were supposed to fit together.
+   Not good.
+* Third, fold things back together and make a memorable pattern
+** ./component.tcl::sdrkit::component defines the interface
+   between components and the controller
+** components may be of various types.
+*** dsp components which crunch samples
+*** midi components which crunch events
+*** composite components which organize other components
+*** tap components which simply identify points in the computation graph
+*** meter components which observe samples or events and report
+*** control components which synthesize option value reports from options    
+** components can implement a UI of last resort
+*** A UI which exposes all details, even those of no intrinsic interest.
+*** A UI which allows meddling at levels which should be left alone.
+*** A UI which should be ignored, except as a last resort.
+** The wrappers are currently named according to the sdrtcl component name
+   but it might be better to distinguish them by a prefix to keep this
+   directory better organized.
+   But I haven't found a prefix I like, yet.
+** The base component wrapper is intended to run in four contexts
+   It's very convenient to be able to fire off instances of components
+   as a processes in themselves and then wire them together in jackctl.
+*** As a standalone component.
+    These start activated and are suitable for wiring with qjackctl,
+    there is no automatic option mapping or port connection.
+    The script bin/sdrkit-gain, run by itself, is a simple example of
+    a standalone component.  It starts as a solitary process, makes an
+    sdrtcl::gain component, and presents a slider that controls the
+    gain.
+*** As an embedded standalone component.
+    These start with a -control option specified, so the component
+    starts in a deactivated state.
+    This is the same as the previous with the addition of a -control
+    option, which will handle option and port connection.
+    The window is embedded with the Tk -use and -container options.
+    The component runs as a separate process, but it is embedded
+    inside a controlling process.
+    The control communication uses the Tk send command to pass control
+    information between applications via the X server.
+    This is how the sdrkit-signal-generator and sdrkit-iq-unbalance
+    applications are implemented.
+*** As a hosted component.
+    This is the same as the previous, except that the component runs
+    inside the hosting process, builds its windows inside a supplied
+    window frame, and communicates via local controls.
+*** As a scripted component.
+    This is the same as the previous, but there is no UI window.
+* Architecture
+  An sdrkit application works like this.
+** Components
+*** There are any number of components involved.
+    Some perform DSP computations,
+    some process midi streams,
+    some manage groups of other components.
+*** ./component.tcl::sdrkit::component is the outer wrapper
+    around each component.
+*** There is one instance of sdrkit::component running
+    for each component started.
+*** It is responsible for adapting the component to the controller.
+** Control
+*** There is one controller for the application
+*** ./control.tcl::sdrkit::control is the controller.
+*** It is responsible for adapting components to components.    
+* Control details
+** There is one instance of control.tcl::sdrkit::control running per application. 
+   It is responsible for the following 
+*** registering components
+    Each component has a unique name, ideally related to what it does
+    and hierarchically constructed to allow the overall graph of names
+    to be neatly folded and unfolded.
+    The component supplies a callback method as part of its
+    registration.
+*** distinguishing local and remote components
+    The callback method may be directly callable Tcl proc, located in
+    the same interpreter process as the controller, or it may be a
+    remote call to another interpreter using the tcllib comm package
+    for RPC.
+*** registering component options
+    Each component specifies which option values it can supply and
+    which it can implement.
+    A base component is both a user interface and an implementation of
+    the computation that the interface controls.  The user interface
+    controls the computation directly, but can also supply the values
+    being specified or accept externally chosen values.
+*** registering component ports
+    Each component specifies which Jack ports it listens to and which
+    it talks to.
+    The ports don't actually exist until the component is activated.
+    The ports may be even more virtual, in the sense that they never
+    become real Jack ports, they simply mark a location in the
+    processing chain that may be connected to.
+*** registering connections
+    Each component is fairly agnostic about what it's connected to,
+    but the composites that construct larger computational modules and
+    applications have definite ideas about how things connect.  They
+    specify the connectivity between component option values and
+    between component ports.
+*** delivering option value reports
+    Each component will report when its option values are altered, the
+    control will relay those reports to the components that have been
+    registered as connected to the reported options.
+*** keeping track of component state
+**** A component has a state which may be disabled or enabled.
+     This is usually managed by a composite component rather than the
+     component itself, and maintained by the controller.
+**** Any component may be configured and queried for its option values.
+**** Any component may be rewired in its option connections
+**** Any component may be rewired in its port connections     
+**** If an enabled component is activated, then there may be a delay
+     in implementing option value changes.
+**** A disabled component may be enabled at any time.
+**** An enabled component may be disabled at any time.
+*** keeping track of component activation
+**** An enabled component may be activated at any time.
+**** Activating a component activates all enabled sub-components as a group
+     and creation of all the port connections between all activated
+    components.
+**** Enabling a component inside an activated group will activate the component
+     and rewire the port connections to include it in the ongoing computation.
+**** Disabling a component inside an activated group will deactivate the component
+     and rewire the port connections to exclude it from the ongoing
+     computation.
+**** Disabled components in an activated group act as wires
+     connecting the active components upstream to active components
+     downstream in the computation.
+* Component types
+  There are several possible component types.  The type is not
+  explicitly recorded anywhere, it is implemented by the wrapper which
+  ::sdrkit::component calls to implement the component.
+** jack components
+   Jack components register a Jack process callback that processes
+   audio samples and/or midi events when the component is activated.
+   Jack components are realized by sdrtcl::component factories.
+   Jack components have three layers.
+   Suppose we want an sdrtcl::gain component to control the receiver
+   audio gain.  We'll probably give this component the name
+   "rx-af-gain" to distinguish it from other gain controls.
+   The sdrtcl::gain component will be created as the Tcl
+   command ::sdrkitx::rx-af-gain.
+   The wrapper around that will come from sdrkit/gain.tcl, and it
+   will be created as the Tcl command ::sdrkitw::rx-af-gain.
+   The wrapper around that will come from sdrkit/component.tcl and
+   it will created as the Tcl command ::sdrkitv::rx-af-gain.
+** composite components
+   Composite components start subcomponents and wire them up into
+   useful groups.  The signal-generator composite creates a
+   oscillators and noise sources and connects them to a master gain
+   output.  The iq-unbalancer composite wires up various I/Q
+   mangling components in a pipeline.  The radio composites wire up
+   all the components of a radio into a working whole.
+   Composites have options which allow different parts or
+   combinations of parts to be enabled, disabled, or controlled in
+   concert.  Thus the radio-rx-mode composite will arrange to change
+   the demodulation component, the band pass filter width and
+   center, the local oscillator offset, the noise limiter
+   implementation, and the overall tuning indicator to be consistent
+   with receiving the specified mode.
+** meter components
+   Some components do not actively participate in the DSP
+   computation, they simply observe and report or observe and
+   adjust.
+** source components
+   Some components participate by injecting signals into the DSP
+   computation.

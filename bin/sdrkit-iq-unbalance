@@ -18,91 +18,15 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-
-#
-# find the script file
-# and add the lib directory to the automatic package search path
-#
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-#
-# require Tk for graphical UI and communications
-#
 package require Tk
-package require sdrtk::clabelframe
-
-#
-# on the fly implementation of control interface
-#
 package require snit
 
-namespace eval sdrkit {}
+package require sdrkit::component
+package require sdrkit::iq-unbalance
 
-snit::type sdrkit::iq-unbalance {
-    option -server -default default -readonly true
-    option -name -default sdr-iqu -readonly true
-    option -control -default {} -readonly true
-    option -enable -default 1 -configuremethod Configure
-    option -activate -default 1 -configuremethod Configure
-    option -title -default {IQ Unbalancer} -readonly true
-    option -minsizes -default {100 200} -readonly true
-    option -weights -default {1 3} -readonly true
+namespace eval sdrkitv {}
 
-    variable data -array {
-    }
-
-    constructor {args} {
-	$self configure {*}$args
-
-	tk appname $options(-name)
-	wm title . $options(-title)
-
-	foreach {name title command} [$self Components] {
-	    grid [sdrtk::clabelframe .$name -label $title] -sticky ew
-	    grid [ttk::checkbutton .$name.enable -text Enable -variable [myvar data($name-enable)] -command [mymethod Set enable $name]] -sticky w
-	    set data($name-enable) 0
-	    grid [frame .$name.container -container true]
-	    set cmd [list \
-			 [file join [file dirname $::script] $command] \
-			 -use [winfo id .$name.container] \
-			 -- \
-			 -server $options(-server) \
-			 -name $options(-name)-$name \
-			 -control $options(-name) \
-			 -minsizes $options(-minsizes) \
-			 -weights $options(-weights) \
-			]
-		     set data($name-pid) [exec {*}$cmd &]
-	}
-	grid columnconfigure . 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-    }
-    destructor {
-	foreach {name title command} [$self Components] {
-	    catch {send $options(-name)-$name ::sdrkit destroy}
-	}
-    }
-    method Components {} {
-	lappend components swap {IQ Swap} sdrkit-iq-swap
-	lappend components delay "IQ Delay" sdrkit-iq-delay
-	lappend components balance "IQ Balance" sdrkit-iq-balance
-	return $components
-    }
-    method Configure {opt val} {
-	set options($opt) $val
-	switch -- $opt {
-	    default {}
-	}
-    }
-    method {Set enable} {name} {
-	if {$data($name-enable)} {
-	    send $options(-name)-$name ::sdrkit configure -enable 1 -activate 1
-	} else {
-	    send $options(-name)-$name ::sdrkit configure -activate 0 -enable 0
-	}
-    }
-}
-
-sdrkit::iq-unbalance ::sdrkit {*}$argv
-
-
+sdrkit::component ::sdrkitv::sdr-iq-unbalance -window {} -name sdr-iq-unbalance -subsidiary sdrkit::iq-unbalance {*}$argv

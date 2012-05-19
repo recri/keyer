@@ -19,85 +19,16 @@
 # 
 
 #
-# an sdrkit embeddable iq-swap component
+# an iq-swap component
 #
 
-#
-# find the script file
-# and add the lib directory to the automatic package search path
-#
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-#
-# require Tk for graphical UI and communications
-# sdrtcl::iq-swap to implement the component
-#
 package require Tk
-package require sdrtcl::iq-swap
+package require sdrkit::iq-swap
+package require sdrkit::component
 
-#
-# on the fly implementation of control interface
-#
-package require snit
+namespace eval sdrkitv {}
 
-namespace eval sdrkit {}
-
-snit::type sdrkit::iq-swap {    
-    option -server -default default -readonly true
-    option -sample-rate -default 0 -readonly true
-    option -name -default sdr-iq-swap -readonly true
-    option -minsizes -default {100 200} -readonly true
-    option -weights -default {1 3} -readonly true
-    option -control -default {} -readonly true
-    option -enable -default 1 -configuremethod Configure
-    option -activate -default 1 -configuremethod Configure
-
-    option -swap -default 0 -configuremethod Configure
-
-    variable data -array {
-    }
-
-    constructor {args} {
-
-	$self configure {*}$args
-
-	wm title . $options(-name)
-	tk appname $options(-name)
-
-	sdrtcl::iq-swap $options(-name) -server $options(-server)
-
-	if {$options(-control) ne {}} {
-	    set options(-enable) 0
-	    set options(-activate) 0
-	    if {[$options(-name) is-active]} { $options(-name) deactivate }
-	} else {
-	    set options(-enable) 1
-	    set options(-activate) 1
-	    if { ! [$options(-name) is-active]} { $options(-name) activate }
-	}
-
-	set data(pi) [tcl::mathfunc::atan2 0 -1]
-
-	ttk::checkbutton .swap -text {Swap} -variable [myvar options(-swap)] -command [mymethod Set swap]
-	grid .swap -sticky ew 
-
-	grid columnconfigure . 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
-    }
-    destructor {
-	catch {$options(-name) deactivate}
-	catch {rename $options(-name) {}}
-    }
-    method Configure {opt val} {
-	set options($opt) $val
-	switch -- $opt {
-	    -activate { $options(-name) [expr {$val?{activate}:{deactivate}}] }
-	    -swap { $options(-name) configure $opt $val }
-	}
-    }
-    method {Set swap} {} {
-	$options(-name) configure -delay $options(-swap)
-    }
-}
-
-sdrkit::iq-swap ::sdrkit {*}$argv
+sdrkit::component ::sdrkitv::sdr-iq-swap -window {} -name sdr-iq-swap -subsidiary sdrkit::iq-swap {*}$argv

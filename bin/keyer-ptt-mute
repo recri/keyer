@@ -19,16 +19,14 @@
 # 
 
 #
-# a noise generator
+# an audio mute switched by a midi signal
 #
 
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::noise
+package require sdrkit::keyer-ptt-mute
 package require sdrkit::component
 
-namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-noise -window {} -subsidiary sdrkit::noise -name sdr-noise {*}$argv
+sdrkit::component ::sdrkit -window {} -name keyer-ptt-mute -subsidiary sdrkit::keyer-ptt-mute {*}$argv

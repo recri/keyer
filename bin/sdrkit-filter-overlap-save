@@ -19,16 +19,16 @@
 # 
 
 #
-# a noise generator
+# an overlap save filter component
 #
 
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require sdrkit::noise
+package require sdrkit::filter-overlap-save
 package require sdrkit::component
 
 namespace eval sdrkitv {}
 
-sdrkit::component ::sdrkitv::sdr-noise -window {} -subsidiary sdrkit::noise -name sdr-noise {*}$argv
+sdrkit::component ::sdrkitv::sdr-ovsv -window {} -name sdr-ovsv -subsidiary sdrkit::filter-overlap-save {*}$argv

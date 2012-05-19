@@ -22,6 +22,8 @@
 ## via [sdrtype::<enum-type> cget -values]
 ## or [sdrtype::<range-type> cget -min/-max]
 ##
+## some of the limits depend on the sample rate.
+##
 package provide sdrtype::types 1.0.0
 
 package require snit
@@ -29,19 +31,37 @@ package require snit
 snit::enum	sdrtype::type		-values {none ctl dsp jack ui hw}
 
 snit::enum	sdrtype::mode		-values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}
+
 snit::enum	sdrtype::agc-mode	-values {off long slow medium fast}
+snit::double	sdrtype::agc-target	-min 0.1 -max 10;	# target level, linear gain
+snit::double	sdrtype::agc-attack	-min 1 -max 4;		# attack time in ms
+snit::double	sdrtype::agc-decay	-min 100 -max 2000;	# decay time in ms
+snit::double	sdrtype::agc-slope	-min 0.5 -max 2;	# slope, as in y = slope * x + intercept
+snit::double	sdrtype::agc-hang	-min 50 -max 1000;	# hang time in ms
+snit::double	sdrtype::agc-fasthang	-min 50 -max 200;	# fast hang time in ms
+snit::double	sdrtype::agc-max	-min 1 -max 1e5;	# max level
+snit::double	sdrtype::agc-min	-min 1e-5 -max 1;	# min level
+snit::double	sdrtype::agc-threshold	-min 0.25 -max 4;	# threshold level
+
+snit::double	sdrtype::constant-real
+snit::double	sdrtype::constant-imag
+
+# filter-overlap-save - 
+
+
 snit::enum	sdrtype::leveler-mode	-values {off leveler}
 
 snit::enum	sdrtype::iambic		-values {none ad5dz dttsp nd7pa}
 snit::boolean	sdrtype::debounce
-snit::double	sdrtype::debounce-period
-snit::integer	sdrtype::debounce-steps	-min 1 -max 32
+snit::double	sdrtype::debounce-period -min 0.1 -max 50;	# period for switch state sampling in ms
+snit::integer	sdrtype::debounce-steps	-min 1 -max 32;		# number of consistent periods for debounced state change
 
-snit::boolean	sdrtype::iq-swap
-snit::enum	sdrtype::iq-delay	-values {-1 0 1}
-snit::double	sdrtype::iq-correct	-min -1e6 -max 1e6
-snit::double	sdrtype::sine-phase	-min -1.0 -max 1.0
-snit::double	sdrtype::linear-gain	-min 0.125 -max 8.0
+snit::boolean	sdrtype::iq-swap;				# true or false, swapped or not swapped
+
+snit::enum	sdrtype::iq-delay	-values {-1 0 1};	# delay I by one sample, no delay, or delay Q by one sample
+snit::double	sdrtype::iq-correct	-min -1e6 -max 1e6;	# the learning rate for the adaptive filter
+snit::double	sdrtype::sine-phase	-min -1.0 -max 1.0;	# 
+snit::double	sdrtype::linear-gain	-min 0.125 -max 8.0;	# 
 
 snit::double	sdrtype::gain		-min -200.0 -max 200.0; # gain in decibels
 snit::double	sdrtype::hertz

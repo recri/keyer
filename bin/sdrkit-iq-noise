@@ -19,89 +19,16 @@
 # 
 
 #
-# an sdrkit embeddable IQ coherent noise generator
+# an IQ coherent noise generator
 #
 
-#
-# find the script file
-# and add the lib directory to the automatic package search path
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-#
-# require Tk for graphical UI and communications
-# sdrtcl::noise to implement the noise generator
-#
 package require Tk
-package require sdrtcl::iq-noise
+package require sdrkit::iq-noise
+package require sdrkit::component
 
-#
-# on the fly implementation of control interface
-#
-package require snit
+namespace eval sdrkitv {}
 
-namespace eval sdrkit {}
-
-snit::type sdrkit::iq-noise {    
-    option -server -default default -readonly true
-    option -name -default sdr-iq-noise -readonly true
-    option -control -default {} -readonly true
-    option -minsizes -default {100 200} -readonly true
-    option -weights -default {1 3} -readonly true
-    option -enable -default 1 -configuremethod Configure
-    option -activate -default 1 -configuremethod Configure
-
-    option -level -default -30.0 -configuremethod Configure
-    option -min-level -default -160.0 -configuremethod Configure
-    option -max-level -default 0.0 -configuremethod Configure
-
-    variable data -array {
-	level-label {}
-    }
-
-    constructor {args} {
-	$self configure {*}$args
-
-	tk appname $options(-name)
-	wm title . $options(-name)
-	
-	sdrtcl::iq-noise $options(-name) -server $options(-server) -level $options(-level)
-
-	if {$options(-control) ne {}} {
-	    set options(-enable) 0
-	    set options(-activate) 0
-	    if {[$options(-name) is-active]} { $options(-name) deactivate }
-	} else {
-	    set options(-enable) 1
-	    set options(-activate) 1
-	    if { ! [$options(-name) is-active]} { $options(-name) activate }
-	}
-
-	ttk::label .level-l -textvar [myvar data(level-label)] -width 10 -anchor e
-	ttk::scale .level-s -from $options(-max-level) -to $options(-min-level) -command [mymethod Set level] -variable [myvar options(-level)]
-	$self Set level $options(-level)
-	grid .level-l .level-s -sticky ew
-
-	set col -1
-	foreach ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure . [incr col] -minsize $ms -weight $wt
-	}
-    }
-    destructor {
-	catch {$options(-name) deactivate}
-	catch {rename $options(-name) {}}
-    }
-    method Configure {opt val} {
-	set options($opt) $val
-	switch -- $opt {
-	    -activate { $options(-name) [expr {$val?{activate}:{deactivate}}] }
-	    default {}
-	}
-    }
-    method {Set level} {v} {
-	$options(-name) configure -level $v
-	set data(level-label) [format {%.1f dBFS} $v]
-    }
-}
-
-sdrkit::iq-noise ::sdrkit {*}$argv
+sdrkit::component ::sdrkitv::sdr-iq-noise -window {} -name sdr-iq-noise -subsidiary sdrkit::iq-noise {*}$argv

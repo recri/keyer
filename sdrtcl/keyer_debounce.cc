@@ -41,7 +41,7 @@ extern "C" {
 
   typedef struct {
 #include "framework_options_vars.h"    
-    float period;	  /* period of input sampling, seconds */
+    float period;	  /* period of input sampling, milliseconds */
     int steps;		  /* number of periods of stability desired */
   } options_t;
 
@@ -63,7 +63,7 @@ extern "C" {
     if (dp->modified) {
       dp->modified = 0;
       /* ptt recomputation */
-      dp->period_samples = dp->opts.period * sdrkit_sample_rate(dp);
+      dp->period_samples = dp->opts.period * sdrkit_sample_rate(dp) / 1000;
       dp->dopts.steps = dp->opts.steps;
       for (int i = 0; i < DEBOUNCE_N_NOTES; i += 1)
 	debouncer_configure(&dp->deb[i], &dp->dopts);
@@ -172,7 +172,7 @@ extern "C" {
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
     // debounce options
-    { "-period",  "period",  "Period",   "0.0002",  fw_option_float, fw_flag_none, offsetof(_t, opts.period), "key sampling period in seconds" },
+    { "-period",  "period",  "Period",   "0.0002",  fw_option_float, fw_flag_none, offsetof(_t, opts.period), "key sampling period in milliseconds" },
     { "-steps",   "steps",   "Steps",    "6",       fw_option_int,   fw_flag_none, offsetof(_t, opts.steps),  "number of consistent samples define stability" },
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };

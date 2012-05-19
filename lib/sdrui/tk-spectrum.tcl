@@ -24,8 +24,10 @@ package provide sdrui::tk-spectrum 1.0.0
 
 package require Tk
 package require snit
+package require sdrtype::types
 
 snit::widgetadaptor sdrui::tk-spectrum {
+    option -pal -default 0 -type sdrtype::spec-palette
     option -max -default 0 -type sdrtype::decibel -configuremethod Readjust
     option -min -default -160 -type sdrtype::decibel -configuremethod Readjust
 
@@ -33,8 +35,7 @@ snit::widgetadaptor sdrui::tk-spectrum {
 
     option -multi -default 1 -type sdrtype::multi -configuremethod Remulti
 
-    option -size -default width -type sdrtype::spec-size
-    option -rate -default 48000 -type sdrtype::sample-rate
+    option -sample-rate -default 48000 -type sdrtype::sample-rate
     option -zoom -default 1 -type sdrtype::zoom
     option -pan -default 0 -type sdrtype::pan
 
@@ -85,7 +86,7 @@ snit::widgetadaptor sdrui::tk-spectrum {
     }
 
     method HorizontalScale {tag} {
-	set xscale [expr {[winfo width $win]/double($options(-rate))}]
+	set xscale [expr {[winfo width $win]/double($options(-sample-rate))}]
 	set xoffset [expr {[winfo width $win]/2.0}]
 	$hull scale $tag 0 0 $xscale 1
 	$hull move $tag $xoffset 0
@@ -106,8 +107,8 @@ snit::widgetadaptor sdrui::tk-spectrum {
 	$hull create rectangle $data(filter-low) $options(-min) $data(filter-high) $options(-max) -fill $darker -outline $darker -tag grid
 	# carrier tuning line
 	$hull create line $data(tuned-freq) $options(-min) $data(tuned-freq) $options(-max) -fill red -tag {grid vgrid}
-	set lo [expr {-$options(-rate)/2.0}]
-	set hi [expr {$options(-rate)/2.0}]
+	set lo [expr {-$options(-sample-rate)/2.0}]
+	set hi [expr {$options(-sample-rate)/2.0}]
 	set xy {}
 	for {set l $options(-min)} {$l <= $options(-max)} {incr l 20} {
 	    # main db grid
@@ -126,7 +127,7 @@ snit::widgetadaptor sdrui::tk-spectrum {
 	# offset of tuning from grid
 	set frnd [expr {int($data(center-freq)/10000)*10000}]
 	set foff [expr {$data(center-freq)-$frnd}]
-	set fmax [expr {int($options(-rate)/20000+1)*10000}]
+	set fmax [expr {int($options(-sample-rate)/20000+1)*10000}]
 	set fmin [expr {-$fmax}]
 	set xy {}
 	for {set f $fmin} {$f <= $fmax} {incr f 10000} {
