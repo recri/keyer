@@ -1,4 +1,3 @@
-#!/usr/bin/tclsh
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,17 +17,39 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-
 #
-# find the script file
-# and add the lib directory to the automatic package search path
+# a meter tap component, just a marker in the graph
 #
-set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+package provide sdrkit::meter-tap 1.0.0
 
-package require sdrkit::component
-package require sdrkit::iq-source
-namespace eval sdrkitv {}
-sdrkit::component sdrkitv::iq-source -window {} -name iq-src -subsidiary sdrkit::iq-source {*}$argv
+package require snit
 
+namespace eval sdrkit {}
 
+snit::type sdrkit::meter-tap {    
+    option -name meter-tap
+    option -server default
+    option -component {}
+
+    option -window none
+    option -title Gain
+    option -minsizes {100 200}
+    option -weights {1 3}
+
+    option -in-ports {i q}
+    option -out-ports {i q}
+    option -in-options {}
+    option -out-options {}
+
+    variable data -array { activate 0 }
+
+    constructor {args} { $self configure {*}$args }
+    destructor {}
+    method build-parts {} {}
+    method build-ui {} {}
+
+    method is-needed {} { return 1 }
+    method is-active {} { return $data(activate) }
+    method activate {} { set data(activate) 1 }
+    method deactivate {} { set data(activate) 0 }
+}

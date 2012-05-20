@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::oscillator
 package require sdrkit::component
-
+package require sdrkit::oscillator
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-osc -window {} -name sdr-osc -subsidiary sdrkit::oscillator {*}$argv
+sdrkit::component ::sdrkitv::oscillator -window {} -name oscillator -subsidiary sdrkit::oscillator {*}$argv

@@ -25,8 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::keyer-iambic-nd7pa
 package require sdrkit::component
-
-sdrkit::component ::sdrkit -window {} -name keyer-iambic-nd7pa -subsidiary sdrkit::keyer-iambic-nd7pa {*}$argv
+package require sdrkit::keyer-iambic-nd7pa
+namespace eval sdrkitv {}
+sdrkit::component sdrkitv::keyer-iambic-nd7pa -window {} -name keyer-iambic-nd7pa -subsidiary sdrkit::keyer-iambic-nd7pa {*}$argv

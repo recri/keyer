@@ -22,7 +22,7 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../dspmath/modul_fm.h"
+#include "../dspmath/mod_fm.h"
 #include "framework.h"
 
 /*
@@ -30,14 +30,14 @@
 */
 typedef struct {
   framework_t fw;
-  modul_fm_t fm;
-  modul_fm_options_t opts;
+  mod_fm_t fm;
+  mod_fm_options_t opts;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   data->opts.sample_rate = sdrkit_sample_rate(arg);
-  void *e = modul_fm_init(&data->fm, &data->opts); if (e != &data->fm) return e;
+  void *e = mod_fm_init(&data->fm, &data->opts); if (e != &data->fm) return e;
   return arg;
 }
 
@@ -49,7 +49,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    complex float z = modul_fm_process(&data->fm, (*in0++ + *in1++)/2.0f);
+    complex float z = mod_fm_process(&data->fm, (*in0++ + *in1++)/2.0f);
     *out0++ = crealf(z);
     *out1++ = cimagf(z);
   }
@@ -62,12 +62,12 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   if (framework_command(clientData, interp, argc, objv) != TCL_OK)
     return TCL_ERROR;
   if (deviation != data->opts.deviation) {
-    void *e = modul_fm_preconfigure(&data->fm, &data->opts); if (e != &data->fm) {
+    void *e = mod_fm_preconfigure(&data->fm, &data->opts); if (e != &data->fm) {
       Tcl_SetResult(interp, e, TCL_STATIC);
       data->opts.deviation = deviation;
       return TCL_ERROR;
     }
-    modul_fm_configure(&data->fm, &data->opts);
+    mod_fm_configure(&data->fm, &data->opts);
   }
   return TCL_OK;
 }
@@ -100,7 +100,7 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Modul_fm_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrtcl::modul-fm", "1.0.0", "sdrtcl::modul-fm", _factory);
+int DLLEXPORT Mod_fm_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrtcl::mod-fm", "1.0.0", "sdrtcl::mod-fm", _factory);
 }
 

@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::iq-delay
 package require sdrkit::component
-
+package require sdrkit::iq-delay
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-iq-delay -window {} -name sdr-iq-delay -subsidiary sdrkit::iq-delay {*}$argv
+sdrkit::component ::sdrkitv::iq-delay -window {} -name iq-delay -subsidiary sdrkit::iq-delay {*}$argv

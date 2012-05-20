@@ -18,35 +18,68 @@
 # 
 
 #
-# a composite component that implements a keyer
+# a composite component that implements a receiver
 #
-package provide sdrkit::keyer 1.0.0
+package provide sdrkit::tx 1.0.0
 
 package require snit
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
-snit::type sdrkit::keyer {
-    option -name keyer
-    option -title {Keyer}
-    option -in-ports {midi_in}
-    option -out-ports {out_i out_q midi_out}
+snit::type sdrkit::tx {
+    option -name tx
+    option -title {TX}
+    option -in-ports {in_i in_q}
+    option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	deb {Debounce} keyer-debounce
-	imb {Iambic} keyer-iambic
-	ton {Tone} keyer-tone
-	ptt {PTT} keyer-ptt
+	af-g {AF Gain} gain
+	-af-real {Real part} real
+	-af-wave {Wave shape} waveshape
+	af-mtr1 {Wave shape meter} meter-tap
+	-af-dcb {DC Block} dc-block
+	-af-sql {Squelch} squelch
+	-af-geq {Graphic EQ} graphic-eq
+	af-mtr2 {Graphic EQ meter} meter-tap
+	af-lvlr {Leveler} agc
+	af-mtr3 {Leveler meter} meter-tap
+	-af-spch {Speech processor} speech-processor
+	af-mtr4 {Speech processor meter} meter-tap
+	af-mod {Modulation} mod
+	if-bpf {Bandpass} filter-overlap-save
+	-if-comp {Compander} compand
+	if-mtr5 {Compander meter} meter-tap
+	if-sp1 {TX Spectrum} spectrum-tap
+	if-lo {LO Mixer} lo-mixer
+	rf-iqb {IQ Balance} iq-balance
+	rf-g {RF Level} gain
+	rf-mtr6 {RF Power meter} meter-tap
     }
     option -connections {
-	{} in-ports deb in-ports
-	deb out-ports imb in-ports
-	imb out-ports ptt in-ports
-	ptt out-ports ton in-ports
-	ton out-ports {} out-ports
-	ptt out-ports {} out-ports
+	{} in-ports af-g in-ports
+	af-g out-ports af-real in-ports
+	af-real out-ports af-wave in-ports
+	af-wave out-ports af-mtr1 in-ports
+	af-mtr1 out-ports af-dcb in-ports
+	af-dcb out-ports af-sql in-ports
+	af-sql out-ports af-geq in-ports
+	af-geq out-ports af-mtr2 in-ports
+	af-mtr2 out-ports af-lvlr in-ports
+	af-lvlr out-ports af-mtr3 in-ports
+	af-mtr3 out-ports af-spch in-ports
+	af-spch out-ports af-mtr4 in-ports
+	af-mtr4 out-ports af-mod in-ports
+	af-mod out-ports if-bpf in-ports
+	if-bpf out-ports if-comp in-ports
+	if-comp out-ports if-mtr5 in-ports
+	if-mtr5 out-ports if-sp1 in-ports
+	if-sp1 out-ports if-lo in-ports
+	if-lo out-ports rf-iqb in-ports
+	rf-iqb out-ports rf-g in-ports
+	rf-g out-ports rf-mtr6 in-ports
+	rf-mtr6 out-ports {} out-ports
     }
 
     option -server default
@@ -103,6 +136,11 @@ snit::type sdrkit::keyer {
     method build-parts {} {
 	if {$options(-window) ne {none}} return
 	foreach {name title command} $options(-sub-components) {
+	    if {[string match -* $name]} {
+		# placeholder component, replace with spectrum tap
+		set name [string range $name 1 end]
+		set command spectrum-tap
+	    }
 	    set data($name-enable) 0
 	    lappend data(parts) $name
 	    package require sdrkit::$command
@@ -120,7 +158,16 @@ snit::type sdrkit::keyer {
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
 	foreach {name title command} $options(-sub-components) {
-	    grid [sdrtk::clabelframe $w.$name -label $title] -sticky ew
+	    if {[string match -* $name]} {
+		# placeholder component, replace with spectrum tap
+		set name [string range $name 1 end]
+		set command spectrum-tap
+	    }
+	    sdrtk::clabelframe $w.$name -label $title
+	    if {$command ni {meter-tap spectrum-tap}} {
+		# only display real working components
+		grid $w.$name -sticky ew
+	    }
 	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 	    set data($name-enable) 0
 	    lappend data(parts) $name

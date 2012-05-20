@@ -16,49 +16,42 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 
-#ifndef MODUL_FM_H
-#define MODUL_FM_H
+#ifndef MOD_AM_H
+#define MOD_AM_H
 
 /*
-** FM modulation - rewritten from dttsp
+** AM modulation - rewritten from dttsp
    Copyright (C) 2004, 2005, 2006, 2007, 2008 by Frank Brickle, AB2KT and Bob McGwier, N4HY
 */
 
 #include "dspmath.h"
 
 typedef struct {
-  float phase;
-  float cvtmod2freq;
-} modul_fm_t;
+  float carrier_level;
+  float one_m_carrier_level;
+} mod_am_t;
 
 typedef struct {
-  float deviation;		/* 5000 Hz default */
-  float sample_rate;
-} modul_fm_options_t;
+  float carrier_level;
+} mod_am_options_t;
 
-static void modul_fm_configure(modul_fm_t *p, modul_fm_options_t *q) {
-  p->phase = 0.0f;
-  p->cvtmod2freq = q->deviation * two_pi / q->sample_rate;
+static void mod_am_configure(mod_am_t *p, mod_am_options_t *q) {
+  p->carrier_level = q->carrier_level;
+  p->one_m_carrier_level = 1.0f - p->carrier_level;
 }
 
-static void *modul_fm_preconfigure(modul_fm_t *p, modul_fm_options_t *q) {
+static void *mod_am_preconfigure(mod_am_t *p, mod_am_options_t *q) {
   return p;
 }
 
-static void *modul_fm_init(modul_fm_t *p, modul_fm_options_t *q) {
-  void *e = modul_fm_preconfigure(p,q); if (e != p) return e;
-  modul_fm_configure(p, q);
+static void *mod_am_init(mod_am_t *p, mod_am_options_t *q) {
+  void *e = mod_am_preconfigure(p,q); if (e != p) return e;
+  mod_am_configure(p, q);
   return p;
 }
 
-/*
-** yuck, sin_cos per sample, must be a better way.
-** if crealf(in) * p->cvtmod2freq were complex, then
-** it could be multiplied into a complex phase
-*/
-static complex float modul_fm_process(modul_fm_t *p, const float complex in) {
-  p->phase += crealf(in) * p->cvtmod2freq;
-  return cexpf(I * p->phase);
+static complex float mod_am_process(mod_am_t *p, const float in) {
+  return p->carrier_level + p->one_m_carrier_level * in;
 }
 
 #endif

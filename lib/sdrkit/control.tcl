@@ -27,7 +27,6 @@
 #
 package provide sdrkit::control 1.0.0
 
-package require Tk
 package require snit
 package require sdrkit::comm
 

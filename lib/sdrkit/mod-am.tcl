@@ -18,32 +18,32 @@
 # 
 
 #
-# an FM demodulation component
+# an AM modulation component
 #
-# this module could allow the pll parameters to be set for wide, narrow, or other
-#
-package provide sdrkit::demod-fm 1.0.0
+package provide sdrkit::mod-am 1.0.0
 
 package require snit
-package require sdrtcl::demod-fm
+package require sdrtcl::mod-am
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
 
-snit::type sdrkit::demod-fm {    
-    option -name sdr-demod-fm
+snit::type sdrkit::mod-am {    
+    option -name sdr-mod-am
     option -server default
     option -component {}
 
     option -window none
-    option -title demod-fm
+    option -title mod-am
     option -minsizes {100 200}
     option -weights {1 3}
 
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -in-options {-level}
+    option -out-options {-level}
+
+    option -level -default 0.50 -configuremethod Configure
 
     variable data -array {
     }
@@ -56,7 +56,7 @@ snit::type sdrkit::demod-fm {
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
     method build-parts {} {
-	sdrtcl::demod-fm ::sdrkitx::$options(-name) -server $options(-server)
+	sdrtcl::mod-am ::sdrkitx::$options(-name) -server $options(-server) -level $options(-level)
     }
     method build-ui {} {
 	set w $options(-window)
@@ -64,7 +64,7 @@ snit::type sdrkit::demod-fm {
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
 	foreach {opt type format min max} {
-	    x separator x x x 
+	    level scale {Mod Level %.1f} 0.0 1.0
 	} {
 	    switch $type {
 		spinbox {

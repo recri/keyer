@@ -18,35 +18,66 @@
 # 
 
 #
-# a composite component that implements a keyer
+# a composite component that implements a receiver
 #
-package provide sdrkit::keyer 1.0.0
+package provide sdrkit::rx 1.0.0
 
 package require snit
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
-snit::type sdrkit::keyer {
-    option -name keyer
-    option -title {Keyer}
-    option -in-ports {midi_in}
-    option -out-ports {out_i out_q midi_out}
+snit::type sdrkit::rx {
+    option -name rx
+    option -title {RX}
+    option -in-ports {in_i in_q}
+    option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	deb {Debounce} keyer-debounce
-	imb {Iambic} keyer-iambic
-	ton {Tone} keyer-tone
-	ptt {PTT} keyer-ptt
+	rf-g {RF Gain} gain
+	rf-iqs {IQ Swap} iq-swap
+	rf-iqd {IQ Delay} iq-delay
+	rf-sp1 {Spectrum Semi-raw} spectrum-tap
+	-rf-nb1 {Noiseblanker} noiseblanker
+	-rf-nb2 {SDRom Noiseblanker} sdrom-noiseblanker
+	rf-iqc {IQ Correct} iq-correct
+	if-sp2 {Spectrum Pre-filter} spectrum-tap
+	if-lo {LO Mixer} lo-mixer
+	if-bpf {BP Filter} filter-overlap-save
+	af-mt1 {Meter Post-filter} meter-tap
+	af-sp3 {Spectrum Post-filter} spectrum-tap
+	-af-cmp {Compander} compand
+	af-agc {AGC} agc
+	af-sp4 {Spectrum Post-AGC} spectrum-tap
+	af-dem {Demodulation} demod
+	-af-sql {Squelch} squelch
+	-af-spt {Spot Tone} spot
+	-af-geq {Graphic EQ} graphic-eq
+	af-g {AF Gain} gain
     }
     option -connections {
-	{} in-ports deb in-ports
-	deb out-ports imb in-ports
-	imb out-ports ptt in-ports
-	ptt out-ports ton in-ports
-	ton out-ports {} out-ports
-	ptt out-ports {} out-ports
+	{} in-ports rf-g in-ports
+	rf-g out-ports rf-iqs in-ports
+	rf-iqs out-ports rf-iqd in-ports
+	rf-iqd out-ports rf-sp1 in-ports
+	rf-sp1 out-ports rf-nb1 in-ports
+	rf-nb1 out-ports rf-nb2 in-ports
+	rf-nb2 out-ports rf-iqc in-ports
+	rf-iqc out-ports if-sp2 in-ports
+	if-sp2 out-ports if-lo in-ports
+	if-lo out-ports if-bpf in-ports
+	if-bpf out-ports af-mt1 in-ports
+	af-mt1 out-ports af-sp3 in-ports
+	af-sp3 out-ports af-cmp in-ports
+	af-cmp out-ports af-agc in-ports
+	af-agc out-ports af-sp4 in-ports
+	af-sp4 out-ports af-dem in-ports
+	af-dem out-ports af-sql in-ports
+	af-sql out-ports af-spt in-ports
+	af-spt out-ports af-geq in-ports
+	af-geq out-ports af-g in-ports
+	af-g out-ports {} out-ports
     }
 
     option -server default
@@ -103,6 +134,11 @@ snit::type sdrkit::keyer {
     method build-parts {} {
 	if {$options(-window) ne {none}} return
 	foreach {name title command} $options(-sub-components) {
+	    if {[string match -* $name]} {
+		# placeholder component, replace with spectrum tap
+		set name [string range $name 1 end]
+		set command spectrum-tap
+	    }
 	    set data($name-enable) 0
 	    lappend data(parts) $name
 	    package require sdrkit::$command
@@ -120,7 +156,16 @@ snit::type sdrkit::keyer {
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
 	foreach {name title command} $options(-sub-components) {
-	    grid [sdrtk::clabelframe $w.$name -label $title] -sticky ew
+	    if {[string match -* $name]} {
+		# placeholder component, replace with spectrum tap
+		set name [string range $name 1 end]
+		set command spectrum-tap
+	    }
+	    sdrtk::clabelframe $w.$name -label $title
+	    if {$command ni {meter-tap spectrum-tap}} {
+		# only display real working components
+		grid $w.$name -sticky ew
+	    }
 	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 	    set data($name-enable) 0
 	    lappend data(parts) $name

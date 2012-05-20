@@ -19,13 +19,13 @@
 # 
 
 #
-# an iambic keyer component by ad5dz
+# a transmitter component
 #
 
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require sdrkit::component
-package require sdrkit::keyer-iambic-ad5dz
+package require sdrkit::tx
 namespace eval sdrkitv {}
-sdrkit::component sdrkitv::keyer-iambic-ad5dz -window {} -name keyer-iambic-ad5dz -subsidiary sdrkit::keyer-iambic-ad5dz {*}$argv
+sdrkit::component ::sdrkitv::tx -window {} -name tx -subsidiary sdrkit::tx {*}$argv

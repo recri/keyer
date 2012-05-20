@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::agc
 package require sdrkit::component
-
+package require sdrkit::agc
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-agc -window {} -name sdr-agc -subsidiary sdrkit::agc {*}$argv
+sdrkit::component ::sdrkitv::agc -window {} -name agc -subsidiary sdrkit::agc {*}$argv

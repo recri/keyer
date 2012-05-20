@@ -19,14 +19,41 @@
 # 
 
 #
-# an audio mute switched by a midi signal
-#
+# a generic script for starting sdrkit components by linking their
+# name to this script.
+# 
 
+#
+# follow any symbolic links to find the true location of the script
+#
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+
+#
+# append the ../lib directory to the Tcl search path
+#
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::keyer-ptt-mute
+#
+# find the name of the script, without reading links
+#
+set name [file tail [info script]]
+
+#
+# we need the component wrapper
+#
 package require sdrkit::component
 
-sdrkit::component ::sdrkit -window {} -name keyer-ptt-mute -subsidiary sdrkit::keyer-ptt-mute {*}$argv
+#
+# we need the package that implements the component
+#
+package require sdrkit::$name
+
+#
+# create the namespace for the component wrappers
+#
+namespace eval sdrkitv {}
+
+#
+# create the named component, modified by the options specified as arguments
+#
+sdrkit::component ::sdrkitv::$name -window {} -name $name -subsidiary sdrkit::$name {*}$argv

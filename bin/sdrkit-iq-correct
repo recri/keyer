@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::iq-correct
 package require sdrkit::component
-
+package require sdrkit::iq-correct
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-iq-correct -window {} -name sdr-iq-correct -subsidiary sdrkit::iq-correct {*}$argv
+sdrkit::component ::sdrkitv::iq-correct -window {} -name iq-correct -subsidiary sdrkit::iq-correct {*}$argv

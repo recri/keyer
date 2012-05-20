@@ -32,6 +32,7 @@ proc sdrdsp::tx {name args} {
 proc sdrdsp::tx-af {name args} {
     # a lot of this is voice specific
     # CW only has a keyed oscillator feeding into the LO mixer
+    # better, offset the oscillator tone and skip the mixer
     # hw-softrock-dg8saq should have an option to poll keystate and insert as midi
     # hw-softrock-dg8saq should by default convert midi control to dg8saq, both directions
     array set fopt {

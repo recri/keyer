@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
 package require sdrkit::component
 package require sdrkit::iq-balance
-
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-iq-balance -window {} -name sdr-iq-balance -subsidiary sdrkit::iq-balance {*}$argv
+sdrkit::component ::sdrkitv::iq-balance -window {} -name iq-balance -subsidiary sdrkit::iq-balance {*}$argv

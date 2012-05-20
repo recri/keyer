@@ -37,7 +37,7 @@ snit::type sdrkit::lo-mixer {
     option -minsizes {100 200}
     option -weights {1 3}
 
-    option -in-ports {}
+    option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -in-options {-freq}
     option -out-options {}

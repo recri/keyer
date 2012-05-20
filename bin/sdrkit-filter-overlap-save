@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
 package require sdrkit::filter-overlap-save
 package require sdrkit::component
-
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-ovsv -window {} -name sdr-ovsv -subsidiary sdrkit::filter-overlap-save {*}$argv
+sdrkit::component ::sdrkitv::filter-overlap-save -window {} -name filter-overlap-save -subsidiary sdrkit::filter-overlap-save {*}$argv

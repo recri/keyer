@@ -18,14 +18,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# an iambic keyer component by ad5dz
-#
-
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require sdrkit::component
-package require sdrkit::keyer-iambic-ad5dz
+package require sdrkit::mod
 namespace eval sdrkitv {}
-sdrkit::component sdrkitv::keyer-iambic-ad5dz -window {} -name keyer-iambic-ad5dz -subsidiary sdrkit::keyer-iambic-ad5dz {*}$argv
+sdrkit::component ::sdrkitv::mod -window {} -name mod -subsidiary sdrkit::mod {*}$argv
+
+

@@ -64,10 +64,32 @@ snit::type sdrkit::demod-sam {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	ttk::separator $w.demod-sam
-	grid $w.demod-sam -sticky ew
-
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	foreach {opt type format min max} {
+	    x separator x x x 
+	} {
+	    switch $type {
+		spinbox {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::spinbox $w.s-$opt -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+		}
+		scale {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
+		}
+		separator {
+		    ttk::separator $w.l-$opt
+		    ttk::separator $w.s-$opt
+		}
+	    }
+	    grid $w.l-$opt $w.s-$opt -sticky ew
+	}
+	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
+	    grid columnconfigure $pw $col -minsize $ms -weight $wt
+	}
     }
     method is-needed {} { return 1 }
 

@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::demod-fm
 package require sdrkit::component
-
+package require sdrkit::demod-fm
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-demod-fm -window {} -name sdr-demod-fm -subsidiary sdrkit::demod-fm {*}$argv
+sdrkit::component ::sdrkitv::demod-fm -window {} -name demod-fm -subsidiary sdrkit::demod-fm {*}$argv

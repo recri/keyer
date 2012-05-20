@@ -25,8 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::keyer-ptt
 package require sdrkit::component
-
-sdrkit::component ::sdrkit -window {} -name keyer-ptt -subsidiary sdrkit::keyer-ptt {*}$argv
+package require sdrkit::keyer-ptt
+namespace eval sdrkitv {}
+sdrkit::component ::sdrkitv::keyer-ptt -window {} -name keyer-ptt -subsidiary sdrkit::keyer-ptt {*}$argv

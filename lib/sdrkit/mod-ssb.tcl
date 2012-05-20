@@ -18,25 +18,23 @@
 # 
 
 #
-# an FM demodulation component
+# an FM modulation component
 #
-# this module could allow the pll parameters to be set for wide, narrow, or other
-#
-package provide sdrkit::demod-fm 1.0.0
+package provide sdrkit::mod-ssb 1.0.0
 
 package require snit
-package require sdrtcl::demod-fm
+package require sdrtcl::mod-ssb
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
 
-snit::type sdrkit::demod-fm {    
-    option -name sdr-demod-fm
+snit::type sdrkit::mod-ssb {    
+    option -name sdr-mod-ssb
     option -server default
     option -component {}
 
     option -window none
-    option -title demod-fm
+    option -title mod-ssb
     option -minsizes {100 200}
     option -weights {1 3}
 
@@ -56,7 +54,7 @@ snit::type sdrkit::demod-fm {
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
     method build-parts {} {
-	sdrtcl::demod-fm ::sdrkitx::$options(-name) -server $options(-server)
+	sdrtcl::mod-ssb ::sdrkitx::$options(-name) -server $options(-server)
     }
     method build-ui {} {
 	set w $options(-window)
@@ -64,7 +62,7 @@ snit::type sdrkit::demod-fm {
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
 	foreach {opt type format min max} {
-	    x separator x x x 
+	    x separator x x x
 	} {
 	    switch $type {
 		spinbox {

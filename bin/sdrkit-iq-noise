@@ -25,10 +25,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-package require Tk
-package require sdrkit::iq-noise
 package require sdrkit::component
-
+package require sdrkit::iq-noise
 namespace eval sdrkitv {}
-
-sdrkit::component ::sdrkitv::sdr-iq-noise -window {} -name sdr-iq-noise -subsidiary sdrkit::iq-noise {*}$argv
+sdrkit::component ::sdrkitv::iq-noise -window {} -name iq-noise -subsidiary sdrkit::iq-noise {*}$argv

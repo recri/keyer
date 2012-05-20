@@ -64,9 +64,9 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/midi_tap.so \
 	$(LIBDIR)/mixer.so \
-	$(LIBDIR)/modul_am.so \
-	$(LIBDIR)/modul_fm.so \
-	$(LIBDIR)/modul_ssb.so \
+	$(LIBDIR)/mod_am.so \
+	$(LIBDIR)/mod_fm.so \
+	$(LIBDIR)/mod_ssb.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
 	$(LIBDIR)/spectrum_tap.so \
@@ -177,13 +177,13 @@ $(LIBDIR)/midi_tap.so: midi_tap.c framework.h ../dspmath/ring_buffer.h
 $(LIBDIR)/mixer.so: mixer.c framework.h ../dspmath/dspmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/modul_am.so: modul_am.c framework.h ../dspmath/modul_am.h
+$(LIBDIR)/mod_am.so: mod_am.c framework.h ../dspmath/mod_am.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/modul_fm.so: modul_fm.c framework.h ../dspmath/modul_fm.h
+$(LIBDIR)/mod_fm.so: mod_fm.c framework.h ../dspmath/mod_fm.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/modul_ssb.so: modul_ssb.c framework.h ../dspmath/modul_ssb.h
+$(LIBDIR)/mod_ssb.so: mod_ssb.c framework.h ../dspmath/mod_ssb.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/noise.so: noise.c framework.h ../dspmath/dspmath.h ../dspmath/noise.h

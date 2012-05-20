@@ -22,21 +22,21 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../dspmath/modul_ssb.h"
+#include "../dspmath/mod_am.h"
 #include "framework.h"
 
 /*
-** modulate SSB, any sideband modulation.
+** modulate AM.
 */
 typedef struct {
   framework_t fw;
-  modul_ssb_t ssb;
-  modul_ssb_options_t opts;
+  mod_am_t am;
+  mod_am_options_t opts;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *e = modul_ssb_init(&data->ssb, &data->opts); if (e != &data->ssb) return e;
+  void *e = mod_am_init(&data->am, &data->opts); if (e != &data->am) return e;
   return arg;
 }
 
@@ -48,7 +48,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    complex float z = modul_ssb_process(&data->ssb, (*in0++ + *in1++)/2.0f);
+    complex float z = mod_am_process(&data->am, (*in0++ + *in1++)/2.0f);
     *out0++ = crealf(z);
     *out1++ = cimagf(z);
   }
@@ -56,11 +56,24 @@ static int _process(jack_nframes_t nframes, void *arg) {
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_command(clientData, interp, argc, objv);
+  _t *data = (_t *)clientData;
+  float carrier_level = data->opts.carrier_level;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  if (carrier_level != data->opts.carrier_level) {
+    void *e = mod_am_preconfigure(&data->am, &data->opts); if (e != &data->am) {
+      Tcl_SetResult(interp, e, TCL_STATIC);
+      data->opts.carrier_level = carrier_level;
+      return TCL_ERROR;
+    }
+    mod_am_configure(&data->am, &data->opts);
+  }
+  return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+  { "-level", "level", "Level", "0.5", fw_option_float, 0, offsetof(_t, opts.carrier_level), "carrier level" },
   { NULL }
 };
 
@@ -78,7 +91,7 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "an SSB modulation component"
+  "an AM modulation component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -86,7 +99,7 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Modul_ssb_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrtcl::modul-ssb", "1.0.0", "sdrtcl::modul-ssb", _factory);
+int DLLEXPORT Mod_am_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrtcl::mod-am", "1.0.0", "sdrtcl::mod-am", _factory);
 }
 
