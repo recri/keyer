@@ -84,6 +84,14 @@ snit::type sdrkit::component {
     # the factory for the subsidiary which we're wrapping
     option -subsidiary {}
     option -subsidiary-opts {}
+
+    # delegate unknown options to the subsidiary
+    delegate option * to subsidiary
+
+    # delegate unknown methods to the controller
+    # won't work, have a special method call to reach controller
+    # delegate method * to control
+
     variable data -array {
     }
 
@@ -115,7 +123,7 @@ snit::type sdrkit::component {
 	    # look for controller
 	    if {[info commands ::sdrkit-control] eq {}} {
 		# make one
-		::sdrkit::control ::sdrkit-control
+		::sdrkit::control ::sdrkit-control -server $options(-server)
 	    }
 	    set control [::sdrkit-control get-controller]
 	}
@@ -151,29 +159,28 @@ snit::type sdrkit::component {
 	}
 
 	# set up control
-	#puts "$self control name-register $options(-name) [sdrkit::comm::wrap $self]"
-	$self control name-register $options(-name) [sdrkit::comm::wrap $self]
-	#puts "$self control name-declare-in-ports $options(-name) {*}[$subsidiary cget -in-ports]"
-	$self control name-declare-in-ports $options(-name) {*}[$subsidiary cget -in-ports]
-	#puts "$self control name-declare-out-ports $options(-name) {*}[$subsidiary cget -out-ports]"
-	$self control name-declare-out-ports $options(-name) {*}[$subsidiary cget -out-ports]
-	#puts "$self control name-declare-in-options $options(-name) {*}[$subsidiary cget -in-options]"
-	$self control name-declare-in-options $options(-name) {*}[$subsidiary cget -in-options]
-	#puts "$self control name-declare-out-options $options(-name) {*}[$subsidiary cget -out-options]"
-	$self control name-declare-out-options $options(-name) {*}[$subsidiary cget -out-options]
+	$self control part-add $options(-name) [sdrkit::comm::wrap $self]
 
 	# build the ui if any
-	if {$options(-window) ne {none}} { $subsidiary build-ui }
+	if {$options(-window) ne {none}} {
+	    $subsidiary build-ui
+	    if {$options(-window) eq {}} {
+		bind . <Destroy> [mymethod destroy]
+	    }
+	}
 	
 	# resolve the parts
 	if {{resolve-parts} in [$subsidiary info methods]} {
 	    $subsidiary resolve-parts
 	}
     }
+    destructor {
+	catch {$subsidiary destroy}
+    }
     #
     # callback from subsidiary reporting option changes
     #
-    method report {args} { $self control name-report $options(-name) {*}$args }
+    method report {args} { $self control part-report $options(-name) {*}$args }
     #
     # callback from subsidiary requesting controller method
     #
@@ -182,9 +189,12 @@ snit::type sdrkit::component {
     # call to the controller
     #
     method control {args} { return [sdrkit::comm::send $control {*}$args] }
-    method name-report {args} { return [$self control name-report {*}$args] }
-    method name-enable {args} { return [$self control name-enable {*}$args] }
-    method connect-ports {args} { return [$self control name-connect-ports {*}$args] }
-    method out-ports {args} { return [$self control name-out-ports {*}$args] }	
-    method in-ports {args} { return [$self control name-in-ports {*}$args] }	
+    method name-report {args} { return [$self control part-report {*}$args] }
+    method name-enable {args} { return [$self control part-enable {*}$args] }
+    method name-destroy {args} { return [$self control part-destroy {*}$args] }
+    # double listing
+    method connect-ports {n1 p1 n2 p2} { return [$self control port-connect [list [list $n1 $p1]] [list [list $n2 $p2]]] }
+    method connect-options {n1 o1 n2 o2} { return [$self control opt-connect [list [list $n1 $o1]] [list [list $n2 $o2]]] }
+    method out-ports {args} { return [$self control part-out-ports {*}$args] }	
+    method in-ports {args} { return [$self control part-in-ports {*}$args] }	
 }

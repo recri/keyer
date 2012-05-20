@@ -66,8 +66,8 @@ snit::type sdrkit::demod {
 	$self configure {*}$args
     }
     destructor {
-	foreach {name title command} $options(-sub-components) {
-	    # destroy? how?
+	foreach name $data(parts) {
+	    $option(-component) name-destroy $options(-name)-$name
 	}
     }
     method resolve-parts {} {

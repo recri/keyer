@@ -68,7 +68,7 @@ snit::type sdrkit::signal-generator {
     }
     destructor {
 	foreach {name title command} $options(-sub-components) {
-	    catch {$options(-component) name-destroy $options(-name)-$name}
+	    $option(-component) report name-destroy $options(-name)$name
 	}
     }
     method resolve-parts {} {

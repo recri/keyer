@@ -59,8 +59,9 @@ snit::type sdrkit::rxtx {
 	$self configure {*}$args
     }
     destructor {
-	foreach {name title command} $options(-sub-components) {
-	    $option(-component) report name-destroy $options(-name)$name
+	puts "rxtx destructor"
+	foreach name $data(parts) {
+	    $option(-component) name-destroy $options(-name)-$name
 	}
     }
     method resolve-parts {} {
