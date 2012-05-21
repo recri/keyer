@@ -181,24 +181,70 @@ snit::type sdrkit::component {
     destructor {
 	catch {$subsidiary destroy}
     }
-    #
-    # callback from subsidiary reporting option changes
-    #
-    method report {args} { $self control part-report $options(-name) {*}$args }
+    method Configure {opt val} {
+	set options($opt) $val
+	if {$opt eq {-activate}} {
+	    if {$val} { $subsidiary activate } else { $subsidiary deactivate }
+	}
+    }
+
     #
     # callback from subsidiary requesting controller method
     #
     method get-controller {} { return $control }
     #
-    # call to the controller
+    # call the controller
     #
     method control {args} { return [sdrkit::comm::send $control {*}$args] }
+    #
+    # rewritten call from subsidiary reporting option changes
+    #
+    method report {args} { $self control part-report $options(-name) {*}$args }
+    #
+    # calls to the controller from the subsidiary
+    #
     method part-report {args} { return [$self control part-report {*}$args] }
+    method part-is-enabled {args} { return [$self control part-is-enabled {*}$args] }
     method part-enable {args} { return [$self control part-enable {*}$args] }
+    method part-disable {args} { return [$self control part-disable {*}$args] }
+    method part-is-activated {args} { return [$self control part-is-activated {*}$args] }
+    method part-activate {args} { return [$self control part-activate {*}$args] }
+    method part-deactivate {args} { return [$self control part-deactivate {*}$args] }
     method part-destroy {args} { return [$self control part-destroy {*}$args] }
-    # double listing
     method connect-ports {n1 p1 n2 p2} { return [$self control port-connect [list $n1 $p1] [list $n2 $p2]] }
     method connect-options {n1 o1 n2 o2} { return [$self control opt-connect [list $n1 $o1] [list $n2 $o2]] }
     method out-ports {args} { return [$self control part-out-ports {*}$args] }	
     method in-ports {args} { return [$self control part-in-ports {*}$args] }	
+    #
+    # call from the controller to the subsidiary
+    #
+    method rewrite-connections-to {port candidates} {
+	if {{rewrite-connections-to} in [$subsidiary info methods]} {
+	    return [$subsidiary rewrite-connections-to $port $candidates]
+	} else {
+	    return $candidates
+	}
+    }
+    method rewrite-connections-from {port candidates} {
+	if {{rewrite-connections-from} in [$subsidiary info methods]} {
+	    return [$subsidiary rewrite-connections-from $port $candidates]
+	} else {
+	    return $candidates
+	}
+    }
+    method port-complement {port} {
+	if {{port-complement} in [$subsidiary info methods]} {
+	    return [$subsidiary port-complement $port]
+	} else {
+	    switch -exact $port {
+		in_i { return {out_i} }
+		in_q { return {out_q} }
+		out_i { return {in_i} }
+		out_q { return {in_q} }
+		midi_in { return {midi_out} }
+		midi_out { return {midi_in} }
+		default { error "unknown port \"$port\"" }
+	    }
+	}
+    }
 }

@@ -90,6 +90,8 @@ snit::type sdrkit::tx {
     option -minsizes {100 200}
     option -weights {1 3}
 
+    option -tx-source {}
+    option -tx-sink {}
 
     variable data -array {
 	enabled 0

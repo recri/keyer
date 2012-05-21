@@ -27,7 +27,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-ptt {    
     option -name key-ptt
-    option -type dsp
+    option -type jack
 
     option -server default
     option -component {}

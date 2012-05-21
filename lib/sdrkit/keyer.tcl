@@ -64,6 +64,9 @@ snit::type sdrkit::keyer {
 	parts {}
     }
 
+    option -keyer-source {}
+    option -keyer-sink {}
+
     constructor {args} {
 	# puts "$self constructor"
 	$self configure {*}$args

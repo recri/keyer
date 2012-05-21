@@ -28,7 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-detone {    
     option -name key-detone
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

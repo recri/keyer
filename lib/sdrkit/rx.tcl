@@ -88,6 +88,8 @@ snit::type sdrkit::rx {
     option -minsizes {100 200}
     option -weights {1 3}
 
+    option -rx-source {}
+    option -rx-sink {}
 
     variable data -array {
 	enabled 0

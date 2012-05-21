@@ -28,7 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-iambic-ad5dz {    
     option -name key-iambic-ad5dz
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

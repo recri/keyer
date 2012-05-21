@@ -28,7 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-detime {    
     option -name key-detime
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

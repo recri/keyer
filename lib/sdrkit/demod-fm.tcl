@@ -32,7 +32,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::demod-fm {    
     option -name sdr-demod-fm
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

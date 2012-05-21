@@ -30,7 +30,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::noise {    
     option -name sdr-noise
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

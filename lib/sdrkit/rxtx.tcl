@@ -50,9 +50,14 @@ snit::type sdrkit::rxtx {
     option -minsizes {100 200}
     option -weights {1 3}
 
+    option -rx-source {}
+    option -rx-sink {}
+    option -tx-source {}
+    option -tx-sink {}
+    option -keyer-source {}
+    option -keyer-sink {}
+
     variable data -array {
-	enabled 0
-	active 0
 	parts {}
     }
 
@@ -77,7 +82,6 @@ snit::type sdrkit::rxtx {
     method build-parts {} {
 	if {$options(-window) ne {none}} return
 	foreach {name title command} $options(-sub-components) {
-	    set data($name-enable) 0
 	    lappend data(parts) $name
 	    set args {}
 	    if {[llength $command] > 1} {
@@ -111,6 +115,11 @@ snit::type sdrkit::rxtx {
 	    if {[llength $command] > 1} {
 		set args [lrange $command 1 end]
 		set command [lindex $command 0]
+	    }
+	    switch $name {
+		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }
+		tx { lappend args -tx-source $options(-tx-source) -tx-sink $options(-tx-sink) }
+		keyer { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
 	    }
 	    package require sdrkit::$command
 	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
@@ -157,7 +166,6 @@ snit::type sdrkit::rxtx {
 	    # stay expanded
 	}
     }
-
     method NoteEmptySelect {w} {
 	#puts "NoteEmptySelect [$w.empty select]"
 	set select [$w.empty select]

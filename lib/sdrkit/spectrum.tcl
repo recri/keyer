@@ -36,7 +36,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::spectrum {    
     option -name sdr-spectrum
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

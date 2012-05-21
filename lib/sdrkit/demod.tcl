@@ -32,8 +32,8 @@ snit::type sdrkit::demod {
     option -name demod
     option -type dsp
     option -title {Demod}
-    option -in-ports {in_i in_q}
-    option -out-ports {out_i out_q}
+    option -in-ports {alt_in_i alt_in_q}
+    option -out-ports {alt_out_i alt_out_q}
     option -in-options {-demod}
     option -out-options {-demod}
     option -sub-components {
@@ -84,7 +84,6 @@ snit::type sdrkit::demod {
     method build-parts {} {
 	if {$options(-window) ne {none}} return
 	foreach {name title command} $options(-sub-components) {
-	    set data(enable-$name) 0
 	    lappend data(parts) $name
 	    package require sdrkit::$command
 	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
@@ -108,7 +107,6 @@ snit::type sdrkit::demod {
 	    lappend labels $title
 	    set data(window-$name) [sdrtk::clabelframe $w.$name -label $title]
 	    lappend data(parts) $name
-	    set data(enable-$name) 0
 	    package require sdrkit::$command
 	    frame $w.$name.container
 	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
@@ -132,12 +130,10 @@ snit::type sdrkit::demod {
     }
     method is-active {} { return $data(active) }
     method activate {} {
-	set data(active) 1
 	foreach part $data(parts) {
 	}
     }
     method deactivate {} {
-	set data(active) 1
 	foreach part $data(parts) {
 	}
     }
@@ -145,19 +141,17 @@ snit::type sdrkit::demod {
 	# find deselected component
 	set exname {none}
 	foreach part $data(parts) {
-	    if {$data(enable-$part)} {
+	    if {[$options(-component) part-is-enabled $options(-name)-$part]} {
 		if {$exname ne {none}} { error "multiple selected keyers $part and $exname" }
 		set exname $part
 	    }
 	}
 	# enable selected component if any
 	if {$name ne {none}} {
-	    set data(enable-$name) 1
 	    $options(-component) part-enable $options(-name)-$name
 	}
 	# disable deselected keyer
 	if {$exname ne {none}} {
-	    set data(enable-$exname) 0
 	    $options(-component) part-disable $options(-name)-$exname
 	}
 	# deal with ui details
@@ -172,6 +166,60 @@ snit::type sdrkit::demod {
 	    if {$name ne {none}} {
 		grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew
 	    }
+	}
+    }
+
+    method rewrite-connections-to {port candidates} {
+	if {$options(-demod) eq {none}} {
+	    return [rewrite-connections-to {} $port $candidates]
+	} else {
+	    return [rewrite-connections-to $options(-name)-$options(-demod) $port $candidates]
+	}
+    }
+    method rewrite-connections-from {port candidates} {
+	if {$options(-demod) eq {none}} {
+	    return [rewrite-connections-from {} $port $candidates]
+	} else {
+	    return [rewrite-connections-from $options(-name)-$options(-demod) $port $candidates]
+	}
+    }
+    proc rewrite-connections-to {selected port candidates} {
+	#puts "$options(-name) rewrite-connections-to $port {$candidates}"
+	if {$port ni {alt_out_i alt_out_q alt_midi_out}} { return $candidates }
+	if {$selected eq {}} {
+	    switch $port {
+		alt_out_i { return [list [list $port alt_in_i]] }
+		alt_out_q { return [list [list $port alt_in_q]] }
+		alt_midi_out { return [list [list $port alt_midi_in]] }
+		default { error "rewrite-connections-to: unexpected port \"$port\"" }
+	    }
+	} else {
+	    foreach c $candidates {
+		if {[string match [list $selected *] $c]} {
+		    return [list $c]
+		}
+	    }
+	    error "rewrite-connections-to: failed to match $data(selected-client) in $candidates"
+	}
+    }
+
+    proc rewrite-connections-from {selected port candidates} {
+	#puts "$options(-name) rewrite-connections-from $port {$candidates}"
+	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
+	if {$selected eq {}} {
+	    switch $port {
+		alt_in_i { return [list [list $port alt_out_i]] }
+		alt_in_q { return [list [list $port alt_out_q]] }
+		alt_midi_in { return [list [list $port alt_midi_out]] }
+		default { error "rewrite-connections-from: unexpected port \"$port\"" }
+	    }
+	} else {
+	    foreach c $candidates {
+		if {[string match [list $selected *] $c]} {
+		    return [list $c]
+		}
+	    }
+	    error "rewrite-connections-from: failed to match $data(selected-client) in $candidates"
 	}
     }
 }

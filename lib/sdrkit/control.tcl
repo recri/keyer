@@ -122,18 +122,10 @@ snit::type sdrkit::control {
     ## hierarchy.
     ##
 
-    # this is hacky, finding the corresponding port leaving the other side of a jack component
-    proc complement {port} {
-	switch -exact $port {
-	    in_i { return {out_i} }
-	    in_q { return {out_q} }
-	    out_i { return {in_i} }
-	    out_q { return {in_q} }
-	    midi_in { return {midi_out} }
-	    midi_out { return {midi_in} }
-	    default { error "unknown port \"$port\"" }
-	}
-    }
+
+    method part-port-complement {part port} { return [[$self part-get $part] port-complement $port] }
+
+    method pair-complement {pair} { return [list [lindex $pair 0] [$self part-port-complement {*}$pair]] }
 
     method part-rewrite-connections-to {part port candidates} { return [[$self part-get $part] rewrite-connections-to $port $candidates] }
     method part-rewrite-connections-from {part port candidates} { return [[$self part-get $part] rewrite-connections-from $port $candidates] }
@@ -153,7 +145,7 @@ snit::type sdrkit::control {
 		    # puts "port-active-connections-to: accepted source={$source}"
 		    lappend active $source
 		} elseif {$type eq {jack}} {
-		    set source [list $part [complement $port]]
+		    set source [$self pair-complement $source]
 		    # puts "port-active-connections-to: searching source={$source}"
 		    lappend active {*}[$self port-active-connections-to $source]
 		}
@@ -180,7 +172,7 @@ snit::type sdrkit::control {
 		    # puts "port-active-connections-from: accepted sink={$sink}"
 		    lappend active $sink
 		} elseif {$type eq {jack}} {
-		    set sink [list $part [complement $port]]
+		    set sink [$self pair-complement $sink]
 		    # puts "port-active-connections-from: searching sink={$sink}"
 		    lappend active {*}[$self port-active-connections-from $sink]
 		}
@@ -211,8 +203,7 @@ snit::type sdrkit::control {
 	foreach part $subtree {
 	    if {[$self part-type $part] ni {jack hw}} continue
 	    #puts "activate ports $part"
-	    foreach port [$self part-ports $part] {
-		set pair [list $part $port]
+	    foreach pair [$self port-filter [list $part *]] {
 		foreach sink [$self port-active-connections-from $pair] {
 		    dict set subgraph $pair $sink 1
 		}
@@ -243,8 +234,7 @@ snit::type sdrkit::control {
 	set subgraph [dict create]
 	foreach part $subtree {
 	    if {[$self part-type $part] ni {jack hw}} continue
-	    foreach port [$self part-ports $part] {
-		set pair [list $part $port]
+	    foreach pair [$self port-filter [list $part *]] {
 		foreach sink [$self port-active-connections-from $pair] {
 		    dict set subgraph $pair $sink 1
 		}
@@ -279,27 +269,26 @@ snit::type sdrkit::control {
 	array set from {}
 	set makes {}
 	set breaks {}
-	foreach port [$self part-ports $name] {
-	    # puts "part-activate-node $name port $port"
-	    set pair [list $name $port]
+	foreach pair [$self port-filter [list $name *]] {
+	    # puts "part-activate-node $pair"
 	    set jackport [join $pair :]
 	    # find the connections from node
-	    set from($port) {}
+	    set from($pair) {}
 	    foreach sink [$self port-active-connections-from $pair] {
 		set connection [list $jackport [join $sink :]]
-		if {[lsearch -exact $from($port) $connection] < 0} {
+		if {[lsearch -exact $from($pair) $connection] < 0} {
 		    # puts "add connect $connection"
-		    lappend from($port) $connection
+		    lappend from($pair) $connection
 		    lappend makes $connection
 		}
 	    }
 	    # find the connections to node
-	    set to($port) {}
+	    set to($pair) {}
 	    foreach source [$self port-active-connections-to $pair] {
 		set connection [list [join $source :] $jackport]
-		if {[lsearch -exact $to($port) $connection] < 0} {
+		if {[lsearch -exact $to($pair) $connection] < 0} {
 		    # puts "add connect $connection"
-		    lappend to($port) $connection
+		    lappend to($pair) $connection
 		    lappend makes $connection
 		}
 	    }
@@ -307,19 +296,19 @@ snit::type sdrkit::control {
 	    # out ports will have connections-from but no connections-to
 	    # the short circuit connections will match the source of the in port connections-to
 	    # with the sinks of the out port connections from
-	    if {$from($port) ne {} && $to($port) ne {}} {
+	    if {$from($pair) ne {} && $to($pair) ne {}} {
 		error "activating $pair finds connections both ways"
 	    }
 	}
-	# that found the makes, and left the per port information in to and from
+	# that found the makes, and left the per pair information in to and from
 	# now match the non-empty to's to the non-empty from's to generate the
 	# break list
-	foreach to_port [array names to] {
-	    if {$to($to_port) ne {}} {
-		set from_port [complement $to_port]
-		foreach to_conn $to($to_port) {
+	foreach to_pair [array names to] {
+	    if {$to($to_pair) ne {}} {
+		set from_pair [$self pair-complement $to_pair]
+		foreach to_conn $to($to_pair) {
 		    lassign $to_conn to_source to_me
-		    foreach from_conn $from($from_port) {
+		    foreach from_conn $from($from_pair) {
 			lassign $from_conn from_me from_sink
 			lappend breaks [list $to_source $from_sink]
 		    }

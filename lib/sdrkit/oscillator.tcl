@@ -28,7 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::oscillator {    
     option -name sdr-osc
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

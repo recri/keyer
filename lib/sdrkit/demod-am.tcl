@@ -30,7 +30,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::demod-am {    
     option -name sdr-demod-am
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

@@ -31,7 +31,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::iq-balance {    
     option -name sdr-iq-balance
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

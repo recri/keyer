@@ -30,7 +30,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::filter-overlap-save {    
     option -name sdr-ovsv
-    option -type dsp
+    option -type jack
     option -server default
     option -component {}
 

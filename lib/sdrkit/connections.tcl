@@ -307,7 +307,7 @@ snit::widget sdrkit::connections {
     
     method update-canvas {} {
 	# need to figure out if the connection line terminates above or below
-	array set missing { first-lft {} first-rgt {} last-lft {} last-rgt {} above-lft {} above-rgt {} below-lft {} below-rgt {} }
+	# they get too confusing, just leave them off
 	foreach item [dict keys $data(items)] {
 	    foreach w {lft rgt} {
 		# initialize y coordinate
@@ -317,10 +317,7 @@ snit::widget sdrkit::connections {
 		    set bbox [$win.$w bbox $item] 
 		    if {$bbox ne {}} {
 			lassign $bbox x y wd ht
-			set y [expr {$y+$ht/2.0}]
-			dict set data(items) $item $w-y $y
-			if {$missing(first-$w) eq {}} { set missing(first-$w) $item }
-			set missing(last-$w) $item
+			dict set data(items) $item $w-y [expr {$y+$ht/2.0}]
 		    }
 		}
 		# find parental y coordinate if necessary
@@ -332,30 +329,6 @@ snit::widget sdrkit::connections {
 			    break
 			}
 		    }
-		}
-		# no coordinate, then save for post processing
-		if {[dict get $data(items) $item $w-y] eq {}} {
-		    if {$missing(first-$w) eq {}} {
-			lappend missing(above-$w) $item
-		    } else {
-			lappend missing(below-$w) $item
-		    }
-		}
-	    }
-	}
-	foreach w {lft rgt} {
-	    if {$missing(first-$w) ne {}} {
-		lassign [$win.$w bbox $missing(first-$w)] x y wd ht
-		foreach item [lreverse $missing(above-$w)] {
-		    set y [expr {$y-$ht}]
-		    dict set data(items) $item $w-y $y
-		}
-	    }
-	    if {$missing(last-$w) ne {}} {
-		lassign [$win.$w bbox $missing(last-$w)] x y wd ht
-		foreach item $missing(below-$w) {
-		    set y [expr {$y+$ht}]
-		    dict set data(items) $item $w-y $y
 		}
 	    }
 	}
