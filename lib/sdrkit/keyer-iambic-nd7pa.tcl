@@ -48,12 +48,6 @@ snit::type sdrkit::keyer-iambic-nd7pa {
     option -swap -default 0 -configuremethod Configure
 
     variable data -array {
-	label-chan {} format-chan {Channel}
-	label-note {} format-note {Note}
-	label-wpm {} format-wpm {%.1f words/min}
-	label-dah {} format-dah {Dah %.2f Dits}
-	label-ies {} format-ies {Space %.2f Dits}
-	label-swap {} format-swap {}
     }
 
     constructor {args} {
@@ -74,26 +68,38 @@ snit::type sdrkit::keyer-iambic-nd7pa {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	foreach opt {chan note} title {{Midi Channel} {Midi Note}} min {1 0} max {16 127} {
-	    ttk::label $w.l-$opt -text $title -anchor e
-	    ttk::spinbox $w.s-$opt -width 3 -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
-	    grid $w.l-$opt $w.s-$opt -sticky ew
-	}
-
-	foreach {opt min max} {
-	    wpm 5 60
-	    dah 2.5 3.5
-	    ies 0.75 1.25
+	foreach {opt type format min max} {
+	    chan spinbox {Midi Channel} 1 16
+	    note spinbox {Midi Note} 0 127
+	    wpm scale {%d dits/word} 5 60
+	    dah scale {Dah %.2f Dits} 2.5 3.5
+	    ies scale {Space %.2f Dits} 0.75 1.25
 	} {
-	    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -width 10 -anchor e
-	    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
-	    $self Set -$opt $options(-$opt)
+	    switch $type {
+		spinbox {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::spinbox $w.s-$opt -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+		}
+		scale {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
+		}
+		separator {
+		    ttk::separator $w.l-$opt
+		    ttk::separator $w.s-$opt
+		}
+	    }
 	    grid $w.l-$opt $w.s-$opt -sticky ew
 	}
 	
 	foreach {opt vals lbls} {
 	    swap {0 1} {Unswapped Swapped}
 	} {
+	    set data(format-$opt) {}
 	    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -width 10 -anchor e
 	    sdrtk::radiomenubutton $w.s-$opt -values $vals -labels $lbls -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
 	    $self Set -$opt $options(-$opt)

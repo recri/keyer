@@ -41,9 +41,9 @@ snit::type sdrkit::gain {
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -in-options {-gain}
-    option -out-options {}
+    option -out-options {-gain}
 
-    option -gain -default -30.0 -configuremethod Configure
+    option -gain -default 0 -configuremethod Configure
 
     variable data -array {
 	label-gain {} format-gain {Gain %.1f dBFS}

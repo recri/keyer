@@ -35,17 +35,17 @@ snit::type sdrkit::keyer {
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	deb {Debounce} keyer-debounce
-	imb {Iambic} keyer-iambic
-	ton {Tone} keyer-tone
+	debounce {Debounce} keyer-debounce
+	iambic {Iambic} keyer-iambic
+	tone {Tone} keyer-tone
 	ptt {PTT} keyer-ptt
     }
     option -connections {
-	{} in-ports deb in-ports
-	deb out-ports imb in-ports
-	imb out-ports ptt in-ports
-	ptt out-ports ton in-ports
-	ton out-ports {} out-ports
+	{} in-ports debounce in-ports
+	debounce out-ports iambic in-ports
+	iambic out-ports ptt in-ports
+	ptt out-ports tone in-ports
+	tone out-ports {} out-ports
 	ptt out-ports {} out-ports
     }
 

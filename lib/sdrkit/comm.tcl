@@ -24,11 +24,20 @@ package require comm
 namespace eval sdrkit {}
 namespace eval sdrkit::comm {}
 
+#
+# okay, ignore this for a moment
+# because using comm for all communication is extremely slow
+# and the semantics of the plain call differ from the remote
+#
 proc sdrkit::comm::send {target args} {
-    return [comm::comm send {*}$target {*}$args]
+    # set result [comm::comm send {*}$target {*}$args]
+    set result [$target {*}$args]
+    # puts "comm::comm send $target $args => $result"
+    return $result
 }
 
 proc sdrkit::comm::wrap {command} {
-    return [list [comm::comm self] {*}$command]
+    #return [list [comm::comm self] {*}$command]
+    return $command
 }
 

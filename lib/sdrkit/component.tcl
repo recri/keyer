@@ -193,8 +193,8 @@ snit::type sdrkit::component {
     method name-enable {args} { return [$self control part-enable {*}$args] }
     method name-destroy {args} { return [$self control part-destroy {*}$args] }
     # double listing
-    method connect-ports {n1 p1 n2 p2} { return [$self control port-connect [list [list $n1 $p1]] [list [list $n2 $p2]]] }
-    method connect-options {n1 o1 n2 o2} { return [$self control opt-connect [list [list $n1 $o1]] [list [list $n2 $o2]]] }
+    method connect-ports {n1 p1 n2 p2} { return [$self control port-connect [list $n1 $p1] [list $n2 $p2]] }
+    method connect-options {n1 o1 n2 o2} { return [$self control opt-connect [list $n1 $o1] [list $n2 $o2]] }
     method out-ports {args} { return [$self control part-out-ports {*}$args] }	
     method in-ports {args} { return [$self control part-in-ports {*}$args] }	
 }

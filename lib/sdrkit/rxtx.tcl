@@ -97,7 +97,7 @@ snit::type sdrkit::rxtx {
 	set w $options(-window)
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	grid [ttk::notebook $w.full] -sticky nsew
+	ttk::notebook $w.full
 	ttk::notebook $w.empty
 	foreach {name title command} $options(-sub-components) {
 	    ttk::frame $w.full.$name
@@ -117,19 +117,19 @@ snit::type sdrkit::rxtx {
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)
-	    grid columnconfigure $w.full.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	    $w.full add $w.full.$name -text $title
 	    $w.empty add $w.empty.$name -text $title
 	}
-	$w.full add [ttk::frame $w.collapse] -text Collapse
+	$w.full add [ttk::frame $w.full.collapse] -text Collapse
 	$w.empty add [ttk::frame $w.empty.collapse] -text Collapse
+	grid $w.full -sticky nsew
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	bind $w.full <<NotebookTabChanged>> [mymethod note-full-select $w]
 	bind $w.empty <<NotebookTabChanged>> [mymethod note-empty-select $w]
     }
 
     method note-full-select {w} {
-	#puts "notes1-select [$w.notes1 select]"
+	#puts "note-full-select [$w.full select]"
 	set select [$w.full select]
 	if {[string match *collapse* $select]} {
 	    # collapse
@@ -143,7 +143,7 @@ snit::type sdrkit::rxtx {
     }
 
     method note-empty-select {w} {
-	#puts "notes2-select [$w.notes2 select]"
+	#puts "note-empty-select [$w.empty select]"
 	set select [$w.empty select]
 	if {[string match *collapse* $select]} {
 	    # stay collapsed

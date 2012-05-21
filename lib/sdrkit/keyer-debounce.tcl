@@ -36,7 +36,7 @@ snit::type sdrkit::keyer-debounce {
 
     option -in-ports {midi_in}
     option -out-ports {midi_out}
-    option -in-options {-chan -note -freq -gain -rise -fall}
+    option -in-options {-chan -note -period -steps}
     option -out-options {}
 
     option -chan -default 1 -configuremethod Configure
@@ -68,22 +68,32 @@ snit::type sdrkit::keyer-debounce {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	foreach opt {chan note} title {{Midi Channel} {Midi Note}} min {1 0} max {16 127} {
-	    ttk::label $w.l-$opt -text $title -anchor e
-	    ttk::spinbox $w.s-$opt -width 3 -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+	foreach {opt type format min max} {
+	    chan spinbox {Midi Channel} 1 16
+	    note spinbox {Midi Note} 0 127
+	    period scale  {Period %.1f ms} 0.1 10
+	    steps scale {Steps %d} 0 32
+	} {
+	    switch $type {
+		spinbox {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::spinbox $w.s-$opt -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+		}
+		scale {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
+		}
+		separator {
+		    ttk::separator $w.l-$opt
+		    ttk::separator $w.s-$opt
+		}
+	    }
 	    grid $w.l-$opt $w.s-$opt -sticky ew
 	}
-
-	ttk::label $w.l-period -textvar [myvar data(label-period)] -width 10 -anchor e
-	ttk::scale $w.s-period -from 0.1 -to 10 -command [mymethod Set -period] -variable [myvar options(-period)]
-	$self Set -period $options(-period)
-	grid $w.l-period $w.s-period -sticky ew
-
-	ttk::label $w.l-steps -textvar [myvar data(label-steps)] -width 10 -anchor e
-	ttk::scale $w.s-steps -from 1 -to 32 -command [mymethod Set -steps] -variable [myvar options(-steps)]
-	$self Set -steps $options(-steps)
-	grid $w.l-steps $w.s-steps -sticky ew
-
 	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
 	    grid columnconfigure $pw $col -minsize $ms -weight $wt
 	}

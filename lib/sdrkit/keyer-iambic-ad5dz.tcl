@@ -37,8 +37,8 @@ snit::type sdrkit::keyer-iambic-ad5dz {
 
     option -in-ports {midi_in}
     option -out-ports {midi_out}
-    option -in-options {-chan -note -word -wpm -day -ies -ils -iws -swap -alsp -awsp -mode}
-    option -out-options {-chan -note -word -wpm -day -ies -ils -iws -swap -alsp -awsp -mode}
+    option -in-options {-chan -note -word -wpm -dah -ies -ils -iws -swap -alsp -awsp -mode}
+    option -out-options {-chan -note -word -wpm -dah -ies -ils -iws -swap -alsp -awsp -mode}
 
     option -chan -default 1 -configuremethod Configure
     option -note -default 0 -configuremethod Configure
@@ -54,18 +54,6 @@ snit::type sdrkit::keyer-iambic-ad5dz {
     option -mode -default A -configuremethod Configure
 
     variable data -array {
-	label-chan {} format-chan {Channel}
-	label-note {} format-note {Note}
-	label-word {} format-word {%d dits/word}
-	label-wpm {} format-wpm {%.1f words/min}
-	label-dah {} format-dah {Dah %.2f Dits}
-	label-ies {} format-ies {Space %.2f Dits}
-	label-ils {} format-ils {Letter %.2f Dits}
-	label-iws {} format-iws {Word %.2f Dits}
-	label-swap {} format-swap {}
-	label-alsp {} format-alsp {}
-	label-awsp {} format-awsp {}
-	label-mode {} format-mode {}
     }
 
     constructor {args} {
@@ -86,29 +74,43 @@ snit::type sdrkit::keyer-iambic-ad5dz {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	foreach opt {chan note} title {{Midi Channel} {Midi Note}} min {1 0} max {16 127} {
-	    ttk::label $w.l-$opt -text $title -anchor e
-	    ttk::spinbox $w.s-$opt -width 3 -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+	foreach {opt type format min max} {
+	    chan spinbox {Midi Channel} 1 16
+	    note spinbox {Midi Note} 0 127
+	    wpm scale {%d dits/word} 5 60
+	    dah scale {Dah %.2f Dits} 2.5 3.5
+	    ies scale {Space %.2f Dits} 0.75 1.25
+	    ils scale {Letter %.2f Dits} 2.5 3.5
+	    iws scale {Word %.2f Dits} 6 8
+	} {
+	    switch $type {
+		spinbox {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::spinbox $w.s-$opt -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+		}
+		scale {
+		    set data(format-$opt) $format
+		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
+		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
+		    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
+		}
+		separator {
+		    ttk::separator $w.l-$opt
+		    ttk::separator $w.s-$opt
+		}
+	    }
 	    grid $w.l-$opt $w.s-$opt -sticky ew
 	}
 
-	ttk::label $w.l-word -textvar [myvar data(label-word)] -width 10 -anchor e
-	sdrtk::radiomenubutton $w.s-word -values {50 60} -labels {PARIS CODEX} -command [mymethod Set -word] -variable [myvar options(-word)]
-	$self Set -word $options(-word)
-	grid $w.l-word $w.s-word -sticky ew
-
-	foreach {opt min max} {wpm 5 60 dah 2.5 3.5 ies 0.75 1.25 ils 2.5 3.5 iws 6 8} {
-	    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -width 10 -anchor e
-	    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
-	    $self Set -$opt $options(-$opt)
-	    grid $w.l-$opt $w.s-$opt -sticky ew
-	}
-	
 	foreach {opt vals lbls} {
+	    word {50 60} {PARIS CODEX}
 	    swap {0 1} {Unswapped Swapped}
 	    alsp {0 1} {{Auto letter space off} {Auto letter space on}}
 	    awsp {0 1} {{Auto word space off} {Auto word space on}}
 	    mode {A B} {{Iambic Mode A} {Iambic Mode B}}} {
+	    set data(format-$opt) {}
 	    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -width 10 -anchor e
 	    sdrtk::radiomenubutton $w.s-$opt -values $vals -labels $lbls -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
 	    $self Set -$opt $options(-$opt)

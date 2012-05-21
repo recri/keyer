@@ -27,119 +27,13 @@
 #
 package provide sdrkit::control 1.0.0
 
-if {0} {
-package require snit
-package require sdrkit::comm
-
-namespace eval sdrkit {}
-
-snit::type sdrkit::control {
-
-    variable d [dict create \
-		    name [dict create] \
-		    opt [dict create] \
-		    invert-opt [dict create] \
-		    port [dict create] \
-		    invert-port [dict create] \
-		   ]
-
-    constructor {args} {
-	#$self configure {*}$args
-    }
-    method get-controller {} { return [sdrkit::comm::wrap $self] }
-    #
-    # name methods - names are unique identifiers of parts
-    #
-    method part-exists {name} { return [dict exists $d name $name] }
-    method part-get-key {name key} { return [dict get $d name $name $key] }
-    method part-set-key {name key value} { dict set d name $name $key $value }
-    method part-call {name args} { return [sdrkit::comm::send [$self part-command $name] {*}$args] }
-    method part-register {name args} {
-	# test for uniqueness
-	if {[$self part-exists $name]} { error "name \"$name\" exists" }
-	# create
-	dict set d name $name [dict create command $args]
-	# install ports and options
-	foreach aspect {in-ports out-ports in-options out-options} adder {port-add port-add opt-add opt-add} {
-	    set val [$self part-cget $name -$aspect]
-	    $self part-set-key $name $aspect $val
-	    foreach v $val { $self $adder [list $name $v] }
-	}
-    }
-    method part-unregister {name} {
-	if { ! [$self part-exists $name]} { error "name \"$name\" does not exist" }
-	# clean up opts, invert-opts, ports, invert-ports
-	#if {[$self part-is-active $name]} { $self part-deactivate }
-	#if {[$self part-is-enabled $name]} { $self part-disable }
-	foreach pair [$self option-filter [list $name *]] { $self opt-remove $pair }
-	foreach pair [$self port-filter [list $name *]] { $self port-remove $pair }
-	dict unset d name $name
-    }
-    method part-destroy {name} {
-	$self part-call $name destroy
-    }
-    method part-command {name} {
-	return [$self part-get-key $name command]
-    }
-    method part-configure {name args} {
-	return [$self part-call $name configure {*}$args]
-    }
-    method part-cget {name opt} {
-	return [$self part-call $name cget $opt]
-    }
-    method part-in-ports {name} { return [$self part-get-key $name in-ports] }
-    method part-out-ports {name} { return [$self part-get-key $name out-ports] }
-    method part-in-options {name} { return [$self part-get-key $name in-options] }
-    method part-out-options {name} { return [$self part-get-key $name out-options] }
-    method part-connect-ports {name port name2 port2} {
-	#puts "part-connect-ports $name {$ports} $name2 {$ports2}"
-    }
-    method part-connect-options {name option name2 option2} {
-	#puts "part-connect-options $name {$options} $name2 {$options2}"
-    }
-    method part-is-enabled {name} { return [$self part-get-key enable] }
-    method part-enable {name val} {
-	$self part-set-key $name enable $val
-	$self part-call $name enable $val
-    }
-    method part-is-activated {name} { return [$self part-get-key activate] }
-    method part-activate {name} {
-	$self part-set-key $name activate $val
-	$self part-call $name activate $val
-    }
-    method part-report {name args} {
-	#puts "part-report $name $args"
-    }
-    #
-    # port methods.  pair is a [list $name $port] pair
-    #
-    method port-exists {pair} { return [dict exists $d port $pair] }
-    method port-filter {pattern} { return [dict keys [dict get $d port] $pattern] }
-    method port-add {pair} {
-	if {[$self port-exists $pair]} { error "port \"$pair\" already exists" }
-	dict set d port $pair {}
-	dict set d inverse-port $pair {}
-    }
-    method port-remove {pair} {
-    }
-    #
-    # option methods.  pair is a [list $name $option] pair
-    #
-    method option-exists {pair} { return [dict exists $d option $pair] }
-    method option-filter {pattern} { return [dict keys [dict get $d option] $pattern] }
-    method option-add {pair} {
-	if {[$self option-exists $pair]} { error "option \"$pair\" already exists" }
-	dict set d option $pair {}
-	dict set d inverse-option $pair {}
-    }
-    method option-remove {pair} {
-    }
-}
-}
 
 package provide sdrkit::control 1.0.0
 
 package require snit
+package require sdrkit::comm
+
+namespace eval sdrkit {}
 
 snit::type sdrkit::control {
     option -notifier {}
@@ -169,6 +63,7 @@ snit::type sdrkit::control {
 	foreach opt [$self part-out-options $name] { $self opt-add-if-new [list $name $opt] }
 	foreach port [$self part-in-ports $name] { $self port-add [list $name $port] }
 	foreach port [$self part-out-ports $name] { $self port-add-if-new [list $name $port] }	
+	return {}
     }
     method part-remove {name} {
 	#puts "part-remove $name"
@@ -178,6 +73,7 @@ snit::type sdrkit::control {
 	foreach pair [$self opt-filter [list $name *]] { $self opt-remove $pair }
 	foreach pair [$self port-filter [list $name *]] { $self port-remove $pair }
 	$self X-remove part $name
+	return {}
     }
     method part-destroy {name} { return [$self part-call $name destroy] }
     method part-list {} { return [$self X-list part] }
@@ -524,6 +420,7 @@ snit::type sdrkit::control {
 	if {[dict exists $data($x) $tag]} { error "$x \"$tag\" exists" }
 	dict set data($x) $tag {}
 	if {$x in {opt port}} { dict set data(invert-$x) $tag {} }
+	return {}
     }
     method X-remove {x tag} {
 	#puts "X-remove $x $tag"
@@ -543,6 +440,7 @@ snit::type sdrkit::control {
 	}
 	# remove the tag
 	dict unset data($x) $tag
+	return {}
     }
     method X-list {x} { return [dict keys $data($x)] }
     method X-filter {x glob} { return [dict keys $data($x) $glob] }
@@ -562,6 +460,7 @@ snit::type sdrkit::control {
 	if {[$self X-connected $x $pair1 $pair2]} { error "${x}s \"$pair1\" \"$pair2\" are connected" }
 	dict lappend data($x) $pair1 $pair2
 	dict lappend data(invert-$x) $pair2 $pair1
+	return {}
     }
     method X-disconnect {x pair1 pair2} {
 	if { ! [dict exists $data($x) $pair1]} { error "$x \"$pair1\" does not exist" }
@@ -573,6 +472,7 @@ snit::type sdrkit::control {
 	set list [dict get $data(invert-$x) $pair2]
 	set i [lsearch -exact $list $pair1]
 	dict set data(invert-$x) $pair2 [lreplace $list $i $i]
+	return {}
     }
     method X-connections-from {x pair} { return [$self X-get $x $pair] }
     method X-connections-to {x pair} { return [$self X-get invert-$x $pair] }
