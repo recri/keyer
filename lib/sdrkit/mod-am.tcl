@@ -30,6 +30,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::mod-am {    
     option -name sdr-mod-am
+    option -type dsp
     option -server default
     option -component {}
 

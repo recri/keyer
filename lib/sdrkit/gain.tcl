@@ -30,6 +30,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::gain {    
     option -name sdr-gain
+    option -type dsp
     option -server default
     option -component {}
 

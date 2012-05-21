@@ -29,6 +29,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::iq-unbalance {
     option -name sdr-iqu
+    option -type dsp
     option -title {IQ Unbalancer}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
@@ -89,6 +90,7 @@ snit::type sdrkit::iq-unbalance {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -109,6 +111,7 @@ snit::type sdrkit::iq-unbalance {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)

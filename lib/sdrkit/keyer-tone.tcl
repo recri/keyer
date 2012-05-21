@@ -28,6 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-tone {    
     option -name key-tone
+    option -type dsp
     option -server default
     option -component {}
 

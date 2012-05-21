@@ -28,6 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-iambic-nd7pa {    
     option -name key-iambic-nd7pa
+    option -type dsp
     option -server default
     option -component {}
 

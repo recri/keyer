@@ -32,6 +32,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::agc {    
     option -name sdr-agc
+    option -type dsp
     option -server default
     option -component {} 
 

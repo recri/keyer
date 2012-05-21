@@ -27,6 +27,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-debounce {    
     option -name key-debounce
+    option -type dsp
     option -server default
     option -component {}
 

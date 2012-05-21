@@ -31,6 +31,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::iq-delay {    
     option -name sdr-iq-delay
+    option -type dsp
     option -server default
     option -component {}
 

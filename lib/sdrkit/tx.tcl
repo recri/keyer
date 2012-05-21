@@ -29,13 +29,14 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::tx {
     option -name tx
+    option -type dsp
     option -title {TX}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	af-g {AF Gain} gain
+	af-gain {AF Gain} gain
 	-af-real {Real part} real
 	-af-wave {Wave shape} waveshape
 	af-mtr1 {Wave shape meter} meter-tap
@@ -54,12 +55,12 @@ snit::type sdrkit::tx {
 	if-sp1 {TX Spectrum} spectrum-tap
 	if-lo {LO Mixer} lo-mixer
 	rf-iqb {IQ Balance} iq-balance
-	rf-g {RF Level} gain
+	rf-gain {RF Level} gain
 	rf-mtr6 {RF Power meter} meter-tap
     }
     option -connections {
-	{} in-ports af-g in-ports
-	af-g out-ports af-real in-ports
+	{} in-ports af-gain in-ports
+	af-gain out-ports af-real in-ports
 	af-real out-ports af-wave in-ports
 	af-wave out-ports af-mtr1 in-ports
 	af-mtr1 out-ports af-dcb in-ports
@@ -77,8 +78,8 @@ snit::type sdrkit::tx {
 	if-mtr5 out-ports if-sp1 in-ports
 	if-sp1 out-ports if-lo in-ports
 	if-lo out-ports rf-iqb in-ports
-	rf-iqb out-ports rf-g in-ports
-	rf-g out-ports rf-mtr6 in-ports
+	rf-iqb out-ports rf-gain in-ports
+	rf-gain out-ports rf-mtr6 in-ports
 	rf-mtr6 out-ports {} out-ports
     }
 
@@ -149,6 +150,7 @@ snit::type sdrkit::tx {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -178,6 +180,7 @@ snit::type sdrkit::tx {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)

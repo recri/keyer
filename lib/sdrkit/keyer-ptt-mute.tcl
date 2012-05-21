@@ -27,6 +27,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-ptt-mute {    
     option -name key-ptt-mute
+    option -type dsp
 
     option -server default
     option -component {}

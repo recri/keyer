@@ -35,6 +35,7 @@ package require snit
 
 package require sdrkit::control
 package require sdrkit::comm
+package require sdrtype::types
 
 namespace eval sdrkit {}
 namespace eval sdrkitw {}
@@ -43,7 +44,7 @@ snit::type sdrkit::component {
     component subsidiary
     component control
 
-    # the tk appname, jack client name, and sdrkit::control name
+    # the jack client name, and sdrkit::control name
     # used to "send" commands to this component
     # used as the jack client name or as the root jack
     #   client name if more than one client is active
@@ -53,6 +54,9 @@ snit::type sdrkit::component {
     # the jack server name to create clients
     option -server default
 
+    # the component which contains this component
+    option -container {}
+
     # root window for ui options
     # should be {} for .
     # should be a window name for window name
@@ -60,7 +64,7 @@ snit::type sdrkit::component {
     option -window -default {}
     option -parent-window {.}
 
-    # the tk appname / sdrkit::control name
+    # the sdrkit::control name
     # of the control application
     # used to "send" commands to the control component 
     option -control {}
@@ -184,7 +188,7 @@ snit::type sdrkit::component {
     #
     # callback from subsidiary requesting controller method
     #
-    method get-controller {} { return $options(-control) }
+    method get-controller {} { return $control }
     #
     # call to the controller
     #

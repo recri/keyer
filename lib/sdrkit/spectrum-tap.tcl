@@ -28,6 +28,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::spectrum-tap {    
     option -name spectrum-tap
+    option -type dsp
     option -server default
     option -component {}
 

@@ -31,6 +31,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::iq-noise {    
     option -name sdr-iq-noise
+    option -type dsp
     option -server default
     option -component {}
 

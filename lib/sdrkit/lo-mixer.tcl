@@ -28,6 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::lo-mixer {    
     option -name sdr-lo-mixer
+    option -type dsp
     option -server default
     option -component {}
 

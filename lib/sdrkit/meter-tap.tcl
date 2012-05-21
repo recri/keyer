@@ -28,6 +28,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::meter-tap {    
     option -name meter-tap
+    option -type dsp
     option -server default
     option -component {}
 

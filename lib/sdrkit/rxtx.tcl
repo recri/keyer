@@ -29,6 +29,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::rxtx {
     option -name sdr-src
+    option -type dsp
     option -title {IQ Source}
     option -in-ports {}
     option -out-ports {out_i out_q}
@@ -89,6 +90,7 @@ snit::type sdrkit::rxtx {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command -subsidiary-opts $args \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -97,6 +99,8 @@ snit::type sdrkit::rxtx {
 	set w $options(-window)
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
+	grid [ttk::frame $w.menu] -sticky ew
+	pack [ttk::button $w.menu.connections -text connections -command [mymethod ViewConnections]] -side left
 	ttk::notebook $w.full
 	ttk::notebook $w.empty
 	foreach {name title command} $options(-sub-components) {
@@ -114,6 +118,7 @@ snit::type sdrkit::rxtx {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command -subsidiary-opts $args \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)
@@ -122,28 +127,39 @@ snit::type sdrkit::rxtx {
 	}
 	$w.full add [ttk::frame $w.full.collapse] -text Collapse
 	$w.empty add [ttk::frame $w.empty.collapse] -text Collapse
-	grid $w.full -sticky nsew
+	grid $w.full -sticky nsew -row 1
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-	bind $w.full <<NotebookTabChanged>> [mymethod note-full-select $w]
-	bind $w.empty <<NotebookTabChanged>> [mymethod note-empty-select $w]
+	bind $w.full <<NotebookTabChanged>> [mymethod NoteFullSelect $w]
+	bind $w.empty <<NotebookTabChanged>> [mymethod NoteEmptySelect $w]
     }
-
-    method note-full-select {w} {
-	#puts "note-full-select [$w.full select]"
+    method ViewConnections {} {
+	if { ! [winfo exists .connections]} {
+	    package require sdrkit::connections
+	    toplevel .connections
+	    pack [::sdrkit::connections .connections.x \
+		      -server $options(-server) \
+		      -container $options(-component) \
+		      -control [$options(-component) get-controller]] -side top -fill both -expand true
+	} else {
+	    wm deiconify .connections
+	}
+    }
+    method NoteFullSelect {w} {
+	#puts "NoteFullSelect [$w.full select]"
 	set select [$w.full select]
 	if {[string match *collapse* $select]} {
 	    # collapse
 	    #puts "collapsing"
 	    grid remove $w.full
-	    grid $w.empty -row 0 -column 0 -sticky ew
+	    grid $w.empty -row 1 -column 0 -sticky ew
 	    $w.empty select [regsub {full} $select empty]
 	} else {
 	    # stay expanded
 	}
     }
 
-    method note-empty-select {w} {
-	#puts "note-empty-select [$w.empty select]"
+    method NoteEmptySelect {w} {
+	#puts "NoteEmptySelect [$w.empty select]"
 	set select [$w.empty select]
 	if {[string match *collapse* $select]} {
 	    # stay collapsed
@@ -151,7 +167,7 @@ snit::type sdrkit::rxtx {
 	    # expand
 	    #puts "expanding"
 	    grid remove $w.empty
-	    grid $w.full -row 0 -column 0 -sticky nsew
+	    grid $w.full -row 1 -column 0 -sticky nsew
 	    $w.full select [regsub {empty} $select full]
 	}
     }

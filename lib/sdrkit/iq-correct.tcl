@@ -31,6 +31,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::iq-correct {    
     option -name sdr-iq-correct
+    option -type dsp
     option -server default
     option -component {}
 

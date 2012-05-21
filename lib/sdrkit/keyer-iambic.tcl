@@ -30,6 +30,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::keyer-iambic {
     option -name keyer
+    option -type dsp
     option -title {Iambic}
     option -in-ports {midi_in}
     option -out-ports {midi_out}
@@ -94,6 +95,7 @@ snit::type sdrkit::keyer-iambic {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -117,6 +119,7 @@ snit::type sdrkit::keyer-iambic {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)

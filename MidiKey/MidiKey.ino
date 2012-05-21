@@ -38,7 +38,7 @@
 */
 
 #include "WProgram.h"
-#include "Debounce.h"
+#include "debouncer.h"
 
 const int channel = 1;      // the MIDI channel number to send messages
 const int base_note = 0;    // the base midi note
@@ -48,8 +48,8 @@ const int dahPin = 1;       // the dah pin number, is B1
 
 const int debounceFor = 4;  // four clock debounce
 
-Debounce ditFilter(debounceFor);	    
-Debounce dahFilter(debounceFor);
+debouncer ditFilter(debounceFor);	    
+debouncer dahFilter(debounceFor);
 
 const int sample_period = 100;
 

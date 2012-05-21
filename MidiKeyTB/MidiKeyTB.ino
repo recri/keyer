@@ -38,7 +38,7 @@
 */
 
 #include "WProgram.h"
-#include "Debounce.h"
+#include "debouncer.h"
 
 const int channel = 1;      // the MIDI channel number to send messages
 const int base_note = 0;    // the base midi note
@@ -55,9 +55,9 @@ byte btn;                   // the current button value
 const int debounceFor = 1;  // 1 step debounce 
 const int readPeriod = 50;  // microseconds per debounce step
 
-Debounce ditFilter(debounceFor);	    
-Debounce dahFilter(debounceFor);
-Debounce btnFilter(debounceFor);
+debouncer ditFilter(debounceFor);	    
+debouncer dahFilter(debounceFor);
+debouncer btnFilter(debounceFor);
 
 const int rgtPin = 5;		// right on D0
 const int lftPin = 6;		// left on D1

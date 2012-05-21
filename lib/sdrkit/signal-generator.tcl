@@ -26,6 +26,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::signal-generator {
     option -name sdr-sg
+    option -type dsp
     option -title {Signal Generator}
     option -in-ports {}
     option -out-ports {out_i out_q}
@@ -91,6 +92,7 @@ snit::type sdrkit::signal-generator {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -111,6 +113,7 @@ snit::type sdrkit::signal-generator {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)

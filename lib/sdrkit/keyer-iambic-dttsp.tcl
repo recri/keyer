@@ -28,6 +28,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::keyer-iambic-dttsp {    
     option -name key-iambic-dttsp
+    option -type dsp
     option -server default
     option -component {}
 

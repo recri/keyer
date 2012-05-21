@@ -30,6 +30,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::mod {
     option -name mod
+    option -type dsp
     option -title {Mod}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
@@ -91,6 +92,7 @@ snit::type sdrkit::mod {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -114,6 +116,7 @@ snit::type sdrkit::mod {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)

@@ -29,13 +29,14 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::rx {
     option -name rx
+    option -type dsp
     option -title {RX}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	rf-g {RF Gain} gain
+	rf-gain {RF Gain} gain
 	rf-iqs {IQ Swap} iq-swap
 	rf-iqd {IQ Delay} iq-delay
 	rf-sp1 {Spectrum Semi-raw} spectrum-tap
@@ -54,11 +55,11 @@ snit::type sdrkit::rx {
 	-af-sql {Squelch} squelch
 	-af-spt {Spot Tone} spot
 	-af-geq {Graphic EQ} graphic-eq
-	af-g {AF Gain} gain
+	af-gain {AF Gain} gain
     }
     option -connections {
-	{} in-ports rf-g in-ports
-	rf-g out-ports rf-iqs in-ports
+	{} in-ports rf-gain in-ports
+	rf-gain out-ports rf-iqs in-ports
 	rf-iqs out-ports rf-iqd in-ports
 	rf-iqd out-ports rf-sp1 in-ports
 	rf-sp1 out-ports rf-nb1 in-ports
@@ -76,8 +77,8 @@ snit::type sdrkit::rx {
 	af-dem out-ports af-sql in-ports
 	af-sql out-ports af-spt in-ports
 	af-spt out-ports af-geq in-ports
-	af-geq out-ports af-g in-ports
-	af-g out-ports {} out-ports
+	af-geq out-ports af-gain in-ports
+	af-gain out-ports {} out-ports
     }
 
     option -server default
@@ -147,6 +148,7 @@ snit::type sdrkit::rx {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -176,6 +178,7 @@ snit::type sdrkit::rx {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)

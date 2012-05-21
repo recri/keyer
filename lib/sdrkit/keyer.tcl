@@ -29,6 +29,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::keyer {
     option -name keyer
+    option -type dsp
     option -title {Keyer}
     option -in-ports {midi_in}
     option -out-ports {out_i out_q midi_out}
@@ -111,6 +112,7 @@ snit::type sdrkit::keyer {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -131,6 +133,7 @@ snit::type sdrkit::keyer {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)

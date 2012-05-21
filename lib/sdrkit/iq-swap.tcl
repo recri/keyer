@@ -31,6 +31,7 @@ namespace eval sdrkitx {}
 
 snit::type sdrkit::iq-swap {    
     option -name sdr-iq-swap
+    option -type dsp
     option -server default
     option -component {}
 

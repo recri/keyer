@@ -30,6 +30,7 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::iq-source {
     option -name sdr-src
+    option -type dsp
     option -title {IQ Source}
     option -in-ports {}
     option -out-ports {out_i out_q}
@@ -90,6 +91,7 @@ snit::type sdrkit::iq-source {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command -subsidiary-opts $args \
+		-container $options(-component) \
 		-control [$options(-component) get-controller]
 	}
     }
@@ -115,6 +117,7 @@ snit::type sdrkit::iq-source {
 		-server $options(-server) \
 		-name $options(-name)-$name \
 		-subsidiary sdrkit::$command -subsidiary-opts $args \
+		-container $options(-component) \
 		-control [$options(-component) get-controller] \
 		-minsizes $options(-minsizes) \
 		-weights $options(-weights)
