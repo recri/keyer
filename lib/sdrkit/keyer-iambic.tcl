@@ -153,12 +153,12 @@ snit::type sdrkit::keyer-iambic {
 	# enable selected keyer if any
 	if {$name ne {none}} {
 	    set data(enable-$name) 1
-	    $options(-component) report name-enable $options(-name)-$name 1
+	    $options(-component) part-enable $options(-name)-$name
 	}
 	# disable deselected keyer
 	if {$exname ne {none}} {
 	    set data(enable-$exname) 0
-	    $options(-component) report name-enable $options(-name)-$exname 0
+	    $options(-component) part-disable $options(-name)-$exname
 	}
 	# deal with ui details
 	set w $options(-window)

@@ -189,9 +189,9 @@ snit::type sdrkit::component {
     # call to the controller
     #
     method control {args} { return [sdrkit::comm::send $control {*}$args] }
-    method name-report {args} { return [$self control part-report {*}$args] }
-    method name-enable {args} { return [$self control part-enable {*}$args] }
-    method name-destroy {args} { return [$self control part-destroy {*}$args] }
+    method part-report {args} { return [$self control part-report {*}$args] }
+    method part-enable {args} { return [$self control part-enable {*}$args] }
+    method part-destroy {args} { return [$self control part-destroy {*}$args] }
     # double listing
     method connect-ports {n1 p1 n2 p2} { return [$self control port-connect [list $n1 $p1] [list $n2 $p2]] }
     method connect-options {n1 o1 n2 o2} { return [$self control opt-connect [list $n1 $o1] [list $n2 $o2]] }

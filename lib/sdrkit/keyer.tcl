@@ -150,6 +150,12 @@ snit::type sdrkit::keyer {
 	foreach part $data(parts) {
 	}
     }
-    method Enable {name} { $options(-component) report name-enable $options(-name)-$name $data($name-enable) }
+    method Enable {name} {
+	if {$data($name-enable)} {
+	    $options(-component) part-enable $options(-name)-$name
+	} else {
+	    $options(-component) part-disable $options(-name)-$name
+	}
+    }
 }
 
