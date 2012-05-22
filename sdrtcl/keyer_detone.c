@@ -44,7 +44,7 @@ typedef struct {
 
 static void _update(_t *dp) {
   if (dp->modified) {
-    dp->modified = 0;
+    dp->modified = dp->fw.busy = 0;
     filter_goertzel_configure(&dp->fg, &dp->opts.fg);
   }
 }
@@ -94,11 +94,11 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = (data->opts.fg.hertz != save.fg.hertz || data->opts.fg.bandwidth != save.fg.bandwidth);
+  data->modified = data->fw.busy = (data->opts.fg.hertz != save.fg.hertz || data->opts.fg.bandwidth != save.fg.bandwidth);
   if (data->modified) {
     void *e = filter_goertzel_preconfigure(&data->fg, &data->opts.fg); if (e != &data->fg) {
       data->opts = save;
-      data->modified = 0;
+      data->modified = data->fw.busy = 0;
       return fw_error_str(interp, e);
     }
   }

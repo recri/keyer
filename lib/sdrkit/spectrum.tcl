@@ -180,7 +180,7 @@ snit::type sdrkit::spectrum {
 	set options($opt) $val
 	.spectrum-$options(-name) configure $opt $val
     }
-    method Tap-is-busy {} { return [lindex [::sdrkitx::$options(-name) modified] 1] }
+    method Tap-is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
     method UpdateFrequencies {} {
 	#puts "recomputing frequencies for length $n from [llength $data(frequencies)]"
 	set data(frequencies) {}

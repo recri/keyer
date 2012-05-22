@@ -54,7 +54,7 @@ typedef struct {
 
 static void _update(_t *dp) {
   if (dp->modified) {
-    dp->modified = 0;
+    dp->modified = dp->fw.busy = 0;
     dp->opts.detime.word = dp->opts.word;
     dp->opts.detime.wpm = dp->opts.wpm;
     detime_configure(&dp->detime, &dp->opts.detime);
@@ -144,7 +144,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = (data->opts.word != save.word || data->opts.wpm != save.wpm);
+  data->modified = data->fw.busy = (data->opts.word != save.word || data->opts.wpm != save.wpm);
   return TCL_OK;
 }
 

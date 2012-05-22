@@ -60,7 +60,7 @@ typedef struct {
 // update the computed parameters
 static void _update(_t *dp) {
   if (dp->modified) {
-    dp->modified = 0;
+    dp->modified = dp->fw.busy = 0;
     /* ptt recomputation */
     int sample_rate = sdrkit_sample_rate(dp);
     dp->ptt_delay_samples = dp->opts.ptt_delay * sample_rate;
@@ -73,7 +73,7 @@ static void *_init(void *arg) {
   void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
   dp->ptt_on = 0;
   dp->key_on = 0;
-  dp->modified = 1;
+  dp->modified = dp->fw.busy = 1;
   _update(dp);
   return arg;
 }
@@ -167,7 +167,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     dp->opts = save;
     return TCL_ERROR;
   }
-  dp->modified = (dp->opts.ptt_delay != save.ptt_delay || dp->opts.ptt_hang != save.ptt_hang);
+  dp->modified = dp->fw.busy = (dp->opts.ptt_delay != save.ptt_delay || dp->opts.ptt_hang != save.ptt_hang);
   return TCL_OK;
 }
 

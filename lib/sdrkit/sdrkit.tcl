@@ -23,6 +23,6 @@
 package provide sdrkit::sdrkit 1.0.0
 
 namespace eval sdrkit {
-    set testing 1
+    set testing 0
 }
 

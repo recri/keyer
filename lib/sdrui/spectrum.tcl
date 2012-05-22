@@ -366,7 +366,7 @@ snit::widget sdrui::spectrum {
 
     method Window-configure {} { $self configure -size $options(-size) }
 
-    method Capture-is-busy {} { return [lindex [$capture modified] 1] }
+    method Capture-is-busy {} { return [$capture is-busy] }
 
     method Capture-deactivate {} { lappend data(capture-queue) deactivate }
     method Capture-activate {} { lappend data(capture-queue) activate }

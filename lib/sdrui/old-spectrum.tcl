@@ -68,7 +68,7 @@ snit::widget sdrui::old-spectrum {
     method Opt-delegate {opt val} {
 	if {$display ne {} && $opt in $data(display-options)} { $display configure $opt $val }
 	if {$capture ne {} && $opt in $data(capture-options)} {
-	    while {[lindex [$capture modified] 1]} { after 1 }
+	    while {[$capture is-busy]} { after 1 }
 	    $capture configure $opt $val
 	}
     }
@@ -99,7 +99,7 @@ snit::widget sdrui::old-spectrum {
     }
 
     method update {} {
-	if { ! [lindex [$capture modified] 1]} {
+	if { ! [$capture is-busy]} {
 	    lassign [$capture get] frame dB
 	    binary scan $dB f* dB
 	    set n [llength $dB]

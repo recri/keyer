@@ -108,7 +108,10 @@ snit::type sdrkit::agc {
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }
 
     method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} { ::sdrkitx::$options(-name) configure $data(map$opt) $val }
+    method ComponentConfigure {opt val} {
+	while {[::sdrkitx::$options(-name) is-busy]} { after 1 }
+	::sdrkitx::$options(-name) configure $data(map$opt) $val
+    }
     method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 

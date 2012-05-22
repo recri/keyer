@@ -116,7 +116,7 @@ static void *_preconfigure(_t *data) {
   else if (strcmp(reduce_type_str, "abs_imag") == 0) prec->reduce = reduce_abs_imag;
   else if (strcmp(reduce_type_str, "max_abs") == 0) prec->reduce = reduce_max_abs;
   else return "reduce must be one of mag2, abs_real, abs_imag, or max_abs";
-  data->modified = 1;
+  data->modified = data->fw.busy = 1;
   return data;
 }
 
@@ -132,7 +132,7 @@ static void _configure(_t *data) {
 static void _update(_t *data) {
   if (data->modified) {
     _configure(data);
-    data->modified = 0;
+    data->modified = data->fw.busy = 0;
   }
 }
 
@@ -162,7 +162,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   if ( ! framework_is_active(clientData)) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not active", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  if (data->modified || (data->n_results-1) < 0) return fw_error_str(interp, "busy");
+  if ((data->n_results-1) < 0) return fw_error_str(interp, "busy");
   summary_t result = data->results[(data->n_results-1)&3];
   return fw_success_obj(interp, Tcl_NewListObj(5, (Tcl_Obj *[]){
 	Tcl_NewLongObj(result.frame), Tcl_NewLongObj(result.nframes),

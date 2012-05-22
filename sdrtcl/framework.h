@@ -126,10 +126,11 @@ typedef struct {
   Tcl_Obj *client_name;
   Tcl_Obj *subcommands_string;
   int verbose;
+  int activated;
+  int busy;
   jack_client_t *client;
   jack_port_t **port;
   framework_midi_t *midi;
-  int activated;
   Tcl_Obj *method_list, *option_list, *port_list;
 } framework_t;
 
@@ -499,8 +500,18 @@ static int fw_subcommand_is_active(ClientData clientData, Tcl_Interp *interp, in
   Tcl_SetObjResult(interp, Tcl_NewIntObj(fp->activated));
   return TCL_OK;
 }
+static int fw_subcommand_is_busy(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(fp->busy));
+  return TCL_OK;
+}
 static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
+  if (fp->busy) {
+    if (argc == 2 && strcmp("is-busy", Tcl_GetString(objv[1])) == 0)
+      return fw_subcommand_is_busy(clientData, interp, argc, objv);
+    return fw_error_str(interp, "busy");
+  }
   // fprintf(stderr, "fw_subcommand_dispatch(%lx, %lx, %d, %lx)\n", (long)clientData, (long)interp, argc, (long)objv);
   const fw_subcommand_table_t *table = fp->subcommands;
   if (argc < 2)

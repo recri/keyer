@@ -168,7 +168,7 @@ snit::type sdrctl::control {
 
     method {Handler2 -high} {val} {
 	if {$options(-type) eq {jack}} {
-	    if {[lindex [$wrapped modified] 1]} {
+	    if {[$wrapped is-busy]} {
 		# puts "deferred $wrapped configure -low $options(-low) -high $val"
 		after 10 [mymethod Handler2 -high $val]
 	    } else {

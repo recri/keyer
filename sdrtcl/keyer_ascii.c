@@ -63,7 +63,7 @@ typedef struct {
 
 static void _update(_t *dp) {
   if (dp->modified) {
-    dp->modified = 0;
+    dp->modified = dp->fw.busy = 0;
     if (dp->fw.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
     /* update timing computations */
     // maybe this wasn't the best idea
@@ -257,12 +257,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = (data->opts.word != save.word ||
-		    data->opts.wpm != save.wpm ||
-		    data->opts.dah != save.dah ||
-		    data->opts.ies != save.ies ||
-		    data->opts.ils != save.ils ||
-		    data->opts.iws != save.iws);
+
+  data->modified = data->fw.busy = (data->opts.word != save.word ||
+				    data->opts.wpm != save.wpm ||
+				    data->opts.dah != save.dah ||
+				    data->opts.ies != save.ies ||
+				    data->opts.ils != save.ils ||
+				    data->opts.iws != save.iws);
   return TCL_OK;
 }
 

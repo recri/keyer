@@ -96,7 +96,7 @@ snit::type sdrkit::filter-overlap-save {
 	}
     }
     method is-needed {} { return 1 }
-    method is-busy {} { return [lindex [::sdrkitx::$options(-name) modified] 1] }
+    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
 
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }

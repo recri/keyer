@@ -158,7 +158,7 @@ static void *_preconfigure(_t *data) {
       return e;
     }
   }
-  data->modified = 1;
+  data->modified = data->fw.busy = 1;
   return data;
 }
 
@@ -181,7 +181,7 @@ static void _configure(_t *data) {
 static void _update(_t *data) {
   if (data->modified) {
     _configure(data);
-    data->modified = 0;
+    data->modified = data->fw.busy = 0;
   }
 }
 
@@ -318,24 +318,14 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_str(interp, "no result computed, how?");
 }
 
-static int _modified(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
-  _t *data = (_t *)clientData;
-  return fw_success_obj(interp, Tcl_NewListObj(2, (Tcl_Obj *[]){ Tcl_NewIntObj(jack_frame_time(data->fw.client)), Tcl_NewIntObj(data->modified) }));
-
-}
-
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (data->modified) {		// not safe to access
-    if (argc == 2 && strcmp("modified", Tcl_GetString(objv[1])) == 0)
-      return _modified(clientData, interp, argc, objv);
-    return fw_error_str(interp, "busy");
-  }
   options_t save = data->opts;
   Tcl_IncrRefCount(save.result_type_obj);
-  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) {
+    Tcl_DecrRefCount(save.result_type_obj);
+    return TCL_ERROR;
+  }
   if (save.size != data->opts.size ||
       save.planbits != data->opts.planbits ||
       save.polyphase != data->opts.polyphase ||
@@ -367,7 +357,6 @@ static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get-window",_get_window,   "get the window used to compute the spectrum" },
   { "get",	 _get,		"get a spectrum" },
-  { "modified", _modified,	"fetch the current modified flag" },
   { NULL }
 };
 

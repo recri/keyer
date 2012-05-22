@@ -39,14 +39,14 @@ typedef struct {
 
 static void _update(_t *data) {
   if (data->modified) {
-    data->modified = 0;
+    data->modified = data->fw.busy = 0;
     oscillator_update(&data->o, data->hertz, data->sample_rate);
   }
 }
   
 static void *_init(void *arg) {
   _t * const data = (_t *)arg;
-  data->modified = 0;
+  data->modified = data->fw.busy = 0;
   // data->hertz = 440.0f;
   // data->dBgain = -30;
 #ifndef NO_GAIN
@@ -94,7 +94,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 #endif
       return fw_error_str(interp, "frequency is more than samplerate/4");
     }
-    data->modified = 1;
+    data->modified = data->fw.busy = 1;
   }
 #ifndef NO_GAIN
   if (data->dBgain != dBgain) {

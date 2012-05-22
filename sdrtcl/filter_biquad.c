@@ -35,14 +35,14 @@ typedef struct {
 } _t;
 
 static void _update(_t *data) {
-  data->modified = 0;
+  data->modified = data->fw.busy = 0;
   filter_biquad_config(&data->bq, &data->opts);
 }
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = filter_biquad_init(&data->bq); if (p != &data->bq) return p;
-  data->modified = 1;
+  data->modified = data->fw.busy = 1;
   _update(data);
   return arg;
 }
@@ -66,11 +66,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   _t *data = (_t *)clientData;
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  data->modified = (save.a1 != data->opts.a1 ||
-		    save.a2 != data->opts.a2 ||
-		    save.b0 != data->opts.b0 ||
-		    save.b1 != data->opts.b1 ||
-		    save.b2 != data->opts.b2);
+  if (save.a1 != data->opts.a1 ||
+      save.a2 != data->opts.a2 ||
+      save.b0 != data->opts.b0 ||
+      save.b1 != data->opts.b1 ||
+      save.b2 != data->opts.b2) {
+    data->modified = data->fw.busy = 1;
+  }
   return TCL_OK;
 }
 

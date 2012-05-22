@@ -42,7 +42,7 @@ static void _delete(void *arg) {
 static void _update(_t *data) {
   if (data->modified) {
     filter_overlap_save_configure(&data->ovsv, &data->opts);
-    data->modified = 0;
+    data->modified = data->fw.busy = 0;
   }
 }
 
@@ -50,7 +50,7 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   data->opts.sample_rate = sdrkit_sample_rate(arg);
   void *p = filter_overlap_save_init(&data->ovsv, &data->opts); if (p != &data->ovsv) return p;
-  data->modified = 1;
+  data->modified = data->fw.busy = 1;
   _update(data);
   return arg;
 }
@@ -85,21 +85,8 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   return TCL_OK;
 }
 
-static int _modified(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
-  _t *data = (_t *)clientData;
-  return fw_success_obj(interp, Tcl_NewListObj(2, (Tcl_Obj *[]){ Tcl_NewIntObj(jack_frame_time(data->fw.client)), Tcl_NewIntObj(data->modified) }));
-
-}
-
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (data->modified) {		// not safe to access
-    if (argc == 2 && strcmp("modified", Tcl_GetString(objv[1])) == 0)
-      return _modified(clientData, interp, argc, objv);
-    return fw_error_str(interp, "busy");
-  }
   options_t save = data->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
   if (save.low_frequency != data->opts.low_frequency ||
@@ -114,7 +101,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       data->opts = save;
       return TCL_ERROR;
     }
-    data->modified = 1;
+    data->modified = data->fw.busy = 1;
     if (data->fw.verbose) {
       fprintf(stderr, "configuration to -low %.1f -high %.1f from -low %.1f -high %.1f succeeded\n",
 	      data->opts.low_frequency, data->opts.high_frequency, save.low_frequency, save.high_frequency);
@@ -142,7 +129,6 @@ static const fw_option_table_t _options[] = {
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get",      _get,	   "fetch the current transformed filter" },
-  { "modified", _modified, "fetch the current modified flag" },
   { NULL }
 };
 

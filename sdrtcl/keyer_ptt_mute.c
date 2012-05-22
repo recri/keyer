@@ -36,7 +36,6 @@ typedef struct {
 
 typedef struct {
   framework_t fw;
-  int modified;
   options_t opts;
   float gain;
   int mute;

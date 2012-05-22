@@ -37,20 +37,20 @@ typedef struct {
 static void _setup(_t *data, float hertz) {
   if (hertz != data->hertz) {
     data->hertz = hertz;
-    data->modified = 1;
+    data->modified = data->fw.busy = 1;
   }
 }
   
 static void _update(_t *data) {
   if (data->modified) {
-    data->modified = 0;
+    data->modified = data->fw.busy = 0;
     lo_mixer_update(&data->lo, data->hertz, sdrkit_sample_rate(data));
   }
 }
 
 static void *_init(void *arg) {
   _t * const data = (_t *)arg;
-  data->modified = 0;
+  data->modified = data->fw.busy = 0;
   // data->hertz = 700.0f;
   lo_mixer_init(&data->lo, data->hertz, sdrkit_sample_rate(data));
   return arg;
@@ -80,7 +80,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       data->hertz = hertz;
       return fw_error_str(interp, "frequency is more than samplerate/4");
     }
-    data->modified = 1;
+    data->modified = data->fw.busy = 1;
   }
   return TCL_OK;
 }

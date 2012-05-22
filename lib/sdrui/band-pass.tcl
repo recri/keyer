@@ -206,16 +206,13 @@ snit::widget sdrui::band-pass {
 	# don't set it if it's still digesting the last set
 	# we could get here from a later ui event
 	# while still waiting for the previous event to complete
-	lassign [$options(-name) modified] frame modified
-	if {$modified} return
+	if {[$options(-name) is-busy]} return
 	# set the filter points
 	set lo [expr {$options(-center)-$options(-width)/2}]
 	set hi [expr {$options(-center)+$options(-width)/2}]
 	$options(-name) configure -low $lo -high $hi -length  $options(-filter-length)
 	# wait for the setting to take effect
-	while {1} {
-	    lassign [$options(-name) modified] frame modified
-	    if { ! $modified } break
+	while {[$options(-name) is-busy]} {
 	    #puts "waiting for filter config in set-filter"
 	    after 2
 	}

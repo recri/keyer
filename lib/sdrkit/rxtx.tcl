@@ -23,6 +23,7 @@
 package provide sdrkit::rxtx 1.0.0
 
 package require snit
+package require sdrtk::cnotebook
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
@@ -35,6 +36,7 @@ snit::type sdrkit::rxtx {
     option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
+    #ctl {Control} rxtx-control
     option -sub-components {
 	rx {Receiver} rx
 	tx {Transmitter} tx
@@ -67,7 +69,7 @@ snit::type sdrkit::rxtx {
     }
 
     constructor {args} {
-	puts "rxtx constructor $args"
+	# puts "rxtx constructor $args"
 	$self configure {*}$args
     }
     destructor {
@@ -116,27 +118,19 @@ snit::type sdrkit::rxtx {
 	$self build-common
 	grid [ttk::frame $w.menu] -sticky ew
 	pack [ttk::button $w.menu.connections -text connections -command [mymethod ViewConnections]] -side left
-	ttk::notebook $w.full
-	ttk::notebook $w.empty
+	sdrtk::cnotebook $w.note
 	foreach {name title command} $options(-sub-components) {
-	    ttk::frame $w.full.$name
-	    ttk::frame $w.empty.$name
 	    lassign [split-command-args $command] command args
 	    switch $name {
 		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }
 		tx { lappend args -tx-source $options(-tx-source) -tx-sink $options(-tx-sink) }
 		keyer { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
 	    }
-	    $self sub-window $w.full.$name $name sdrkit::$command {*}$args
-	    $w.full add $w.full.$name -text $title
-	    $w.empty add $w.empty.$name -text $title
+	    $self sub-window [ttk::frame $w.note.$name] $name sdrkit::$command {*}$args
+	    $w.note add $w.note.$name -text $title
 	}
-	$w.full add [ttk::frame $w.full.collapse] -text Collapse
-	$w.empty add [ttk::frame $w.empty.collapse] -text Collapse
-	grid $w.full -sticky nsew -row 1
+	grid $w.note -sticky nsew -row 1
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-	bind $w.full <<NotebookTabChanged>> [mymethod NoteFullSelect $w]
-	bind $w.empty <<NotebookTabChanged>> [mymethod NoteEmptySelect $w]
     }
     method resolve-parts {} {
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
@@ -163,32 +157,6 @@ snit::type sdrkit::rxtx {
 		      -control [$options(-component) get-controller]] -side top -fill both -expand true
 	} else {
 	    wm deiconify .connections
-	}
-    }
-    method NoteFullSelect {w} {
-	#puts "NoteFullSelect [$w.full select]"
-	set select [$w.full select]
-	if {[string match *collapse* $select]} {
-	    # collapse
-	    #puts "collapsing"
-	    grid remove $w.full
-	    grid $w.empty -row 1 -column 0 -sticky ew
-	    $w.empty select [regsub {full} $select empty]
-	} else {
-	    # stay expanded
-	}
-    }
-    method NoteEmptySelect {w} {
-	#puts "NoteEmptySelect [$w.empty select]"
-	set select [$w.empty select]
-	if {[string match *collapse* $select]} {
-	    # stay collapsed
-	} else {
-	    # expand
-	    #puts "expanding"
-	    grid remove $w.empty
-	    grid $w.full -row 1 -column 0 -sticky nsew
-	    $w.full select [regsub {empty} $select full]
 	}
     }
     method is-active {} { return $data(active) }

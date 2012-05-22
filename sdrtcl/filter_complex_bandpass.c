@@ -36,7 +36,7 @@ typedef struct {
 
 static void _update(_t *data) {
   if (data->modified) {
-    data->modified = 0;
+    data->modified = data->fw.busy = 0;
     filter_complex_bandpass_configure(&data->bpf, &data->opts);
   }
 }
@@ -45,7 +45,7 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   data->opts.sample_rate = sdrkit_sample_rate(arg);
   void *p = filter_complex_bandpass_init(&data->bpf, &data->opts); if (p != &data->bpf) return p;
-  data->modified = 1;
+  data->modified = data->fw.busy = 1;
   _update(data);
   return arg;
 }
@@ -77,7 +77,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       data->opts = save;
       return TCL_ERROR;
     }
-    data->modified = 1;
+    data->modified = data->fw.busy = 1;
   }
   return TCL_OK;
 }

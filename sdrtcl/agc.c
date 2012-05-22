@@ -78,7 +78,7 @@ static void _delete(void *arg) {
 
 static void _update(_t *data) {
   if (data->modified) {
-    data->modified = 0;
+    data->modified = data->fw.busy = 0;
     agc_configure(&data->agc, &data->opts);
   }
 }
@@ -140,7 +140,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       data->opts = save_opts;
       return TCL_ERROR;
     }
-    data->modified = 1;
+    data->modified = data->fw.busy = 1;
   } else if (save_opts.target != data->opts.target ||
 	     save_opts.attack != data->opts.attack ||
 	     save_opts.decay != data->opts.decay ||
@@ -155,8 +155,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       data->opts = save_opts;
       return TCL_ERROR;
     }
-    data->modified = 1;
+    data->modified = data->fw.busy = 1;
   }
+  if (data->modified && ! data->fw.activated)
+    _update(data);
   return TCL_OK;
 }
 

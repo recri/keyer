@@ -30,7 +30,6 @@ typedef iq_correct_options_t options_t;
 
 typedef struct {
   framework_t fw;
-  int modified;
   options_t opts;
   iq_correct_t iqb;
 } _t;
@@ -87,8 +86,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = save.mu != data->opts.mu;
-  if (data->modified) {
+
+  if (save.mu != data->opts.mu) {
     void *e = iq_correct_preconfigure(&data->iqb, &data->opts);
     if (e != &data->iqb) {
       data->opts = save;
