@@ -52,6 +52,8 @@ snit::type sdrkit::rxtx {
 
     option -rx-source {}
     option -rx-sink {}
+    option -rx-enable {}
+    option -rx-activate {}
     option -tx-source {}
     option -tx-sink {}
     option -keyer-source {}
@@ -65,20 +67,12 @@ snit::type sdrkit::rxtx {
     }
 
     constructor {args} {
+	puts "rxtx constructor $args"
 	$self configure {*}$args
     }
     destructor {
 	foreach name $data(parts) {
-	    $option(-component) name-destroy $options(-name)-$name
-	}
-    }
-    method resolve-parts {} {
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
-	    set name1 [string trim "$options(-name)-$name1" -]
-	    set name2 [string trim "$options(-name)-$name2" -]
-	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
-		$options(-component) connect-ports $name1 $p1 $name2 $p2
-	    }
+	    $options(-component) name-destroy $options(-name)-$name
 	}
     }
     method sub-component {name subsub args} {
@@ -143,6 +137,21 @@ snit::type sdrkit::rxtx {
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	bind $w.full <<NotebookTabChanged>> [mymethod NoteFullSelect $w]
 	bind $w.empty <<NotebookTabChanged>> [mymethod NoteEmptySelect $w]
+    }
+    method resolve-parts {} {
+	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	    set name1 [string trim "$options(-name)-$name1" -]
+	    set name2 [string trim "$options(-name)-$name2" -]
+	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
+		$options(-component) connect-ports $name1 $p1 $name2 $p2
+	    }
+	}
+	if {$options(-rx-enable) ne {} && $options(-rx-enable)} {
+	    $options(-component) part-enable $options(-name)-rx
+	}
+	if {$options(-rx-activate) ne {} && $options(-rx-activate)} {
+	    $options(-component) part-activate $options(-name)-rx
+	}
     }
     method ViewConnections {} {
 	if { ! [winfo exists .connections]} {

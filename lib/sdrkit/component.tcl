@@ -33,6 +33,7 @@ package provide sdrkit::component 1.0.0
 
 package require snit
 
+package require sdrkit::sdrkit
 package require sdrkit::control
 package require sdrkit::comm
 package require sdrtype::types
@@ -99,6 +100,18 @@ snit::type sdrkit::component {
     variable data -array {
     }
 
+    proc filter-list {name opts from} {
+	foreach opt $opts {
+	    if {[llength $opt] == 2} {
+		lassign $opt tname opt
+		if { ! [string match $tname $name]} continue
+	    }
+	    while {[set i [lsearch $from $opt]] >= 0} {
+		set from [lreplace $from $i $i]
+	    }
+	}
+	return $from
+    }
     constructor {args} {
 	$self configure {*}$args
 	package require $options(-subsidiary)
@@ -151,17 +164,20 @@ snit::type sdrkit::component {
 	}
 
 	# double check controls and ports against dps component
+	# this isn't actually working
 	#puts "info commands ::sdrkitx::$options(-name)* is [info commands ::sdrkitx::$options(-name)*]"
-	if {[info commands sdrkitx::$options(-name)*] ne {}} {
+	if {$::sdrkit::testing && [info commands ::sdrkitx::$options(-name)*] ne {}} {
 	    puts "testing ports and options for $options(-name)"
 	    set ports1 [::sdrkitx::$options(-name) info ports]
 	    set ports2 [concat [$subsidiary cget -in-ports] [$subsidiary cget -out-ports]]
 	    set opts1 [::sdrkitx::$options(-name) info options]
 	    set opts2 [concat [$subsidiary cget -in-options] [$subsidiary cget -out-options]]
-	    foreach port $port1 { if {$port ni $ports2} { error "$options(-name) has real port $port not in $ports2" } }
-	    foreach port $port2 { if {$port ni $ports1} { error "$options(-name) names port $port not in $ports1" } }
-	    foreach opt $opt1 { if {$opt ni $opts2} { error "$options(-name) has real option $opt not in $opts2" } }
-	    foreach opt $opt2 { if {$opt ni $opts1} { error "$options(-name) names option $opt not in $opts1" } }
+	    set opts1 [filter-list $options(-name) {-server -client -verbose {*bpf -planbits} {*iqb -linear-gain} {*iqb -sine-phase}} $opts1]
+	    set opts2 [filter-list $options(-name) {{*iqb -phase} {*iqb -gain}} $opts2]
+	    foreach port $ports1 { if {$port ni $ports2} { error "$options(-name) has real port $port not in $ports2" } }
+	    foreach port $ports2 { if {$port ni $ports1} { error "$options(-name) names port $port not in $ports1" } }
+	    foreach opt $opts1 { if {$opt ni $opts2} { error "$options(-name) has real option $opt not in $opts2" } }
+	    foreach opt $opts2 { if {$opt ni $opts1} { error "$options(-name) names option $opt not in $opts1" } }
 	} else {
 	    #puts "info commands ::sdrkitx::* is [info commands ::sdrkitx::*]"
 	}
@@ -214,6 +230,9 @@ snit::type sdrkit::component {
     method part-activate {args} { return [$self control part-activate {*}$args] }
     method part-deactivate {args} { return [$self control part-deactivate {*}$args] }
     method part-destroy {args} { return [$self control part-destroy {*}$args] }
+    method opt-filter {args} { return [$self control opt-filter {*}$args] }
+    method port-filter {args} { return [$self control port-filter {*}$args] }
+    method port-connect {args} { return [$self control port-connect {*}$args] }
     method connect-ports {n1 p1 n2 p2} { return [$self control port-connect [list $n1 $p1] [list $n2 $p2]] }
     method connect-options {n1 o1 n2 o2} { return [$self control opt-connect [list $n1 $o1] [list $n2 $o2]] }
     method out-ports {args} { return [$self control part-out-ports {*}$args] }	

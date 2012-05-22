@@ -37,47 +37,47 @@ snit::type sdrkit::rx {
     option -out-options {}
     option -sub-components {
 	rf-gain {RF Gain} gain
-	rf-iqs {IQ Swap} iq-swap
-	rf-iqd {IQ Delay} iq-delay
+	rf-iq-swap {IQ Swap} iq-swap
+	rf-iq-delay {IQ Delay} iq-delay
 	rf-sp1 {Spectrum Semi-raw} spectrum-tap
 	-rf-nb1 {Noiseblanker} noiseblanker
 	-rf-nb2 {SDRom Noiseblanker} sdrom-noiseblanker
-	rf-iqc {IQ Correct} iq-correct
+	rf-iq-correct {IQ Correct} iq-correct
 	if-sp2 {Spectrum Pre-filter} spectrum-tap
-	if-lo {LO Mixer} lo-mixer
+	if-lo-mixer {LO Mixer} lo-mixer
 	if-bpf {BP Filter} filter-overlap-save
 	af-mt1 {Meter Post-filter} meter-tap
 	af-sp3 {Spectrum Post-filter} spectrum-tap
-	-af-cmp {Compander} compand
+	-af-compand {Compander} compand
 	af-agc {AGC} agc
 	af-sp4 {Spectrum Post-AGC} spectrum-tap
-	af-dem {Demodulation} demod
-	-af-sql {Squelch} squelch
-	-af-spt {Spot Tone} spot
-	-af-geq {Graphic EQ} graphic-eq
+	af-demod {Demodulation} demod
+	-af-squelch {Squelch} squelch
+	-af-spot {Spot Tone} spot
+	-af-graphic-eq {Graphic EQ} graphic-eq
 	af-gain {AF Gain} gain
     }
     option -connections {
 	{} in-ports rf-gain in-ports
-	rf-gain out-ports rf-iqs in-ports
-	rf-iqs out-ports rf-iqd in-ports
-	rf-iqd out-ports rf-sp1 in-ports
+	rf-gain out-ports rf-iq-swap in-ports
+	rf-iq-swap out-ports rf-iq-delay in-ports
+	rf-iq-delay out-ports rf-sp1 in-ports
 	rf-sp1 out-ports rf-nb1 in-ports
 	rf-nb1 out-ports rf-nb2 in-ports
-	rf-nb2 out-ports rf-iqc in-ports
-	rf-iqc out-ports if-sp2 in-ports
-	if-sp2 out-ports if-lo in-ports
-	if-lo out-ports if-bpf in-ports
+	rf-nb2 out-ports rf-iq-correct in-ports
+	rf-iq-correct out-ports if-sp2 in-ports
+	if-sp2 out-ports if-lo-mixer in-ports
+	if-lo-mixer out-ports if-bpf in-ports
 	if-bpf out-ports af-mt1 in-ports
 	af-mt1 out-ports af-sp3 in-ports
-	af-sp3 out-ports af-cmp in-ports
-	af-cmp out-ports af-agc in-ports
+	af-sp3 out-ports af-compand in-ports
+	af-compand out-ports af-agc in-ports
 	af-agc out-ports af-sp4 in-ports
-	af-sp4 out-ports af-dem in-ports
-	af-dem out-ports af-sql in-ports
-	af-sql out-ports af-spt in-ports
-	af-spt out-ports af-geq in-ports
-	af-geq out-ports af-gain in-ports
+	af-sp4 out-ports af-demod in-ports
+	af-demod out-ports af-squelch in-ports
+	af-squelch out-ports af-spot in-ports
+	af-spot out-ports af-graphic-eq in-ports
+	af-graphic-eq out-ports af-gain in-ports
 	af-gain out-ports {} out-ports
     }
 
@@ -119,6 +119,9 @@ snit::type sdrkit::rx {
 	    }
 	}
     }
+    method resolve-port-name {pair} {
+	return [lindex [$options(-component) port-filter "*$pair"] 0]
+    }
     method resolve-parts {} {
 	# need to match midi vs audio
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
@@ -131,6 +134,18 @@ snit::type sdrkit::rx {
 	    }
 	    foreach p1 $ports1 p2 $ports2 {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
+	    }
+	}
+	if {$options(-rx-source) ne {}} {
+	    foreach src $options(-rx-source) dst {in_i in_q} {
+		lassign [$self resolve-port-name [split $src :]] sname sport
+		$options(-component) connect-ports $sname $sport $options(-name) $dst
+	    }
+	}
+	if {$options(-rx-sink) ne {}} {
+	    foreach src {out_i out_q} dst $options(-rx-sink) {
+		lassign [$self resolve-port-name [split $dst :]] dname dport
+		$options(-component) connect-ports $options(-name) $src $dname $dport
 	    }
 	}
     }

@@ -184,3 +184,4 @@
 ** DONE - would my life be simpler if I just used Tk virtual events?
    Maybe, but I wouldn't be able to watch.
 
+** DONE - install physical ports in current setup

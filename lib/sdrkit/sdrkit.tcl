@@ -17,27 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrkit::comm 1.0.0
-
-#package require comm
-
-namespace eval sdrkit {}
-namespace eval sdrkit::comm {}
-
 #
-# okay, ignore this for a moment
-# because using comm for all communication is extremely slow
-# and the semantics of the plain call differ from the remote
+# a few globals
 #
-proc sdrkit::comm::send {target args} {
-    # set result [comm::comm send {*}$target {*}$args]
-    set result [$target {*}$args]
-    # puts "comm::comm send $target $args => $result"
-    return $result
-}
+package provide sdrkit::sdrkit 1.0.0
 
-proc sdrkit::comm::wrap {command} {
-    #return [list [comm::comm self] {*}$command]
-    return $command
+namespace eval sdrkit {
+    set testing 1
 }
 

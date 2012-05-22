@@ -38,8 +38,8 @@ snit::type sdrkit::keyer-iambic-dttsp {
 
     option -in-ports {midi_in}
     option -out-ports {midi_out}
-    option -in-options {-chan -note -word -wpm -weight -swap -alsp -awsp -mode -mdit -mdah -mide}
-    option -out-options {-chan -note -word -wpm -weight -swap -alsp -awsp -mode -mdit -mdah -mide}
+    option -in-options {-chan -note -wpm -weight -swap -alsp -awsp -mode -mdit -mdah -mide}
+    option -out-options {-chan -note -wpm -weight -swap -alsp -awsp -mode -mdit -mdah -mide}
 
     option -chan -default 1 -configuremethod Configure
     option -note -default 0 -configuremethod Configure

@@ -18,19 +18,19 @@
 # 
 
 #
-# there should one sdrkit::control in an application
-# containing one or more sdrkit::component.
-# the control allows components to register their presence,
-# their dsp sample stream connectivity, and their interest in
-# or ability to supply values for options.
+# there is one sdrkit::control in an application
+# containing one or more sdrkit::component's.
+# the control allows components to register
+# their presence,
+# their dsp sample stream connectivity,
+# their interest in values for options,
+# and their abilities to supply values for options.
 #
-#
-package provide sdrkit::control 1.0.0
-
 
 package provide sdrkit::control 1.0.0
 
 package require snit
+package require sdrkit::sdrkit
 package require sdrkit::comm
 
 namespace eval sdrkit {}

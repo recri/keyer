@@ -57,4 +57,4 @@ namespace eval sdrkitv {}
 #
 # create the named component, modified by the options specified as arguments
 #
-sdrkit::component ::sdrkitv::$name -window {} -name $name -subsidiary sdrkit::$name {*}$argv
+sdrkit::component ::sdrkitv::$name -window {} -name $name -subsidiary sdrkit::$name -subsidiary-opts $argv

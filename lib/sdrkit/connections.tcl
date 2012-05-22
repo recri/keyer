@@ -172,7 +172,7 @@ snit::widget sdrkit::connections {
 	set options(-show) $v
 	foreach item [dict keys $data(items)] {
 	    switch [dict get $data(items) $item type] {
-		ctl - ui - hw - dsp - jack {}
+		ctl - ui - hw - dsp - jack - physical {}
 		port - audio - midi - opt {
 		    if {[$lft exists $item]} { $lft delete $item }
 		    if {[$rgt exists $item]} { $rgt delete $item }
