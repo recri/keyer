@@ -271,28 +271,26 @@ snit::type sdrkit::component {
     }
     #
     # convenience calls from the subsidiary
+    # eliminate all options that can be inherited by
+    # asking $options(-container),
+    # ie -server -control -minsizes -weights can all
+    # be gotten from -container.
     #
-    method sub-component {name subsub args} {
+    method sub-component {window name subsub args} {
+	set argv [list -window $window]
+	if {$window ne {none}} {
+	    lappend argv -minsizes $options(-minsizes) -weights $options(-weights)
+	}
 	package require $subsub
 	::sdrkit::component ::sdrkitv::$options(-name)-$name \
-	    -window none \
+	    {*}$argv \
 	    -server $options(-server) \
 	    -name $options(-name)-$name \
 	    -subsidiary $subsub -subsidiary-opts $args \
 	    -container $self \
 	    -control [$self get-controller]
     }
-    method sub-window {window name subsub args} {
-	package require $subsub
-	::sdrkit::component ::sdrkitv::$options(-name)-$name \
-	    -window $window \
-	    -server $options(-server) \
-	    -name $options(-name)-$name \
-	    -subsidiary $subsub -subsidiary-opts $args \
-	    -container $self \
-	    -control [$self get-controller] \
-	    -minsizes $options(-minsizes) \
-	    -weights $options(-weights)
-    }
-
+    method destroy-sub-parts {parts} {
+	foreach part $parts { $self part-destroy $options(-name)-$part }
+    }	
 }

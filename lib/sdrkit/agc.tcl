@@ -57,19 +57,20 @@ snit::type sdrkit::agc {
     option -threshold -default 1 -type sdrtype::agc-threshold -configuremethod Configure
     option -mode -default medium -type sdrtype::agc-mode -configuremethod Configure
 
-    # provide labels, formats for labels, and mapping to dsp option name
-    variable data -array {
-	label-target {} format-target {Target %.5f} map-target -target
-	label-attack {} format-attack {Attack %.1f ms} map-attack -attack
-	label-decay {} format-decay {Decay %.1f ms} map-decay -decay
-	label-slope {} format-slope {Slope %.2f} map-slope -slope
-	label-hang {} format-hang {Hang %.1f ms} map-hang -hang
-	label-fasthang {} format-fasthang {Fasthang %.1f ms} map-fasthang -fasthang
-	label-max {} format-max {Max %.0f} map-max -max
-	label-min {} format-min {Min %.5f} map-min -min
-	label-threshold {} format-threshold {Threshold %.5f} map-threshold -threshold
-	label-mode {} format-mode {} map-mode -mode
+    option -sub-controls {
+	mode radio {-format {AGC mode}}
+	target scale {-format {Target %.5f}}
+	attack scale {-format {Attack %.1f ms}}
+	decay scale {-format {Decay %.1f ms}}
+	slope scale {-format {Slope %.2f}}
+	hang scale {-format {Hang %.1f ms}}
+	fasthang scale {-format {Fasthang %.1f ms}}
+	max scale {-format {Max %.0f}}
+	min scale {-format {Min %.5f}}
+	threshold scale {-format {Threshold %.5f}}
     }
+
+    variable data -array {}
 
     constructor {args} {
 	$self configure {*}$args
@@ -86,21 +87,29 @@ snit::type sdrkit::agc {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	ttk::label $w.mode-l -text {agc mode}
-	sdrtk::radiomenubutton $w.mode-s -defaultvalue $options(-mode) -values [sdrtype::agc-mode cget -values] -variable [myvar options(-mode)] -command [mymethod Set -mode]
-	grid $w.mode-l $w.mode-s
-
-	foreach opt {target threshold min max slope attack decay hang fasthang} {
-	    ttk::label $w.$opt-l -textvar [myvar data(label-$opt)] -width 10 -anchor e
-	    ttk::scale $w.$opt-s -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max] \
-		-command [mymethod Set -$opt] -variable [myvar options(-$opt)]
-	    $self Set -$opt $options(-$opt)
-	    grid $w.$opt-l $w.$opt-s -sticky ew
+	foreach {opt type opts} $options(-sub-controls) {
+	    switch $type {
+		spinbox {
+		    package require sdrkit::label-spinbox
+		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		scale {
+		    package require sdrkit::label-scale
+		    lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
+		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		separator {
+		    ttk::separator $w.$opt
+		}
+		radio {
+		    package require sdrkit::label-radio
+		    lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
+		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
+		}
+	    }
+	    grid $w.$opt -sticky ew
 	}
-
-	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure $pw $col -minsize $ms -weight $wt
-	}
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
     method is-needed {} { return [expr {$options(-mode) ne {off}}] }
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
@@ -112,18 +121,15 @@ snit::type sdrkit::agc {
 	while {[::sdrkitx::$options(-name) is-busy]} { after 1 }
 	::sdrkitx::$options(-name) configure $data(map$opt) $val
     }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
     }
     method Set {opt val} {
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
 	$self ControlConfigure $opt $val
 	if {$opt eq {-mode} && $val ni {off custom}} {
 	    foreach opt [::sdrkitx::$options(-name) configure] {
@@ -136,7 +142,6 @@ snit::type sdrkit::agc {
     }
     method Update {opt val} {
 	$self OptionConfigure $opt $val
-	$self LabelConfigure $opt $val
 	$self ControlConfigure $opt $val
     }
 }

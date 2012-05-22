@@ -137,20 +137,21 @@ snit::type sdrkit::control {
     method port-active-connections-to {pair} {
 	set active {}
 	set candidates [$self part-rewrite-connections-to {*}$pair [$self port-connections-to $pair]]
+	#puts "port-active-connections-to: $pair candidates={$candidates}"
 	foreach source $candidates {
 	    lassign $source part port
 	    set type [$self part-type $part]
 	    if {$type in {jack physical}} {
 		if {[$self part-is-active $part]} {
-		    # puts "port-active-connections-to: accepted source={$source}"
+		    #puts "port-active-connections-to: $pair accepted source={$source}"
 		    lappend active $source
 		} elseif {$type eq {jack}} {
 		    set source [$self pair-complement $source]
-		    # puts "port-active-connections-to: searching source={$source}"
+		    #puts "port-active-connections-to: $pair searching source={$source}"
 		    lappend active {*}[$self port-active-connections-to $source]
 		}
 	    } else {
-		# puts "port-active-connections-to: searching source={$source}"
+		#puts "port-active-connections-to: $pair searching source={$source}"
 		lappend active {*}[$self port-active-connections-to $source]
 	    }
 	}
@@ -169,15 +170,15 @@ snit::type sdrkit::control {
 	    set type [$self part-type $part]
 	    if {$type in {jack physical}} {
 		if {[$self part-is-active $part]} {
-		    # puts "port-active-connections-from: accepted sink={$sink}"
+		    #puts "port-active-connections-from: $pair accepted sink={$sink}"
 		    lappend active $sink
 		} elseif {$type eq {jack}} {
 		    set sink [$self pair-complement $sink]
-		    # puts "port-active-connections-from: searching sink={$sink}"
+		    #puts "port-active-connections-from: $pair searching sink={$sink}"
 		    lappend active {*}[$self port-active-connections-from $sink]
 		}
 	    } else {
-		# puts "port-active-connections-from: searching sink={$sink}"
+		#puts "port-active-connections-from: $pair searching sink={$sink}"
 		lappend active {*}[$self port-active-connections-from $sink]
 	    }
 	}

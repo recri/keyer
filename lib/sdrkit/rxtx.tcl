@@ -36,8 +36,9 @@ snit::type sdrkit::rxtx {
     option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
-    #ctl {Control} rxtx-control
+    
     option -sub-components {
+	ctl {Control} rxtx-control
 	rx {Receiver} rx
 	tx {Transmitter} tx
 	keyer {Keyer} keyer
@@ -72,27 +73,11 @@ snit::type sdrkit::rxtx {
 	# puts "rxtx constructor $args"
 	$self configure {*}$args
     }
-    destructor {
-	foreach name $data(parts) {
-	    $options(-component) name-destroy $options(-name)-$name
-	}
-    }
-    method sub-component {name subsub args} {
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
+
+    method sub-component {window name subsub args} {
 	lappend data(parts) $name
-	$options(-component) sub-component $name $subsub {*}$args
-    }
-    method sub-window {window name subsub args} {
-	lappend data(parts) $name
-	$options(-component) sub-window $window $name $subsub {*}$args
-    }
-    method build-common {} {
-	if {$options(-physical) ne {}} {
-	    $self sub-component ports sdrkit::physical-ports -physical $options(-physical)
-	    $options(-component) part-configure $options(-name)-ports -enable true -activate true
-	}
-	if {$options(-hardware) ne {}} {
-	    $self sub-component hardware sdrkit::hardware -hardware $options(-hardware)
-	}
+	$options(-component) sub-component $window $name $subsub {*}$args
     }
     proc split-command-args {command} {
 	set args {}
@@ -102,35 +87,45 @@ snit::type sdrkit::rxtx {
 	}
 	return [list $command $args]
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
-	$self build-common
-	foreach {name title command} $options(-sub-components) {
-	    lassign [split-command-args $command] command args
-	    $self sub-component $name sdrkit::$command {*}$args
-	}
-    }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
+    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
+    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
+    method build {} {
 	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
-	$self build-common
-	grid [ttk::frame $w.menu] -sticky ew
-	pack [ttk::button $w.menu.connections -text connections -command [mymethod ViewConnections]] -side left
-	sdrtk::cnotebook $w.note
+	if {$w ne {none}} {
+	    if {$w eq {}} { set pw . } else { set pw $w }
+	}
+	if {$options(-physical) ne {}} {
+	    $self sub-component none ports sdrkit::physical-ports -physical $options(-physical)
+	    $options(-component) part-configure $options(-name)-ports -enable true -activate true
+	}
+	if {$options(-hardware) ne {}} {
+	    $self sub-component none hardware sdrkit::hardware -hardware $options(-hardware)
+	}
+	if {$w ne {none}} {
+	    grid [ttk::frame $w.menu] -sticky ew
+	    pack [ttk::button $w.menu.connections -text connections -command [mymethod ViewConnections]] -side left
+	    sdrtk::cnotebook $w.note
+	}
 	foreach {name title command} $options(-sub-components) {
 	    lassign [split-command-args $command] command args
 	    switch $name {
+		ctl {}
 		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }
 		tx { lappend args -tx-source $options(-tx-source) -tx-sink $options(-tx-sink) }
 		keyer { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
+		default { error "rxtx::build-ui unknown name \"$name\"" }
 	    }
-	    $self sub-window [ttk::frame $w.note.$name] $name sdrkit::$command {*}$args
-	    $w.note add $w.note.$name -text $title
+	    if {$w eq {none}} {
+		$self sub-component none $name sdrkit::$command {*}$args
+	    } else {
+		$self sub-component [ttk::frame $w.note.$name] $name sdrkit::$command {*}$args
+		$w.note add $w.note.$name -text $title
+	    }
 	}
-	grid $w.note -sticky nsew -row 1
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	if {$w ne {none}} {
+	    grid $w.note -sticky nsew -row 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	}
     }
     method resolve-parts {} {
 	foreach {name1 ports1 name2 ports2} $options(-connections) {

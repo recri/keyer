@@ -59,9 +59,9 @@ snit::type sdrkit::physical-ports {
 	    }
 	}
     }
-    method sub-component {name subsub args} {
+    method sub-component {window name subsub args} {
 	lappend data(parts) $name
-	$options(-component) sub-component $name $subsub {*}$args
+	$options(-component) sub-component $window $name $subsub {*}$args
     }
     method build-parts {} {
 	set clients [dict create]
@@ -73,7 +73,7 @@ snit::type sdrkit::physical-ports {
 	    }
 	}
 	dict for {client ports} $clients {
-	    $self sub-component $client sdrkit::physical-port -ports $ports
+	    $self sub-component none $client sdrkit::physical-port -ports $ports
 	    $options(-component) part-configure $options(-name)-$client -enable true -activate true
 	}
     }

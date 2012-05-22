@@ -54,6 +54,21 @@ snit::type sdrkit::keyer-iambic-ad5dz {
     option -awsp -default 0 -configuremethod Configure
     option -mode -default A -configuremethod Configure
 
+    option -sub-controls {
+	chan spinbox {-format {Midi Channel} -from 1 -to 16}
+	note spinbox {-format {Midi Note} -from 0 -to 127}
+	wpm scale {-format {%.0f wpm} -from 5 -to 60}
+	dah scale {-format {Dah %.2f} -from 2.5 -to 3.5}
+	ies scale {-format {Space %.2f} -from 0.75 -to 1.25}
+	ils scale {-format {Letter %.2f} -from 2.5 -to 3.5}
+	iws scale {-format {Word %.2f} -from 6 -to 8}
+	word radio {-format {%d dits/word} -values {50 60} -labels {PARIS CODEX}}
+	swap radio {-format {Paddles} -values {0 1} -labels {Unswapped Swapped}}
+	alsp radio {-format {Letter space} -values {0 1} -labels {{Auto off} {Auto on}}}
+	awsp radio {-format {Word space} -values {0 1} -labels {{Auto off} {Auto on}}}
+	mode radio {-format {Iambic mode} -values {A B} -labels {A B}}
+    }
+
     variable data -array {
     }
 
@@ -75,52 +90,27 @@ snit::type sdrkit::keyer-iambic-ad5dz {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	foreach {opt type format min max} {
-	    chan spinbox {Midi Channel} 1 16
-	    note spinbox {Midi Note} 0 127
-	    wpm scale {%d dits/word} 5 60
-	    dah scale {Dah %.2f Dits} 2.5 3.5
-	    ies scale {Space %.2f Dits} 0.75 1.25
-	    ils scale {Letter %.2f Dits} 2.5 3.5
-	    iws scale {Word %.2f Dits} 6 8
-	} {
+	foreach {opt type opts} $options(-sub-controls) {
 	    switch $type {
 		spinbox {
-		    set data(format-$opt) $format
-		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
-		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
-		    ttk::spinbox $w.s-$opt -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+		    package require sdrkit::label-spinbox
+		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 		}
 		scale {
-		    set data(format-$opt) $format
-		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
-		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
-		    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
+		    package require sdrkit::label-scale
+		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 		}
 		separator {
-		    ttk::separator $w.l-$opt
-		    ttk::separator $w.s-$opt
+		    ttk::separator $w.$opt
+		}
+		radio {
+		    package require sdrkit::label-radio
+		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
 		}
 	    }
-	    grid $w.l-$opt $w.s-$opt -sticky ew
+	    grid $w.$opt -sticky ew
 	}
-
-	foreach {opt vals lbls} {
-	    word {50 60} {PARIS CODEX}
-	    swap {0 1} {Unswapped Swapped}
-	    alsp {0 1} {{Auto letter space off} {Auto letter space on}}
-	    awsp {0 1} {{Auto word space off} {Auto word space on}}
-	    mode {A B} {{Iambic Mode A} {Iambic Mode B}}} {
-	    set data(format-$opt) {}
-	    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -width 10 -anchor e
-	    sdrtk::radiomenubutton $w.s-$opt -values $vals -labels $lbls -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
-	    $self Set -$opt $options(-$opt)
-	    grid $w.l-$opt $w.s-$opt -sticky ew
-	}
-
-	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure $pw $col -minsize $ms -weight $wt
-	}
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
 
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
@@ -134,23 +124,18 @@ snit::type sdrkit::keyer-iambic-ad5dz {
 
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} { ::sdrkitx::$options(-name) configure $opt $val }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
     }
 
     method Set {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
 	$self ControlConfigure $opt $val
     }
-    method Changed {opt} { $self Set $opt $options($opt) }
-
 }

@@ -37,12 +37,12 @@ snit::type sdrkit::demod {
     option -in-options {-demod}
     option -out-options {-demod}
     option -sub-components {
-	am {AM} demod-am
-	fm {FM} demod-fm
-	sam {SAM} demod-sam
+	am {AM} demod-am {}
+	fm {FM} demod-fm {}
+	sam {SAM} demod-sam {}
     }
     option -connections {
-	{} in-ports am in-ports		am out-ports {} in-ports
+	{} in-ports am in-ports		am out-ports {} out-ports
 	{} in-ports fm in-ports		fm out-ports {} out-ports
 	{} in-ports sam in-ports	sam out-ports {} out-ports
     }
@@ -71,6 +71,10 @@ snit::type sdrkit::demod {
 	    $option(-component) name-destroy $options(-name)-$name
 	}
     }
+    method sub-component {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $window $name $subsub {*}$args
+    }
     method resolve-parts {} {
 	# need to match midi vs audio
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
@@ -83,16 +87,8 @@ snit::type sdrkit::demod {
     }
     method build-parts {} {
 	if {$options(-window) ne {none}} return
-	foreach {name title command} $options(-sub-components) {
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window none \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller]
+	foreach {name title command args} $options(-sub-components) {
+	    $self sub-component none $name sdrkit::$command {*}$args
 	}
     }
     method build-ui {} {
@@ -102,41 +98,23 @@ snit::type sdrkit::demod {
 	
 	set values {none}
 	set labels {none}
-	foreach {name title command} $options(-sub-components) {
+	foreach {name title command args} $options(-sub-components) {
 	    lappend values $name
 	    lappend labels $title
 	    set data(window-$name) [sdrtk::clabelframe $w.$name -label $title]
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    frame $w.$name.container
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window $w.$name.container \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller] \
-		-minsizes $options(-minsizes) \
-		-weights $options(-weights)
+	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.container
 	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	}
-	ttk::label $w.l -text {Demodulation} -anchor e
-	sdrtk::radiomenubutton $w.s -variable [myvar options(-demod)] -values $values -labels $labels -command [mymethod Set -demod]
-	grid $w.l $w.s
-	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure $pw $col -minsize $ms -weight $wt
-	}
+	package require sdrkit::label-radio
+	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-demod)] -command [mymethod Set -demod]
+	grid $w.mode
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-    method is-active {} { return $data(active) }
-    method activate {} {
-	foreach part $data(parts) {
-	}
-    }
-    method deactivate {} {
-	foreach part $data(parts) {
-	}
-    }
+
+    method is-active {} { return 1 }
+    method activate {} { }
+    method deactivate {} { }
     method Set {opt name} {
 	# find deselected component
 	set exname {none}
@@ -170,21 +148,22 @@ snit::type sdrkit::demod {
     }
 
     method rewrite-connections-to {port candidates} {
+	# puts "demod::rewrite-connections-to $port {$candidates}"
 	if {$options(-demod) eq {none}} {
-	    return [rewrite-connections-to {} $port $candidates]
+	    return [Rewrite-connections-to {} $port $candidates]
 	} else {
-	    return [rewrite-connections-to $options(-name)-$options(-demod) $port $candidates]
+	    return [Rewrite-connections-to $options(-name)-$options(-demod) $port $candidates]
 	}
     }
     method rewrite-connections-from {port candidates} {
 	if {$options(-demod) eq {none}} {
-	    return [rewrite-connections-from {} $port $candidates]
+	    return [Rewrite-connections-from {} $port $candidates]
 	} else {
-	    return [rewrite-connections-from $options(-name)-$options(-demod) $port $candidates]
+	    return [Rewrite-connections-from $options(-name)-$options(-demod) $port $candidates]
 	}
     }
-    proc rewrite-connections-to {selected port candidates} {
-	#puts "$options(-name) rewrite-connections-to $port {$candidates}"
+    proc Rewrite-connections-to {selected port candidates} {
+	# puts "demod::Rewrite-connections-to $port {$candidates}"
 	if {$port ni {alt_out_i alt_out_q alt_midi_out}} { return $candidates }
 	if {$selected eq {}} {
 	    switch $port {
@@ -203,7 +182,7 @@ snit::type sdrkit::demod {
 	}
     }
 
-    proc rewrite-connections-from {selected port candidates} {
+    proc Rewrite-connections-from {selected port candidates} {
 	#puts "$options(-name) rewrite-connections-from $port {$candidates}"
 	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
 	if {$selected eq {}} {

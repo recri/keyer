@@ -28,7 +28,7 @@ package provide sdrtype::types 1.0.0
 
 package require snit
 
-snit::enum	sdrtype::type		-values {none ctl dsp jack ui hw}
+snit::enum	sdrtype::type		-values {none ctl dsp jack ui hw physical}
 
 snit::enum	sdrtype::mode		-values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}
 

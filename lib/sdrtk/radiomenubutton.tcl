@@ -38,7 +38,7 @@ snit::widgetadaptor sdrtk::radiomenubutton {
     option -labels -default {} -configuremethod Configure
     option -defaultvalue -default {} -configuremethod Configure
     option -command {}
-    option -variable {}
+    option -variable -default {} -configuremethod Configure
 
     delegate method * to hull
     delegate option * to hull
@@ -47,7 +47,9 @@ snit::widgetadaptor sdrtk::radiomenubutton {
 	installhull using ttk::menubutton -textvar [myvar data(label)] -menu $win.m
 	$self configure {*}$args
     }
-    
+    destructor {
+	catch {trace remove variable $options(-variable) write [mymethod TraceWrite]}
+    }
     method {Configure -values} {val} {
 	set options(-values) $val
 	if {[llength $val] ne [llength $options(-labels)]} { set options(-labels) $val }
@@ -61,6 +63,17 @@ snit::widgetadaptor sdrtk::radiomenubutton {
     method {Configure -defaultvalue} {val} {
 	set options(-defaultvalue) $val
     }
+    method {Configure -variable} {val} {
+	if {$options(-variable) ne {}} {
+	    trace remove variable $options(-variable) write [mymethod TraceWrite]
+	}
+	set options(-variable) $val
+	if {$options(-variable) ne {}} {
+	    trace add variable $options(-variable) write [mymethod TraceWrite]
+	    $self TraceWrite
+	}
+    }
+    method TraceWrite {args} { catch { $self set-value [set $options(-variable)] } }
     method Rebuild {} {
 	set values $options(-values)
 	set labels $options(-labels)
@@ -77,7 +90,6 @@ snit::widgetadaptor sdrtk::radiomenubutton {
 	    set data(label) $data(label-$options(-defaultvalue))
 	}
     }
-
     method Set {val} {
 	if {$options(-variable) ne {}} { set $options(-variable) $val }
 	if {$options(-command) ne {}} { {*}$options(-command) $val }

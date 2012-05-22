@@ -47,10 +47,11 @@ snit::type sdrkit::constant {
     option -real -default 0.0 -configuremethod Configure
     option -imag -default 0.0 -configuremethod Configure
 
-    variable data -array {
-	format-real {real %.4f}
-	format-imag {imag %.4f}
+    option -sub-controls {
+	real scale {-format {real %.4f} -from -2 -to 2}
+	imag scale {-format {imag %.4f} -from -2 -to 2}
     }
+    variable data -array { }
 
     constructor {args} {
 	$self configure {*}$args
@@ -67,16 +68,29 @@ snit::type sdrkit::constant {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	foreach l {real imag} {
-	    ttk::label $w.$l-l -textvar [myvar data(label-$l)] -width 10 -anchor e
-	    ttk::scale $w.$l-s -from -2 -to 2 -command [mymethod Set -$l] -variable [myvar options(-$l)]
-	    $self Set -$l $options(-$l)
-	    grid $w.$l-l $w.$l-s -sticky ew
+	foreach {opt type opts} $options(-sub-controls) {
+	    switch $type {
+		spinbox {
+		    package require sdrkit::label-spinbox
+		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		scale {
+		    package require sdrkit::label-scale
+		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
+		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		separator {
+		    ttk::separator $w.$opt
+		}
+		radio {
+		    package require sdrkit::label-radio
+		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
+		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
+		}
+	    }
+	    grid $w.$opt -sticky ew
 	}
-
-	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure $pw $col -minsize $ms -weight $wt
-	}
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
     method is-needed {} { return 1 }
 
@@ -85,24 +99,20 @@ snit::type sdrkit::constant {
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }
 
     method OptionConstrain {opt val} { return $val }
-
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} { ::sdrkitx::$options(-name) configure $opt $val }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
     }
 
     method Set {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
 	$self ControlConfigure $opt $val
     }
     method Changed {opt} { $self Set $opt $options($opt) }
