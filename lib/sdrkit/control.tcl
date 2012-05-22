@@ -140,7 +140,7 @@ snit::type sdrkit::control {
 	foreach source $candidates {
 	    lassign $source part port
 	    set type [$self part-type $part]
-	    if {$type in {jack hw}} {
+	    if {$type in {jack physical}} {
 		if {[$self part-is-active $part]} {
 		    # puts "port-active-connections-to: accepted source={$source}"
 		    lappend active $source
@@ -167,7 +167,7 @@ snit::type sdrkit::control {
 	foreach sink [$self port-connections-from $pair] {
 	    lassign $sink part port
 	    set type [$self part-type $part]
-	    if {$type in {jack hw}} {
+	    if {$type in {jack physical}} {
 		if {[$self part-is-active $part]} {
 		    # puts "port-active-connections-from: accepted sink={$sink}"
 		    lappend active $sink
@@ -201,7 +201,7 @@ snit::type sdrkit::control {
 	# find the connections to make
 	set subgraph [dict create]
 	foreach part $subtree {
-	    if {[$self part-type $part] ni {jack hw}} continue
+	    if {[$self part-type $part] ni {jack physical}} continue
 	    #puts "activate ports $part"
 	    foreach pair [$self port-filter [list $part *]] {
 		foreach sink [$self port-active-connections-from $pair] {
@@ -233,7 +233,7 @@ snit::type sdrkit::control {
 	# find the connections to break
 	set subgraph [dict create]
 	foreach part $subtree {
-	    if {[$self part-type $part] ni {jack hw}} continue
+	    if {[$self part-type $part] ni {jack physical}} continue
 	    foreach pair [$self port-filter [list $part *]] {
 		foreach sink [$self port-active-connections-from $pair] {
 		    dict set subgraph $pair $sink 1

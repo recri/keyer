@@ -56,16 +56,18 @@ snit::type sdrkit::rxtx {
     option -tx-sink {}
     option -keyer-source {}
     option -keyer-sink {}
+    option -physical true
+    option -hardware {}
 
     variable data -array {
 	parts {}
+	active 0
     }
 
     constructor {args} {
 	$self configure {*}$args
     }
     destructor {
-	puts "rxtx destructor"
 	foreach name $data(parts) {
 	    $option(-component) name-destroy $options(-name)-$name
 	}
@@ -79,23 +81,37 @@ snit::type sdrkit::rxtx {
 	    }
 	}
     }
+    method sub-component {name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $name $subsub {*}$args
+    }
+    method sub-window {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-window $window $name $subsub {*}$args
+    }
+    method build-common {} {
+	if {$options(-physical) ne {}} {
+	    $self sub-component ports sdrkit::physical-ports -physical $options(-physical)
+	    $options(-component) part-configure $options(-name)-ports -enable true -activate true
+	}
+	if {$options(-hardware) ne {}} {
+	    $self sub-component hardware sdrkit::hardware -hardware $options(-hardware)
+	}
+    }
+    proc split-command-args {command} {
+	set args {}
+	if {[llength $command] > 1} {
+	    set args [lrange $command 1 end]
+	    set command [lindex $command 0]
+	}
+	return [list $command $args]
+    }
     method build-parts {} {
 	if {$options(-window) ne {none}} return
+	$self build-common
 	foreach {name title command} $options(-sub-components) {
-	    lappend data(parts) $name
-	    set args {}
-	    if {[llength $command] > 1} {
-		set args [lrange $command 1 end]
-		set command [lindex $command 0]
-	    }
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window none \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command -subsidiary-opts $args \
-		-container $options(-component) \
-		-control [$options(-component) get-controller]
+	    lassign [split-command-args $command] command args
+	    $self sub-component $name sdrkit::$command {*}$args
 	}
     }
     method build-ui {} {
@@ -103,6 +119,7 @@ snit::type sdrkit::rxtx {
 	set w $options(-window)
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
+	$self build-common
 	grid [ttk::frame $w.menu] -sticky ew
 	pack [ttk::button $w.menu.connections -text connections -command [mymethod ViewConnections]] -side left
 	ttk::notebook $w.full
@@ -110,27 +127,13 @@ snit::type sdrkit::rxtx {
 	foreach {name title command} $options(-sub-components) {
 	    ttk::frame $w.full.$name
 	    ttk::frame $w.empty.$name
-	    lappend data(parts) $name
-	    set args {}
-	    if {[llength $command] > 1} {
-		set args [lrange $command 1 end]
-		set command [lindex $command 0]
-	    }
+	    lassign [split-command-args $command] command args
 	    switch $name {
 		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }
 		tx { lappend args -tx-source $options(-tx-source) -tx-sink $options(-tx-sink) }
 		keyer { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
 	    }
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window $w.full.$name \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command -subsidiary-opts $args \
-		-container $options(-component) \
-		-control [$options(-component) get-controller] \
-		-minsizes $options(-minsizes) \
-		-weights $options(-weights)
+	    $self sub-window $w.full.$name $name sdrkit::$command {*}$args
 	    $w.full add $w.full.$name -text $title
 	    $w.empty add $w.empty.$name -text $title
 	}

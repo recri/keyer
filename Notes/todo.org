@@ -1,6 +1,24 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - install physical ports in current setup
+** TODO - install dial control in current setup
+** TODO - install ctl logic in current setup
+** TODO - debug option connections
+** TODO - debug port connections
+** TODO - debug activation   
+** TODO - make is-busy a standard framework method
+** TODO - make graph.tcl take a fixed bbox
+** TODO - make graph.tcl use the automated tick labels
+** TODO - make graph.tcl draw rectangles
+** TODO - make graph.tcl the spectrum readout
+** TODO - make graph.tcl callback picks
+** TODO - make graph.tcl callback drags
+** TODO - make smooth scroll tune to pick
+** TODO - use the is-needed method for enabling components
+** TODO - implement spectrum
+** TODO - debug spectrum, polyphase should smooth the noise floor   
+------------------------------------------------------------------------
 ** TODO - looking and thinking about the sdrsharp IQ balancing,
    it's running off-line, it takes a buffer of samples and repeatedly
    adjusts the IQ balance, runs an fft, computes the utility, accepts

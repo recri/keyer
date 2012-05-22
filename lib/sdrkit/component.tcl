@@ -101,6 +101,7 @@ snit::type sdrkit::component {
 
     constructor {args} {
 	$self configure {*}$args
+	package require $options(-subsidiary)
 	install subsidiary using $options(-subsidiary) ::sdrkitw::$options(-name) \
 	    -server $options(-server) -name $options(-name) \
 	    -component $self {*}$options(-subsidiary-opts)
@@ -132,6 +133,9 @@ snit::type sdrkit::component {
 	    set control [::sdrkit-control get-controller]
 	}
 
+	# set up control
+	$self control part-add $options(-name) [sdrkit::comm::wrap $self]
+
 	# build the subsidiary parts
 	$subsidiary build-parts
 
@@ -161,9 +165,6 @@ snit::type sdrkit::component {
 	} else {
 	    #puts "info commands ::sdrkitx::* is [info commands ::sdrkitx::*]"
 	}
-
-	# set up control
-	$self control part-add $options(-name) [sdrkit::comm::wrap $self]
 
 	# build the ui if any
 	if {$options(-window) ne {none}} {
@@ -204,6 +205,8 @@ snit::type sdrkit::component {
     # calls to the controller from the subsidiary
     #
     method part-report {args} { return [$self control part-report {*}$args] }
+    method part-configure {args} { return [$self control part-configure {*}$args] }
+    method part-cget {args} { return [$self control part-cget {*}$args] }
     method part-is-enabled {args} { return [$self control part-is-enabled {*}$args] }
     method part-enable {args} { return [$self control part-enable {*}$args] }
     method part-disable {args} { return [$self control part-disable {*}$args] }
@@ -247,4 +250,30 @@ snit::type sdrkit::component {
 	    }
 	}
     }
+    #
+    # convenience calls from the subsidiary
+    #
+    method sub-component {name subsub args} {
+	package require $subsub
+	::sdrkit::component ::sdrkitv::$options(-name)-$name \
+	    -window none \
+	    -server $options(-server) \
+	    -name $options(-name)-$name \
+	    -subsidiary $subsub -subsidiary-opts $args \
+	    -container $self \
+	    -control [$self get-controller]
+    }
+    method sub-window {window name subsub args} {
+	package require $subsub
+	::sdrkit::component ::sdrkitv::$options(-name)-$name \
+	    -window $window \
+	    -server $options(-server) \
+	    -name $options(-name)-$name \
+	    -subsidiary $subsub -subsidiary-opts $args \
+	    -container $self \
+	    -control [$self get-controller] \
+	    -minsizes $options(-minsizes) \
+	    -weights $options(-weights)
+    }
+
 }
