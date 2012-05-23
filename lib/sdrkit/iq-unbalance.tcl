@@ -40,11 +40,13 @@ snit::type sdrkit::iq-unbalance {
 	dly {IQ Delay} iq-delay {}
 	bal {IQ Balance} iq-balance {}
     }
-    option -connections {
+    option -port-connections {
 	{} in-ports swp out-ports
 	swp out-ports dly in-ports
 	dly out-ports bal in-ports
 	bal out-ports {} out-ports
+    }
+    option -opt-connections {
     }
 
     option -server default
@@ -67,12 +69,14 @@ snit::type sdrkit::iq-unbalance {
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
     method resolve {} {
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
+	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method build-parts {} {

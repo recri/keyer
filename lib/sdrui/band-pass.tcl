@@ -31,13 +31,15 @@ package provide sdrui::band-pass 1.0.0
 package require Tk
 package require snit
 
-package require sdrkit
+package require sdrtcl
 package require sdrtcl::jack
 package require sdrtcl::filter-overlap-save
 
 package require sdrtcl::filter-fir
 package require sdrtcl::window
 package require sdrtcl::fftw
+
+package require sdrtk::radiomenubutton
 
 snit::widget sdrui::band-pass {
     option -server default
@@ -48,6 +50,9 @@ snit::widget sdrui::band-pass {
     option -center 0
     option -min-center -5000
     option -max-center 5000
+    option -cutoff 4096
+    option -min-cutoff -24000
+    option -max-cutoff -24000
     option -width 8192
     option -min-width 50
     option -max-width 10000
@@ -69,6 +74,7 @@ snit::widget sdrui::band-pass {
 	coeffs {}
 	filter {}
 	busy 0
+	filter-type {bandpass}
     }
 
     method draw-filter {wd ht} {
@@ -104,20 +110,20 @@ snit::widget sdrui::band-pass {
 	}
 	    
 	# delete the old filter, if any
-	if {[llength [$win.c find all]]} {
-	    $win.c delete all
+	if {[llength [$win.ui.c find all]]} {
+	    $win.ui.c delete all
 	}
 
 	# draw the new filter
-	$win.c create line $c -fill white
+	$win.ui.c create line $c -fill white
 
 	# frame it
-	lassign [$win.c bbox all] x1 y1 x2 y2
+	lassign [$win.ui.c bbox all] x1 y1 x2 y2
 	#puts "raw bounding box $x1 $y1 $x2 $y2"
 	set y1 [expr {-20}]
 	set y2 [expr {160}]
 	#puts "rounded raw bounding box $x1 $y1 $x2 $y2"
-	$win.c create rectangle $x1 $y1 $x2 $y2 -outline grey -fill {}
+	$win.ui.c create rectangle $x1 $y1 $x2 $y2 -outline grey -fill {}
 
 	# draw the dB scale
 	set dt [expr {($x2-$x1)*0.01}]
@@ -125,10 +131,10 @@ snit::widget sdrui::band-pass {
 	set x2dt [expr {$x2+$dt}]
 	foreach y {0 20 40 60 80 100 120 140 160} {
 	    if {$y > $y1 && $y < $y2} {
-		$win.c create line $x1 $y $x1dt $y -fill white
-		$win.c create text $x1dt $y -anchor e -text "-$y " -fill white
-		$win.c create line $x2 $y $x2dt $y -fill white 
-		$win.c create text $x2dt $y -anchor w -text " -$y" -fill white
+		$win.ui.c create line $x1 $y $x1dt $y -fill white
+		$win.ui.c create text $x1dt $y -anchor e -text "-$y " -fill white
+		$win.ui.c create line $x2 $y $x2dt $y -fill white 
+		$win.ui.c create text $x2dt $y -anchor w -text " -$y" -fill white
 	    }
 	}
 	
@@ -141,52 +147,74 @@ snit::widget sdrui::band-pass {
 	for {set f 0} {$f < $maxf} {incr f 1000} {
 	    set bigtick [expr {($f % 10000) == 0}]
 	    if {$f > $x1 && $f < $x2} {
-		$win.c create line $f $y1 $f [expr {$bigtick ? $y1dt2 : $y1dt}] -fill white
-		$win.c create line $f $y2 $f [expr {$bigtick ? $y2dt2 : $y2dt}] -fill white
+		$win.ui.c create line $f $y1 $f [expr {$bigtick ? $y1dt2 : $y1dt}] -fill white
+		$win.ui.c create line $f $y2 $f [expr {$bigtick ? $y2dt2 : $y2dt}] -fill white
 		if {($f % 20000) == 0} {
-		    $win.c create text $f $y2dt -anchor n -text $f -fill white
+		    $win.ui.c create text $f $y2dt -anchor n -text $f -fill white
 		}
 	    }
 	    set f [expr {-$f}]
 	    if {$f > $x1 && $f < $x2} {
-		$win.c create line $f $y1 $f [expr {$bigtick ? $y1dt2 : $y1dt}] -fill white
-		$win.c create line $f $y2 $f [expr {$bigtick ? $y2dt2 : $y2dt}] -fill white
+		$win.ui.c create line $f $y1 $f [expr {$bigtick ? $y1dt2 : $y1dt}] -fill white
+		$win.ui.c create line $f $y2 $f [expr {$bigtick ? $y2dt2 : $y2dt}] -fill white
 		if {($f % 20000) == 0} {
-		    $win.c create text $f $y2dt -anchor n -text $f -fill white
+		    $win.ui.c create text $f $y2dt -anchor n -text $f -fill white
 		}
 	    }
 	    set f [expr {-$f}]
 	}
 
 	# scale to fill
-	lassign [$win.c bbox all] x1 y1 x2 y2
+	lassign [$win.ui.c bbox all] x1 y1 x2 y2
 	#puts "framed bounding box $x1 $y1 $x2 $y2"
 	set xs [expr {0.8*double($wd)/($x2-$x1)}]
 	set ys [expr {0.8*double($ht)/($y2-$y1)}]
-	$win.c scale all 0 0 $xs $ys
-	lassign [$win.c bbox all] x1 y1 x2 y2
+	$win.ui.c scale all 0 0 $xs $ys
+	lassign [$win.ui.c bbox all] x1 y1 x2 y2
 	#puts "scaled bounding box $x1 $y1 $x2 $y2"
 	set xo [expr {($wd-($x1+$x2))/2}]
 	set yo [expr {($ht-($y1+$y2))/2}]
-	$win.c move all $xo $yo
-	lassign [$win.c bbox all] x1 y1 x2 y2
+	$win.ui.c move all $xo $yo
+	lassign [$win.ui.c bbox all] x1 y1 x2 y2
 	#puts "offset bounding box $x1 $y1 $x2 $y2"
 
 	# add a title
-	set text [format "center %d width %d length %d" $options(-center) $options(-width) $options(-filter-length)]
-	$win.c create text [expr {$wd/2}] 5 -text $text -anchor n -fill white
+	switch $data(filter-type) {
+	    bandpass - notch {
+		set text [format "$data(filter-type) center %d width %d length %d" $options(-center) $options(-width) $options(-filter-length)]
+	    }
+	    lowpass - highpass {
+		set text [format "$data(filter-type) cutoff %d length %d" $options(-cutoff) $options(-filter-length)]
+	    }
+	}
+	$win.ui.c create text [expr {$wd/2}] 5 -text $text -anchor n -fill white
     }
 
     method set-filter {} {
 	if {$data(busy)} return
 	set data(busy) 1
-	# compute the filter points
-	set lo [expr {$options(-center)-$options(-width)/2}]
-	set hi [expr {$options(-center)+$options(-width)/2}]
-	# build the FIR
-	# usage: sdrtcl::filter-fir coeff-type filter-type sample-rate size ...
-	# complex|real bandpass|bandstop|lowpass|highpass|hilbert rate n-coefficients 
-	binary scan [sdrtcl::filter-fir complex bandpass $options(-sample-rate) $options(-filter-length) $lo $hi] f* data(coeffs)
+	switch $data(filter-type) {
+	    bandpass - notch {
+		# compute the filter points
+		set lo [expr {$options(-center)-$options(-width)/2}]
+		set hi [expr {$options(-center)+$options(-width)/2}]
+		# build the FIR
+		# usage: sdrtcl::filter-fir coeff-type filter-type sample-rate size ...
+		# complex|real bandpass|bandstop|lowpass|highpass|hilbert rate n-coefficients 
+		if {$data(filter-type) eq {bandpass}} {
+		    binary scan [sdrtcl::filter-fir complex bandpass $options(-sample-rate) $options(-filter-length) $lo $hi] f* data(coeffs)
+		} else {
+		    binary scan [sdrtcl::filter-fir complex bandstop $options(-sample-rate) $options(-filter-length) $lo $hi] f* data(coeffs)
+		}
+	    }
+	    lowpass - highpass {
+		if {$data(filter-type) eq {lowpass}} {
+		    binary scan [sdrtcl::filter-fir complex lowpass $options(-sample-rate) $options(-filter-length) $options(-cutoff)] f* data(coeffs)
+		} else {
+		    binary scan [sdrtcl::filter-fir complex highpass $options(-sample-rate) $options(-filter-length)  $options(-cutoff)] f* data(coeffs)
+		}
+	    }
+	}
 	# pad with zeroes on the left to make fft fodder
 	set data(coeffs) [binary format f* [concat [lrepeat [expr {($options(-filter-length)-2)*2}] 0.0] $data(coeffs)]]
 	# rebuild the fft if it's not the right size
@@ -198,7 +226,7 @@ snit::widget sdrui::band-pass {
 	# run the fft
 	set data(filter) [$data(fftw) exec $data(coeffs)]
 	# draw the result
-	$self draw-filter [winfo width $win.c] [winfo height $win.c]
+	$self draw-filter [winfo width $win.ui.c] [winfo height $win.ui.c]
 	set data(busy) 0
     }
 
@@ -221,7 +249,7 @@ snit::widget sdrui::band-pass {
 	# get the sample rate
 	set options(-sample-rate) [sdrtcl::jack -server $options(-server) sample-rate]
 	# draw the new filter
-	$self draw-filter [winfo width $win.c] [winfo height $win.c]
+	$self draw-filter [winfo width $win.ui.c] [winfo height $win.ui.c]
     }
 
     method set-width {width} {
@@ -232,43 +260,77 @@ snit::widget sdrui::band-pass {
 	set options(-center) [expr {int($center)}]
 	$self set-filter
     }
+    method set-cutoff {cutoff} {
+	set options(-cutoff) [expr {int($cutoff)}]
+	$self set-filter
+    }
     method set-filter-length {length} {
 	set options(-filter-length) [expr {(int($length)&~1)+1}]; # make it odd
 	#$self set-filter
     }
 
     method window-configure {wd ht} {
-	$self draw-filter $wd $ht
+	$self draw-filter [winfo width $win.ui.c] [winfo height $win.ui.c]
     }
 
+    method Rebuild {args} {
+	catch {destroy $win.ui}
+	grid [ttk::frame $win.ui] -row 0 -column 0 -sticky nsew
+	grid columnconfigure $win 0 -weight 1
+	grid rowconfigure $win 0 -weight 1
+	set row 0
+	grid [sdrtk::radiomenubutton $win.ui.filter -values {lowpass highpass bandpass notch} -variable [myvar data(filter-type)] -command [mymethod Rebuild]]
+	switch $data(filter-type) {
+	    lowpass - highpass {
+		incr row
+		grid [ttk::label $win.ui.lc -text {filter cutoff}] -row $row -column 0
+		grid [ttk::label $win.ui.vc -textvar [myvar options(-cutoff)] -width 5] -row $row -column 1
+		set lo [expr {-$options(-sample-rate)/2}]
+		set hi [expr {+$options(-sample-rate)/2}]
+		grid [ttk::scale $win.ui.sc -from $lo -to $hi -variable [myvar options(-cutoff)] \
+			  -command [mymethod set-cutoff]] -row $row -column 2 -sticky ew
+		incr row
+		grid [ttk::label $win.ui.ll -text {filter length}] -row $row -column 0
+		grid [ttk::label $win.ui.vl -textvar [myvar options(-filter-length)] -width 5] -row $row -column 1
+		grid [ttk::scale $win.ui.sl -from $options(-min-filter-length) -to $options(-max-filter-length) \
+			  -variable [myvar options(-filter-length)] -command [mymethod set-filter-length]] -row $row -column 2 -sticky ew
+		grid [ttk::button $win.ui.apply -text {apply} -command [mymethod set-filter]] -row $row -column 3
+		incr row
+		grid [ttk::button $win.ui.install -text {install} -command [mymethod select-filter]] -row $row -column 0 -columnspan 4
+	    }
+	    bandpass - notch {
+		incr row
+		grid [ttk::label $win.ui.lw -text {filter width}] -row $row -column 0
+		grid [ttk::label $win.ui.vw -textvar [myvar options(-width)] -width 5] -row $row -column 1
+		grid [ttk::scale $win.ui.sw -from $options(-min-width) -to $options(-max-width) \
+			  -variable [myvar options(-width)] -command [mymethod set-width]] -row $row -column 2 -sticky ew
+		incr row
+		grid [ttk::label $win.ui.lc -text {filter center}] -row $row -column 0
+		grid [ttk::label $win.ui.vc -textvar [myvar options(-center)] -width 5] -row $row -column 1
+		set lo [expr {-$options(-sample-rate)/2}]
+		set hi [expr {+$options(-sample-rate)/2}]
+		grid [ttk::scale $win.ui.sc -from $lo -to $hi -variable [myvar options(-center)] -command [mymethod set-center]] -row $row -column 2 -sticky ew
+		incr row
+		grid [ttk::label $win.ui.ll -text {filter length}] -row $row -column 0
+		grid [ttk::label $win.ui.vl -textvar [myvar options(-filter-length)] -width 5] -row $row -column 1
+		grid [ttk::scale $win.ui.sl -from $options(-min-filter-length) -to $options(-max-filter-length) -variable [myvar options(-filter-length)] -command [mymethod set-filter-length]] -row $row -column 2 -sticky ew
+		grid [ttk::button $win.ui.apply -text {apply} -command [mymethod set-filter]] -row $row -column 3
+		incr row
+		grid [ttk::button $win.ui.install -text {install} -command [mymethod select-filter]] -row $row -column 0 -columnspan 4
+	    }
+	    default { error "unanticipated filter type \"$data(filter-type)\"" }
+	}
+	incr row
+	grid [canvas $win.ui.c -bg black] -row $row -column 0 -columnspan 4 -sticky nsew
+	grid columnconfigure $win.ui 2 -weight 1
+	grid rowconfigure $win.ui $row -weight 1
+	$self set-filter
+    }
     constructor {args} {
 	$self configure {*}$args
-
 	sdrtcl::filter-overlap-save $options(-name) -server $options(-server)
-
-	set row 0
-	grid [ttk::label $win.lw -text {filter width}] -row $row -column 0
- 	grid [ttk::label $win.vw -textvar [myvar options(-width)] -width 5] -row $row -column 1
-	grid [ttk::scale $win.sw -from $options(-min-width) -to $options(-max-width) -variable [myvar options(-width)] -command [mymethod set-width]] -row $row -column 2 -sticky ew
-	incr row
-	grid [ttk::label $win.lc -text {filter center}] -row $row -column 0
-	grid [ttk::label $win.vc -textvar [myvar options(-center)] -width 5] -row $row -column 1
-	set lo [expr {-$options(-sample-rate)/2}]
-	set hi [expr {+$options(-sample-rate)/2}]
-	grid [ttk::scale $win.sc -from $lo -to $hi -variable [myvar options(-center)] -command [mymethod set-center]] -row $row -column 2 -sticky ew
-	incr row
-	grid [ttk::label $win.ll -text {filter length}] -row $row -column 0
-	grid [ttk::label $win.vl -textvar [myvar options(-filter-length)] -width 5] -row $row -column 1
-	grid [ttk::scale $win.sl -from $options(-min-filter-length) -to $options(-max-filter-length) -variable [myvar options(-filter-length)] -command [mymethod set-filter-length]] -row $row -column 2 -sticky ew
-	grid [ttk::button $win.apply -text {apply} -command [mymethod set-filter]] -row $row -column 3
-	incr row
-	grid [ttk::button $win.install -text {install} -command [mymethod select-filter]] -row $row -column 0 -columnspan 4
-	incr row
-	grid [canvas $win.c -bg black] -row $row -column 0 -columnspan 4 -sticky nsew
-	grid columnconfigure $win 2 -weight 1
-	grid rowconfigure $win $row -weight 1
-	$self set-filter
-	bind $win.c <Configure> [mymethod window-configure %w %h]
+	$self Rebuild
+	bind $win <Configure> [mymethod window-configure %w %h]
     }
 
     destructor {

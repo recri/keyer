@@ -59,7 +59,7 @@ snit::type sdrkit::rx {
 	af-gain {AF Gain} gain {}
     }
 
-    option -connections {
+    option -port-connections {
 	{} in-ports rf-gain in-ports
 	rf-gain out-ports rf-iq-swap in-ports
 	rf-iq-swap out-ports rf-iq-delay in-ports
@@ -81,6 +81,8 @@ snit::type sdrkit::rx {
 	af-spot out-ports af-graphic-eq in-ports
 	af-graphic-eq out-ports af-gain in-ports
 	af-gain out-ports {} out-ports
+    }
+    option -opt-connections {
     }
 
     option -server default
@@ -156,7 +158,7 @@ snit::type sdrkit::rx {
     }
     method resolve {} {
 	# need to match midi vs audio
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    set ports1 [$options(-component) $ports1 $name1]
@@ -179,6 +181,8 @@ snit::type sdrkit::rx {
 		lassign [$self resolve-port-name [split $dst :]] dname dport
 		$options(-component) connect-ports $options(-name) $src $dname $dport
 	    }
+	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method is-active {} { return 1 }

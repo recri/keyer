@@ -40,9 +40,11 @@ snit::type sdrkit::iq-source {
 	sg {Signal Generator} signal-generator {}
 	iq {IQ Imbalance} iq-unbalance {}
     }
-    option -connections {
+    option -port-connections {
 	sg out-ports iq in-ports
 	iq out-ports {} out-ports
+    }
+    option -opt-connections {
     }
 
     option -server default
@@ -65,12 +67,14 @@ snit::type sdrkit::iq-source {
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
     method resolve {} {
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
+	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method build-parts {} { if {$options(-window) eq {none}} { $self build } }

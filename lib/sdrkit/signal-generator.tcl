@@ -41,7 +41,7 @@ snit::type sdrkit::signal-generator {
 	iqn {IQ Noised} iq-noise {}
 	out {Master Gain} gain {}
     }
-    option -connections {
+    option -port-connections {
 	osc1 out-ports out in-ports
 	osc2 out-ports out in-ports
 	osc3 out-ports out in-ports
@@ -49,6 +49,8 @@ snit::type sdrkit::signal-generator {
 	noi out-ports out in-ports
 	iqn out-ports out in-ports
 	out out-ports {} out-ports
+    }
+    option -opt-connections {
     }
 
     option -server default
@@ -96,12 +98,14 @@ snit::type sdrkit::signal-generator {
 	}
     }
     method resolve {} {
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
+	}
+	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
 	}
     }
     method is-active {} { return $data(active) }

@@ -28,4 +28,10 @@
 *** Build the bandstop filter for the desired notch,
 **** Either add the coefficients in the time domain
 **** Or transform into the frequency domain and multiply together
-     
+** More surprises
+*** A complex lowpass or highpass FIR filter has only real coefficients
+    and it makes filters abs(frequency)
+    so the low pass passes a band around 0 with width 2*cutoff
+    and the high pass rejects a band around 0 with width 2*cutoff
+*** My bandstop filter has a mistake in it.
+

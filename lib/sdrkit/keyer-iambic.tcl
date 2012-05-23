@@ -41,10 +41,12 @@ snit::type sdrkit::keyer-iambic {
 	dtt {dttsp} keyer-iambic-dttsp {}
 	nd7 {nd7pa} keyer-iambic-nd7pa {}
     }
-    option -connections {
+    option -port-connections {
 	{} in-ports ad5 in-ports	ad5 out-ports {} out-ports
 	{} in-ports dtt in-ports	dtt out-ports {} out-ports
 	{} in-ports nd7 in-ports	nd7 out-ports {} out-ports
+    }
+    option -opt-connections {
     }
 
     option -server default
@@ -66,12 +68,14 @@ snit::type sdrkit::keyer-iambic {
     }
     method resolve {} {
 	# need to match midi vs audio
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
+	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method build-parts {} {

@@ -52,10 +52,12 @@ snit::type sdrkit::mod {
 	ssb {SSB} mod-ssb {}
     }
 
-    option -connections {
+    option -port-connections {
 	{} in-ports am in-ports		am out-ports {} in-ports
 	{} in-ports fm in-ports		fm out-ports {} out-ports
 	{} in-ports ssb in-ports	ssb out-ports {} out-ports
+    }
+    option -opt-connections {
     }
 
     variable data -array {
@@ -75,12 +77,14 @@ snit::type sdrkit::mod {
     }
     method resolve {} {
 	# need to match midi vs audio
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
+	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method build-parts {} {

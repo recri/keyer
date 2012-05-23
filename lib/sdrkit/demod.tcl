@@ -41,10 +41,12 @@ snit::type sdrkit::demod {
 	fm {FM} demod-fm {}
 	sam {SAM} demod-sam {}
     }
-    option -connections {
+    option -port-connections {
 	{} in-ports am in-ports		am out-ports {} out-ports
 	{} in-ports fm in-ports		fm out-ports {} out-ports
 	{} in-ports sam in-ports	sam out-ports {} out-ports
+    }
+    option -opt-connections {
     }
 
     option -server default
@@ -66,12 +68,14 @@ snit::type sdrkit::demod {
     }
     method resolve {} {
 	# need to match midi vs audio
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
+	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method build-parts {} {
