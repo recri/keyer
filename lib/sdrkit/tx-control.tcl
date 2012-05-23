@@ -42,41 +42,41 @@ snit::type sdrkit::tx-control {
     option -in-options {}
     option -out-options {}
 
-    option -sub-controls {
-    }
+    option -sample-rate 0
 
-    option -sub-components {
+    option -mode -default CWU -configuremethod Retune -type sdrtype::mode
+    option -width -default 400 -configuremethod Retune
+    option -offset -default 150 -configuremethod Retune
+    option -freq -default 7050000 -configuremethod Retune
+    option -lo1 -default 7039400 -configuremethod Opt-handler
+    option -lo2 -default 10000 -configuremethod Retune
+    option -cw -default 600 -configuremethod Retune
+    option -carrier -default 7040000 -configuremethod Opt-handler
+
+    option -sub-controls {
+	mode radio {-format {Mode} -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}}
+	width scale {-format {Width %.0f Hz} -from 10 -to 50000}
+	offset scale {-format {Offset %.0f Hz} -from 10 -to 1000}
+	freq scale {-format {Freq %.0f Hz} -from 1000000 -to 30000000}
+	lo2 scale {-format {LO2 %.0f Hz}  -from -24000 -to 24000}
+	cw scale {-format {CW Tone %.0f Hz} -from 100 -to 1000}
     }
 
     variable data -array {}
 
     constructor {args} {
 	$self configure {*}$args
+	$self configure -sample-rate [sdrtcl::jack -server $options(-server) sample-rate]
     }
-    destructor { $options(-component) destroy-sub-parts $data(parts) }
-
-    method sub-component {window name subsub args} {
-	lappend data(parts) $name
-	$options(-component) sub-component $window $name $subsub {*}$args
-    }
-
-    proc split-command-args {command} {
-	set args {}
-	if {[llength $command] > 1} {
-	    set args [lrange $command 1 end]
-	    set command [lindex $command 0]
-	}
-	return [list $command $args]
-    }
-
+    destructor {}
     method build-parts {} { if {$options(-window) eq {none}} { $self build } }
     method build-ui {} { if {$options(-window) ne {none}} { $self build } }
     method build {} {
 	set w $options(-window)
-
 	if {$w ne {none}} {
 	    if {$w eq {}} { set pw . } else { set pw $w }
 	    foreach {opt type opts} $options(-sub-controls) {
+		if {$opt eq {lo2}} { lappend opts -from [expr {-$options(-sample-rate)/4.0}] -to [expr {$options(-sample-rate)/4.0}] }
 		switch $type {
 		    spinbox {
 			package require sdrkit::label-spinbox
@@ -84,6 +84,7 @@ snit::type sdrkit::tx-control {
 		    }
 		    scale {
 			package require sdrkit::label-scale
+			#lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
 			sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 		    }
 		    separator {
@@ -91,57 +92,32 @@ snit::type sdrkit::tx-control {
 		    }
 		    radio {
 			package require sdrkit::label-radio
+			#lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
 			sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
 		    }
 		}
 		grid $w.$opt -sticky ew
 	    }
-	}
-	foreach {name title command} $options(-sub-components) {
-	    lassign [split-command-args $command] command args
-	    if {$w eq {none}} {
-		$self sub-component none $name sdrkit::$command {*}$args
-	    } else {
-		$self sub-component [ttk::frame $w.$name] $name sdrkit::$command {*}$args
-	    }
-	}
-	if {$w ne {none}} {
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
-
     method is-needed {} { return 1 }
-
     method is-active {} { return 1 }
     method activate {} { }
     method deactivate {} { }
-
     method OptionConstrain {opt val} { return $val }
-
     method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
+    method ComponentConfigure {opt val} {}
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
     }
-
     method Set {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
 	$self ControlConfigure $opt $val
     }
-    method Changed {opt} { $self Set $opt $options($opt) }
 }

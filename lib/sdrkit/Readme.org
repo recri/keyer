@@ -23,19 +23,19 @@
    When a radio switches between receive and transmit, for instance.
 * First we had free form scripts
    which had to do all the option and jack port connections on their
-   own.
+   own.  This was tedious to write, hard to modify, and prone to
+   errors.
 * Second we had separate sdrdsp, sdrui, and sdrctl directories
    which automated option and port connections, but scattered the
-   logic over multiple directories and required massive efforts on my
-   part to remember how things were supposed to fit together.
-   Not good.
+   logic over multiple directories and required huge concentration to
+   remember how things were supposed to fit together.
 * Third, fold things back together and make a memorable pattern
 ** ./component.tcl::sdrkit::component defines the interface
-   between components and the controller
+   between components and the controller and tries to abstract out
+   useful computations for the wrapped components.
 ** components may be of various types.
-*** dsp components which crunch samples
-*** midi components which crunch events
-*** composite components which organize other components
+*** jack components which crunch audio samples or midi events
+*** dsp composite components which organize other components
 *** tap components which simply identify points in the computation graph
 *** meter components which observe samples or events and report
 *** control components which synthesize option value reports from options    
@@ -44,9 +44,10 @@
 *** A UI which allows meddling at levels which should be left alone.
 *** A UI which should be ignored, except as a last resort.
 ** The wrappers are currently named according to the sdrtcl component name
-   but it might be better to distinguish them by a prefix to keep this
+   but it might be better to distinguish them by a type prefix to keep this
    directory better organized.
    But I haven't found a prefix I like, yet.
+   I guess using the type used inside the controller would be a good idea.
 ** The base component wrapper is intended to run in four contexts
    It's very convenient to be able to fire off instances of components
    as a processes in themselves and then wire them together in jackctl.
@@ -69,6 +70,12 @@
     information between applications via the X server.
     This is how the sdrkit-signal-generator and sdrkit-iq-unbalance
     applications are implemented.
+    No longer true, using remote control connections turned out to be
+    problematic, in two ways: using the remote connection even for
+    local connections turned out to be slow; the semantics of the
+    remote call and a local call aren't exactly the same.
+    So sdrkit-signal-generator and sdrkit-iq-unbalance now host local
+    components with direct connections.
 *** As a hosted component.
     This is the same as the previous, except that the component runs
     inside the hosting process, builds its windows inside a supplied

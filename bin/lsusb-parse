@@ -1,0 +1,63 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [info script]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require sdrtk::vtext
+package require sdrtk::vtreeview
+
+proc usbmenu {w} {
+    ttk::menubutton $w -textvar device -menu $w.m
+    menu $w.m -tearoff no
+    foreach line [split [string trim [exec lsusb]] \n] {
+	$w.m add radiobutton -label $line -value $line -variable ::device -command select
+    }
+    return $w
+}
+proc selected-device {} {
+    # Bus 002 Device 004: ID 041e:30df
+    regexp {^Bus 0*(\d+) Device 0*(\d+): ID (....:....) (.*)$} $::device all bus dev id desc
+    return "${bus}:${dev}"
+}
+
+proc select {} {
+    catch {.n.text delete all}
+    catch {.n.tree delete all}
+    set lines {}
+    set last(-1) {}
+    foreach line [split [string trim [exec sudo lsusb -v -s [selected-device]]] \n] {
+	.n.text insert end $line\n
+	regexp {^([ ]*)(.*)$} $line all indent content
+	set n [expr {[string length $indent]/2}]
+	set p [expr {$n-1}]
+	set last($n) [.n.tree insert $last($p) end -text $content]
+    }
+}
+
+pack [ttk::frame .m] -side top -fill x
+pack [usbmenu .m.u] -side left
+pack [ttk::notebook .n] -side top -fill both -expand true
+sdrtk::vtext .n.text -width 60 -scrollbar right
+sdrtk::vtreeview .n.tree -width 60 -scrollbar right
+.n add .n.text -text Text
+.n add .n.tree -text Tree
+

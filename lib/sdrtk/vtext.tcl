@@ -1,0 +1,77 @@
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+package provide sdrtk::vtext 1.0.0
+
+package require Tk
+package require snit
+
+namespace eval ::sdrtk {}
+
+#
+# a text with vertical scrollbar to left or right
+#
+snit::widget sdrtk::vtext {
+    component text
+    component scrollbar
+
+    option -scrollbar -default right -type {snit::enum -values {left right}} -configuremethod Configure
+
+    delegate method * to text
+    delegate option * to text
+
+    constructor {args} {
+	install text using text $win.t -yscrollcommand [mymethod Scroll set $win.v]
+	install scrollbar using ttk::scrollbar $win.v -orient vertical -command [mymethod Scroll yview $win.t]
+	$self configure {*}$args
+	if {[event info <<TextScroll>>] eq {}} {
+	    event add <<TextScroll>> <Prior> <Next>
+	}
+    }
+
+    method {Configure -scrollbar} {side} {
+	set options(-scrollbar) $side
+	catch {pack forget $win.t $win.v}
+	switch $options(-scrollbar) {
+	    left {
+		pack $win.t -side right -fill both -expand true
+		pack $win.v -side right -fill y
+	    }
+	    right {    
+		pack $win.t -side left -fill both -expand true
+		pack $win.v -side left -fill y
+	    }
+	}
+    }
+				   
+    method bind {pattern command} {
+	bind $win.t $pattern $command
+    }
+
+    method {Scroll set} {w args} {
+	$w set {*}$args
+    }
+
+    method {Scroll yview} {w args} {
+	$w yview {*}$args
+	event generate $w <<TextScroll>>
+    }
+}
+ 
+

@@ -35,6 +35,7 @@ snit::type sdrkit::rx {
     option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
+
     option -sub-components {
 	rf-gain {RF Gain} gain {}
 	rf-iq-swap {IQ Swap} iq-swap {}
@@ -57,6 +58,7 @@ snit::type sdrkit::rx {
 	-af-graphic-eq {Graphic EQ} graphic-eq {}
 	af-gain {AF Gain} gain {}
     }
+
     option -connections {
 	{} in-ports rf-gain in-ports
 	rf-gain out-ports rf-iq-swap in-ports
@@ -124,12 +126,11 @@ snit::type sdrkit::rx {
 		    # only display real working components
 		    grid $w.$name -sticky ew
 		}
-		set data($name-enable) [$options(-component) part-cget $options(-name)-$name -enable]
+		set data($name-enable) 0
 		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container
-		grid $w.$name -sticky ew
 		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	    }
 	}
@@ -184,12 +185,10 @@ snit::type sdrkit::rx {
     method activate {} {}
     method deactivate {} {}
     method Enable {name} {
-	if {$data($name-enable) != [$options(-component) part-cget $options(-name)-$name -enable]} {
-	    if {$data($name-enable)} {
-		$options(-component) part-enable $options(-name)-$name
-	    } else {
-		$options(-component) part-disable $options(-name)-$name
-	    }
+	if {$data($name-enable)} {
+	    $options(-component) part-enable $options(-name)-$name
+	} else {
+	    $options(-component) part-disable $options(-name)-$name
 	}
     }
 }

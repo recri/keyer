@@ -49,9 +49,9 @@ snit::type sdrkit::rxtx-control {
     }
 
     option -sub-components {
-	rx {RX Control} rx-control
-	tx {TX Control} tx-control
-	keyer {Keyer Control} keyer-control
+	rx {RX Control} rx-control {}
+	tx {TX Control} tx-control {}
+	keyer {Keyer Control} keyer-control {}
     }
 
     option -mox -default 0 -configuremethod Configure
@@ -86,33 +86,39 @@ snit::type sdrkit::rxtx-control {
 
 	if {$w ne {none}} {
 	    if {$w eq {}} { set pw . } else { set pw $w }
+	    set name rxtx
+	    set title RXTX
+	    sdrtk::clabelframe $w.$name -label $title
+	    grid $w.$name -sticky ew
 	    foreach {opt type opts} $options(-sub-controls) {
 		switch $type {
 		    spinbox {
 			package require sdrkit::label-spinbox
-			sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+			sdrkit::label-spinbox $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 		    }
 		    scale {
 			package require sdrkit::label-scale
-			sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+			sdrkit::label-scale $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 		    }
 		    separator {
-			ttk::separator $w.$opt
+			ttk::separator $w.$name.$opt
 		    }
 		    radio {
 			package require sdrkit::label-radio
-			sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
+			sdrkit::label-radio $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
 		    }
 		}
-		grid $w.$opt -sticky ew
+		grid $w.$name.$opt -sticky ew
 	    }
 	}
-	foreach {name title command} $options(-sub-components) {
-	    lassign [split-command-args $command] command args
+	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
 	    } else {
-		$self sub-component [ttk::frame $w.$name] $name sdrkit::$command {*}$args
+		sdrtk::clabelframe $w.$name -label $title
+		grid $w.$name -sticky ew
+		$self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
+		grid $w.$name.container -sticky ew
 	    }
 	}
 	if {$w ne {none}} {
