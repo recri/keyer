@@ -71,21 +71,37 @@ snit::type sdrkit::spectrum {
     option -zoom -default 1 -configuremethod TkConfigure
     option -pan -default 0 -configuremethod TkConfigure
 
-    # tuning mode
-    option -mode -default CWU -configuremethod TkConfigure
-    # tuning
+    option -mode -default CWU -configuremethod Retune
     option -freq -default 7050000 -configuremethod Retune
     option -lo-freq -default 10000 -configuremethod Retune
     option -cw-freq -default 600 -configuremethod Retune
     option -carrier-freq -default 7040000 -configuremethod Retune
-    # band pass filter
     option -low -default 400 -configuremethod Retune
     option -high -default 800 -configuremethod Retune
+    
+    # tap - no spectrum source tap control
+    # period - no spectrum period control
+    # result - no spectrum result control
+    # smooth - no smooth control
+    option -sub-controls {
+	period iscale {-format {Period %d ms} -from 50 -to 1000} 
+	size iscale {-format {Size %d} -from 8 -to 4096}
+	polyphase iscale {-format {Polyphase %d} -from 1 -to 32}
+	smooth radio {-format {Smooth} -values {0 1} -labels {off on}}
+	multi iscale {-format {Multi %d} -from 1 -to 32}
+	pal iscale {-format {Palette %d} -from 0 -to 9}
+	min iscale {-format {Min %d dBFS} -from -160 -to -80}
+	max iscale {-format {Max %d dBFS} -from -80 -to 0}
+	zoom scale {-format {Zoom %.2f} -from 0.5 -to 100}
+	pan iscale {-format {Pan %d} -from -20000 -to 20000}
+    }
 
     variable data -array {
 	tap-deferred-opts {}
 	after {}
 	frequencies {}
+	tap-options {-server -size -polyphase -result}
+	tk-options {-sample-rate -pal -max -min -smooth -multi -zoom -pan -mode -freq -lo-freq -cw-freq -carrier-freq -low -high}
     }
 
     constructor {args} {
@@ -100,7 +116,7 @@ snit::type sdrkit::spectrum {
     }
     method build-parts {} {
 	toplevel .spectrum-$options(-name)
-	set data(display) [sdrui::tk-spectrum .spectrum-$options(-name).s {*}[$self TkOptions]]
+	set data(display) [sdrui::tk-spectrum .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]
 	pack $data(display) -side top -fill both -expand true
 	sdrtcl::spectrum-tap ::sdrkitx::$options(-name) {*}[$self TapOptions]
 	set data(after) [after $options(-period) [mymethod Update]]
@@ -110,77 +126,77 @@ snit::type sdrkit::spectrum {
 	set w $options(-window)
 	if {$w eq {}} { set pw . } else { set pw $w }
 
-	# no spectrum source tap control
-	
-	# spectrum fft size control, use scale?
-	lassign [list [sdrtype::spec-size cget -values] {}] values labels
-	foreach x $values { lappend labels "size $x" }
-	sdrtk::radiomenubutton $w.size -defaultvalue $options(-size) -values $values -labels $labels \
-	    -variable [myvar options(-size)] -command [mymethod Set -size]
-	
-	# polyphase spectrum control
-	lassign { {1 2 4 8 16 32} {} } values labels
-	foreach x $values { lappend labels [expr {$x==1?{no polyphase}:"polyphase $x"}] }
-	sdrtk::radiomenubutton $w.polyphase -defaultvalue $options(-polyphase) -values $values -labels $labels \
-	    -variable [myvar options(-polyphase)] -command [mymethod Set -polyphase]
-	
-	# multi-trace spectrum control
-	lassign { {1 2 4 6 8 10 12} {} } values labels
-	foreach x $values { lappend labels "multi $x" }
-	sdrtk::radiomenubutton $w.multi -defaultvalue $options(-multi) -values $values -labels $labels \
-	    -variable [myvar options(-multi)] -command [mymethod Set -multi]
-	
-	# waterfall palette control
-	lassign { {0 1 2 3 4 5} {} } values labels
-	foreach x $values { lappend labels "palette $x" }
-	sdrtk::radiomenubutton $w.palette -defaultvalue $options(-pal) -values $values -labels $labels \
-	    -variable [myvar options(-pal)] -command [mymethod Set -pal]
-	
-	# waterfall/spectrum min dB, use scale?
-	lassign { {} {} } values labels
-	for {set x 0} {$x >= -80} {incr x -10} { lappend values $x; lappend labels "min $x dB" }
-	sdrtk::radiomenubutton $w.min -defaultvalue $options(-min) -values $values -labels $labels \
-	    -variable [myvar options(-min)] -command [mymethod Set -min]
-	
-	# waterfall/spectrum max dB, use scale?
-	lassign { {} {} } values labels
-	for {set x -80} {$x >= -160} {incr x -10} { lappend values $x; lappend labels "max $x dB" }
-	foreach x $values { lappend labels "max $x dB" }
-	sdrtk::radiomenubutton $w.max -defaultvalue $options(-max) -values $values -labels $labels \
-	    -variable [myvar options(-max)] -command [mymethod Set -max]
-	
-	# zoom in/out, use scale?
-	lassign { {1 2.5 5 10 25 50 100} {} } values labels
-	foreach x $values { lappend labels "zoom $x x" }
-	sdrtk::radiomenubutton $w.zoom -defaultvalue $options(-zoom) -values $values -labels $labels \
-	    -variable [myvar options(-zoom)] -command [mymethod Set -zoom]
-	
-	# pan left/right
-	
-	# assemble grid
-	grid $w.size $w.polyphase -sticky ew
-	grid $w.multi $w.palette -sticky ew
-	grid $w.min $w.max -sticky ew
-	grid $w.zoom -sticky ew
-	grid columnconfigure [winfo parent $w.zoom] 0 -weight 1
-	grid columnconfigure [winfo parent $w.zoom] 1 -weight 1
+	foreach {opt type opts} $options(-sub-controls) {
+	    switch $type {
+		spinbox {
+		    package require sdrkit::label-spinbox
+		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		scale {
+		    package require sdrkit::label-scale
+		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
+		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		iscale {
+		    package require sdrkit::label-iscale
+		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
+		    sdrkit::label-iscale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		separator {
+		    ttk::separator $w.$opt
+		}
+		radio {
+		    package require sdrkit::label-radio
+		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
+		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
+		}
+		default { error "unimplemented control type \"$type\"" }
+	    }
+	    grid $w.$opt -sticky ew
+	}
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
+    method Set {opt val} {
+	if { ! [info exists data(Set-dispatch$opt)]} {
+	    if {$opt in $data(tap-options)} {
+		set data(Set-dispatch$opt) [mymethod TapConfigure]
+	    } elseif {$opt in $data(tk-options)} {
+		set data(Set-dispatch$opt) [mymethod TkConfigure]
+	    } else {
+		set data(Set-dispatch$opt) [mymethod Configure]
+	    }
+	}
+	{*}$data(Set-dispatch$opt) $opt $val
+    }
+    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
     method is-active {} { return [::sdrkitx::$options(-name) is-active]  }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }
-    method FilterOptions {keepers} {
-	foreach opt $keepers { lappend opts $opt $options($opt) }
-	return $opts
+    method FilterOptions {keepers} { foreach opt $keepers { lappend opts $opt $options($opt) }; return $opts }
+    method TapOptions {} { return [$self FilterOptions $data(tap-options)] }
+    method TkOptions {} { return [$self FilterOptions $data(tk-options)] }
+
+    method OptionConstrain {opt val} {
+	switch -- $opt {
+	    -size - -polyphase - -multi - -pal - -min - -max - -pan - -period {
+		return [expr {int(round($val))}]
+	    }
+	    -smooth - -zoom { return $val }
+	    default { error "unanticipated option \"$opt\"" }
+	}
     }
-    method TapOptions {} { return [$self FilterOptions {-server -size -polyphase -result}] }
-    method TkOptions {} { return [$self FilterOptions {-sample-rate -pal -max -min -smooth -multi -zoom -pan -mode -freq -lo-freq -cw-freq -carrier-freq -low -high}] }
-    method Configure {opt val} { set options($opt) $val }
-    method TapConfigure {opt val} { lappend data(tap-deferred-opts) $opt $val }
+    method Configure {opt val} {
+	set options($opt) [$self OptionConstrain $opt $val]
+    }
+    method TapConfigure {opt val} {
+	$self Configure $opt $val
+	lappend data(tap-deferred-opts) $opt $options($opt)
+    }
     method TkConfigure {opt val} {
-	set options($opt) $val
-	.spectrum-$options(-name) configure $opt $val
+	$self Configure $opt $val
+	$data(display) configure $opt $options($opt)
     }
-    method Tap-is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
+	
     method UpdateFrequencies {} {
 	#puts "recomputing frequencies for length $n from [llength $data(frequencies)]"
 	set data(frequencies) {}
@@ -204,7 +220,7 @@ snit::type sdrkit::spectrum {
 	set data(after) [after $options(-period) [mymethod Update]]
     }
     method Update {} {
-	if {[$self Tap-is-busy]} {
+	if {[$self is-busy]} {
 	    # if busy, then supply a blank
 	    $self BlankUpdate
 	    # finished
@@ -215,14 +231,14 @@ snit::type sdrkit::spectrum {
 	    set config $data(tap-deferred-opts)
 	    set data(tap-deferred-opts) {}
 	    #puts "Update configure $config"
-	    $capture configure {*}$config
+	    ::sdrkitx::$options(-name) configure {*}$config
 	    # supply a blank
 	    $self BlankUpdate
 	    # finished
 	    return
 	}
 	# if not active
-	if { ! [::sdrkitx::$options(-name) is-active]} {
+	if { ! [$self is-active]} {
 	    # supply a blank
 	    $self BlankUpdate
 	    # finished
@@ -235,7 +251,13 @@ snit::type sdrkit::spectrum {
 	if {[llength $data(frequencies)] != $options(-size)} {
 	    $self UpdateFrequencies
 	}
-	foreach x $data(frequencies) y [concat [lrange $dB [expr {$options(-size)/2}] end] [lrange $dB 0 [expr {$options(-size)/2-1}]]] {
+	set n [llength $dB]
+	if {$n != $options(-size)} {
+	    $self BlankUpdate
+	    puts "received $n spectrum values instead of $options(-size)"
+	    return
+	}
+	foreach x $data(frequencies) y [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {($n/2)-1}]]] {
 	    lappend xy $x $y
 	}
 	#puts "$xy"
@@ -243,9 +265,5 @@ snit::type sdrkit::spectrum {
 	
 	# start the next
 	set data(after) [after $options(-period) [mymethod Update]]
-    }
-    method Set {opt val} {
-	::sdrkitx::$options(-name) configure $opt $val
-	set data(label$opt) [format $data(format$opt) $val]
     }
 }

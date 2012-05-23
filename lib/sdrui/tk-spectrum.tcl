@@ -52,6 +52,9 @@ snit::widgetadaptor sdrui::tk-spectrum {
     option -low -default 400 -configuremethod Retune
     option -high -default 800 -configuremethod Retune
 
+    delegate option * to hull
+    delegate method * to hull
+
     variable data -array {
 	multi 0
 	center-freq 0
@@ -172,7 +175,7 @@ snit::widgetadaptor sdrui::tk-spectrum {
 
     method Resmooth {opt value} {
 	set options($opt) $value
-	catch {$hull configure spectrum -smooth $value}
+	catch {$hull itemconfigure spectrum -smooth $value}
     }
 
     proc gray-scale {n} {
@@ -191,7 +194,7 @@ snit::widgetadaptor sdrui::tk-spectrum {
 	set data(multi-hues) [gray-scale $options(-multi)]
 	catch {$hull delete spectrum}
 	for {set i 0} {$i < $options(-multi)} {incr i} {
-	    $hull create line 0 0 0 0 -tags [list spectrum spectrum-$i]
+	    $hull create line 0 0 0 0 -width 0 -tags [list spectrum spectrum-$i]
 	}
     }
 

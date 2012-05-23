@@ -17,29 +17,39 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide sdrtk::iscale 1.0.0
+package provide sdrkit::label-iscale 1.0.0
 
 package require Tk
+package require Ttk
 package require snit
+package require sdrtk::iscale
 
-namespace eval ::sdrtk {}
+namespace eval sdrkit {}
 
-##
-## a ttk::scale constrained to integer values
-##
-
-snit::widgetadaptor sdrtk::iscale {
-    option -command {}
+snit::widget sdrkit::label-iscale {
+    component label
+    component iscale
+    
     option -variable -default {} -configuremethod Configure
+    option -command {}
+    option -format {}
+    option -minsizes {100 200}
+    option -weights {1 3}
 
-    delegate option * to hull
-    delegate method * to hull
+    delegate option * to iscale
+    delegate method * to iscale
 
-    variable value
+    variable data -array { label {} value {} }
 
     constructor {args} {
-	installhull using ttk::scale -command [mymethod Command] -variable [myvar value]
+	install label using ttk::label $win.l -textvar [myvar data(label)] -anchor e
+	install iscale using sdrtk::iscale $win.s -variable [myvar data(value)] -command [mymethod Value]
 	$self configure {*}$args
+	set data(label) [format $options(-format) $data(value)]
+	grid $win.l $win.s -sticky ew
+	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
+	    grid columnconfigure $win $col -minsize $ms -weight $wt
+	}
     }
     destructor {
 	catch {trace remove variable $options(-variable) write [mymethod TraceWrite]}
@@ -55,13 +65,12 @@ snit::widgetadaptor sdrtk::iscale {
 	}
     }
     method TraceWrite {args} {
-	set value [set $options(-variable)]
+	set data(value) [set $options(-variable)]
+	$iscale set $data(value)
     }
-
-    method Command {val} {
-	set val [expr {int(round($val))}]
-	set value $val
-	if {$options(-variable) ne {}} { set $options(-variable) $val }
-	if {$options(-command) ne {}} { {*}$options(-command) $val }
+    method Value {args} {
+	set data(label) [format $options(-format) $data(value)]
+	if {$options(-variable) ne {}} { set $options(-variable) $data(value) }
+	if {$options(-command) ne {}} { {*}$options(-command) $data(value) }
     }
 }
