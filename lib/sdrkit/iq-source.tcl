@@ -64,7 +64,7 @@ snit::type sdrkit::iq-source {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method resolve-parts {} {
+    method resolve {} {
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]

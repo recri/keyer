@@ -95,7 +95,7 @@ snit::type sdrkit::signal-generator {
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
-    method resolve-parts {} {
+    method resolve {} {
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]

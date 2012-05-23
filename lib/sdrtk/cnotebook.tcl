@@ -37,24 +37,37 @@ snit::widget sdrtk::cnotebook {
     hulltype ttk::frame
     component full
     component empty
+    option -collapse-text -default {Hide} -configuremethod Configure
     variable data -array { counter -1 }
     constructor {args} {
 	install full using ttk::notebook $win.full
 	install empty using ttk::notebook  $win.empty
 	#$self configure {*}$args               
-	$full add [ttk::frame $win.full.collapse] -text Collapse
-	$empty add [ttk::frame $win.empty.collapse] -text Collapse
+	ttk::frame $win.full.collapse
+	ttk::frame $win.empty.collapse
+	$self AddCollapse
 	bind $win.full <<NotebookTabChanged>> [mymethod TabSelect $win.full]
 	bind $win.empty <<NotebookTabChanged>> [mymethod TabSelect $win.empty]
 	grid $win.full -row 0 -column 0 -sticky nsew
     }
     method add {window args} {
-	$full forget $win.full.collapse
-	$empty forget $win.empty.collapse
+	$self ForgetCollapse
 	$full add $window {*}$args
 	$empty add [$self MakeTranslate $window] {*}$args
-	$full add $win.full.collapse -text Collapse
-	$empty add $win.empty.collapse -text Collapse
+	$self AddCollapse
+    }
+    method AddCollapse {} {
+	$full add $win.full.collapse -text $options(-collapse-text)
+	$empty add $win.empty.collapse -text $options(-collapse-text)
+    }
+    method ForgetCollapse {} {
+	$full forget $win.full.collapse
+	$empty forget $win.empty.collapse
+    }
+    method {Configure -collapse-text} {val} {
+	set options(-collapse-text) $val
+	$self ForgetCollapse
+	$self AddCollapse
     }
     method MakeTranslate {window} {
 	set w [ttk::frame $win.empty.x[incr data(counter)]]

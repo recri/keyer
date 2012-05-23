@@ -93,7 +93,7 @@ snit::type sdrkit::keyer {
 		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
-		grid $w.$name.enable $w.$name.container
+		grid $w.$name.enable $w.$name.container -sticky ew
 		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	    }
 	}
@@ -114,7 +114,7 @@ snit::type sdrkit::keyer {
 	    }
 	}
     }
-    method resolve-parts {} {
+    method resolve {} {
 	# need to match midi vs audio
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]

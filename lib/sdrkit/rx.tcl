@@ -154,7 +154,7 @@ snit::type sdrkit::rx {
     method resolve-port-name {pair} {
 	return [lindex [$options(-component) port-filter "*$pair"] 0]
     }
-    method resolve-parts {} {
+    method resolve {} {
 	# need to match midi vs audio
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]

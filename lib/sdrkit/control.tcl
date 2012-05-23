@@ -49,7 +49,15 @@ snit::type sdrkit::control {
 	set data(invert-port) [dict create]
 	$self configure {*}$args
     }
-    method get-controller {} { return [sdrkit::comm::wrap $self] }
+    ## return the controller
+    method controller {} { return [sdrkit::comm::wrap $self] }
+    ## call all the resolve methods
+    method resolve {} {
+	foreach part [$self part-list] {
+	    {*}[$self part-get $part] resolve
+	}
+    }
+    
     ## part methods
     ## parts are components in the computation which supply
     ## opts and ports that can be wired up
@@ -361,12 +369,6 @@ snit::type sdrkit::control {
     method part-report {name opt value args} {
 	foreach pair [$self opt-connections-from [list $name $opt]] {
 	    $self part-configure {*}$pair $value {*}$args
-	}
-    }
-    
-    method part-resolve {} {
-	foreach part [$self part-list] {
-	    {*}[$self part-get $part] resolve
 	}
     }
     

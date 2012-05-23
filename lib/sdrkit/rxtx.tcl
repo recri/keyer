@@ -39,11 +39,13 @@ snit::type sdrkit::rxtx {
     
     option -sub-components {
 	ctl {Control} rxtx-control {}
-	rx {Receiver} rx {}
-	tx {Transmitter} tx {}
-	keyer {Keyer} keyer {}
+	rx {RX} rx {}
+	tx {TX} tx {}
+	keyer {Key} keyer {}
     }
-    option -connections {
+    option -port-connections {
+    }
+    option -opt-connections {
     }
 
     option -server default
@@ -114,8 +116,8 @@ snit::type sdrkit::rxtx {
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
-    method resolve-parts {} {
-	foreach {name1 ports1 name2 ports2} $options(-connections) {
+    method resolve {} {
+	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
@@ -127,6 +129,8 @@ snit::type sdrkit::rxtx {
 	}
 	if {$options(-rx-activate) ne {} && $options(-rx-activate)} {
 	    $options(-component) part-activate $options(-name)-rx
+	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method ViewConnections {} {
@@ -141,15 +145,7 @@ snit::type sdrkit::rxtx {
 	    wm deiconify .connections
 	}
     }
-    method is-active {} { return $data(active) }
-    method activate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
-    method deactivate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
+    method is-active {} { return 1 }
+    method activate {} {}
+    method deactivate {} {}
 }

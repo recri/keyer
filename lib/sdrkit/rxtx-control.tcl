@@ -52,6 +52,7 @@ snit::type sdrkit::rxtx-control {
 	rx {RX Control} rx-control {}
 	tx {TX Control} tx-control {}
 	keyer {Keyer Control} keyer-control {}
+	spectrum {Spectrum} spectrum {}
     }
 
     option -mox -default 0 -configuremethod Configure
@@ -109,6 +110,7 @@ snit::type sdrkit::rxtx-control {
 		    }
 		}
 		grid $w.$name.$opt -sticky ew
+		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	    }
 	}
 	foreach {name title command args} $options(-sub-components) {
@@ -119,6 +121,7 @@ snit::type sdrkit::rxtx-control {
 		grid $w.$name -sticky ew
 		$self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 		grid $w.$name.container -sticky ew
+		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	    }
 	}
 	if {$w ne {none}} {

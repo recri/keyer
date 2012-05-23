@@ -151,7 +151,7 @@ snit::type sdrkit::tx {
 	    }
 	}
     }
-    method resolve-parts {} {
+    method resolve {} {
 	# need to match midi vs audio
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]

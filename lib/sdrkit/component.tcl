@@ -143,7 +143,7 @@ snit::type sdrkit::component {
 		# make one
 		::sdrkit::control ::sdrkit-control -server $options(-server)
 	    }
-	    set control [::sdrkit-control get-controller]
+	    set control [::sdrkit-control controller]
 	}
 
 	# set up control
@@ -193,8 +193,8 @@ snit::type sdrkit::component {
 	# resolve the parts
 	# this might need to wait until everybody is built
 	# the controller has a "part-resolve" that
-	if {{resolve-parts} in [$subsidiary info methods]} {
-	    $subsidiary resolve-parts
+	if {$control ne $options(-control)} {
+	    $control resolve
 	}
     }
     destructor {
@@ -242,6 +242,11 @@ snit::type sdrkit::component {
     #
     # call from the controller to the subsidiary
     #
+    method resolve {} {
+	if {{resolve} in [$subsidiary info methods]} {
+	    $subsidiary resolve
+	}
+    }
     method rewrite-connections-to {port candidates} {
 	if {{rewrite-connections-to} in [$subsidiary info methods]} {
 	    return [$subsidiary rewrite-connections-to $port $candidates]
