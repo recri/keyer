@@ -162,7 +162,7 @@ extern "C" {
     { "-mide", "mide",    "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.need_midelemodeB), "remember key state at mid-element" },
     { "-alsp", "alsp",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.autocharspacing), "auto letter spacing" },
     { "-awsp", "awsp",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.autowordspacing), "auto word spacing" },
-    { "-weight","weight", "Bool",    "50",   fw_option_int,     fw_flag_none, offsetof(_t, opts.key_opts.weight), "adjust relative weight of dit and dah" },
+    { "-weight","weight", "Weight",  "50",   fw_option_int,     fw_flag_none, offsetof(_t, opts.key_opts.weight), "adjust relative weight of dit and dah" },
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 

@@ -119,7 +119,13 @@ snit::type sdrkit::tx-control {
     method OptionConstrain {opt val} { return $val }
 
     method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} { ::sdrkitx::$options(-name) configure $opt $val }
+    method ComponentConfigure {opt val} {
+	lappend data(deferred-config) $opt $val
+	if { ! [$self is-busy]} {
+	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
+	    set data(deferred-config) {}
+	}
+    }
     method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 

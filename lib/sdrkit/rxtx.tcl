@@ -38,10 +38,10 @@ snit::type sdrkit::rxtx {
     option -out-options {}
     
     option -sub-components {
-	ctl {Control} rxtx-control
-	rx {Receiver} rx
-	tx {Transmitter} tx
-	keyer {Keyer} keyer
+	ctl {Control} rxtx-control {}
+	rx {Receiver} rx {}
+	tx {Transmitter} tx {}
+	keyer {Keyer} keyer {}
     }
     option -connections {
     }
@@ -69,23 +69,11 @@ snit::type sdrkit::rxtx {
 	active 0
     }
 
-    constructor {args} {
-	# puts "rxtx constructor $args"
-	$self configure {*}$args
-    }
+    constructor {args} { $self configure {*}$args }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
-
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
-    }
-    proc split-command-args {command} {
-	set args {}
-	if {[llength $command] > 1} {
-	    set args [lrange $command 1 end]
-	    set command [lindex $command 0]
-	}
-	return [list $command $args]
     }
     method build-parts {} { if {$options(-window) eq {none}} { $self build } }
     method build-ui {} { if {$options(-window) ne {none}} { $self build } }
@@ -106,8 +94,7 @@ snit::type sdrkit::rxtx {
 	    pack [ttk::button $w.menu.connections -text connections -command [mymethod ViewConnections]] -side left
 	    sdrtk::cnotebook $w.note
 	}
-	foreach {name title command} $options(-sub-components) {
-	    lassign [split-command-args $command] command args
+	foreach {name title command args} $options(-sub-components) {
 	    switch $name {
 		ctl {}
 		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }

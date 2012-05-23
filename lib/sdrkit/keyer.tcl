@@ -36,10 +36,10 @@ snit::type sdrkit::keyer {
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	debounce {Debounce} keyer-debounce
-	iambic {Iambic} keyer-iambic
-	tone {Tone} keyer-tone
-	ptt {PTT} keyer-ptt
+	debounce {Debounce} keyer-debounce {}
+	iambic {Iambic} keyer-iambic {}
+	tone {Tone} keyer-tone {}
+	ptt {PTT} keyer-ptt {}
     }
     option -connections {
 	{} in-ports debounce in-ports
@@ -57,23 +57,47 @@ snit::type sdrkit::keyer {
     option -minsizes {100 200}
     option -weights {1 3}
 
-
-    variable data -array {
-	enabled 0
-	active 0
-	parts {}
-    }
+    variable data -array { parts {} }
 
     option -keyer-source {}
     option -keyer-sink {}
 
-    constructor {args} {
-	# puts "$self constructor"
-	$self configure {*}$args
+    constructor {args} { $self configure {*}$args }
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
+    method sub-component {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    destructor {
-	foreach name $data(parts) {
-	    $option(-component) name-destroy $options(-name)-$name
+    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
+    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
+    method build {} {
+	set w $options(-window)
+	if {$w ne {none}} {
+	    if {$w eq {}} { set pw . } else { set pw $w }
+	}
+	foreach {name title command args} $options(-sub-components) {
+	    if {[string match -* $name]} {
+		# placeholder component, replace with spectrum tap
+		set name [string range $name 1 end]
+		set command spectrum-tap
+	    }
+	    if {$w eq {none}} {
+		$self sub-component none $name sdrkit::$command {*}$args
+	    } else {
+		sdrtk::clabelframe $w.$name -label $title
+		if {$command ni {meter-tap spectrum-tap}} {
+		    # only display real working components
+		    grid $w.$name -sticky ew
+		}
+		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
+		ttk::frame $w.$name.container
+		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
+		grid $w.$name.enable $w.$name.container
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    }
+	}
+	if {$w ne {none}} {
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
     proc match-ports {ports1 ports2} {
@@ -104,60 +128,11 @@ snit::type sdrkit::keyer {
 	    }
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
-	foreach {name title command} $options(-sub-components) {
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window none \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller]
-	}
-    }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
-	foreach {name title command} $options(-sub-components) {
-	    grid [sdrtk::clabelframe $w.$name -label $title] -sticky ew
-	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    frame $w.$name.container
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window $w.$name.container \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller] \
-		-minsizes $options(-minsizes) \
-		-weights $options(-weights)
-	    grid $w.$name.enable $w.$name.container
-	    grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
-	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-    }
-    method is-active {} { return $data(active) }
-    method activate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
-    method deactivate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
+    method is-active {} { return 1 }
+    method activate {} {}
+    method deactivate {} {}
     method Enable {name} {
-	if {$data($name-enable)} {
+	if {[$options(-component) cget -enable]} {
 	    $options(-component) part-enable $options(-name)-$name
 	} else {
 	    $options(-component) part-disable $options(-name)-$name

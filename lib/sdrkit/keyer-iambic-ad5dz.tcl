@@ -69,17 +69,13 @@ snit::type sdrkit::keyer-iambic-ad5dz {
 	mode radio {-format {Iambic mode} -values {A B} -labels {A B}}
     }
 
-    variable data -array {
-    }
+    variable data -array {}
 
-    constructor {args} {
-	$self configure {*}$args
-    }
+    constructor {args} { $self configure {*}$args }
     destructor {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
-
     method build-parts {} {
 	sdrtcl::keyer-iambic-ad5dz ::sdrkitx::$options(-name) -server $options(-server) -chan $options(-chan) -note $options(-note) \
 	    -word $options(-word) -wpm $options(-wpm) -dah $options(-dah) -ies $options(-ies) -ils $options(-ils) -iws $options(-iws) \
@@ -112,26 +108,25 @@ snit::type sdrkit::keyer-iambic-ad5dz {
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-
+    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }
-
-    method OptionConstrain {opt val} {
-	if {$opt eq {-steps}} { return [expr {int(round($val))}] }
-	return $val
-    }
-
+    method OptionConstrain {opt val} { return $val }
     method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} { ::sdrkitx::$options(-name) configure $opt $val }
+    method ComponentConfigure {opt val} {
+	lappend data(deferred-config) $opt $val
+	if { ! [$self is-busy]} {
+	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
+	    set data(deferred-config) {}
+	}
+    }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
     }
-
     method Set {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val

@@ -53,18 +53,16 @@ snit::type sdrkit::iq-source {
     option -weights {1 3}
 
     variable data -array {
-	enabled 0
-	active 0
 	parts {}
     }
 
     constructor {args} {
 	$self configure {*}$args
     }
-    destructor {
-	foreach name $data(parts) {
-	    $option(-component) name-destroy $options(-name)-$name
-	}
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
+    method sub-component {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $window $name $subsub {*}$args
     }
     method resolve-parts {} {
 	foreach {name1 ports1 name2 ports2} $options(-connections) {
@@ -75,68 +73,28 @@ snit::type sdrkit::iq-source {
 	    }
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
-	foreach {name title command} $options(-sub-components) {
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    set args {}
-	    if {[llength $command] > 1} {
-		set args [lrange $command 1 end]
-		set command [lindex $command 0]
-	    }
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window none \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command -subsidiary-opts $args \
-		-container $options(-component) \
-		-control [$options(-component) get-controller]
-	}
-    }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
+    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
+    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
+    method build {} {
 	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
-	foreach {name title command} $options(-sub-components) {
-	    grid [sdrtk::clabelframe $w.$name -label $title] -sticky ew
-	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    set args {}
-	    if {[llength $command] > 1} {
-		set args [lrange $command 1 end]
-		set command [lindex $command 0]
+	if {$w ne {none}} {
+	    if {$w eq {}} { set pw . } else { set pw $w }
+	}
+	foreach {name title command args} $options(-sub-components) {
+	    if {$w eq {none}} {
+		$self sub-component none $name sdrkit::$command {*}$args
+	    } else {
+		$self sub-component [ttk::frame $w.$name] $name sdrkit::$command {*}$args
+		grid $w.$name -sticky ew
 	    }
-	    package require sdrkit::$command
-	    frame $w.$name.container
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window $w.$name.container \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command -subsidiary-opts $args \
-		-container $options(-component) \
-		-control [$options(-component) get-controller] \
-		-minsizes $options(-minsizes) \
-		-weights $options(-weights)
-	    grid $w.$name.enable $w.$name.container
-	    grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-    }
-    method is-active {} { return $data(active) }
-    method activate {} {
-	set data(active) 1
-	foreach part $data(parts) {
+	if {$w ne {none}} {
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
-    method deactivate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
+    method is-active {} { return 1 }
+    method activate {} {}
+    method deactivate {} {}
     method Enable {name} {
 	if {$data($name-enable)} {
 	    $options(-component) part-enable $options(-name)-$name

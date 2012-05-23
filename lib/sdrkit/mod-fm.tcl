@@ -46,12 +46,13 @@ snit::type sdrkit::mod-fm {
 
     option -deviation -default 5000 -configuremethod Configure
 
-    variable data -array {
+    option -sub-controls {
+	deviation scale {-format {Deviation %.1f} -from 1000 -to 20000}
     }
 
-    constructor {args} {
-	$self configure {*}$args
-    }
+    variable data -array { deferred-config {} }
+
+    constructor {args} { $self configure {*}$args }
     destructor {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
@@ -64,59 +65,55 @@ snit::type sdrkit::mod-fm {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
-	foreach {opt type format min max} {
-	    deviation scale {Deviation %.1f} 1000 20000
-	} {
+	foreach {opt type opts} $options(-sub-controls) {
 	    switch $type {
 		spinbox {
-		    set data(format-$opt) $format
-		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
-		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
-		    ttk::spinbox $w.s-$opt -from $min -to $max -increment 1 -textvar [myvar options(-$opt)] -command [mymethod Changed -$opt]
+		    package require sdrkit::label-spinbox
+		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 		}
 		scale {
-		    set data(format-$opt) $format
-		    set data(label-$opt) [format $data(format-$opt) $options(-$opt)]
-		    ttk::label $w.l-$opt -textvar [myvar data(label-$opt)] -anchor e
-		    ttk::scale $w.s-$opt -from $min -to $max -command [mymethod Set -$opt] -variable [myvar options(-$opt)]
+		    package require sdrkit::label-scale
+		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
+		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 		}
 		separator {
-		    ttk::separator $w.l-$opt
-		    ttk::separator $w.s-$opt
+		    ttk::separator $w.$opt
 		}
+		radio {
+		    package require sdrkit::label-radio
+		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
+		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
+		}
+		default { error "unimplemented control type \"$type\"" }
 	    }
-	    grid $w.l-$opt $w.s-$opt -sticky ew
+	    grid $w.$opt -sticky ew
 	}
-	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure $pw $col -minsize $ms -weight $wt
-	}
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
     method is-needed {} { return 1 }
-
+    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }
-
     method OptionConstrain {opt val} { return $val }
-
     method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} { ::sdrkitx::$options(-name) configure $opt $val }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
+    method ComponentConfigure {opt val} {
+	lappend data(deferred-config) $opt $val
+	if { ! [$self is-busy]} {
+	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
+	    set data(deferred-config) {}
+	}
+    }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
     }
-
     method Set {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
 	$self ControlConfigure $opt $val
     }
-    method Changed {opt} { $self Set $opt $options($opt) }
 }

@@ -70,7 +70,7 @@ snit::type sdrkit::agc {
 	threshold scale {-format {Threshold %.5f}}
     }
 
-    variable data -array {}
+    variable data -array { deferred-config {} }
 
     constructor {args} {
 	$self configure {*}$args
@@ -115,11 +115,13 @@ snit::type sdrkit::agc {
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }
-
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {
-	while {[::sdrkitx::$options(-name) is-busy]} { after 1 }
-	::sdrkitx::$options(-name) configure $data(map$opt) $val
+	lappend data(deferred-config) $opt $val
+	if { ! [$self is-busy]} {
+	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
+	    set data(deferred-config) {}
+	}
     }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 

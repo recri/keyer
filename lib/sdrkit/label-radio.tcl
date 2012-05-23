@@ -17,6 +17,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+#
+# a labelled radio button menu control
+#
 package provide sdrkit::label-radio 1.0.0
 
 package require Tk

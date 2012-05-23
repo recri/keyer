@@ -48,9 +48,12 @@ snit::type sdrkit::iq-balance {
     option -phase -default 0 -configuremethod Configure
     option -gain -default 0 -configuremethod Configure
 
+    option -sub-controls {
+	phase scale {-format {Phase %.1f Deg} -from -90 -to 90}
+	gain scale {-format {Gain %.1f dBFS} -from -6 -to 6}
+    }
+
     variable data -array {
-	label-gain {} format-gain {%.1f dBFS}
-	label-phase {} format-phase {%.1f Deg}
     }
 
     constructor {args} {
@@ -69,22 +72,34 @@ snit::type sdrkit::iq-balance {
 	if {$w eq {none}} return
 	if {$w eq {}} { set pw . } else { set pw $w }
 
-	ttk::label $w.gain-l -textvar [myvar data(label-gain)] -width 10 -anchor e
-	ttk::scale $w.gain-s -from -6 -to 6 -command [mymethod Set -gain] -variable [myvar options(-gain)]
-	$self Set -gain $options(-gain)
-	grid $w.gain-l $w.gain-s -sticky ew
-
-	ttk::label $w.phase-l -textvar [myvar data(label-phase)] -width 10 -anchor e
-	ttk::scale $w.phase-s -from -90 -to 90 -command [mymethod Set -phase] -variable [myvar options(-phase)]
-	$self Set -phase $options(-phase)
-	grid $w.phase-l $w.phase-s -sticky ew
-
-	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure $pw $col -minsize $ms -weight $wt
+	foreach {opt type opts} $options(-sub-controls) {
+	    switch $type {
+		spinbox {
+		    package require sdrkit::label-spinbox
+		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		scale {
+		    package require sdrkit::label-scale
+		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
+		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
+		}
+		separator {
+		    ttk::separator $w.$opt
+		}
+		radio {
+		    package require sdrkit::label-radio
+		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
+		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
+		}
+		default { error "unimplemented control type \"$type\"" }
+	    }
+	    grid $w.$opt -sticky ew
 	}
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-    method is-needed {} { return [expr {$options(-phase) != 0 || $options(-gain) != 0}] }
 
+    method is-needed {} { return [expr {$options(-phase) != 0 || $options(-gain) != 0}] }
+    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }
@@ -94,26 +109,27 @@ snit::type sdrkit::iq-balance {
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {
 	switch -- $opt {
-	    -gain { ::sdrkitx::$options(-name) configure -linear-gain [expr {10.0**($val/20)}] }
-	    -phase { ::sdrkitx::$options(-name) configure -sine-phase [expr {sin(2*$data(pi)*$val/360.0)}] }
-	    default { ::sdrkitx::$options(-name) configure $opt $val }
+	    -gain { lappend data(deferred-config) -linear-gain [expr {10.0**($val/20)}] }
+	    -phase { lappend data(deferred-config) -sine-phase [expr {sin(2*$data(pi)*$val/360.0)}] }
+	    default { lappend data(deferred-config) $opt $val }
+	}
+	if { ! [$self is-busy]} {
+	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
+	    set data(deferred-config) {}
 	}
     }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
     }
 
     method Set {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
 	$self ControlConfigure $opt $val
     }
     method Changed {opt} { $self Set $opt $options($opt) }

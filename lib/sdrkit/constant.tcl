@@ -100,7 +100,13 @@ snit::type sdrkit::constant {
 
     method OptionConstrain {opt val} { return $val }
     method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} { ::sdrkitx::$options(-name) configure $opt $val }
+    method ComponentConfigure {opt val} {
+	lappend data(deferred-config) $opt $val
+	if { ! [$self is-busy]} {
+	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
+	    set data(deferred-config) {}
+	}
+    }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {

@@ -33,13 +33,13 @@ snit::type sdrkit::signal-generator {
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	osc1 {Oscillator 1} oscillator
-	osc2 {Oscillator 2} oscillator
-	osc3 {Oscillator 3} oscillator
-	osc4 {Oscillator 4} oscillator
-	noi Noise noise
-	iqn {IQ Noised} iq-noise
-	out {Master Gain} gain
+	osc1 {Oscillator 1} oscillator {}
+	osc2 {Oscillator 2} oscillator {}
+	osc3 {Oscillator 3} oscillator {}
+	osc4 {Oscillator 4} oscillator {}
+	noi Noise noise {}
+	iqn {IQ Noised} iq-noise {}
+	out {Master Gain} gain {}
     }
     option -connections {
 	osc1 out-ports out in-ports
@@ -64,12 +64,34 @@ snit::type sdrkit::signal-generator {
 	parts {}
     }
 
-    constructor {args} {
-	$self configure {*}$args
+    constructor {args} { $self configure {*}$args }
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
+    method sub-component {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    destructor {
-	foreach {name title command} $options(-sub-components) {
-	    $option(-component) report name-destroy $options(-name)$name
+    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
+    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
+    method build {} {
+	set w $options(-window)
+	if {$w ne {none}} {
+	    if {$w eq {}} { set pw . } else { set pw $w }
+	}
+	foreach {name title command args} $options(-sub-components) {
+	    if {$w eq {none}} {
+		$self sub-component none $name sdrkit::$command {*}$args
+	    } else {
+		sdrtk::clabelframe $w.$name -label $title
+		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
+		ttk::frame $w.$name.container
+		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
+		grid $w.$name.enable $w.$name.container
+		grid $w.$name -sticky ew
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    }
+	}
+	if {$w ne {none}} {
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
     method resolve-parts {} {
@@ -81,48 +103,6 @@ snit::type sdrkit::signal-generator {
 	    }
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
-	foreach {name title command} $options(-sub-components) {
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window none \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller]
-	}
-    }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
-	foreach {name title command} $options(-sub-components) {
-	    grid [sdrtk::clabelframe $w.$name -label $title] -sticky ew
-	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    frame $w.$name.container
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window $w.$name.container \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller] \
-		-minsizes $options(-minsizes) \
-		-weights $options(-weights)
-	    grid $w.$name.enable $w.$name.container
-	    grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
-	}
-	grid columnconfigure $pw 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
-    }
-
     method is-active {} { return $data(active) }
     method activate {} {
 	set data(active) 1
@@ -134,7 +114,9 @@ snit::type sdrkit::signal-generator {
 	foreach part $data(parts) {
 	}
     }
-    method Enable {name} { $options(-component) name-enable $options(-name)-$name $data($name-enable) }
+    method Enable {name} {
+	$options(-component) name-enable $options(-name)-$name $data($name-enable)
+    }
 }
 
 

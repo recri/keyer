@@ -49,16 +49,8 @@ snit::type sdrkit::physical-ports {
 	parts {}
     }
 
-    constructor {args} {
-	$self configure {*}$args
-    }
-    destructor {
-	foreach part $data(parts) {
-	    if {[catch {$options(-component) part-destroy $part} error]} {
-		puts "error cleaning up ports for $part: $error"
-	    }
-	}
-    }
+    constructor {args} { $self configure {*}$args }
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args

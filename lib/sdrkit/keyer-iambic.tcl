@@ -32,22 +32,19 @@ snit::type sdrkit::keyer-iambic {
     option -name keyer
     option -type dsp
     option -title {Iambic}
-    option -in-ports {midi_in}
-    option -out-ports {midi_out}
+    option -in-ports {alt_midi_in}
+    option -out-ports {alt_midi_out}
     option -in-options {-iambic}
     option -out-options {-iambic}
     option -sub-components {
-	ad5 {ad5dz} keyer-iambic-ad5dz
-	dtt {dttsp} keyer-iambic-dttsp
-	nd7 {nd7pa} keyer-iambic-nd7pa
+	ad5 {ad5dz} keyer-iambic-ad5dz {}
+	dtt {dttsp} keyer-iambic-dttsp {}
+	nd7 {nd7pa} keyer-iambic-nd7pa {}
     }
     option -connections {
-	{} in-ports ad5 in-ports
-	ad5 out-ports {} in-ports
-	{} in-ports dtt in-ports
-	dtt out-ports {} out-ports
-	{} in-ports nd7 in-ports
-	nd7 out-ports {} out-ports
+	{} in-ports ad5 in-ports	ad5 out-ports {} out-ports
+	{} in-ports dtt in-ports	dtt out-ports {} out-ports
+	{} in-ports nd7 in-ports	nd7 out-ports {} out-ports
     }
 
     option -server default
@@ -59,20 +56,13 @@ snit::type sdrkit::keyer-iambic {
 
     option -iambic none
 
-    variable data -array {
-	enabled 0
-	active 0
-	parts {}
-    }
+    variable data -array { parts {} }
 
-    constructor {args} {
-	# puts "$self constructor"
-	$self configure {*}$args
-    }
-    destructor {
-	foreach name $data(parts) {
-	    $option(-component) name-destroy $options(-name)-$name
-	}
+    constructor {args} { $self configure {*}$args }
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
+    method sub-component {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $window $name $subsub {*}$args
     }
     method resolve-parts {} {
 	# need to match midi vs audio
@@ -86,17 +76,8 @@ snit::type sdrkit::keyer-iambic {
     }
     method build-parts {} {
 	if {$options(-window) ne {none}} return
-	foreach {name title command} $options(-sub-components) {
-	    set data(enable-$name) 0
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window none \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller]
+	foreach {name title command args} $options(-sub-components) {
+	    $self sub-component none $name sdrkit::$command {*}$args
 	}
     }
     method build-ui {} {
@@ -106,76 +87,96 @@ snit::type sdrkit::keyer-iambic {
 	
 	set values {none}
 	set labels {none}
-	foreach {name title command} $options(-sub-components) {
+	foreach {name title command args} $options(-sub-components) {
 	    lappend values $name
 	    lappend labels $title
 	    set data(window-$name) [sdrtk::clabelframe $w.$name -label $title]
-	    lappend data(parts) $name
-	    set data(enable-$name) 0
-	    package require sdrkit::$command
-	    frame $w.$name.container
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window $w.$name.container \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller] \
-		-minsizes $options(-minsizes) \
-		-weights $options(-weights)
+	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.container
 	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	}
-	ttk::label $w.l -text {Iambic Keyer} -anchor e
-	sdrtk::radiomenubutton $w.s -variable [myvar options(-iambic)] -values $values -labels $labels -command [mymethod Set -iambic]
-	grid $w.l $w.s
-	foreach col {0 1} ms $options(-minsizes) wt $options(-weights) {
-	    grid columnconfigure $pw $col -minsize $ms -weight $wt
-	}
+	package require sdrkit::label-radio
+	sdrkit::label-radio $w.mode -format {Keyer} -values $values -labels $labels -variable [myvar options(-iambic)] -command [mymethod Set -iambic]
+	grid $w.mode
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-    method is-active {} { return $data(active) }
-    method activate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
-    method deactivate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
+    method is-active {} { return 1 }
+    method activate {} {}
+    method deactivate {} {}
     method Set {opt name} {
 	# find deselected keyer
 	set exname {none}
 	foreach part $data(parts) {
-	    if {$data(enable-$part)} {
+	    if {[$options(-component) part-is-enabled $options(-name)-$part]} {
 		if {$exname ne {none}} { error "multiple selected keyers $part and $exname" }
 		set exname $part
 	    }
 	}
 	# enable selected keyer if any
-	if {$name ne {none}} {
-	    set data(enable-$name) 1
-	    $options(-component) part-enable $options(-name)-$name
-	}
+	if {$name ne {none}} { $options(-component) part-enable $options(-name)-$name }
 	# disable deselected keyer
-	if {$exname ne {none}} {
-	    set data(enable-$exname) 0
-	    $options(-component) part-disable $options(-name)-$exname
-	}
+	if {$exname ne {none}} { $options(-component) part-disable $options(-name)-$exname }
 	# deal with ui details
 	set w $options(-window)
 	# determine if ui details exist
 	if {$w ne {none}} {
 	    # remove deselected keyer ui
-	    if {$exname ne {none}} {
-		grid forget $data(window-$exname)
-	    }
+	    if {$exname ne {none}} { grid forget $data(window-$exname) }
 	    # install selected keyer ui
-	    if {$name ne {none}} {
-		grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew
+	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
+	}
+    }
+    method rewrite-connections-to {port candidates} {
+	# puts "demod::rewrite-connections-to $port {$candidates}"
+	if {$options(-iambic) eq {none}} {
+	    return [Rewrite-connections-to {} $port $candidates]
+	} else {
+	    return [Rewrite-connections-to $options(-name)-$options(-iambic) $port $candidates]
+	}
+    }
+    method rewrite-connections-from {port candidates} {
+	if {$options(-iambic) eq {none}} {
+	    return [Rewrite-connections-from {} $port $candidates]
+	} else {
+	    return [Rewrite-connections-from $options(-name)-$options(-iambic) $port $candidates]
+	}
+    }
+    proc Rewrite-connections-to {selected port candidates} {
+	# puts "demod::Rewrite-connections-to $port {$candidates}"
+	if {$port ni {alt_out_i alt_out_q alt_midi_out}} { return $candidates }
+	if {$selected eq {}} {
+	    switch $port {
+		alt_out_i { return [list [list $port alt_in_i]] }
+		alt_out_q { return [list [list $port alt_in_q]] }
+		alt_midi_out { return [list [list $port alt_midi_in]] }
+		default { error "rewrite-connections-to: unexpected port \"$port\"" }
 	    }
+	} else {
+	    foreach c $candidates {
+		if {[string match [list $selected *] $c]} {
+		    return [list $c]
+		}
+	    }
+	    error "rewrite-connections-to: failed to match $data(selected-client) in $candidates"
+	}
+    }
+    proc Rewrite-connections-from {selected port candidates} {
+	#puts "$options(-name) rewrite-connections-from $port {$candidates}"
+	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
+	if {$selected eq {}} {
+	    switch $port {
+		alt_in_i { return [list [list $port alt_out_i]] }
+		alt_in_q { return [list [list $port alt_out_q]] }
+		alt_midi_in { return [list [list $port alt_midi_out]] }
+		default { error "rewrite-connections-from: unexpected port \"$port\"" }
+	    }
+	} else {
+	    foreach c $candidates {
+		if {[string match [list $selected *] $c]} {
+		    return [list $c]
+		}
+	    }
+	    error "rewrite-connections-from: failed to match $data(selected-client) in $candidates"
 	}
     }
 }
-

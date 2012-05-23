@@ -63,7 +63,10 @@ snit::widget sdrkit::label-scale {
 	    $self TraceWrite
 	}
     }
-    method TraceWrite {args} { set data(value) [set $options(-variable)] }
+    method TraceWrite {args} {
+	set data(value) [set $options(-variable)]
+	$scale set $data(value)
+    }
     method Value {args} {
 	set data(label) [format $options(-format) $data(value)]
 	if {$options(-variable) ne {}} {

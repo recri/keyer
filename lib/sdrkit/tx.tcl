@@ -36,27 +36,27 @@ snit::type sdrkit::tx {
     option -in-options {}
     option -out-options {}
     option -sub-components {
-	af-gain {AF Gain} gain
-	-af-real {Real part} real
-	-af-wave {Wave shape} waveshape
-	af-mtr1 {Wave shape meter} meter-tap
-	-af-dcb {DC Block} dc-block
-	-af-sql {Squelch} squelch
-	-af-geq {Graphic EQ} graphic-eq
-	af-mtr2 {Graphic EQ meter} meter-tap
-	af-lvlr {Leveler} agc
-	af-mtr3 {Leveler meter} meter-tap
-	-af-spch {Speech processor} speech-processor
-	af-mtr4 {Speech processor meter} meter-tap
-	af-mod {Modulation} mod
-	if-bpf {Bandpass} filter-overlap-save
-	-if-comp {Compander} compand
-	if-mtr5 {Compander meter} meter-tap
-	if-sp1 {TX Spectrum} spectrum-tap
-	if-lo {LO Mixer} lo-mixer
-	rf-iqb {IQ Balance} iq-balance
-	rf-gain {RF Level} gain
-	rf-mtr6 {RF Power meter} meter-tap
+	af-gain {AF Gain} gain {}
+	-af-real {Real part} real {}
+	-af-wave {Wave shape} waveshape {}
+	af-mtr1 {Wave shape meter} meter-tap {}
+	-af-dcb {DC Block} dc-block {}
+	-af-sql {Squelch} squelch {}
+	-af-geq {Graphic EQ} graphic-eq {}
+	af-mtr2 {Graphic EQ meter} meter-tap {}
+	af-lvlr {Leveler} agc {}
+	af-mtr3 {Leveler meter} meter-tap {}
+	-af-spch {Speech processor} speech-processor {}
+	af-mtr4 {Speech processor meter} meter-tap {}
+	af-mod {Modulation} mod {}
+	if-bpf {Bandpass} filter-overlap-save {}
+	-if-comp {Compander} compand {}
+	if-mtr5 {Compander meter} meter-tap {}
+	if-sp1 {TX Spectrum} spectrum-tap {}
+	if-lo {LO Mixer} lo-mixer {}
+	rf-iqb {IQ Balance} iq-balance {}
+	rf-gain {RF Level} gain {}
+	rf-mtr6 {RF Power meter} meter-tap {}
     }
     option -connections {
 	{} in-ports af-gain in-ports
@@ -99,13 +99,42 @@ snit::type sdrkit::tx {
 	parts {}
     }
 
-    constructor {args} {
-	# puts "$self constructor"
-	$self configure {*}$args
+    constructor {args} { $self configure {*}$args }
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
+    method sub-component {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    destructor {
-	foreach name $data(parts) {
-	    $option(-component) name-destroy $options(-name)-$name
+    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
+    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
+    method build {} {
+	set w $options(-window)
+	if {$w ne {none}} {
+	    if {$w eq {}} { set pw . } else { set pw $w }
+	}
+	foreach {name title command args} $options(-sub-components) {
+	    if {[string match -* $name]} {
+		# placeholder component, replace with spectrum tap
+		set name [string range $name 1 end]
+		set command spectrum-tap
+	    }
+	    if {$w eq {none}} {
+		$self sub-component none $name sdrkit::$command {*}$args
+	    } else {
+		sdrtk::clabelframe $w.$name -label $title
+		if {$command ni {meter-tap spectrum-tap}} {
+		    # only display real working components
+		    grid $w.$name -sticky ew
+		}
+		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
+		ttk::frame $w.$name.container
+		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
+		grid $w.$name.enable $w.$name.container
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    }
+	}
+	if {$w ne {none}} {
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
     proc match-ports {ports1 ports2} {
@@ -136,74 +165,11 @@ snit::type sdrkit::tx {
 	    }
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
-	foreach {name title command} $options(-sub-components) {
-	    if {[string match -* $name]} {
-		# placeholder component, replace with spectrum tap
-		set name [string range $name 1 end]
-		set command spectrum-tap
-	    }
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window none \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller]
-	}
-    }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
-	foreach {name title command} $options(-sub-components) {
-	    if {[string match -* $name]} {
-		# placeholder component, replace with spectrum tap
-		set name [string range $name 1 end]
-		set command spectrum-tap
-	    }
-	    sdrtk::clabelframe $w.$name -label $title
-	    if {$command ni {meter-tap spectrum-tap}} {
-		# only display real working components
-		grid $w.$name -sticky ew
-	    }
-	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
-	    set data($name-enable) 0
-	    lappend data(parts) $name
-	    package require sdrkit::$command
-	    frame $w.$name.container
-	    ::sdrkit::component ::sdrkitv::$options(-name)-$name \
-		-window $w.$name.container \
-		-server $options(-server) \
-		-name $options(-name)-$name \
-		-subsidiary sdrkit::$command \
-		-container $options(-component) \
-		-control [$options(-component) get-controller] \
-		-minsizes $options(-minsizes) \
-		-weights $options(-weights)
-	    grid $w.$name.enable $w.$name.container
-	    grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
-	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-    }
-    method is-active {} { return $data(active) }
-    method activate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
-    method deactivate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
+    method is-active {} { return 1 }
+    method activate {} {}
+    method deactivate {} {}
     method Enable {name} {
-	if {$data($name-enable)} {
+	if {[$options(-component) cget -enable]} {
 	    $options(-component) part-enable $options(-name)-$name
 	} else {
 	    $options(-component) part-disable $options(-name)-$name

@@ -56,21 +56,10 @@ snit::type sdrkit::demod {
 
     option -demod none
 
-    variable data -array {
-	enabled 0
-	active 0
-	parts {}
-    }
+    variable data -array { parts {} }
 
-    constructor {args} {
-	# puts "$self constructor"
-	$self configure {*}$args
-    }
-    destructor {
-	foreach name $data(parts) {
-	    $option(-component) name-destroy $options(-name)-$name
-	}
-    }
+    constructor {args} { $self configure {*}$args }
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
@@ -111,7 +100,6 @@ snit::type sdrkit::demod {
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-
     method is-active {} { return 1 }
     method activate {} { }
     method deactivate {} { }
@@ -125,28 +113,19 @@ snit::type sdrkit::demod {
 	    }
 	}
 	# enable selected component if any
-	if {$name ne {none}} {
-	    $options(-component) part-enable $options(-name)-$name
-	}
+	if {$name ne {none}} { $options(-component) part-enable $options(-name)-$name }
 	# disable deselected keyer
-	if {$exname ne {none}} {
-	    $options(-component) part-disable $options(-name)-$exname
-	}
+	if {$exname ne {none}} { $options(-component) part-disable $options(-name)-$exname }
 	# deal with ui details
 	set w $options(-window)
 	# determine if ui details exist
 	if {$w ne {none}} {
 	    # remove deselected keyer ui
-	    if {$exname ne {none}} {
-		grid forget $data(window-$exname)
-	    }
+	    if {$exname ne {none}} { grid forget $data(window-$exname) }
 	    # install selected keyer ui
-	    if {$name ne {none}} {
-		grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew
-	    }
+	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
 	}
     }
-
     method rewrite-connections-to {port candidates} {
 	# puts "demod::rewrite-connections-to $port {$candidates}"
 	if {$options(-demod) eq {none}} {
@@ -181,7 +160,6 @@ snit::type sdrkit::demod {
 	    error "rewrite-connections-to: failed to match $data(selected-client) in $candidates"
 	}
     }
-
     proc Rewrite-connections-from {selected port candidates} {
 	#puts "$options(-name) rewrite-connections-from $port {$candidates}"
 	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
