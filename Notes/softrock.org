@@ -30,3 +30,23 @@ Roland, KB8XI
   http://groups.yahoo.com/group/softrock40/message/54144
   run a simple choke between USB power/ground and Softrock analog
   power/ground.
+* Modifying Soundblaster X-Fi USB
+This has probably been mentioned before but it works so well that it
+deserves to be mentioned again. On the web site of IW3AUT is a
+document describing how to add two electrolytic bypass caps to the
+SB-XFi USB unit model SB-1095. The document contains pictures and and
+test results showing the noise floor improvement along with
+instructions for adding the caps. The basics are to add 100uf 6.3v
+electrolytic across C100 (an existing electrolytic) and 100uf 6.3 volt
+across C40. I have done this myslef and measured the improvemnt. It is
+every bit as good as he says. I also own an SB1090 which, as it turns
+out, has the identical layout for these capacitors and the imrovement
+is just as good for this model. There is also a substantial
+improvement in the DC "spike" (the bump at the center frequency). To
+access the board just peel up the stick on feet and remove the 4
+screws underneath. The knob is pressed on so pulling on the top cover
+will remove the knob. It requires a small t ip on the iron but I used
+plain vanilla electrolytics (not surface mount) and tacked them across
+the two caps with as short leads as I could manage reasonably. 
+
+Anthony Casorso canthony15@msn.com

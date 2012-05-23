@@ -82,6 +82,7 @@ snit::type sdrkit::signal-generator {
 		$self sub-component none $name sdrkit::$command {*}$args
 	    } else {
 		sdrtk::clabelframe $w.$name -label $title
+		set data($name-enable) [$options(-component) part-cget $options(-name)-$name -enable]
 		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
@@ -115,7 +116,13 @@ snit::type sdrkit::signal-generator {
 	}
     }
     method Enable {name} {
-	$options(-component) name-enable $options(-name)-$name $data($name-enable)
+	if {$data($name-enable) != [$options(-component) part-cget $options(-name)-$name -enable]} {
+	    if {$data($name-enable)} {
+		$options(-component) part-enable $options(-name)-$name
+	    } else {
+		$options(-component) part-disable $options(-name)-$name
+	    }
+	}
     }
 }
 

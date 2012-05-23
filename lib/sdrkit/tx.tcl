@@ -126,6 +126,7 @@ snit::type sdrkit::tx {
 		    # only display real working components
 		    grid $w.$name -sticky ew
 		}
+		set data($name-enable) [$options(-component) part-cget $options(-name)-$name -enable]
 		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
@@ -169,10 +170,12 @@ snit::type sdrkit::tx {
     method activate {} {}
     method deactivate {} {}
     method Enable {name} {
-	if {[$options(-component) cget -enable]} {
-	    $options(-component) part-enable $options(-name)-$name
-	} else {
-	    $options(-component) part-disable $options(-name)-$name
+	if {$data($name-enable) != [$options(-component) part-cget $options(-name)-$name -enable]} {
+	    if {$data($name-enable)} {
+		$options(-component) part-enable $options(-name)-$name
+	    } else {
+		$options(-component) part-disable $options(-name)-$name
+	    }
 	}
     }
 }

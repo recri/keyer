@@ -95,11 +95,4 @@ snit::type sdrkit::iq-source {
     method is-active {} { return 1 }
     method activate {} {}
     method deactivate {} {}
-    method Enable {name} {
-	if {$data($name-enable)} {
-	    $options(-component) part-enable $options(-name)-$name
-	} else {
-	    $options(-component) part-disable $options(-name)-$name
-	}
-    }
 }

@@ -42,6 +42,22 @@ snit::type sdrkit::rx-control {
     option -in-options {}
     option -out-options {}
 
+    # the basic radio controls which are not simply
+    # component controls
+    # mode affects demodulation and filtering
+    option -mode -default CWU -configuremethod Retune -type sdrtype::mode
+    # the filter positioning changes with mode 
+    option -filter-width -default 400 -configuremethod Retune
+    option -filter-offset -default 150 -configuremethod Retune
+    # frequency depends on mode, we tune to carrier frequency
+    # in some modes, even if there isn't a carrier, and to an
+    # offset from carrier in other modes.
+    option -freq -default 7050000 -configuremethod Retune
+    option -lo-freq -default 10000 -configuremethod Retune
+    option -cw-freq -default 600 -configuremethod Retune
+    option -carrier-freq -default 7040000 -configuremethod Opt-handler
+    option -hw-freq -default 7039400 -configuremethod Opt-handler
+
     option -sub-controls {
     }
 

@@ -191,6 +191,8 @@ snit::type sdrkit::component {
 	}
 	
 	# resolve the parts
+	# this might need to wait until everybody is built
+	# the controller has a "part-resolve" that
 	if {{resolve-parts} in [$subsidiary info methods]} {
 	    $subsidiary resolve-parts
 	}
@@ -293,4 +295,5 @@ snit::type sdrkit::component {
     method destroy-sub-parts {parts} {
 	foreach part $parts { $self part-destroy $options(-name)-$part }
     }	
+    method myvar-enable {} { return [myvar options(-enable)] }
 }

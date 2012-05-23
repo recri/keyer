@@ -88,6 +88,7 @@ snit::type sdrkit::iq-unbalance {
 	
 	foreach {name title command args} $options(-sub-components) {
 	    grid [sdrtk::clabelframe $w.$name -label $title] -sticky ew
+	    set data($name-enable) [$options(-component) part-cget $options(-name)-$name -enable]
 	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.enable $w.$name.container
@@ -99,10 +100,12 @@ snit::type sdrkit::iq-unbalance {
     method activate {} {}
     method deactivate {} {}
     method Enable {name} {
-	if {$data($name-enable)} {
-	    $options(-component) part-enable $options(-name)-$name
-	} else {
-	    $options(-component) part-disable $options(-name)-$name
+	if {$data($name-enable) != [$options(-component) part-cget $options(-name)-$name -enable]} {
+	    if {$data($name-enable)} {
+		$options(-component) part-enable $options(-name)-$name
+	    } else {
+		$options(-component) part-disable $options(-name)-$name
+	    }
 	}
     }
 }
