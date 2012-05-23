@@ -28,7 +28,7 @@ package require snit
 
 package require sdrtcl::jack
 package require sdrtcl::spectrum-tap
-package require sdrui::tk-spectrum
+package require sdrtk::spectrum
 package require sdrtk::radiomenubutton
 
 namespace eval sdrkit {}
@@ -39,7 +39,6 @@ snit::type sdrkit::spectrum {
     option -type jack
     option -server default
     option -component {}
-
 
     option -window {}
     option -minsizes {100 200}
@@ -116,7 +115,7 @@ snit::type sdrkit::spectrum {
     }
     method build-parts {} {
 	toplevel .spectrum-$options(-name)
-	set data(display) [sdrui::tk-spectrum .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]
+	set data(display) [sdrtk::spectrum .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]
 	pack $data(display) -side top -fill both -expand true
 	sdrtcl::spectrum-tap ::sdrkitx::$options(-name) {*}[$self TapOptions]
 	set data(after) [after $options(-period) [mymethod Update]]
