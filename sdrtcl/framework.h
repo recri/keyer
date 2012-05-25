@@ -645,7 +645,8 @@ static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_
 static void framework_delete2(void *arg, int outside_shutdown) {
   framework_t *dsp = (framework_t *)arg;
   if (outside_shutdown && dsp->client) {
-    jack_deactivate(dsp->client);
+    if (framework_is_active(arg))
+      jack_deactivate(dsp->client);
     jack_client_close(dsp->client);
   }
   if (dsp->cdelete) {
@@ -872,19 +873,8 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   // fprintf(stderr, "create command %s at %lx\n", command_name, (long)data->command);
   Tcl_CreateObjCommand(interp, command_name, data->command, (ClientData)data, framework_delete);
 
-  // activate the client
-  // fprintf(stderr, "framework_factory: activate client\n");  
-  if (data->process) {
-    status = (jack_status_t)jack_activate(data->client);
-    if (status) {
-      // fprintf(stderr, "framework_factory: activate failed\n");  
-      // this is just a guess, the header doesn't say it's so
-      // jack_status_report(adaptp->interp, status);
-      framework_delete(data);
-      return fw_error_obj(interp, Tcl_ObjPrintf("jack_activate(%s) failed: ", client_name));
-    }
-    data->activated = 1;
-  }
+  // no longer activate the client
+
   // fprintf(stderr, "framework_factory: returning okay\n");
   Tcl_SetObjResult(interp, objv[1]);
   return TCL_OK;

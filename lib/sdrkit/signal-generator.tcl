@@ -32,13 +32,14 @@ snit::type sdrkit::signal-generator {
     option -out-ports {out_i out_q}
     option -in-options {}
     option -out-options {}
+
     option -sub-components {
 	osc1 {Oscillator 1} oscillator {}
 	osc2 {Oscillator 2} oscillator {}
 	osc3 {Oscillator 3} oscillator {}
 	osc4 {Oscillator 4} oscillator {}
-	noi Noise noise {}
-	iqn {IQ Noised} iq-noise {}
+	noise Noise noise {}
+	iq-noise {IQ Noise} iq-noise {}
 	out {Master Gain} gain {}
     }
     option -port-connections {
@@ -46,8 +47,8 @@ snit::type sdrkit::signal-generator {
 	osc2 out-ports out in-ports
 	osc3 out-ports out in-ports
 	osc4 out-ports out in-ports
-	noi out-ports out in-ports
-	iqn out-ports out in-ports
+	noise out-ports out in-ports
+	iq-noise out-ports out in-ports
 	out out-ports {} out-ports
     }
     option -opt-connections {
@@ -102,28 +103,23 @@ snit::type sdrkit::signal-generator {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
 	    foreach p1 [$options(-component) $ports1 $name1] p2 [$options(-component) $ports2 $name2] {
+		#puts "$options(-component) connect-ports $name1 $p1 $name2 $p2"
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
 	}
 	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
 	}
     }
-    method is-active {} { return $data(active) }
-    method activate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
-    method deactivate {} {
-	set data(active) 1
-	foreach part $data(parts) {
-	}
-    }
+    method part-is-enabled {name} { return [$options(-component) part-is-enabled $options(-name)-$name] }
     method Enable {name} {
 	if {$data($name-enable)} {
-	    $options(-component) part-enable $options(-name)-$name
+	    if {! [$self part-is-enabled $name]} {
+		$options(-component) part-enable $options(-name)-$name
+	    }
 	} else {
-	    $options(-component) part-disable $options(-name)-$name
+	    if {[$self part-is-enabled $name]} {
+		$options(-component) part-disable $options(-name)-$name
+	    }
 	}
     }
 }

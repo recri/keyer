@@ -112,8 +112,19 @@ snit::type sdrkit::component {
 	}
 	return $from
     }
+
     constructor {args} {
+	# fetch two options which will not be correct
+	# if they disagree with our defaults
+	set activated [from args -activate false]
+	set enabled [from args -enable false]
+	
+	# apply the rest of the configuration
 	$self configure {*}$args
+
+	puts "$options(-name) args={$args}, enabled=$enabled, activated=$activated"
+
+	# create our subsidiary 
 	package require $options(-subsidiary)
 	install subsidiary using $options(-subsidiary) ::sdrkitw::$options(-name) \
 	    -server $options(-server) -name $options(-name) \
@@ -152,37 +163,7 @@ snit::type sdrkit::component {
 	# build the subsidiary parts
 	$subsidiary build-parts
 
-	# enable or disable depending on the controller
-	if {$options(-control) ne {}} {
-	    set options(-enable) 0
-	    set options(-activate) 0
-	    if {[$subsidiary is-active]} { $subsidiary deactivate }
-	} else {
-	    set options(-enable) 1
-	    set options(-activate) 1
-	    if { ! [$subsidiary is-active]} { $subsidiary activate }
-	}
-
-	# double check controls and ports against dps component
-	# this isn't actually working
-	#puts "info commands ::sdrkitx::$options(-name)* is [info commands ::sdrkitx::$options(-name)*]"
-	if {$::sdrkit::testing && [info commands ::sdrkitx::$options(-name)*] ne {}} {
-	    puts "testing ports and options for $options(-name)"
-	    set ports1 [::sdrkitx::$options(-name) info ports]
-	    set ports2 [concat [$subsidiary cget -in-ports] [$subsidiary cget -out-ports]]
-	    set opts1 [::sdrkitx::$options(-name) info options]
-	    set opts2 [concat [$subsidiary cget -in-options] [$subsidiary cget -out-options]]
-	    set opts1 [filter-list $options(-name) {-server -client -verbose {*bpf -planbits} {*iqb -linear-gain} {*iqb -sine-phase}} $opts1]
-	    set opts2 [filter-list $options(-name) {{*iqb -phase} {*iqb -gain}} $opts2]
-	    foreach port $ports1 { if {$port ni $ports2} { error "$options(-name) has real port $port not in $ports2" } }
-	    foreach port $ports2 { if {$port ni $ports1} { error "$options(-name) names port $port not in $ports1" } }
-	    foreach opt $opts1 { if {$opt ni $opts2} { error "$options(-name) has real option $opt not in $opts2" } }
-	    foreach opt $opts2 { if {$opt ni $opts1} { error "$options(-name) names option $opt not in $opts1" } }
-	} else {
-	    #puts "info commands ::sdrkitx::* is [info commands ::sdrkitx::*]"
-	}
-
-	# build the ui if any
+	# build the ui
 	if {$options(-window) ne {none}} {
 	    $subsidiary build-ui
 	    if {$options(-window) eq {}} {
@@ -190,23 +171,53 @@ snit::type sdrkit::component {
 	    }
 	}
 	
-	# resolve the parts
-	# this might need to wait until everybody is built
-	# the controller has a "part-resolve" that
-	if {$control ne $options(-control)} {
-	    $control resolve
+	# find the parts of the subsidiary which are optional
+	foreach m {resolve rewrite-connections-to rewrite-connections-from port-complement is-active activate deactivate} {
+	    set data(subsidiary-$m) [expr {$m in [$subsidiary info methods]}]
 	}
+	foreach o {-enable -activate} {
+	    set data(subsidiary-configure$o) [expr {$o in [$subsidiary info options]}]
+	}
+	
+	if {$enabled || [$subsidiary cget -type] ni {jack}} {
+	    $control part-enable $options(-name)
+	}
+
+	# if we made the controller, we're the root component
+	if {$control ne $options(-control)} {
+	    # resolve the remaining connections
+	    $control resolve
+	    # activate if requested
+	    puts "$options(-name) $options(-activate)"
+	    if {$activated} { $control part-activate $options(-name) }
+	    # dump the tree
+	    foreach part [$control part-list] {
+		puts "$part enabled [$control part-is-enabled $part] active [$control part-is-active $part]"
+	    }
+	}
+	# hmm, marking something enabled
     }
     destructor {
 	catch {$subsidiary destroy}
     }
+    
     method Configure {opt val} {
+	#puts "$options(-name) configure $opt $val"
 	set options($opt) $val
-	if {$opt eq {-activate}} {
-	    if {$val} { $subsidiary activate } else { $subsidiary deactivate }
+	if {$subsidiary ne {}} {
+	    if {$data(subsidiary-configure$opt)} { $subsidiary configure $opt $val }
+	    switch -- $opt {
+		-activate {
+		    if {$val} {
+			if {$data(subsidiary-activate)} { $subsidiary activate }
+		    } else {
+			if {$data(subsidiary-deactivate)} { $subsidiary deactivate }
+		    }
+		}
+	    }
 	}
     }
-
+    
     #
     # callback from subsidiary requesting controller method
     #
@@ -243,37 +254,27 @@ snit::type sdrkit::component {
     # call from the controller to the subsidiary
     #
     method resolve {} {
-	if {{resolve} in [$subsidiary info methods]} {
-	    $subsidiary resolve
-	}
+	if {$data(subsidiary-resolve)} { $subsidiary resolve }
     }
+    
     method rewrite-connections-to {port candidates} {
-	if {{rewrite-connections-to} in [$subsidiary info methods]} {
-	    return [$subsidiary rewrite-connections-to $port $candidates]
-	} else {
-	    return $candidates
-	}
+	if {$data(subsidiary-rewrite-connections-to)} { return [$subsidiary rewrite-connections-to $port $candidates] }
+	return $candidates
     }
     method rewrite-connections-from {port candidates} {
-	if {{rewrite-connections-from} in [$subsidiary info methods]} {
-	    return [$subsidiary rewrite-connections-from $port $candidates]
-	} else {
-	    return $candidates
-	}
+	if {$data(subsidiary-rewrite-connections-from)} { return [$subsidiary rewrite-connections-from $port $candidates] }
+	return $candidates
     }
     method port-complement {port} {
-	if {{port-complement} in [$subsidiary info methods]} {
-	    return [$subsidiary port-complement $port]
-	} else {
-	    switch -exact $port {
-		in_i { return {out_i} }
-		in_q { return {out_q} }
-		out_i { return {in_i} }
-		out_q { return {in_q} }
-		midi_in { return {midi_out} }
-		midi_out { return {midi_in} }
-		default { error "unknown port \"$port\"" }
-	    }
+	if {$data(subsidiary-port-complement)} { return [$subsidiary port-complement $port] }
+	switch -exact $port {
+	    in_i { return {out_i} }
+	    in_q { return {out_q} }
+	    out_i { return {in_i} }
+	    out_q { return {in_q} }
+	    midi_in { return {midi_out} }
+	    midi_out { return {midi_in} }
+	    default { error "unknown port \"$port\"" }
 	}
     }
     #
@@ -300,5 +301,4 @@ snit::type sdrkit::component {
     method destroy-sub-parts {parts} {
 	foreach part $parts { $self part-destroy $options(-name)-$part }
     }	
-    method myvar-enable {} { return [myvar options(-enable)] }
 }

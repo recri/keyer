@@ -111,7 +111,7 @@ snit::type sdrkit::keyer-control {
     }
 
     method is-needed {} { return 1 }
-
+    method is-busy {} { return 0 }
     method is-active {} { return 1 }
     method activate {} { }
     method deactivate {} { }

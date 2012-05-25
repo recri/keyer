@@ -41,7 +41,7 @@ snit::type sdrkit::iq-unbalance {
 	bal {IQ Balance} iq-balance {}
     }
     option -port-connections {
-	{} in-ports swp out-ports
+	{} in-ports swp in-ports
 	swp out-ports dly in-ports
 	dly out-ports bal in-ports
 	bal out-ports {} out-ports

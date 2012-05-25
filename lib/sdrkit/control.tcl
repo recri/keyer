@@ -32,6 +32,7 @@ package provide sdrkit::control 1.0.0
 package require snit
 package require sdrkit::sdrkit
 package require sdrkit::comm
+package require sdrtcl::jack
 
 namespace eval sdrkit {}
 
@@ -94,7 +95,14 @@ snit::type sdrkit::control {
     }
     method part-cget {name opt} { return [$self part-call $name cget $opt] }
 
-    method part-container {name} { return [[$self part-cget $name -container] cget -name] }
+    method part-container {name} {
+	set container [$self part-cget $name -container]
+	if {$container eq {}} {
+	    return {}
+	} else {
+	    return [$container cget -name]
+	}
+    }
     method part-in-options {name} { return [$self part-cget $name -in-options] }
     method part-out-options {name} { return [$self part-cget $name -out-options] }
     method part-in-ports {name} { return [$self part-cget $name -in-ports] }
@@ -102,6 +110,27 @@ snit::type sdrkit::control {
     method part-type {name} { return [$self part-cget $name -type] }
     method part-is-enabled {name} { return [$self part-cget $name -enable] }
     method part-is-active {name} { return [$self part-cget $name -activate] }
+    method part-enable {name} {
+	if {[$self part-is-enabled $name]} { error "part \"$name\" is enabled" }
+	$self part-configure $name -enable true
+	if {[$self part-container $name] ne {} && [$self part-is-active [$self part-container $name]]} {
+	    $self part-activate-node $name
+	}
+    }
+    method part-disable {name} {
+	if { ! [$self part-is-enabled $name]} { error "part \"$name\" is not enabled" }
+	if {[$self part-is-active $name]} { $self part-deactivate-node $name }
+	$self part-configure $name -enable false
+    }
+    method part-activate {name} {
+	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
+	if { ! [$self part-is-enabled $name]} { error "part \"$name\" is not enabled, cannot activate" }
+	$self part-activate-tree $name
+    }
+    method part-deactivate {name} {
+	if { ! [$self part-is-active $name]} { error "part \"$name\" is not active" }
+	$self part-deactivate-tree $name
+    }
 
     ##
     ## now the tricky stuff, which only applies to the dsp parts of the tree
@@ -133,7 +162,13 @@ snit::type sdrkit::control {
 
     method part-port-complement {part port} { return [[$self part-get $part] port-complement $port] }
 
-    method pair-complement {pair} { return [list [lindex $pair 0] [$self part-port-complement {*}$pair]] }
+    method pair-complement {pair} {
+	set port [$self part-port-complement {*}$pair]
+	if {$port eq {}} {
+	    return {}
+	}
+	return [list [lindex $pair 0] $port]
+    }
 
     method part-rewrite-connections-to {part port candidates} { return [[$self part-get $part] rewrite-connections-to $port $candidates] }
     method part-rewrite-connections-from {part port candidates} { return [[$self part-get $part] rewrite-connections-from $port $candidates] }
@@ -156,7 +191,9 @@ snit::type sdrkit::control {
 		} elseif {$type eq {jack}} {
 		    set source [$self pair-complement $source]
 		    #puts "port-active-connections-to: $pair searching source={$source}"
-		    lappend active {*}[$self port-active-connections-to $source]
+		    if {$source ne {}} {
+			lappend active {*}[$self port-active-connections-to $source]
+		    }
 		}
 	    } else {
 		#puts "port-active-connections-to: $pair searching source={$source}"
@@ -169,7 +206,6 @@ snit::type sdrkit::control {
     # chase each connections-from chain starting from {part port} until you find an active component
     # and return the list of active {port part} pairs found
     # this is looking down the sample computation graph at the outputs from port
-    # todo - avoid chasing through all the disabled alternates in an alternates block
     method port-active-connections-from {pair} {
 	set active {}
 	set candidates [$self part-rewrite-connections-from {*}$pair [$self port-connections-from $pair]]
@@ -183,7 +219,9 @@ snit::type sdrkit::control {
 		} elseif {$type eq {jack}} {
 		    set sink [$self pair-complement $sink]
 		    #puts "port-active-connections-from: $pair searching sink={$sink}"
-		    lappend active {*}[$self port-active-connections-from $sink]
+		    if {$sink ne {}} {
+			lappend active {*}[$self port-active-connections-from $sink]
+		    }
 		}
 	    } else {
 		#puts "port-active-connections-from: $pair searching sink={$sink}"
@@ -194,16 +232,12 @@ snit::type sdrkit::control {
     }
 
     method part-activate-tree {name} {
-	# puts "activate tree $name"
-	if {[$self part-is-active $name]} { error "part \"$name\" is active" }
-	if { ! [$self part-is-enabled $name]} return
-
 	# find the parts to activate
 	set subtree [$self part-filter-pred $name* [mymethod part-is-enabled]]
 
 	# activate the parts
 	foreach part $subtree {
-	    # puts "activate $part"
+	    puts "activate $part"
 	    $self part-configure $part -activate true
 	}
 	    
@@ -234,7 +268,6 @@ snit::type sdrkit::control {
     # deactivating a tree could be simpler, because all the jack connections just
     # go away as each node is deactivated, but we do it by hand
     method part-deactivate-tree {name} {
-	if { ! [$self part-is-active $name]} { error "part \"$name\" is not active" }
 
 	# find the set to deactivate
 	set subtree [$self part-filter-pred $name* [mymethod part-is-active]]
@@ -335,6 +368,7 @@ snit::type sdrkit::control {
 	if { ! [$self part-is-enabled $name]} return
 	lassign [$self part-node-connections $name] makes breaks
 	$self part-configure $name -activate true
+	# puts "part-activate-node $name: makes={$makes}, breaks={$breaks}"
 	foreach conn $makes { sdrtcl::jack -server $options(-server) connect {*}$conn }
 	foreach conn $breaks { sdrtcl::jack -server $options(-server) disconnect {*}$conn }
     }
@@ -346,24 +380,6 @@ snit::type sdrkit::control {
 	foreach conn $makes { sdrtcl::jack -server $options(-server) connect {*}$conn }
 	foreach conn $breaks { sdrtcl::jack -server $options(-server) disconnect {*}$conn }
 	$self part-configure $name -activate false
-    }
-    
-    method part-activate {name} { $self part-activate-tree $name }
-    method part-deactivate {name} { $self part-deactivate-tree $name }
-
-    method part-enable {name} {
-	if {[$self part-is-enabled $name]} { error "part \"$name\" is enabled" }
-	$self part-configure $name -enable true
-	if {[$self part-is-active [$self part-container $name]]} {
-	    $self part-activate-node $name
-	}
-    }
-    method part-disable {name} {
-	if { ! [$self part-is-enabled $name]} { error "part \"$name\" is not enabled" }
-	if {[$self part-is-active $name]} {
-	    $self part-deactivate-node $name
-	}
-	$self part-configure $name -enable false
     }
     
     method part-report {name opt value args} {

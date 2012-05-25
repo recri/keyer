@@ -57,6 +57,7 @@ snit::type sdrkit::iq-noise {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
+    method port-complement {port} { return {} }
     method build-parts {} {
 	sdrtcl::iq-noise ::sdrkitx::$options(-name) -server $options(-server) -level $options(-level)
     }

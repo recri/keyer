@@ -97,7 +97,8 @@ snit::type sdrkit::hardware {
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-    method is-needed {} { return [expr {$options(-gain) != 0}] }
+    method is-needed {} { return 1 }
+    method is-busy {} { return 0 }
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }

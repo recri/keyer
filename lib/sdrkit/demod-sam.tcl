@@ -95,7 +95,7 @@ snit::type sdrkit::demod-sam {
     }
 
     method is-needed {} { return 1 }
-
+    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }

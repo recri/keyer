@@ -93,6 +93,7 @@ snit::type sdrkit::gain {
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
     method is-needed {} { return [expr {$options(-gain) != 0}] }
+    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }
     method deactivate {} { ::sdrkitx::$options(-name) deactivate }

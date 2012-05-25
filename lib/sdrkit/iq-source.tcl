@@ -96,7 +96,4 @@ snit::type sdrkit::iq-source {
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
-    method is-active {} { return 1 }
-    method activate {} {}
-    method deactivate {} {}
 }

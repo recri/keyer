@@ -95,6 +95,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       return fw_error_str(interp, "frequency is more than samplerate/4");
     }
     data->modified = data->fw.busy = 1;
+    if ( ! framework_is_active(data)) _update(data);
   }
 #ifndef NO_GAIN
   if (data->dBgain != dBgain) {

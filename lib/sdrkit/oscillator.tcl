@@ -62,6 +62,7 @@ snit::type sdrkit::oscillator {
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
 
+    method port-complement {port} { return {} }
     method build-parts {} {
 	sdrtcl::oscillator ::sdrkitx::$options(-name) -server $options(-server) -freq $options(-freq) -gain $options(-gain)
     }
