@@ -478,25 +478,25 @@ static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int arg
 }
 static int fw_subcommand_activate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
-  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot activate");
-  if (fp->activated) return fw_error_str(interp, "command is already active");
+  if ( ! fp->client) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not a jack client, cannot activate", Tcl_GetString(objv[0])));
+  if (fp->activated) return fw_error_obj(interp, Tcl_ObjPrintf("%s is already active, cannot activate", Tcl_GetString(objv[0])));
   jack_status_t status = (jack_status_t)jack_activate(fp->client);
-  if (status) return fw_error_str(interp, "command failed to activate");
+  if (status) return fw_error_obj(interp, Tcl_ObjPrintf("%s failed to activate", Tcl_GetString(objv[0])));
   fp->activated = 1;
   return TCL_OK;
 }
 static int fw_subcommand_deactivate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
-  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client, cannot deactivate");
-  if ( ! fp->activated) return fw_error_str(interp, "command is not active");
+  if ( ! fp->client) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not a jack client, cannot deactivate", Tcl_GetString(objv[0])));
+  if ( ! fp->activated) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not active, cannot deactivate", Tcl_GetString(objv[0])));
   jack_status_t status = (jack_status_t)jack_deactivate(fp->client);
-  if (status) return fw_error_str(interp, "command failed to deactivate");
+  if (status) return fw_error_obj(interp, Tcl_ObjPrintf("%s failed to deactivate", Tcl_GetString(objv[0])));
   fp->activated = 0;
   return TCL_OK;
 }
 static int fw_subcommand_is_active(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
-  if ( ! fp->client) return fw_error_str(interp, "command is not a jack client");
+  if ( ! fp->client) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not a jack client, cannot be activated", Tcl_GetString(objv[0])));
   Tcl_SetObjResult(interp, Tcl_NewIntObj(fp->activated));
   return TCL_OK;
 }

@@ -124,13 +124,13 @@ snit::type sdrkit::rxtx {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
 	}
+	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
+	}
 	if {$options(-rx-enable) ne {} && $options(-rx-enable)} {
 	    $options(-component) part-enable $options(-name)-rx
 	}
 	if {$options(-rx-activate) ne {} && $options(-rx-activate)} {
 	    $options(-component) part-activate $options(-name)-rx
-	}
-	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
     method ViewConnections {} {

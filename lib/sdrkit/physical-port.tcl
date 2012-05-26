@@ -62,8 +62,4 @@ snit::type sdrkit::physical-port {
     method build-parts {} {}
     method build-ui {} {}
     method is-needed {} { return 1 }
-    method is-active {} { return 1 }
-    method activate {} {}
-    method deactivate {} {}
-
 }

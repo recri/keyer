@@ -104,9 +104,6 @@ snit::type sdrkit::demod {
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-    method is-active {} { return 1 }
-    method activate {} { }
-    method deactivate {} { }
     method Set {opt name} {
 	# find deselected component
 	set exname {none}
@@ -131,57 +128,42 @@ snit::type sdrkit::demod {
 	}
     }
     method rewrite-connections-to {port candidates} {
-	# puts "demod::rewrite-connections-to $port {$candidates}"
-	if {$options(-demod) eq {none}} {
-	    return [Rewrite-connections-to {} $port $candidates]
-	} else {
-	    return [Rewrite-connections-to $options(-name)-$options(-demod) $port $candidates]
-	}
+	return [Rewrite-connections-to $options(-name) $options(-demod) $port $candidates]
     }
     method rewrite-connections-from {port candidates} {
-	if {$options(-demod) eq {none}} {
-	    return [Rewrite-connections-from {} $port $candidates]
-	} else {
-	    return [Rewrite-connections-from $options(-name)-$options(-demod) $port $candidates]
-	}
+	return [Rewrite-connections-from $options(-name) $options(-demod) $port $candidates]
     }
-    proc Rewrite-connections-to {selected port candidates} {
-	# puts "demod::Rewrite-connections-to $port {$candidates}"
+    proc Rewrite-connections-to {name selected port candidates} {
+	#puts "Rewrite-connections-to {$selected} $name $port {$candidates}"
 	if {$port ni {alt_out_i alt_out_q alt_midi_out}} { return $candidates }
-	if {$selected eq {}} {
+	foreach c $candidates {
+	    if {[string match [list $name-$selected *] $c]} { return [list $c] }
+	}
+	if {$selected in {none {}}} {
 	    switch $port {
-		alt_out_i { return [list [list $port alt_in_i]] }
-		alt_out_q { return [list [list $port alt_in_q]] }
-		alt_midi_out { return [list [list $port alt_midi_in]] }
+		alt_out_i { return [list [list $name alt_in_i]] }
+		alt_out_q { return [list [list $name alt_in_q]] }
+		alt_midi_out { return [list [list $name alt_midi_in]] }
 		default { error "rewrite-connections-to: unexpected port \"$port\"" }
 	    }
-	} else {
-	    foreach c $candidates {
-		if {[string match [list $selected *] $c]} {
-		    return [list $c]
-		}
-	    }
-	    error "rewrite-connections-to: failed to match $data(selected-client) in $candidates"
 	}
+	error "rewrite-connections-to: failed to match $selected in $candidates"
     }
-    proc Rewrite-connections-from {selected port candidates} {
-	#puts "$options(-name) rewrite-connections-from $port {$candidates}"
+    proc Rewrite-connections-from {name selected port candidates} {
+	#puts "Rewrite-connections-from {$selected} $name $port {$candidates}"
 	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
-	if {$selected eq {}} {
+	foreach c $candidates {
+	    if {[string match [list $name-$selected *] $c]} { return [list $c] }
+	}
+	if {$selected in {none {}}} {
 	    switch $port {
-		alt_in_i { return [list [list $port alt_out_i]] }
-		alt_in_q { return [list [list $port alt_out_q]] }
-		alt_midi_in { return [list [list $port alt_midi_out]] }
+		alt_in_i { return [list [list $name alt_out_i]] }
+		alt_in_q { return [list [list $name alt_out_q]] }
+		alt_midi_in { return [list [list $name alt_midi_out]] }
 		default { error "rewrite-connections-from: unexpected port \"$port\"" }
 	    }
-	} else {
-	    foreach c $candidates {
-		if {[string match [list $selected *] $c]} {
-		    return [list $c]
-		}
-	    }
-	    error "rewrite-connections-from: failed to match $data(selected-client) in $candidates"
 	}
+	error "rewrite-connections-from: failed to match $selected in $candidates"
     }
 }
 

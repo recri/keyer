@@ -52,7 +52,6 @@ snit::type sdrkit::rxtx-control {
 	rx {RX Control} rx-control {}
 	tx {TX Control} tx-control {}
 	keyer {Keyer Control} keyer-control {}
-	spectrum {Spectrum} spectrum {}
     }
 
     option -mox -default 0 -configuremethod Configure

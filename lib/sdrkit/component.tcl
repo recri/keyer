@@ -62,8 +62,8 @@ snit::type sdrkit::component {
     # should be {} for .
     # should be a window name for window name
     # should be {none} for no window
-    option -window -default {}
-    option -parent-window {.}
+    option -window -default {none}
+    option -parent-window {none}
 
     # the sdrkit::control name
     # of the control application
@@ -122,7 +122,7 @@ snit::type sdrkit::component {
 	# apply the rest of the configuration
 	$self configure {*}$args
 
-	puts "$options(-name) args={$args}, enabled=$enabled, activated=$activated"
+	#puts "$options(-name) args={$args}, enabled=$enabled, activated=$activated"
 
 	# create our subsidiary 
 	package require $options(-subsidiary)
@@ -131,18 +131,25 @@ snit::type sdrkit::component {
 	    -component $self {*}$options(-subsidiary-opts)
 
 	# determine window setup
-	if {$options(-window) ne {none}} {
-	    # configure for some windows
-	    package require Tk
-	    if {$options(-window) eq {}} {
-		# configure for root window
-		wm title . $options(-name)
-	    } elseif {[winfo exists $options(-window)]} {
-		# configure for another window
-	    } else {
-		error "invalid window: $options(-window)"
+	switch $options(-window) {
+	    none {
+		set options(-parent-window) none
 	    }
-	    $subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
+	    {} {
+		package require Tk
+		wm title . $options(-name)
+		set options(-parent-window) .
+		$subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
+	    }
+	    default {
+		package require Tk
+		if {[winfo exists $options(-window)]} {
+		    set options(-parent-window) [winfo parent $options(-window)]
+		    $subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
+		} else {
+		    error "invalid window: $options(-window)"
+		}
+	    }
 	}
 
 	# determine control setup
@@ -188,14 +195,13 @@ snit::type sdrkit::component {
 	    # resolve the remaining connections
 	    $control resolve
 	    # activate if requested
-	    puts "$options(-name) $options(-activate)"
+	    #puts "$options(-name) $options(-activate)"
 	    if {$activated} { $control part-activate $options(-name) }
 	    # dump the tree
-	    foreach part [$control part-list] {
-		puts "$part enabled [$control part-is-enabled $part] active [$control part-is-active $part]"
-	    }
+	    #foreach part [$control part-list] {
+	    #puts "$part enabled [$control part-is-enabled $part] active [$control part-is-active $part]"
+	    #}
 	}
-	# hmm, marking something enabled
     }
     destructor {
 	catch {$subsidiary destroy}
@@ -279,21 +285,27 @@ snit::type sdrkit::component {
     }
     #
     # convenience calls from the subsidiary
+    # one to make a subcomponent, with a subsidiary name,
+    # one to make a component with fully specified name
+    #
     # eliminate all options that can be inherited by
     # asking $options(-container),
     # ie -server -control -minsizes -weights can all
     # be gotten from -container.
     #
     method sub-component {window name subsub args} {
+	$self new-component $window $options(-name)-$name $subsub {*}$args
+    }
+    method new-component {window name subsub args} {
 	set argv [list -window $window]
 	if {$window ne {none}} {
 	    lappend argv -minsizes $options(-minsizes) -weights $options(-weights)
 	}
 	package require $subsub
-	::sdrkit::component ::sdrkitv::$options(-name)-$name \
+	::sdrkit::component ::sdrkitv::$name \
 	    {*}$argv \
 	    -server $options(-server) \
-	    -name $options(-name)-$name \
+	    -name $name \
 	    -subsidiary $subsub -subsidiary-opts $args \
 	    -container $self \
 	    -control [$self get-controller]

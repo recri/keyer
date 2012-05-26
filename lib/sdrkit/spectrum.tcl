@@ -113,6 +113,7 @@ snit::type sdrkit::spectrum {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
+    method port-complement {port} { return {} }
     method build-parts {} {
 	toplevel .spectrum-$options(-name)
 	set data(display) [sdrtk::spectrum .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]

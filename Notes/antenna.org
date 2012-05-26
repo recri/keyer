@@ -10,3 +10,21 @@
    Unwind the rope, tie the rope up to suspend everything at height,
    and now instruct the spools to unwind their wires along the
    suspended rope, taking up the slack in the ropes as they go.
+** How about a radio that tunes by looking at the antenna
+   The basic link coupled tuner, or Z-match, acts as a preselector.
+   Suppose we tuned the radio according to the peak of the antenna
+   response rather than peaking the antenna according to the frequency
+   selected at the LO?  That is, tune the radio to the antenna /
+   coupler resonant frequency, by scanning the transmitter and
+   listening with the receiver, to find the peak.  The controls for
+   tuning would be controls that peaked the tuner-antenna resonance.
+   With a sufficiently narrow band response, this might be able to
+   replace some of the band pass and low pass and high pass filters
+   that get built to avoid spurious receiver responses and unwanted
+   transmitter.
+   So build it, a tuner that peaks a simple whip antenna response, and
+   see if the transceiver can follow the peak.
+   The probe should be done at the lowest effective level, I assume
+   that we can get arbitrarily low levels by sending arbitrarily low
+   level baseband to the QSE.
+

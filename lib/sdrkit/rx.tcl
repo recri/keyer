@@ -37,6 +37,7 @@ snit::type sdrkit::rx {
     option -out-options {}
 
     option -sub-components {
+	spectrum {Spectrum} spectrum {}
 	rf-gain {RF Gain} gain {}
 	rf-iq-swap {IQ Swap} iq-swap {}
 	rf-iq-delay {IQ Delay} iq-delay {}
@@ -58,6 +59,8 @@ snit::type sdrkit::rx {
 	-af-graphic-eq {Graphic EQ} graphic-eq {}
 	af-gain {AF Gain} gain {}
     }
+
+    option -parts-enable { rf-iq-correct if-lo-mixer if-bpf af-agc spectrum }
 
     option -port-connections {
 	{} in-ports rf-gain in-ports
@@ -81,7 +84,9 @@ snit::type sdrkit::rx {
 	af-spot out-ports af-graphic-eq in-ports
 	af-graphic-eq out-ports af-gain in-ports
 	af-gain out-ports {} out-ports
+	if-sp2 out-ports spectrum in-ports
     }
+
     option -opt-connections {
     }
 
@@ -171,23 +176,31 @@ snit::type sdrkit::rx {
 	    }
 	}
 	if {$options(-rx-source) ne {}} {
+	    # puts "rx source $options(-rx-source)"
 	    foreach src $options(-rx-source) dst {in_i in_q} {
 		lassign [$self resolve-port-name [split $src :]] sname sport
-		$options(-component) connect-ports $sname $sport $options(-name) $dst
+		# puts "rx $options(-component) connect-ports $sname $sport $options(-name) $dst"
+		$options(-component) connect-ports $sname $sport $options(-name) $dst		
 	    }
 	}
 	if {$options(-rx-sink) ne {}} {
+	    # puts "rx sink $options(-rx-sink)"
 	    foreach src {out_i out_q} dst $options(-rx-sink) {
 		lassign [$self resolve-port-name [split $dst :]] dname dport
+		# puts "rx $options(-component) connect-ports $options(-name) $src $dname $dport"
 		$options(-component) connect-ports $options(-name) $src $dname $dport
 	    }
 	}
 	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
+	foreach name $options(-parts-enable) {
+	    set data($name-enable) 1
+	    $self Enable $name
+	}
     }
-    method is-active {} { return 1 }
-    method activate {} {}
-    method deactivate {} {}
+    #method is-active {} { return 1 }
+    #method activate {} {}
+    #method deactivate {} {}
     method Enable {name} {
 	if {$data($name-enable)} {
 	    $options(-component) part-enable $options(-name)-$name

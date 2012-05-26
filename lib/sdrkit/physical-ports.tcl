@@ -51,22 +51,22 @@ snit::type sdrkit::physical-ports {
 
     constructor {args} { $self configure {*}$args }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
-    method sub-component {window name subsub args} {
+    method new-component {window name subsub args} {
 	lappend data(parts) $name
-	$options(-component) sub-component $window $name $subsub {*}$args
+	$options(-component) new-component $window $name $subsub {*}$args
     }
     method build-parts {} {
 	set clients [dict create]
 	foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
 	    # pdict has type, direction, physical, and connections
-	    if {[dict get $pdict physical] ||
-		[string match audioadapter:* $pname]} {
+	    if {[dict get $pdict physical] || [string match audioadapter:* $pname]} {
 		dict lappend clients {*}[split $pname :]
 	    }
 	}
-	dict for {client ports} $clients {
-	    $self sub-component none $client sdrkit::physical-port -ports $ports
-	    $options(-component) part-configure $options(-name)-$client -enable true -activate true
+	foreach client [lsort [dict keys $clients]] {
+	    set ports [dict get $clients $client]
+	    $self new-component none $client sdrkit::physical-port -ports $ports
+	    $options(-component) part-configure $client -activate true
 	}
     }
     method build-ui {} {}

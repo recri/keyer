@@ -180,26 +180,27 @@ snit::type sdrkit::control {
     method port-active-connections-to {pair} {
 	set active {}
 	set candidates [$self part-rewrite-connections-to {*}$pair [$self port-connections-to $pair]]
-	#puts "port-active-connections-to: $pair candidates={$candidates}"
+	# puts "port-active-connections-to: $pair candidates={$candidates}"
 	foreach source $candidates {
 	    lassign $source part port
 	    set type [$self part-type $part]
 	    if {$type in {jack physical}} {
 		if {[$self part-is-active $part]} {
-		    #puts "port-active-connections-to: $pair accepted source={$source}"
+		    # puts "port-active-connections-to: $pair accepted source={$source}"
 		    lappend active $source
 		} elseif {$type eq {jack}} {
 		    set source [$self pair-complement $source]
-		    #puts "port-active-connections-to: $pair searching source={$source}"
+		    # puts "port-active-connections-to: $pair searching source={$source}"
 		    if {$source ne {}} {
 			lappend active {*}[$self port-active-connections-to $source]
 		    }
 		}
 	    } else {
-		#puts "port-active-connections-to: $pair searching source={$source}"
+		# puts "port-active-connections-to: $pair searching source={$source}"
 		lappend active {*}[$self port-active-connections-to $source]
 	    }
 	}
+	# puts "port-active-connections-to: $pair candidates={$candidates} -> {$active}"
 	return $active
     }
 
@@ -237,7 +238,7 @@ snit::type sdrkit::control {
 
 	# activate the parts
 	foreach part $subtree {
-	    puts "activate $part"
+	    #puts "activate $part"
 	    $self part-configure $part -activate true
 	}
 	    
@@ -348,11 +349,13 @@ snit::type sdrkit::control {
 	foreach to_pair [array names to] {
 	    if {$to($to_pair) ne {}} {
 		set from_pair [$self pair-complement $to_pair]
-		foreach to_conn $to($to_pair) {
-		    lassign $to_conn to_source to_me
-		    foreach from_conn $from($from_pair) {
-			lassign $from_conn from_me from_sink
-			lappend breaks [list $to_source $from_sink]
+		if {$from_pair ne {}} {
+		    foreach to_conn $to($to_pair) {
+			lassign $to_conn to_source to_me
+			foreach from_conn $from($from_pair) {
+			    lassign $from_conn from_me from_sink
+			    lappend breaks [list $to_source $from_sink]
+			}
 		    }
 		}
 	    }
