@@ -95,7 +95,6 @@ snit::widgetadaptor sdrtk::radiomenubutton {
 	if {$options(-command) ne {}} { {*}$options(-command) $val }
     }
 
-    # should be tracing the value of $options(-variable)
     method set-value {val} {
 	set data(label) $data(label-$val)
     }

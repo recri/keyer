@@ -23,6 +23,7 @@
 package provide sdrkit::rxtx 1.0.0
 
 package require snit
+package require sdrtk::control-dial
 package require sdrtk::cnotebook
 package require sdrtk::clabelframe
 
@@ -92,8 +93,7 @@ snit::type sdrkit::rxtx {
 	    $self sub-component none hardware sdrkit::hardware -hardware $options(-hardware)
 	}
 	if {$w ne {none}} {
-	    grid [ttk::frame $w.menu] -sticky ew
-	    pack [ttk::button $w.menu.connections -text connections -command [mymethod ViewConnections]] -side left
+	    sdrkit::control-dial $w.dial -component $options(-component)
 	    sdrtk::cnotebook $w.note
 	}
 	foreach {name title command args} $options(-sub-components) {
@@ -112,6 +112,7 @@ snit::type sdrkit::rxtx {
 	    }
 	}
 	if {$w ne {none}} {
+	    grid $w.dial -sticky nsew -row 0
 	    grid $w.note -sticky nsew -row 1
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
@@ -131,18 +132,6 @@ snit::type sdrkit::rxtx {
 	}
 	if {$options(-rx-activate) ne {} && $options(-rx-activate)} {
 	    $options(-component) part-activate $options(-name)-rx
-	}
-    }
-    method ViewConnections {} {
-	if { ! [winfo exists .connections]} {
-	    package require sdrkit::connections
-	    toplevel .connections
-	    pack [::sdrkit::connections .connections.x \
-		      -server $options(-server) \
-		      -container $options(-component) \
-		      -control [$options(-component) get-controller]] -side top -fill both -expand true
-	} else {
-	    wm deiconify .connections
 	}
     }
     method is-active {} { return 1 }

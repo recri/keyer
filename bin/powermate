@@ -1,0 +1,243 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+
+namespace eval powermate {
+    #
+    # read powermate events from /dev/powermate
+    #
+
+    #
+    # put the following into /etc/udev/rules.d/powermate.rules:
+    # it makes the powermate input device link to /dev/powermate
+    # and makes it readable and writable by anyone
+    #
+    set rules {
+	SUBSYSTEMS=="usb", ATTRS{idVendor}=="077d", ATTRS{idProduct}=="0410", SYMLINK+="powermate", MODE="0666"
+    }
+
+    #
+    # reading from the event device returns the following structure
+    #
+    # struct input_event {
+    #	struct timeval time;	// 16b
+    #	__u16 type;		// 2b
+    #	__u16 code;		// 2b
+    #	__s32 value;		// 4b
+    #};
+    #
+    # the timeval has this structure on my x86_64 linux system,
+    # it might be different on a 32 bit processor, but probably not.
+    #
+    # struct timeval {
+    #    __time_t tv_sec;		/* Seconds.  */		// 8b
+    #    __suseconds_t tv_usec;	/* Microseconds.  */	// 8b
+    # };
+    #
+
+    #
+    # the "type" values in the input_event
+    #
+    set ev [dict create {*}{
+	0 EV_SYN
+	1 EV_KEY
+	2 EV_REL
+	3 EV_ABS
+	4 EV_MSC
+	5 EV_SW
+	17 EV_LED
+	18 EV_SND
+	20 EV_REP
+	21 EV_FF
+	22 EV_PWR
+	23 EV_FF_STATUS
+    }]
+
+    #
+    # SYN codes for synchronization events
+    #
+    set syn [dict create {*}{
+	0 SYN_REPORT
+	1 SYN_CONFIG
+	2 SYN_MT_REPORT
+	3 SYN_DROPPED
+    }]
+
+    #
+    # REL codes for relative axes
+    #
+    set rel [dict create {*}{
+	0 REL_X
+	1 REL_Y
+	2 REL_Z
+	3 REL_RX
+	4 REL_RY
+	5 REL_RZ
+	6 REL_HWHEEL
+	7 REL_DIAL
+	8 REL_WHEEL
+	9 REL_MISC
+    }]
+
+    #
+    # MSC codes for Misc events
+    #
+    set msc [dict create {*}{
+	0 MSC_SERIAL
+	1 MSC_PULSELED
+	2 MSC_GESTURE
+	3 MSC_RAW
+	4 MSC_SCAN
+    }]
+
+    proc invert {dict} {
+	set invert [dict create]
+	dict for {key val} $dict {
+	    dict set invert $val $key
+	}
+	return $invert
+    }
+
+    set iev [invert $ev]
+    set imsc [invert $msc]
+    
+    proc decode {event} {
+	if {$event eq {}} {
+	    return {}
+	} else {
+	    variable ev
+	    binary scan $event mmttn tv_sec tv_usec type code value
+	    set type [dict get $ev $type]
+	    switch $type {
+		EV_SYN {
+		    variable syn
+		    set code [dict get $syn $code]
+		}
+		EV_KEY {
+		    if {$code == 256} { set code BTN_MISC }
+		}
+		EV_REL {
+		    variable rel
+		    set code [dict get $rel $code]
+		}
+	    }
+	    return [dict create sec $tv_sec usec $tv_usec type $type code $code value $value]
+	}
+    }
+    
+    # brightness 
+    proc set-led {fp brightness speed table asleep awake} {
+	variable iev
+	variable imsc
+	set secs 0
+	set usecs 0
+	set type [dict get $iev EV_MSC]
+	set code [dict get $imsc MSC_PULSELED]
+	set brightness [expr {max(0,min(255,$brightness))}]
+	set speed [expr {max(0,min(510,$speed))}]
+	set table [expr {max(0,min(2,$table))}]
+	set asleep [expr {$asleep != 0}]
+	set awake [expr {$awake != 0}]
+	set value [expr {$brightness | ($speed << 8) | ($table << 17) | ($asleep << 19) | ($awake << 20)}]
+	set event [binary format mmttn $secs $usecs $type $code $value]
+	puts -nonewline $fp $event
+    }
+}
+
+array set data {
+    turns 0
+    bright 0
+    speed 0
+    table 0
+    asleep 0
+    awake 0
+    button 0
+}
+ 
+proc readMe chan {
+    if {[catch {powermate::decode [read $chan 24]} event]} {
+	puts "error $event\n$::errorInfo"
+    } elseif {$event == {}} {
+	if {[eof $chan]} {
+	    close $chan
+	    destroy .
+	}
+    } else {
+	switch [dict get $event type]:[dict get $event code] {
+	    EV_REL:REL_DIAL {
+		incr ::data(turns) [dict get $event value]
+	    }
+	    EV_SYN:SYN_REPORT {
+	    }
+	    EV_KEY:BTN_MISC {
+		set ::data(button) [dict get $event value]
+	    }
+	    default {
+		puts stdout "event: $event"
+	    }
+	}
+    }
+    #after idle [list update idletasks]
+}
+
+proc update-led {args} {
+    foreach var {turns bright speed} {
+	set ::data($var) [expr {int(round($::data($var)))}]
+    }
+    powermate::set-led $::data(fp) $::data(bright) $::data(speed) $::data(table) $::data(asleep) $::data(awake)
+}
+
+proc main {argv} {
+    pack [ttk::frame .labels] -side top -fill x -expand true
+    foreach l {turns bright speed} {
+	pack [ttk::label .labels.l$l -text $l] -side left -fill x -expand true
+	pack [ttk::label .labels.$l -textvar ::data($l) -width 8] -side left -fill x -expand true
+    }
+    pack [ttk::scale .bright -variable ::data(bright) -from 0 -to 255 -command update-led] -side top -fill x -expand true
+    pack [ttk::scale .speed -variable ::data(speed) -from 0 -to 510 -command update-led] -side top -fill x -expand true
+    pack [ttk::frame .table] -side top -fill x -expand true
+    pack [ttk::label .table.l -text table] -side left -fill x -expand true
+    foreach t {0 1 2} {
+	pack [ttk::radiobutton .table.t$t -text $t -value $t -variable ::data(table) -command update-led] -side left -fill x -expand true
+    }
+    pack [ttk::frame .buttons] -side top -fill x -expand true
+    foreach b {asleep awake button} {
+	pack [ttk::checkbutton .buttons.$b -text $b -variable ::data($b) -command update-led] -side left -fill x -expand true
+    }
+    .buttons.button configure -state disabled
+    if { ! [file exists /dev/powermate]} {
+	tk_messageBox {*}{
+	    -message "You need to install a udev rule for the powermate, or plug it in."
+	    -icon error -type ok \
+		-detail "Select \"Yes\" to make the application exit"
+	}
+	destroy .
+    } else {
+	set ::data(fp) [open /dev/powermate rb+]
+	fconfigure $::data(fp) -blocking 0 -buffering none
+	fileevent $::data(fp) readable "readMe $::data(fp)"
+    }
+}
+
+main $argv
