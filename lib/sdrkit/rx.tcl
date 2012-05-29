@@ -34,25 +34,27 @@ snit::type sdrkit::rx {
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -in-options {
-	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -bpf-width -bpf-offset -agc-mode -af-gain
+	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
+	-cw-freq -bpf-width -bpf-offset
     }
     option -out-options {
-	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -bpf-width -bpf-offset -agc-mode -af-gain
+	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
 	-low -high
     }
 
-    option -mode -configuremethod Configure
-    option -rf-gain -configuremethod Configure
-    option -iq-swap -configuremethod Configure
-    option -iq-delay -configuremethod Configure
-    option -iq-correct -configuremethod Configure
-    option -lo-freq -configuremethod Configure
-    option -bpf-width -configuremethod Configure
-    option -bpf-offset -configuremethod Configure
-    option -agc-mode -configuremethod Configure
-    option -af-gain -configuremethod Configure
-    option -low -readonly true
-    option -high -readonly true
+    option -mode -default CWU -configuremethod Configure
+    option -rf-gain -default 0 -configuremethod Configure
+    option -iq-swap -default 0 -configuremethod Configure
+    option -iq-delay -default 0 -configuremethod Configure
+    option -iq-correct -default 0 -configuremethod Configure
+    option -lo-freq -default 10000 -configuremethod Configure
+    option -cw-freq -default 400 -configuremethod Configure
+    option -bpf-width -default 200 -configuremethod Configure
+    option -bpf-offset -default 150 -configuremethod Configure
+    option -agc-mode -default medium -configuremethod Configure
+    option -af-gain -default 0 -configuremethod Configure
+    option -low -default -100 -configuremethod Configure
+    option -high -default 100 -configuremethod Configure
 
     option -sub-components {
 	spectrum {Spectrum} spectrum {}
@@ -246,12 +248,61 @@ snit::type sdrkit::rx {
 	if {[string first . $name] == 0} { return [regsub {^.} $name $options(-name)] }
 	return $name
     }
+    method FilterConfigure {opt val} {
+    }
     method Configure {opt val} {
 	set options($opt) $val
 	switch -- $opt {
-	    default { }
+	    -bpf-width -
+	    -bpf-offset -
+	    -cw-freq -
+	    -mode {
+		switch $options(-mode) {
+		    CWU {
+			if {$opt in {-cw-freq -bpf-width -mode}} {
+			    $self configure -low [expr {$options(-cw-freq)-$options(-bpf-width)/2}] -high [expr {$options(-cw-freq)+$options(-bpf-width)/2}]
+			}
+		    }
+		    CWL {
+			if {$opt in {-cw-freq -bpf-width -mode}} {
+			    $self configure -low [expr {-$options(-cw-freq)-$options(-bpf-width)/2}] -high [expr {-$options(-cw-freq)+$options(-bpf-width)/2}]
+			}
+		    }
+		    AM - SAM - FM {
+			if {$opt in {-bpf-width -mode}} {
+			    $self configure -low [expr {-$options(-bpf-width)/2}] -high [expr {+$options(-bpf-width)/2}]
+			}
+		    }
+		    DIGU - USB {
+			if {$opt in {-bpf-offset -bpf-width -mode}} {
+			    $self configure [expr {$options(-bpf-offset)}] $low -high [expr {$options(-bpf-offset)+$options(-bpf-width)}]
+			}
+		    }
+		    DIGL - LSB {
+			if {$opt in {-bpf-offset -bpf-width -mode}} {
+			    $self configure -low [expr {-$options(-bpf-offset)-$options(-bpf-width)}] -high [expr {-$options(-bpf-offset)}]
+			}
+		    }
+		    default { error "unanticipated mode \"$options(-mode)\"" }
+		}
+
+	    }
+	    -lo-freq {
+		$options(-component) report $opt [expr {-$val}]
+	    }
+	    -rf-gain -
+	    -iq-swap -
+	    -iq-delay -
+	    -agc-mode -
+	    -af-gain -
+	    -low -
+	    -high {
+		$options(-component) report $opt $val
+	    }
+	    default {
+		error "unanticipated option \"$opt\""
+	    }
 	}
-	$options(-component) report $opt $val
     }
     method Enable {name} {
 	if {$data($name-enable)} {

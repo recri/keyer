@@ -87,13 +87,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     return TCL_ERROR;
   }
   if (data->hertz != hertz) {
-    if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
+    /* if (fabsf(data->hertz) > sdrkit_sample_rate(data)/4) {
       data->hertz = hertz;
 #ifndef NO_GAIN
       data->dBgain = dBgain;
 #endif
       return fw_error_str(interp, "frequency is more than samplerate/4");
-    }
+      } */
     data->modified = data->fw.busy = 1;
     if ( ! framework_is_active(data)) _update(data);
   }

@@ -101,7 +101,14 @@ snit::type sdrkit::lo-mixer {
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {
 	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
+	after 10 [mymethod DeferredComponentConfigure]
+    }
+    method DeferredComponentConfigure {} {
+	if {[llength $data(deferred-config)] == 0} {
+	    return
+	} elseif {[$self is-busy]} {
+	    after 10 [mymethod DeferredComponentConfigure]
+	} else {
 	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
 	    set data(deferred-config) {}
 	}

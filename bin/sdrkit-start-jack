@@ -8,8 +8,9 @@
 # results logged to ~/Projects/keyer/logs/<date>-jack.log
 #
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
-RATE=96000
-jackd -T -s -dalsa -Chw:1 -Phw:1 -r$RATE -p1024 -i2 -o2 -n3 -X raw > $LOG-jack.log 2>&1&
+RATE1=96000
+RATE0=96000
+jackd -T -s -dalsa -Chw:1 -Phw:1 -r$RATE1 -p1024 -i2 -o2 -n3 -X raw > $LOG-jack.log 2>&1&
 sleep 5
-jack_load audioadapter -i "-D -Chw:0,0 -Phw:0,1 -q 0 -r $RATE" >> $LOG-jack.log 2>&1&
+jack_load audioadapter -i "-Chw:0 -Phw:0-q 0 -r $RATE0" >> $LOG-jack.log 2>&1&
 

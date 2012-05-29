@@ -103,7 +103,7 @@ snit::widgetadaptor sdrtk::spectrum {
 
     # filter rectangle
     method DrawFilter {} {
-	$hull create rectangle $options(-filter-low) $options(-min) $options(-filter-high) $options(-max) -fill $data(darker) -outline $data(darker) -tag filter
+	$hull create rectangle $options(-filter-low) $options(-min) $options(-filter-high) $options(-max) -fill $data(darker) -outline $data(darker) -tags filter
 	$self Scale filter
     }
     method AdjustFilter {} {
@@ -113,7 +113,7 @@ snit::widgetadaptor sdrtk::spectrum {
 
     # carrier tuning line
     method DrawCarrier {} {
-	$hull create line $options(-tuned-freq) $options(-min) $options(-tuned-freq) $options(-max) -fill $data(carrier) -tag carrier
+	$hull create line $options(-tuned-freq) $options(-min) $options(-tuned-freq) $options(-max) -fill $data(carrier) -tags carrier
 	$self Scale carrier
     }
 
@@ -130,17 +130,17 @@ snit::widgetadaptor sdrtk::spectrum {
 	for {set l $options(-min)} {$l <= $options(-max)} {incr l 20} {
 	    # main db grid
 	    lappend xy $lo $l $hi $l $lo $l
-	    $hull create text 0 $l -text " $l" -font {Helvetica 8} -anchor nw -fill $data(light) -tags {label vlabel}
+	    $hull create text 0 $l -text " $l" -font {Helvetica 8} -anchor nw -fill $data(light) -tags vlabel
 	    # sub grid
 	    if {0} {
 		for {set ll [expr {$l-10}]} {$ll > $l-20} {incr ll -10} {
 		    if {$ll >= $options(-min) && $ll <= $options(-max)} {
-			$hull create line $lo $ll $hi $ll -fill $data(med) -tags {grid vgrid}
+			$hull create line $lo $ll $hi $ll -fill $data(med) -tags vgrid
 		    }
 		}
 	    }
 	}
-	$hull create line $xy -fill $data(darkest) -tags {grid vgrid}
+	$hull create line $xy -fill $data(darkest) -tags vgrid
 	$self Scale vgrid
 	$self VerticalScale vlabel
     }
@@ -163,13 +163,12 @@ snit::widgetadaptor sdrtk::spectrum {
 	    set label [format { %.2f} [expr {($f+$frnd)*1e-6}]]
 	    set fo [expr {$f-$foff}]
 	    lappend xy $fo $options(-min) $fo $options(-max) $fo $options(-min)
-	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $data(light) -tags {label hlabel}
+	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $data(light) -tags hlabel
 	}
 	$hull create line $xy -fill $data(darkest) -tags hgrid
 	$self Scale hgrid
 	$self Scale hlabel
 	$hull lower hgrid
-	$hull lower hlabel
 	set data(hgrid-scroll) 0
     }
 

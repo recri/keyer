@@ -227,6 +227,7 @@ snit::widget sdrtk::dialbook {
 	# puts "$self Adjust $step"
 	$dial rotate $step
 	if {$data(menu)} {
+	    
 	} else {
 	    if {$data(current) ne {}} { [$data(current) get-window] adjust $step }
 	}
@@ -239,6 +240,7 @@ snit::widget sdrtk::dialbook {
 	} else {
 	    # start menu - done as a plain popup, but needs to be
 	    # redone in a way that uses the rotational input
+	    set data(menu) true
 	    if { ! [winfo exists $win.menu]} {
 		menu $win.menu -tearoff no
 	    } else {
@@ -250,6 +252,7 @@ snit::widget sdrtk::dialbook {
 		$win.menu add radiobutton -label $text -value $atab -variable [myvar data(menu-select)] -command [mymethod MenuInvoke $atab]
 	    }
 	    bind $win.menu <<MenuSelect>> [mymethod MenuSelect]
+	    bind $win.menu <Unmap> [mymethod MenuUnmap]
 	    tk_popup $win.menu [winfo pointerx $win] [winfo pointery $win] [$win.menu index [$data(current) cget -text]]
 	}
     }
@@ -260,7 +263,13 @@ snit::widget sdrtk::dialbook {
     }
 
     method MenuInvoke {atab} {
+	set data(menu) false
 	set data(current) $atab
+	$self UpdateCurrent
+    }
+
+    method MenuUnmap {} {
+	set data(menu) false
 	$self UpdateCurrent
     }
 
@@ -334,7 +343,9 @@ snit::widget sdrtk::dialbook {
 	set data(wd) [tcl::mathfunc::max {*}$data(wd)]
 	set data(ht) [tcl::mathfunc::max {*}$data(ht)]
 	# puts "$self UpdateLists tabs $data(tabs) wd $data(wd) ht $data(ht)"
-	$self UpdateCurrent
+	if { ! $data(menu)} {
+	    $self UpdateCurrent
+	}
     }
 
     method UpdateCurrent {} {
