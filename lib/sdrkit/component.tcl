@@ -33,7 +33,7 @@ package provide sdrkit::component 1.0.0
 
 package require snit
 
-package require sdrkit::sdrkit
+package require sdrkit
 package require sdrkit::control
 package require sdrkit::comm
 package require sdrtype::types
@@ -225,9 +225,10 @@ snit::type sdrkit::component {
     }
     
     #
-    # callback from subsidiary requesting controller method
+    # callbacks from subsidiary requesting controller method
     #
     method get-controller {} { return $control }
+    method get-parent {} { return $options(-container) }
     #
     # call the controller
     #

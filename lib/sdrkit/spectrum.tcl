@@ -26,6 +26,7 @@ package provide sdrkit::spectrum 1.0.0
 package require Tk
 package require snit
 
+package require sdrkit
 package require sdrtcl::jack
 package require sdrtcl::spectrum-tap
 package require sdrtk::spectrum
@@ -110,9 +111,11 @@ snit::type sdrkit::spectrum {
 	$self configure {*}$args
     }
     destructor {
+	if {$::sdrkit::verbose(destroy)} { puts "$self destroy" }
 	catch {after cancel $data(after)}
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
+	if {$::sdrkit::verbose(destroy)} { puts "$self destroy, completed" }
     }
     method port-complement {port} { return {} }
     method build-parts {} {

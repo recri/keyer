@@ -44,13 +44,25 @@ snit::type sdrkit::rxtx {
     option -cw-freq -default 400 -configuremethod Configure
     option -mode -default CWU -configuremethod Configure
     option -agc-mode -default medium -configuremethod Configure
-    option -iq-correct -default off -configuremethod Configure
+    option -iq-swap -default 0 -configuremethod Configure
+    option -iq-delay -default 0 -configuremethod Configure
+    option -iq-correct -default 0 -configuremethod Configure
     option -bpf-width -default 200 -configuremethod Configure
     option -bpf-offset -default 150 -configuremethod Configure
+    option -rx-rf-gain -default 0 -configuremethod Configure
+    option -rx-af-gain -default 0 -configuremethod Configure
     option -hw-freq -default [expr {7050000-10000-400}] -readonly true
 
-    option -in-options {-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -mode -agc-mode -iq-correct -bpf-width}
-    option -out-options {-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -hw-freq -mode -agc-mode -iq-correct -bpf-width}
+    option -in-options {
+	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
+	-mode -agc-mode -iq-correct -iq-swap -iq-delay
+	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain
+    }
+    option -out-options {
+	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
+	-mode -agc-mode -iq-correct -iq-swap -iq-delay
+	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain -hw-freq
+    }
     
     option -sub-components {
 	ctl {Control} rxtx-control {}

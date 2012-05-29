@@ -73,7 +73,7 @@ snit::widget sdrtk::dialbook {
     option -class undefined
     option {-cursor cursor Cursor} {}
     option {-style style Style} {}
-    option {-takefocus takeFocus TakeFocus} {}
+    option {-takefocus takeFocus TakeFocus} 1
     # If present and greater than zero, specifies the desired height of the pane area
     # (not including internal padding or the dial).
     # Otherwise, the maximum height of all panes is used.

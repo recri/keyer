@@ -33,8 +33,26 @@ snit::type sdrkit::rx {
     option -title {RX}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -in-options {
+	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -bpf-width -bpf-offset -agc-mode -af-gain
+    }
+    option -out-options {
+	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -bpf-width -bpf-offset -agc-mode -af-gain
+	-low -high
+    }
+
+    option -mode -configuremethod Configure
+    option -rf-gain -configuremethod Configure
+    option -iq-swap -configuremethod Configure
+    option -iq-delay -configuremethod Configure
+    option -iq-correct -configuremethod Configure
+    option -lo-freq -configuremethod Configure
+    option -bpf-width -configuremethod Configure
+    option -bpf-offset -configuremethod Configure
+    option -agc-mode -configuremethod Configure
+    option -af-gain -configuremethod Configure
+    option -low -readonly true
+    option -high -readonly true
 
     option -sub-components {
 	spectrum {Spectrum} spectrum {}
@@ -88,6 +106,25 @@ snit::type sdrkit::rx {
     }
 
     option -opt-connections {
+	..	-mode		.		-mode
+	..	-rx-rf-gain	.		-rf-gain
+	..	-iq-swap	.		-iq-swap
+	..	-iq-delay	.		-iq-delay
+	..	-iq-correct	.		-iq-correct
+	..	-lo-freq	.		-lo-freq
+	..	-bpf-width	.		-bpf-width
+	..	-bpf-offset	.		-bpf-offset
+	..	-agc-mode	.		-agc-mode
+	..	-rx-af-gain	.		-af-gain
+	.	-rf-gain	.-rf-gain	-gain
+	.	-iq-swap	.-rf-iq-swap	-swap
+	.	-iq-delay	.-rf-iq-delay	-delay
+	.	-iq-correct	.-rf-iq-correct	-mu
+	.	-lo-freq	.-if-lo-mixer	-freq
+	.	-low		.-if-bpf	-low
+	.	-high		.-if-bpf	-high
+	.	-agc-mode	.-af-agc	-mode
+	.	-af-gain	.-af-gain	-gain
     }
 
     option -server default
@@ -191,16 +228,31 @@ snit::type sdrkit::rx {
 		$options(-component) connect-ports $options(-name) $src $dname $dport
 	    }
 	}
-	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
+	# puts "resolve options(-name) is $options(-name)"
+	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
+	    set ename1 [$self Expand-name $name1]
+	    set ename2 [$self Expand-name $name2]
+	    # puts "$name1 $opt1 $name2 $opt2 -> $options(-component) connect-options $ename1 $opt1 $ename2 $opt2"
+	    $options(-component) connect-options $ename1 $opt1 $ename2 $opt2
 	}
 	foreach name $options(-parts-enable) {
 	    set data($name-enable) 1
 	    $self Enable $name
 	}
     }
-    #method is-active {} { return 1 }
-    #method activate {} {}
-    #method deactivate {} {}
+    method Expand-name {name} {
+	if {$name eq {..}} { return [[$options(-component) get-parent] cget -name] }
+	if {$name eq {.}} { return $options(-name) }
+	if {[string first . $name] == 0} { return [regsub {^.} $name $options(-name)] }
+	return $name
+    }
+    method Configure {opt val} {
+	set options($opt) $val
+	switch -- $opt {
+	    default { }
+	}
+	$options(-component) report $opt $val
+    }
     method Enable {name} {
 	if {$data($name-enable)} {
 	    $options(-component) part-enable $options(-name)-$name

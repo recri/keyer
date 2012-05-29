@@ -92,7 +92,7 @@ snit::widgetadaptor sdrtk::dial {
     }
 
     constructor {args} {
-	installhull using canvas -width 350 -height 350
+	installhull using canvas -width 350 -height 350 -takefocus 1
 	set data(2pi) [expr {2*atan2(0,-1)}]
 	set data(phi) [expr {-$data(2pi)/4}]
 	$self Configure -cpr $options(-cpr)

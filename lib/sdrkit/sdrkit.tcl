@@ -20,9 +20,12 @@
 #
 # a few globals
 #
-package provide sdrkit::sdrkit 1.0.0
+package provide sdrkit 1.0.0
 
 namespace eval sdrkit {
     set testing 0
+    array set verbose {
+	destroy 1
+    }
 }
 
