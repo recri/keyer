@@ -645,7 +645,7 @@ static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_
 static void framework_delete2(void *arg, int outside_shutdown) {
   framework_t *dsp = (framework_t *)arg;
   if (outside_shutdown && dsp->client) {
-    if (framework_is_active(arg))
+    if (framework_is_active(dsp))
       jack_deactivate(dsp->client);
     jack_client_close(dsp->client);
   }

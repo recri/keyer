@@ -27,30 +27,33 @@ package require sdrtk::dialbook
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
+package require sdrutil::util
 
 namespace eval sdrkit {}
 
 snit::widgetadaptor sdrkit::control-dial {
-    option -component {}
+    option -command {}
 
     # hmm, the actual set depends on mode
     # and whether you're running split
 
-    option -vfo-freq -default 7050000 -configuremethod Configure
+    option -freq -default 7050000 -configuremethod Configure
     option -tune-rate -default 50 -configuremethod Configure
     option -mode -default CWU -configuremethod Configure
-    option -lfo-freq -default 10000 -configuremethod Configure
-    option -cw-tone -default 400 -configuremethod Configure
+    option -lo-freq -default 10000 -configuremethod Configure
+    option -lo-tune-rate -default 50 -configuremethod Configure
+    option -cw-freq -default 400 -configuremethod Configure
     option -bpf-width -default 200 -configuremethod Configure
     option -rx-af-gain -default 0 -configuremethod Configure
     option -rx-rf-gain -default 0 -configuremethod Configure
 
     option -sub-controls {
-	vfo-freq freq {-text VFO -format {%.6f} -units MHz -step 50}
+	freq freq {-text VFO -format {%.6f} -units MHz -step 50}
 	tune-rate enum {-text {VFO Step} -values {{1 Hz} {5 Hz} {10 Hz} {25 Hz} {50 Hz} {100 Hz} {250 Hz} {500 Hz} {1 kHz} {2.5 kHz} {5 kHz} {10 kHz} {25 kHz}}} 
 	mode enum {-text Mode -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}}
-	lfo-freq freq {-text LO -format {%.0f} -units Hz}
-	cw-tone freq {-text {CW Tone} -format {%.0f} -units Hz}
+	lo-freq freq {-text LO -format {%.0f} -units Hz}
+	lo-tune-rate enum {-text {LFO Step} -values {{1 Hz} {5 Hz} {10 Hz} {25 Hz} {50 Hz} {100 Hz} {250 Hz} {500 Hz} {1 kHz} {2.5 kHz} {5 kHz} {10 kHz} {25 kHz}}} 
+	cw-freq freq {-text {CW Tone} -format {%.0f} -units Hz}
 	bpf-width freq {-text {BPF Width} -format {%.0f} -units Hz}
 	rx-af-gain value {-text {RX AF Gain} -format {%.1f} -units dB -step 0.1}
 	rx-rf-gain value {-text {RX RF Gain} -format {%.1f} -units dB -step 0.1}
@@ -75,8 +78,14 @@ snit::widgetadaptor sdrkit::control-dial {
     }
 
     method OptionConstrain {opt val} { return $val }
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
+    method OptionConfigure {opt val} {
+	set options($opt) $val
+	switch -- $opt {
+	    -tune-rate { $win.freq configure -step [sdrutil::hertz $val] }
+	    -lo-tune-rate { $win.lo-freq configure -step [sdrutil::hertz $val] }
+	}
+    }
+    method ControlConfigure {opt val} { if {$options(-command) ne {}} { {*}$options(-command) $opt $val } }
 
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]

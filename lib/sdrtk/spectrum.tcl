@@ -28,8 +28,8 @@ package require sdrtype::types
 
 snit::widgetadaptor sdrtk::spectrum {
     option -pal -default 0 -type sdrtype::spec-palette
-    option -max -default 0 -type sdrtype::decibel -configuremethod Readjust
-    option -min -default -160 -type sdrtype::decibel -configuremethod Readjust
+    option -max -default 0 -type sdrtype::decibel -configuremethod Revertical
+    option -min -default -160 -type sdrtype::decibel -configuremethod Revertical
 
     option -smooth -default true -type sdrtype::smooth -configuremethod Resmooth
 
@@ -39,35 +39,32 @@ snit::widgetadaptor sdrtk::spectrum {
     option -zoom -default 1 -type sdrtype::zoom
     option -pan -default 0 -type sdrtype::pan
 
-    # from ctl-rxtx-mode
-    option -mode -default CWU -type sdrtype::mode -configuremethod Retune
-
-    # from ctl-rxtx-tune
-    option -freq -default 7050000 -configuremethod Retune
-    option -lo-freq -default 10000 -configuremethod Retune
-    option -cw-freq -default 600 -configuremethod Retune
-    option -carrier-freq -default 7040000 -configuremethod Retune
-
-    # from ctl-rxtx-if-bpf
-    option -low -default 400 -configuremethod Retune
-    option -high -default 800 -configuremethod Retune
+    # from sdrkit::spectrum
+    option -center-freq -default 0 -configuremethod Retune
+    option -filter-low -default 0 -configuremethod Retune
+    option -filter-high -default 0 -configuremethod Retune
+    option -tuned-freq -default 0 -configuremethod Retune
 
     delegate option * to hull
     delegate method * to hull
 
     variable data -array {
 	multi 0
-	center-freq 0
-	filter-low 0
-	filter-high 0
-	tuned-freq 0
+	darkest \#444
+	darker \#666
+	dark \#888
+	med \#AAA
+	light \#CCC
+	lighter \#EEE
+	lightest \#FFF
+	carrier red
     }
     
     constructor {args} {
 	installhull using canvas
 	$self configure {*}$args
 	$hull configure -bg black
-	bind $win <Configure> [mymethod Adjust]
+	bind $win <Configure> [mymethod DrawAll]
     }
     
     method update {xy} {
@@ -95,82 +92,134 @@ snit::widgetadaptor sdrtk::spectrum {
 	$hull move $tag $xoffset 0
     }
     
+    method HorizontalScroll {tag dx} {
+	$hull move $tag [expr {$dx*[winfo width $win]/double($options(-sample-rate))}] 0
+    }
+
     method Scale {tag} {
 	$self VerticalScale $tag
 	$self HorizontalScale $tag
     }
 
-    method Adjust {} {
-	catch {$hull delete grid}
-	catch {$hull delete label}
-	lassign {\#444 \#666 \#888 \#AAA \#CCC \#EEE \#FFF} darkest darker dark med light lighter lightest
-	#lassign {\#FFF \#FFF \#FFF \#FFF \#FFF} darkest darker dark med light
-	
-	# filter rectangle
-	$hull create rectangle $data(filter-low) $options(-min) $data(filter-high) $options(-max) -fill $darker -outline $darker -tag grid
-	# carrier tuning line
-	$hull create line $data(tuned-freq) $options(-min) $data(tuned-freq) $options(-max) -fill red -tag {grid vgrid}
+    # filter rectangle
+    method DrawFilter {} {
+	$hull create rectangle $options(-filter-low) $options(-min) $options(-filter-high) $options(-max) -fill $data(darker) -outline $data(darker) -tag filter
+	$self Scale filter
+    }
+    method AdjustFilter {} {
+	$hull coords filter $options(-filter-low) $options(-min) $options(-filter-high) $options(-max)
+	$self Scale filter
+    }
+
+    # carrier tuning line
+    method DrawCarrier {} {
+	$hull create line $options(-tuned-freq) $options(-min) $options(-tuned-freq) $options(-max) -fill $data(carrier) -tag carrier
+	$self Scale carrier
+    }
+
+    method AdjustCarrier {} {
+	$hull coords carrier $options(-tuned-freq) $options(-min) $options(-tuned-freq) $options(-max)
+	$self Scale carrier
+    }
+
+    # vertical grid, horizontal dBFS markings and labels
+    method DrawVgrid {} {
 	set lo [expr {-$options(-sample-rate)/2.0}]
 	set hi [expr {$options(-sample-rate)/2.0}]
 	set xy {}
 	for {set l $options(-min)} {$l <= $options(-max)} {incr l 20} {
 	    # main db grid
 	    lappend xy $lo $l $hi $l $lo $l
-	    $hull create text 0 $l -text " $l" -font {Helvetica 8} -anchor nw -fill $light -tags {label vlabel}
+	    $hull create text 0 $l -text " $l" -font {Helvetica 8} -anchor nw -fill $data(light) -tags {label vlabel}
 	    # sub grid
 	    if {0} {
 		for {set ll [expr {$l-10}]} {$ll > $l-20} {incr ll -10} {
 		    if {$ll >= $options(-min) && $ll <= $options(-max)} {
-			$hull create line $lo $ll $hi $ll -fill $med -tags {grid vgrid}
+			$hull create line $lo $ll $hi $ll -fill $data(med) -tags {grid vgrid}
 		    }
 		}
 	    }
 	}
-	$hull create line $xy -fill $darkest -tags {grid vgrid}
+	$hull create line $xy -fill $data(darkest) -tags {grid vgrid}
+	$self Scale vgrid
+	$self VerticalScale vlabel
+    }
+    method AdjustVgrid {} {
+	$hull delete vgrid
+	$hull delete vlabel
+	$self DrawVgrid
+	$hull lower vgrid
+    }
+    
+    # horizontal grid, vertical frequency markings and labels
+    method DrawHgrid {} {
 	# offset of tuning from grid
-	set frnd [expr {int($data(center-freq)/10000)*10000}]
-	set foff [expr {$data(center-freq)-$frnd}]
-	set fmax [expr {int($options(-sample-rate)/20000+1)*10000}]
+	set frnd [expr {int($options(-center-freq)/10000)*10000}]
+	set foff [expr {$options(-center-freq)-$frnd}]
+	set fmax [expr {int(5*$options(-sample-rate)/20000+1)*10000}]
 	set fmin [expr {-$fmax}]
 	set xy {}
 	for {set f $fmin} {$f <= $fmax} {incr f 10000} {
 	    set label [format { %.2f} [expr {($f+$frnd)*1e-6}]]
 	    set fo [expr {$f-$foff}]
 	    lappend xy $fo $options(-min) $fo $options(-max) $fo $options(-min)
-	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $light -tags {label hlabel}
+	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $data(light) -tags {label hlabel}
 	}
-	$hull create line $xy -fill $darkest -tags {grid hgrid}
-	$hull lower grid
-	$self Scale grid
-	$self VerticalScale vlabel
+	$hull create line $xy -fill $data(darkest) -tags hgrid
+	$self Scale hgrid
 	$self Scale hlabel
-    }	
-	
-    method Retune {opt val} {
-	set options($opt) $val
-	# the frequency at the center of the spectrum
-	set data(center-freq) [expr {$options(-carrier-freq)-$options(-lo-freq)}]
-	# the limits of the band pass filter in the spectrum
-	set data(filter-low) [expr {$options(-lo-freq)+$options(-low)}]
-	set data(filter-high) [expr {$options(-lo-freq)+$options(-high)}]
-	# the frequency tuned in the spectrum
-	switch $options(-mode) {
-	    CWU {
-		set data(tuned-freq) [expr {$options(-lo-freq)+$options(-cw-freq)}]
-	    }
-	    CWL {
-		set data(tuned-freq) [expr {$options(-lo-freq)-$options(-cw-freq)}]
-	    }
-	    default {
-		set data(tuned-freq) $options(-lo-freq)
-	    }
+	$hull lower hgrid
+	$hull lower hlabel
+	set data(hgrid-scroll) 0
+    }
+
+    method ScrollHgrid {dx} {
+	if {abs($data(hgrid-scroll)+$dx) < 2*$options(-sample-rate)} {
+	    $self HorizontalScroll hgrid $dx
+	    $self HorizontalScroll hlabel $dx
+	    set data(hgrid-scroll) [expr {$data(hgrid-scroll)+$dx}]
+	} else {
+	    $hull delete hgrid
+	    $hull delete hlabel
+	    $self DrawHgrid
 	}
-	$self Adjust
+    }
+
+    method DrawAll {} {
+	catch {$hull delete grid}
+	catch {$hull delete label}
+	$self DrawHgrid
+	$self DrawVgrid
+	$self DrawFilter
+	$self DrawCarrier
+    }	
+    
+    method {Retune -filter-low} {val} {
+	set options(-filter-low) $val
+	$self AdjustFilter
     }
     
-    method Readjust {opt value} {
+    method {Retune -filter-high} {val} {
+	set options(-filter-high) $val
+	$self AdjustFilter
+    }
+    
+    method {Retune -tuned-freq} {val} {
+	set options(-tuned-freq) $val
+	$self AdjustCarrier
+    }
+				 
+    method {Retune -center-freq} {val} {
+	set scroll [expr {$options(-center-freq)-$val}]
+	set options(-center-freq) $val
+	$self ScrollHgrid $scroll
+    }
+
+    method Revertical {opt value} {
 	set options($opt) $value
-	$self Adjust
+	$self AdjustVgrid
+	$self AdjustFilter
+	$self AdjustCarrier
     }
 
     method Resmooth {opt value} {

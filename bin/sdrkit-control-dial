@@ -26,17 +26,12 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require snit
 package require sdrkit::control-dial
 
-snit::type component {
-    constructor {args} {
-	sdrkit::control-dial .dial -component $self
-	pack .dial -fill both -expand true
-    }
-    method report {args} {
-	puts "$self report $args"
-    }
-}
-component ::control-dial
+
+proc report {args} { puts "control-dial report $args" }
+
+pack [sdrkit::control-dial .dial -command ::report] -fill both -expand true
+
+
 

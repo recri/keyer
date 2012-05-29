@@ -1,4 +1,9 @@
 #!/bin/bash
+#
+# script to start the sdrkit transceiver
+# using system capture and playback to connect to the radio
+# and audioadapter capture and playback to connect to microphone and speakers
+#
 BIN=/home/rec/Projects/keyer/bin
 RXSOURCE='system:capture_1 system:capture_2'
 RXSINK='audioadapter:playback_1 audioadapter:playback_2'
@@ -6,4 +11,5 @@ TXSINK='system:playback_1 system:playback_2'
 TXSOURCE='audioadapter:capture_1 audioadapter:capture_2'
 KEYSOURCE='system:midi_capture_1'
 JACK=...
-$BIN/sdrkit-radio -rx-source "$RXSOURCE" -rx-sink "$RXSINK" -activate-hw yes -enable-rx yes -activate-rx yes
+ARGS=
+$BIN/sdrkit-rxtx -rx-source "$RXSOURCE" -rx-sink "$RXSINK" -tx-source "$TXSOURCE" -tx-sink "$TXSINK" -keyer-source "$KEYSOURCE" "$@"

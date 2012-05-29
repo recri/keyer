@@ -50,7 +50,7 @@ snit::type sdrkit::spectrum {
 	-period -size -polyphase -result -tap
 	-pal -max -min -smooth -multi -zoom -pan
 	-mode -freq -lo-freq -cw-freq -carrier-freq
-	-low -high
+	-low -high -bpf-width
     }
     option -out-options {}
 
@@ -77,6 +77,7 @@ snit::type sdrkit::spectrum {
     option -carrier-freq -default 7040000 -configuremethod Retune
     option -low -default 400 -configuremethod Retune
     option -high -default 800 -configuremethod Retune
+    option -bpf-width -default 200 -configuremethod Retune
     
     # tap - no spectrum source tap control
     # period - no spectrum period control
@@ -100,7 +101,7 @@ snit::type sdrkit::spectrum {
 	after {}
 	frequencies {}
 	tap-options {-server -size -polyphase -result}
-	tk-options {-sample-rate -pal -max -min -smooth -multi -zoom -pan -mode -freq -lo-freq -cw-freq -carrier-freq -low -high}
+	tk-options {-sample-rate -pal -max -min -smooth -multi -zoom -pan}
     }
 
     constructor {args} {
@@ -156,6 +157,19 @@ snit::type sdrkit::spectrum {
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
+
+    method resolve {} {
+	foreach {name opt myopt} {
+	    rxtx -mode -mode
+	    rxtx -freq -freq
+	    rxtx -lo-freq -lo-freq
+	    rxtx -cw-freq -cw-freq
+	    rxtx -bpf-width -bpf-width
+	} {
+	    $options(-component) connect-options $name $opt $options(-name) $myopt
+	}
+    }
+
     method Set {opt val} {
 	if { ! [info exists data(Set-dispatch$opt)]} {
 	    if {$opt in $data(tap-options)} {
@@ -175,7 +189,6 @@ snit::type sdrkit::spectrum {
     method FilterOptions {keepers} { foreach opt $keepers { lappend opts $opt $options($opt) }; return $opts }
     method TapOptions {} { return [$self FilterOptions $data(tap-options)] }
     method TkOptions {} { return [$self FilterOptions $data(tk-options)] }
-
     method OptionConstrain {opt val} {
 	switch -- $opt {
 	    -size - -polyphase - -multi - -pal - -min - -max - -pan - -period {
@@ -196,7 +209,43 @@ snit::type sdrkit::spectrum {
 	$self Configure $opt $val
 	$data(display) configure $opt $options($opt)
     }
-	
+    method Retune {opt val} {
+	set options($opt) $val
+	set wid $options(-bpf-width)
+	# convert -bpf-width to -low -high
+	# compute -tuned-freq offset from -center-freq
+	switch $options(-mode) {
+	    CWU {
+		lassign [list [expr {$options(-cw-freq)-$wid/2}] [expr {$options(-cw-freq)+$wid/2}]] options(-low) options(-high)
+		set options(-tuned-freq) [expr {$options(-lo-freq)+$options(-cw-freq)}]
+	    }
+	    CWL {
+		lassign [list [expr {-$options(-cw-freq)-$wid/2}] [expr {-$options(-cw-freq)+$wid/2}]] options(-low) options(-high)
+		set options(-tuned-freq) [expr {$options(-lo-freq)-$options(-cw-freq)}]
+	    }
+	    DIGU - USB {
+		lassign [list 150 [expr {150+$wid}]] options(-low) options(-high)
+		set options(-tuned-freq) $options(-lo-freq)
+	    }
+	    DIGL - LSB {
+		lassign [list -150 [expr {-150-$wid}]] options(-low) options(-high)
+		set options(-tuned-freq) $options(-lo-freq)
+	    }
+	    AM - DSB - SAM - FM {
+		lassign [list [expr {-$wid/2}] [expr {+$wid/2}]] options(-low) options(-high)
+		set options(-tuned-freq) $options(-lo-freq)
+	    }
+	}
+	set options(-center-freq) [expr {$options(-freq)-$options(-tuned-freq)}]
+	set options(-filter-low) [expr {$options(-lo-freq)+$options(-low)}]
+	set options(-filter-high) [expr {$options(-lo-freq)+$options(-high)}]
+	set opts {}
+	foreach opt { -center-freq -tuned-freq -filter-low -filter-high } {
+	    if {[$data(display) cget $opt] != $options($opt)} { lappend opts $opt $options($opt) }
+	}
+	if {$opts ne {}} { $data(display) configure {*}$opts }
+    }
+
     method UpdateFrequencies {} {
 	#puts "recomputing frequencies for length $n from [llength $data(frequencies)]"
 	set data(frequencies) {}
@@ -209,15 +258,15 @@ snit::type sdrkit::spectrum {
 	#puts "recomputed [llength $data(frequencies)] frequencies"
     }
     method BlankUpdate {} {
-	if {[llength $data(frequencies)] != $options(-size)} {
-	    $self UpdateFrequencies
+	if {[llength $data(frequencies)] != $options(-size)} { $self UpdateFrequencies }
+	foreach x $data(frequencies) { lappend xy $x $options(-min) }
+	if { ! [winfo exists $data(display)]} {
+	    unset data(after)
+	} else {
+	    $data(display) update $xy
+	    # start the next
+	    set data(after) [after $options(-period) [mymethod Update]]
 	}
-	foreach x $data(frequencies) {
-	    lappend xy $x $options(-min)
-	}
-	$data(display) update $xy
-	# start the next
-	set data(after) [after $options(-period) [mymethod Update]]
     }
     method Update {} {
 	if {[$self is-busy]} {
@@ -261,9 +310,12 @@ snit::type sdrkit::spectrum {
 	    lappend xy $x $y
 	}
 	#puts "$xy"
-	$data(display) update $xy
-	
-	# start the next
-	set data(after) [after $options(-period) [mymethod Update]]
+	if { ! [winfo exists $data(display)]} {
+	    unset data(after)
+	} else {
+	    $data(display) update $xy
+	    # start the next
+	    set data(after) [after $options(-period) [mymethod Update]]
+	}
     }
 }

@@ -232,13 +232,13 @@ snit::widget sdrtk::dialbook {
 	}
     }
     method Press {} {
-	puts "$self Press"
+	# puts "$self Press"
 	if {$data(menu)} {
 	    # select currently addressed tab
 	    # end menu
 	} else {
-	    # start menu
-	    # make current tab currently addressed tab
+	    # start menu - done as a plain popup, but needs to be
+	    # redone in a way that uses the rotational input
 	    if { ! [winfo exists $win.menu]} {
 		menu $win.menu -tearoff no
 	    } else {
@@ -314,12 +314,20 @@ snit::widget sdrtk::dialbook {
 	grid rowconfigure $win.tab 0 -minsize $data(ht)
     }
 
+    method SubwindowMapped {w} {
+	bind $w <Map> {}
+	$self UpdateLists
+    }
+
     method UpdateLists {} {
 	set data(wd) 0
 	set data(ht) 0
 	foreach atab $data(tabs) {
 	    set w [$atab get-window]
-	    if { ! [winfo ismapped $w]} { update idletasks }
+	    if { ! [winfo ismapped $w]} {
+		#update idletasks
+		bind $w <Map> [mymethod SubwindowMapped %W]
+	    }
 	    lappend data(wd) [winfo width $w]
 	    lappend data(ht) [winfo height $w]
 	}

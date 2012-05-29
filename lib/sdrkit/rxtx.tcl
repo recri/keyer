@@ -23,20 +23,34 @@
 package provide sdrkit::rxtx 1.0.0
 
 package require snit
-package require sdrtk::control-dial
+package require sdrkit::control-dial
 package require sdrtk::cnotebook
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
 snit::type sdrkit::rxtx {
-    option -name sdr-src
+    option -name rxtx
     option -type dsp
-    option -title {IQ Source}
+    option -title {RXTX}
     option -in-ports {}
-    option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -out-ports {}
+
+    option -mox -default 0 -configuremethod Configure
+    option -freq -default 7050000 -configuremethod Configure
+    option -tune-rate -default 50 -configuremethod Configure
+    option -lo-freq -default 10000 -configuremethod Configure
+    option -lo-tune-rate -default 50 -configuremethod Configure
+    option -cw-freq -default 400 -configuremethod Configure
+    option -mode -default CWU -configuremethod Configure
+    option -agc-mode -default medium -configuremethod Configure
+    option -iq-correct -default off -configuremethod Configure
+    option -bpf-width -default 200 -configuremethod Configure
+    option -bpf-offset -default 150 -configuremethod Configure
+    option -hw-freq -default [expr {7050000-10000-400}] -readonly true
+
+    option -in-options {-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -mode -agc-mode -iq-correct -bpf-width}
+    option -out-options {-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -hw-freq -mode -agc-mode -iq-correct -bpf-width}
     
     option -sub-components {
 	ctl {Control} rxtx-control {}
@@ -44,6 +58,17 @@ snit::type sdrkit::rxtx {
 	tx {TX} tx {}
 	keyer {Key} keyer {}
     }
+
+    option -sub-controls {
+	mox radio {-format {MOX} -values {0 1} -labels {Off On}}
+	freq scale {-format {Freq %.0f Hz} -from 1000000 -to 30000000}
+	lo-freq scale {-format {LO %.0f Hz}  -from -24000 -to 24000}
+	cw-freq scale {-format {CW Tone %.0f Hz} -from 100 -to 1000}
+	mode radio {-format {Mode} -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}}
+	bpf-width scale {-format {Width %.0f Hz} -from 10 -to 50000}
+	bpf-offset scale {-format {Offset %.0f Hz} -from 10 -to 1000}
+    }
+
     option -port-connections {
     }
     option -opt-connections {
@@ -93,7 +118,7 @@ snit::type sdrkit::rxtx {
 	    $self sub-component none hardware sdrkit::hardware -hardware $options(-hardware)
 	}
 	if {$w ne {none}} {
-	    sdrkit::control-dial $w.dial -component $options(-component)
+	    sdrkit::control-dial $w.dial -command [mymethod Set]
 	    sdrtk::cnotebook $w.note
 	}
 	foreach {name title command args} $options(-sub-components) {
@@ -117,6 +142,7 @@ snit::type sdrkit::rxtx {
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
 	}
     }
+
     method resolve {} {
 	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
@@ -125,7 +151,8 @@ snit::type sdrkit::rxtx {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
 	}
-	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
+	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
+	    $options(-component) connect-opts $name1 $opt1 $name2 $opt2
 	}
 	if {$options(-rx-enable) ne {} && $options(-rx-enable)} {
 	    $options(-component) part-enable $options(-name)-rx
@@ -134,7 +161,26 @@ snit::type sdrkit::rxtx {
 	    $options(-component) part-activate $options(-name)-rx
 	}
     }
-    method is-active {} { return 1 }
-    method activate {} {}
-    method deactivate {} {}
+
+    method OptionConstrain {opt val} { return $val }
+    method OptionConfigure {opt val} { set options($opt) $val }
+    method ComponentConfigure {opt val} { $options(-window).dial configure $opt $val }
+    method ControlConfigure {opt val} { $options(-component) report $opt $val }
+
+    method Configure {opt val} {
+	set val [$self OptionConstrain $opt $val]
+	$self OptionConfigure $opt $val
+	$self ComponentConfigure $opt $val
+    }
+
+    method Set {opt val} {
+	set val [$self OptionConstrain $opt $val]
+	if {$opt eq {-lo-freq}} {
+	    set df [expr {$val-$options(-lo-freq)}]
+	    $self Set -freq [expr {$options(-freq)+$df}]
+	}
+	$self OptionConfigure $opt $val
+	$self ComponentConfigure $opt $val
+	$self ControlConfigure $opt $val
+    }
 }

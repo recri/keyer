@@ -1,5 +1,15 @@
 #!/bin/sh
+#
+# script to start jack with two sound cards
+# both running at 96000 samples per second
+# hw:1 being the master, presumed to connect to the radio
+# hw:0 being a slave, presumed to connect to onboard mike
+# and speakers
+# results logged to ~/Projects/keyer/logs/<date>-jack.log
+#
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
-jackd -T -s -dalsa -Chw:1 -Phw:1 -r96000 -p1024 -i2 -o2 -n3 -X raw > $LOG-jack.log 2>&1&
+RATE=96000
+jackd -T -s -dalsa -Chw:1 -Phw:1 -r$RATE -p1024 -i2 -o2 -n3 -X raw > $LOG-jack.log 2>&1&
 sleep 5
-jack_load audioadapter -i "-D -Chw:0,0 -Phw:0,1 -q 0 -r 96000" >> $LOG-jack.log 2>&1&
+jack_load audioadapter -i "-D -Chw:0,0 -Phw:0,1 -q 0 -r $RATE" >> $LOG-jack.log 2>&1&
+

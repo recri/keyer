@@ -39,25 +39,23 @@ snit::type sdrkit::rxtx-control {
 
     option -in-ports {}
     option -out-ports {}
-    option -in-options {-mox -split -qsk}
-    option -out-options {-mox -split -qsk}
+    option -in-options {}
+    option -out-options {}
 
     option -sub-controls {
-	mox radio {-format {MOX} -values {0 1} -labels {Off On}}
-	split radio {-format {Split} -values {0 1} -labels {Off On}}
-	qsk radio {-format {QSK} -values {0 1} -labels {Off On}}
     }
+    #split radio {-format {Split} -values {0 1} -labels {Off On}}
+    #qsk radio {-format {QSK} -values {0 1} -labels {Off On}}
 
     option -sub-components {
-	rx {RX Control} rx-control {}
-	tx {TX Control} tx-control {}
-	keyer {Keyer Control} keyer-control {}
 	more {More Controls} more-control {}
     }
+    #rx {RX Control} rx-control {}
+    #tx {TX Control} tx-control {}
+    #keyer {Keyer Control} keyer-control {}
 
-    option -mox -default 0 -configuremethod Configure
-    option -split -default 0 -configuremethod Configure
-    option -qsk -default 0 -configuremethod Configure
+    #option -split -default 0 -configuremethod Configure
+    #option -qsk -default 0 -configuremethod Configure
 
     variable data -array {}
 
