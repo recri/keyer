@@ -38,13 +38,22 @@ package require snit
 #' Wilkinson, L. (2005) The Grammar of Graphics, Springer-Verlag New York, Inc.
 #' Talbot, J., Lin, S., Hanrahan, P. (2010) An Extension of Wilkinson's Algorithm for Positioning Tick Labels on Axes, InfoVis 2010.
 
+namespace eval sdrtk::tick-labels {
+    array set data { eps 1.11e-16 }
+}
+
 snit::type sdrtk::tick-labels {
-    variable data -array {
-	eps 1.11e-16
+
+    proc dot {v1 v2} {
+	set dot 0
+	foreach e1 $v1 e2 $v2 {
+	    set dot [expr {$dot+$e1*$e2}]
+	}
+	return $dot
     }
 
     proc simplicity {q Q j lmin lmax lstep} {
-	set eps [expr {$data(eps) * 100}]
+	set eps [expr {${::sdrtk::tick-labels::data(eps)} * 100}]
 	set n [llength $Q]
 	set i [expr {[lsearch $Q $q]+1}]
 	set v [expr {(fmod($lmin,$lstep) < $eps || $lstep - fmod($lmin, $lstep) < $eps) && $lmin <= 0 && $lmax >= 0}]
@@ -97,7 +106,7 @@ snit::type sdrtk::tick-labels {
 
     proc seq-step {min max step} {
 	set seq {}
-	for {set x $min} {$min <= $max} {set x [expr {$x+$step}]} {
+	for {set x $min} {$x <= $max} {set x [expr {$x+$step}]} {
 	    lappend seq $x
 	}
 	return $seq
@@ -118,14 +127,18 @@ snit::type sdrtk::tick-labels {
     #' Talbot, J., Lin, S., Hanrahan, P. (2010) An Extension of Wilkinson's Algorithm for Positioning Tick Labels on Axes, InfoVis 2010.
     #' @author Justin Talbot \email{jtalbot@@stanford.edu}
     #' @export
-    proc extended {dmin dmax m {Q {1 5 2 2.5 4 3}} {only_loose false} {w {0.25 0.2 0.5 0.05}}} {
-	set eps <- .Machine$double.eps * 100
+    method extended {dmin dmax m {Q {1 5 2 2.5 4 3}} {only_loose false} {w {0.25 0.2 0.5 0.05}}} {
+	set eps [expr {${::sdrtk::tick-labels::data(eps)} * 100}]
 
-	if {$dmin > $dmax} { lassign [list $dmin $dmax] dmax dmin }
+	if {$dmin > $dmax} {
+	    lassign [list $dmin $dmax] dmax dmin
+	    # puts "reversed order of $dmin $dmax"
+	}
 	
 	if {$dmax - $dmin < $eps} {
 	    #if the range is near the floating point limit,
 	    #let seq generate some equally spaced steps.
+	    # puts "range is less than $eps"
 	    return [seq-n dmin dmax m]
 	}
 	set n [llength $Q]
@@ -133,32 +146,38 @@ snit::type sdrtk::tick-labels {
 	set best {}
 	set best_score -2
 	
-	for {set j 1} {$j < Inf} {incr j} {
+	for {set j 1} {$j < Inf} {set j [expr {$j+1}]} {
+	    # puts "iteration j = $j"
 	    foreach q $Q {
+		# puts "iteration q = $q"
 		set sm [simplicity-max $q $Q $j]
 		if {[dot $w [list $sm 1 1 1]] < $best_score} {
 		    set j Inf
+		    # puts "set j Inf -> $j and break"
 		    break
 		}
 		for {set k 2} {$k < Inf} {incr k} {
+		    # puts "iteration k $k"
 		    set dm [density-max $k $m]
 
 		    if {[dot $w [list $sm 1 $dm 1]] < $best_score} break
 
 		    set delta [expr {double($dmax-$dmin)/($k+1)/$j/$q}]
-		    for {set z [expr {ceil(log10($delta))}]} {$z < Inf} {incr z} {
+		    for {set z [expr {ceil(log10($delta))}]} {$z < Inf} {set z [expr {$z+1}]} {
+			#puts "iteration z $z"
 			set step [expr {$j*$q*10**$z}]
-
+			#puts "step $step"
 			set cm [coverage-max $dmin $dmax [expr {$step*($k-1)}]]
-
+			#puts "coverage-max $cm"
 			if {[dot $w [list $sm $cm $dm 1]] < $best_score} break
-					
+			
 			set min_start [expr {floor($dmax/($step))*$j - ($k - 1)*$j}]
 			set max_start [expr {ceil($dmin/($step))*$j}]
-
+			#puts "min_start $min_start maxstart $max_start"
 			if {$min_start > $max_start} continue
 
 			foreach start [seq-step $min_start $max_start 1] {
+			    #puts "iteration start $start"
 			    set lmin [expr {$start * ($step/$j)}]
 			    set lmax [expr {$lmin + $step*($k-1)}]
 			    set lstep $step

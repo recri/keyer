@@ -28,7 +28,7 @@ package require sdrtk::tick-labels
 #
 
 snit::widgetadaptor sdrtk::graph {
-    component ticks
+    component ticklabels
 
     # minimum and maximum of arguments
     proc min {args} { return [tcl::mathfunc::min {*}$args] }
@@ -87,7 +87,7 @@ snit::widgetadaptor sdrtk::graph {
 
     constructor {args} {
 	installhull using canvas
-	install ticks using sdrtk::tick-labels %AUTO%
+	install ticklabels using sdrtk::tick-labels %AUTO%
 	bind $win <Configure> [mymethod window-configure]
 	set data [dict create lines {} bbox [bbox-empty] inset {} frame {} title {}]
 	$self configure {*}$args
@@ -180,15 +180,20 @@ snit::widgetadaptor sdrtk::graph {
 	}
 
 	# draw and label the tick marks 
-	$self ticks x [ticks-place $x0 $wx0 $x1 $wx1]
-	$self ticks y [ticks-place $y0 $wy0 $y1 $wy1]
+	$self ticks x [$self ticks-place $x0 $wx0 $x1 $wx1]
+	$self ticks y [$self ticks-place $y0 $wy0 $y1 $wy1]
     }
 
     # decide tick placement for value v0 to value v1
     # located at window wv0 to window wv1
     # return a list of value-string window-coordinate tick-size triples
-    proc ticks-place {v0 wv0 v1 wv1} {
-	return [list [format %.1f $v0] $wv0 3 [format %.1f $v1] $wv1 3]
+    method ticks-place {v0 wv0 v1 wv1} {
+	set n [expr {max(3,int(abs($wv0-$wv1)/30))}]
+	foreach mark [$ticklabels extended $v0 $v1 $n] {
+	    set c [expr {($mark-$v0)/($v1-$v0)*($wv1-$wv0)+$wv0}]
+	    lappend marks [format %.1f $mark] $c 3
+	}
+	return $marks
     }
     method ticks {coord places} {
 	$hull delete $coord-tick

@@ -39,6 +39,20 @@ proc average-max-min {vals} {
     return [list [expr {[tcl::mathop::+ {*}$vals]/double([llength $vals])}] [tcl::mathfunc::max {*}$vals] [tcl::mathfunc::min {*}$vals]]
 }
 
+proc trimmed-weighted-mean {parts} {
+    set m 0
+    set n 0
+    set i 1
+    foreach p $parts {
+	# trim the singletons
+	if {$p < 2} continue
+	set m [expr {$m+$p*$i}]
+	incr n $p
+	incr i
+    }
+    return [expr {double($m)/$n}]
+}
+	    
 proc main {argv} {
     foreach {option value} $argv {
 	switch -- $option {
@@ -47,14 +61,14 @@ proc main {argv} {
 	}
     }
     grid [ttk::frame .t] -row 0
-    grid [sdrtk::graph .c] -row 1 -sticky nsew
-    grid [sdrtk::graph .d] -row 2 -sticky nsew
-    grid [sdrtk::graph .e] -row 3 -sticky nsew
+    grid [sdrtk::graph .c] [sdrtk::graph .d] -row 1 -sticky nsew
+    grid [sdrtk::graph .e] [sdrtk::graph .f] -row 2 -sticky nsew
     grid rowconfigure . 1 -weight 1
     grid rowconfigure . 2 -weight 1
     grid rowconfigure . 3 -weight 1
     grid columnconfigure . 0 -weight 1
-
+    grid columnconfigure . 1 -weight 1
+    
     set lineno 0
     while {[gets stdin line] >= 0} {
 	incr lineno
@@ -74,7 +88,9 @@ proc main {argv} {
 	lappend qval($freq) [lindex $iq 1]
 	lappend dval($freq) $lvl
 	lappend pval($parts) $lvl
+	lappend mval([trimmed-weighted-mean $parts]) $lvl
     }
+    
     foreach f [lsort -real [array names ival]] {
 	lassign [average-max-min $ival($f)] iavg imax imin
 	lassign [average-max-min $qval($f)] qavg qmax qmin
@@ -89,9 +105,16 @@ proc main {argv} {
 	    lappend dxy $f $davg
 	}
     }
+    foreach m [lsort -real [array names mval]] {
+	lassign [average-max-min $mval($m)] mavg mmax mmin
+	lappend mxy $m $mavg
+    }
+
     .c add line pts {*}$ixy
     .d add line pts {*}$qxy
     .e add line pts {*}$dxy
+    .f add line pts {*}$mxy
+
     puts "[array size ival] frequencies"
     puts "[array size pval] parts"
     puts "$lineno lines processed"

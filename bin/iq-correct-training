@@ -949,7 +949,10 @@ proc main {argv} {
 	}
     }
     sdrtcl::audio-tap $::data(-name)-tap -server $::data(-server) -log2size $::data(-buffer) -log2n 2 -complex 1
+    $::data(-name)-tap activate
+    puts "$::data(-name)-tap activate"
     $::data(-name)-tap start
+    puts "$::data(-name)-tap start"
     if {$::data(-tap) ne {}} {
 	foreach in $::data(-tap) out [$::data(-name)-tap info ports] {
 	    sdrtcl::jack connect $in [join [list $::data(-name)-tap $out] :]
