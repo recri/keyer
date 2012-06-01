@@ -40,3 +40,12 @@
 ** and update the filter coefficient   
    w -= mu * z^2
 
+* The error signal is
+  z1 * z1 = z1.re^2 - z1.im^2 + 2 i z1.re z1.im
+  to the extent that z1 = cos(phi) + i sin(phi)
+  a perfect IQ signal, that becomes
+  cos(phi)^2 - sin(phi)^2 + 2 i cos(phi) sin(phi)
+  which is an IQ signal at twice the original frequency.
+
+
+  

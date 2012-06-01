@@ -134,15 +134,15 @@ array set data {
     -usbsoftrock true
     -iteration-set {1 2 4 8 16 32 64 128}
     -mu-set {}
-    -trainer-set {::trainer1 ::trainer2 ::trainer3 ::trainer4 ::trainer5}
+    -trainer-set {::trainer1 ::trainer2 ::trainer3 ::trainer4 ::trainer5 ::trainer6 ::trainer7}
     -buffer 10
-    selected-trainer {::trainer5}
+    selected-trainer {::trainer7}
     selected-iterations 32
     selected-mus {}
     samples {}
     
 }
-for {set i 26} {$i >= -10} {incr i -1} {
+for {set i 0} {$i >= 0} {incr i -1} {
     lappend data(-mu-set) [expr {2.0**$i}]
     lappend data(selected-mus) [expr {2.0**$i}]
 }
@@ -919,6 +919,119 @@ snit::type train6 {
 }
 train6 ::trainer6
 
+proc log2 {x} { return [expr {int(round(log10($x)/log10(2)))}] }
+
+# seventh training, sweep mu over a buffer of samples, pick the best
+snit::type train7 {
+    variable session
+    
+    proc init-plot {session} {
+	.t.title configure -text [dict get $session title]
+	catch {.c delete all}
+	foreach s [grid slaves .] {
+	    if {$s in {.c .d .e .f}} {
+		grid forget $s
+	    }
+	}
+	grid .c -row 1 -column 0 -sticky nsew
+	grid columnconfigure . 0 -weight 1
+	grid rowconfigure . 1 -weight 1
+	set pi [expr {atan2(0,-1)}]
+	set pts {}
+	for {set i 0} {$i <= 64} {incr i} {
+	    set phi [expr {$i*2*$pi/64.0}]
+	    lappend pts [expr {cos($phi)}] [expr {sin($phi)}]	    
+	}
+	.c add line circle
+	.c line add point circle {*}$pts
+    }
+
+    proc update-plot {re0 im0 re1 im1} {
+	# extend the segment from pt0 to p1 to the intersection with the unit circle
+	set vx [expr {$re1-$re0}]
+	set vy [expr {$im1-$im0}]
+	# oh, cheat, just draw the ray of radius 1
+	set dv [expr {sqrt($vx*$vx+$vy*$vy)}]
+	.c add line [list $re0 $im0]
+	.c line add point [list $re0 $im0] $re0 $im0 $re1 $im1 [expr {$re0+$vx/$dv}] [expr {$im0+$vy/$dv}]
+    }
+
+    proc finish-plot {} {
+	#puts "finish-plot"
+    }
+
+    # train over a buffer of samples
+    # we are looking for a signal that tells us what mu to start at
+    # a mu that is too large will cause w to blow up
+    #  this is apparent at the end of a round of training from the value of w
+    # a mu that is smaller but still too large causes w to oscillate
+    #  this is apparent at the end of a round of training from the dispersion
+    #  of the magnitude of w, but I'm not collecting that anymore because it's
+    #  expensive to compute, I'm hoping that the dispersion in real(w) or imag(w)
+    #  will show a similar signal.
+    # a mu that is smaller will move toward the region of filter convergence, then
+    #  oscillate when it gets within mu*error of the filter.
+    # a mu that is too small will not modify w at all
+    #
+    # the hope is that looking at the series of w's trained by a series of mu's will
+    # have the pattern "blow up* oscillate* converging* nothing*"
+    # the oscillate* will have large magnitudes of w, but the angles of w will be
+    # wobbling around.
+    # the converge* will have decreasing magnitudes of w in proportion to the magnitude
+    # of mu, but the angles of w will all be aligned.
+    # the goal is to ride the largest mu which is converging until it begins to oscillate
+    # and then step down to the next smaller mu, and so on.
+    proc train {type iterations mus buffer {winit {0 0}}} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	foreach mu $mus { dict set session mu $mu 0 [list 0 0] }
+
+	puts "mus: {$mus}"
+	puts [dict get $session title]
+	
+	init-plot $session
+	set binary [format-buffer $buffer]
+	set ntotal 0
+	set nparts {}
+	foreach winit {{0 0} {0.1 0} {-0.1 0} {0 0.1} {0 -0.1}} {
+	    puts [format "%s w {%10.7f %10.7f}" [dict get $session title] {*}$winit]
+	    foreach mu $mus {
+		# puts [format "i %2d mu %.6f w %.6f %.6f" 0 $mu {*}$w]
+		lassign [sdrtcl::iq-correct-train2 $mu {*}$winit $binary] re im avg_re avg_im var_re var_im disp_re disp_im
+		if {$re != $re || $im != $im} {
+		    puts [format {%3.0f NaN NaN} [log2 $mu]]
+		} else {
+		    lassign $winit reinit iminit
+		    set dre [expr {$re-$reinit}]
+		    set dim [expr {$im-$iminit}]
+		    set mag2 [expr {$dre*$dre+$dim*$dim}]
+		    set mag [expr {sqrt($mag2)}]
+		    set phi [expr {180*atan2($dim,$dre)/atan2(0,-1)}]
+		    puts [format {%3.0f %12.9f %12.9f %12.9f %12.9f} [log2 $mu] $re $im $mag $phi]
+		    update-plot $reinit $iminit $re $im
+		}
+	    }
+	}
+    }
+    method train {iterations mus samples {winit {0 0}}} {
+	return [train [$self info type] $iterations $mus $samples $winit]
+    }
+}
+train7 ::trainer7
+
+
 proc do-train {} { $::data(selected-trainer) train $::data(selected-iterations) $::data(selected-mus) $::data(samples) }
 proc start-train {} { after 1 do-train }
 
@@ -997,5 +1110,5 @@ proc main {argv} {
 	exit 0
     }
 }
-    
+
 main $argv

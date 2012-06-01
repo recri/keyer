@@ -34,12 +34,12 @@
 #include "dspmath.h"
 
 typedef struct {
-  float mu;			/* update factor, a loop gain */
+  double mu;			/* update factor, a loop gain */
 } iq_correct_options_t;
 
 typedef struct {
-  float mu;
-  float complex w;
+  double mu;
+  double complex w;
 } iq_correct_t;
 
 static void iq_correct_configure(iq_correct_t *p, iq_correct_options_t *q) {
@@ -52,16 +52,16 @@ static void *iq_correct_preconfigure(iq_correct_t *p, iq_correct_options_t *q) {
 }
 
 static void *iq_correct_init(iq_correct_t *p, iq_correct_options_t *q) {
-  p->w = 0.0f;
+  p->w = 0.0;
   void *e = iq_correct_preconfigure(p, q); if (e != p) return e;
   iq_correct_configure(p, q);
   return p;
 }
 
 static float complex iq_correct_process(iq_correct_t *p, const float complex z0) {
-  const float complex z1 = z0 + p->w * conjf(z0); // compute corrected sample
-  p->w -= p->mu * z1 * z1;			  // filter update: coefficients += -mu * error
-  return z1;					  // return corrected sample
+  const double complex z1 = z0 + p->w * conjf(z0);	// correct sample
+  p->w -= p->mu * z1 * z1;				// update filter
+  return z1;
 }
 
 #endif

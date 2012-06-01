@@ -100,11 +100,22 @@ snit::type sdrtk::tick-labels {
 	return 1;			## did all the legibility tests in C#, not in R.
     }
 
-    proc seq-n {min max n-steps} {
+    proc seq-n {min max n} {
+	if {$min == $max} {
+	    set min [expr {$min-0.1}]
+	    set max [expr {$min+0.1}]
+	}
 	return [seq-step $min $max [expr {($max-$min)/($n-1)}]]
     }
 
     proc seq-step {min max step} {
+	if {$min == $max} {
+	    set min [expr {$min-0.1}]
+	    set max [expr {$min+0.1}]
+	}
+	if {$step == 0} {
+	    set step [expr {($max-$min)/2.0}]
+	}
 	set seq {}
 	for {set x $min} {$x <= $max} {set x [expr {$x+$step}]} {
 	    lappend seq $x
@@ -139,7 +150,7 @@ snit::type sdrtk::tick-labels {
 	    #if the range is near the floating point limit,
 	    #let seq generate some equally spaced steps.
 	    # puts "range is less than $eps"
-	    return [seq-n dmin dmax m]
+	    return [seq-n $dmin $dmax $m]
 	}
 	set n [llength $Q]
 	

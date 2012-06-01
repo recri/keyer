@@ -49,9 +49,14 @@ snit::type sdrkit::iq-correct {
 
     option -sub-controls {
 	mu radio {-values {0 1} -labels {Off On} -format {Correct}}
+	error button {-text Error}
+	train button {-text Train}
     }
 
     variable data -array {
+	mu 1
+	wreal 0
+	wimag 0
     }
 
     constructor {args} {
@@ -70,6 +75,10 @@ snit::type sdrkit::iq-correct {
 	if {$w eq {}} { set pw . } else { set pw $w }
 
 	foreach {opt type opts} $options(-sub-controls) {
+	    switch $opt {
+		error { lappend opts -command [mymethod get-error] }
+		train { lappend opts -command [mymethod do-train] }
+	    }
 	    switch $type {
 		spinbox {
 		    package require sdrkit::label-spinbox
@@ -87,6 +96,10 @@ snit::type sdrkit::iq-correct {
 		    package require sdrkit::label-radio
 		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
 		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
+		}
+		button {
+		    package require sdrkit::label-button
+		    sdrkit::label-button $w.$opt {*}$opts
 		}
 		default { error "unimplemented control type \"$type\"" }
 	    }
@@ -111,17 +124,31 @@ snit::type sdrkit::iq-correct {
 	}
     }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
     method Configure {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
     }
-
     method Set {opt val} {
 	set val [$self OptionConstrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
 	$self ControlConfigure $opt $val
+    }
+    method get-error {} {
+	if {[sdrkitx::$options(-name) is-active]} {
+	    set e [sdrkitx::$options(-name) error]
+	    puts "iq-correct error $e"
+	} else {
+	    puts "iq-correct is not activated"
+	}
+    }
+    method do-train {} {
+	if {[sdrkitx::$options(-name) is-active]} {
+	    set r [sdrkitx::$options(-name) train $data(mu) $data(wreal) $data(wimag)]
+	    puts "iq-correct train $data(mu) $data(wreal) $data(wimag) -> $r"
+	} else {
+	    puts "iq-correct is not activated"
+	}
     }
 }
