@@ -960,6 +960,51 @@ snit::type train7 {
 	#puts "finish-plot"
     }
 
+    proc estimate-error {buffer} {
+	set n 0
+	set sum [complex 0 0]
+	foreach {i q} $buffer {
+	    set z [complex $i $q]
+	    set sum [expr {[+ $sum [* $z $z]]}]
+	    incr n
+	}
+	return [expr {max(abs([real $z]/$n), abs([imag $z]/$n))}]
+    }
+    proc choose-alternate-ws {re1 im1 re2 im2} {
+	set orthag [geometry::orthogonal-line [list $re1 $im1 $re2 $im2]]
+	puts "orthogonal-line to $re1 $im1 $re2 $im2 is $orthag"
+	set pts [intersection-line-circle $orthag [list 0 0 1 0]]
+	puts "points intersecting circle at $pts"
+	foreach p $pts {
+	    lassign $p x y
+	    lappend ws [list [expr {($x+$re1)/2}] [expr {($y+$im1)/2}]]
+	}
+	return $ws
+    }
+    proc intersections-line-set {args} {
+	set pts {}
+	foreach line $args {
+	    foreach line2 $args {
+		if {[lsearch $line $args] < [lsearch $line2 $args]} {
+		    lappend pts [geometry::intersection-line-line $line $line2]
+		}
+	    }
+	}
+	return $pts
+    }
+    proc average-point-set {args} {
+	set sum_x 0
+	set sum_y 0
+	set n 0
+	foreach p $args {
+	    lassign $p x y
+	    set sum_x [expr {$sum_x+$x}]
+	    set sum_y [expr {$sum_y+$y}]
+	    incr n
+	}
+	return [list [expr {$sum_x/$n}] [expr {$sum_y/$n}]]
+    }
+    
     # train over a buffer of samples
     # we are looking for a signal that tells us what mu to start at
     # a mu that is too large will cause w to blow up
@@ -1003,26 +1048,30 @@ snit::type train7 {
 	
 	init-plot $session
 	set binary [format-buffer $buffer]
-	set ntotal 0
-	set nparts {}
-	foreach winit {{0 0} {0.1 0} {-0.1 0} {0 0.1} {0 -0.1}} {
-	    puts [format "%s w {%10.7f %10.7f}" [dict get $session title] {*}$winit]
-	    foreach mu $mus {
-		# puts [format "i %2d mu %.6f w %.6f %.6f" 0 $mu {*}$w]
-		lassign [sdrtcl::iq-correct-train2 $mu {*}$winit $binary] re im avg_re avg_im var_re var_im disp_re disp_im
-		if {$re != $re || $im != $im} {
-		    puts [format {%3.0f NaN NaN} [log2 $mu]]
-		} else {
-		    lassign $winit reinit iminit
-		    set dre [expr {$re-$reinit}]
-		    set dim [expr {$im-$iminit}]
-		    set mag2 [expr {$dre*$dre+$dim*$dim}]
-		    set mag [expr {sqrt($mag2)}]
-		    set phi [expr {180*atan2($dim,$dre)/atan2(0,-1)}]
-		    puts [format {%3.0f %12.9f %12.9f %12.9f %12.9f} [log2 $mu] $re $im $mag $phi]
-		    update-plot $reinit $iminit $re $im
-		}
+	# start from origin
+	set winit {0 0}
+	# get the error magnitude
+	set e [estimate-error $buffer]
+	# pick a mu
+	set mu [expr {1e-10/$e}]
+	foreach try {0 1 2 3 4 5} {
+	    puts [format "%s e %10.7 mu %10.7 w {%10.7f %10.7f}" [dict get $session title] $e $mu {*}$winit]
+	    # puts [format "i %2d mu %.6f w %.6f %.6f" 0 $mu {*}$w]
+	    lassign [sdrtcl::iq-correct-train2 $mu {*}$winit $binary] re im avg_re avg_im var_re var_im disp_re disp_im
+	    if {$re != $re || $im != $im} {
+		puts [format {%3.0f NaN NaN} [log2 $mu]]
+		break
 	    }
+	    update-plot {*}$winit $re $im
+	    set lines [list [list {*}$winit $re $im]]
+	    foreach wx [choose-alternate-ws $winit [list $re $im]] {
+		lassign [sdrtcl::iq-correct-train2 $mu {*}$wx $binary] wxre wxim avg_re avg_im var_re var_im disp_re disp_im
+		update-plot {*}$wx $wxre $wxim
+		lappend lines [list {*}$wx $wxre $wxim]
+	    }
+	    set pts [intersections-line-set {*}$lines]
+	    set winit [average-point-set {*}$pts]
+	    puts [format {%12.9f %12.9f : %s} {*}$winit $pts]
 	}
     }
     method train {iterations mus samples {winit {0 0}}} {
