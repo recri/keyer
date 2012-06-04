@@ -58,7 +58,7 @@ snit::type sdrkit::spectrum {
     option -sample-rate 48000
 
     option -period -default 100 -configuremethod Configure
-    option -size -default 1024 -configuremethod TapConfigure
+    option -size -default 2048 -configuremethod TapConfigure
     option -polyphase -default 1 -configuremethod TapConfigure
     option -result -default dB -configuremethod TapConfigure
     option -tap -default {} -configuremethod Configure
