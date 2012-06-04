@@ -270,38 +270,34 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   case as_coefficients:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float complex));
     float complex *coeff = (float complex *)Tcl_GetByteArrayFromObj(result, NULL);
-    for (int i = 0; i < opts->size; i += 1)
-      coeff[i] = norm * inout[i];
+    for (int i = 0; i < opts->size; i += 1) coeff[i] = norm * inout[i];
     break;
   case as_magnitudes:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float));
     float *mag = (float *)Tcl_GetByteArrayFromObj(result, NULL);
-    for (int i = 0; i < opts->size; i += 1)
-      mag[i] = norm * cabsf(inout[i]);
+    for (int i = 0; i < opts->size; i += 1) mag[i] = norm * cabsf(inout[i]);
     break;
   case as_magnitudes_squared:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float));
     float *mag2 = (float *)Tcl_GetByteArrayFromObj(result, NULL);
-    for (int i = 0; i < opts->size; i += 1)
-      mag2[i] = norm2 * cabs2f(inout[i]);
+    for (int i = 0; i < opts->size; i += 1) mag2[i] = norm2 * cabs2f(inout[i]);
     break;
   case as_decibels:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float));
     float *dB = (float *)Tcl_GetByteArrayFromObj(result, NULL);
-    for (int i = 0; i < opts->size; i += 1)
-      dB[i] = 10 * (log10f(cabs2f(inout[i]) + 1e-16) + lognorm2);
+    for (int i = 0; i < opts->size; i += 1) dB[i] = 10 * log10f(cabs2f(inout[i]) + 1e-60);
     break;
   case as_decibel_shorts:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(short));
     short *shorts = (short *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1)
-      shorts[i] = (short)(100 * 10 * (log10f(cabs2f(inout[i]) + 1e-16) + lognorm2));
+      shorts[i] = (short)(100 * 10 * log10f(cabs2f(inout[i]) + 1e-60));
     break;
   case as_decibel_chars:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(unsigned char));
     unsigned char *chars = (unsigned char *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1) {
-      short t = (short)(10 * (log10f(cabs2f(inout[i]) + 1e-16) + lognorm2));
+      short t = (short)(10 * log10f(cabs2f(inout[i]) + 1e-60));
       chars[i] = (t > 0) ? 0 : (t < -255 ? 255 : -t);
     }
     break;
