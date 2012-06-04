@@ -69,6 +69,7 @@ snit::type sdrkit::rxtx {
 	rx {RX} rx {}
 	tx {TX} tx {}
 	keyer {Key} keyer {}
+	spectrum {Spec} spectrum {}
     }
 
     option -sub-controls {
@@ -82,6 +83,7 @@ snit::type sdrkit::rxtx {
     }
 
     option -port-connections {
+	rx-if-sp2 out-ports spectrum in-ports
     }
     option -opt-connections {
     }
@@ -103,6 +105,8 @@ snit::type sdrkit::rxtx {
     option -keyer-sink {}
     option -physical true
     option -hardware {}
+
+    option -parts-enable { spectrum }
 
     variable data -array {
 	parts {}
@@ -139,6 +143,7 @@ snit::type sdrkit::rxtx {
 		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }
 		tx { lappend args -tx-source $options(-tx-source) -tx-sink $options(-tx-sink) }
 		keyer { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
+		spectrum { }
 		default { error "rxtx::build-ui unknown name \"$name\"" }
 	    }
 	    if {$w eq {none}} {
@@ -172,6 +177,10 @@ snit::type sdrkit::rxtx {
 	if {$options(-rx-activate) ne {} && $options(-rx-activate)} {
 	    $options(-component) part-activate $options(-name)-rx
 	}
+	foreach name $options(-parts-enable) {
+	    set data($name-enable) 1
+	    $self Enable $name
+	}
     }
 
     method OptionConstrain {opt val} { return $val }
@@ -194,5 +203,20 @@ snit::type sdrkit::rxtx {
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
 	$self ControlConfigure $opt $val
+	if {$opt eq {-freq}} {
+	    switch $options(-mode) {
+		CWU { set options(-hw-freq) [expr {$val-$options(-lo-freq)-$options(-cw-freq)}] }
+		CWL { set options(-hw-freq) [expr {$val-$options(-lo-freq)+$options(-cw-freq)}] }
+		default { set options(-hw-freq) [expr {$val-$options(-lo-freq)}] }
+	    }
+	    $self ControlConfigure -hw-freq $options(-hw-freq)
+	}
+    }
+    method Enable {name} {
+	if {$data($name-enable)} {
+	    $options(-component) part-enable $options(-name)-$name
+	} else {
+	    $options(-component) part-disable $options(-name)-$name
+	}
     }
 }

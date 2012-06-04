@@ -23,7 +23,6 @@
 package provide sdrkit::hardware 1.0.0
 
 package require snit
-package require sdrtcl::hardware
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -44,64 +43,60 @@ snit::type sdrkit::hardware {
     option -in-options {}
     option -out-options {}
 
-    option -hardware -default {} -configuremethod Configure
+    option -hardware -default {}
 
     option -sub-controls {
     }
 	
     variable data -array {
+	parts {}
     }
 
     constructor {args} {
+	#puts "sdrkit::hardware constructor $args"
 	$self configure {*}$args
-    }
-    destructor {
-	foreach name $data(parts) {
-	    catch {::sdrkitx::$options(-name)-$name deactivate}
-	    catch {rename ::sdrkitx::$options(-name)-$name {}}
-	}
-    }
-    method build-parts {} {
 	foreach {name command args} $options(-hardware) {
-	    package require sdrkit::$command
-	    lappend data(parts) $name
-	    sdrkit::$command ::sdrkitx::$options(-name)-$name -server $options(-server) {*}$args
+	    lappend options(-sub-components) $name $name $command $args
 	}
     }
-    method build-ui {} {
+    destructor { $options(-component) destroy-sub-parts $data(parts) }
+    method sub-component {window name subsub args} {
+	lappend data(parts) $name
+	$options(-component) sub-component $window $name $subsub {*}$args
+    }
+    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
+    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
+    method build {} {
 	set w $options(-window)
-	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
-	foreach {opt type opts} $options(-sub-controls) {
-	    switch $type {
-		spinbox {
-		    package require sdrkit::label-spinbox
-		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		scale {
-		    package require sdrkit::label-scale
-		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		separator {
-		    ttk::separator $w.$opt
-		}
-		radio {
-		    package require sdrkit::label-radio
-		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
-		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		}
-	    }
-	    grid $w.$opt -sticky ew
+	if {$w ne {none}} {
+	    if {$w eq {}} { set pw . } else { set pw $w }
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	foreach {name title command args} $options(-sub-components) {
+	    if {$w eq {none}} {
+		$self sub-component none $name sdrkit::$command {*}$args
+	    } else {
+		sdrtk::clabelframe $w.$name -label $title
+		if {$command ni {meter-tap spectrum-tap}} {
+		    # only display real working components
+		    grid $w.$name -sticky ew
+		}
+		set data($name-enable) 0
+		ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
+		ttk::frame $w.$name.container
+		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
+		grid $w.$name.enable $w.$name.container
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    }
+	}
+	if {$w ne {none}} {
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	}
     }
     method is-needed {} { return 1 }
     method is-busy {} { return 0 }
-    method is-active {} { return [::sdrkitx::$options(-name) is-active] }
-    method activate {} { ::sdrkitx::$options(-name) activate }
-    method deactivate {} { ::sdrkitx::$options(-name) deactivate }
+    method is-active {} { return 1 }
+    method activate {} {  }
+    method deactivate {} {  }
 
     method OptionConstrain {opt val} { return $val }
     method OptionConfigure {opt val} { set options($opt) $val }

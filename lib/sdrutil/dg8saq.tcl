@@ -146,13 +146,9 @@ proc dg8saq::close {h} {
 proc dg8saq::calibrate {h} {
     ## Si570 RECALL function
     set i2c [usb::device_to_host [handle::handle $h] 0x20 [expr {[handle::si570_addr $h] | (135 << 8)}] 0x01 "xxxxxxxx" 500]
-    if {[string length $i2c] != 1} {
-	error "failed resetting to factory frequency"
-    }
+    if {[string length $i2c] != 1} { error "failed resetting to factory frequency: [string length $buff]" }
     binary scan $i2c c i2c
-    if {$i2c != 0} {
-	error "failed resetting to factory frequency"
-    }
+    if {$i2c != 0} { error "failed resetting to factory frequency: $i2c" }
     set regs [get $h registers]
     set newXtallFreq [si570::calculate_xtal $regs [handle::si570_startup $h]]
     return [si570::validate_xtal $newXtallFreq]
@@ -165,9 +161,7 @@ proc dg8saq::get {h tag args} {
 proc dg8saq::get_read_version {h} {
     variable REQUEST_READ_VERSION
     set version [usb::device_to_host [handle::handle $h] $REQUEST_READ_VERSION 0x0E00 0 "xxxxxxxxx" 500]
-    if {[string length $version] != 2} {
-	error "failed to read version"
-    }
+    if {[string length $version] != 2} { error "failed to read version: [string length $buff]" }
     binary scan $version cc minor major
     return [format %d.%d $major $minor]
 }
@@ -175,9 +169,7 @@ proc dg8saq::get_read_version {h} {
 proc dg8saq::get_frequency_by_value {h} {
     variable REQUEST_READ_FREQUENCY
     set buff [usb::device_to_host [handle::handle $h] $REQUEST_READ_FREQUENCY 0 0 "xxxxxxxxx" 500]
-    if {[string length $buff] != 4} {
-	error "failed to read frequency"
-    }
+    if {[string length $buff] != 4} { error "failed to read frequency: [string length $buff]" }
     binary scan $buff i ifreq
     return [expr {double($ifreq)/ (1<<21)}]
 }
@@ -185,9 +177,7 @@ proc dg8saq::get_frequency_by_value {h} {
 proc dg8saq::get_registers {h} {
     variable REQUEST_READ_REGISTERS
     set buff [usb::device_to_host [handle::handle $h] $REQUEST_READ_REGISTERS [handle::si570_addr $h] 0 "xxxxxxxx" 500]
-    if {[string length $buff] != 6} {
-	error "failed to read registers"
-    }
+    if {[string length $buff] != 6} { error "failed to read registers: [string length $buff]" }
     binary scan $buff c* regs
     foreach r $regs {
 	lappend result [format 0x%02x [expr {$r&0xFF}]]
@@ -202,9 +192,7 @@ proc dg8saq::get_frequency {h} {
 proc dg8saq::get_read_keys {h} {
     variable REQUEST_READ_KEYS
     set buff [usb::device_to_host [handle::handle $h] $REQUEST_READ_KEYS 0 0 "xxxxxxxx" 500]
-    if {[string length $buff] != 1} {
-	error "failed to read keys"
-    }
+    if {[string length $buff] != 1} { error "failed to read keys: [string length $buff]" }
     binary scan $buff c k
     return [expr {$k&0xFF}]
 }
@@ -229,9 +217,7 @@ proc dg8saq::get_startup_freq {h} {
     # note, this is not the si570 startup frequency, it's the operating startup frequency
     variable REQUEST_READ_STARTUP
     set buff [usb::device_to_host [handle::handle $h] $REQUEST_READ_STARTUP 0 0 "xxxxxxxx" 500]
-    if {[string length $buff] != 4} {
-	error "failed to read startup"
-    }
+    if {[string length $buff] != 4} { error "failed to read startup: [string length $buff]" }
     # requires config for softrock: multiplier
     binary scan $buff i ifreq
     return [expr {(double($ifreq) / (1<<21)) / [handle::multiplier $h]}]
@@ -240,9 +226,7 @@ proc dg8saq::get_startup_freq {h} {
 proc dg8saq::get_xtal_freq {h} {
     variable REQUEST_READ_XTALL
     set buff [usb::device_to_host [handle::handle $h] $REQUEST_READ_XTALL 0 0 "xxxxxxxx" 500]
-    if {[string length $buff] != 4} {
-	error "failed to read xtall"
-    }
+    if {[string length $buff] != 4} { error "failed to read xtall: [string length $buff]" }
     binary scan $buff i ifreq
     return [expr {double($ifreq) / (1<<24)}]
 }
@@ -250,8 +234,7 @@ proc dg8saq::get_xtal_freq {h} {
 proc dg8saq::get_si570_address {h} {
     variable REQUEST_SET_SI570_ADDR
     set buff [usb::device_to_host [handle::handle $h] $REQUEST_SET_SI570_ADDR 0 0 "xxxxxxxx" 500]
-    if {[string length $buff] != 1} {
-	error "failed to set si570 addr"
+    if {[string length $buff] != 1} { error "failed to set si570 addr: [string length $buff]"
     }
     binary scan $buff c addr
     return [expr {$addr & 0xFF}]
@@ -260,8 +243,7 @@ proc dg8saq::get_si570_address {h} {
 proc dg8saq::get_multiply_lo {h band} {
     variable REQUEST_READ_MULTIPLY_LO
     set buff [usb::device_to_host [handle::handle $h] $REQUEST_READ_MULTIPLY_LO 0 $band "xxxxxxxx" 500]
-    if {[string length $buff] != 8} {
-	error "failed to read multiply LO"
+    if {[string length $buff] != 8} { error "failed to read multiply LO: [string length $buff]"
     }
     binary scan $buff ii sub mul
     return [list [expr {double($sub) / (1<<21)}] [expr {double($mul) / (1<<21)}]]
@@ -407,28 +389,24 @@ proc dg8saq::put_frequency {h frequency} {
     set regs [si570::calculate_registers $f [handle::si570_xtal $h]]
     set buffer [binary format c* $regs]
     set result [usb::host_to_device [handle::handle $h] $REQUEST_SET_FREQ $value 0  500]
-    if {[string length $result] != 2} {
-	error "failed to set freq"
-    }
+    if {[string length $result] != 2} { error "failed to set freq: [string length $result]" }
 }
 
 proc dg8saq::put_frequency_by_value {h frequency} {
     variable REQUEST_SET_FREQ_BY_VALUE
     set value [expr {0x700 | [handle::si570_addr $h]}]
-    set buffer [binary format i [expr {round($frequency * 2097152.0)}]]
+    set buffer [binary format i [expr {int(round($frequency * (1<<21)))}]]
     set result [usb::host_to_device [handle::handle $h] $REQUEST_SET_FREQ_BY_VALUE $value 0 $buffer 500]
-    if {[string length $result] != 2} {
-	error "failed to set freq by value"
-    }
+    if {[string length $result] != 4} { error "failed to set freq by value: [string length $result]" }
+    binary scan $result i result
+    puts "put_frequency_by_value $frequency -> [expr {int(round($frequency * (1<<21)))}] -> $result -> [expr {double($result)/(1<<21)}]"
 }
 
 proc dg8saq::put_startup_freq {h startup_freq} {
     variable REQUEST_SET_STARTUP_FREQ
     set buffer [binary format i [expr {int($startup_freq * [handle::multiplier $h] * (1 << 21))}]]
     set result [usb::host_to_device [handle::handle $h] $REQUEST_SET_STARTUP_FREQ 0 0 $buffer 500]
-    if {[string length $result] != 2} {
-	error "failed to set startup freq"
-    }
+    if {[string length $result] != 2} { error "failed to set startup freq: [string length $result]" }
 }
 
 ##
@@ -439,9 +417,7 @@ proc dg8saq::put_xtal_freq {h xtal} {
     variable REQUEST_SET_XTALL_FREQ
     set buffer [binary format i [expr {int($xtal * (1<<24))}]]
     set result [usb::host_to_device [handle::handle $h] $REQUEST_SET_XTALL_FREQ 0 0 $buffer 500]
-    if {[string length $result] != 2} {
-	error "failed to set xtal freq"
-    }
+    if {[string length $result] != 2} { error "failed to set xtal freq: [string length $result]" }
 }
 
 ##
@@ -451,9 +427,7 @@ proc dg8saq::put_si570_address {h new_addr} {
     variable REQUEST_SET_SI570_ADDR
     set buffer [binary format c $new_addr]
     set result [usb::host_to_device [handle::handle $h] $REQUEST_SET_SI570_ADDR 0 $new_addr $buffer 500]
-    if {[string length $result] != 2} {
-	error "failed to set si570 addr"
-    }
+    if {[string length $result] != 2} { error "failed to set si570 addr: [string length $result]" }
 }
 
 ##
@@ -463,9 +437,7 @@ proc dg8saq::put_multiply_lo {h band mul sub} {
     variable REQUEST_SET_MULTIPLY_LO
     set buffer [binary format ii [expr {int($sub * (1<<21))}] [expr {int($mul * (1<<21))}]]
     set result [usb::host_to_device [handle::handle $h] $REQUEST_SET_MULTIPLY_LO 0 $band $buffer 500]
-    if {[string length $result] != 8} {
-	error "failed to set multiply LO $band $mul $sub"
-    }
+    if {[string length $result] != 8} { error "failed to set multiply LO $band $mul $sub" }
 }
 
 ##
@@ -474,9 +446,7 @@ proc dg8saq::put_multiply_lo {h band mul sub} {
 proc dg8saq::put_bpf_address {h index value} {
     variable REQUEST_SET_BPF_ADDRESS
     set result [usb::device_to_host [handle::handle $h] $REQUEST_SET_BPF_ADDRESS $value $index "xxxxxxxxxxxxxxxxxx" 500]
-    if {[string length $result] != 16} {
-	error "failed to set bpf address"
-    }
+    if {[string length $result] != 16} { error "failed to set bpf address: [string length $result]" }
 }
 
 ##
@@ -487,9 +457,7 @@ proc dg8saq::put_bpf_crossover {h index freq} {
     ## get the current bandpass crossover points
     set crossovers [get $h bpf_crossover]
     ## is there a place for this new value?
-    if {[llength $crossovers] < $index+1} {
-	error "cannot set crossover for band $index"
-    }
+    if {[llength $crossovers] < $index+1} { error "cannot set crossover for band $index" }
     ## put the new value into the set
     set crossovers [lreplace $crossovers $index $index [expr {int($freq * (1<<5))}]]
     ## set them all
@@ -532,9 +500,7 @@ proc dg8saq::put_bpf {h enable} {
 proc dg8saq::put_lpf_address {h index value} {
     variable REQUEST_SET_LPF_ADDRESS
     set result [usb::device_to_host [handle::handle $h] $REQUEST_SET_LPF_ADDRESS $value $index "xxxxxxxxxxxxxxxxxx" 500]
-    if {[string length $result] != 16} {
-	error "failed to set lpf address"
-    }
+    if {[string length $result] != 16} { error "failed to set lpf address" }
 }
 
 ##

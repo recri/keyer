@@ -62,8 +62,8 @@ proc geometry::intersection-line-circle {line circle} {
     # decide what we found
     # no intersection
     if {$delta < 0} { return {} }
-    set xt1 [expr {$D*$dy/$dr2}]
-    set yt1 [expr {-$D*$dx/$dr2}]
+    set xt1 [expr {$x0+$D*$dy/$dr2}]
+    set yt1 [expr {$y0-$D*$dx/$dr2}]
     # tangent point
     if {$delta == 0} { return [list [list $xt1 $yt1]] }
     # secant points

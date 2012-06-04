@@ -143,10 +143,70 @@ snit::type sdrkit::iq-correct {
 	    puts "iq-correct is not activated"
 	}
     }
+
+    # train the adaptive filter for one buffer
+    # use mu and w = w0 + p * dw to get f, a new w
+    # compute the x and y displacement for f-w
+    # compute the magnitude of f-w
+    # compute the dot product of dw and f-w
+    method train {mu w0 p dw} {
+	# puts "train $mu {$w0} $p {$dw}"
+	lassign $w0 x0 y0
+	lassign $dw dx dy
+	set w [list [expr {$x0+$p*$dx}] [expr {$y0+$p*$dy}]]
+	# puts "w $w"
+	set f [lrange [sdrkitx::$options(-name) train $mu {*}$w] 1 2]
+	# puts "f $f"
+	set x [expr {[lindex $f 0]-[lindex $w 0]}]
+	set y [expr {[lindex $f 1]-[lindex $w 1]}]
+	set m [expr {sqrt($x*$x+$y*$y)}]
+	set d [expr {($x*$dx+$y*$dy)/$m}]
+	return [list $p $w $f $x $y $m $d]
+    }
+
     method do-train {} {
 	if {[sdrkitx::$options(-name) is-active]} {
-	    set r [sdrkitx::$options(-name) train $data(mu) $data(wreal) $data(wimag)]
-	    puts "iq-correct train $data(mu) $data(wreal) $data(wimag) -> $r"
+	    # find the average error signal
+	    lassign [sdrkitx::$options(-name) error] frame ereal eimag
+	    set e [expr {max(abs($ereal),abs($eimag))}]
+
+	    # choose mu to produce filter updates ~ 1e-10
+	    set mu [expr {1e-10/$e}]
+
+	    # evaluate the filter at w = {0 0}
+	    lassign [$self train $mu {0 0} 0 {0 0}] p0 w0 f0 x0 y0 m0 d0
+
+	    ## the direction of our line search, normalized to length 1
+	    set dw [list [expr {$x0/$m0}] [expr {$y0/$m0}]]
+
+	    ## correct direction of filter coefficients at point 0
+	    set d0 1
+	    puts "p0 $p0 $w0 $f0 $m0 $d0"
+
+	    # evaluate the filter at w {$dx $dy} projected to circumference of unit circle
+	    lassign [$self train $mu $w0 1 $dw] p2 w2 f2 x2 y2 m2 d2
+	    puts "p2 $p2 $w2 $f2 $m2 $d2"
+	    
+	    # binary search
+	    for {set try 0} {$try < 24} {incr try} {
+		lassign [$self train $mu $w0 [expr {($p0+$p2)/2.0}] $dw] p1 w1 f1 x1 y1 m1 d1
+		puts "p1 $p1 $w1 $f1 $m1 $d1"
+		if {$m1 < 1e-10} {
+		    # call it quits
+		    break
+		} elseif {$d0 > 0 && $d1 < 0} {
+		    # move search to p0 .. p1
+		    lassign [list $p1 $w1 $f1 $x1 $y1 $m1 $d1] p2 w2 f2 x2 y2 m2 d2
+		} elseif {$d1 > 0 && $d2 < 0} {
+		    # move search to p1 .. p2
+		    lassign [list $p1 $w1 $f1 $x1 $y1 $m1 $d1] p0 w0 f0 x0 y0 m0 d0
+		} elseif {$d1 == 0} {
+		    # unlikely, but possible
+		    break
+		}
+	    }
+	    puts "w = $w1, f = $f1, m = $m1, d = $d1"
+	    sdrkitx::$options(-name) set $mu {*}$w1
 	} else {
 	    puts "iq-correct is not activated"
 	}

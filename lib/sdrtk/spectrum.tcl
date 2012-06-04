@@ -130,17 +130,17 @@ snit::widgetadaptor sdrtk::spectrum {
 	for {set l $options(-min)} {$l <= $options(-max)} {incr l 20} {
 	    # main db grid
 	    lappend xy $lo $l $hi $l $lo $l
-	    $hull create text 0 $l -text " $l" -font {Helvetica 8} -anchor nw -fill $data(light) -tags vlabel
+	    $hull create text 0 $l -text " $l" -font {Helvetica 8} -anchor nw -fill $data(light) -tags {vlabel label}
 	    # sub grid
 	    if {0} {
 		for {set ll [expr {$l-10}]} {$ll > $l-20} {incr ll -10} {
 		    if {$ll >= $options(-min) && $ll <= $options(-max)} {
-			$hull create line $lo $ll $hi $ll -fill $data(med) -tags vgrid
+			$hull create line $lo $ll $hi $ll -fill $data(med) -tags {vgrid grid}
 		    }
 		}
 	    }
 	}
-	$hull create line $xy -fill $data(darkest) -tags vgrid
+	$hull create line $xy -fill $data(darkest) -tags {vgrid grid}
 	$self Scale vgrid
 	$self VerticalScale vlabel
     }
@@ -163,9 +163,9 @@ snit::widgetadaptor sdrtk::spectrum {
 	    set label [format { %.2f} [expr {($f+$frnd)*1e-6}]]
 	    set fo [expr {$f-$foff}]
 	    lappend xy $fo $options(-min) $fo $options(-max) $fo $options(-min)
-	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $data(light) -tags hlabel
+	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $data(light) -tags {hlabel label}
 	}
-	$hull create line $xy -fill $data(darkest) -tags hgrid
+	$hull create line $xy -fill $data(darkest) -tags {hgrid grid}
 	$self Scale hgrid
 	$self Scale hlabel
 	$hull lower hgrid

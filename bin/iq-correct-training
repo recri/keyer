@@ -28,6 +28,8 @@ package require sdrtk::graph
 package require sdrtk::checkmenubutton
 package require sdrtk::radiomenubutton
 package require math::complexnumbers
+package require math::optimize
+package require geometry
 
 package require sdrtcl
 package require sdrtcl::jack
@@ -131,12 +133,12 @@ array set data {
     -server default
     -name iq
     -tap {system:capture_2 system:capture_1}
-    -usbsoftrock true
+    -usbsoftrock false
     -iteration-set {1 2 4 8 16 32 64 128}
     -mu-set {}
-    -trainer-set {::trainer1 ::trainer2 ::trainer3 ::trainer4 ::trainer5 ::trainer6 ::trainer7}
+    -trainer-set {::trainer1 ::trainer2 ::trainer3 ::trainer4 ::trainer5 ::trainer6 ::trainer7 ::trainer8 ::trainer9 ::trainer10}
     -buffer 10
-    selected-trainer {::trainer7}
+    selected-trainer {::trainer10}
     selected-iterations 32
     selected-mus {}
     samples {}
@@ -921,10 +923,24 @@ train6 ::trainer6
 
 proc log2 {x} { return [expr {int(round(log10($x)/log10(2)))}] }
 
+namespace eval tcl {
+    namespace eval mathfunc {
+	proc sgn x { return [expr {$x<0?-1:1}] }
+    }
+}
+
+
 # seventh training, sweep mu over a buffer of samples, pick the best
 snit::type train7 {
     variable session
-    
+
+    # import complex arithmetic
+    constructor {args} {
+	foreach x {complex real imag conj + - * mod} {
+	    namespace import ::math::complexnumbers::$x
+	}
+    }
+
     proc init-plot {session} {
 	.t.title configure -text [dict get $session title]
 	catch {.c delete all}
@@ -946,6 +962,11 @@ snit::type train7 {
 	.c line add point circle {*}$pts
     }
 
+    proc add-line-to-plot {tag args} {
+	.c add line $tag
+	.c line add point $tag {*}$args
+    }
+
     proc update-plot {re0 im0 re1 im1} {
 	# extend the segment from pt0 to p1 to the intersection with the unit circle
 	set vx [expr {$re1-$re0}]
@@ -955,7 +976,6 @@ snit::type train7 {
 	.c add line [list $re0 $im0]
 	.c line add point [list $re0 $im0] $re0 $im0 $re1 $im1 [expr {$re0+$vx/$dv}] [expr {$im0+$vy/$dv}]
     }
-
     proc finish-plot {} {
 	#puts "finish-plot"
     }
@@ -971,10 +991,12 @@ snit::type train7 {
 	return [expr {max(abs([real $z]/$n), abs([imag $z]/$n))}]
     }
     proc choose-alternate-ws {re1 im1 re2 im2} {
-	set orthag [geometry::orthogonal-line [list $re1 $im1 $re2 $im2]]
-	puts "orthogonal-line to $re1 $im1 $re2 $im2 is $orthag"
-	set pts [intersection-line-circle $orthag [list 0 0 1 0]]
-	puts "points intersecting circle at $pts"
+	set line [list $re1 $im1 $re2 $im2]
+	set orthag [geometry::orthogonal-line $line]
+	# puts "orthogonal-line to $re1 $im1 $re2 $im2 is $orthag"
+	set pts [geometry::intersection-line-circle $orthag [list 0 0 1 0]]
+	add-line-to-plot [list orthogonal $line] {*}[lindex $pts 0] $re1 $im1 {*}[lindex $pts 1]
+	# puts "points intersecting circle at $pts"
 	foreach p $pts {
 	    lassign $p x y
 	    lappend ws [list [expr {($x+$re1)/2}] [expr {($y+$im1)/2}]]
@@ -985,14 +1007,17 @@ snit::type train7 {
 	set pts {}
 	foreach line $args {
 	    foreach line2 $args {
-		if {[lsearch $line $args] < [lsearch $line2 $args]} {
-		    lappend pts [geometry::intersection-line-line $line $line2]
+		if {[lsearch $args $line] < [lsearch $args $line2]} {
+		    set pt [geometry::intersection-line-line $line $line2]
+		    # puts "geometry::intersection-line-line $line $line2 -> $pt"
+		    lappend pts $pt
 		}
 	    }
 	}
 	return $pts
     }
     proc average-point-set {args} {
+	# puts "average-point-set $args"
 	set sum_x 0
 	set sum_y 0
 	set n 0
@@ -1055,7 +1080,7 @@ snit::type train7 {
 	# pick a mu
 	set mu [expr {1e-10/$e}]
 	foreach try {0 1 2 3 4 5} {
-	    puts [format "%s e %10.7 mu %10.7 w {%10.7f %10.7f}" [dict get $session title] $e $mu {*}$winit]
+	    puts [format "%s e %10.7f mu %10.7f w {%10.7f %10.7f}" [dict get $session title] $e $mu {*}$winit]
 	    # puts [format "i %2d mu %.6f w %.6f %.6f" 0 $mu {*}$w]
 	    lassign [sdrtcl::iq-correct-train2 $mu {*}$winit $binary] re im avg_re avg_im var_re var_im disp_re disp_im
 	    if {$re != $re || $im != $im} {
@@ -1064,7 +1089,7 @@ snit::type train7 {
 	    }
 	    update-plot {*}$winit $re $im
 	    set lines [list [list {*}$winit $re $im]]
-	    foreach wx [choose-alternate-ws $winit [list $re $im]] {
+	    foreach wx [choose-alternate-ws {*}$winit $re $im] {
 		lassign [sdrtcl::iq-correct-train2 $mu {*}$wx $binary] wxre wxim avg_re avg_im var_re var_im disp_re disp_im
 		update-plot {*}$wx $wxre $wxim
 		lappend lines [list {*}$wx $wxre $wxim]
@@ -1080,6 +1105,394 @@ snit::type train7 {
 }
 train7 ::trainer7
 
+# eighth training, pick a small mu and minimize the error
+namespace eval ::opt8 {
+    variable line-params
+    proc function-on-line {p} {
+	variable line-params
+	# get the line parameters
+	lassign ${line-params} mu x0 y0 dx dy binary
+	# compute the p position on the line
+	set x [expr {$x0+$p*$dx}]
+	set y [expr {$y0+$p*$dy}]
+	# evaluate the adaptive filter
+	set rest [lassign [sdrtcl::iq-correct-train2 $mu $x $y $binary] xp yp]
+	# find the displacement vector from where the filter started
+	set dxp [expr {$xp-$x}]
+	set dyp [expr {$yp-$y}]
+	# find the projection of the displacement on our line
+	set dot [expr {$dx*$dxp+$dy*$dyp}]
+	# square it
+	return [expr {$dot*$dot}]
+    }
+    proc minimize-on-line {mu x0 y0 dx dy binary} {
+	variable line-params
+	set {line-params} [list $mu $x0 $y0 $dx $dy $binary]
+	lassign [::math::optimize::min_bound_1d function-on-line 0 [expr {1/sqrt($dx*$dx+$dy*$dy)}] -trace 0] p f_of_p
+	set result [list [expr {$x0+$p*$dx}] [expr {$y0+$p*$dy}] ]
+	# puts "min at $p is $f_of_p: $result"
+	return $result
+    }
+}
+
+snit::type train8 {
+    variable session
+
+    # import complex arithmetic
+    constructor {args} {
+	foreach x {complex real imag conj + - * mod} {
+	    namespace import ::math::complexnumbers::$x
+	}
+    }
+
+    proc init-plot {session} {
+	.t.title configure -text [dict get $session title]
+	catch {.c delete all}
+	foreach s [grid slaves .] {
+	    if {$s in {.c .d .e .f}} {
+		grid forget $s
+	    }
+	}
+	grid .c -row 1 -column 0 -rowspan 2 -columnspan 2 -sticky nsew
+	grid columnconfigure . 0 -weight 1
+	grid rowconfigure . 1 -weight 1
+	set pi [expr {atan2(0,-1)}]
+	set pts {}
+	for {set i 0} {$i <= 64} {incr i} {
+	    set phi [expr {$i*2*$pi/64.0}]
+	    lappend pts [expr {cos($phi)}] [expr {sin($phi)}]	    
+	}
+	.c add line circle
+	.c line add point circle {*}$pts
+	.c add line traj
+	.c line add point traj 0 0
+    }
+
+    proc add-line-to-plot {tag args} {
+	.c add line $tag
+	.c line add point $tag {*}$args
+    }
+
+    proc update-plot {re im} {
+	.c line add point traj $re $im
+    }
+    proc finish-plot {} {
+	#puts "finish-plot"
+    }
+
+    proc estimate-error {buffer} {
+	set n 0
+	set sum [complex 0 0]
+	foreach {i q} $buffer {
+	    set z [complex $i $q]
+	    set sum [expr {[+ $sum [* $z $z]]}]
+	    incr n
+	}
+	return [expr {max(abs([real $z]/$n), abs([imag $z]/$n))}]
+    }
+    # train over a buffer of samples
+    # we are looking for a signal that tells us what mu to start at
+    # a mu that is too large will cause w to blow up
+    #  this is apparent at the end of a round of training from the value of w
+    # a mu that is smaller but still too large causes w to oscillate
+    #  this is apparent at the end of a round of training from the dispersion
+    #  of the magnitude of w, but I'm not collecting that anymore because it's
+    #  expensive to compute, I'm hoping that the dispersion in real(w) or imag(w)
+    #  will show a similar signal.
+    # a mu that is smaller will move toward the region of filter convergence, then
+    #  oscillate when it gets within mu*error of the filter.
+    # a mu that is too small will not modify w at all
+    #
+    # the hope is that looking at the series of w's trained by a series of mu's will
+    # have the pattern "blow up* oscillate* converging* nothing*"
+    # the oscillate* will have large magnitudes of w, but the angles of w will be
+    # wobbling around.
+    # the converge* will have decreasing magnitudes of w in proportion to the magnitude
+    # of mu, but the angles of w will all be aligned.
+    # the goal is to ride the largest mu which is converging until it begins to oscillate
+    # and then step down to the next smaller mu, and so on.
+    proc train {type iterations mus buffer {winit {0 0}}} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	foreach mu $mus { dict set session mu $mu 0 [list 0 0] }
+
+	
+	init-plot $session
+	set binary [format-buffer $buffer]
+	# start from origin
+	set winit {0 0}
+	# get the error magnitude
+	set e [estimate-error $buffer]
+	# pick a mu
+	set mu [expr {1e-10/$e}]
+	puts [format {e %f mu %f %s} $e $mu [dict get $session title]]
+	foreach size {1 2 4 8 16 32 64} {
+	    set subbuffer [lrange $buffer 0 [expr {([llength $buffer]/$size)-1}]]
+	    #puts "subbuffer [llength $subbuffer] is [llength $buffer]/$size"
+	    set binary [format-buffer $subbuffer]
+	    lassign [sdrtcl::iq-correct-train2 $mu {*}$winit $binary] re im avg_re avg_im var_re var_im disp_re disp_im
+	    if {$re != $re || $im != $im} {
+		puts [format {%3.0f NaN NaN} [log2 $mu]]
+		break
+	    }
+	    set wnew [::opt8::minimize-on-line $mu {*}$winit $re $im $binary]
+	    puts [format "size 1/$size w0 {%g %g} -> w1 {%g %g}" {*}$winit {*}$wnew]
+	    update-plot {*}$wnew
+	    set winit $wnew
+	}
+    }
+    method train {iterations mus samples {winit {0 0}}} {
+	return [train [$self info type] $iterations $mus $samples $winit]
+    }
+}
+train8 ::trainer8
+
+snit::type train9 {
+    variable session
+
+    # import complex arithmetic
+    constructor {args} {
+	foreach x {complex real imag conj + - * mod} {
+	    namespace import ::math::complexnumbers::$x
+	}
+    }
+    
+    proc estimate-error {buffer} {
+	set n 0
+	set sum [complex 0 0]
+	foreach {i q} $buffer {
+	    set z [complex $i $q]
+	    set sum [expr {[+ $sum [* $z $z]]}]
+	    incr n
+	}
+	return [expr {max(abs([real $z]/$n), abs([imag $z]/$n))}]
+    }
+    proc report {tag p w f m d} {
+	puts "$tag p=$p w={$w} f={$w} m=$m d=$d"
+    }
+
+    #
+    # train over a buffer of samples
+    # starting from w {0 0},
+    # compute the error signal magnitude
+    # assign mu appropriate to the error signal magnitude
+    # train one buffer of sample to find the direction of the converged filter coefficients
+    # perform a binary search for the converged filter coefficients along that direction
+    # between w {0 0} and the circumference of the unit circle
+    #
+    proc train {type iterations mus buffer {winit {0 0}}} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	foreach mu $mus { dict set session mu $mu 0 [list 0 0] }
+
+	
+	set binary [format-buffer $buffer]
+	# start from origin
+	set winit {0 0}
+	# get the error magnitude
+	set e [estimate-error $buffer]
+	# pick a mu
+	set mu [expr {1e-10/$e}]
+	# report our starting conditions
+	puts [format {e %f mu %f %s} $e $mu [dict get $session title]]
+	# format the samples as a binary
+	set binary [format-buffer $buffer]
+
+	# evaluate the filter at w = {0 0}
+	# parameter of point 0
+	set p0 0
+	# filter coefficients at point 0
+	set w0 {0 0} 
+	# filter evaluation at point 0
+	set f0 [lrange [sdrtcl::iq-correct-train2 $mu {*}$w0 $binary] 0 1]
+	# coordinates of filter coefficients at point 0
+	lassign $f0 x0 y0
+	## the direction of our line search
+	lassign $f0 dx dy
+	# direction of filter coefficients at point 0
+	set d0 [expr {$x0*$dx+$y0*$dy}]
+	# magnitude of filter coefficients at point 0
+	set m0 [expr {sqrt($x0*$x0+$y0*$y0)}]
+	report p0 $p0 $w0 $f0 $m0 $d0
+
+	# evaluate the filter at w {$dx $dy} projected to circumference of unit circle
+	set p2 [expr {1.0/$m0}]
+	set w2 [list [expr {$p2*$dx}] [expr {$p2*$dy}]]
+	set f2 [lrange [sdrtcl::iq-correct-train2 $mu {*}$w2 $binary] 0 1]
+	lassign $f2 x2 y2
+	set x2 [expr {$x2-[lindex $w2 0]}]
+	set y2 [expr {$y2-[lindex $w2 1]}]
+	set m2 [expr {sqrt($x2*$x2+$y2*$y2)}]
+	set d2 [expr {$x2*$dx+$y2*$dy}]
+	report p2 $p2 $w2 $f2 $m2 $d2
+
+	# binary search
+	while {1} {
+	    set p1 [expr {($p0+$p2)/2}]
+	    set w1 [list [expr {$p1*$dx}] [expr {$p1*$dy}]]
+	    set f1 [lrange [sdrtcl::iq-correct-train2 $mu {*}$w1 $binary] 0 1]
+	    lassign $f1 x1 y1
+	    set x1 [expr {$x1-[lindex $w1 0]}]
+	    set y1 [expr {$y1-[lindex $w1 1]}]
+	    set m1 [expr {sqrt($x1*$x1+$y1*$y1)}]
+	    set d1 [expr {$x1*$dx+$y1*$dy}]
+	    report p1 $p1 $w1 $f1 $m1 $d1
+	    if {$m1 < 1e-10} {
+		# call it quits
+		break
+	    }
+	    if {$d0 > 0 && $d1 < 0} {
+		# move search to p0 .. p1
+		lassign [list $p1 $w1 $f1 $x1 $y1 $m1 $d1] p2 w2 f2 x2 y2 m2 d2
+	    } elseif {$d1 > 0 && $d2 < 0} {
+		# move search to p1 .. p2
+		lassign [list $p1 $w1 $f1 $x1 $y1 $m1 $d1] p0 w0 f0 x0 y0 m0 d0
+	    } elseif {$d1 == 0} {
+		# unlikely, but possible
+		break
+	    }
+	}
+	puts "w = $w1, f = $f1, m = $m1, d = $d1"
+    }
+    method train {iterations mus samples {winit {0 0}}} {
+	return [train [$self info type] $iterations $mus $samples $winit]
+    }
+}
+train9 ::trainer9
+
+snit::type train10 {
+    variable session
+
+    # import complex arithmetic
+    constructor {args} {
+	foreach x {complex real imag conj + - * mod} {
+	    namespace import ::math::complexnumbers::$x
+	}
+    }
+    
+    proc estimate-error {buffer} {
+	set n 0
+	set sum [complex 0 0]
+	foreach {i q} $buffer {
+	    set z [complex $i $q]
+	    set sum [expr {[+ $sum [* $z $z]]}]
+	    incr n
+	}
+	return [expr {max(abs([real $z]/$n), abs([imag $z]/$n))}]
+    }
+
+    proc report {tag p w f m d} {
+	puts "$tag p=$p w={$w} f={$w} m=$m d=$d"
+    }
+
+    #
+    # train over a buffer of samples
+    # starting from w {0 0},
+    # compute the error signal magnitude
+    # assign mu appropriate to the error signal magnitude
+    # train one buffer of sample to find the direction of the converged filter coefficients
+    # use Newton's method to search for the minimum filter coefficients along the direction
+    #
+    proc train {type iterations mus buffer {winit {0 0}}} {
+	set session [dict create]
+
+	dict set session iterations $iterations
+	dict set session mus $mus
+	dict set session buffer $buffer
+	dict set session n-samples [expr {[llength $buffer]/2}]
+
+	dict set session date [acquire-date]
+	dict set session freq [usbsoftrock-getfreq]
+	dict set session dBFS [compute-power [dict get $session buffer]]
+
+	dict set session title [acquire-title $type $session]
+
+	dict set session mu [dict create]
+	foreach mu $mus { dict set session mu $mu 0 [list 0 0] }
+
+	
+	set binary [format-buffer $buffer]
+	# start from origin
+	set winit {0 0}
+	# get the error magnitude
+	set e [estimate-error $buffer]
+	# pick a mu
+	set mu [expr {1e-10/$e}]
+	# report our starting conditions
+	puts [format {e %f mu %f %s} $e $mu [dict get $session title]]
+	# format the samples as a binary
+	set binary [format-buffer $buffer]
+
+	# evaluate the filter at w = {0 0}
+	# parameter of point 0
+	set p0 0
+	# filter coefficients at point 0
+	set w0 {0 0} 
+	# filter evaluation at point 0
+	set f0 [lrange [sdrtcl::iq-correct-train2 $mu {*}$w0 $binary] 0 1]
+	# coordinates of filter coefficients at point 0
+	lassign $f0 x0 y0
+	## the direction of our line search
+	lassign $f0 dx dy
+	## the magnitude of our line search direction
+	set md [expr {sqrt($dx*$dx+$dy*$dy)}]
+	# direction of filter coefficients at point 0
+	set d0 [expr {($x0*$dx+$y0*$dy)/$md}]
+	# magnitude of filter coefficients at point 0
+	set m0 [expr {sqrt($x0*$x0+$y0*$y0)}]
+
+	# Newton's method x[i+1] = x[i] - f(x[i])/f'(x[i])
+	# x[i] will be the parameter of position on the line
+	# f(x[i]) will be the magnitude of the filter coefficient change trained from x[i]
+	# f'(x[i]) will be the negative of the direction of the filter coefficient change trained from x[i]
+	set n 0
+	while {[incr n] < 20} {
+	    report p0 $p0 $w0 $f0 $m0 $d0
+	    puts "set p0 $p0-$m0/(-$d0) = $p0 - [expr {$m0/(-$d0)}]"
+	    set p0 [expr {$p0-$m0/(-$d0)}]
+	    set w0 [list [expr {$p0*$dx}] [expr {$p0*$dy}]]
+	    set f0 [lrange [sdrtcl::iq-correct-train2 $mu {*}$w0 $binary] 0 1]
+	    lassign $f0 x0 y0
+	    set x0 [expr {$x0-[lindex $w0 0]}]
+	    set y0 [expr {$y0-[lindex $w0 1]}]
+	    set m0 [expr {sqrt($x0*$x0+$y0*$y0)}]
+	    set d0 [expr {($x0*$dx+$y0*$dy)/$md}]
+	    if {$m0 < 1e-10} {
+		# call it quits
+		break
+	    }
+	}
+	puts "p = $p0, w = $w0, f = $f0, m = $m0, d = $d0"
+    }
+    method train {iterations mus samples {winit {0 0}}} {
+	return [train [$self info type] $iterations $mus $samples $winit]
+    }
+}
+train10 ::trainer10
 
 proc do-train {} { $::data(selected-trainer) train $::data(selected-iterations) $::data(selected-mus) $::data(samples) }
 proc start-train {} { after 1 do-train }

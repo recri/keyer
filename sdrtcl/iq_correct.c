@@ -82,7 +82,7 @@ static int _error(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* 
   Tcl_SetObjResult(interp, Tcl_NewListObj(3, result));
   return TCL_OK;
 }
-// train given w and mu over the current sample buffer
+// train a round given w and mu over the current sample buffer
 static int _train(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 5)
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s train mu wreal wimag", Tcl_GetString(objv[0])));

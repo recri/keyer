@@ -231,7 +231,6 @@ static int _get_window(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
 }
 
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   if ( ! framework_is_active(clientData)) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not active", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;

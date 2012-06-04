@@ -57,7 +57,6 @@ snit::type sdrkit::rx {
     option -high -default 100 -configuremethod Configure
 
     option -sub-components {
-	spectrum {Spectrum} spectrum {}
 	rf-gain {RF Gain} gain {}
 	rf-iq-swap {IQ Swap} iq-swap {}
 	rf-iq-delay {IQ Delay} iq-delay {}
@@ -80,7 +79,7 @@ snit::type sdrkit::rx {
 	af-gain {AF Gain} gain {}
     }
 
-    option -parts-enable { rf-iq-correct if-lo-mixer if-bpf af-agc spectrum }
+    option -parts-enable { rf-iq-correct if-lo-mixer if-bpf af-agc }
 
     option -port-connections {
 	{} in-ports rf-gain in-ports
@@ -104,7 +103,6 @@ snit::type sdrkit::rx {
 	af-spot out-ports af-graphic-eq in-ports
 	af-graphic-eq out-ports af-gain in-ports
 	af-gain out-ports {} out-ports
-	if-sp2 out-ports spectrum in-ports
     }
 
     option -opt-connections {
@@ -247,8 +245,6 @@ snit::type sdrkit::rx {
 	if {$name eq {.}} { return $options(-name) }
 	if {[string first . $name] == 0} { return [regsub {^.} $name $options(-name)] }
 	return $name
-    }
-    method FilterConfigure {opt val} {
     }
     method Configure {opt val} {
 	set options($opt) $val

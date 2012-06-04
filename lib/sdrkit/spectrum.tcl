@@ -61,7 +61,7 @@ snit::type sdrkit::spectrum {
     option -size -default 1024 -configuremethod TapConfigure
     option -polyphase -default 1 -configuremethod TapConfigure
     option -result -default dB -configuremethod TapConfigure
-    option -tap -default {} -configuremethod TapConfigure
+    option -tap -default {} -configuremethod Configure
 
     option -pal -default 0 -configuremethod TkConfigure
     option -max -default 0 -configuremethod TkConfigure
@@ -296,6 +296,7 @@ snit::type sdrkit::spectrum {
 	    # finished
 	    return
 	}
+	if {[incr data(nspectrum)] == 1} { puts [join [::sdrkitx::$options(-name) configure] \n] }
 	# capture spectrum and pass to display
 	lassign [::sdrkitx::$options(-name) get] frame dB
 	binary scan $dB f* dB
@@ -309,7 +310,8 @@ snit::type sdrkit::spectrum {
 	    puts "received $n spectrum values instead of $options(-size)"
 	    return
 	}
-	foreach x $data(frequencies) y [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {($n/2)-1}]]] {
+	set dB [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {($n/2)-1}]]]
+	foreach x $data(frequencies) y $dB {
 	    lappend xy $x $y
 	}
 	#puts "$xy"
