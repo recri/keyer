@@ -185,3 +185,18 @@
    Maybe, but I wouldn't be able to watch.
 
 ** DONE - install physical ports in current setup
+** DONE - install ctl logic in current setup
+** DONE - install dial control in current setup
+** DONE - debug port connections
+** DONE - debug activation   
+** DONE - make is-busy a standard framework method
+** DONE - make graph.tcl use the automated tick labels
+** DONE - build a portable single wire coaxial dipole
+   Take a length of RG-174,
+   strip off half the jacket more or less,
+   fold back the exposed braid over the remaining jacket,
+   or cut it off and thread it back on if folding doesn't work,
+   wrap the whole thing in heat shrink tubing,
+   put an BNC connector on the free end,
+   voila, an antenna with an unbalance feed connection that drives
+   the softrock antenna input.

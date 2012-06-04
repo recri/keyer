@@ -1,14 +1,15 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
-** TODO - install dial control in current setup
-** TODO - install ctl logic in current setup
+** TODO - tuning the softrock with synchronous libusb calls
+   yields extremely jerky tuning after a while.
+   Defer the configuration application to a timed out handler for
+   a start, but better to use asynch libusb and mark yourself busy
+   while waiting for a reply to the last tuning command.
 ** TODO - debug option connections
-** TODO - debug port connections
-** TODO - debug activation   
-** TODO - make is-busy a standard framework method
+   Even initializing options in rxtx leaves some components floating
+   without clear option settings.
 ** TODO - make graph.tcl take a fixed bbox
-** TODO - make graph.tcl use the automated tick labels
 ** TODO - make graph.tcl draw rectangles
 ** TODO - make graph.tcl the spectrum readout
 ** TODO - make graph.tcl callback picks
@@ -17,7 +18,10 @@
 ** TODO - use the is-needed method for enabling components
 ** TODO - implement spectrum
 ** TODO - debug spectrum, polyphase should smooth the noise floor   
-------------------------------------------------------------------------
+   The spectrum looks very different from the QtRadio spectrum
+   even though it should be working the same.  Removed all normalization
+   and set the zero on power to 1e-60, and it doesn't look closer, the
+   magnitude is even further off than it was.  What's going on?
 ** TODO - looking and thinking about the sdrsharp IQ balancing,
    it's running off-line, it takes a buffer of samples and repeatedly
    adjusts the IQ balance, runs an fft, computes the utility, accepts
@@ -27,9 +31,14 @@
    buffer of samples, run the filter until it converges, discarding the
    adjusted samples, reusing the same buffer over and over again, plug
    the converged filter coefficient into the online filter.
+   The iq-correct now does a line search for the minimum filter coefficients
+   along the line of the optimum for a given buffer, but that doesn't seem to
+   be a consistent thing.
 ** TODO - rewriting the ui components, refactoring and simplifying,
    trying to recover from the trauma of the spectrum coding.  So new
-   rules:
+   rules.  Yah, well this seemed like a good idea, but now I have a bunch
+   of different UI components that don't show the same values, and the
+   actual components seem to be using another set of values entirely.
 *** each of the plain ui components needs to be created with a
    -name option that defines which control part it is;
 *** multiple ui components may share that control part;
@@ -64,6 +73,8 @@
    Done in a hacky way, needs a better solution.
    And the hack bit me when I tried to translate the option names into
    another component.
+   The general solution is to defer all configuration passing for a few
+   milliseconds and then pass all the accumulated options.
 ** TODO - tracing the filter -low -high issue shows a lot of repetition
    The configured values get transmitted to the filter multiple times
    without modification, should stop that, it's going to be expensive.
