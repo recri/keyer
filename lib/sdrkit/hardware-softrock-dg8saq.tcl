@@ -56,6 +56,8 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 
     variable data -array {
 	parts {}
+	deferred-freq {}
+	deferred-after {}
     }
 
     constructor {args} {
@@ -96,7 +98,7 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	}
 	if {[catch {
 	    foreach handle [handle::find_handles usb] {
-		puts "softrock::build [handle::serial $handle]"
+		# puts "softrock::build [handle::serial $handle]"
 		if {[string match PE0FKO-* [handle::serial $handle]]} {
 		    set data(handle) $handle
 		}
@@ -104,7 +106,9 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	    } error]} {
 	    puts "error handling handles: $error"
 	}
-	# dg8saq::get_si570_address
+    }
+
+    method check-softrock {} {
 	# dg8saq::get_multiply_lo - needs band
 	foreach command {
 	    dg8saq::get_read_version
@@ -132,6 +136,7 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	    }
 	}
     }
+
     method is-needed {} { return 1 }
     method is-busy {} { return 0 }
     method is-active {} { return $data(active) }
@@ -155,8 +160,15 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     method {Handler -freq} {val} {
 	# puts "hardware-softrock-dg8saq configure -freq $val"
 	set options(-freq) $val
+	set data(deferred-freq) $val
+	if {$data(deferred-after) eq {}} {
+	    set data(deferred-after) [after 50 [mymethod Deferred-handler]]
+	}
+    }
+    method Deferred-handler {} {
+	set data(deferred-after) {}
 	if {$data(active)} {
-	    dg8saq::put_frequency_by_value $data(handle) [expr {$val/1e6}]
+	    dg8saq::put_frequency_by_value $data(handle) [expr {$data(deferred-freq)/1e6}]
 	    #exec usbsoftrock set freq [expr {$val/1e6}]
 	}
     }

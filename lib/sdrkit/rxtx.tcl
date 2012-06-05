@@ -108,6 +108,23 @@ snit::type sdrkit::rxtx {
 
     option -parts-enable { spectrum }
 
+    option -initialize {
+	-freq
+	-tune-rate
+	-lo-freq
+	-lo-tune-rate
+	-cw-freq
+	-mode
+	-agc-mode
+	-iq-swap
+	-iq-delay
+	-iq-correct
+	-bpf-width
+	-bpf-offset
+	-rx-rf-gain
+	-rx-af-gain
+    }
+
     variable data -array {
 	parts {}
 	active 0
@@ -181,11 +198,21 @@ snit::type sdrkit::rxtx {
 	    set data($name-enable) 1
 	    $self Enable $name
 	}
+	after 50 [mymethod Initialize]
     }
-
+    method Initialize {} {
+	foreach opt $options(-initialize) {
+	    $self Configure $opt $options($opt)
+	    $self Set $opt $options($opt)
+	}
+    }
     method OptionConstrain {opt val} { return $val }
     method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} { $options(-window).dial configure $opt $val }
+    method ComponentConfigure {opt val} {
+	if {$opt in {-agc-mode -mode -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -bpf-width -rx-af-gain -rx-rf-gain}} {
+	    $options(-window).dial configure $opt $val
+	}
+    }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {

@@ -56,7 +56,7 @@ snit::type sdrkit::demod {
     option -minsizes {100 200}
     option -weights {1 3}
 
-    option -demod none
+    option -demod -default none -configuremethod Configure
 
     variable data -array { parts {} }
 
@@ -103,6 +103,15 @@ snit::type sdrkit::demod {
 	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-demod)] -command [mymethod Set -demod]
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+    }
+    method {Configure -demod} {val} {
+	switch $val {
+	    CWU - CWL - USB - LSB - DIGU - DIGL - DSB { $self Set -demod none }
+	    FMN { $self Set -demod FM }
+	    AM { $self Set -demod AM }
+	    SAM { $self Set -demod SAM }
+	    default { error "unanticipated demodulation \"$val\"" }
+	}
     }
     method Set {opt name} {
 	# find deselected component

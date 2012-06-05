@@ -240,6 +240,7 @@ snit::type sdrkit::component {
     #
     # calls to the controller from the subsidiary
     #
+    method part-exists {args} { return [$self control part-exists {*}$args] }
     method part-report {args} { return [$self control part-report {*}$args] }
     method part-configure {args} { return [$self control part-configure {*}$args] }
     method part-cget {args} { return [$self control part-cget {*}$args] }
@@ -250,7 +251,9 @@ snit::type sdrkit::component {
     method part-activate {args} { return [$self control part-activate {*}$args] }
     method part-deactivate {args} { return [$self control part-deactivate {*}$args] }
     method part-destroy {args} { return [$self control part-destroy {*}$args] }
+    method opt-exists {args} { return [$self control opt-exists {*}$args] }
     method opt-filter {args} { return [$self control opt-filter {*}$args] }
+    method port-exists {args} { return [$self control port-exists {*}$args] }
     method port-filter {args} { return [$self control port-filter {*}$args] }
     method port-connect {args} { return [$self control port-connect {*}$args] }
     method opt-connect {args} { return [$self control opt-connect {*}$args] }

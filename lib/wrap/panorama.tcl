@@ -21,6 +21,7 @@
 ##
 package provide panorama 1.0.0
 
+package require sdrtcl
 package require sdrtcl::jack
 
 package require waterfall

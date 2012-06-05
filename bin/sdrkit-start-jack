@@ -11,6 +11,6 @@ LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
 RATE1=96000
 RATE0=96000
 jackd -T -s -dalsa -Chw:1 -Phw:1 -r$RATE1 -p1024 -i2 -o2 -n3 -X raw > $LOG-jack.log 2>&1&
-sleep 5
-jack_load audioadapter -i "-Chw:0 -Phw:0-q 0 -r $RATE0" >> $LOG-jack.log 2>&1&
+#sleep 5
+#jack_load audioadapter -i "-Chw:0 -Phw:0-q 0 -r $RATE0" >> $LOG-jack.log 2>&1&
 

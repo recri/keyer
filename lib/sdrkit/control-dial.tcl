@@ -37,9 +37,10 @@ snit::widgetadaptor sdrkit::control-dial {
     # hmm, the actual set depends on mode
     # and whether you're running split
 
+    option -agc-mode -default medium -configuremethod Configure
+    option -mode -default CWU -configuremethod Configure
     option -freq -default 7050000 -configuremethod Configure
     option -tune-rate -default 50 -configuremethod Configure
-    option -mode -default CWU -configuremethod Configure
     option -lo-freq -default 10000 -configuremethod Configure
     option -lo-tune-rate -default 50 -configuremethod Configure
     option -cw-freq -default 400 -configuremethod Configure
@@ -50,9 +51,10 @@ snit::widgetadaptor sdrkit::control-dial {
     option -sub-controls {
 	freq freq {-text VFO -format {%.6f} -units MHz -step 50}
 	tune-rate enum {-text {VFO Step} -values {{1 Hz} {5 Hz} {10 Hz} {25 Hz} {50 Hz} {100 Hz} {250 Hz} {500 Hz} {1 kHz} {2.5 kHz} {5 kHz} {10 kHz} {25 kHz}}} 
-	mode enum {-text Mode -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}}
 	lo-freq freq {-text LO -format {%.0f} -units Hz}
 	lo-tune-rate enum {-text {LFO Step} -values {{1 Hz} {5 Hz} {10 Hz} {25 Hz} {50 Hz} {100 Hz} {250 Hz} {500 Hz} {1 kHz} {2.5 kHz} {5 kHz} {10 kHz} {25 kHz}}} 
+	agc-mode enum {-text AGC -values {off long slow medium fast}}
+	mode enum {-text Mode -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL}}
 	cw-freq freq {-text {CW Tone} -format {%.0f} -units Hz}
 	bpf-width freq {-text {BPF Width} -format {%.0f} -units Hz}
 	rx-af-gain value {-text {RX AF Gain} -format {%.1f} -units dB -step 0.1}

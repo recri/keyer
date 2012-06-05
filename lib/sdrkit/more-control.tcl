@@ -46,6 +46,7 @@ snit::type sdrkit::more-control {
 	ports button {-label {Port Connections} -text View}
 	options button {-label {Option Connections} -text View}
 	active button {-label {Active Connections} -text View}
+	config button {-label {Check Config} -text Check}
     }
 
     variable data -array {}
@@ -65,6 +66,7 @@ snit::type sdrkit::more-control {
 		    ports { lappend opts -command [mymethod ViewConnections port] }
 		    options { lappend opts -command [mymethod ViewConnections opt] }
 		    active { lappend opts -command [mymethod ViewConnections active] }
+		    config { lappend opts -command [mymethod CheckConfig config] }
 		}
 		switch $type {
 		    button {
@@ -106,5 +108,30 @@ snit::type sdrkit::more-control {
 	} else {
 	    wm deiconify .$flavor-connections
 	}
+    }
+    method CheckConfig {val} {
+	foreach command {
+	    rxtx-rx-rf-gain
+	    rxtx-rx-rf-iq-swap
+	    rxtx-rx-rf-iq-delay
+	    rxtx-rx-rf-iq-correct
+	    rxtx-rx-if-lo-mixer
+	    rxtx-rx-if-bpf
+	    rxtx-rx-af-agc
+	    rxtx-rx-af-gain
+	} {
+	    catch {sdrkitv::$command cget -enable} enable
+	    #catch {sdrkitw::$command configure} kitw
+	    catch {sdrkitx::$command is-active} active
+	    set kitx {}
+	    foreach {option} [sdrkitx::$command configure] {
+		lassign $option opt name class def val
+		if {$opt ni {-client -server -verbose}} {
+		    lappend kitx $opt $val
+		}
+	    }
+	    puts "$command enable=$enable active=$active $kitx"
+	}
+	puts "rxtx-rx-af-demod enable=[sdrkitv::rxtx-rx-af-demod cget -enable] -demod [sdrkitw::rxtx-rx-af-demod cget -demod]"
     }
 }

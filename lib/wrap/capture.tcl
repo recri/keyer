@@ -243,6 +243,7 @@ proc ::capture::spectrum {w args} {
     ::sdrtcl::fftw $data(fft) -size $data(-size)
     #puts "creating $data(tap)"
     ::sdrtcl::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 1
+    $data(tap) activate
     #puts "configuring $data(tap)"
     ::capture::configure $w {*}$args
 }
@@ -254,6 +255,7 @@ proc ::capture::iq {w args} {
     set data(type) iq
     set data(tap) "capture_iq_[incr ::capture::ntap]"
     ::sdrtcl::audio-tap $data(tap) -log2n 2 -log2size [::capture::log2-size $data(-size)] -complex 0
+    $data(tap) activate
     ::capture::configure $w {*}$args
 }
 
@@ -264,6 +266,7 @@ proc ::capture::midi {w args} {
     set data(type) midi
     set data(tap) "capture_midi_[incr ::capture::ntap]"
     ::sdrtcl::midi-tap $data(tap)
+    $data(tap) activate
     ::capture::configure $w {*}$args
 }
 

@@ -112,6 +112,7 @@ snit::type sdrkit::rx {
 	..	-iq-delay	.		-iq-delay
 	..	-iq-correct	.		-iq-correct
 	..	-lo-freq	.		-lo-freq
+	..	-cw-freq	.		-cw-freq
 	..	-bpf-width	.		-bpf-width
 	..	-bpf-offset	.		-bpf-offset
 	..	-agc-mode	.		-agc-mode
@@ -124,6 +125,7 @@ snit::type sdrkit::rx {
 	.	-low		.-if-bpf	-low
 	.	-high		.-if-bpf	-high
 	.	-agc-mode	.-af-agc	-mode
+	.	-mode		.-af-demod	-demod
 	.	-af-gain	.-af-gain	-gain
     }
 
@@ -271,7 +273,7 @@ snit::type sdrkit::rx {
 		    }
 		    DIGU - USB {
 			if {$opt in {-bpf-offset -bpf-width -mode}} {
-			    $self configure [expr {$options(-bpf-offset)}] $low -high [expr {$options(-bpf-offset)+$options(-bpf-width)}]
+			    $self configure -low [expr {$options(-bpf-offset)}] -high [expr {$options(-bpf-offset)+$options(-bpf-width)}]
 			}
 		    }
 		    DIGL - LSB {
@@ -281,7 +283,7 @@ snit::type sdrkit::rx {
 		    }
 		    default { error "unanticipated mode \"$options(-mode)\"" }
 		}
-
+		$options(-component) report $opt $val
 	    }
 	    -lo-freq {
 		$options(-component) report $opt [expr {-$val}]
@@ -289,6 +291,7 @@ snit::type sdrkit::rx {
 	    -rf-gain -
 	    -iq-swap -
 	    -iq-delay -
+	    -iq-correct -
 	    -agc-mode -
 	    -af-gain -
 	    -low -

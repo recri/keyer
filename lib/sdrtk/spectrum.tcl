@@ -58,6 +58,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	lighter \#EEE
 	lightest \#FFF
 	carrier red
+	hgrid-scroll 0
     }
     
     constructor {args} {

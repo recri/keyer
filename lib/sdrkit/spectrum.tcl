@@ -111,11 +111,11 @@ snit::type sdrkit::spectrum {
 	$self configure {*}$args
     }
     destructor {
-	if {$::sdrkit::verbose(destroy)} { puts "$self destroy" }
+	# if {$::sdrkit::verbose(destroy)} { puts "$self destroy" }
 	catch {after cancel $data(after)}
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
-	if {$::sdrkit::verbose(destroy)} { puts "$self destroy, completed" }
+	#if {$::sdrkit::verbose(destroy)} { puts "$self destroy, completed" }
     }
     method port-complement {port} { return {} }
     method build-parts {} {
@@ -169,7 +169,9 @@ snit::type sdrkit::spectrum {
 	    rxtx -cw-freq -cw-freq
 	    rxtx -bpf-width -bpf-width
 	} {
-	    $options(-component) connect-options $name $opt $options(-name) $myopt
+	    if {[$options(-component) part-exists $name] && [$options(-component) opt-exists [list $name $opt]]} {
+		$options(-component) connect-options $name $opt $options(-name) $myopt
+	    }
 	}
     }
 
@@ -296,7 +298,7 @@ snit::type sdrkit::spectrum {
 	    # finished
 	    return
 	}
-	if {[incr data(nspectrum)] == 1} { puts [join [::sdrkitx::$options(-name) configure] \n] }
+	# if {[incr data(nspectrum)] == 1} { puts [join [::sdrkitx::$options(-name) configure] \n] }
 	# capture spectrum and pass to display
 	lassign [::sdrkitx::$options(-name) get] frame dB
 	binary scan $dB f* dB
