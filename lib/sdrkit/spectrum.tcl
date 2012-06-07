@@ -29,13 +29,14 @@ package require snit
 package require sdrkit
 package require sdrtcl::jack
 package require sdrtcl::spectrum-tap
-package require sdrtk::spectrum
+package require sdrtk::spectrum-waterfall
 package require sdrtk::radiomenubutton
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
 
 snit::type sdrkit::spectrum {    
+
     option -name sdr-spectrum
     option -type jack
     option -server default
@@ -91,8 +92,8 @@ snit::type sdrkit::spectrum {
 	smooth radio {-format {Smooth} -values {0 1} -labels {off on}}
 	multi iscale {-format {Multi %d} -from 1 -to 32}
 	pal iscale {-format {Palette %d} -from 0 -to 9}
-	min iscale {-format {Min %d dBFS} -from -160 -to -80}
-	max iscale {-format {Max %d dBFS} -from -80 -to 0}
+	min iscale {-format {Min %d dBFS} -from -160 -to 50}
+	max iscale {-format {Max %d dBFS} -from -160 -to 50}
 	zoom scale {-format {Zoom %.2f} -from 0.5 -to 100}
 	pan iscale {-format {Pan %d} -from -20000 -to 20000}
     }
@@ -120,7 +121,7 @@ snit::type sdrkit::spectrum {
     method port-complement {port} { return {} }
     method build-parts {} {
 	toplevel .spectrum-$options(-name)
-	set data(display) [sdrtk::spectrum .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]
+	set data(display) [sdrtk::spectrum-waterfall .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]
 	pack $data(display) -side top -fill both -expand true
 	sdrtcl::spectrum-tap ::sdrkitx::$options(-name) {*}[$self TapOptions]
 	set data(after) [after $options(-period) [mymethod Update]]
