@@ -45,6 +45,8 @@ snit::widgetadaptor sdrtk::spectrum {
     option -filter-high -default 0 -configuremethod Retune
     option -tuned-freq -default 0 -configuremethod Retune
 
+    option -command -default {}
+
     delegate option * to hull
     delegate method * to hull
 
@@ -59,6 +61,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	lightest \#FFF
 	carrier red
 	hgrid-scroll 0
+	freq 0
     }
     
     constructor {args} {
@@ -66,8 +69,27 @@ snit::widgetadaptor sdrtk::spectrum {
 	$self configure {*}$args
 	$hull configure -bg black
 	bind $win <Configure> [mymethod DrawAll]
+	bind $win <ButtonPress-1> [mymethod Press %W %x %y]
+	bind $win <ButtonRelease-1> [mymethod Release %W %x %y]
+	bind $win <B1-Motion> [mymethod Motion %W %x %y]
     }
     
+    method Press {w x y} {
+	set data(freq) [expr {($x-$data(xoffset))/$data(xscale)}]
+	# puts "Press $w $b $x $y -> $f $data(xscale) $data(xoffset)"
+    }
+    method Release {w x y} {
+	set df [expr {($x-$data(xoffset))/$data(xscale) - $data(freq)}]
+	#puts "Release $w $b $x $y -> $f"
+	if {$options(-command) ne {}} { {*}$options(-command) $w $x $y $df }
+    }
+    method Motion {w x y} {
+	set df [expr {($x-$data(xoffset))/$data(xscale) - $data(freq)}]
+	set data(freq) [expr {$data(freq)+$df}]
+	# puts "Motion $w $x $y"
+	if {$options(-command) ne {}} { {*}$options(-command) $w $x $y $df }
+    }
+
     method update {xy} {
 	$hull coords spectrum-$data(multi) $xy
 	$hull raise spectrum-$data(multi)
@@ -80,21 +102,21 @@ snit::widgetadaptor sdrtk::spectrum {
     }
 
     method VerticalScale {tag} {
-	set yscale [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
-	set yoffset [expr {-$options(-max)*$yscale}]
-	$hull scale $tag 0 0 1 $yscale
-	$hull move $tag 0 $yoffset
+	set data(yscale) [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
+	set data(yoffset) [expr {-$options(-max)*$data(yscale)}]
+	$hull scale $tag 0 0 1 $data(yscale)
+	$hull move $tag 0 $data(yoffset)
     }
 
     method HorizontalScale {tag} {
-	set xscale [expr {[winfo width $win]/double($options(-sample-rate))}]
-	set xoffset [expr {[winfo width $win]/2.0}]
-	$hull scale $tag 0 0 $xscale 1
-	$hull move $tag $xoffset 0
+	set data(xscale) [expr {[winfo width $win]/double($options(-sample-rate))}]
+	set data(xoffset) [expr {[winfo width $win]/2.0}]
+	$hull scale $tag 0 0 $data(xscale) 1
+	$hull move $tag $data(xoffset) 0
     }
     
     method HorizontalScroll {tag dx} {
-	$hull move $tag [expr {$dx*[winfo width $win]/double($options(-sample-rate))}] 0
+	$hull move $tag [expr {$dx*$data(xscale)}] 0
     }
 
     method Scale {tag} {

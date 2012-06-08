@@ -41,14 +41,24 @@ snit::widgetadaptor sdrtk::waterfall {
     option -reverse 0
     option -direction s
 
+    option -command -default {}
+
+    delegate option * to hull
+    delegate method * to hull
+
     variable data -array {
 	line-number 0
+	freq 0
     }
 
     constructor {args} {
 	installhull using canvas
 	$self configure {*}$args
 	$hull configure -width $options(-width) -height $options(-height) -bg black
+	bind $win <Configure> [mymethod DrawAll]
+	bind $win <ButtonPress-1> [mymethod Press %W %x %y]
+	bind $win <ButtonRelease-1> [mymethod Release %W %x %y]
+	bind $win <B1-Motion> [mymethod Motion %W %x %y]
     }
 
     ##
@@ -57,6 +67,24 @@ snit::widgetadaptor sdrtk::waterfall {
     destructor {
 	foreach img [array names data img-*] { rename $data($img) {} }
 	array unset data
+    }
+
+    method DrawAll {} {
+    }
+    method Press {w x y} {
+	set data(freq) [expr {($x-$data(xoffset))/$data(xscale)}]
+	# puts "Press $w $b $x $y -> $f $data(xscale) $data(xoffset)"
+    }
+    method Release {w x y} {
+	set df [expr {($x-$data(xoffset))/$data(xscale) - $data(freq)}]
+	#puts "Release $w $b $x $y -> $f"
+	if {$options(-command) ne {}} { {*}$options(-command) $w $x $y $df }
+    }
+    method Motion {w x y} {
+	set df [expr {($x-$data(xoffset))/$data(xscale) - $data(freq)}]
+	set data(freq) [expr {$data(freq)+$df}]
+	# puts "Motion $w $x $y"
+	if {$options(-command) ne {}} { {*}$options(-command) $w $x $y $df }
     }
 
     ##
@@ -77,14 +105,14 @@ snit::widgetadaptor sdrtk::waterfall {
     ## make a scan line row or column of pixel values
     ##
     method scan {xy} {
-	set xscale [expr {[winfo width $win]/double($options(-sample-rate))}]
-	set xoffset [expr {[winfo width $win]/2.0}]
+	set data(xscale) [expr {[winfo width $win]/double($options(-sample-rate))}]
+	set data(xoffset) [expr {[winfo width $win]/2.0}]
 	set ymin 1e6
 	set ymax -1e6
 	set xmin 1e6
 	set xmax -1e6
 	foreach {x y} $xy {
-	    set x [expr {$x*$xscale+$xoffset}]
+	    set x [expr {$x*$data(xscale)+$data(xoffset)}]
 	    set xmin [expr {min($xmin,$x)}]
 	    set xmax [expr {max($xmax,$x)}]
 	    set y [expr {$y+$options(-atten)}]

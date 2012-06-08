@@ -53,11 +53,15 @@ snit::widgetadaptor sdrtk::spectrum-waterfall {
 
     constructor {args} {
 	installhull using ttk::panedwindow -orient vertical
-	install spectrum using sdrtk::spectrum $win.s
-	install waterfall using sdrtk::waterfall $win.w
+	install spectrum using sdrtk::spectrum $win.s -command [mymethod Tune]
+	install waterfall using sdrtk::waterfall $win.w -command [mymethod Tune]
 	$hull add $spectrum
 	$hull add $waterfall
 	$self configure {*}$args
+    }
+
+    method Tune {w x y f} {
+	puts "$self Tune $w $x $y $f"
     }
 
     method Dispatch {opt val} {
