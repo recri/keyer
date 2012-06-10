@@ -27,6 +27,7 @@ snit::widgetadaptor sdrtk::waterfall {
     option -pal 0
     option -min -125.0
     option -max -60.0
+    option -automatic true
     option -min-f -1e6
     option -max-f 1e6
     
@@ -92,7 +93,7 @@ snit::widgetadaptor sdrtk::waterfall {
     ##
     method pixel {level} {
 	# clamp to percentage of range
-	set level [expr {min(1,max(0,($level-$options(-min))/($options(-max)-$options(-min))))}]
+	set level [expr {min(1,max(0,($level-$data(min))/($data(max)-$data(min))))}]
 	# use 100 levels
 	set i color-$options(-pal)-[expr {int(100*$level)}]
 	if { ! [info exists data($i)]} {
@@ -109,17 +110,32 @@ snit::widgetadaptor sdrtk::waterfall {
 	set data(xoffset) [expr {[winfo width $win]/2.0}]
 	set ymin 1e6
 	set ymax -1e6
+	set ysum 0
 	set xmin 1e6
 	set xmax -1e6
+	set n 0
 	foreach {x y} $xy {
 	    set x [expr {$x*$data(xscale)+$data(xoffset)}]
 	    set xmin [expr {min($xmin,$x)}]
 	    set xmax [expr {max($xmax,$x)}]
 	    set y [expr {$y+$options(-atten)}]
+	    set ysum [expr {$ysum+$y}]
 	    set ymin [expr {min($ymin,$y)}]
 	    set ymax [expr {max($ymax,$y)}]
 	    lappend f([expr {round($x)}]) $y
+	    incr n
 	}
+	set yavg [expr {double($ysum)/$n}]
+
+	# automatic palette bounds assignment
+	if {$options(-automatic)} {
+	    set data(min) [expr {$yavg-10}]
+	    set data(max) [expr {$yavg+60}]
+	} else {
+	    set data(min) $options(-min)
+	    set data(max) $options(-max)
+	}
+
 	set n [winfo width $win]
 	for {set x 0} {$x < $n} {incr x} {
 	    if {[info exists f($x)]} {
@@ -153,7 +169,7 @@ snit::widgetadaptor sdrtk::waterfall {
 	# this needs to scale x to window width
 	lassign [$self scan $xy] freq scan
 	set x0 [lindex $freq 0]
-	
+
 	# scroll all the canvas images up/down/left/right by 1
 	switch $options(-direction) {
 	    n { $hull move all 0 -1 }

@@ -29,6 +29,7 @@ snit::widgetadaptor sdrtk::spectrum-waterfall {
     # options to waterfall
     delegate option -pal to waterfall
     delegate option -atten to waterfall
+    delegate option -automatic to waterfall
     option -min-f -1e6
     option -max-f 1e6
 

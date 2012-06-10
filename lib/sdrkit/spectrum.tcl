@@ -50,7 +50,7 @@ snit::type sdrkit::spectrum {
     option -out-ports {}
     option -in-options {
 	-period -size -polyphase -result -tap
-	-pal -max -min -smooth -multi -zoom -pan
+	-pal -max -min -automatic -smooth -multi -zoom -pan
 	-mode -freq -lo-freq -cw-freq -carrier-freq
 	-low -high -bpf-width
     }
@@ -67,6 +67,7 @@ snit::type sdrkit::spectrum {
     option -pal -default 0 -configuremethod TkConfigure
     option -max -default 0 -configuremethod TkConfigure
     option -min -default -160 -configuremethod TkConfigure
+    option -automatic -default true -configuremethod TkConfigure
     option -smooth -default false -configuremethod TkConfigure
     option -multi -default 1 -configuremethod TkConfigure
     option -zoom -default 1 -configuremethod TkConfigure
