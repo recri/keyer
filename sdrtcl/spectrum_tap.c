@@ -150,7 +150,7 @@ static void *_preconfigure(_t *data) {
     return "allocation failure";
   }
   if (opts->polyphase == 1)
-    window_make(WINDOW_BLACKMANHARRIS, opts->size, prec->window);
+    window_make(WINDOW_BLACKMAN_HARRIS, opts->size, prec->window);
   else {
     void * e = polyphase_fft_window(opts->polyphase, opts->size, prec->window);
     if (e != prec->window) {

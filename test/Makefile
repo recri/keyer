@@ -1,5 +1,8 @@
 CFLAGS=-std=c99 -g -O3 
-all: test-osc2
+all: test-window
+
+test-window: test-window.c ../dspmath/window.h
+	cc -o test-window $(CFLAGS) test-window.c -lm
 
 test-osc2: test-osc2.c
 	cc -o test-osc2 $(CFLAGS) test-osc2.c -lm
