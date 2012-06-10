@@ -40,8 +40,7 @@ snit::type sdrkit::hardware {
 
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -hardware -default {}
 
@@ -97,28 +96,4 @@ snit::type sdrkit::hardware {
     method is-active {} { return 1 }
     method activate {} {  }
     method deactivate {} {  }
-
-    method OptionConstrain {opt val} { return $val }
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
-    method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-    }
-
-    method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self ControlConfigure $opt $val
-    }
 }

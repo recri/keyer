@@ -20,8 +20,9 @@
 package provide sdrkit::keyer-tone 1.0.0
 
 package require snit
-package require sdrtcl::jack
 package require sdrtcl::keyer-tone
+package require sdrkit::common-sdrtcl
+package require sdrtcl::jack
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -40,8 +41,7 @@ snit::type sdrkit::keyer-tone {
 
     option -in-ports {midi_in}
     option -out-ports {out_i out_q}
-    option -in-options {-chan -note -freq -gain -rise -fall}
-    option -out-options {}
+    option -options {-chan -note -freq -gain -rise -fall}
 
     option -chan -default 1 -configuremethod Configure
     option -note -default 0 -configuremethod Configure
@@ -63,11 +63,13 @@ snit::type sdrkit::keyer-tone {
 	fall scale {-format {Fall %.1f ms} -from 0.5 -to 50.0}
     }
 
-    variable data -array { deferred-config {} }
+    component common
+    delegate method * to common
 
     constructor {args} {
 	$self configure {*}$args
 	$self configure -sample-rate [sdrtcl::jack -server $options(-server) sample-rate]
+	install common using sdrkit::common-sdrtcl %AUTO% -name $options(-name) -parent $self -options [myvar options]
     }
     destructor {
 	catch {::sdrkitx::$options(-name) deactivate}
@@ -84,52 +86,9 @@ snit::type sdrkit::keyer-tone {
 	
 	foreach {opt type opts} $options(-sub-controls) {
 	    if {$opt eq {freq}} { lappend opts -from [expr {-$options(-sample-rate)/4.0}] -to [expr {$options(-sample-rate)/4.0}] }
-	    switch $type {
-		spinbox {
-		    package require sdrkit::label-spinbox
-		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		scale {
-		    package require sdrkit::label-scale
-		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		separator {
-		    ttk::separator $w.$opt
-		}
-		radio {
-		    package require sdrkit::label-radio
-		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
-		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		}
-	    }
+	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
-    }
-    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
-    method is-active {} { return [::sdrkitx::$options(-name) is-active] }
-    method activate {} { ::sdrkitx::$options(-name) activate }
-    method deactivate {} { ::sdrkitx::$options(-name) deactivate }
-    method OptionConstrain {opt val} { return $val }
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-    method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-    }
-    method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self ControlConfigure $opt $val
     }
 }

@@ -29,6 +29,20 @@ package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
+#
+# construct a snit type on the fly which
+# handles a list of options
+#
+proc sdrkit::make-echoplex {typename component options} {
+    set echoplex {}
+    lappend echoplex "snit::type $typename {"
+    lappend echoplex "method Echo {opt val} { $component report \$opt \[set options(\$opt) \$val\] }"
+    foreach opt $options { lappend echoplex "option $opt -configuremethod Echo" }
+    lappend echoplex "}"
+    eval [join $echoplex \n]
+    return $typename
+}
+
 snit::type sdrkit::rxtx {
     option -name rxtx
     option -type dsp
@@ -53,12 +67,7 @@ snit::type sdrkit::rxtx {
     option -rx-af-gain -default 0 -configuremethod Configure
     option -hw-freq -default [expr {7050000-10000-400}] -readonly true
 
-    option -in-options {
-	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
-	-mode -agc-mode -iq-correct -iq-swap -iq-delay
-	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain
-    }
-    option -out-options {
+    option -options {
 	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
 	-mode -agc-mode -iq-correct -iq-swap -iq-delay
 	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain -hw-freq
@@ -130,7 +139,13 @@ snit::type sdrkit::rxtx {
 	active 0
     }
 
-    constructor {args} { $self configure {*}$args }
+    component echoplex
+    delegate option * to echoplex
+
+    constructor {args} {
+	$self configure {*}$args
+	install echoplex using [make-echoplex sdrkit::rxtx-echo-1 $options(-component) {}] %AUTO%
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
@@ -178,6 +193,7 @@ snit::type sdrkit::rxtx {
     }
 
     method resolve {} {
+	# make the ports connect
 	foreach {name1 ports1 name2 ports2} $options(-port-connections) {
 	    set name1 [string trim "$options(-name)-$name1" -]
 	    set name2 [string trim "$options(-name)-$name2" -]
@@ -185,6 +201,30 @@ snit::type sdrkit::rxtx {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
 	}
+
+	# first we connect all component control reports
+	# to constructed options in this component
+	# and those constructed options are connected back
+	# to the original component.
+	set echoes {}
+	foreach pair [$options(-component) opt-filter {* *}] {
+	    lassign $pair name opt
+	    if {[string match rxtx-* $name]} {
+		set newopt [string range "$name$opt" 4 end]
+		set newpair [list rxtx $newopt]
+		if {[$options(-component) opt-exists [list rxtx $newopt]]} {
+		    puts "bad luck rxtx $newopt already exists"
+		} else {
+		    $options(-component) opt-add $newpair
+		    $options(-component) opt-connect $pair $newpair
+		    $options(-component) opt-connect $newpair $pair
+		    lappend echoes $newopt
+		}
+	    }
+	}
+	install echoplex using [make-echoplex sdrkit::rxtx-echo-2 $options(-component) $echoes] %AUTO%
+
+	# now we need to identify the options
 	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
 	    $options(-component) connect-opts $name1 $opt1 $name2 $opt2
 	}
@@ -206,7 +246,7 @@ snit::type sdrkit::rxtx {
 	    $self Set $opt $options($opt)
 	}
     }
-    method OptionConstrain {opt val} { return $val }
+    method Constrain {opt val} { return $val }
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {
 	if {$opt in {-agc-mode -mode -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -bpf-width -rx-af-gain -rx-rf-gain}} {
@@ -216,13 +256,13 @@ snit::type sdrkit::rxtx {
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
     }
 
     method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	if {$opt eq {-lo-freq}} {
 	    set df [expr {$val-$options(-lo-freq)}]
 	    $self Set -freq [expr {$options(-freq)+$df}]

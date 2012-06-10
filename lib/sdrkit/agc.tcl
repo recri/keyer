@@ -23,9 +23,10 @@
 package provide sdrkit::agc 1.0.0
 
 package require snit
+
+package require sdrkit::common-sdrtcl
 package require sdrtcl::agc
 package require sdrtype::types
-package require sdrtk::radiomenubutton
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -43,8 +44,7 @@ snit::type sdrkit::agc {
 
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {-target -attack -decay -slope -hang -fasthang -max -min -threshold -mode}
-    option -out-options {-target -attack -decay -slope -hang -fasthang -max -min -threshold -mode}
+    option -options {-target -attack -decay -slope -hang -fasthang -max -min -threshold -mode}
 
     option -target -default 1 -type sdrtype::agc-target -configuremethod Configure
     option -attack -default 2 -type sdrtype::agc-attack -configuremethod Configure
@@ -70,10 +70,14 @@ snit::type sdrkit::agc {
 	threshold scale {-format {Threshold %.5f}}
     }
 
-    variable data -array { deferred-config {} }
+    variable data -array { defcon {} }
+
+    component common
+    delegate method * to common
 
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-sdrtcl %AUTO% -name $options(-name) -parent $self -options [myvar options]
     }
     destructor {
 	catch {::sdrkitx::$options(-name) deactivate}
@@ -88,63 +92,27 @@ snit::type sdrkit::agc {
 	if {$w eq {}} { set pw . } else { set pw $w }
 	
 	foreach {opt type opts} $options(-sub-controls) {
-	    switch $type {
-		spinbox {
-		    package require sdrkit::label-spinbox
-		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		scale {
-		    package require sdrkit::label-scale
-		    lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		separator {
-		    ttk::separator $w.$opt
-		}
-		radio {
-		    package require sdrkit::label-radio
-		    lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
-		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		}
+	    switch $opt {
+		mode { lappend opts -values [sdrtype::agc-$opt cget -values] }
+		default { lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max] }
 	    }
+	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
+    ## these are specific to this component
     method is-needed {} { return [expr {$options(-mode) ne {off}}] }
-    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
-    method is-active {} { return [::sdrkitx::$options(-name) is-active] }
-    method activate {} { ::sdrkitx::$options(-name) activate }
-    method deactivate {} { ::sdrkitx::$options(-name) deactivate }
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
     method Configure {opt val} {
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-    }
-    method Set {opt val} {
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self ControlConfigure $opt $val
 	if {$opt eq {-mode} && $val ni {off custom}} {
+	    # fetch the itemized values that go with a mode setting
 	    foreach opt [::sdrkitx::$options(-name) configure] {
 		lassign $opt opt name class default val
-		if {$opt ne {-mode} && $opt in $options(-in-options)} {
-		    $self Update $opt $val
+		if {$opt ne {-mode} && $opt in $options(-options)} {
+		    $self Set $opt $val
 		}
 	    }
 	}
-    }
-    method Update {opt val} {
-	$self OptionConfigure $opt $val
-	$self ControlConfigure $opt $val
+	$self Defcon $opt [set options($opt) [$self Constrain $opt $val]]
     }
 }

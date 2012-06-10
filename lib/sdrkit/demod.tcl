@@ -34,8 +34,7 @@ snit::type sdrkit::demod {
     option -title {Demod}
     option -in-ports {alt_in_i alt_in_q}
     option -out-ports {alt_out_i alt_out_q}
-    option -in-options {-demod}
-    option -out-options {-demod}
+    option -options {-mode}
     option -sub-components {
 	am {AM} demod-am {}
 	fm {FM} demod-fm {}
@@ -56,9 +55,11 @@ snit::type sdrkit::demod {
     option -minsizes {100 200}
     option -weights {1 3}
 
-    option -demod -default none -configuremethod Configure
+    option -mode -default none -configuremethod Configure
 
-    variable data -array { parts {} }
+    variable data -array {
+	parts {}
+    }
 
     constructor {args} { $self configure {*}$args }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
@@ -100,47 +101,49 @@ snit::type sdrkit::demod {
 	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	}
 	package require sdrkit::label-radio
-	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-demod)] -command [mymethod Set -demod]
+	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-mode)] -command [mymethod Set -mode]
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-    method {Configure -demod} {val} {
+    method {Configure -mode} {val} {
 	switch $val {
-	    CWU - CWL - USB - LSB - DIGU - DIGL - DSB { $self Set -demod none }
-	    FMN { $self Set -demod FM }
-	    AM { $self Set -demod AM }
-	    SAM { $self Set -demod SAM }
+	    CWU - CWL - USB - LSB - DIGU - DIGL - DSB { set name none }
+	    FMN { set name FM }
+	    AM { set name AM }
+	    SAM { set name SAM }
 	    default { error "unanticipated demodulation \"$val\"" }
 	}
-    }
-    method Set {opt name} {
+	set options(-mode) $val
 	# find deselected component
 	set exname {none}
 	foreach part $data(parts) {
 	    if {[$options(-component) part-is-enabled $options(-name)-$part]} {
-		if {$exname ne {none}} { error "multiple selected keyers $part and $exname" }
+		if {$exname ne {none}} { error "multiple selected alternates: $part and $exname" }
 		set exname $part
 	    }
 	}
 	# enable selected component if any
 	if {$name ne {none}} { $options(-component) part-enable $options(-name)-$name }
-	# disable deselected keyer
+	# disable deselected component
 	if {$exname ne {none}} { $options(-component) part-disable $options(-name)-$exname }
 	# deal with ui details
 	set w $options(-window)
 	# determine if ui details exist
 	if {$w ne {none}} {
-	    # remove deselected keyer ui
+	    # remove deselected component ui
 	    if {$exname ne {none}} { grid forget $data(window-$exname) }
 	    # install selected keyer ui
 	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
 	}
     }
+    method Set {opt name} {
+	$options(-component) report $opt $val
+    }
     method rewrite-connections-to {port candidates} {
-	return [Rewrite-connections-to $options(-name) $options(-demod) $port $candidates]
+	return [Rewrite-connections-to $options(-name) $options(-mode) $port $candidates]
     }
     method rewrite-connections-from {port candidates} {
-	return [Rewrite-connections-from $options(-name) $options(-demod) $port $candidates]
+	return [Rewrite-connections-from $options(-name) $options(-mode) $port $candidates]
     }
     proc Rewrite-connections-to {name selected port candidates} {
 	#puts "Rewrite-connections-to {$selected} $name $port {$candidates}"

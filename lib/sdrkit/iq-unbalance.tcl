@@ -33,8 +33,7 @@ snit::type sdrkit::iq-unbalance {
     option -title {IQ Unbalancer}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
     option -sub-components {
 	swp {IQ Swap} iq-swap {}
 	dly {IQ Delay} iq-delay {}

@@ -39,8 +39,7 @@ snit::type sdrkit::more-control {
 
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -sub-controls {
 	ports button {-label {Port Connections} -text View}
@@ -132,6 +131,6 @@ snit::type sdrkit::more-control {
 	    }
 	    puts "$command enable=$enable active=$active $kitx"
 	}
-	puts "rxtx-rx-af-demod enable=[sdrkitv::rxtx-rx-af-demod cget -enable] -demod [sdrkitw::rxtx-rx-af-demod cget -demod]"
+	puts "rxtx-rx-af-demod enable=[sdrkitv::rxtx-rx-af-demod cget -enable] -mode [sdrkitw::rxtx-rx-af-demod cget -mode]"
     }
 }

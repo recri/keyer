@@ -105,17 +105,17 @@ snit::type sdrkit::rx-control {
     method is-active {} { return 1 }
     method activate {} { }
     method deactivate {} { }
-    method OptionConstrain {opt val} { return $val }
+    method Constrain {opt val} { return $val }
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {}
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
     method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
     }
     method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
 	$self ControlConfigure $opt $val

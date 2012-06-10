@@ -34,8 +34,7 @@ snit::type sdrkit::mod {
     option -title {Mod}
     option -in-ports {alt_in_i alt_in_q}
     option -out-ports {alt_out_i alt_out_q}
-    option -in-options {-mod}
-    option -out-options {-mod}
+    option -options {-mode}
 
     option -server default
     option -component {}
@@ -44,7 +43,7 @@ snit::type sdrkit::mod {
     option -minsizes {100 200}
     option -weights {1 3}
 
-    option -mod none
+    option -mode -default none -configuremethod Configure
 
     option -sub-components {
 	am {AM} mod-am {}
@@ -109,14 +108,16 @@ snit::type sdrkit::mod {
 	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
 	}
 	package require sdrkit::label-radio
-	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-mod)] -command [mymethod Set -mod]
+	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-mode)] -command [mymethod Set -mode]
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
     method is-active {} { return 1 }
     method activate {} {}
     method deactivate {} {}
-    method Set {opt name} {
+    method Constrain {opt val} { return $val }
+    method Configure {opt name} {
+	set options($opt) $name
 	# find deselected component
 	set exname {none}
 	foreach part $data(parts) {
@@ -149,19 +150,22 @@ snit::type sdrkit::mod {
 	    }
 	}
     }
+    method Set {opt val} {
+	$options(-component) report $opt [$self Constrain $opt $val]
+    }
     method rewrite-connections-to {port candidates} {
 	# puts "mod::rewrite-connections-to $port {$candidates}"
-	if {$options(-mod) eq {none}} {
+	if {$options(-mode) eq {none}} {
 	    return [Rewrite-connections-to {} $port $candidates]
 	} else {
-	    return [Rewrite-connections-to $options(-name)-$options(-mod) $port $candidates]
+	    return [Rewrite-connections-to $options(-name)-$options(-mode) $port $candidates]
 	}
     }
     method rewrite-connections-from {port candidates} {
-	if {$options(-mod) eq {none}} {
+	if {$options(-mode) eq {none}} {
 	    return [Rewrite-connections-from {} $port $candidates]
 	} else {
-	    return [Rewrite-connections-from $options(-name)-$options(-mod) $port $candidates]
+	    return [Rewrite-connections-from $options(-name)-$options(-mode) $port $candidates]
 	}
     }
     proc Rewrite-connections-to {selected port candidates} {

@@ -25,6 +25,7 @@ package provide sdrkit::iq-correct 1.0.0
 
 package require snit
 package require sdrtcl::iq-correct
+package require sdrkit::common-sdrtcl
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -42,8 +43,7 @@ snit::type sdrkit::iq-correct {
 
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {-mu}
-    option -out-options {}
+    option -options {-mu}
 
     option -mu -default 0 -configuremethod Configure
 
@@ -59,8 +59,12 @@ snit::type sdrkit::iq-correct {
 	wimag 0
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-sdrtcl %AUTO% -name $options(-name) -parent $self -options [myvar options]
     }
     destructor {
 	catch {::sdrkitx::$options(-name) deactivate}
@@ -79,62 +83,17 @@ snit::type sdrkit::iq-correct {
 		error { lappend opts -command [mymethod get-error] }
 		train { lappend opts -command [mymethod do-train] }
 	    }
-	    switch $type {
-		spinbox {
-		    package require sdrkit::label-spinbox
-		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		scale {
-		    package require sdrkit::label-scale
-		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		separator {
-		    ttk::separator $w.$opt
-		}
-		radio {
-		    package require sdrkit::label-radio
-		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
-		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		}
-		button {
-		    package require sdrkit::label-button
-		    sdrkit::label-button $w.$opt {*}$opts
-		}
-		default { error "unimplemented control type \"$type\"" }
+	    if {[info exists options(-$opt]} {
+		$common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
+	    } else {
+		$common window $w $opt $type $opts {} {} {}
 	    }
 	    grid $w.$opt -sticky ew
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
-    method is-needed {} { return $options(-mu) }
-    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
-    method is-active {} { return [::sdrkitx::$options(-name) is-active] }
-    method activate {} { ::sdrkitx::$options(-name) activate }
-    method deactivate {} { ::sdrkitx::$options(-name) deactivate }
+    method is-needed {} { return [expr {$options(-mu) != 0}] }
 
-    method OptionConstrain {opt val} { return $val }
-
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-    method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-    }
-    method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self ControlConfigure $opt $val
-    }
     method get-error {} {
 	if {[sdrkitx::$options(-name) is-active]} {
 	    set e [sdrkitx::$options(-name) error]

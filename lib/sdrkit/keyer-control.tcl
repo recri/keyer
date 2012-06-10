@@ -39,8 +39,7 @@ snit::type sdrkit::keyer-control {
 
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -sub-controls {
     }
@@ -58,15 +57,6 @@ snit::type sdrkit::keyer-control {
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
-    }
-
-    proc split-command-args {command} {
-	set args {}
-	if {[llength $command] > 1} {
-	    set args [lrange $command 1 end]
-	    set command [lindex $command 0]
-	}
-	return [list $command $args]
     }
 
     method build-parts {} { if {$options(-window) eq {none}} { $self build } }
@@ -97,8 +87,7 @@ snit::type sdrkit::keyer-control {
 		grid $w.$opt -sticky ew
 	    }
 	}
-	foreach {name title command} $options(-sub-components) {
-	    lassign [split-command-args $command] command args
+	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
 	    } else {
@@ -116,32 +105,4 @@ snit::type sdrkit::keyer-control {
     method activate {} { }
     method deactivate {} { }
 
-    method OptionConstrain {opt val} { return $val }
-
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
-    method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
-    }
-
-    method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
-	$self ControlConfigure $opt $val
-    }
-    method Changed {opt} { $self Set $opt $options($opt) }
 }

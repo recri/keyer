@@ -39,8 +39,7 @@ snit::type sdrkit::spectrum-tap {
 
     option -in-ports {i q}
     option -out-ports {i q}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     variable data -array { activate 0 }
 

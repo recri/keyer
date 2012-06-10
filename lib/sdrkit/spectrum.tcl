@@ -25,12 +25,11 @@ package provide sdrkit::spectrum 1.0.0
 
 package require Tk
 package require snit
-
-package require sdrkit
-package require sdrtcl::jack
 package require sdrtcl::spectrum-tap
+package require sdrtcl::jack
+package require sdrkit
+package require sdrkit::common-sdrtcl
 package require sdrtk::spectrum-waterfall
-package require sdrtk::radiomenubutton
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -48,39 +47,38 @@ snit::type sdrkit::spectrum {
 
     option -in-ports {in_i in_q}
     option -out-ports {}
-    option -in-options {
+    option -options {
 	-period -size -polyphase -result -tap
 	-pal -max -min -automatic -smooth -multi -zoom -pan
 	-mode -freq -lo-freq -cw-freq -carrier-freq
 	-low -high -bpf-width
     }
-    option -out-options {}
 
     option -sample-rate 48000
 
-    option -period -default 100 -configuremethod Configure
-    option -size -default 2048 -configuremethod TapConfigure
-    option -polyphase -default 1 -configuremethod TapConfigure
-    option -result -default dB -configuremethod TapConfigure
-    option -tap -default {} -configuremethod Configure
+    option -period -default 100 -configuremethod Dispatch
+    option -size -default 2048 -configuremethod Dispatch
+    option -polyphase -default 1 -configuremethod Dispatch
+    option -result -default dB -configuremethod Dispatch
+    option -tap -default {} -configuremethod Dispatch
 
-    option -pal -default 0 -configuremethod TkConfigure
-    option -max -default 0 -configuremethod TkConfigure
-    option -min -default -160 -configuremethod TkConfigure
-    option -automatic -default true -configuremethod TkConfigure
-    option -smooth -default false -configuremethod TkConfigure
-    option -multi -default 1 -configuremethod TkConfigure
-    option -zoom -default 1 -configuremethod TkConfigure
-    option -pan -default 0 -configuremethod TkConfigure
+    option -pal -default 0 -configuremethod Dispatch
+    option -max -default 0 -configuremethod Dispatch
+    option -min -default -160 -configuremethod Dispatch
+    option -automatic -default true -configuremethod Dispatch
+    option -smooth -default false -configuremethod Dispatch
+    option -multi -default 1 -configuremethod Dispatch
+    option -zoom -default 1 -configuremethod Dispatch
+    option -pan -default 0 -configuremethod Dispatch
 
-    option -mode -default CWU -configuremethod Retune
-    option -freq -default 7050000 -configuremethod Retune
-    option -lo-freq -default 10000 -configuremethod Retune
-    option -cw-freq -default 600 -configuremethod Retune
-    option -carrier-freq -default 7040000 -configuremethod Retune
-    option -low -default 400 -configuremethod Retune
-    option -high -default 800 -configuremethod Retune
-    option -bpf-width -default 200 -configuremethod Retune
+    option -mode -default CWU -configuremethod Dispatch
+    option -freq -default 7050000 -configuremethod Dispatch
+    option -lo-freq -default 10000 -configuremethod Dispatch
+    option -cw-freq -default 600 -configuremethod Dispatch
+    option -carrier-freq -default 7040000 -configuremethod Dispatch
+    option -low -default 400 -configuremethod Dispatch
+    option -high -default 800 -configuremethod Dispatch
+    option -bpf-width -default 200 -configuremethod Dispatch
     
     # tap - no spectrum source tap control
     # period - no spectrum period control
@@ -105,12 +103,18 @@ snit::type sdrkit::spectrum {
 	frequencies {}
 	tap-options {-server -size -polyphase -result}
 	tk-options {-sample-rate -pal -max -min -smooth -multi -zoom -pan}
+	retune-options {-mode -freq -lo-freq -cw-freq -carrier-freq -low -high -bpf-width}
     }
+
+    component common
+    delegate method * to common
 
     constructor {args} {
 	set options(-server) [from args -server default]
 	set options(-sample-rate) [sdrtcl::jack -server $options(-server) sample-rate]
+	$self BuildDispatchTable
 	$self configure {*}$args
+	install common using sdrkit::common-sdrtcl %AUTO% -name $options(-name) -parent $self -options [myvar options]
     }
     destructor {
 	# if {$::sdrkit::verbose(destroy)} { puts "$self destroy" }
@@ -133,91 +137,57 @@ snit::type sdrkit::spectrum {
 	if {$w eq {}} { set pw . } else { set pw $w }
 
 	foreach {opt type opts} $options(-sub-controls) {
-	    switch $type {
-		spinbox {
-		    package require sdrkit::label-spinbox
-		    sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		scale {
-		    package require sdrkit::label-scale
-		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-		    sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		iscale {
-		    package require sdrkit::label-iscale
-		    #lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-		    sdrkit::label-iscale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		}
-		separator {
-		    ttk::separator $w.$opt
-		}
-		radio {
-		    package require sdrkit::label-radio
-		    #lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
-		    sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		}
-		default { error "unimplemented control type \"$type\"" }
-	    }
+	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
 
     method resolve {} {
-	foreach {name opt myopt} {
-	    rxtx -mode -mode
-	    rxtx -freq -freq
-	    rxtx -lo-freq -lo-freq
-	    rxtx -cw-freq -cw-freq
-	    rxtx -bpf-width -bpf-width
-	} {
-	    if {[$options(-component) part-exists $name] && [$options(-component) opt-exists [list $name $opt]]} {
-		$options(-component) connect-options $name $opt $options(-name) $myopt
+	if {0} {
+	    foreach {name opt myopt} {
+		rxtx -mode -mode
+		rxtx -freq -freq
+		rxtx -lo-freq -lo-freq
+		rxtx -cw-freq -cw-freq
+		rxtx -bpf-width -bpf-width
+	    } {
+		if {[$options(-component) part-exists $name] && [$options(-component) opt-exists [list $name $opt]]} {
+		    $options(-component) connect-options $name $opt $options(-name) $myopt
+		}
 	    }
 	}
     }
 
-    method Set {opt val} {
-	if { ! [info exists data(Set-dispatch$opt)]} {
-	    if {$opt in $data(tap-options)} {
-		set data(Set-dispatch$opt) [mymethod TapConfigure]
-	    } elseif {$opt in $data(tk-options)} {
-		set data(Set-dispatch$opt) [mymethod TkConfigure]
-	    } else {
-		set data(Set-dispatch$opt) [mymethod Configure]
-	    }
-	}
-	{*}$data(Set-dispatch$opt) $opt $val
-    }
-    method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }
-    method is-active {} { return [::sdrkitx::$options(-name) is-active]  }
-    method activate {} { ::sdrkitx::$options(-name) activate }
-    method deactivate {} { ::sdrkitx::$options(-name) deactivate }
     method FilterOptions {keepers} { foreach opt $keepers { lappend opts $opt $options($opt) }; return $opts }
     method TapOptions {} { return [$self FilterOptions $data(tap-options)] }
     method TkOptions {} { return [$self FilterOptions $data(tk-options)] }
-    method OptionConstrain {opt val} {
-	switch -- $opt {
-	    -size - -polyphase - -multi - -pal - -min - -max - -pan - -period {
-		return [expr {int(round($val))}]
+    method RetuneOptions {} { return [$self FilterOptions $data(return-options)] }
+
+    method BuildDispatchTable {} {
+	foreach {opts handler} [list \
+				    $data(tap-options) [mymethod TapConfigure] \
+				    $data(tk-options) [mymethod TkConfigure] \
+				    $data(retune-options) [mymethod RetuneConfigure] ] {
+	    foreach opt $opts {
+		set data(Dispatch$opt) $handler
 	    }
-	    -smooth - -zoom { return $val }
-	    default { error "unanticipated option \"$opt\"" }
 	}
     }
-    method Configure {opt val} {
-	set options($opt) [$self OptionConstrain $opt $val]
+    method Dispatch {opt val} {
+	set options($opt) [$self Constrain $opt $val]
+	if {[info exists data(Dispatch$opt)]} {
+	    {*}$data(Dispatch$opt) $opt $options($opt)
+	} else {
+	}
     }
     method TapConfigure {opt val} {
-	$self Configure $opt $val
 	lappend data(tap-deferred-opts) $opt $options($opt)
     }
     method TkConfigure {opt val} {
-	$self Configure $opt $val
 	$data(display) configure $opt $options($opt)
     }
-    method Retune {opt val} {
-	set options($opt) $val
+    method RetuneConfigure {opt val} {
 	set wid $options(-bpf-width)
 	# convert -bpf-width to -low -high
 	# compute -tuned-freq offset from -center-freq

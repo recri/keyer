@@ -34,8 +34,7 @@ snit::type sdrkit::iq-source {
     option -title {IQ Source}
     option -in-ports {}
     option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
     option -sub-components {
 	sg {Signal Generator} signal-generator {}
 	iq {IQ Imbalance} iq-unbalance {}

@@ -33,15 +33,11 @@ snit::type sdrkit::rx {
     option -title {RX}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {
-	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
-	-cw-freq -bpf-width -bpf-offset
-    }
-    option -out-options {
-	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
-	-low -high
-    }
-
+    option -options {}
+    #{
+    #	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
+    #	-cw-freq -bpf-width -bpf-offset -low -high
+    #}
     option -mode -default CWU -configuremethod Configure
     option -rf-gain -default 0 -configuremethod Configure
     option -iq-swap -default 0 -configuremethod Configure
@@ -125,7 +121,7 @@ snit::type sdrkit::rx {
 	.	-low		.-if-bpf	-low
 	.	-high		.-if-bpf	-high
 	.	-agc-mode	.-af-agc	-mode
-	.	-mode		.-af-demod	-demod
+	.	-mode		.-af-demod	-mode
 	.	-af-gain	.-af-gain	-gain
     }
 
@@ -230,12 +226,14 @@ snit::type sdrkit::rx {
 		$options(-component) connect-ports $options(-name) $src $dname $dport
 	    }
 	}
-	# puts "resolve options(-name) is $options(-name)"
-	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
-	    set ename1 [$self Expand-name $name1]
-	    set ename2 [$self Expand-name $name2]
-	    # puts "$name1 $opt1 $name2 $opt2 -> $options(-component) connect-options $ename1 $opt1 $ename2 $opt2"
-	    $options(-component) connect-options $ename1 $opt1 $ename2 $opt2
+	if {0} {
+	    # puts "resolve options(-name) is $options(-name)"
+	    foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
+		set ename1 [$self Expand-name $name1]
+		set ename2 [$self Expand-name $name2]
+		# puts "$name1 $opt1 $name2 $opt2 -> $options(-component) connect-options $ename1 $opt1 $ename2 $opt2"
+		$options(-component) connect-options $ename1 $opt1 $ename2 $opt2
+	    }
 	}
 	foreach name $options(-parts-enable) {
 	    set data($name-enable) 1

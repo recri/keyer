@@ -39,8 +39,7 @@ snit::type sdrkit::physical-port {
 
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -ports {}
 

@@ -79,7 +79,7 @@ snit::widgetadaptor sdrkit::control-dial {
 	}
     }
 
-    method OptionConstrain {opt val} { return $val }
+    method Constrain {opt val} { return $val }
     method OptionConfigure {opt val} {
 	set options($opt) $val
 	switch -- $opt {
@@ -90,12 +90,12 @@ snit::widgetadaptor sdrkit::control-dial {
     method ControlConfigure {opt val} { if {$options(-command) ne {}} { {*}$options(-command) $opt $val } }
 
     method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	$self OptionConfigure $opt $val
     }
 
     method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ControlConfigure $opt $val
     }

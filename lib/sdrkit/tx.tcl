@@ -33,8 +33,7 @@ snit::type sdrkit::tx {
     option -title {TX}
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
     option -sub-components {
 	af-gain {AF Gain} gain {}
 	-af-real {Real part} real {}

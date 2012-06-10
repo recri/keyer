@@ -33,8 +33,7 @@ snit::type sdrkit::keyer {
     option -title {Keyer}
     option -in-ports {midi_in}
     option -out-ports {out_i out_q midi_out}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
     option -sub-components {
 	debounce {Debounce} keyer-debounce {}
 	iambic {Iambic} keyer-iambic {}

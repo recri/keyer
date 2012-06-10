@@ -252,6 +252,7 @@ snit::type sdrkit::component {
     method part-deactivate {args} { return [$self control part-deactivate {*}$args] }
     method part-destroy {args} { return [$self control part-destroy {*}$args] }
     method opt-exists {args} { return [$self control opt-exists {*}$args] }
+    method opt-add {args} { return [$self control opt-add {*}$args] }
     method opt-filter {args} { return [$self control opt-filter {*}$args] }
     method port-exists {args} { return [$self control port-exists {*}$args] }
     method port-filter {args} { return [$self control port-filter {*}$args] }

@@ -34,8 +34,7 @@ snit::type sdrkit::keyer-iambic {
     option -title {Iambic}
     option -in-ports {alt_midi_in}
     option -out-ports {alt_midi_out}
-    option -in-options {-iambic}
-    option -out-options {-iambic}
+    option -options {-iambic}
     option -sub-components {
 	ad5 {ad5dz} keyer-iambic-ad5dz {}
 	dtt {dttsp} keyer-iambic-dttsp {}
@@ -56,7 +55,7 @@ snit::type sdrkit::keyer-iambic {
     option -minsizes {100 200}
     option -weights {1 3}
 
-    option -iambic none
+    option -iambic -default none -configuremethod Configure
 
     variable data -array { parts {} }
 
@@ -104,10 +103,16 @@ snit::type sdrkit::keyer-iambic {
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
     }
+    ## these are specific to this component
+    method is-needed {} { return 1 }
+    method Constrain {opt val} { return $val }
+    ## 
     method is-active {} { return 1 }
+    method is-busy {} { return 0 }
     method activate {} {}
     method deactivate {} {}
-    method Set {opt name} {
+    method {Configure -iambic} {name} {
+	set options($opt) $name
 	# find deselected keyer
 	set exname {none}
 	foreach part $data(parts) {
@@ -129,6 +134,9 @@ snit::type sdrkit::keyer-iambic {
 	    # install selected keyer ui
 	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
 	}
+    }
+    method Set {opt val} {
+	$options(-component) report $opt [$self Constrain $opt $val]
     }
     method rewrite-connections-to {port candidates} {
 	# puts "demod::rewrite-connections-to $port {$candidates}"

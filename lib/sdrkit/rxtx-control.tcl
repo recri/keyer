@@ -39,8 +39,7 @@ snit::type sdrkit::rxtx-control {
 
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -sub-controls {
     }
@@ -67,15 +66,6 @@ snit::type sdrkit::rxtx-control {
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
-    }
-
-    proc split-command-args {command} {
-	set args {}
-	if {[llength $command] > 1} {
-	    set args [lrange $command 1 end]
-	    set command [lindex $command 0]
-	}
-	return [list $command $args]
     }
 
     method build-parts {} { if {$options(-window) eq {none}} { $self build } }
@@ -133,7 +123,7 @@ snit::type sdrkit::rxtx-control {
     method activate {} { }
     method deactivate {} { }
 
-    method OptionConstrain {opt val} { return $val }
+    method Constrain {opt val} { return $val }
 
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {
@@ -147,14 +137,14 @@ snit::type sdrkit::rxtx-control {
     method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
     method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
 	$self LabelConfigure $opt $val
     }
 
     method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
+	set val [$self Constrain $opt $val]
 	$self OptionConfigure $opt $val
 	$self ComponentConfigure $opt $val
 	$self LabelConfigure $opt $val

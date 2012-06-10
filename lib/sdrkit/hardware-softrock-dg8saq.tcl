@@ -37,8 +37,7 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 
     option -in-ports {}
     option -out-ports {}
-    option -in-options {-freq}
-    option -out-options {}
+    option -options {-freq}
 
     option -sub-controls {
     }

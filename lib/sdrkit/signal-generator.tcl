@@ -30,8 +30,7 @@ snit::type sdrkit::signal-generator {
     option -title {Signal Generator}
     option -in-ports {}
     option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -sub-components {
 	osc1 {Oscillator 1} oscillator {}

@@ -68,8 +68,7 @@ snit::type sdrkit::control {
     method part-add {name args} {
 	$self X-add part $name
 	dict set data(part) $name $args
-	foreach opt [$self part-in-options $name] { $self opt-add [list $name $opt] }
-	foreach opt [$self part-out-options $name] { $self opt-add-if-new [list $name $opt] }
+	foreach opt [$self part-options $name] { $self opt-add [list $name $opt] }
 	foreach port [$self part-in-ports $name] { $self port-add [list $name $port] }
 	foreach port [$self part-out-ports $name] { $self port-add-if-new [list $name $port] }	
 	return {}
@@ -103,8 +102,7 @@ snit::type sdrkit::control {
 	    return [$container cget -name]
 	}
     }
-    method part-in-options {name} { return [$self part-cget $name -in-options] }
-    method part-out-options {name} { return [$self part-cget $name -out-options] }
+    method part-options {name} { return [$self part-cget $name -options] }
     method part-in-ports {name} { return [$self part-cget $name -in-ports] }
     method part-out-ports {name} { return [$self part-cget $name -out-ports] }
     method part-type {name} { return [$self part-cget $name -type] }
