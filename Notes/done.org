@@ -200,3 +200,24 @@
    put an BNC connector on the free end,
    voila, an antenna with an unbalance feed connection that drives
    the softrock antenna input.
+** DONE - implement spectrum
+** DONE - debug spectrum, polyphase should smooth the noise floor   
+   The spectrum looks very different from the QtRadio spectrum
+   even though it should be working the same.  Removed all normalization
+   and set the zero on power to 1e-60, and it doesn't look closer, the
+   magnitude is even further off than it was.  What's going on?
+   The dttsp window generator was making a bogus Blackman Harris window,
+   the only one it uses.  It was computing window coefficients at
+   (i+0.5)2pi/n rather than i2pi/n.
+
+** DONE - figure out how to deal with filter -low low -high high
+   If the configuration gets split into option at a time passing, then
+   eventually the filter gets a -low that's incompatible with its
+   current -high, or vice versa, leading to an error message that's an
+   accident and would not a problem except that the incompatible value
+   gets discarded, leaving you with a weird filter envelope.
+   Done in a hacky way, needs a better solution.
+   And the hack bit me when I tried to translate the option names into
+   another component.
+   The general solution is to defer all configuration passing for a few
+   milliseconds and then pass all the accumulated options.

@@ -16,12 +16,6 @@
 ** TODO - make graph.tcl callback drags
 ** TODO - make smooth scroll tune to pick
 ** TODO - use the is-needed method for enabling components
-** TODO - implement spectrum
-** TODO - debug spectrum, polyphase should smooth the noise floor   
-   The spectrum looks very different from the QtRadio spectrum
-   even though it should be working the same.  Removed all normalization
-   and set the zero on power to 1e-60, and it doesn't look closer, the
-   magnitude is even further off than it was.  What's going on?
 ** TODO - looking and thinking about the sdrsharp IQ balancing,
    it's running off-line, it takes a buffer of samples and repeatedly
    adjusts the IQ balance, runs an fft, computes the utility, accepts
@@ -35,24 +29,24 @@
    along the line of the optimum for a given buffer, but that doesn't seem to
    be a consistent thing.
 ** TODO - rewriting the ui components, refactoring and simplifying,
-   trying to recover from the trauma of the spectrum coding.  So new
-   rules.  Yah, well this seemed like a good idea, but now I have a bunch
-   of different UI components that don't show the same values, and the
-   actual components seem to be using another set of values entirely.
-*** each of the plain ui components needs to be created with a
-   -name option that defines which control part it is;
-*** multiple ui components may share that control part;
-*** the control part has nothing to do with the window name;
-*** the ui components get created at will;
-*** there needs to be a central registry of control names;
-*** there needs to be a central registry of control name options;    
-*** there needs to be a map showing how dsp components are mapped
-    onto control names;
-*** the configuration names and classes from the dsp components
-    should be in one-to-one correspondance with the sdr::types;
-*** or are they sdrkit::types;
-*** a lot of this stuff should not be created until it's actually
-    needed to be used.
+   Each component in the dsp graph creates a UI which reports changes
+   to the associated values and accepts configuration of the values.
+   These are not connected by default, so the UI changes do not reflect
+   back into component parameter changes
+   Each UI component also structures its report/configure in a similar
+   disconnected state.
+   The toplevel collects all these option definitions at resolve time.
+   Those which refer to the same values or which must be computed from
+   multiple values get routed through a control component.  So all the 
+   frequency controller reports get routed to a single frequency controller
+   option, and the changes in that option get routed back to the other
+   controllers.
+   The others, which aren't under some kind of shared control, simply get
+   routed back to themselves.
+   So every UI control either loops directly to its component or is looped
+   through the main controller.
+   All the funky control manipulations and mode dependent interpretations
+   happen in the main controller
 ** TODO - the RXMeter signal from ghpsdr
    is post filter 10 log10(sum of squared magnitude+smidgen)
    then offset by multimeterCalibrationOffset, which has a series
@@ -64,17 +58,6 @@
    actually runs at the negative of the specified offset.
 ** TODO - the connections pane needs option/enable/activate notification.
    So it needs to hook into the opt chain.
-** TODO - figure out how to deal with filter -low low -high high
-   If the configuration gets split into option at a time passing, then
-   eventually the filter gets a -low that's incompatible with its
-   current -high, or vice versa, leading to an error message that's an
-   accident and would not a problem except that the incompatible value
-   gets discarded, leaving you with a weird filter envelope.
-   Done in a hacky way, needs a better solution.
-   And the hack bit me when I tried to translate the option names into
-   another component.
-   The general solution is to defer all configuration passing for a few
-   milliseconds and then pass all the accumulated options.
 ** TODO - tracing the filter -low -high issue shows a lot of repetition
    The configured values get transmitted to the filter multiple times
    without modification, should stop that, it's going to be expensive.
