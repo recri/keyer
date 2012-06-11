@@ -23,6 +23,7 @@
 package provide sdrkit::rxtx-control 1.0.0
 
 package require snit
+package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
