@@ -30,10 +30,13 @@ namespace eval sdrkit {}
 snit::type sdrkit::iq-unbalance {
     option -name sdr-iqu
     option -type dsp
-    option -title {IQ Unbalancer}
+    option -server default
+    option -component {}
+
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -options {}
+
     option -sub-components {
 	swp {IQ Swap} iq-swap {}
 	dly {IQ Delay} iq-delay {}
@@ -47,13 +50,6 @@ snit::type sdrkit::iq-unbalance {
     }
     option -opt-connections {
     }
-
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
 
     variable data -array {
 	enabled 0
@@ -78,26 +74,23 @@ snit::type sdrkit::iq-unbalance {
 	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
+    method build-parts {w} {
+	if {$w ne {none}} return
 	foreach {name title command args} $options(-sub-components) {
 	    $self sub-component none $name sdrkit::$command {*}$args
 	}
     }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
+    method build-ui {w pw minsizes weights} {
+	if {$w eq {none}} return
 	foreach {name title command args} $options(-sub-components) {
 	    grid [sdrtk::clabelframe $w.$name -label $title] -sticky ew
 	    set data($name-enable) 0
 	    ttk::checkbutton $w.$name.enable -text {} -variable [myvar data($name-enable)] -command [mymethod Enable $name]
 	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.enable $w.$name.container
-	    grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
     method is-active {} { return 1 }
     method activate {} {}

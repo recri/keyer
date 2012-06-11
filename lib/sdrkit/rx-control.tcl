@@ -32,11 +32,6 @@ snit::type sdrkit::rx-control {
     option -server default
     option -component {}
 
-    option -window none
-    option -title {RX Control}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
     option -in-options {-mode -width -offset -freq -lo2-freq -cw-freq}
@@ -69,12 +64,10 @@ snit::type sdrkit::rx-control {
 	$self configure -sample-rate [sdrtcl::jack -server $options(-server) sample-rate]
     }
     destructor {}
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
 	    foreach {opt type opts} $options(-sub-controls) {
 		if {$opt eq {lo2}} { lappend opts -from [expr {-$options(-sample-rate)/4.0}] -to [expr {$options(-sample-rate)/4.0}] }
 		switch $type {
@@ -98,7 +91,7 @@ snit::type sdrkit::rx-control {
 		}
 		grid $w.$opt -sticky ew
 	    }
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
     method is-needed {} { return 1 }

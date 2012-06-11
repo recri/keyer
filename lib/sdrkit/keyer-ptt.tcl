@@ -33,10 +33,6 @@ snit::type sdrkit::keyer-ptt {
     option -server default
     option -component {}
 
-    option -window none
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {midi_in}
     option -out-ports {midi_out}
     option -options {-chan -note -delay -hang}
@@ -64,20 +60,17 @@ snit::type sdrkit::keyer-ptt {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::keyer-ptt ::sdrkitx::$options(-name) -server $options(-server) \
 	    -delay $options(-delay) -hang $options(-hang) \
 	    -chan $options(-chan) -note $options(-note)
     }
-    method build-ui {} {
-	set w $options(-window)
+    method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
 	foreach {opt type opts} $options(-sub-controls) {
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 }

@@ -35,10 +35,6 @@ snit::type sdrkit::keyer-tone {
 
     option -sample-rate 48000 
 
-    option -window none
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {midi_in}
     option -out-ports {out_i out_q}
     option -options {-chan -note -freq -gain -rise -fall}
@@ -75,20 +71,17 @@ snit::type sdrkit::keyer-tone {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::keyer-tone ::sdrkitx::$options(-name) -server $options(-server) -freq $options(-freq) -gain $options(-gain) \
 	    -chan $options(-chan) -note $options(-note) -rise $options(-rise) -fall $options(-fall)
     }
-    method build-ui {} {
-	set w $options(-window)
+    method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
 	foreach {opt type opts} $options(-sub-controls) {
-	    if {$opt eq {freq}} { lappend opts -from [expr {-$options(-sample-rate)/4.0}] -to [expr {$options(-sample-rate)/4.0}] }
+	    if {$opt eq {freq}} { lappend opts -from [expr {-$options(-sample-rate)/2.0}] -to [expr {$options(-sample-rate)/2.0}] }
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 }

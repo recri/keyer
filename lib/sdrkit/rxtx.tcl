@@ -23,9 +23,7 @@
 package provide sdrkit::rxtx 1.0.0
 
 package require snit
-package require sdrkit::control-dial
 package require sdrtk::cnotebook
-package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
@@ -46,9 +44,16 @@ proc sdrkit::make-echoplex {typename component options} {
 snit::type sdrkit::rxtx {
     option -name rxtx
     option -type dsp
-    option -title {RXTX}
+    option -server default
+    option -component {}
+
     option -in-ports {}
     option -out-ports {}
+    option -options {
+	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
+	-mode -agc-mode -iq-correct -iq-swap -iq-delay
+	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain -hw-freq
+    }
 
     option -mox -default 0 -configuremethod Configure
     option -freq -default 7050000 -configuremethod Configure
@@ -67,12 +72,6 @@ snit::type sdrkit::rxtx {
     option -rx-af-gain -default 0 -configuremethod Configure
     option -hw-freq -default [expr {7050000-10000-400}] -readonly true
 
-    option -options {
-	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
-	-mode -agc-mode -iq-correct -iq-swap -iq-delay
-	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain -hw-freq
-    }
-    
     option -sub-components {
 	ctl {Control} rxtx-control {}
 	rx {RX} rx {}
@@ -96,13 +95,6 @@ snit::type sdrkit::rxtx {
     }
     option -opt-connections {
     }
-
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
 
     option -rx-source {}
     option -rx-sink {}
@@ -151,13 +143,9 @@ snit::type sdrkit::rxtx {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	if {$options(-physical) ne {}} {
 	    $self sub-component none ports sdrkit::physical-ports -physical $options(-physical)
 	    $options(-component) part-configure $options(-name)-ports -enable true -activate true
@@ -166,7 +154,7 @@ snit::type sdrkit::rxtx {
 	    $self sub-component none hardware sdrkit::hardware -hardware $options(-hardware)
 	}
 	if {$w ne {none}} {
-	    sdrkit::control-dial $w.dial -command [mymethod Set]
+	    $self sub-component $w dial sdrkit::dial
 	    sdrtk::cnotebook $w.note
 	}
 	foreach {name title command args} $options(-sub-components) {
@@ -188,7 +176,7 @@ snit::type sdrkit::rxtx {
 	if {$w ne {none}} {
 	    grid $w.dial -sticky nsew -row 0
 	    grid $w.note -sticky nsew -row 1
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
 
@@ -250,7 +238,7 @@ snit::type sdrkit::rxtx {
     method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {
 	if {$opt in {-agc-mode -mode -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -bpf-width -rx-af-gain -rx-rf-gain}} {
-	    $options(-window).dial configure $opt $val
+	    $options(-component) part-configure $options(-name)-dial $opt $val
 	}
     }
     method ControlConfigure {opt val} { $options(-component) report $opt $val }

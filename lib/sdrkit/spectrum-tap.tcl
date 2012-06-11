@@ -32,11 +32,6 @@ snit::type sdrkit::spectrum-tap {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Gain
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {i q}
     option -out-ports {i q}
     option -options {}
@@ -45,8 +40,8 @@ snit::type sdrkit::spectrum-tap {
 
     constructor {args} { $self configure {*}$args }
     destructor {}
-    method build-parts {} {}
-    method build-ui {} {}
+    method build-parts {w} { }
+    method build-ui {w pw minsizes weights} { }
 
     method is-needed {} { return 1 }
     method is-active {} { return $data(activate) }

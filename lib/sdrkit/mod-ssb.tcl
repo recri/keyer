@@ -35,11 +35,6 @@ snit::type sdrkit::mod-ssb {
     option -server default
     option -component {}
 
-    option -window none
-    option -title mod-ssb
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -options {}
@@ -59,14 +54,11 @@ snit::type sdrkit::mod-ssb {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::mod-ssb ::sdrkitx::$options(-name) -server $options(-server)
     }
-    method build-ui {} {
-	set w $options(-window)
+    method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
 	foreach {opt type opts} $options(-sub-controls) {
 	    if {[info exists options(-$opt]} {
 		$common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
@@ -75,6 +67,6 @@ snit::type sdrkit::mod-ssb {
 	    }
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 }

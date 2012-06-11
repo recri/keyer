@@ -41,10 +41,6 @@ snit::type sdrkit::spectrum {
     option -server default
     option -component {}
 
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {in_i in_q}
     option -out-ports {}
     option -options {
@@ -124,23 +120,20 @@ snit::type sdrkit::spectrum {
 	#if {$::sdrkit::verbose(destroy)} { puts "$self destroy, completed" }
     }
     method port-complement {port} { return {} }
-    method build-parts {} {
+    method build-parts {w} {
 	toplevel .spectrum-$options(-name)
 	set data(display) [sdrtk::spectrum-waterfall .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]
 	pack $data(display) -side top -fill both -expand true
 	sdrtcl::spectrum-tap ::sdrkitx::$options(-name) {*}[$self TapOptions]
 	set data(after) [after $options(-period) [mymethod Update]]
     }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-
+    method build-ui {w pw minsizes weights} {
+	if {$w eq {none}} return
 	foreach {opt type opts} $options(-sub-controls) {
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 
     method resolve {} {

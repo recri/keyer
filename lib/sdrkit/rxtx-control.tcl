@@ -32,11 +32,6 @@ snit::type sdrkit::rxtx-control {
     option -server default
     option -component {}
 
-    option -window none
-    option -title {RXTX Control}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
     option -options {}
@@ -68,13 +63,10 @@ snit::type sdrkit::rxtx-control {
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
 
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
 	    set name rxtx
 	    set title RXTX
 	    sdrtk::clabelframe $w.$name -label $title
@@ -98,7 +90,7 @@ snit::type sdrkit::rxtx-control {
 		    }
 		}
 		grid $w.$name.$opt -sticky ew
-		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	foreach {name title command args} $options(-sub-components) {
@@ -109,11 +101,11 @@ snit::type sdrkit::rxtx-control {
 		grid $w.$name -sticky ew
 		$self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 		grid $w.$name.container -sticky ew
-		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
 

@@ -30,14 +30,18 @@ namespace eval sdrkit {}
 snit::type sdrkit::rx {
     option -name rx
     option -type dsp
-    option -title {RX}
+    option -server default
+    option -component {}
+
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -options {}
+
     #{
     #	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
     #	-cw-freq -bpf-width -bpf-offset -low -high
     #}
+
     option -mode -default CWU -configuremethod Configure
     option -rf-gain -default 0 -configuremethod Configure
     option -iq-swap -default 0 -configuremethod Configure
@@ -125,13 +129,6 @@ snit::type sdrkit::rx {
 	.	-af-gain	.-af-gain	-gain
     }
 
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -rx-source {}
     option -rx-sink {}
 
@@ -147,13 +144,9 @@ snit::type sdrkit::rx {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {[string match -* $name]} {
 		# placeholder component, replace with spectrum tap
@@ -173,11 +166,11 @@ snit::type sdrkit::rx {
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container
-		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
     proc match-ports {ports1 ports2} {

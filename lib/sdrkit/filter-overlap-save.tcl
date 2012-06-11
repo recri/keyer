@@ -35,11 +35,6 @@ snit::type sdrkit::filter-overlap-save {
     option -server default
     option -component {}
 
-    option -window none
-    option -title filter-ovsv
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -options {-low -high -length}
@@ -51,7 +46,7 @@ snit::type sdrkit::filter-overlap-save {
     option -sub-controls {
 	low scale {-format {Low %.0f Hz} -from -8000 -to 8000}
 	high scale {-format {High %.0f Hz} -from -8000 -to 8000}
-	length scale {-format {Length %.0f samples} -from 8 -to 2048}
+	length iscale {-format {Length %d samples} -from 8 -to 2048}
     }
 
     variable data -array { }
@@ -67,24 +62,20 @@ snit::type sdrkit::filter-overlap-save {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::filter-overlap-save ::sdrkitx::$options(-name) -server $options(-server) -low $options(-low) -high $options(-high) -length $options(-length)
     }
-    method build-ui {} {
-	set w $options(-window)
+    method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
 	foreach {opt type opts} $options(-sub-controls) {
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 
     method Constrain {opt val} {
 	switch -- $opt {
-	    -length { return [expr {int(round($val))}] }
 	    -low { return [expr {min($options(-high)-11,$val)}] }
 	    -high { return [expr {max($options(-low)+11,$val)}] }
 	}

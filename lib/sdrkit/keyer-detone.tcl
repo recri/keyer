@@ -32,10 +32,6 @@ snit::type sdrkit::keyer-detone {
     option -server default
     option -component {}
 
-    option -window none
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {in_i}
     option -out-ports {midi_out}
     option -options {-chan -note -freq -bandwidth}
@@ -63,19 +59,16 @@ snit::type sdrkit::keyer-detone {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::keyer-detone ::sdrkitx::$options(-name) -server $options(-server) -freq $options(-freq) -bandwidth $options(-bandwidth) \
 	    -chan $options(-chan) -note $options(-note)
     }
-    method build-ui {} {
-	set w $options(-window)
+    method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
 	foreach {opt type opts} $options(-sub-controls) {
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 }

@@ -36,10 +36,6 @@ snit::type sdrkit::oscillator {
 
     option -sample-rate 48000 
 
-    option -window none
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {out_i out_q}
     option -options {-freq -gain}
@@ -66,19 +62,16 @@ snit::type sdrkit::oscillator {
     }
 
     method port-complement {port} { return {} }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::oscillator ::sdrkitx::$options(-name) -server $options(-server) -freq $options(-freq) -gain $options(-gain)
     }
-    method build-ui {} {
-	set w $options(-window)
+    method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
 	foreach {opt type opts} $options(-sub-controls) {
 	    if {$opt eq {freq}} { lappend opts -from [expr {-$options(-sample-rate)/2.0}] -to [expr {$options(-sample-rate)/2.0}] }
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 }

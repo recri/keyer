@@ -32,11 +32,6 @@ snit::type sdrkit::physical-port {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Port
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
     option -options {}
@@ -58,7 +53,7 @@ snit::type sdrkit::physical-port {
 	    }
 	}
     }
-    method build-parts {} {}
-    method build-ui {} {}
+    method build-parts {w} {}
+    method build-ui {w pw minsizes weights} {}
     method is-needed {} { return 1 }
 }

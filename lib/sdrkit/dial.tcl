@@ -20,8 +20,9 @@
 #
 # a control dial
 #
-package provide sdrkit::control-dial 1.0.0
+package provide sdrkit::dial 1.0.0
 
+package require Tk
 package require snit
 package require sdrtk::dialbook
 package require sdrtk::readout-enum
@@ -31,8 +32,18 @@ package require sdrutil::util
 
 namespace eval sdrkit {}
 
-snit::widgetadaptor sdrkit::control-dial {
-    option -command {}
+snit::type sdrkit::dial {
+
+    option -name sdr-dial
+    option -type ui
+    option -server default
+    option -component {}
+
+    option -in-ports {}
+    option -out-ports {}
+    option -options {
+	-agc-mode -mode -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -bpf-width -rx-af-gain -rx-rf-gain
+    }
 
     # hmm, the actual set depends on mode
     # and whether you're running split
@@ -61,42 +72,46 @@ snit::widgetadaptor sdrkit::control-dial {
 	rx-rf-gain value {-text {RX RF Gain} -format {%.1f} -units dB -step 0.1}
     }
 	
-    variable data -array {
-    }
-
     constructor {args} {
-	installhull using sdrtk::dialbook
 	$self configure {*}$args
+    }
+    destructor {
+    }
+    variable dial
+    method build-parts {w} {}
+    method build-ui {w pw minsizes weights} {
+	set dial $w.dial
+	sdrtk::dialbook $dial
 	foreach {opt type opts} $options(-sub-controls) {
 	    lappend opts -value $options(-$opt) -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
 	    switch $type {
-		enum { sdrtk::readout-enum $win.$opt {*}$opts }
-		freq { sdrtk::readout-freq $win.$opt {*}$opts }
-		value { sdrtk::readout-value $win.$opt {*}$opts }
+		enum { sdrtk::readout-enum $dial.$opt {*}$opts }
+		freq { sdrtk::readout-freq $dial.$opt {*}$opts }
+		value { sdrtk::readout-value $dial.$opt {*}$opts }
 		default { error "unanticipated type \"$type\"" }
 	    }
-	    $hull add $win.$opt -text [$win.$opt cget -text]
+	    $dial add $dial.$opt -text [$dial.$opt cget -text]
 	}
     }
-
     method Constrain {opt val} { return $val }
-    method OptionConfigure {opt val} {
-	set options($opt) $val
-	switch -- $opt {
-	    -tune-rate { $win.freq configure -step [sdrutil::hertz $val] }
-	    -lo-tune-rate { $win.lo-freq configure -step [sdrutil::hertz $val] }
-	}
-    }
-    method ControlConfigure {opt val} { if {$options(-command) ne {}} { {*}$options(-command) $opt $val } }
-
     method Configure {opt val} {
-	set val [$self Constrain $opt $val]
-	$self OptionConfigure $opt $val
+	set options($opt) [$self Constrain $opt $val]
+	switch -- $opt {
+	    -tune-rate { $dial.freq configure -step [sdrutil::hertz $val] }
+	    -lo-tune-rate { $dial.lo-freq configure -step [sdrutil::hertz $val] }
+	    -agc-mode -
+	    -mode -
+	    -freq -
+	    -lo-freq -
+	    -cw-freq -
+	    -bpf-width -
+	    -rx-af-gain -
+	    -rx-rf-gain {}
+	    default { error "unanticipated option \"$opt\"" }
+	}
     }
 
     method Set {opt val} {
-	set val [$self Constrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ControlConfigure $opt $val
+	$options(-component) report $opt [$self Constrain $opt $val]
     }
 }

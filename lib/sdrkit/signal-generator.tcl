@@ -27,7 +27,9 @@ namespace eval sdrkit {}
 snit::type sdrkit::signal-generator {
     option -name sdr-sg
     option -type dsp
-    option -title {Signal Generator}
+    option -server default
+    option -component {}
+
     option -in-ports {}
     option -out-ports {out_i out_q}
     option -options {}
@@ -53,13 +55,6 @@ snit::type sdrkit::signal-generator {
     option -opt-connections {
     }
 
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     variable data -array {
 	enabled 0
 	active 0
@@ -72,13 +67,9 @@ snit::type sdrkit::signal-generator {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
@@ -90,11 +81,11 @@ snit::type sdrkit::signal-generator {
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container
 		grid $w.$name -sticky ew
-		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
     method resolve {} {

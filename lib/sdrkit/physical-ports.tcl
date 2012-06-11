@@ -33,11 +33,6 @@ snit::type sdrkit::physical-ports {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Ports
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
     option -options {}
@@ -54,7 +49,7 @@ snit::type sdrkit::physical-ports {
 	lappend data(parts) $name
 	$options(-component) new-component $window $name $subsub {*}$args
     }
-    method build-parts {} {
+    method build-parts {w} {
 	set clients [dict create]
 	foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
 	    # pdict has type, direction, physical, and connections
@@ -68,7 +63,7 @@ snit::type sdrkit::physical-ports {
 	    $options(-component) part-configure $client -activate true
 	}
     }
-    method build-ui {} {}
+    method build-ui {w pw minsizes weights} {}
     method is-needed {} { return 1 }
     method is-active {} { return 1 }
     method activate {} { }

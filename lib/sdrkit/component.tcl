@@ -139,13 +139,13 @@ snit::type sdrkit::component {
 		package require Tk
 		wm title . $options(-name)
 		set options(-parent-window) .
-		$subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
+		#$subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
 	    }
 	    default {
 		package require Tk
 		if {[winfo exists $options(-window)]} {
 		    set options(-parent-window) [winfo parent $options(-window)]
-		    $subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
+		    #$subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
 		} else {
 		    error "invalid window: $options(-window)"
 		}
@@ -168,14 +168,20 @@ snit::type sdrkit::component {
 	$self control part-add $options(-name) [sdrkit::comm::wrap $self]
 
 	# build the subsidiary parts
-	$subsidiary build-parts
+	$subsidiary build-parts $options(-window)
 
 	# build the ui
-	if {$options(-window) ne {none}} {
-	    $subsidiary build-ui
-	    if {$options(-window) eq {}} {
-		bind . <Destroy> [mymethod destroy]
-	    }
+	set w $options(-window)
+	if {$w eq {none}} {
+	    set pw {}
+	} elseif {$w eq {}} {
+	    set pw .
+	} else {
+	    set pw $w
+	}
+	$subsidiary build-ui $w $pw $options(-minsizes) $options(-weights)
+	if {$options(-window) eq {}} {
+	    bind . <Destroy> [mymethod destroy]
 	}
 	
 	# find the parts of the subsidiary which are optional

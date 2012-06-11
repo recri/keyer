@@ -31,10 +31,13 @@ namespace eval sdrkit {}
 snit::type sdrkit::demod {
     option -name demod
     option -type dsp
-    option -title {Demod}
+    option -server default
+    option -component {}
+
     option -in-ports {alt_in_i alt_in_q}
     option -out-ports {alt_out_i alt_out_q}
     option -options {-mode}
+
     option -sub-components {
 	am {AM} demod-am {}
 	fm {FM} demod-fm {}
@@ -47,13 +50,6 @@ snit::type sdrkit::demod {
     }
     option -opt-connections {
     }
-
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
 
     option -mode -default none -configuremethod Configure
 
@@ -79,17 +75,14 @@ snit::type sdrkit::demod {
 	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
+    method build-parts {w} {
+	if {$w ne {none}} return
 	foreach {name title command args} $options(-sub-components) {
 	    $self sub-component none $name sdrkit::$command {*}$args
 	}
     }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
+    method build-ui {w pw minsizes weights} {
+	if {$w eq {none}} return
 	set values {none}
 	set labels {none}
 	foreach {name title command args} $options(-sub-components) {
@@ -98,12 +91,12 @@ snit::type sdrkit::demod {
 	    set data(window-$name) [sdrtk::clabelframe $w.$name -label $title]
 	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.container
-	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	}
 	package require sdrkit::label-radio
 	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-mode)] -command [mymethod Set -mode]
 	grid $w.mode
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
     method {Configure -mode} {val} {
 	switch $val {

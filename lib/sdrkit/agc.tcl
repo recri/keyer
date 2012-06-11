@@ -37,11 +37,6 @@ snit::type sdrkit::agc {
     option -server default
     option -component {} 
 
-    option -window none
-    option -title agc
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
     option -options {-target -attack -decay -slope -hang -fasthang -max -min -threshold -mode}
@@ -83,14 +78,10 @@ snit::type sdrkit::agc {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::agc ::sdrkitx::$options(-name) -server $options(-server) -mode $options(-mode)
     }
-    method build-ui {} {
-	set w $options(-window)
-	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
+    method build-ui {w pw minsizes weights} {
 	foreach {opt type opts} $options(-sub-controls) {
 	    switch $opt {
 		mode { lappend opts -values [sdrtype::agc-$opt cget -values] }
@@ -99,9 +90,8 @@ snit::type sdrkit::agc {
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
-    ## these are specific to this component
     method is-needed {} { return [expr {$options(-mode) ne {off}}] }
     method Configure {opt val} {
 	if {$opt eq {-mode} && $val ni {off custom}} {

@@ -35,11 +35,6 @@ snit::type sdrkit::noise {
     option -server default
     option -component {}
 
-    option -window none
-    option -title {Noise}
-    option -minsizes -default {100 200}
-    option -weights -default {1 3}
-
     option -in-ports {}
     option -out-ports {out_i out_q}
     option -options {-level}
@@ -62,19 +57,16 @@ snit::type sdrkit::noise {
 	catch {rename ::sdrkitx::$options(-name) {}}
     }
     method port-complement {port} { return {} }
-    method build-parts {} {
+    method build-parts {w} {
 	sdrtcl::noise ::sdrkitx::$options(-name) -server $options(-server) -level $options(-level)
     }
-    method build-ui {} {
-	set w $options(-window)
+    method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
-	if {$w eq {}} { set pw . } else { set pw $w }
-
 	foreach {opt type opts} $options(-sub-controls) {
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
 }
 

@@ -30,11 +30,6 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Hardware
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
     option -options {-freq}
@@ -68,13 +63,9 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
     method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
 	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
@@ -89,11 +80,11 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container
-		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
 	if {[catch {
 	    foreach handle [handle::find_handles usb] {
