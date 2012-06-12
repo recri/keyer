@@ -23,6 +23,7 @@
 package provide sdrkit::mod 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::clabelframe
 package require sdrtk::radiomenubutton
 
@@ -60,8 +61,12 @@ snit::type sdrkit::mod {
 	parts {}
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {

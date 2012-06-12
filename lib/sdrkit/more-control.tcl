@@ -23,6 +23,7 @@
 package provide sdrkit::more-control 1.0.0
 
 package require snit
+package require sdrkit::common-component
 
 namespace eval sdrkit {}
 
@@ -45,8 +46,12 @@ snit::type sdrkit::more-control {
 
     variable data -array {}
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor {}
     method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }

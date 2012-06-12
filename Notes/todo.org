@@ -1,6 +1,21 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - make spectrum and dial use unconnected control reports
+** TODO - make rxtx resolve connect everything up
+** TODO - make the band select work
+** TODO - make the meter work
+** TODO - debug the failure to enable, probably component.tcl looking
+   for a method that isn't there.
+** TODO - There should be a set of methods required for each component type
+** TODO - Abstract the common component code for alternate components.
+** TODO - Abstract the common component code for pipeline components.
+** TODO - Blow away lib/sdrapp
+** TODO - Blow away lib/sdrctl
+** TODO - Blow away lib/sdrdsp
+** TODO - Blow away lib/sdrhw
+** TODO - Blow away lib/sdrui
+** TODO - Blow away lib/wrap   
 ** TODO - tuning the softrock with synchronous libusb calls
    yields extremely jerky tuning after a while.
    Defer the configuration application to a timed out handler for

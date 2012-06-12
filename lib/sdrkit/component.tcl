@@ -221,9 +221,11 @@ snit::type sdrkit::component {
 	    switch -- $opt {
 		-activate {
 		    if {$val} {
-			if {$data(subsidiary-activate)} { $subsidiary activate }
+			#if {$data(subsidiary-activate)} { $subsidiary activate }
+			if {[$subsidiary cget -type] eq {jack}} { $subsidiary activate }
 		    } else {
-			if {$data(subsidiary-deactivate)} { $subsidiary deactivate }
+			#if {$data(subsidiary-deactivate)} { $subsidiary deactivate }
+			if {[$subsidiary cget -type] eq {jack}} { $subsidiary deactivate }
 		    }
 		}
 	    }
@@ -271,30 +273,10 @@ snit::type sdrkit::component {
     #
     # call from the controller to the subsidiary
     #
-    method resolve {} {
-	if {$data(subsidiary-resolve)} { $subsidiary resolve }
-    }
-    
-    method rewrite-connections-to {port candidates} {
-	if {$data(subsidiary-rewrite-connections-to)} { return [$subsidiary rewrite-connections-to $port $candidates] }
-	return $candidates
-    }
-    method rewrite-connections-from {port candidates} {
-	if {$data(subsidiary-rewrite-connections-from)} { return [$subsidiary rewrite-connections-from $port $candidates] }
-	return $candidates
-    }
-    method port-complement {port} {
-	if {$data(subsidiary-port-complement)} { return [$subsidiary port-complement $port] }
-	switch -exact $port {
-	    in_i { return {out_i} }
-	    in_q { return {out_q} }
-	    out_i { return {in_i} }
-	    out_q { return {in_q} }
-	    midi_in { return {midi_out} }
-	    midi_out { return {midi_in} }
-	    default { error "unknown port \"$port\"" }
-	}
-    }
+    method resolve {} { $subsidiary resolve }
+    method rewrite-connections-to {port candidates} { return [$subsidiary rewrite-connections-to $port $candidates] }
+    method rewrite-connections-from {port candidates} { return [$subsidiary rewrite-connections-from $port $candidates] }
+    method port-complement {port} { return [$subsidiary port-complement $port] }
     #
     # convenience calls from the subsidiary
     # one to make a subcomponent, with a subsidiary name,

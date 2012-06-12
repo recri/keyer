@@ -23,6 +23,7 @@
 package provide sdrkit::iq-unbalance 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
@@ -57,7 +58,13 @@ snit::type sdrkit::iq-unbalance {
 	parts {}
     }
 
-    constructor {args} { $self configure {*}$args }
+    component common
+    delegate method * to common
+
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name

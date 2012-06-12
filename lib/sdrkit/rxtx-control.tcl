@@ -23,6 +23,7 @@
 package provide sdrkit::rxtx-control 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
@@ -45,17 +46,18 @@ snit::type sdrkit::rxtx-control {
     option -sub-components {
 	more {More Controls} more-control {}
     }
-    #rx {RX Control} rx-control {}
-    #tx {TX Control} tx-control {}
-    #keyer {Keyer Control} keyer-control {}
 
     #option -split -default 0 -configuremethod Configure
     #option -qsk -default 0 -configuremethod Configure
 
     variable data -array {}
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
 

@@ -23,6 +23,7 @@
 package provide sdrkit::hardware 1.0.0
 
 package require snit
+package require sdrkit::common-component
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -46,9 +47,13 @@ snit::type sdrkit::hardware {
 	parts {}
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	#puts "sdrkit::hardware constructor $args"
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
 	foreach {name command args} $options(-hardware) {
 	    lappend options(-sub-components) $name $name $command $args
 	}

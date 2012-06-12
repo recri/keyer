@@ -24,6 +24,7 @@ package provide sdrkit::common-sdrtcl 1.0.0
 
 package require snit
 
+package require sdrkit::common-component
 package require sdrkit::label-spinbox
 package require sdrkit::label-scale
 package require sdrkit::label-iscale
@@ -44,8 +45,12 @@ snit::type sdrkit::common-sdrtcl {
 	defcon {}
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor {
     }

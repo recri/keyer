@@ -20,6 +20,7 @@
 package provide sdrkit::hardware-powermate 1.0.0
 
 package require snit
+package require sdrkit::common-component
 
 snit::type sdrkit::hardware-powermate {
     option -opt-connections {}
@@ -28,9 +29,13 @@ snit::type sdrkit::hardware-powermate {
 
     variable data -array {}
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	# puts "hardwre-powermate $self constructor $args"
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
 	if {[catch {
 	    foreach handle [handle::find_handles usb] {
 		puts "[handle::getdict $handle]"

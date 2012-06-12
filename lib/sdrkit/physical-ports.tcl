@@ -23,6 +23,7 @@
 package provide sdrkit::physical-ports 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtcl::jack
 
 namespace eval sdrkit {}
@@ -43,7 +44,13 @@ snit::type sdrkit::physical-ports {
 	parts {}
     }
 
-    constructor {args} { $self configure {*}$args }
+    component common
+    delegate method * to common
+
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method new-component {window name subsub args} {
 	lappend data(parts) $name

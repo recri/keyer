@@ -20,6 +20,7 @@
 package provide sdrkit::hardware-softrock-dg8saq 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require handle
 
 namespace eval sdrkit {}
@@ -54,9 +55,13 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	deferred-after {}
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	#puts "sdrkit::hardware-softrock-dg8saq constructor $args"
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor {}
     method sub-component {window name subsub args} {

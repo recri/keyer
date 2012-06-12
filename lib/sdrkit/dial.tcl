@@ -24,6 +24,7 @@ package provide sdrkit::dial 1.0.0
 
 package require Tk
 package require snit
+package require sdrkit::common-component
 package require sdrtk::dialbook
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
@@ -72,8 +73,12 @@ snit::type sdrkit::dial {
 	rx-rf-gain value {-text {RX RF Gain} -format {%.1f} -units dB -step 0.1}
     }
 	
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor {
     }

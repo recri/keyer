@@ -23,6 +23,7 @@
 package provide sdrkit::rxtx 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::cnotebook
 
 namespace eval sdrkit {}
@@ -134,8 +135,12 @@ snit::type sdrkit::rxtx {
     component echoplex
     delegate option * to echoplex
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
 	install echoplex using [make-echoplex sdrkit::rxtx-echo-1 $options(-component) {}] %AUTO%
     }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
