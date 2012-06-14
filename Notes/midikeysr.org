@@ -29,3 +29,27 @@
  |     12 | PA9        | PWM      |
  |     14 | PA7        | PWM      |
  |     15 | PA6        | PWM      |
+* Insert DG8SAQ firmware into USB Stack
+  Possible on all atmega32u4.
+  Teensy USB stack catches the control requests.
+  Just need to forward to a version of the firmware
+  that doesn't directly drive the wrong pins
+* Alternative, use Arduino Leonardo
+** Add a shield that covers the additional functions:
+*** DIP connection to replace ATTiny
+*** Key input that doesn't share pins with I2C
+*** Rotary encoder/track ball/joy stick
+*** Additional buttons for PTT, etc    
+*** LEDs for feedback
+*** LCD for feedback
+** Software
+*** Incorporate ATTiny/DG8SAQ firmware
+    as part of Arduino USB stack
+*** Implement MIDI event alternative
+    interface to Softrock/Si570 functions
+*** Add MIDI event interface to
+**** Key input
+**** Rotary encoder/track ball/joy stick
+**** Additional buttons
+**** LED feedback
+**** LCD feedback
