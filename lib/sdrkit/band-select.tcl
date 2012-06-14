@@ -25,21 +25,16 @@
 # needs merge some services into single row
 #
 
-package provide sdrtk::band-select 1.0
+package provide sdrkit::band-select 1.0
 
 package require Tk
 package require snit
 
+package require sdrkit::common-component
 package require sdrutil::band-data
 
-snit::widgetadaptor sdrtk::band-select {
-
-    option -band {}
-    option -channel {}
-
-    option -command {};			# script called to report band selection 
-    option -opt-connect-to {}
-    option -opt-connect-from {}
+snit::widgetadaptor sdrkit::band-select-window {
+    option -component {}
 
     option -height 150;			# height of the band display
     option -width 200;			# width of the band display
@@ -56,16 +51,10 @@ snit::widgetadaptor sdrtk::band-select {
 	$hull configure -width $options(-width) -height $options(-height)
 	bind $win <Configure> [mymethod window-configure %w %h]
 	$self draw-bands
-	regexp {^.*ui-(.*)$} $win all tail
-	foreach opt {-band -channel} {
-	    lappend options(-opt-connect-to) [list $opt ctl-$tail $opt]
-	    lappend options(-opt-connect-from) [list ctl-$tail $opt $opt]
-	}
     }
-    
-    method ignore {args} { }
 
-    destructor {}
+    destructor {
+    }
 
     proc x-for-frequency {f} {
 	return [expr {log10($f)-log10(30000)}]
@@ -129,8 +118,8 @@ snit::widgetadaptor sdrtk::band-select {
     method scan-dragto {x} { $hull scan dragto $x 0 }
 
     method no-pick {} { if {$data(hover-text) eq {}} { } }
-    method band-pick {service band} { {*}$options(-command) report -band [list $service $band] }
-    method channel-pick {service channel} { {*}$options(-command) report -channel [list $service $channel] }
+    method band-pick {service band} { $options(-component) report -band [list $service $band] }
+    method channel-pick {service channel} { $options(-component) report -channel [list $service $channel] }
     
     method window-configure {w h} {
 	if {$h != $options(-height)} {
@@ -188,3 +177,34 @@ snit::widgetadaptor sdrtk::band-select {
 	}
     }
 }    
+
+snit::type sdrkit::band-select {    
+    option -name band
+    option -type jack
+    option -server default
+    option -component {}
+
+    option -in-ports {}
+    option -out-ports {}
+    option -options { -band -channel }
+
+    option -band {}
+    option -channel {}
+
+    component common
+    delegate method * to common
+
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
+    destructor {
+	$common destroy
+    }
+    method build-ui {w pw minsizes weights} {
+	if {$w eq {none}} return
+	sdrkit::band-select-window $w.b -component $options(-component)
+	grid $w.b -sticky ew
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
+    }
+}

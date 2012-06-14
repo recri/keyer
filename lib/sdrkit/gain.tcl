@@ -58,6 +58,7 @@ snit::type sdrkit::gain {
     destructor {
 	catch {::sdrkitx::$options(-name) deactivate}
 	catch {rename ::sdrkitx::$options(-name) {}}
+	catch {$common destroy}
     }
     method build-parts {w} {
 	sdrtcl::gain ::sdrkitx::$options(-name) -server $options(-server) -gain $options(-gain)

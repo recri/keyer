@@ -103,14 +103,6 @@ snit::type sdrkit::keyer-iambic {
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
-    ## these are specific to this component
-    method is-needed {} { return 1 }
-    method Constrain {opt val} { return $val }
-    ## 
-    method is-active {} { return 1 }
-    method is-busy {} { return 0 }
-    method activate {} {}
-    method deactivate {} {}
     method {Configure -iambic} {name} {
 	set options($opt) $name
 	# find deselected keyer
@@ -126,7 +118,7 @@ snit::type sdrkit::keyer-iambic {
 	# disable deselected keyer
 	if {$exname ne {none}} { $options(-component) part-disable $options(-name)-$exname }
 	# deal with ui details
-	set w $options(-window)
+	set w [$options(-component) cget -window]
 	# determine if ui details exist
 	if {$w ne {none}} {
 	    # remove deselected keyer ui
@@ -135,9 +127,7 @@ snit::type sdrkit::keyer-iambic {
 	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
 	}
     }
-    method Set {opt val} {
-	$options(-component) report $opt [$self Constrain $opt $val]
-    }
+    method Set {opt val} { $options(-component) report $opt [$self Constrain $opt $val] }
     method rewrite-connections-to {port candidates} {
 	# puts "demod::rewrite-connections-to $port {$candidates}"
 	if {$options(-iambic) eq {none}} {

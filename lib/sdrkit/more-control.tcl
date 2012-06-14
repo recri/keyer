@@ -58,7 +58,6 @@ snit::type sdrkit::more-control {
     method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
     method build {w pw minsizes weights} {
 	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
 	    foreach {opt type opts} $options(-sub-controls) {
 		switch $opt {
 		    ports { lappend opts -command [mymethod ViewConnections port] }
@@ -66,28 +65,10 @@ snit::type sdrkit::more-control {
 		    active { lappend opts -command [mymethod ViewConnections active] }
 		    config { lappend opts -command [mymethod CheckConfig config] }
 		}
-		switch $type {
-		    button {
-			package require sdrkit::label-button
-			sdrkit::label-button $w.$opt {*}$opts
-		    }
-		    spinbox {
-			package require sdrkit::label-spinbox
-			sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    scale {
-			package require sdrkit::label-scale
-			#lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-			sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    separator {
-			ttk::separator $w.$opt
-		    }
-		    radio {
-			package require sdrkit::label-radio
-			#lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
-			sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		    }
+		if {[info exists options(-$opt]} {
+		    $self window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
+		} else {
+		    $self window $w $opt $type $opts {} {} {}
 		}
 		grid $w.$opt -sticky ew
 	    }

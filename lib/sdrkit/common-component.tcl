@@ -79,7 +79,6 @@ snit::type sdrkit::common-component {
     }
 
     ## these are over ridden in the parent if the defaults don't do
-
     # build the parts that exist independent of user interface
     method build-parts {w} {
     }

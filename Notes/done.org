@@ -221,3 +221,12 @@
    another component.
    The general solution is to defer all configuration passing for a few
    milliseconds and then pass all the accumulated options.
+** DONE - make spectrum and dial use unconnected control reports
+** DONE - make rxtx resolve connect everything up
+** DONE - make the band select work
+** DONE - make the meter work
+** DONE - debug the failure to enable, probably component.tcl looking
+   for a method that isn't there.
+** DONE - There should be a set of methods required for each component type
+** DONE - Abstract the common component code for alternate components.
+** DONE - Abstract the common component code for pipeline components.

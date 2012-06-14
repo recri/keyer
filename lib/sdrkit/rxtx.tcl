@@ -24,23 +24,8 @@ package provide sdrkit::rxtx 1.0.0
 
 package require snit
 package require sdrkit::common-component
-package require sdrtk::cnotebook
 
 namespace eval sdrkit {}
-
-#
-# construct a snit type on the fly which
-# handles a list of options
-#
-proc sdrkit::make-echoplex {typename component options} {
-    set echoplex {}
-    lappend echoplex "snit::type $typename {"
-    lappend echoplex "method Echo {opt val} { $component report \$opt \[set options(\$opt) \$val\] }"
-    foreach opt $options { lappend echoplex "option $opt -configuremethod Echo" }
-    lappend echoplex "}"
-    eval [join $echoplex \n]
-    return $typename
-}
 
 snit::type sdrkit::rxtx {
     option -name rxtx
@@ -54,26 +39,61 @@ snit::type sdrkit::rxtx {
 	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
 	-mode -agc-mode -iq-correct -iq-swap -iq-delay
 	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain -hw-freq
+	-rx-lo-freq -bpf-low -bpf-high -carrier-freq
+	-band -channel -band-low -band-high
     }
 
+    # the transmit button
     option -mox -default 0 -configuremethod Configure
+    # the tuned frequency displayed
     option -freq -default 7050000 -configuremethod Configure
+    # the frequency tuning rate 
     option -tune-rate -default 50 -configuremethod Configure
+    # the local oscillator offset
     option -lo-freq -default 10000 -configuremethod Configure
+    # the receiver local oscillator offset
+    option -rx-lo-freq -default -10000 -configuremethod Configure
+    # the local oscillator tuning rate 
     option -lo-tune-rate -default 50 -configuremethod Configure
+    # the cw tone offset 
     option -cw-freq -default 400 -configuremethod Configure
+    # the mode of operation (no mode split)
     option -mode -default CWU -configuremethod Configure
+    # the agc mode of operation
     option -agc-mode -default medium -configuremethod Configure
+    # the iq needs to be swapped (RX, need TX)
     option -iq-swap -default 0 -configuremethod Configure
+    # the iq needs a sample delay (RX)
     option -iq-delay -default 0 -configuremethod Configure
+    # the iq correct learning rate
     option -iq-correct -default 0 -configuremethod Configure
+    # the band pass filter width
     option -bpf-width -default 200 -configuremethod Configure
+    # the band pass filter offset
     option -bpf-offset -default 150 -configuremethod Configure
+    # the band pass filter low cutoff
+    option -bpf-low -default 200 -configuremethod Configure
+    # the band pass filter high cutoff
+    option -bpf-high -default 600 -configuremethod Configure
+    # the receiver rf gain
     option -rx-rf-gain -default 0 -configuremethod Configure
+    # the receiver af gain
     option -rx-af-gain -default 0 -configuremethod Configure
-    option -hw-freq -default [expr {7050000-10000-400}] -readonly true
+    # the hardware frequency
+    option -hw-freq -default [expr {7050000-10000-400}] -configuremethod Configure
+    # the carrier frequency
+    option -carrier-freq -default [expr {7050000-10000-400}] -configuremethod Configure
+    # the band selection
+    option -band -default {} -configuremethod Configure
+    # the channel selection
+    option -channel -default {} -configuremethod Configure
+    # the band low frequency
+    option -band-low -default {} -configuremethod Configure
+    # the band high frequency
+    option -band-high -default {} -configuremethod Configure
 
     option -sub-components {
+	band {Band} band-select {}
 	ctl {Control} rxtx-control {}
 	rx {RX} rx {}
 	tx {TX} tx {}
@@ -92,9 +112,47 @@ snit::type sdrkit::rxtx {
     }
 
     option -port-connections {
-	rx-if-sp2 out-ports spectrum in-ports
     }
+
+    #
+    # these connections are all reciprocal
+    #
     option -opt-connections {
+
+	rxtx	-mode		rxtx-rx-af-demod	-mode
+	rxtx	-rx-rf-gain	rxtx-rx-rf-gain		-gain
+	rxtx	-iq-swap	rxtx-rx-rf-iq-swap	-swap
+	rxtx	-iq-delay	rxtx-rx-rf-iq-delay	-delay
+	rxtx	-iq-correct	rxtx-rx-rf-iq-correct	-mu
+	rxtx	-rx-lo-freq	rxtx-rx-if-lo-mixer	-freq
+	rxtx	-bpf-low	rxtx-rx-if-bpf		-low
+	rxtx	-bpf-high	rxtx-rx-if-bpf		-high
+	rxtx	-agc-mode	rxtx-rx-af-agc		-mode
+	rxtx	-rx-af-gain	rxtx-rx-af-gain		-gain
+
+	rxtx	-mode		rxtx-dial		-mode
+	rxtx	-agc-mode	rxtx-dial		-agc-mode
+	rxtx	-freq		rxtx-dial		-freq
+	rxtx	-tune-rate	rxtx-dial		-tune-rate
+	rxtx	-lo-freq	rxtx-dial		-lo-freq
+	rxtx	-lo-tune-rate	rxtx-dial		-lo-tune-rate
+	rxtx	-cw-freq	rxtx-dial		-cw-freq
+	rxtx	-bpf-width	rxtx-dial		-bpf-width
+	rxtx	-rx-af-gain	rxtx-dial		-rx-af-gain
+	rxtx	-rx-rf-gain	rxtx-dial		-rx-rf-gain
+
+	rxtx	-mode		rxtx-spectrum		-mode
+	rxtx	-freq		rxtx-spectrum		-freq
+	rxtx	-lo-freq	rxtx-spectrum		-lo-freq
+	rxtx	-cw-freq	rxtx-spectrum		-cw-freq
+	rxtx	-carrier-freq	rxtx-spectrum		-carrier-freq
+
+	rxtx	-bpf-low	rxtx-spectrum		-low
+	rxtx	-bpf-high	rxtx-spectrum		-high
+	rxtx	-bpf-width	rxtx-spectrum		-bpf-width
+
+	rxtx	-band		rxtx-band		-band
+	rxtx	-channel	rxtx-band		-channel
     }
 
     option -rx-source {}
@@ -108,7 +166,7 @@ snit::type sdrkit::rxtx {
     option -physical true
     option -hardware {}
 
-    option -parts-enable { spectrum }
+    option -parts-enable { spectrum meter }
 
     option -initialize {
 	-freq
@@ -132,16 +190,12 @@ snit::type sdrkit::rxtx {
 	active 0
     }
 
-    component echoplex
-    delegate option * to echoplex
-
     component common
     delegate method * to common
 
     constructor {args} {
 	$self configure {*}$args
 	install common using sdrkit::common-component %AUTO%
-	install echoplex using [make-echoplex sdrkit::rxtx-echo-1 $options(-component) {}] %AUTO%
     }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
@@ -160,15 +214,18 @@ snit::type sdrkit::rxtx {
 	}
 	if {$w ne {none}} {
 	    $self sub-component $w dial sdrkit::dial
+	    $self sub-component $w meter sdrkit::meter
+	    package require sdrtk::cnotebook
 	    sdrtk::cnotebook $w.note
 	}
 	foreach {name title command args} $options(-sub-components) {
 	    switch $name {
+		band {}
 		ctl {}
 		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }
 		tx { lappend args -tx-source $options(-tx-source) -tx-sink $options(-tx-sink) }
 		keyer { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
-		spectrum { }
+		spectrum {}
 		default { error "rxtx::build-ui unknown name \"$name\"" }
 	    }
 	    if {$w eq {none}} {
@@ -180,7 +237,8 @@ snit::type sdrkit::rxtx {
 	}
 	if {$w ne {none}} {
 	    grid $w.dial -sticky nsew -row 0
-	    grid $w.note -sticky nsew -row 1
+	    grid $w.meter -sticky ew -row 1
+	    grid $w.note -sticky nsew -row 2
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
@@ -194,33 +252,29 @@ snit::type sdrkit::rxtx {
 		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
 	}
-
-	# first we connect all component control reports
-	# to constructed options in this component
-	# and those constructed options are connected back
-	# to the original component.
-	set echoes {}
-	foreach pair [$options(-component) opt-filter {* *}] {
-	    lassign $pair name opt
-	    if {[string match rxtx-* $name]} {
-		set newopt [string range "$name$opt" 4 end]
-		set newpair [list rxtx $newopt]
-		if {[$options(-component) opt-exists [list rxtx $newopt]]} {
-		    puts "bad luck rxtx $newopt already exists"
-		} else {
-		    $options(-component) opt-add $newpair
-		    $options(-component) opt-connect $pair $newpair
-		    $options(-component) opt-connect $newpair $pair
-		    lappend echoes $newopt
-		}
+	# connect specified controls
+	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
+	    $options(-component) connect-options $name1 $opt1 $name2 $opt2
+	    $options(-component) connect-options $name2 $opt2 $name1 $opt1
+	}
+	# find the hardware frequency control
+	if {$options(-hardware) ne {}} {
+	    foreach pair [$options(-component) opt-filter {rxtx-hw* *-freq}] {
+		puts "hardware freq: $pair"
+	    }
+	    #$options(-component) opt-connect [list rxtx -hw-freq] [list rxtx-hw -freq]
+	}
+	# loop back remaining controls,
+	# other than our own which will infinitely recurse if looped back
+	foreach pair [$options(-component) opt-filter {rxtx-* *}] {
+	    if {[$options(-component) opt-connections-from $pair] eq {} &&
+		[$options(-component) opt-connections-to $pair] eq {}} {
+		# a control with no connections gets looped back
+		# puts "$options(-component) opt-connect $pair $pair"
+		$options(-component) opt-connect $pair $pair
 	    }
 	}
-	install echoplex using [make-echoplex sdrkit::rxtx-echo-2 $options(-component) $echoes] %AUTO%
-
 	# now we need to identify the options
-	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
-	    $options(-component) connect-opts $name1 $opt1 $name2 $opt2
-	}
 	if {$options(-rx-enable) ne {} && $options(-rx-enable)} {
 	    $options(-component) part-enable $options(-name)-rx
 	}
@@ -239,39 +293,64 @@ snit::type sdrkit::rxtx {
 	    $self Set $opt $options($opt)
 	}
     }
-    method Constrain {opt val} { return $val }
-    method OptionConfigure {opt val} { set options($opt) $val }
     method ComponentConfigure {opt val} {
-	if {$opt in {-agc-mode -mode -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq -bpf-width -rx-af-gain -rx-rf-gain}} {
-	    $options(-component) part-configure $options(-name)-dial $opt $val
-	}
     }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
 
+    # we receive change notifications from remote components via Configure
+    # we compute the net result and fire the results via Set
+    # this is backwards of the way this works for the remote components
     method Configure {opt val} {
 	set val [$self Constrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
+	set old $options($opt)
+	set options($opt) $val
+	switch -- $opt {
+	    -agc-mode {
+		if {$val eq {off}} {
+		    if {[$options(-component) part-is-enabled rxtx-rx-af-agc]} {
+			$options(-component) part-disable rxtx-rx-af-agc
+		    }
+		} else {
+		    if { ! [$options(-component) part-is-enabled rxtx-rx-af-agc]} {
+			$options(-component) part-enable rxtx-rx-af-agc
+		    }
+		    $self Set -agc-mode $val
+		}
+	    }
+	    -lo-freq {
+		set df [expr {$val-$old}]
+		$self configure -freq [expr {$options(-freq)+$df}]
+		$self configure -rx-lo-freq [expr {-$val}]
+		$self Set -lo-freq $val
+	    }
+	    -freq {
+		switch $options(-mode) {
+		    CWU { $self configure -hw-freq [expr {$val-$options(-lo-freq)-$options(-cw-freq)}] }
+		    CWL { $self configure -hw-freq [expr {$val-$options(-lo-freq)+$options(-cw-freq)}] }
+		    default { $self configure -hw-freq [expr {$val-$options(-lo-freq)}] }
+		}
+		$self Set -freq $val
+	    }
+	    -band {
+		lassign [sdrutil::band-data-band-range-hertz {*}$val] low high
+		$self configure -freq [expr {($low+$high)/2}] -band-low $low -band-high $high
+	    }
+	    -channel {
+		$self configure -freq [sdrutil::band-data-channel-freq-hertz {*}$val]
+	    }
+	    -rx-lo-freq -
+	    -rx-rf-gain -
+	    -rx-af-gain -
+	    -hw-freq {
+		$self Set $opt $val
+	    }
+	    default {
+		puts "default option handler $opt $val"
+		$self Set $opt $val
+	    }
+	}
     }
 
-    method Set {opt val} {
-	set val [$self Constrain $opt $val]
-	if {$opt eq {-lo-freq}} {
-	    set df [expr {$val-$options(-lo-freq)}]
-	    $self Set -freq [expr {$options(-freq)+$df}]
-	}
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self ControlConfigure $opt $val
-	if {$opt eq {-freq}} {
-	    switch $options(-mode) {
-		CWU { set options(-hw-freq) [expr {$val-$options(-lo-freq)-$options(-cw-freq)}] }
-		CWL { set options(-hw-freq) [expr {$val-$options(-lo-freq)+$options(-cw-freq)}] }
-		default { set options(-hw-freq) [expr {$val-$options(-lo-freq)}] }
-	    }
-	    $self ControlConfigure -hw-freq $options(-hw-freq)
-	}
-    }
+    method Set {opt val} { $options(-component) report $opt $val }
     method Enable {name} {
 	if {$data($name-enable)} {
 	    $options(-component) part-enable $options(-name)-$name

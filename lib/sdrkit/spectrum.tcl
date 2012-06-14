@@ -56,7 +56,7 @@ snit::type sdrkit::spectrum {
     option -size -default 2048 -configuremethod Dispatch
     option -polyphase -default 1 -configuremethod Dispatch
     option -result -default dB -configuremethod Dispatch
-    option -tap -default {} -configuremethod Dispatch
+    option -tap -default {rx-if-sp2} -configuremethod Dispatch
 
     option -pal -default 0 -configuremethod Dispatch
     option -max -default 0 -configuremethod Dispatch
@@ -135,23 +135,33 @@ snit::type sdrkit::spectrum {
 	}
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
-
-    method resolve {} {
-	if {0} {
-	    foreach {name opt myopt} {
-		rxtx -mode -mode
-		rxtx -freq -freq
-		rxtx -lo-freq -lo-freq
-		rxtx -cw-freq -cw-freq
-		rxtx -bpf-width -bpf-width
-	    } {
-		if {[$options(-component) part-exists $name] && [$options(-component) opt-exists [list $name $opt]]} {
-		    $options(-component) connect-options $name $opt $options(-name) $myopt
-		}
+    method connect-tap {tap} {
+	set taps [$options(-component) part-filter *$tap]
+	if {[llength $taps] == 1} {
+	    set name1 [lindex $taps 0]
+	    set name2 $options(-name)
+	    foreach p1 [$options(-component) out-ports $name1] p2 [$options(-component) in-ports $name2] {
+		$options(-component) connect-ports $name1 $p1 $name2 $p2
 	    }
+	} else {
+	    error "multiple taps match $tap: $taps"
 	}
     }
-
+    method disconnect-tap {tap} {
+	set taps [$options(-component) part-filter *$tap]
+	if {[llength $taps] == 1} {
+	    set name1 [lindex $taps 0]
+	    set name2 $options(-name)
+	    foreach p1 [$options(-component) out-ports $name1] p2 [$options(-component) in-ports $name2] {
+		$options(-component) disconnect-ports $name1 $p1 $name2 $p2
+	    }
+	} else {
+	    error "multiple taps match $tap: $taps"
+	}
+    }
+    method resolve {} {
+	$self connect-tap $options(-tap)
+    }
     method FilterOptions {keepers} { foreach opt $keepers { lappend opts $opt $options($opt) }; return $opts }
     method TapOptions {} { return [$self FilterOptions $data(tap-options)] }
     method TkOptions {} { return [$self FilterOptions $data(tk-options)] }
@@ -168,10 +178,19 @@ snit::type sdrkit::spectrum {
 	}
     }
     method Dispatch {opt val} {
+	set old $options($opt)
 	set options($opt) [$self Constrain $opt $val]
 	if {[info exists data(Dispatch$opt)]} {
 	    {*}$data(Dispatch$opt) $opt $options($opt)
 	} else {
+	    switch -- $opt {
+		-tap {
+		    if {$old ne $options(-tap)} {
+			$self connect-tap $options(-tap)
+			$self disconnect-tap $old
+		    }
+		}
+	    }
 	}
     }
     method TapConfigure {opt val} {

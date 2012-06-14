@@ -44,7 +44,6 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     option -port-connections {
     }
     option -opt-connections {
-	rxtx -hw-freq . -freq
     }
 
     option -freq -default 7.050 -configuremethod Handler

@@ -25,11 +25,6 @@ package provide sdrkit::common-sdrtcl 1.0.0
 package require snit
 
 package require sdrkit::common-component
-package require sdrkit::label-spinbox
-package require sdrkit::label-scale
-package require sdrkit::label-iscale
-package require sdrkit::label-radio
-package require sdrkit::label-button
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -53,28 +48,10 @@ snit::type sdrkit::common-sdrtcl {
 	install common using sdrkit::common-component %AUTO%
     }
     destructor {
+	$common destroy
     }
 
     ## these are services to simplify the parent component
-    method window {w opt wtype opts myvar mycmd mydef} {
-	## there are more of these to be added
-	switch $wtype {
-	    spinbox { sdrkit::label-spinbox $w.$opt {*}$opts -variable $myvar -command $mycmd }
-	    scale { sdrkit::label-scale $w.$opt {*}$opts -variable $myvar -command $mycmd }
-	    iscale { sdrkit::label-iscale $w.$opt {*}$opts -variable $myvar -command $mycmd }
-	    separator { ttk::separator $w.$opt }
-	    radio { sdrkit::label-radio $w.$opt {*}$opts -variable $myvar -command $mycmd -defaultvalue $mydef }
-	    button { sdrkit::label-button $w.$opt {*}$opts }
-	    default { error "unimplemented control type \"$type\"" }
-	}
-	return $w.$opt
-    }
-
-    ## these are over ridden in the parent if the defaults won't do
-    method is-needed {} { return [expr {1}] }
-    method Constrain {opt val} { return $val }
-
-    ## these are common to all sdrtcl jack components
     method is-busy {} { return [::sdrkitx::$options(-name) is-busy] }    
     method is-active {} { return [::sdrkitx::$options(-name) is-active] }
     method activate {} { ::sdrkitx::$options(-name) activate }

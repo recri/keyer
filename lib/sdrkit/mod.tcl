@@ -23,9 +23,7 @@
 package provide sdrkit::mod 1.0.0
 
 package require snit
-package require sdrkit::common-component
-package require sdrtk::clabelframe
-package require sdrtk::radiomenubutton
+package require sdrkit::common-alternate
 
 namespace eval sdrkit {}
 
@@ -39,7 +37,8 @@ snit::type sdrkit::mod {
     option -out-ports {alt_out_i alt_out_q}
     option -options {-mode}
 
-    option -mode -default none -configuremethod Configure
+    option -mode -default CWU -configuremethod Configure
+    option -mode-name -default ssb -configuremethod Configure
 
     option -sub-components {
 	am {AM} mod-am {}
@@ -54,6 +53,9 @@ snit::type sdrkit::mod {
     }
     option -opt-connections {
     }
+
+    option -alt-labels { CWU CWL USB LSB DIGU DIGL DSB  FMN AM SAM }
+    option -alt-values { ssb ssb ssb ssb ssb  ssb  none fm  am am }
 
     variable data -array {
 	enabled 0
@@ -93,26 +95,32 @@ snit::type sdrkit::mod {
     }
     method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
+	package require sdrtk::clabelframe
 	set values {none}
 	set labels {none}
 	foreach {name title command args} $options(-sub-components) {
-	    lappend values $name
-	    lappend labels $title
 	    set data(window-$name) [sdrtk::clabelframe $w.$name -label $title]
 	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.container
 	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	}
 	package require sdrkit::label-radio
-	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-mode)] -command [mymethod Set -mode]
+	sdrkit::label-radio $w.mode -format {Mode} -values $options(-alt-labels) -labels $options(-alt-labels) -variable [myvar options(-mode)] -command [mymethod Set -mode]
 	grid $w.mode
 	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
-    method is-active {} { return 1 }
-    method activate {} {}
-    method deactivate {} {}
-    method Constrain {opt val} { return $val }
-    method Configure {opt name} {
+    method mode-name {mode} {
+	set i [lsearch $options(-alt-labels) $mode]
+	if {$i >= 0 && $i < [llength $options(-alt-values)]} {
+	    return [lindex $options(-alt-values) $i]
+	} else {
+	    error "unanticipated modulation \"$mode\""
+	}
+    }
+    method {Configure -mode} {val} {
+	set name [$self mode-name $val]
+	set options(-mode) $val
+	set options(-mode-name) $name
 	set options($opt) $name
 	# find deselected component
 	set exname {none}
@@ -122,85 +130,32 @@ snit::type sdrkit::mod {
 		set exname $part
 	    }
 	}
-	# enable selected component if any
+	# enable selected component, if any
 	if {$name ne {none}} {
 	    set data(enable-$name) 1
 	    $options(-component) part-enable $options(-name)-$name
 	}
-	# disable deselected keyer
+	# disable deselected component, if any
 	if {$exname ne {none}} {
 	    set data(enable-$exname) 0
 	    $options(-component) part-disable $options(-name)-$exname
 	}
 	# deal with ui details
-	set w $options(-window)
+	set w [$options(-component) cget -window]
 	# determine if ui details exist
 	if {$w ne {none}} {
-	    # remove deselected keyer ui
-	    if {$exname ne {none}} {
-		grid forget $data(window-$exname)
-	    }
-	    # install selected keyer ui
-	    if {$name ne {none}} {
-		grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew
-	    }
+	    # remove deselected component ui
+	    if {$exname ne {none}} { grid forget $data(window-$exname) }
+	    # install selected component ui
+	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
 	}
     }
-    method Set {opt val} {
-	$options(-component) report $opt [$self Constrain $opt $val]
-    }
+    method Set {opt val} { $options(-component) report $opt [$self Constrain $opt $val] }
     method rewrite-connections-to {port candidates} {
-	# puts "mod::rewrite-connections-to $port {$candidates}"
-	if {$options(-mode) eq {none}} {
-	    return [Rewrite-connections-to {} $port $candidates]
-	} else {
-	    return [Rewrite-connections-to $options(-name)-$options(-mode) $port $candidates]
-	}
+	return [$self Rewrite-connections-to $options(-name) $options(-mode-name) $port $candidates]
     }
     method rewrite-connections-from {port candidates} {
-	if {$options(-mode) eq {none}} {
-	    return [Rewrite-connections-from {} $port $candidates]
-	} else {
-	    return [Rewrite-connections-from $options(-name)-$options(-mode) $port $candidates]
-	}
-    }
-    proc Rewrite-connections-to {selected port candidates} {
-	# puts "mod::Rewrite-connections-to $port {$candidates}"
-	if {$port ni {alt_out_i alt_out_q alt_midi_out}} { return $candidates }
-	if {$selected eq {}} {
-	    switch $port {
-		alt_out_i { return [list [list $port alt_in_i]] }
-		alt_out_q { return [list [list $port alt_in_q]] }
-		alt_midi_out { return [list [list $port alt_midi_in]] }
-		default { error "rewrite-connections-to: unexpected port \"$port\"" }
-	    }
-	} else {
-	    foreach c $candidates {
-		if {[string match [list $selected *] $c]} {
-		    return [list $c]
-		}
-	    }
-	    error "rewrite-connections-to: failed to match $data(selected-client) in $candidates"
-	}
-    }
-    proc Rewrite-connections-from {selected port candidates} {
-	#puts "$options(-name) rewrite-connections-from $port {$candidates}"
-	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
-	if {$selected eq {}} {
-	    switch $port {
-		alt_in_i { return [list [list $port alt_out_i]] }
-		alt_in_q { return [list [list $port alt_out_q]] }
-		alt_midi_in { return [list [list $port alt_midi_out]] }
-		default { error "rewrite-connections-from: unexpected port \"$port\"" }
-	    }
-	} else {
-	    foreach c $candidates {
-		if {[string match [list $selected *] $c]} {
-		    return [list $c]
-		}
-	    }
-	    error "rewrite-connections-from: failed to match $data(selected-client) in $candidates"
-	}
+	return [$self Rewrite-connections-from $options(-name) $options(-mode-name) $port $candidates]
     }
 }
 

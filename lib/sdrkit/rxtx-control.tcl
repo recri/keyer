@@ -75,22 +75,10 @@ snit::type sdrkit::rxtx-control {
 	    sdrtk::clabelframe $w.$name -label $title
 	    grid $w.$name -sticky ew
 	    foreach {opt type opts} $options(-sub-controls) {
-		switch $type {
-		    spinbox {
-			package require sdrkit::label-spinbox
-			sdrkit::label-spinbox $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    scale {
-			package require sdrkit::label-scale
-			sdrkit::label-scale $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    separator {
-			ttk::separator $w.$name.$opt
-		    }
-		    radio {
-			package require sdrkit::label-radio
-			sdrkit::label-radio $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		    }
+		if {[info exists options(-$opt]} {
+		    $self window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
+		} else {
+		    $self window $w $opt $type $opts {} {} {}
 		}
 		grid $w.$name.$opt -sticky ew
 		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
@@ -111,39 +99,6 @@ snit::type sdrkit::rxtx-control {
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
-
-    method is-needed {} { return 1 }
-    method is-busy {} { return 0 }
-    method is-active {} { return 1 }
-    method activate {} { }
-    method deactivate {} { }
-
-    method Constrain {opt val} { return $val }
-
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
-    method Configure {opt val} {
-	set val [$self Constrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
-    }
-
-    method Set {opt val} {
-	set val [$self Constrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
-	$self ControlConfigure $opt $val
-    }
-    method Changed {opt} { $self Set $opt $options($opt) }
+    method Configure {opt val} { set options($opt) [$self Constrain $opt $val] }
+    method Set {opt val} { $options(-component) report $opt [$self Constrain $opt $val] }
 }
