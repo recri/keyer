@@ -230,3 +230,9 @@
 ** DONE - There should be a set of methods required for each component type
 ** DONE - Abstract the common component code for alternate components.
 ** DONE - Abstract the common component code for pipeline components.
+** DONE - Blow away lib/sdrapp
+** DONE - Blow away lib/sdrctl
+** DONE - Blow away lib/sdrdsp
+** DONE - Blow away lib/sdrhw
+** DONE - Blow away lib/sdrui
+** DONE - Blow away lib/wrap   

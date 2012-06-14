@@ -2,12 +2,6 @@
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
 ** TODO - add back tkcon launch button
-** TODO - Blow away lib/sdrapp
-** TODO - Blow away lib/sdrctl
-** TODO - Blow away lib/sdrdsp
-** TODO - Blow away lib/sdrhw
-** TODO - Blow away lib/sdrui
-** TODO - Blow away lib/wrap   
 ** TODO - tuning the softrock with synchronous libusb calls
    yields extremely jerky tuning after a while.
    Defer the configuration application to a timed out handler for
