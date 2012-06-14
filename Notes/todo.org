@@ -1,6 +1,7 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - add back tkcon launch button
 ** TODO - Blow away lib/sdrapp
 ** TODO - Blow away lib/sdrctl
 ** TODO - Blow away lib/sdrdsp
