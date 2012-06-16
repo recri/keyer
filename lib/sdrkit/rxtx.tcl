@@ -62,7 +62,7 @@ snit::type sdrkit::rxtx {
     # the agc mode of operation
     option -agc-mode -default medium -configuremethod Configure
     # the iq needs to be swapped (RX, need TX)
-    option -iq-swap -default 0 -configuremethod Configure
+    option -iq-swap -default 1 -configuremethod Configure
     # the iq needs a sample delay (RX)
     option -iq-delay -default 0 -configuremethod Configure
     # the iq correct learning rate
@@ -150,6 +150,8 @@ snit::type sdrkit::rxtx {
 	rxtx	-bpf-low	rxtx-spectrum		-low
 	rxtx	-bpf-high	rxtx-spectrum		-high
 	rxtx	-bpf-width	rxtx-spectrum		-bpf-width
+	rxtx	-band-low	rxtx-spectrum		-band-low
+	rxtx	-band-high	rxtx-spectrum		-band-high
 
 	rxtx	-band		rxtx-band		-band
 	rxtx	-channel	rxtx-band		-channel
@@ -258,11 +260,18 @@ snit::type sdrkit::rxtx {
 	    $options(-component) connect-options $name2 $opt2 $name1 $opt1
 	}
 	# find the hardware frequency control
+	# activate the hardware
 	if {$options(-hardware) ne {}} {
-	    foreach pair [$options(-component) opt-filter {rxtx-hw* *-freq}] {
-		puts "hardware freq: $pair"
+	    foreach pair [$options(-component) opt-filter {rxtx-hardware-* *-freq}] {
+		$options(-component) opt-connect [list rxtx -hw-freq] $pair
 	    }
-	    #$options(-component) opt-connect [list rxtx -hw-freq] [list rxtx-hw -freq]
+	    foreach part [$options(-component) part-filter {rxtx-hardware*}] {
+		#puts "$part enabled=[$options(-component) part-is-enabled $part] active=[$options(-component) part-is-active $part]"
+		if { ! [$options(-component) part-is-active $part]} {
+		    $options(-component) part-activate $part
+		}
+		#puts "$part enabled=[$options(-component) part-is-enabled $part] active=[$options(-component) part-is-active $part]"
+	    }
 	}
 	# loop back remaining controls,
 	# other than our own which will infinitely recurse if looped back
@@ -274,7 +283,6 @@ snit::type sdrkit::rxtx {
 		$options(-component) opt-connect $pair $pair
 	    }
 	}
-	# now we need to identify the options
 	if {$options(-rx-enable) ne {} && $options(-rx-enable)} {
 	    $options(-component) part-enable $options(-name)-rx
 	}
@@ -304,19 +312,44 @@ snit::type sdrkit::rxtx {
 	set old $options($opt)
 	set options($opt) $val
 	switch -- $opt {
-	    -agc-mode {
-		if {$val eq {off}} {
-		    if {[$options(-component) part-is-enabled rxtx-rx-af-agc]} {
-			$options(-component) part-disable rxtx-rx-af-agc
+	    -mode {
+		switch $old {
+		    CWU {
+			# switching from CWU means that freq -= cw-freq
+			$self configure -freq [expr {$options(-freq)-$options(-cw-freq)}]
 		    }
-		} else {
-		    if { ! [$options(-component) part-is-enabled rxtx-rx-af-agc]} {
-			$options(-component) part-enable rxtx-rx-af-agc
+		    CWL {
+			# switching from CWL means that freq += cw-freq
+			$self configure -freq [expr {$options(-freq)+$options(-cw-freq)}]
 		    }
-		    $self Set -agc-mode $val
+		}
+		switch $val {
+		    CWU {
+			# switching to CWU means that frequency += cw-freq
+			$self configure -freq [expr {$options(-freq)+$options(-cw-freq)}]
+		    }
+		    CWL {
+			# switching from CWL means that freq -= cw-freq
+			$self configure -freq [expr {$options(-freq)-$options(-cw-freq)}]
+		    }
+		}
+		$self Set $opt $val
+	    }
+	    -cw-freq {
+		$self Set $opt $val
+		switch $options(-mode) {
+		    CWU {
+			$self configure -bpf-low [expr {$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {$options(-cw-freq)+$options(-bpf-width)/2}]
+			$self configure -freq [expr {$options(-freq)-$old+$options(-cw-freq)}]
+		    }
+		    CWL {
+			$self configure -bpf-low [expr {-$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {-$options(-cw-freq)+$options(-bpf-width)/2}]
+			$self configure -freq [expr {$options(-freq)+$old-$options(-cw-freq)}]
+		    }
 		}
 	    }
 	    -lo-freq {
+		# lo-freq is the offset from the hw-freq for the tuned 
 		set df [expr {$val-$old}]
 		$self configure -freq [expr {$options(-freq)+$df}]
 		$self configure -rx-lo-freq [expr {-$val}]
@@ -337,10 +370,43 @@ snit::type sdrkit::rxtx {
 	    -channel {
 		$self configure -freq [sdrutil::band-data-channel-freq-hertz {*}$val]
 	    }
+	    -bpf-width -
+	    -bpf-offset {
+		$self Set $opt $val
+		switch $options(-mode) {
+		    CWU { $self configure -bpf-low [expr {$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {$options(-cw-freq)+$options(-bpf-width)/2}] }
+		    CWL { $self configure -bpf-low [expr {-$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {-$options(-cw-freq)+$options(-bpf-width)/2}] }
+		    DIGU - USB { $self configure -bpf-low $options(-bpf-offset) -bpf-high [expr {$options(-bpf-offset)+$options(-bpf-width)}] }
+		    DIGL - LSB { $self configure -bpf-low [expr {-$options(-bpf-offset)-$options(-bpf-width)}] -bpf-high [expr {-$options(-bpf-offset)}] }
+		    AM - SAM - DSB - FMN { $self configure -bpf-low [expr {-$options(-bpf-width)/2}] -bpf-high [expr {$options(-bpf-width)/2}] }
+		    default { error "unanticipated mode \"$options(-mode)\" in configure $opt $val" }
+		}
+	    }
+	    -agc-mode {
+		if {$val eq {off}} {
+		    if {[$options(-component) part-is-enabled rxtx-rx-af-agc]} {
+			$options(-component) part-disable rxtx-rx-af-agc
+		    }
+		} else {
+		    if { ! [$options(-component) part-is-enabled rxtx-rx-af-agc]} {
+			$options(-component) part-enable rxtx-rx-af-agc
+		    }
+		    $self Set -agc-mode $val
+		}
+	    }
+	    -band-low -
+	    -band-high -
 	    -rx-lo-freq -
 	    -rx-rf-gain -
 	    -rx-af-gain -
-	    -hw-freq {
+	    -hw-freq -
+	    -tune-rate -
+	    -lo-tune-rate -
+	    -iq-swap -
+	    -iq-delay -
+	    -iq-correct -
+	    -bpf-low -
+	    -bpf-high {
 		$self Set $opt $val
 	    }
 	    default {

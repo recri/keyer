@@ -83,8 +83,8 @@ snit::type sdrkit::component {
     option -weights {1 3}
 
     # enable or activate this component
-    option -enable -default false -configuremethod Configure
-    option -activate -default false -configuremethod Configure
+    option -enable -default false
+    option -activate -default false -configuremethod Activate -cgetmethod Activated
     
     # the factory for the subsidiary which we're wrapping
     option -subsidiary {}
@@ -213,21 +213,24 @@ snit::type sdrkit::component {
 	catch {$subsidiary destroy}
     }
     
-    method Configure {opt val} {
+    method Activated {opt} {
+	if {$subsidiary eq {}} {
+	    return 0
+	} elseif {[$subsidiary cget -type] in {jack}} {
+	    return [$subsidiary is-active]
+	} else {
+	    return $options($opt)
+	}
+    }
+
+    method Activate {opt val} {
 	#puts "$options(-name) configure $opt $val"
 	set options($opt) $val
-	if {$subsidiary ne {}} {
-	    if {$data(subsidiary-configure$opt)} { $subsidiary configure $opt $val }
-	    switch -- $opt {
-		-activate {
-		    if {$val} {
-			#if {$data(subsidiary-activate)} { $subsidiary activate }
-			if {[$subsidiary cget -type] eq {jack}} { $subsidiary activate }
-		    } else {
-			#if {$data(subsidiary-deactivate)} { $subsidiary deactivate }
-			if {[$subsidiary cget -type] eq {jack}} { $subsidiary deactivate }
-		    }
-		}
+	if {$subsidiary ne {} && [$subsidiary cget -type] in {jack}} {
+	    if {$val} {
+		$subsidiary activate
+	    } else {
+		$subsidiary deactivate
 	    }
 	}
     }
@@ -256,7 +259,7 @@ snit::type sdrkit::component {
     method part-is-enabled {args} { return [$self control part-is-enabled {*}$args] }
     method part-enable {args} { return [$self control part-enable {*}$args] }
     method part-disable {args} { return [$self control part-disable {*}$args] }
-    method part-is-activated {args} { return [$self control part-is-activated {*}$args] }
+    method part-is-active {args} { return [$self control part-is-active {*}$args] }
     method part-activate {args} { return [$self control part-activate {*}$args] }
     method part-deactivate {args} { return [$self control part-deactivate {*}$args] }
     method part-destroy {args} { return [$self control part-destroy {*}$args] }

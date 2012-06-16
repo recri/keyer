@@ -52,7 +52,7 @@ snit::widgetadaptor sdrtk::spectrum {
 
     variable data -array {
 	multi 0
-	darkest \#444
+	darkest \#333
 	darker \#666
 	dark \#888
 	med \#AAA
@@ -126,7 +126,7 @@ snit::widgetadaptor sdrtk::spectrum {
 
     # filter rectangle
     method DrawFilter {} {
-	$hull create rectangle $options(-filter-low) $options(-min) $options(-filter-high) $options(-max) -fill $data(darker) -outline $data(darker) -tags filter
+	$hull create rectangle $options(-filter-low) $options(-min) $options(-filter-high) $options(-max) -fill $data(darkest) -outline $data(darkest) -tags filter
 	$self Scale filter
     }
     method AdjustFilter {} {
@@ -163,7 +163,7 @@ snit::widgetadaptor sdrtk::spectrum {
 		}
 	    }
 	}
-	$hull create line $xy -fill $data(darkest) -tags {vgrid grid}
+	$hull create line $xy -fill $data(darker) -tags {vgrid grid}
 	$self Scale vgrid
 	$self VerticalScale vlabel
     }
@@ -171,7 +171,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	$hull delete vgrid
 	$hull delete vlabel
 	$self DrawVgrid
-	$hull lower vgrid
+	$hull lower vgrid carrier
     }
     
     # horizontal grid, vertical frequency markings and labels
@@ -188,7 +188,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	    lappend xy $fo $options(-min) $fo $options(-max) $fo $options(-min)
 	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $data(light) -tags {hlabel label}
 	}
-	$hull create line $xy -fill $data(darkest) -tags {hgrid grid}
+	$hull create line $xy -fill $data(darker) -tags {hgrid grid}
 	$self Scale hgrid
 	$self Scale hlabel
 	$hull lower hgrid
@@ -208,11 +208,13 @@ snit::widgetadaptor sdrtk::spectrum {
     }
 
     method DrawAll {} {
+	catch {$hull delete filter}
 	catch {$hull delete grid}
 	catch {$hull delete label}
+	catch {$hull delete carrier}
+	$self DrawFilter
 	$self DrawHgrid
 	$self DrawVgrid
-	$self DrawFilter
 	$self DrawCarrier
     }	
     

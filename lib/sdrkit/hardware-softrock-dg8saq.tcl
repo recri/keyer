@@ -69,7 +69,7 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     }
     method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
     method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
-    method build {} {
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
@@ -130,29 +130,9 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	    }
 	}
     }
-
     method is-needed {} { return 1 }
     method is-busy {} { return 0 }
-    method is-active {} { return $data(active) }
-    method activate {} { set data(active) 1 }
-    method deactivate {} { set data(active) 0 }
-    method resolve {} {
-	# puts "hardware-softrock-dg8saq::resolve"
-	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
-	    set ename1 [$self Expand-name $name1]
-	    set ename2 [$self Expand-name $name2]
-	    # puts "$name1 $opt1 $name2 $opt2 -> $options(-component) connect-options $ename1 $opt1 $ename2 $opt2"
-	    $options(-component) connect-options $ename1 $opt1 $ename2 $opt2
-	}
-    }
-    method Expand-name {name} {
-	if {$name eq {..}} { return [[$options(-component) get-parent] cget -name] }
-	if {$name eq {.}} { return $options(-name) }
-	if {[string first . $name] == 0} { return [regsub {^.} $name $options(-name)] }
-	return $name
-    }
     method {Handler -freq} {val} {
-	# puts "hardware-softrock-dg8saq configure -freq $val"
 	set options(-freq) $val
 	set data(deferred-freq) $val
 	if {$data(deferred-after) eq {}} {
@@ -161,9 +141,8 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     }
     method Deferred-handler {} {
 	set data(deferred-after) {}
-	if {$data(active)} {
-	    dg8saq::put_frequency_by_value $data(handle) [expr {$data(deferred-freq)/1e6}]
-	    #exec usbsoftrock set freq [expr {$val/1e6}]
+	if {[info exists data(handle)]} {
+	    dg8saq::put_frequency_by_value $data(handle) [expr {4*$data(deferred-freq)/1e6}]
 	}
     }
 }

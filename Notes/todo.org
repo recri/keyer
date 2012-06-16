@@ -1,6 +1,7 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - need a toplevel component tweak to connect default UI control signals.
 ** TODO - add back tkcon launch button
 ** TODO - tuning the softrock with synchronous libusb calls
    yields extremely jerky tuning after a while.

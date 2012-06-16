@@ -48,6 +48,7 @@ snit::type sdrkit::spectrum {
 	-pal -max -min -automatic -smooth -multi -zoom -pan
 	-mode -freq -lo-freq -cw-freq -carrier-freq
 	-low -high -bpf-width
+	-band-low -band-high
     }
 
     option -sample-rate 48000
@@ -75,6 +76,8 @@ snit::type sdrkit::spectrum {
     option -low -default 400 -configuremethod Dispatch
     option -high -default 800 -configuremethod Dispatch
     option -bpf-width -default 200 -configuremethod Dispatch
+    option -band-low -default {} -configuremethod Dispatch
+    option -band-high -default {} -configuremethod Dispatch
     
     # tap - no spectrum source tap control
     # period - no spectrum period control
@@ -201,6 +204,7 @@ snit::type sdrkit::spectrum {
     }
     method RetuneConfigure {opt val} {
 	set wid $options(-bpf-width)
+	# this is mostly unnecessarily redoing computations done in rxtx.tcl
 	# convert -bpf-width to -low -high
 	# compute -tuned-freq offset from -center-freq
 	switch $options(-mode) {

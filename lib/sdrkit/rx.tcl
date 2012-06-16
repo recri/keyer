@@ -80,7 +80,7 @@ snit::type sdrkit::rx {
 	af-gain {AF Gain} gain {}
     }
 
-    option -parts-enable { rf-iq-correct if-lo-mixer if-bpf af-agc }
+    option -parts-enable { rf-iq-swap rf-iq-correct if-lo-mixer if-bpf af-agc }
 
     option -port-connections {
 	{} in-ports rf-gain in-ports
