@@ -47,7 +47,7 @@ snit::type sdrkit::spectrum {
 	-period -size -polyphase -result -tap
 	-pal -max -min -automatic -smooth -multi -zoom -pan
 	-mode -freq -lo-freq -cw-freq -carrier-freq
-	-low -high -bpf-width
+	-bpf-low -bpf-high
 	-band-low -band-high
     }
 
@@ -72,10 +72,8 @@ snit::type sdrkit::spectrum {
     option -freq -default 7050000 -configuremethod Dispatch
     option -lo-freq -default 10000 -configuremethod Dispatch
     option -cw-freq -default 600 -configuremethod Dispatch
-    option -carrier-freq -default 7040000 -configuremethod Dispatch
-    option -low -default 400 -configuremethod Dispatch
-    option -high -default 800 -configuremethod Dispatch
-    option -bpf-width -default 200 -configuremethod Dispatch
+    option -bpf-low -default 400 -configuremethod Dispatch
+    option -bpf-high -default 800 -configuremethod Dispatch
     option -band-low -default {} -configuremethod Dispatch
     option -band-high -default {} -configuremethod Dispatch
     
@@ -102,7 +100,7 @@ snit::type sdrkit::spectrum {
 	frequencies {}
 	tap-options {-server -size -polyphase -result}
 	tk-options {-sample-rate -pal -max -min -smooth -multi -zoom -pan}
-	retune-options {-mode -freq -lo-freq -cw-freq -carrier-freq -low -high -bpf-width}
+	retune-options {-mode -freq -lo-freq -cw-freq -carrier-freq -bpf-low -bpf-high}
     }
 
     component common
@@ -125,7 +123,7 @@ snit::type sdrkit::spectrum {
     method port-complement {port} { return {} }
     method build-parts {w} {
 	toplevel .spectrum-$options(-name)
-	set data(display) [sdrtk::spectrum-waterfall .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions]]
+	set data(display) [sdrtk::spectrum-waterfall .spectrum-$options(-name).s -width 1024 {*}[$self TkOptions] -command [mymethod Set]]
 	pack $data(display) -side top -fill both -expand true
 	sdrtcl::spectrum-tap ::sdrkitx::$options(-name) {*}[$self TapOptions]
 	set data(after) [after $options(-period) [mymethod Update]]
@@ -165,6 +163,7 @@ snit::type sdrkit::spectrum {
     method resolve {} {
 	$self connect-tap $options(-tap)
     }
+    method Set {opt val} { $options(-component) report $opt $val }
     method FilterOptions {keepers} { foreach opt $keepers { lappend opts $opt $options($opt) }; return $opts }
     method TapOptions {} { return [$self FilterOptions $data(tap-options)] }
     method TkOptions {} { return [$self FilterOptions $data(tk-options)] }
@@ -203,37 +202,16 @@ snit::type sdrkit::spectrum {
 	$data(display) configure $opt $options($opt)
     }
     method RetuneConfigure {opt val} {
-	set wid $options(-bpf-width)
-	# this is mostly unnecessarily redoing computations done in rxtx.tcl
-	# convert -bpf-width to -low -high
-	# compute -tuned-freq offset from -center-freq
 	switch $options(-mode) {
-	    CWU {
-		lassign [list [expr {$options(-cw-freq)-$wid/2}] [expr {$options(-cw-freq)+$wid/2}]] options(-low) options(-high)
-		set options(-tuned-freq) [expr {$options(-lo-freq)+$options(-cw-freq)}]
-	    }
-	    CWL {
-		lassign [list [expr {-$options(-cw-freq)-$wid/2}] [expr {-$options(-cw-freq)+$wid/2}]] options(-low) options(-high)
-		set options(-tuned-freq) [expr {$options(-lo-freq)-$options(-cw-freq)}]
-	    }
-	    DIGU - USB {
-		lassign [list 150 [expr {150+$wid}]] options(-low) options(-high)
-		set options(-tuned-freq) $options(-lo-freq)
-	    }
-	    DIGL - LSB {
-		lassign [list -150 [expr {-150-$wid}]] options(-low) options(-high)
-		set options(-tuned-freq) $options(-lo-freq)
-	    }
-	    AM - DSB - SAM - FM {
-		lassign [list [expr {-$wid/2}] [expr {+$wid/2}]] options(-low) options(-high)
-		set options(-tuned-freq) $options(-lo-freq)
-	    }
+	    CWU { set options(-tuned-freq) [expr {$options(-lo-freq)+$options(-cw-freq)}] }
+	    CWL { set options(-tuned-freq) [expr {$options(-lo-freq)-$options(-cw-freq)}] }
+	    default { set options(-tuned-freq) $options(-lo-freq) }
 	}
 	set options(-center-freq) [expr {$options(-freq)-$options(-tuned-freq)}]
-	set options(-filter-low) [expr {$options(-lo-freq)+$options(-low)}]
-	set options(-filter-high) [expr {$options(-lo-freq)+$options(-high)}]
+	set options(-filter-low) [expr {$options(-lo-freq)+$options(-bpf-low)}]
+	set options(-filter-high) [expr {$options(-lo-freq)+$options(-bpf-high)}]
 	set opts {}
-	foreach opt { -center-freq -tuned-freq -filter-low -filter-high } {
+	foreach opt {-center-freq -tuned-freq -filter-low -filter-high} {
 	    if {[$data(display) cget $opt] != $options($opt)} { lappend opts $opt $options($opt) }
 	}
 	if {$opts ne {}} { $data(display) configure {*}$opts }

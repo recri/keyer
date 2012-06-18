@@ -64,7 +64,8 @@ snit::widgetadaptor sdrtk::meter {
     }
 
     constructor {args} {
-	installhull using canvas -height $data(height)
+	#puts "sdrtk::meter $win $args"
+	installhull using canvas -height $data(height) -width $data(width)
 	$self configure {*}$args
 	$hull configure -bg white
 	bind $win <Configure> [mymethod rescale %w %h]
@@ -72,7 +73,7 @@ snit::widgetadaptor sdrtk::meter {
     }
     
     method rescale {wd ht} {
-	#puts "rescale $wd $ht"
+	#puts "sdrtk::meter rescale $wd $ht"
 	set data(width) $wd
 	$hull delete all
 	$hull create line 0 $data(y) 0 $data(y) -width $data(y) -fill red -tag meter

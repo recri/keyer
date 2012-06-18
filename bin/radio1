@@ -11,6 +11,8 @@ TXSINK='system:playback_1 system:playback_2'
 TXSOURCE='audioadapter:capture_1 audioadapter:capture_2'
 KEYSOURCE='system:midi_capture_1'
 HARDWARE='softrock hardware-softrock-dg8saq {}'
+#HARDWARE='softrock hardware-softrock-dg8saq {} powermate hardware-powermate {}'
+
 JACK=...
 ARGS=
 $BIN/sdrkit-rxtx -rx-source "$RXSOURCE" -rx-sink "$RXSINK" -tx-source "$TXSOURCE" -tx-sink "$TXSINK" -keyer-source "$KEYSOURCE" -hardware "$HARDWARE" "$@"

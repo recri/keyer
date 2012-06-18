@@ -36,10 +36,12 @@ snit::widgetadaptor sdrtk::spectrum-waterfall {
     # options to spectrum
     delegate option -smooth to spectrum
     delegate option -multi to spectrum
-    delegate option -center-freq to spectrum
+    option -center-freq -default 0 -configuremethod Retune
     delegate option -filter-low to spectrum
     delegate option -filter-high to spectrum
-    delegate option -tuned-freq to spectrum
+    delegate option -band-low to spectrum
+    delegate option -band-high to spectrum
+    option -tuned-freq -default 0 -configuremethod Retune
 
     # options to both
     option -sample-rate -default 48000 -type sdrtype::sample-rate -configuremethod Dispatch
@@ -48,6 +50,11 @@ snit::widgetadaptor sdrtk::spectrum-waterfall {
     option -zoom -default 1 -type sdrtype::zoom -configuremethod Dispatch
     option -pan -default 0 -type sdrtype::pan -configuremethod Dispatch
     option -width -default 1024 -configuremethod Dispatch
+
+    # options to here
+    option -command {}
+
+    variable data -array {}
 
     delegate option * to hull
     delegate method * to hull
@@ -61,11 +68,44 @@ snit::widgetadaptor sdrtk::spectrum-waterfall {
 	$self configure {*}$args
     }
 
-    method Tune {w x y f} {
-	puts "$self Tune $w $x $y $f"
+    method Tune {w how x y f df} {
+	# puts "$how $x $y $f $df at c=$options(-center-freq) t=$options(-tuned-freq)"
+	switch $how {
+	    Press {
+		set data(start) [list $x $y $f $df] 
+		set data(drag) 0
+	    }
+	    Release {
+		if { ! $data(drag)} {
+		    if {$options(-command) ne {}} {
+			{*}$options(-command) -freq [expr {$options(-center-freq)+$options(-tuned-freq)+($f-$options(-tuned-freq))}]
+		    }
+		}
+	    }
+	    Motion {
+		lassign $data(start) x0 y0 f0 df0
+		if {abs($x-$x0) > 1} {
+		    incr data(drag)
+		    if {$options(-command) ne {}} {
+			{*}$options(-command) -freq [expr {$options(-center-freq)+$options(-tuned-freq)-($f-$f0)}]
+		    }
+		    set data(start) [list $x $y $f $df]
+		}
+	    }
+	    default {
+		error "unanticipated spectrum/waterfall tuning event: $w $how $x $y $f $df"
+	    }
+	}
     }
 
     method Dispatch {opt val} {
+	set options($opt) $val
+	$spectrum configure $opt $val
+	$waterfall configure $opt $val
+    }
+
+    method Retune {opt val} {
+	set options($opt) $val
 	$spectrum configure $opt $val
 	$waterfall configure $opt $val
     }

@@ -35,9 +35,11 @@ snit::widgetadaptor sdrtk::waterfall {
     option -width 1024
     option -zoom -default 1 -type sdrtype::zoom
     option -pan -default 0 -type sdrtype::pan
-    option -scale -default 1.0 -configuremethod handle-option
-    option -offset -default  0.0 -configuremethod handle-option
-    option -sample-rate -default 48000 -configuremethod handle-option
+    option -scale -default 1.0 -configuremethod Configure
+    option -offset -default  0.0 -configuremethod Configure
+    option -center-freq -default 0 -configuremethod Configure
+    option -tuned-freq -default 0 -configuremethod Configure
+    option -sample-rate -default 48000 -configuremethod Configure
 
     option -reverse 0
     option -direction s
@@ -73,19 +75,17 @@ snit::widgetadaptor sdrtk::waterfall {
     method DrawAll {} {
     }
     method Press {w x y} {
-	set data(freq) [expr {($x-$data(xoffset))/$data(xscale)}]
-	# puts "Press $w $b $x $y -> $f $data(xscale) $data(xoffset)"
+	set data(freq) [expr {int(($x-double($data(xoffset)))/$data(xscale))}]
+	if {$options(-command) ne {}} { {*}$options(-command) $w Press $x $y $data(freq) 0 }
     }
     method Release {w x y} {
-	set df [expr {($x-$data(xoffset))/$data(xscale) - $data(freq)}]
-	#puts "Release $w $b $x $y -> $f"
-	if {$options(-command) ne {}} { {*}$options(-command) $w $x $y $df }
+	set df [expr {int(($x-double($data(xoffset)))/$data(xscale) - $data(freq))}]
+	if {$options(-command) ne {}} { {*}$options(-command) $w Release $x $y $data(freq) $df }
     }
     method Motion {w x y} {
-	set df [expr {($x-$data(xoffset))/$data(xscale) - $data(freq)}]
-	set data(freq) [expr {$data(freq)+$df}]
-	# puts "Motion $w $x $y"
-	if {$options(-command) ne {}} { {*}$options(-command) $w $x $y $df }
+	set df [expr {int(($x-double($data(xoffset)))/$data(xscale) - $data(freq))}]
+	incr data(freq) $df
+	if {$options(-command) ne {}} { {*}$options(-command) $w Motion $x $y $data(freq) $df }
     }
 
     ##
@@ -129,8 +129,8 @@ snit::widgetadaptor sdrtk::waterfall {
 
 	# automatic palette bounds assignment
 	if {$options(-automatic)} {
-	    set data(min) [expr {$yavg-10}]
-	    set data(max) [expr {$yavg+60}]
+	    set data(min) [expr {$yavg-5}]
+	    set data(max) [expr {$yavg+30}]
 	} else {
 	    set data(min) $options(-min)
 	    set data(max) $options(-max)
@@ -201,9 +201,9 @@ snit::widgetadaptor sdrtk::waterfall {
 	# puts "waterfall::configure -scale $data(-scale) -offset $data(-offset) bbox [$w bbox all]"
     }
 
-    method handle-option {option value} {
+    method Configure {opt val} {
 	array set save [array get options]
-	set options($option) $value
+	set options($opt) $val
 	$self adjust save
     }
 

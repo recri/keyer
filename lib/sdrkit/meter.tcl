@@ -74,9 +74,10 @@ snit::type sdrkit::meter {
 	    set data(display) $meter
 	    sdrtk::meter $meter
 	    grid $meter -row 0 -column 0 -sticky ew
-	    grid columnconfigure $pw 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
+	    #grid columnconfigure $pw 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    sdrtcl::meter-tap ::sdrkitx::$options(-name)
 	    set data(after) [after $options(-period) [mymethod Update]]
+	    # puts "meter::build-ui $w $pw $minsizes $weights"
 	    # build a popup menu on the meter window: tap menu, mode menu
 	}
     }

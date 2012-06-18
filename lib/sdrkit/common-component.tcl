@@ -24,6 +24,7 @@ package provide sdrkit::common-component 1.0.0
 
 package require snit
 
+package require sdrkit::label-label
 package require sdrkit::label-spinbox
 package require sdrkit::label-scale
 package require sdrkit::label-iscale
@@ -73,7 +74,8 @@ snit::type sdrkit::common-component {
 	    separator { ttk::separator $w.$opt }
 	    radio { sdrkit::label-radio $w.$opt {*}$opts -variable $myvar -command $mycmd -defaultvalue $mydef }
 	    button { sdrkit::label-button $w.$opt {*}$opts }
-	    default { error "unimplemented control type \"$type\"" }
+	    label { sdrkit::label-label $w.$opt {*}$opts -variable $myvar }
+	    default { error "unimplemented control type \"$wtype\"" }
 	}
 	return $w.$opt
     }

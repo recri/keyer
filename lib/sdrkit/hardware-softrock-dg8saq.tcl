@@ -36,6 +36,7 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     option -options {-freq}
 
     option -sub-controls {
+	freq label {-format {%.0f Hz} -label {HW Freq}}
     }
     option -sub-components {
     }
@@ -46,7 +47,7 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     option -opt-connections {
     }
 
-    option -freq -default 7.050 -configuremethod Handler
+    option -freq -default 7050000 -configuremethod Handler
 
     variable data -array {
 	parts {}
@@ -88,6 +89,10 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	    }
 	}
 	if {$w ne {none}} {
+	    foreach {opt type opts} $options(-sub-controls) {
+		$common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
+		grid $w.$opt -sticky ew
+	    }
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
 	if {[catch {

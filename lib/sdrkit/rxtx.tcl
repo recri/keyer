@@ -38,31 +38,31 @@ snit::type sdrkit::rxtx {
     option -options {
 	-mox -freq -tune-rate -lo-freq -lo-tune-rate -cw-freq
 	-mode -agc-mode -iq-correct -iq-swap -iq-delay
-	-bpf-width -bpf-offset -rx-rf-gain -rx-af-gain -hw-freq
-	-rx-lo-freq -bpf-low -bpf-high -carrier-freq
+	-rx-rf-gain -rx-af-gain -hw-freq -rx-lo-freq
+	-bpf-width -bpf-offset -bpf-low -bpf-high
 	-band -channel -band-low -band-high
     }
 
     # the transmit button
     option -mox -default 0 -configuremethod Configure
-    # the tuned frequency displayed
+    # the tuned frequency displayed, the carrier frequency
     option -freq -default 7050000 -configuremethod Configure
     # the frequency tuning rate 
     option -tune-rate -default 50 -configuremethod Configure
-    # the local oscillator offset
+    # the local oscillator offset mixed to/from baseband
     option -lo-freq -default 10000 -configuremethod Configure
     # the receiver local oscillator offset
     option -rx-lo-freq -default -10000 -configuremethod Configure
     # the local oscillator tuning rate 
     option -lo-tune-rate -default 50 -configuremethod Configure
-    # the cw tone offset 
+    # the cw tone offset, how far above or below the carrier we tune on receive
     option -cw-freq -default 400 -configuremethod Configure
     # the mode of operation (no mode split)
     option -mode -default CWU -configuremethod Configure
     # the agc mode of operation
     option -agc-mode -default medium -configuremethod Configure
     # the iq needs to be swapped (RX, need TX)
-    option -iq-swap -default 1 -configuremethod Configure
+    option -iq-swap -default 0 -configuremethod Configure
     # the iq needs a sample delay (RX)
     option -iq-delay -default 0 -configuremethod Configure
     # the iq correct learning rate
@@ -81,8 +81,6 @@ snit::type sdrkit::rxtx {
     option -rx-af-gain -default 0 -configuremethod Configure
     # the hardware frequency
     option -hw-freq -default [expr {7050000-10000-400}] -configuremethod Configure
-    # the carrier frequency
-    option -carrier-freq -default [expr {7050000-10000-400}] -configuremethod Configure
     # the band selection
     option -band -default {} -configuremethod Configure
     # the channel selection
@@ -94,11 +92,13 @@ snit::type sdrkit::rxtx {
 
     option -sub-components {
 	band {Band} band-select {}
-	ctl {Control} rxtx-control {}
+	ctl {Ctl} rxtx-control {}
+	phys {Phys} physical-ports {}
+	hw {HW} hardware {}
 	rx {RX} rx {}
 	tx {TX} tx {}
-	keyer {Key} keyer {}
-	spectrum {Spec} spectrum {}
+	key {Key} keyer {}
+	spec {Spec} spectrum {}
     }
 
     option -sub-controls {
@@ -141,17 +141,14 @@ snit::type sdrkit::rxtx {
 	rxtx	-rx-af-gain	rxtx-dial		-rx-af-gain
 	rxtx	-rx-rf-gain	rxtx-dial		-rx-rf-gain
 
-	rxtx	-mode		rxtx-spectrum		-mode
-	rxtx	-freq		rxtx-spectrum		-freq
-	rxtx	-lo-freq	rxtx-spectrum		-lo-freq
-	rxtx	-cw-freq	rxtx-spectrum		-cw-freq
-	rxtx	-carrier-freq	rxtx-spectrum		-carrier-freq
-
-	rxtx	-bpf-low	rxtx-spectrum		-low
-	rxtx	-bpf-high	rxtx-spectrum		-high
-	rxtx	-bpf-width	rxtx-spectrum		-bpf-width
-	rxtx	-band-low	rxtx-spectrum		-band-low
-	rxtx	-band-high	rxtx-spectrum		-band-high
+	rxtx	-mode		rxtx-spec		-mode
+	rxtx	-freq		rxtx-spec		-freq
+	rxtx	-lo-freq	rxtx-spec		-lo-freq
+	rxtx	-cw-freq	rxtx-spec		-cw-freq
+	rxtx	-bpf-low	rxtx-spec		-bpf-low
+	rxtx	-bpf-high	rxtx-spec		-bpf-high
+	rxtx	-band-low	rxtx-spec		-band-low
+	rxtx	-band-high	rxtx-spec		-band-high
 
 	rxtx	-band		rxtx-band		-band
 	rxtx	-channel	rxtx-band		-channel
@@ -168,7 +165,7 @@ snit::type sdrkit::rxtx {
     option -physical true
     option -hardware {}
 
-    option -parts-enable { spectrum meter }
+    option -parts-enable { spec meter }
 
     option -initialize {
 	-freq
@@ -207,27 +204,44 @@ snit::type sdrkit::rxtx {
     method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
     method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
     method build {w pw minsizes weights} {
-	if {$options(-physical) ne {}} {
-	    $self sub-component none ports sdrkit::physical-ports -physical $options(-physical)
-	    $options(-component) part-configure $options(-name)-ports -enable true -activate true
-	}
-	if {$options(-hardware) ne {}} {
-	    $self sub-component none hardware sdrkit::hardware -hardware $options(-hardware)
-	}
 	if {$w ne {none}} {
 	    $self sub-component $w dial sdrkit::dial
 	    $self sub-component $w meter sdrkit::meter
 	    package require sdrtk::cnotebook
 	    sdrtk::cnotebook $w.note
 	}
+	if {0} {
+	    if {$w eq {none}} {
+		$self sub-component none ports sdrkit::physical-ports -physical $options(-physical)
+	    } else {
+		set name ports
+		set title Ports
+		$self sub-component [ttk::frame $w.note.$name] $name sdrkit::physical-ports -physical $options(-physical)
+		$w.note add $w.note.$name -text $title
+	    }
+	    $options(-component) part-configure $options(-name)-ports -enable true -activate true
+	}
+	if {0} {
+	    if {$w eq {none}} {
+		$self sub-component none hardware sdrkit::hardware -hardware $options(-hardware)
+	    } else {
+		set name hw
+		set title HW
+		$self sub-component [ttk::frame $w.note.$name] hardware sdrkit::hardware -hardware $options(-hardware)
+		$w.note add $w.note.$name -text $title
+	    }
+	}
 	foreach {name title command args} $options(-sub-components) {
 	    switch $name {
 		band {}
 		ctl {}
+		phys { lappend args -physical $options(-physical) }
+		hw { lappend args -hardware $options(-hardware) }
 		rx { lappend args -rx-source $options(-rx-source) -rx-sink $options(-rx-sink) }
 		tx { lappend args -tx-source $options(-tx-source) -tx-sink $options(-tx-sink) }
-		keyer { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
-		spectrum {}
+		key { lappend args -keyer-source $options(-keyer-source) -keyer-sink $options(-keyer-sink) }
+		spec {}
+		meter {}
 		default { error "rxtx::build-ui unknown name \"$name\"" }
 	    }
 	    if {$w eq {none}} {
@@ -240,7 +254,13 @@ snit::type sdrkit::rxtx {
 	if {$w ne {none}} {
 	    grid $w.dial -sticky nsew -row 0
 	    grid $w.meter -sticky ew -row 1
-	    grid $w.note -sticky nsew -row 2
+	    grid [ttk::frame $w.buttons] -sticky ew -row 2
+	    sdrtk::radiomenubutton $w.buttons.mode -values {CWU CWL USB LSB AM SAM FMN DIGU DIGL} \
+		-variable [myvar data(mode)] -command [mymethod SetMode] -defaultvalue $options(-mode)
+	    sdrtk::radiomenubutton $w.buttons.bpfwidth -values {200 400 800 1600 3200 6400 12800} \
+		-variable [myvar data(bpfwidth)] -command [mymethod SetBpfWidth] -defaultvalue $options(-bpf-width)
+	    pack $w.buttons.mode $w.buttons.bpfwidth -side left
+	    grid $w.note -sticky nsew -row 3
 	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
@@ -262,7 +282,7 @@ snit::type sdrkit::rxtx {
 	# find the hardware frequency control
 	# activate the hardware
 	if {$options(-hardware) ne {}} {
-	    foreach pair [$options(-component) opt-filter {rxtx-hardware-* *-freq}] {
+	    foreach pair [$options(-component) opt-filter {rxtx-hw-* *-freq}] {
 		$options(-component) opt-connect [list rxtx -hw-freq] $pair
 	    }
 	    foreach part [$options(-component) part-filter {rxtx-hardware*}] {
@@ -295,6 +315,8 @@ snit::type sdrkit::rxtx {
 	}
 	after 50 [mymethod Initialize]
     }
+    method SetMode {val} { $self configure -mode $val }
+    method SetBpfWidth {val} { $self configure -bpf-width $val }
     method Initialize {} {
 	foreach opt $options(-initialize) {
 	    $self Configure $opt $options($opt)
@@ -313,54 +335,38 @@ snit::type sdrkit::rxtx {
 	set options($opt) $val
 	switch -- $opt {
 	    -mode {
+		set data(mode) $val
 		switch $old {
-		    CWU {
-			# switching from CWU means that freq -= cw-freq
-			$self configure -freq [expr {$options(-freq)-$options(-cw-freq)}]
-		    }
-		    CWL {
-			# switching from CWL means that freq += cw-freq
-			$self configure -freq [expr {$options(-freq)+$options(-cw-freq)}]
-		    }
+		    CWU { $self configure -freq [expr {$options(-freq)-$options(-cw-freq)}] }
+		    CWL { $self configure -freq [expr {$options(-freq)+$options(-cw-freq)}] }
 		}
 		switch $val {
-		    CWU {
-			# switching to CWU means that frequency += cw-freq
-			$self configure -freq [expr {$options(-freq)+$options(-cw-freq)}]
-		    }
-		    CWL {
-			# switching from CWL means that freq -= cw-freq
-			$self configure -freq [expr {$options(-freq)-$options(-cw-freq)}]
-		    }
+		    CWU { $self configure -freq [expr {$options(-freq)+$options(-cw-freq)}] }
+		    CWL { $self configure -freq [expr {$options(-freq)-$options(-cw-freq)}] }
 		}
+		$self MakeFilter
 		$self Set $opt $val
 	    }
 	    -cw-freq {
-		$self Set $opt $val
 		switch $options(-mode) {
 		    CWU {
-			$self configure -bpf-low [expr {$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {$options(-cw-freq)+$options(-bpf-width)/2}]
-			$self configure -freq [expr {$options(-freq)-$old+$options(-cw-freq)}]
+			$self configure -freq [expr {$options(-freq)-$old+$val}]
+			$self MakeFilter
 		    }
 		    CWL {
-			$self configure -bpf-low [expr {-$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {-$options(-cw-freq)+$options(-bpf-width)/2}]
-			$self configure -freq [expr {$options(-freq)+$old-$options(-cw-freq)}]
+			$self configure -freq [expr {$options(-freq)+$old-$val}]
+			$self MakeFilter
 		    }
 		}
+		$self Set $opt $val
 	    }
 	    -lo-freq {
-		# lo-freq is the offset from the hw-freq for the tuned 
-		set df [expr {$val-$old}]
-		$self configure -freq [expr {$options(-freq)+$df}]
-		$self configure -rx-lo-freq [expr {-$val}]
-		$self Set -lo-freq $val
+		# lo-freq is the offset from the hw-freq for the tuned carrier, or offset +/- cw-freq
+		$self configure -freq [expr {$options(-freq)+$val-$old}] -rx-lo-freq [expr {-$val}]
+		$self Set $opt $val
 	    }
 	    -freq {
-		switch $options(-mode) {
-		    CWU { $self configure -hw-freq [expr {$val-$options(-lo-freq)-$options(-cw-freq)}] }
-		    CWL { $self configure -hw-freq [expr {$val-$options(-lo-freq)+$options(-cw-freq)}] }
-		    default { $self configure -hw-freq [expr {$val-$options(-lo-freq)}] }
-		}
+		$self configure -hw-freq [expr {$options(-hw-freq)+$val-$old}]
 		$self Set -freq $val
 	    }
 	    -band {
@@ -370,17 +376,14 @@ snit::type sdrkit::rxtx {
 	    -channel {
 		$self configure -freq [sdrutil::band-data-channel-freq-hertz {*}$val]
 	    }
-	    -bpf-width -
+	    -bpf-width {
+		set data(bpf-width) $val
+		$self Set $opt $val
+		$self MakeFilter
+	    }
 	    -bpf-offset {
 		$self Set $opt $val
-		switch $options(-mode) {
-		    CWU { $self configure -bpf-low [expr {$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {$options(-cw-freq)+$options(-bpf-width)/2}] }
-		    CWL { $self configure -bpf-low [expr {-$options(-cw-freq)-$options(-bpf-width)/2}] -bpf-high [expr {-$options(-cw-freq)+$options(-bpf-width)/2}] }
-		    DIGU - USB { $self configure -bpf-low $options(-bpf-offset) -bpf-high [expr {$options(-bpf-offset)+$options(-bpf-width)}] }
-		    DIGL - LSB { $self configure -bpf-low [expr {-$options(-bpf-offset)-$options(-bpf-width)}] -bpf-high [expr {-$options(-bpf-offset)}] }
-		    AM - SAM - DSB - FMN { $self configure -bpf-low [expr {-$options(-bpf-width)/2}] -bpf-high [expr {$options(-bpf-width)/2}] }
-		    default { error "unanticipated mode \"$options(-mode)\" in configure $opt $val" }
-		}
+		$self MakeFilter
 	    }
 	    -agc-mode {
 		if {$val eq {off}} {
@@ -413,6 +416,19 @@ snit::type sdrkit::rxtx {
 		puts "default option handler $opt $val"
 		$self Set $opt $val
 	    }
+	}
+    }
+
+    method MakeFilter {} {
+	set wid $options(-bpf-width)
+	set off $options(-bpf-offset)
+	switch $options(-mode) {
+	    CWU { $self configure -bpf-low [expr {$options(-cw-freq)-$wid/2}] -bpf-high [expr {$options(-cw-freq)+$wid/2}] }
+	    CWL { $self configure -bpf-low [expr {-$options(-cw-freq)-$wid/2}] -bpf-high [expr {-$options(-cw-freq)+$wid/2}] }
+	    DIGU - USB { $self configure -bpf-low $off -bpf-high [expr {$off+$wid}] }
+	    DIGL - LSB { $self configure -bpf-low [expr {-$off-$wid}] -bpf-high [expr {-$off}] }
+	    AM - SAM - DSB - FMN { $self configure -bpf-low [expr {-$wid/2}] -bpf-high [expr {$wid/2}] }
+	    default { error "unanticipated mode \"$options(-mode)\" in configure $opt $val" }
 	}
     }
 

@@ -1,6 +1,9 @@
 * Things to Do
 ** TODO - update README.org so it's current with the code.
 ------------------------------------------------------------------------
+** TODO - the carrier frequency is wrong by cw-freq tuning AM, and zero beat tuning CW.
+** TODO - the band limits aren't being drawn
+** TODO - the band/channel should supply a mode and filter
 ** TODO - need a toplevel component tweak to connect default UI control signals.
 ** TODO - add back tkcon launch button
 ** TODO - tuning the softrock with synchronous libusb calls
@@ -30,6 +33,11 @@
    The iq-correct now does a line search for the minimum filter coefficients
    along the line of the optimum for a given buffer, but that doesn't seem to
    be a consistent thing.
+** TODO - my existing IQ train operation needs to start from the existing w.
+** TODO - training from an existing w should adjust magnitude of mu to the existing w.
+** TODO - add another IQ operation for resetting w to zero.
+** TODO - turning IQ correct on/off should not change w, to allow A/B comparisons.
+** TODO - tuning the hardware should trigger a training operation, if necessary.
 ** TODO - rewriting the ui components, refactoring and simplifying,
    Each component in the dsp graph creates a UI which reports changes
    to the associated values and accepts configuration of the values.
