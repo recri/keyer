@@ -20,6 +20,7 @@
 package provide sdrkit::hardware-softrock-dg8saq 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require handle
 
 namespace eval sdrkit {}
@@ -30,17 +31,12 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Hardware
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
-    option -in-options {-freq}
-    option -out-options {}
+    option -options {-freq}
 
     option -sub-controls {
+	freq label {-format {%.0f Hz} -label {HW Freq}}
     }
     option -sub-components {
     }
@@ -49,31 +45,32 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     option -port-connections {
     }
     option -opt-connections {
-	rxtx -hw-freq . -freq
     }
 
-    option -freq -default 7.050 -configuremethod Handler
+    option -freq -default 7050000 -configuremethod Handler
 
     variable data -array {
 	parts {}
+	deferred-freq {}
+	deferred-after {}
     }
+
+    component common
+    delegate method * to common
 
     constructor {args} {
 	#puts "sdrkit::hardware-softrock-dg8saq constructor $args"
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor {}
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
@@ -88,15 +85,19 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container
-		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    foreach {opt type opts} $options(-sub-controls) {
+		$common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
+		grid $w.$opt -sticky ew
+	    }
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
 	if {[catch {
 	    foreach handle [handle::find_handles usb] {
-		puts "softrock::build [handle::serial $handle]"
+		# puts "softrock::build [handle::serial $handle]"
 		if {[string match PE0FKO-* [handle::serial $handle]]} {
 		    set data(handle) $handle
 		}
@@ -104,7 +105,9 @@ snit::type sdrkit::hardware-softrock-dg8saq {
 	    } error]} {
 	    puts "error handling handles: $error"
 	}
-	# dg8saq::get_si570_address
+    }
+
+    method check-softrock {} {
 	# dg8saq::get_multiply_lo - needs band
 	foreach command {
 	    dg8saq::get_read_version
@@ -134,30 +137,17 @@ snit::type sdrkit::hardware-softrock-dg8saq {
     }
     method is-needed {} { return 1 }
     method is-busy {} { return 0 }
-    method is-active {} { return $data(active) }
-    method activate {} { set data(active) 1 }
-    method deactivate {} { set data(active) 0 }
-    method resolve {} {
-	# puts "hardware-softrock-dg8saq::resolve"
-	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
-	    set ename1 [$self Expand-name $name1]
-	    set ename2 [$self Expand-name $name2]
-	    # puts "$name1 $opt1 $name2 $opt2 -> $options(-component) connect-options $ename1 $opt1 $ename2 $opt2"
-	    $options(-component) connect-options $ename1 $opt1 $ename2 $opt2
+    method {Handler -freq} {val} {
+	set options(-freq) $val
+	set data(deferred-freq) $val
+	if {$data(deferred-after) eq {}} {
+	    set data(deferred-after) [after 50 [mymethod Deferred-handler]]
 	}
     }
-    method Expand-name {name} {
-	if {$name eq {..}} { return [[$options(-component) get-parent] cget -name] }
-	if {$name eq {.}} { return $options(-name) }
-	if {[string first . $name] == 0} { return [regsub {^.} $name $options(-name)] }
-	return $name
-    }
-    method {Handler -freq} {val} {
-	# puts "hardware-softrock-dg8saq configure -freq $val"
-	set options(-freq) $val
-	if {$data(active)} {
-	    dg8saq::put_frequency_by_value $data(handle) [expr {$val/1e6}]
-	    #exec usbsoftrock set freq [expr {$val/1e6}]
+    method Deferred-handler {} {
+	set data(deferred-after) {}
+	if {[info exists data(handle)]} {
+	    dg8saq::put_frequency_by_value $data(handle) [expr {4*$data(deferred-freq)/1e6}]
 	}
     }
 }

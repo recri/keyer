@@ -71,7 +71,7 @@ static void *bandpass_real(float lo, float hi, float sr, int size, float *coeff)
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMANHARRIS, size, j) * 2.0f * cosf(ff * k);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j) * 2.0f * cosf(ff * k);
     else
       coeff[j] = 2.0f * fc * 2.0f * cosf(ff * k);
   }
@@ -93,7 +93,7 @@ static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) 
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMANHARRIS, size, j) * 2.0f * sinf(ff * k);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j) * 2.0f * sinf(ff * k);
     else
       coeff[j] = 2.0f * fc * 2.0f * sinf(ff * k);
   }
@@ -110,7 +110,7 @@ static void *lowpass_real(float cutoff, float sr, int size, float *coeff) {
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMANHARRIS, size, j);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j);
     else
       coeff[j] = 2.0f * fc;
   }
@@ -159,7 +159,7 @@ static void *bandpass_complex(float lo, float hi, float sr, int size, float comp
     int j = i - 1, k = i - midpoint;
     float phs = ff * k;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMANHARRIS, size, j) * 2.0f * cexpf(I * phs);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j) * 2.0f * cexpf(I * phs);
     else
       coeff[j] = 2.0f * fc * 2.0f * cexpf(I * phs);
   }
@@ -182,7 +182,7 @@ static void *hilbert_complex(float lo, float hi, float sr, int size, float compl
     int j = i - 1, k = i - midpoint;
     float tmp, phs = ff * k;
     if (i != midpoint)
-      coeff[j] = 2.0f * ((sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMANHARRIS, size, j)) * sinf(phs) * I;
+      coeff[j] = 2.0f * ((sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j)) * sinf(phs) * I;
     else
       coeff[j] = 2.0f * (2.0f * fc) * sinf(phs) * I;
     /* por que? */
@@ -200,7 +200,7 @@ static void *lowpass_complex(float cutoff, float sr, int size, float complex *co
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = ((sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMANHARRIS, size, j));
+      coeff[j] = ((sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j));
     else
       coeff[j] = 2.0f * fc;
   }

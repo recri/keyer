@@ -23,6 +23,7 @@
 package provide sdrkit::meter-tap 1.0.0
 
 package require snit
+package require sdrkit::common-component
 
 namespace eval sdrkit {}
 
@@ -32,25 +33,16 @@ snit::type sdrkit::meter-tap {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Gain
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {i q}
     option -out-ports {i q}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
-    variable data -array { activate 0 }
+    component common
+    delegate method * to common
 
-    constructor {args} { $self configure {*}$args }
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
     destructor {}
-    method build-parts {} {}
-    method build-ui {} {}
-
-    method is-needed {} { return 1 }
-    method is-active {} { return $data(activate) }
-    method activate {} { set data(activate) 1 }
-    method deactivate {} { set data(activate) 0 }
 }

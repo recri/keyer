@@ -23,19 +23,21 @@
 package provide sdrkit::demod 1.0.0
 
 package require snit
+package require sdrkit::common-alternate
 package require sdrtk::clabelframe
-package require sdrtk::radiomenubutton
 
 namespace eval sdrkit {}
 
 snit::type sdrkit::demod {
     option -name demod
     option -type dsp
-    option -title {Demod}
+    option -server default
+    option -component {}
+
     option -in-ports {alt_in_i alt_in_q}
     option -out-ports {alt_out_i alt_out_q}
-    option -in-options {-demod}
-    option -out-options {-demod}
+    option -options {-mode}
+
     option -sub-components {
 	am {AM} demod-am {}
 	fm {FM} demod-fm {}
@@ -49,18 +51,23 @@ snit::type sdrkit::demod {
     option -opt-connections {
     }
 
-    option -server default
-    option -component {}
+    option -alt-labels { CWU  CWL  USB  LSB  DIGU DIGL DSB  FMN AM SAM }
+    option -alt-values { none none none none none none none fm  am sam }
 
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
+    option -mode -default none -configuremethod Configure
+    option -mode-name -default none -configuremethod Configure
 
-    option -demod none
+    variable data -array {
+	parts {}
+    }
 
-    variable data -array { parts {} }
+    component common
+    delegate method * to common
 
-    constructor {args} { $self configure {*}$args }
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-alternate %AUTO% -parent $self
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
@@ -78,92 +85,67 @@ snit::type sdrkit::demod {
 	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
+    method build-parts {w} {
+	if {$w ne {none}} return
 	foreach {name title command args} $options(-sub-components) {
 	    $self sub-component none $name sdrkit::$command {*}$args
 	}
     }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
-	set values {none}
-	set labels {none}
+    method build-ui {w pw minsizes weights} {
+	if {$w eq {none}} return
+	# make sub-components for each demodulation mode
 	foreach {name title command args} $options(-sub-components) {
-	    lappend values $name
-	    lappend labels $title
 	    set data(window-$name) [sdrtk::clabelframe $w.$name -label $title]
 	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.container
-	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	}
+	# make a radio button that selects mode
 	package require sdrkit::label-radio
-	sdrkit::label-radio $w.mode -format {Mode} -values $values -labels $labels -variable [myvar options(-demod)] -command [mymethod Set -demod]
+	sdrkit::label-radio $w.mode -format {Mode} -values $options(-alt-labels) -labels $options(-alt-labels) -variable [myvar options(-mode)] -command [mymethod Set -mode]
 	grid $w.mode
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
-    method Set {opt name} {
+    method mode-name {mode} {
+	set i [lsearch $options(-alt-labels) $mode]
+	if {$i >= 0 && $i < [llength $options(-alt-values)]} {
+	    return [lindex $options(-alt-values) $i]
+	} else {
+	    error "unanticipated demodulation \"$mode\""
+	}
+    }
+    method {Configure -mode} {val} {
+	set name [$self mode-name $val]
+	set options(-mode) $val
+	set options(-mode-name) $name
 	# find deselected component
 	set exname {none}
 	foreach part $data(parts) {
 	    if {[$options(-component) part-is-enabled $options(-name)-$part]} {
-		if {$exname ne {none}} { error "multiple selected keyers $part and $exname" }
+		if {$exname ne {none}} { error "multiple selected alternates: $part and $exname" }
 		set exname $part
 	    }
 	}
 	# enable selected component if any
 	if {$name ne {none}} { $options(-component) part-enable $options(-name)-$name }
-	# disable deselected keyer
+	# disable deselected component
 	if {$exname ne {none}} { $options(-component) part-disable $options(-name)-$exname }
 	# deal with ui details
-	set w $options(-window)
+	set w [$options(-component) cget -window]
 	# determine if ui details exist
 	if {$w ne {none}} {
-	    # remove deselected keyer ui
+	    # remove deselected component ui
 	    if {$exname ne {none}} { grid forget $data(window-$exname) }
-	    # install selected keyer ui
+	    # install selected component ui
 	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
 	}
     }
+    method Set {opt val} { $options(-component) report $opt $val }
     method rewrite-connections-to {port candidates} {
-	return [Rewrite-connections-to $options(-name) $options(-demod) $port $candidates]
+	return [$self Rewrite-connections-to $options(-name) $options(-mode-name) $port $candidates]
     }
     method rewrite-connections-from {port candidates} {
-	return [Rewrite-connections-from $options(-name) $options(-demod) $port $candidates]
-    }
-    proc Rewrite-connections-to {name selected port candidates} {
-	#puts "Rewrite-connections-to {$selected} $name $port {$candidates}"
-	if {$port ni {alt_out_i alt_out_q alt_midi_out}} { return $candidates }
-	foreach c $candidates {
-	    if {[string match [list $name-$selected *] $c]} { return [list $c] }
-	}
-	if {$selected in {none {}}} {
-	    switch $port {
-		alt_out_i { return [list [list $name alt_in_i]] }
-		alt_out_q { return [list [list $name alt_in_q]] }
-		alt_midi_out { return [list [list $name alt_midi_in]] }
-		default { error "rewrite-connections-to: unexpected port \"$port\"" }
-	    }
-	}
-	error "rewrite-connections-to: failed to match $selected in $candidates"
-    }
-    proc Rewrite-connections-from {name selected port candidates} {
-	#puts "Rewrite-connections-from {$selected} $name $port {$candidates}"
-	if {$port ni {alt_in_i alt_in_q alt_midi_in}} { return $candidates }
-	foreach c $candidates {
-	    if {[string match [list $name-$selected *] $c]} { return [list $c] }
-	}
-	if {$selected in {none {}}} {
-	    switch $port {
-		alt_in_i { return [list [list $name alt_out_i]] }
-		alt_in_q { return [list [list $name alt_out_q]] }
-		alt_midi_in { return [list [list $name alt_midi_out]] }
-		default { error "rewrite-connections-from: unexpected port \"$port\"" }
-	    }
-	}
-	error "rewrite-connections-from: failed to match $selected in $candidates"
+	return [$self Rewrite-connections-from $options(-name) $options(-mode-name) $port $candidates]
     }
 }
 

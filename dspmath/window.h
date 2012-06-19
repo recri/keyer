@@ -20,11 +20,9 @@
 
 /*
   window.h - generate windowing functions for ffts and filters.
-
   This file is stolen from dttsp, see comments further down
-  
-  Rewrite this to provide window_get(type, size, index) so we
-  don't need to allocate and free arrays just to do one computation.
+  Augmented from http://en.wikipedia.org/wiki/Window_function
+  as of 2012-06-09.
 */
 
 #include "dspmath.h"
@@ -41,8 +39,10 @@ typedef enum {
   WINDOW_BLACKMAN4 = 8,
   WINDOW_EXPONENTIAL = 9,
   WINDOW_RIEMANN = 10,
-  WINDOW_BLACKMANHARRIS = 11,
-  WINDOW_NUTTALL = 12,
+  WINDOW_BLACKMAN_HARRIS = 11,
+  WINDOW_BLACKMAN_NUTTALL = 12,
+  WINDOW_NUTTALL = 13,
+  WINDOW_FLAT_TOP = 14,
 } window_type_t;
 
 static char *window_names[] = {
@@ -57,8 +57,10 @@ static char *window_names[] = {
   "blackman4",
   "exponential",
   "riemann",
-  "blackmanharris",
+  "blackman-harris",
+  "blackman-nuttall",
   "nuttall",
+  "flat-top",
   NULL
 };
 
@@ -125,226 +127,104 @@ Bridgewater, NJ 08807
 * @return void
 */
 /* ---------------------------------------------------------------------------- */
-static void window_make(const window_type_t type, const int size, float *window) {
-  switch (type) {
-  case WINDOW_RECTANGULAR: {
-    for (int i = 0; i < size; i++)
-      window[i] = 1.0;
-    break;
-  }
-  case WINDOW_HANNING: {	/* Hann would be more accurate */
-    const int midn = size >> 1;
-    const float freq = two_pi / size;
-    float angle = 0.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq)
-      window[j] = (window[i] = (float) (0.5 - 0.5 * cosf(angle)));
-    break;
-  }
-  case WINDOW_WELCH: {
-    const int midn = size >> 1;
-    const int midm1 = (size - 1) / 2;
-    const int midp1 = (size + 1) / 2;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--)
-      window[j] =
-	(window[i] = (float) (1.0 - sqrf((float) (i - midm1) / (float) midp1)));
-    break;
-  }
-  case WINDOW_PARZEN: {
-    const int midn = size >> 1;
-    const int midm1 = (size - 1) / 2;
-    const int midp1 = (size + 1) / 2;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--)
-      window[j] = (window[i] = (float) (1.0 - fabs((float) (i - midm1) / (float) midp1)));
-    break;
-  }
-  case WINDOW_BARTLETT: {
-    const int midn = size >> 1;
-    const float rate = (float) (1.0 / (float) midn);
-    float angle = 0.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += rate)
-      window[j] = (window[i] = angle);
-    break;
-  }
-  case WINDOW_HAMMING: {
-    const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
-    float angle = 0.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq)
-      window[j] = (window[i] = (float) (0.54 - 0.46 * cosf(angle)));
-    break;
-  }
-  case WINDOW_BLACKMAN2: {	/* using Chebyshev polynomial equivalents here */
-    const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
-    float angle = 0.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
-      float cx = (float) cosf(angle);
-      window[j] = window[i] = (.34401 + (cx * (-.49755 + (cx * .15844))));
-    }
-    break;
-  }
-  case WINDOW_BLACKMAN3: {
-    const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
-    float angle = 0.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
-      float cx = (float) cosf(angle);
-      window[j] = window[i] = (float)
-	(.21747 +
-	 (cx *
-	  (-.45325 + (cx * (.28256 - (cx * .04672))))));
-    }
-    break;
-  }
-  case WINDOW_BLACKMAN4: {
-    const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
-    float angle = 0.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--, angle += freq) {
-      float cx = (float) cosf(angle);
-      window[j] = (window[i] = (float)
-		   (.084037 +
-		    (cx *
-		     (-.29145 +
-		      (cx *
-		       (.375696 + (cx * (-.20762 + (cx * .041194)))))))));
-    }
-    break;
-  }
-  case WINDOW_EXPONENTIAL: {
-    const int midn = size >> 1;
-    const float expn = logf(2.0) / midn + 1.0f;
-    float expsum = 1.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--) {
-      window[j] = window[i] = expsum - 1.0f;
-      expsum *= expn;
-    }
-    break;
-  }
-  case WINDOW_RIEMANN: {
-    const int midn = size >> 1;
-    const float sr1 = two_pi / size;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--) {
-      if (i == midn)
-	window[j] = window[i] = 1.0;
-      else {
-	/* split out because NeXT C compiler can't handle the full expression */
-	const float cx = sr1 * (midn - i);
-	window[j] = window[i] = sinf(cx) / cx;
-      }
-    }
-    break;
-  }
-  case WINDOW_BLACKMANHARRIS: {
-    const float a0 = 0.35875f, a1 = 0.48829f, a2 = 0.14128f, a3 = 0.01168f;
-    for (int i = 0; i < size; i++) {
-      const float arg = two_pi * (i + 0.5f) / (size - 1);
-      window[i] = a0 - a1 * cosf(arg) + a2 * cosf(2.0 * arg) - a3 * cosf(3.0 * arg);
-    }
-    break;
-  }
-  case WINDOW_NUTTALL: {
-    const float a0 = 0.3635819f, a1 = 0.4891775f, a2 = 0.1365995f, a3 = 0.0106411f;
-    for (int i = 0; i < size; i++) {
-      const float arg = two_pi * (i + 0.5f) / (size - 1);
-      window[i] = a0 - a1 * cosf(arg) + a2 * cosf(2.0 * arg) - a3 * cosf(3.0 * arg);
-    }
-    break;
-  }
-  }
-}
 static float window_get(const window_type_t type, const int size, int k) {
   switch (type) {
-  case WINDOW_RECTANGULAR: return 1.0f;
+  case WINDOW_RECTANGULAR: return 1.0;
   case WINDOW_HANNING: {	/* Hann would be more accurate */
     const int midn = size >> 1;
-    const float freq = two_pi / size;
-    if (k > midn) k = size-1 - k;
-    return 0.5f - 0.5f * cosf(k*freq);
+    if (k > midn) k = (size-1) - k;
+    return 0.5 - 0.5 * cos(k * dtwo_pi / (size-1));
   }
   case WINDOW_WELCH: {
     const int midn = size >> 1;
     const int midm1 = (size - 1) / 2;
     const int midp1 = (size + 1) / 2;
     if (k > midn) k = size-1 - k;
-    return 1.0f - sqrf((float) (k - midm1) / (float) midp1);
+    return 1.0 - sqr( (k - midm1) / (double) midp1);
   }
   case WINDOW_PARZEN: {
     const int midn = size >> 1;
     const int midm1 = (size - 1) / 2;
     const int midp1 = (size + 1) / 2;
     if (k > midn) k = size-1 - k;
-    return 1.0f - fabs((float) (k - midm1) / (float) midp1);
+    return 1.0 - fabs( (k - midm1) / (double) midp1);
   }
   case WINDOW_BARTLETT: {
     const int midn = size >> 1;
-    const float rate = (float) (1.0 / (float) midn);
     if (k > midn) k = size-1 - k;
-    return k*rate;
+    return k / (double)midn;
   }
   case WINDOW_HAMMING: {
     const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
     if (k > midn) k = size-1 - k;
-    return 0.54f - 0.46f * cosf(k*freq);
+    return 0.54 - 0.46 * cos(k * dtwo_pi / (size-1));
   }
   case WINDOW_BLACKMAN2: {	/* using Chebyshev polynomial equivalents here */
     const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
     if (k > midn) k = size-1 - k;
-    float cx = cosf(k*freq);
+    double cx = cos(k * dtwo_pi / size);
     return .34401 + (cx * (-.49755 + (cx * .15844)));
   }
   case WINDOW_BLACKMAN3: {
     const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
     if (k > midn) k = size-1 - k;
-    float cx = cosf(k*freq);
-    return (.21747 +
-	    (cx *
-	     (-.45325 + (cx * (.28256 - (cx * .04672))))));
+    double cx = cos(k * dtwo_pi / size);
+    return .21747 + (cx * (-.45325 + (cx * (.28256 - (cx * .04672)))));
   }
   case WINDOW_BLACKMAN4: {
     const int midn = size >> 1;
-    const float freq = two_pi / (float) size;
     if (k > midn) k = size-1 - k;
-    float cx = cosf(k*freq);
-    return (.084037 +
-	    (cx *
-	     (-.29145 +
-	      (cx *
-	       (.375696 + (cx * (-.20762 + (cx * .041194))))))));
+    double cx = cos(k * dtwo_pi / size);
+    return .084037 + (cx * (-.29145 + (cx * (.375696 + (cx * (-.20762 + (cx * .041194)))))));
   }
   case WINDOW_EXPONENTIAL: {
     const int midn = size >> 1;
-    const float expn = logf(2.0) / midn + 1.0f;
-    float expsum = 1.0;
+    const double expn = log(2.0) / midn + 1.0;
+    double expsum = 1.0;
     for (int i = 0, j = size - 1; i <= midn; i++, j--) {
       if (i == k || j == k)
-	return expsum - 1.0f;
+	return expsum - 1.0;
       expsum *= expn;
     }
     break;
   }
   case WINDOW_RIEMANN: {
     const int midn = size >> 1;
-    if (midn == k) return 1.0f;
-    const float sr1 = two_pi / size;
+    if (midn == k) return 1.0;
     if (k > midn) k = size-1 - k;
-    const float cx = sr1 * (midn - k);
-    return sinf(cx) / cx;
+    const double cx = (midn - k) * dtwo_pi / size;
+    return sin(cx) / cx;
   }
-  case WINDOW_BLACKMANHARRIS: {
-    const float a0 = 0.35875f, a1 = 0.48829f, a2 = 0.14128f, a3 = 0.01168f;
-    const float arg = two_pi * (k + 0.5f) / (size - 1);
-    return a0 - a1 * cosf(arg) + a2 * cosf(2.0 * arg) - a3 * cosf(3.0 * arg);
+  case WINDOW_BLACKMAN_HARRIS: {
+    // corrected per wikipedia
+    const double a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168;
+    const double arg = k * dtwo_pi / (size - 1);
+    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg);
+  }
+  case WINDOW_BLACKMAN_NUTTALL: {
+    // corrected and renamed per wikipedia
+    const double a0 = 0.3635819, a1 = 0.4891775, a2 = 0.1365995, a3 = 0.0106411;
+    const double arg = k * dtwo_pi / (size - 1);
+    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg);
   }
   case WINDOW_NUTTALL: {
-    const float a0 = 0.3635819f, a1 = 0.4891775f, a2 = 0.1365995f, a3 = 0.0106411f;
-    const float arg = two_pi * (k + 0.5f) / (size - 1);
-    return a0 - a1 * cosf(arg) + a2 * cosf(2.0 * arg) - a3 * cosf(3.0 * arg);
+    // wikipedia's version
+    const double a0 = 0.355768, a1 = 0.487396, a2 = 0.144232, a3 = 0.012604;
+    const double arg = k * dtwo_pi / (size - 1);
+    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg);
   }
+  case WINDOW_FLAT_TOP: {
+    const double a0 = 1.0, a1 = 1.93, a2 = 1.29, a3 = 0.388, a4 = 0.032;
+    const double arg = k * dtwo_pi / (size - 1);
+    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg) + a4 * cos(4 * arg);
+
   }
-  return 1.0f/0.0f;
+    
+  }
+  return 1.0 / 0.0;
+}
+static void window_make(const window_type_t type, const int size, float *window) {
+  for (int i = 0; i < size; i++)
+    window[i] = window_get(type, size, i);
 }
 #endif

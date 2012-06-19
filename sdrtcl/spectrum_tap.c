@@ -150,7 +150,7 @@ static void *_preconfigure(_t *data) {
     return "allocation failure";
   }
   if (opts->polyphase == 1)
-    window_make(WINDOW_BLACKMANHARRIS, opts->size, prec->window);
+    window_make(WINDOW_BLACKMAN_HARRIS, opts->size, prec->window);
   else {
     void * e = polyphase_fft_window(opts->polyphase, opts->size, prec->window);
     if (e != prec->window) {
@@ -249,12 +249,10 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   float complex *in = inout;
   float complex *out = inout;
   float *win = prec->window;
-  for (int i = 0; i < opts->size; i += 1)
-    *out++ = *in++ * *win++;
+  for (int i = 0; i < opts->size; i += 1) *out++ = *in++ * *win++;
   for (int j = 1; j < opts->polyphase; j += 1) {
     out = inout;
-    for (int i = 0; i < opts->size; i += 1)
-      *out++ += *in++ * *win++;
+    for (int i = 0; i < opts->size; i += 1) *out++ += *in++ * *win++;
   }
 
   // compute the fft
@@ -285,19 +283,18 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   case as_decibels:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(float));
     float *dB = (float *)Tcl_GetByteArrayFromObj(result, NULL);
-    for (int i = 0; i < opts->size; i += 1) dB[i] = 10 * log10f(cabs2f(inout[i]) + 1e-60);
+    for (int i = 0; i < opts->size; i += 1) dB[i] = 10 * (log10f(cabs2f(inout[i]) + 1e-60) + lognorm2);
     break;
   case as_decibel_shorts:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(short));
     short *shorts = (short *)Tcl_GetByteArrayFromObj(result, NULL);
-    for (int i = 0; i < opts->size; i += 1)
-      shorts[i] = (short)(100 * 10 * log10f(cabs2f(inout[i]) + 1e-60));
+    for (int i = 0; i < opts->size; i += 1) shorts[i] = (short)(100 * 10 * (log10f(cabs2f(inout[i]) + 1e-60) + lognorm2));
     break;
   case as_decibel_chars:
     result = Tcl_NewByteArrayObj((unsigned char *)inout, opts->size*sizeof(unsigned char));
     unsigned char *chars = (unsigned char *)Tcl_GetByteArrayFromObj(result, NULL);
     for (int i = 0; i < opts->size; i += 1) {
-      short t = (short)(10 * log10f(cabs2f(inout[i]) + 1e-60));
+      short t = (short)(10 * (log10f(cabs2f(inout[i]) + 1e-60) + lognorm2));
       chars[i] = (t > 0) ? 0 : (t < -255 ? 255 : -t);
     }
     break;

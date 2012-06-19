@@ -23,6 +23,7 @@
 package provide sdrkit::keyer 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
@@ -30,11 +31,13 @@ namespace eval sdrkit {}
 snit::type sdrkit::keyer {
     option -name keyer
     option -type dsp
-    option -title {Keyer}
+    option -server default
+    option -component {}
+
     option -in-ports {midi_in}
     option -out-ports {out_i out_q midi_out}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
+
     option -sub-components {
 	debounce {Debounce} keyer-debounce {}
 	iambic {Iambic} keyer-iambic {}
@@ -52,31 +55,26 @@ snit::type sdrkit::keyer {
     option -opt-connections {
     }
 
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     variable data -array { parts {} }
 
     option -keyer-source {}
     option -keyer-sink {}
 
-    constructor {args} { $self configure {*}$args }
+    component common
+    delegate method * to common
+
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {[string match -* $name]} {
 		# placeholder component, replace with spectrum tap
@@ -96,11 +94,11 @@ snit::type sdrkit::keyer {
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container -sticky ew
-		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
     proc match-ports {ports1 ports2} {

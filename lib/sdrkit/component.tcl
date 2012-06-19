@@ -83,8 +83,8 @@ snit::type sdrkit::component {
     option -weights {1 3}
 
     # enable or activate this component
-    option -enable -default false -configuremethod Configure
-    option -activate -default false -configuremethod Configure
+    option -enable -default false
+    option -activate -default false -configuremethod Activate -cgetmethod Activated
     
     # the factory for the subsidiary which we're wrapping
     option -subsidiary {}
@@ -139,13 +139,13 @@ snit::type sdrkit::component {
 		package require Tk
 		wm title . $options(-name)
 		set options(-parent-window) .
-		$subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
+		#$subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
 	    }
 	    default {
 		package require Tk
 		if {[winfo exists $options(-window)]} {
 		    set options(-parent-window) [winfo parent $options(-window)]
-		    $subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
+		    #$subsidiary configure -window $options(-window) -minsizes $options(-minsizes) -weights $options(-weights)
 		} else {
 		    error "invalid window: $options(-window)"
 		}
@@ -168,14 +168,20 @@ snit::type sdrkit::component {
 	$self control part-add $options(-name) [sdrkit::comm::wrap $self]
 
 	# build the subsidiary parts
-	$subsidiary build-parts
+	$subsidiary build-parts $options(-window)
 
 	# build the ui
-	if {$options(-window) ne {none}} {
-	    $subsidiary build-ui
-	    if {$options(-window) eq {}} {
-		bind . <Destroy> [mymethod destroy]
-	    }
+	set w $options(-window)
+	if {$w eq {none}} {
+	    set pw {}
+	} elseif {$w eq {}} {
+	    set pw .
+	} else {
+	    set pw $w
+	}
+	$subsidiary build-ui $w $pw $options(-minsizes) $options(-weights)
+	if {$options(-window) eq {}} {
+	    bind . <Destroy> [mymethod destroy]
 	}
 	
 	# find the parts of the subsidiary which are optional
@@ -207,19 +213,24 @@ snit::type sdrkit::component {
 	catch {$subsidiary destroy}
     }
     
-    method Configure {opt val} {
+    method Activated {opt} {
+	if {$subsidiary eq {}} {
+	    return 0
+	} elseif {[$subsidiary cget -type] in {jack}} {
+	    return [$subsidiary is-active]
+	} else {
+	    return $options($opt)
+	}
+    }
+
+    method Activate {opt val} {
 	#puts "$options(-name) configure $opt $val"
 	set options($opt) $val
-	if {$subsidiary ne {}} {
-	    if {$data(subsidiary-configure$opt)} { $subsidiary configure $opt $val }
-	    switch -- $opt {
-		-activate {
-		    if {$val} {
-			if {$data(subsidiary-activate)} { $subsidiary activate }
-		    } else {
-			if {$data(subsidiary-deactivate)} { $subsidiary deactivate }
-		    }
-		}
+	if {$subsidiary ne {} && [$subsidiary cget -type] in {jack}} {
+	    if {$val} {
+		$subsidiary activate
+	    } else {
+		$subsidiary deactivate
 	    }
 	}
     }
@@ -240,20 +251,30 @@ snit::type sdrkit::component {
     #
     # calls to the controller from the subsidiary
     #
+    method part-exists {args} { return [$self control part-exists {*}$args] }
+    method part-filter {args} { return [$self control part-filter {*}$args] }
     method part-report {args} { return [$self control part-report {*}$args] }
     method part-configure {args} { return [$self control part-configure {*}$args] }
     method part-cget {args} { return [$self control part-cget {*}$args] }
     method part-is-enabled {args} { return [$self control part-is-enabled {*}$args] }
     method part-enable {args} { return [$self control part-enable {*}$args] }
     method part-disable {args} { return [$self control part-disable {*}$args] }
-    method part-is-activated {args} { return [$self control part-is-activated {*}$args] }
+    method part-is-active {args} { return [$self control part-is-active {*}$args] }
     method part-activate {args} { return [$self control part-activate {*}$args] }
     method part-deactivate {args} { return [$self control part-deactivate {*}$args] }
     method part-destroy {args} { return [$self control part-destroy {*}$args] }
+
+    method opt-exists {args} { return [$self control opt-exists {*}$args] }
+    method opt-add {args} { return [$self control opt-add {*}$args] }
     method opt-filter {args} { return [$self control opt-filter {*}$args] }
+    method opt-connect {args} { return [$self control opt-connect {*}$args] }
+    method opt-connections-to {pair} { return [$self control opt-connections-to $pair] }
+    method opt-connections-from {pair} { return [$self control opt-connections-from $pair] }
+
+    method port-exists {args} { return [$self control port-exists {*}$args] }
     method port-filter {args} { return [$self control port-filter {*}$args] }
     method port-connect {args} { return [$self control port-connect {*}$args] }
-    method opt-connect {args} { return [$self control opt-connect {*}$args] }
+
     method connect-ports {n1 p1 n2 p2} { return [$self control port-connect [list $n1 $p1] [list $n2 $p2]] }
     method connect-options {n1 o1 n2 o2} { return [$self control opt-connect [list $n1 $o1] [list $n2 $o2]] }
     method out-ports {args} { return [$self control part-out-ports {*}$args] }	
@@ -261,30 +282,10 @@ snit::type sdrkit::component {
     #
     # call from the controller to the subsidiary
     #
-    method resolve {} {
-	if {$data(subsidiary-resolve)} { $subsidiary resolve }
-    }
-    
-    method rewrite-connections-to {port candidates} {
-	if {$data(subsidiary-rewrite-connections-to)} { return [$subsidiary rewrite-connections-to $port $candidates] }
-	return $candidates
-    }
-    method rewrite-connections-from {port candidates} {
-	if {$data(subsidiary-rewrite-connections-from)} { return [$subsidiary rewrite-connections-from $port $candidates] }
-	return $candidates
-    }
-    method port-complement {port} {
-	if {$data(subsidiary-port-complement)} { return [$subsidiary port-complement $port] }
-	switch -exact $port {
-	    in_i { return {out_i} }
-	    in_q { return {out_q} }
-	    out_i { return {in_i} }
-	    out_q { return {in_q} }
-	    midi_in { return {midi_out} }
-	    midi_out { return {midi_in} }
-	    default { error "unknown port \"$port\"" }
-	}
-    }
+    method resolve {} { $subsidiary resolve }
+    method rewrite-connections-to {port candidates} { return [$subsidiary rewrite-connections-to $port $candidates] }
+    method rewrite-connections-from {port candidates} { return [$subsidiary rewrite-connections-from $port $candidates] }
+    method port-complement {port} { return [$subsidiary port-complement $port] }
     #
     # convenience calls from the subsidiary
     # one to make a subcomponent, with a subsidiary name,

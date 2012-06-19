@@ -398,8 +398,8 @@ proc dg8saq::put_frequency_by_value {h frequency} {
     set buffer [binary format i [expr {int(round($frequency * (1<<21)))}]]
     set result [usb::host_to_device [handle::handle $h] $REQUEST_SET_FREQ_BY_VALUE $value 0 $buffer 500]
     if {[string length $result] != 4} { error "failed to set freq by value: [string length $result]" }
-    binary scan $result i result
-    puts "put_frequency_by_value $frequency -> [expr {int(round($frequency * (1<<21)))}] -> $result -> [expr {double($result)/(1<<21)}]"
+    #binary scan $result i result
+    #puts "put_frequency_by_value $frequency -> [expr {int(round($frequency * (1<<21)))}] -> $result -> [expr {double($result)/(1<<21)}]"
 }
 
 proc dg8saq::put_startup_freq {h startup_freq} {

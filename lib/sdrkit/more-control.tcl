@@ -23,6 +23,7 @@
 package provide sdrkit::more-control 1.0.0
 
 package require snit
+package require sdrkit::common-component
 
 namespace eval sdrkit {}
 
@@ -32,66 +33,46 @@ snit::type sdrkit::more-control {
     option -server default
     option -component {}
 
-    option -window none
-    option -title {More Control}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -sub-controls {
 	ports button {-label {Port Connections} -text View}
 	options button {-label {Option Connections} -text View}
 	active button {-label {Active Connections} -text View}
+	config button {-label {Check Config} -text Check}
     }
 
     variable data -array {}
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor {}
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
 	    foreach {opt type opts} $options(-sub-controls) {
 		switch $opt {
 		    ports { lappend opts -command [mymethod ViewConnections port] }
 		    options { lappend opts -command [mymethod ViewConnections opt] }
 		    active { lappend opts -command [mymethod ViewConnections active] }
+		    config { lappend opts -command [mymethod CheckConfig config] }
 		}
-		switch $type {
-		    button {
-			package require sdrkit::label-button
-			sdrkit::label-button $w.$opt {*}$opts
-		    }
-		    spinbox {
-			package require sdrkit::label-spinbox
-			sdrkit::label-spinbox $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    scale {
-			package require sdrkit::label-scale
-			#lappend opts -from [sdrtype::agc-$opt cget -min] -to [sdrtype::agc-$opt cget -max]
-			sdrkit::label-scale $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    separator {
-			ttk::separator $w.$opt
-		    }
-		    radio {
-			package require sdrkit::label-radio
-			#lappend opts -defaultvalue $options(-$opt) -values [sdrtype::agc-$opt cget -values]
-			sdrkit::label-radio $w.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		    }
+		if {[info exists options(-$opt]} {
+		    $self window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
+		} else {
+		    $self window $w $opt $type $opts {} {} {}
 		}
 		grid $w.$opt -sticky ew
 	    }
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
     method ViewConnections {flavor} {
@@ -106,5 +87,30 @@ snit::type sdrkit::more-control {
 	} else {
 	    wm deiconify .$flavor-connections
 	}
+    }
+    method CheckConfig {val} {
+	foreach command {
+	    rxtx-rx-rf-gain
+	    rxtx-rx-rf-iq-swap
+	    rxtx-rx-rf-iq-delay
+	    rxtx-rx-rf-iq-correct
+	    rxtx-rx-if-lo-mixer
+	    rxtx-rx-if-bpf
+	    rxtx-rx-af-agc
+	    rxtx-rx-af-gain
+	} {
+	    catch {sdrkitv::$command cget -enable} enable
+	    #catch {sdrkitw::$command configure} kitw
+	    catch {sdrkitx::$command is-active} active
+	    set kitx {}
+	    foreach {option} [sdrkitx::$command configure] {
+		lassign $option opt name class def val
+		if {$opt ni {-client -server -verbose}} {
+		    lappend kitx $opt $val
+		}
+	    }
+	    puts "$command enable=$enable active=$active $kitx"
+	}
+	puts "rxtx-rx-af-demod enable=[sdrkitv::rxtx-rx-af-demod cget -enable] -mode [sdrkitw::rxtx-rx-af-demod cget -mode]"
     }
 }

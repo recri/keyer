@@ -23,6 +23,7 @@
 package provide sdrkit::hardware 1.0.0
 
 package require snit
+package require sdrkit::common-component
 
 namespace eval sdrkit {}
 namespace eval sdrkitx {}
@@ -33,15 +34,9 @@ snit::type sdrkit::hardware {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Hardware
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -hardware -default {}
 
@@ -52,9 +47,13 @@ snit::type sdrkit::hardware {
 	parts {}
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	#puts "sdrkit::hardware constructor $args"
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
 	foreach {name command args} $options(-hardware) {
 	    lappend options(-sub-components) $name $name $command $args
 	}
@@ -64,13 +63,9 @@ snit::type sdrkit::hardware {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
@@ -85,11 +80,11 @@ snit::type sdrkit::hardware {
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container
-		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
     method is-needed {} { return 1 }
@@ -97,28 +92,4 @@ snit::type sdrkit::hardware {
     method is-active {} { return 1 }
     method activate {} {  }
     method deactivate {} {  }
-
-    method OptionConstrain {opt val} { return $val }
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
-    method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-    }
-
-    method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self ControlConfigure $opt $val
-    }
 }

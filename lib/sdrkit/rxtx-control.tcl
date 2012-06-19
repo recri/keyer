@@ -23,6 +23,8 @@
 package provide sdrkit::rxtx-control 1.0.0
 
 package require snit
+package require sdrkit::common-component
+package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
 
@@ -32,15 +34,9 @@ snit::type sdrkit::rxtx-control {
     option -server default
     option -component {}
 
-    option -window none
-    option -title {RXTX Control}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -sub-controls {
     }
@@ -50,17 +46,18 @@ snit::type sdrkit::rxtx-control {
     option -sub-components {
 	more {More Controls} more-control {}
     }
-    #rx {RX Control} rx-control {}
-    #tx {TX Control} tx-control {}
-    #keyer {Keyer Control} keyer-control {}
 
     #option -split -default 0 -configuremethod Configure
     #option -qsk -default 0 -configuremethod Configure
 
     variable data -array {}
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
 
@@ -69,46 +66,22 @@ snit::type sdrkit::rxtx-control {
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
 
-    proc split-command-args {command} {
-	set args {}
-	if {[llength $command] > 1} {
-	    set args [lrange $command 1 end]
-	    set command [lindex $command 0]
-	}
-	return [list $command $args]
-    }
-
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
 	    set name rxtx
 	    set title RXTX
 	    sdrtk::clabelframe $w.$name -label $title
 	    grid $w.$name -sticky ew
 	    foreach {opt type opts} $options(-sub-controls) {
-		switch $type {
-		    spinbox {
-			package require sdrkit::label-spinbox
-			sdrkit::label-spinbox $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    scale {
-			package require sdrkit::label-scale
-			sdrkit::label-scale $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt]
-		    }
-		    separator {
-			ttk::separator $w.$name.$opt
-		    }
-		    radio {
-			package require sdrkit::label-radio
-			sdrkit::label-radio $w.$name.$opt {*}$opts -variable [myvar options(-$opt)] -command [mymethod Set -$opt] -defaultvalue $options(-$opt)
-		    }
+		if {[info exists options(-$opt]} {
+		    $self window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
+		} else {
+		    $self window $w $opt $type $opts {} {} {}
 		}
 		grid $w.$name.$opt -sticky ew
-		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	foreach {name title command args} $options(-sub-components) {
@@ -119,46 +92,13 @@ snit::type sdrkit::rxtx-control {
 		grid $w.$name -sticky ew
 		$self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 		grid $w.$name.container -sticky ew
-		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
-
-    method is-needed {} { return 1 }
-    method is-busy {} { return 0 }
-    method is-active {} { return 1 }
-    method activate {} { }
-    method deactivate {} { }
-
-    method OptionConstrain {opt val} { return $val }
-
-    method OptionConfigure {opt val} { set options($opt) $val }
-    method ComponentConfigure {opt val} {
-	lappend data(deferred-config) $opt $val
-	if { ! [$self is-busy]} {
-	    ::sdrkitx::$options(-name) configure {*}$data(deferred-config)
-	    set data(deferred-config) {}
-	}
-    }
-    method LabelConfigure {opt val} { set data(label$opt) [format $data(format$opt) $val] }
-    method ControlConfigure {opt val} { $options(-component) report $opt $val }
-
-    method Configure {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
-    }
-
-    method Set {opt val} {
-	set val [$self OptionConstrain $opt $val]
-	$self OptionConfigure $opt $val
-	$self ComponentConfigure $opt $val
-	$self LabelConfigure $opt $val
-	$self ControlConfigure $opt $val
-    }
-    method Changed {opt} { $self Set $opt $options($opt) }
+    method Configure {opt val} { set options($opt) [$self Constrain $opt $val] }
+    method Set {opt val} { $options(-component) report $opt [$self Constrain $opt $val] }
 }

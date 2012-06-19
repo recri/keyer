@@ -43,14 +43,18 @@ snit::widgetadaptor sdrtk::spectrum {
     option -center-freq -default 0 -configuremethod Retune
     option -filter-low -default 0 -configuremethod Retune
     option -filter-high -default 0 -configuremethod Retune
+    option -band-low -default 0 -configuremethod Retune
+    option -band-high -default 0 -configuremethod Retune
     option -tuned-freq -default 0 -configuremethod Retune
+
+    option -command -default {}
 
     delegate option * to hull
     delegate method * to hull
 
     variable data -array {
 	multi 0
-	darkest \#444
+	darkest \#333
 	darker \#666
 	dark \#888
 	med \#AAA
@@ -58,6 +62,10 @@ snit::widgetadaptor sdrtk::spectrum {
 	lighter \#EEE
 	lightest \#FFF
 	carrier red
+	hgrid-scroll 0
+	freq 0
+	band-fill darkred
+	band-width 1000
     }
     
     constructor {args} {
@@ -65,8 +73,25 @@ snit::widgetadaptor sdrtk::spectrum {
 	$self configure {*}$args
 	$hull configure -bg black
 	bind $win <Configure> [mymethod DrawAll]
+	bind $win <ButtonPress-1> [mymethod Press %W %x %y]
+	bind $win <ButtonRelease-1> [mymethod Release %W %x %y]
+	bind $win <B1-Motion> [mymethod Motion %W %x %y]
     }
     
+    method Press {w x y} {
+	set data(freq) [expr {int(($x-double($data(xoffset)))/$data(xscale))}]
+	if {$options(-command) ne {}} { {*}$options(-command) $w Press $x $y $data(freq) 0 }
+    }
+    method Release {w x y} {
+	set df [expr {int(($x-double($data(xoffset)))/$data(xscale) - $data(freq))}]
+	if {$options(-command) ne {}} { {*}$options(-command) $w Release $x $y $data(freq) $df }
+    }
+    method Motion {w x y} {
+	set df [expr {int(($x-double($data(xoffset)))/$data(xscale) - $data(freq))}]
+	incr data(freq) $df
+	if {$options(-command) ne {}} { {*}$options(-command) $w Motion $x $y $data(freq) $df }
+    }
+
     method update {xy} {
 	$hull coords spectrum-$data(multi) $xy
 	$hull raise spectrum-$data(multi)
@@ -79,21 +104,21 @@ snit::widgetadaptor sdrtk::spectrum {
     }
 
     method VerticalScale {tag} {
-	set yscale [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
-	set yoffset [expr {-$options(-max)*$yscale}]
-	$hull scale $tag 0 0 1 $yscale
-	$hull move $tag 0 $yoffset
+	set data(yscale) [expr {-[winfo height $win]/double($options(-max)-$options(-min))}]
+	set data(yoffset) [expr {-$options(-max)*$data(yscale)}]
+	$hull scale $tag 0 0 1 $data(yscale)
+	$hull move $tag 0 $data(yoffset)
     }
 
     method HorizontalScale {tag} {
-	set xscale [expr {[winfo width $win]/double($options(-sample-rate))}]
-	set xoffset [expr {[winfo width $win]/2.0}]
-	$hull scale $tag 0 0 $xscale 1
-	$hull move $tag $xoffset 0
+	set data(xscale) [expr {[winfo width $win]/double($options(-sample-rate))}]
+	set data(xoffset) [expr {[winfo width $win]/2.0}]
+	$hull scale $tag 0 0 $data(xscale) 1
+	$hull move $tag $data(xoffset) 0
     }
     
     method HorizontalScroll {tag dx} {
-	$hull move $tag [expr {$dx*[winfo width $win]/double($options(-sample-rate))}] 0
+	$hull move $tag [expr {$dx*$data(xscale)}] 0
     }
 
     method Scale {tag} {
@@ -101,9 +126,43 @@ snit::widgetadaptor sdrtk::spectrum {
 	$self HorizontalScale $tag
     }
 
+    # band limits
+    method DrawBand {} {
+	if {$options(-band-low) ne {} && $options(-band-high) ne {}} {
+	    set low [expr {$options(-band-low)-$options(-center-freq)}]
+	    set high [expr {$options(-band-high)-$options(-center-freq)}]
+	    $hull create rectangle [expr {$low-$data(band-width)}] $options(-min) $low $options(-max) -fill $data(band-fill) -outline {} -tags {band band-low}
+	    $hull create rectangle $high $options(-min) [expr {$high+$data(band-width)}] $options(-max) -fill $data(band-fill) -outline {} -tags {band band-high}
+	    $hull lower band
+	    $self Scale band
+	}
+    }
+    method AdjustBand {} {
+	if {$options(-band-low) ne {} && $options(-band-high) ne {}} {
+	    if {[$hull find withtag band] eq {}} {
+		$self DrawBand
+	    } else {
+		set low [expr {$options(-band-low)-$options(-center-freq)}]
+		set high [expr {$options(-band-high)-$options(-center-freq)}]
+		$hull coords band-low  [expr {$low-$data(band-width)}] $options(-min) $low $options(-max)
+		$hull coords band-high $high $options(-min) [expr {$high+$data(band-width)}] $options(-max)
+		$self Scale band
+	    }
+	}
+    }
+    method ScrollBand {dx} {
+	if {$options(-band-low) ne {} && $options(-band-high) ne {}} {
+	    if {[$hull find withtag band] eq {}} {
+		$self DrawBand
+	    } else {
+		$self HorizontalScroll band $dx
+	    }
+	}
+    }
+	
     # filter rectangle
     method DrawFilter {} {
-	$hull create rectangle $options(-filter-low) $options(-min) $options(-filter-high) $options(-max) -fill $data(darker) -outline $data(darker) -tags filter
+	$hull create rectangle $options(-filter-low) $options(-min) $options(-filter-high) $options(-max) -fill $data(darkest) -outline $data(darkest) -tags filter
 	$self Scale filter
     }
     method AdjustFilter {} {
@@ -140,7 +199,7 @@ snit::widgetadaptor sdrtk::spectrum {
 		}
 	    }
 	}
-	$hull create line $xy -fill $data(darkest) -tags {vgrid grid}
+	$hull create line $xy -fill $data(darker) -tags {vgrid grid}
 	$self Scale vgrid
 	$self VerticalScale vlabel
     }
@@ -148,7 +207,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	$hull delete vgrid
 	$hull delete vlabel
 	$self DrawVgrid
-	$hull lower vgrid
+	$hull lower vgrid carrier
     }
     
     # horizontal grid, vertical frequency markings and labels
@@ -165,7 +224,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	    lappend xy $fo $options(-min) $fo $options(-max) $fo $options(-min)
 	    $hull create text $fo $options(-min) -text $label -font {Helvetica 8} -anchor sw -fill $data(light) -tags {hlabel label}
 	}
-	$hull create line $xy -fill $data(darkest) -tags {hgrid grid}
+	$hull create line $xy -fill $data(darker) -tags {hgrid grid}
 	$self Scale hgrid
 	$self Scale hlabel
 	$hull lower hgrid
@@ -185,11 +244,15 @@ snit::widgetadaptor sdrtk::spectrum {
     }
 
     method DrawAll {} {
+	catch {$hull delete band}
+	catch {$hull delete filter}
 	catch {$hull delete grid}
 	catch {$hull delete label}
+	catch {$hull delete carrier}
+	$self DrawBand
+	$self DrawFilter
 	$self DrawHgrid
 	$self DrawVgrid
-	$self DrawFilter
 	$self DrawCarrier
     }	
     
@@ -203,6 +266,16 @@ snit::widgetadaptor sdrtk::spectrum {
 	$self AdjustFilter
     }
     
+    method {Retune -band-low} {val} {
+	set options(-band-low) $val
+	$self AdjustBand
+    }
+    
+    method {Retune -band-high} {val} {
+	set options(-band-high) $val
+	$self AdjustBand
+    }
+    
     method {Retune -tuned-freq} {val} {
 	set options(-tuned-freq) $val
 	$self AdjustCarrier
@@ -212,6 +285,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	set scroll [expr {$options(-center-freq)-$val}]
 	set options(-center-freq) $val
 	$self ScrollHgrid $scroll
+	$self ScrollBand $scroll
     }
 
     method Revertical {opt value} {

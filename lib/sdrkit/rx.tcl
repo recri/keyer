@@ -23,6 +23,7 @@
 package provide sdrkit::rx 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
@@ -30,17 +31,17 @@ namespace eval sdrkit {}
 snit::type sdrkit::rx {
     option -name rx
     option -type dsp
-    option -title {RX}
+    option -server default
+    option -component {}
+
     option -in-ports {in_i in_q}
     option -out-ports {out_i out_q}
-    option -in-options {
-	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
-	-cw-freq -bpf-width -bpf-offset
-    }
-    option -out-options {
-	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
-	-low -high
-    }
+    option -options {}
+
+    #{
+    #	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
+    #	-cw-freq -bpf-width -bpf-offset -low -high
+    #}
 
     option -mode -default CWU -configuremethod Configure
     option -rf-gain -default 0 -configuremethod Configure
@@ -79,7 +80,7 @@ snit::type sdrkit::rx {
 	af-gain {AF Gain} gain {}
     }
 
-    option -parts-enable { rf-iq-correct if-lo-mixer if-bpf af-agc }
+    option -parts-enable { rf-iq-swap rf-iq-correct if-lo-mixer if-bpf af-agc }
 
     option -port-connections {
 	{} in-ports rf-gain in-ports
@@ -112,6 +113,7 @@ snit::type sdrkit::rx {
 	..	-iq-delay	.		-iq-delay
 	..	-iq-correct	.		-iq-correct
 	..	-lo-freq	.		-lo-freq
+	..	-cw-freq	.		-cw-freq
 	..	-bpf-width	.		-bpf-width
 	..	-bpf-offset	.		-bpf-offset
 	..	-agc-mode	.		-agc-mode
@@ -124,15 +126,9 @@ snit::type sdrkit::rx {
 	.	-low		.-if-bpf	-low
 	.	-high		.-if-bpf	-high
 	.	-agc-mode	.-af-agc	-mode
+	.	-mode		.-af-demod	-mode
 	.	-af-gain	.-af-gain	-gain
     }
-
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
 
     option -rx-source {}
     option -rx-sink {}
@@ -143,19 +139,21 @@ snit::type sdrkit::rx {
 	parts {}
     }
 
-    constructor {args} { $self configure {*}$args }
+    component common
+    delegate method * to common
+
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) sub-component $window $name $subsub {*}$args
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights } }
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {[string match -* $name]} {
 		# placeholder component, replace with spectrum tap
@@ -175,11 +173,11 @@ snit::type sdrkit::rx {
 		ttk::frame $w.$name.container
 		$self sub-component $w.$name.container $name sdrkit::$command {*}$args
 		grid $w.$name.enable $w.$name.container
-		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+		grid columnconfigure $w.$name 1 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
     proc match-ports {ports1 ports2} {
@@ -228,12 +226,14 @@ snit::type sdrkit::rx {
 		$options(-component) connect-ports $options(-name) $src $dname $dport
 	    }
 	}
-	# puts "resolve options(-name) is $options(-name)"
-	foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
-	    set ename1 [$self Expand-name $name1]
-	    set ename2 [$self Expand-name $name2]
-	    # puts "$name1 $opt1 $name2 $opt2 -> $options(-component) connect-options $ename1 $opt1 $ename2 $opt2"
-	    $options(-component) connect-options $ename1 $opt1 $ename2 $opt2
+	if {0} {
+	    # puts "resolve options(-name) is $options(-name)"
+	    foreach {name1 opt1 name2 opt2} $options(-opt-connections) {
+		set ename1 [$self Expand-name $name1]
+		set ename2 [$self Expand-name $name2]
+		# puts "$name1 $opt1 $name2 $opt2 -> $options(-component) connect-options $ename1 $opt1 $ename2 $opt2"
+		$options(-component) connect-options $ename1 $opt1 $ename2 $opt2
+	    }
 	}
 	foreach name $options(-parts-enable) {
 	    set data($name-enable) 1
@@ -271,7 +271,7 @@ snit::type sdrkit::rx {
 		    }
 		    DIGU - USB {
 			if {$opt in {-bpf-offset -bpf-width -mode}} {
-			    $self configure [expr {$options(-bpf-offset)}] $low -high [expr {$options(-bpf-offset)+$options(-bpf-width)}]
+			    $self configure -low [expr {$options(-bpf-offset)}] -high [expr {$options(-bpf-offset)+$options(-bpf-width)}]
 			}
 		    }
 		    DIGL - LSB {
@@ -281,7 +281,7 @@ snit::type sdrkit::rx {
 		    }
 		    default { error "unanticipated mode \"$options(-mode)\"" }
 		}
-
+		$options(-component) report $opt $val
 	    }
 	    -lo-freq {
 		$options(-component) report $opt [expr {-$val}]
@@ -289,6 +289,7 @@ snit::type sdrkit::rx {
 	    -rf-gain -
 	    -iq-swap -
 	    -iq-delay -
+	    -iq-correct -
 	    -agc-mode -
 	    -af-gain -
 	    -low -

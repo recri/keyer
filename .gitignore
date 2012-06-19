@@ -8,6 +8,7 @@ pkgIndex.tcl
 test/test-ovsv
 test/test-osc
 test/test-osc2
+test/test-window
 test/*.txt
 logs/*
 retired/*

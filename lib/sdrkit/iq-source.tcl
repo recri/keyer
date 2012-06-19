@@ -24,6 +24,7 @@
 package provide sdrkit::iq-source 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::clabelframe
 
 namespace eval sdrkit {}
@@ -31,11 +32,12 @@ namespace eval sdrkit {}
 snit::type sdrkit::iq-source {
     option -name sdr-src
     option -type dsp
-    option -title {IQ Source}
+    option -server default
+    option -component {}
+
     option -in-ports {}
     option -out-ports {out_i out_q}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
     option -sub-components {
 	sg {Signal Generator} signal-generator {}
 	iq {IQ Imbalance} iq-unbalance {}
@@ -47,19 +49,16 @@ snit::type sdrkit::iq-source {
     option -opt-connections {
     }
 
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     variable data -array {
 	parts {}
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
     }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
@@ -77,13 +76,9 @@ snit::type sdrkit::iq-source {
 	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
-    method build-parts {} { if {$options(-window) eq {none}} { $self build } }
-    method build-ui {} { if {$options(-window) ne {none}} { $self build } }
-    method build {} {
-	set w $options(-window)
-	if {$w ne {none}} {
-	    if {$w eq {}} { set pw . } else { set pw $w }
-	}
+    method build-parts {w} { if {$w eq {none}} { $self build $w {} {} {} } }
+    method build-ui {w pw minsizes weights} { if {$w ne {none}} { $self build $w $pw $minsizes $weights} }
+    method build {w pw minsizes weights} {
 	foreach {name title command args} $options(-sub-components) {
 	    if {$w eq {none}} {
 		$self sub-component none $name sdrkit::$command {*}$args
@@ -93,7 +88,7 @@ snit::type sdrkit::iq-source {
 	    }
 	}
 	if {$w ne {none}} {
-	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	    grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
 	}
     }
 }

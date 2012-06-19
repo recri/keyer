@@ -23,6 +23,7 @@
 package provide sdrkit::keyer-iambic 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtk::clabelframe
 package require sdrtk::radiomenubutton
 
@@ -31,11 +32,13 @@ namespace eval sdrkit {}
 snit::type sdrkit::keyer-iambic {
     option -name keyer
     option -type dsp
-    option -title {Iambic}
+    option -server default
+    option -component {}
+
     option -in-ports {alt_midi_in}
     option -out-ports {alt_midi_out}
-    option -in-options {-iambic}
-    option -out-options {-iambic}
+    option -options {-iambic}
+
     option -sub-components {
 	ad5 {ad5dz} keyer-iambic-ad5dz {}
 	dtt {dttsp} keyer-iambic-dttsp {}
@@ -49,18 +52,17 @@ snit::type sdrkit::keyer-iambic {
     option -opt-connections {
     }
 
-    option -server default
-    option -component {}
-
-    option -window {}
-    option -minsizes {100 200}
-    option -weights {1 3}
-
-    option -iambic none
+    option -iambic -default none -configuremethod Configure
 
     variable data -array { parts {} }
 
-    constructor {args} { $self configure {*}$args }
+    component common
+    delegate method * to common
+
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method sub-component {window name subsub args} {
 	lappend data(parts) $name
@@ -78,17 +80,14 @@ snit::type sdrkit::keyer-iambic {
 	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
     }
-    method build-parts {} {
-	if {$options(-window) ne {none}} return
+    method build-parts {w} {
+	if {$w ne {none}} return
 	foreach {name title command args} $options(-sub-components) {
 	    $self sub-component none $name sdrkit::$command {*}$args
 	}
     }
-    method build-ui {} {
-	if {$options(-window) eq {none}} return
-	set w $options(-window)
-	if {$w eq {}} { set pw . } else { set pw $w }
-	
+    method build-ui {w pw minsizes weights} {
+	if {$w eq {none}} return
 	set values {none}
 	set labels {none}
 	foreach {name title command args} $options(-sub-components) {
@@ -97,17 +96,15 @@ snit::type sdrkit::keyer-iambic {
 	    set data(window-$name) [sdrtk::clabelframe $w.$name -label $title]
 	    $self sub-component [ttk::frame $w.$name.container] $name sdrkit::$command {*}$args
 	    grid $w.$name.container
-	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$options(-minsizes)]
+	    grid columnconfigure $w.$name 0 -weight 1 -minsize [tcl::mathop::+ {*}$minsizes]
 	}
 	package require sdrkit::label-radio
 	sdrkit::label-radio $w.mode -format {Keyer} -values $values -labels $labels -variable [myvar options(-iambic)] -command [mymethod Set -iambic]
 	grid $w.mode
-	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$options(-minsizes)] -weight 1
+	grid columnconfigure $pw 0 -minsize [tcl::mathop::+ {*}$minsizes] -weight 1
     }
-    method is-active {} { return 1 }
-    method activate {} {}
-    method deactivate {} {}
-    method Set {opt name} {
+    method {Configure -iambic} {name} {
+	set options($opt) $name
 	# find deselected keyer
 	set exname {none}
 	foreach part $data(parts) {
@@ -121,7 +118,7 @@ snit::type sdrkit::keyer-iambic {
 	# disable deselected keyer
 	if {$exname ne {none}} { $options(-component) part-disable $options(-name)-$exname }
 	# deal with ui details
-	set w $options(-window)
+	set w [$options(-component) cget -window]
 	# determine if ui details exist
 	if {$w ne {none}} {
 	    # remove deselected keyer ui
@@ -130,6 +127,7 @@ snit::type sdrkit::keyer-iambic {
 	    if {$name ne {none}} { grid $data(window-$name) -row 1 -column 0 -columnspan 2 -sticky ew }
 	}
     }
+    method Set {opt val} { $options(-component) report $opt [$self Constrain $opt $val] }
     method rewrite-connections-to {port candidates} {
 	# puts "demod::rewrite-connections-to $port {$candidates}"
 	if {$options(-iambic) eq {none}} {

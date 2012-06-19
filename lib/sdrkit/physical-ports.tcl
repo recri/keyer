@@ -23,6 +23,7 @@
 package provide sdrkit::physical-ports 1.0.0
 
 package require snit
+package require sdrkit::common-component
 package require sdrtcl::jack
 
 namespace eval sdrkit {}
@@ -33,15 +34,9 @@ snit::type sdrkit::physical-ports {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Ports
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -physical {}
 
@@ -49,13 +44,19 @@ snit::type sdrkit::physical-ports {
 	parts {}
     }
 
-    constructor {args} { $self configure {*}$args }
+    component common
+    delegate method * to common
+
+    constructor {args} {
+	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
+    }
     destructor { $options(-component) destroy-sub-parts $data(parts) }
     method new-component {window name subsub args} {
 	lappend data(parts) $name
 	$options(-component) new-component $window $name $subsub {*}$args
     }
-    method build-parts {} {
+    method build-parts {w} {
 	set clients [dict create]
 	foreach {pname pdict} [sdrtcl::jack -server $options(-server) list-ports] {
 	    # pdict has type, direction, physical, and connections
@@ -69,7 +70,7 @@ snit::type sdrkit::physical-ports {
 	    $options(-component) part-configure $client -activate true
 	}
     }
-    method build-ui {} {}
+    method build-ui {w pw minsizes weights} {}
     method is-needed {} { return 1 }
     method is-active {} { return 1 }
     method activate {} { }

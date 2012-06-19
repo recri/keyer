@@ -23,6 +23,7 @@
 package provide sdrkit::physical-port 1.0.0
 
 package require snit
+package require sdrkit::common-component
 
 namespace eval sdrkit {}
 
@@ -32,23 +33,21 @@ snit::type sdrkit::physical-port {
     option -server default
     option -component {}
 
-    option -window none
-    option -title Port
-    option -minsizes {100 200}
-    option -weights {1 3}
-
     option -in-ports {}
     option -out-ports {}
-    option -in-options {}
-    option -out-options {}
+    option -options {}
 
     option -ports {}
 
     variable data -array {
     }
 
+    component common
+    delegate method * to common
+
     constructor {args} {
 	$self configure {*}$args
+	install common using sdrkit::common-component %AUTO%
 	foreach port $options(-ports) {
 	    if {[string match *capture* $port]} {
 		lappend options(-in-ports) $port
@@ -59,7 +58,4 @@ snit::type sdrkit::physical-port {
 	    }
 	}
     }
-    method build-parts {} {}
-    method build-ui {} {}
-    method is-needed {} { return 1 }
 }

@@ -227,6 +227,12 @@ namespace eval sdrutil::band-data {
     # alt {1=162.400, 2=162.425, 3=162.450, 4=162.475, 5=162.500, 6=162.525, 7=162.550 {in order of frequency channel numbering}}
 
     ##
+    ## Hospital emergency room, probably US specific
+    ##
+    add-service Hospital color red row 3
+    add-channel Hospital HERN freq 155.34MHz
+
+    ##
     ## Amateur bands
     ##
     add-service Amateur color gold row 4

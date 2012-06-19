@@ -185,3 +185,55 @@
    Maybe, but I wouldn't be able to watch.
 
 ** DONE - install physical ports in current setup
+** DONE - install ctl logic in current setup
+** DONE - install dial control in current setup
+** DONE - debug port connections
+** DONE - debug activation   
+** DONE - make is-busy a standard framework method
+** DONE - make graph.tcl use the automated tick labels
+** DONE - build a portable single wire coaxial dipole
+   Take a length of RG-174,
+   strip off half the jacket more or less,
+   fold back the exposed braid over the remaining jacket,
+   or cut it off and thread it back on if folding doesn't work,
+   wrap the whole thing in heat shrink tubing,
+   put an BNC connector on the free end,
+   voila, an antenna with an unbalance feed connection that drives
+   the softrock antenna input.
+** DONE - implement spectrum
+** DONE - debug spectrum, polyphase should smooth the noise floor   
+   The spectrum looks very different from the QtRadio spectrum
+   even though it should be working the same.  Removed all normalization
+   and set the zero on power to 1e-60, and it doesn't look closer, the
+   magnitude is even further off than it was.  What's going on?
+   The dttsp window generator was making a bogus Blackman Harris window,
+   the only one it uses.  It was computing window coefficients at
+   (i+0.5)2pi/n rather than i2pi/n.
+
+** DONE - figure out how to deal with filter -low low -high high
+   If the configuration gets split into option at a time passing, then
+   eventually the filter gets a -low that's incompatible with its
+   current -high, or vice versa, leading to an error message that's an
+   accident and would not a problem except that the incompatible value
+   gets discarded, leaving you with a weird filter envelope.
+   Done in a hacky way, needs a better solution.
+   And the hack bit me when I tried to translate the option names into
+   another component.
+   The general solution is to defer all configuration passing for a few
+   milliseconds and then pass all the accumulated options.
+** DONE - make spectrum and dial use unconnected control reports
+** DONE - make rxtx resolve connect everything up
+** DONE - make the band select work
+** DONE - make the meter work
+** DONE - debug the failure to enable, probably component.tcl looking
+   for a method that isn't there.
+** DONE - There should be a set of methods required for each component type
+** DONE - Abstract the common component code for alternate components.
+** DONE - Abstract the common component code for pipeline components.
+** DONE - Blow away lib/sdrapp
+** DONE - Blow away lib/sdrctl
+** DONE - Blow away lib/sdrdsp
+** DONE - Blow away lib/sdrhw
+** DONE - Blow away lib/sdrui
+** DONE - Blow away lib/wrap   
+** DONE - the band limits aren't being drawn
