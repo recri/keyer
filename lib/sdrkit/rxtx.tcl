@@ -366,7 +366,11 @@ snit::type sdrkit::rxtx {
 		$self Set $opt $val
 	    }
 	    -freq {
-		$self configure -hw-freq [expr {$options(-hw-freq)+$val-$old}]
+		switch $options(-mode) {
+		    CWU { $self configure -hw-freq [expr {$options(-freq)-$options(-lo-freq)-$options(-cw-freq)}] }
+		    CWL { $self configure -hw-freq [expr {$options(-freq)-$options(-lo-freq)+$options(-cw-freq)}] }
+		    default  { $self configure -hw-freq [expr {$options(-freq)-$options(-lo-freq)}] }
+		}
 		$self Set -freq $val
 	    }
 	    -band {
