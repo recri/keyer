@@ -236,3 +236,4 @@
 ** DONE - Blow away lib/sdrhw
 ** DONE - Blow away lib/sdrui
 ** DONE - Blow away lib/wrap   
+** DONE - the band limits aren't being drawn

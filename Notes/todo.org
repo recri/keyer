@@ -6,7 +6,6 @@
 ** TODO - should be able to save/restore arrangement of last resort UI components.
 ** TODO - move the band select under the waterfall?
 ** TODO - the carrier frequency is wrong by cw-freq tuning AM, and zero beat tuning CW.
-** TODO - the band limits aren't being drawn
 ** TODO - the band/channel should supply a mode and filter
 ** TODO - need a toplevel component tweak to connect default UI control signals.
 ** TODO - add back tkcon launch button
