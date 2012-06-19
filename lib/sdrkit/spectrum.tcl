@@ -99,7 +99,7 @@ snit::type sdrkit::spectrum {
 	after {}
 	frequencies {}
 	tap-options {-server -size -polyphase -result}
-	tk-options {-sample-rate -pal -max -min -smooth -multi -zoom -pan}
+	tk-options {-sample-rate -pal -max -min -smooth -multi -zoom -pan -band-low -band-high}
 	retune-options {-mode -freq -lo-freq -cw-freq -carrier-freq -bpf-low -bpf-high}
     }
 

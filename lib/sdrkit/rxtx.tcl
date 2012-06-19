@@ -255,9 +255,9 @@ snit::type sdrkit::rxtx {
 	    grid $w.dial -sticky nsew -row 0
 	    grid $w.meter -sticky ew -row 1
 	    grid [ttk::frame $w.buttons] -sticky ew -row 2
-	    sdrtk::radiomenubutton $w.buttons.mode -values {CWU CWL USB LSB AM SAM FMN DIGU DIGL} \
+	    sdrtk::radiomenubutton $w.buttons.mode -values {CWU CWL USB LSB AM SAM FMN DSB DIGU DIGL} \
 		-variable [myvar data(mode)] -command [mymethod SetMode] -defaultvalue $options(-mode)
-	    sdrtk::radiomenubutton $w.buttons.bpfwidth -values {200 400 800 1600 3200 6400 12800} \
+	    sdrtk::radiomenubutton $w.buttons.bpfwidth -values {100 250 500 1000 2500 5000 10000 25000 50000} \
 		-variable [myvar data(bpfwidth)] -command [mymethod SetBpfWidth] -defaultvalue $options(-bpf-width)
 	    pack $w.buttons.mode $w.buttons.bpfwidth -side left
 	    grid $w.note -sticky nsew -row 3

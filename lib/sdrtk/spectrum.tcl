@@ -62,9 +62,10 @@ snit::widgetadaptor sdrtk::spectrum {
 	lighter \#EEE
 	lightest \#FFF
 	carrier red
-	band darkred
 	hgrid-scroll 0
 	freq 0
+	band-fill darkred
+	band-width 1000
     }
     
     constructor {args} {
@@ -127,16 +128,35 @@ snit::widgetadaptor sdrtk::spectrum {
 
     # band limits
     method DrawBand {} {
-	if {$options(-band-low) ne $options(-band-high)} {
-	    $hull create line $options(-band-low) $options(-min) $options(-band-low) $options(-max) -fill $data(band) -tags band
-	    $hull create line $options(-band-high) $options(-min) $options(-band-high) $options(-max) -fill $data(band) -tags band
+	if {$options(-band-low) ne {} && $options(-band-high) ne {}} {
+	    set low [expr {$options(-band-low)-$options(-center-freq)}]
+	    set high [expr {$options(-band-high)-$options(-center-freq)}]
+	    $hull create rectangle [expr {$low-$data(band-width)}] $options(-min) $low $options(-max) -fill $data(band-fill) -outline {} -tags {band band-low}
+	    $hull create rectangle $high $options(-min) [expr {$high+$data(band-width)}] $options(-max) -fill $data(band-fill) -outline {} -tags {band band-high}
+	    $hull lower band
 	    $self Scale band
 	}
     }
-    method AdjustFilter {} {
-	if {$options(-band-low) ne $options(-band-high)} {
-	    $hull coords band $options(-band-low) $options(-min) $options(-band-high) $options(-max)
-	    $self Scale band
+    method AdjustBand {} {
+	if {$options(-band-low) ne {} && $options(-band-high) ne {}} {
+	    if {[$hull find withtag band] eq {}} {
+		$self DrawBand
+	    } else {
+		set low [expr {$options(-band-low)-$options(-center-freq)}]
+		set high [expr {$options(-band-high)-$options(-center-freq)}]
+		$hull coords band-low  [expr {$low-$data(band-width)}] $options(-min) $low $options(-max)
+		$hull coords band-high $high $options(-min) [expr {$high+$data(band-width)}] $options(-max)
+		$self Scale band
+	    }
+	}
+    }
+    method ScrollBand {dx} {
+	if {$options(-band-low) ne {} && $options(-band-high) ne {}} {
+	    if {[$hull find withtag band] eq {}} {
+		$self DrawBand
+	    } else {
+		$self HorizontalScroll band $dx
+	    }
 	}
     }
 	
@@ -265,6 +285,7 @@ snit::widgetadaptor sdrtk::spectrum {
 	set scroll [expr {$options(-center-freq)-$val}]
 	set options(-center-freq) $val
 	$self ScrollHgrid $scroll
+	$self ScrollBand $scroll
     }
 
     method Revertical {opt value} {
