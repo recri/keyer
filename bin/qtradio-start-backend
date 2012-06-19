@@ -27,6 +27,8 @@ esac
 
 for f in $*; do
     case $f in
+	--qi) IQ="--qi";;
+	--iq) IQ="--iq";;
 	--xfi) XFI=1; ADAPTER=0;;
 	--48k) HWRATE=48000;;
 	--96k) HWRATE=96000;;
