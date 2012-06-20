@@ -6,7 +6,12 @@
 ## lately I have tacked on an experimental jack backend for an alternative
 ## remote SDR radio implemented with sdrkit.
 ##
-
+## and now I'm trying to get the IQ order straight, as it swaps between
+## radios and sound cards.
+##
+## RX   startup freq = 114.294666
+## RXTX startup freq = 114.359895
+##
 
 export DISPLAY=:0
 OBDEV=hw:0			# 0 for onboard
@@ -20,9 +25,19 @@ LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
 ADAPTER=1
 XFI=0
 
-case `hostname` in
-    elf12) HWDEV=hw:2;;
-    elf11) HWDEV=hw:1;;
+# figure out which radio
+case `usbsoftrock status | grep '^Xtall Freq' | sed -e 's/.*: *//'` in
+    114.294666) RADIO=RX;;
+    114.359895) RADIO=RXTX;;
+    *) echo "unknown radio";;
+esac
+# figure out which sound card
+SCARD=`cat /proc/asound/card1/id`
+# set defaults for radio soundcard combo
+case "$RADIO"-"$SCARD" in
+    RX-IOx)
+	echo "detected Ensemble RX with IOx, setting --qi"
+	IQ="--qi";;
 esac
 
 for f in $*; do
