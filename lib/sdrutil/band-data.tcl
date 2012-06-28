@@ -285,14 +285,18 @@ namespace eval sdrutil::band-data {
     add-channel Amateur wspr2m freq 144.4890MHz mode DIGU codec WSPR
 
     ##
-    ## WWV channels
+    ## WWV/CHU/HD2I0A/et al standard time channels
     ##
-    add-service WWV color {red} row 3
-    add-channel WWV 2.5 freq 2.5MHz mode AM
-    add-channel WWV 5 freq 5MHz mode AM
-    add-channel WWV 10 freq 10MHz mode AM
-    add-channel WWV 15 freq 15MHz mode AM
-    add-channel WWV 20 freq 20MHz mode AM
+    add-service Time color {red} row 3
+    add-channel Time 2.5 freq 2.5MHz mode AM
+    add-channel Time 3.33 freq 3.33MHz mode AM
+    add-channel Time 3.81 freq 3.18MHz mode AM
+    add-channel Time 5 freq 5MHz mode AM
+    add-channel Time 7.85 freq 7.85MHz mode AM
+    add-channel Time 10 freq 10MHz mode AM
+    add-channel Time 14.67 freq 14.67MHz mode AM
+    add-channel Time 15 freq 15MHz mode AM
+    add-channel Time 20 freq 20MHz mode AM
 
     ##
     ## Satellite services

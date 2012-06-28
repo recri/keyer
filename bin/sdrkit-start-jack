@@ -8,8 +8,8 @@
 # results logged to ~/Projects/keyer/logs/<date>-jack.log
 #
 LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
-RATE1=96000
-RATE0=96000
+RATE1=${RATE1:-96000}
+RATE0=${RATE0:-96000}
 echo jackd -T -s -dalsa -Chw:1 -Phw:1 -r$RATE1 -p1024 -i2 -o2 -n3 -X raw
 jackd -T -s -dalsa -Chw:1 -Phw:1 -r$RATE1 -p1024 -i2 -o2 -n3 -X raw > $LOG-jack.log 2>&1&
 sleep 5

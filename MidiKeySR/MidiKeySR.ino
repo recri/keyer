@@ -99,7 +99,7 @@ uint8_t i2c_get(uint8_t slave_address, uint8_t reg_address) {
   Wire.beginTransmission(slave_address);
   Wire.send(reg_address);
   Wire.endTransmission();
-  Wire.requestFrom(slave_address, 1);
+  Wire.requestFrom((int)slave_address, (int)1);
   return  Wire.receive();
 }
 
