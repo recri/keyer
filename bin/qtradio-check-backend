@@ -1,2 +1,2 @@
 #!/bin/sh
-ps axuw | grep -e 'dspserver\|softrock\|jackd\|backend'
+ps axuw | grep -v grep | grep -e 'dspserver\|softrock\|jackd'
