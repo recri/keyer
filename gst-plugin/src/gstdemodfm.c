@@ -1,3 +1,21 @@
+/* -*- mode: c++; tab-width: 8 -*- */
+/*
+  Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+*/
 /*
  * GStreamer
  * Copyright (C) 2005 Thomas Vander Stichele <thomas@apestaart.org>
@@ -46,7 +64,7 @@
 /**
  * SECTION:element-demodfm
  *
- * FIXME:Describe demodfm here.
+ * demodulate frequency modulated signals
  *
  * <refsect2>
  * <title>Example launch line</title>
@@ -116,8 +134,8 @@ gst_demod_fm_base_init (gpointer gclass)
 
   gst_element_class_set_details_simple(element_class,
     "DemodFM",
-    "FIXME:Generic",
-    "FIXME:Generic Template Element",
+    "Converter/Audio/SDR",
+    "Software Defined Radio FM demodulator",
     "Roger E Critchlow Jr <<user@hostname.org>>");
 
   gst_element_class_add_pad_template (element_class,
@@ -247,11 +265,9 @@ demodfm_init (GstPlugin * demodfm)
    *
    * exchange the string 'Template demodfm' with your description
    */
-  GST_DEBUG_CATEGORY_INIT (gst_demod_fm_debug, "demodfm",
-      0, "Template demodfm");
+  GST_DEBUG_CATEGORY_INIT (gst_demod_fm_debug, "demodfm", 0, "demodulate frequency modulated signals");
 
-  return gst_element_register (demodfm, "demodfm", GST_RANK_NONE,
-      GST_TYPE_DEMODFM);
+  return gst_element_register (demodfm, "demodfm", GST_RANK_NONE, GST_TYPE_DEMODFM);
 }
 
 /* PACKAGE: this is usually set by autotools depending on some _INIT macro
@@ -260,7 +276,7 @@ demodfm_init (GstPlugin * demodfm)
  * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
  */
 #ifndef PACKAGE
-#define PACKAGE "myfirstdemodfm"
+#define PACKAGE "sdrkit"
 #endif
 
 /* gstreamer looks for this structure to register demodfms
@@ -271,7 +287,7 @@ GST_PLUGIN_DEFINE (
     GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
     "demodfm",
-    "Template demodfm",
+    "demodulate frequency modulated signals",
     demodfm_init,
     VERSION,
     "LGPL",

@@ -1,3 +1,21 @@
+/* -*- mode: c++; tab-width: 8 -*- */
+/*
+  Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+*/
 /*
  * GStreamer
  * Copyright (C) 2005 Thomas Vander Stichele <thomas@apestaart.org>
@@ -46,7 +64,7 @@
 /**
  * SECTION:element-ovsvfilter
  *
- * FIXME:Describe ovsvfilter here.
+ * overlap save filter
  *
  * <refsect2>
  * <title>Example launch line</title>
@@ -116,9 +134,9 @@ gst_ovsvfilter_base_init (gpointer gclass)
 
   gst_element_class_set_details_simple(element_class,
     "OVSVFilter",
-    "FIXME:Generic",
-    "FIXME:Generic Template Element",
-    "Roger E Critchlow Jr <<user@hostname.org>>");
+    "Filter/Audio/SDR",
+    "Software Defined Radio band pass filter",
+    "Roger E Critchlow Jr <rec@elf.org>");
 
   gst_element_class_add_pad_template (element_class,
       gst_static_pad_template_get (&src_factory));
@@ -244,11 +262,9 @@ static gboolean
 ovsvfilter_init (GstPlugin * ovsvfilter)
 {
   /* debug category for fltering log messages
-   *
-   * exchange the string 'Template ovsvfilter' with your description
    */
   GST_DEBUG_CATEGORY_INIT (gst_ovsvfilter_debug, "ovsvfilter",
-      0, "Template ovsvfilter");
+      0, "overlap save filter");
 
   return gst_element_register (ovsvfilter, "ovsvfilter", GST_RANK_NONE,
       GST_TYPE_OVSVFILTER);
@@ -260,18 +276,16 @@ ovsvfilter_init (GstPlugin * ovsvfilter)
  * compile this code. GST_PLUGIN_DEFINE needs PACKAGE to be defined.
  */
 #ifndef PACKAGE
-#define PACKAGE "myfirstovsvfilter"
+#define PACKAGE "sdrkit"
 #endif
 
 /* gstreamer looks for this structure to register ovsvfilters
- *
- * exchange the string 'Template ovsvfilter' with your ovsvfilter description
  */
 GST_PLUGIN_DEFINE (
     GST_VERSION_MAJOR,
     GST_VERSION_MINOR,
     "ovsvfilter",
-    "Template ovsvfilter",
+    "overlap save filter",
     ovsvfilter_init,
     VERSION,
     "LGPL",

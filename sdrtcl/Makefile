@@ -27,6 +27,11 @@ FFTW3_LIBS=$(shell pkg-config --libs fftw3f)
 
 LIBDIR=../lib/sdrtcl
 
+ALSA=$(LIBDIR)/alsa_device.so \
+	$(LIBDIR)/alsa_pcm.so \
+	$(LIBDIR)/alsa_rawmidi.so \
+	$(LIBDIR)/alsa_sequencer.so
+
 KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_debounce.so \
 	$(LIBDIR)/keyer_detime.so \
@@ -72,6 +77,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/spectrum_tap.so \
 	$(LIBDIR)/window.so \
 	$(LIBDIR)/window_polyphase.so \
+	$(ALSA) \
 	$(KEYERS) \
 	$(LIBDIR)/usb.so
 
@@ -218,6 +224,18 @@ $(LIBDIR)/window.so: window.c framework.h ../dspmath/window.h
 
 $(LIBDIR)/window_polyphase.so: window_polyphase.c framework.h ../dspmath/polyphase_fft.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/alsa_device.so: alsa_device.c
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
+
+$(LIBDIR)/alsa_pcm.so: alsa_pcm.c
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
+
+$(LIBDIR)/alsa_rawmidi.so: alsa_rawmidi.c
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
+
+$(LIBDIR)/alsa_sequencer.so: alsa_sequencer.c
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/morse_timing.h ../dspmath/morse_coding.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)

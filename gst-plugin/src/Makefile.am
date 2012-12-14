@@ -28,39 +28,40 @@ noinst_HEADERS = \
 	gstlomixer.h \
 	gstovsvfilter.h
 
+SDR_CFLAGS=-std=c99
 # compiler and linker flags used to compile these plugins, set in configure.ac
-libgstdemodam_la_CFLAGS = $(GST_CFLAGS)
+libgstdemodam_la_CFLAGS = $(GST_CFLAGS) $(SDR_CFLAGS)
 libgstdemodam_la_LIBADD = $(GST_LIBS)
 libgstdemodam_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstdemodam_la_LIBTOOLFLAGS = --tag=disable-static
 
-libgstdemodfm_la_CFLAGS = $(GST_CFLAGS)
+libgstdemodfm_la_CFLAGS = $(GST_CFLAGS) $(SDR_CFLAGS)
 libgstdemodfm_la_LIBADD = $(GST_LIBS)
 libgstdemodfm_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstdemodfm_la_LIBTOOLFLAGS = --tag=disable-static
 
-libgstdemodsam_la_CFLAGS = $(GST_CFLAGS)
+libgstdemodsam_la_CFLAGS = $(GST_CFLAGS) $(SDR_CFLAGS)
 libgstdemodsam_la_LIBADD = $(GST_LIBS)
 libgstdemodsam_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstdemodsam_la_LIBTOOLFLAGS = --tag=disable-static
 
-libgstdttspagc_la_CFLAGS = $(GST_CFLAGS)
+libgstdttspagc_la_CFLAGS = $(GST_CFLAGS) $(SDR_CFLAGS)
 libgstdttspagc_la_LIBADD = $(GST_LIBS)
 libgstdttspagc_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstdttspagc_la_LIBTOOLFLAGS = --tag=disable-static
 
-libgstiqcorrect_la_CFLAGS = $(GST_CFLAGS)
+libgstiqcorrect_la_CFLAGS = $(GST_CFLAGS) $(SDR_CFLAGS)
 libgstiqcorrect_la_LIBADD = $(GST_LIBS)
 libgstiqcorrect_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstiqcorrect_la_LIBTOOLFLAGS = --tag=disable-static
 
-libgstlomixer_la_CFLAGS = $(GST_CFLAGS)
+libgstlomixer_la_CFLAGS = $(GST_CFLAGS) $(SDR_CFLAGS) -DOSCILLATOR_Z -DOSCILLATOR_D
 libgstlomixer_la_LIBADD = $(GST_LIBS)
 libgstlomixer_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstlomixer_la_LIBTOOLFLAGS = --tag=disable-static
 
-libgstovsvfilter_la_CFLAGS = $(GST_CFLAGS)
-libgstovsvfilter_la_LIBADD = $(GST_LIBS)
+libgstovsvfilter_la_CFLAGS = $(GST_CFLAGS) $(SDR_CFLAGS)
+libgstovsvfilter_la_LIBADD = $(GST_LIBS) -lfftw3f
 libgstovsvfilter_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS)
 libgstovsvfilter_la_LIBTOOLFLAGS = --tag=disable-static
 

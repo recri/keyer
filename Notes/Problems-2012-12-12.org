@@ -1,0 +1,42 @@
+* Newest problem list
+** Stopped working on it and it stopped working.
+** bin/keyer doesn't create a working keyer
+*** iambic is enabled but not marked enabled
+*** selecting an iambic keyer doesn't bring up controls
+*** keyer is not connected and enabled by default.   
+** bin/keyer-iambic-ad5dz & bin/keyer-debounce & bin/keyer-tone &
+   assembled in jack creates a working keyer but the control panels
+   are impotent.
+* Start a basic keyer and use it to control everything else
+* Control the keyer with the key
+** Change the keyer parameters
+* Start a morse trainer
+** Implement ala aldo, but answer back with key.
+* Bring up a waterfall view of a pileup trainer.
+** Allow the bandpass to be tuned.  
+* Implement the arduino keyer in midi/tcl/jack/sdrkit
+* Implement a complete transceiver in loop back mode.
+* Implement a complete real receiver.
+* Implement a complete real transceiver.
+* Implement the Si570 control on the midi keyer.
+* Implement the audio interface on the midi keyer.
+* Implement an all band transceiver with the receiver monitoring the transmitter
+** Have the Tx relay switch Rx to an inductively coupled and variably attenuated 
+** Use this to match the transmitter to the antenna
+* The principle thing to control is the allocation of connected devices
+*** At start up enumerate
+    the audio devices,
+    the midi devices,
+    the radio control devices,
+    the user interface devices,
+    and decide what to do with them
+*** Also re-enumerate as necessary
+    to find out what has appeared or disappeared since the last enumeration
+    and react appropriately
+*** Application has an existence separate from the Jack server
+    it may need to stop and restart the Jack server to get the proper devices
+    at the proper sample rates and widths in the proper relationship to the server.
+*** Needs to know how to enumerate the properties of audio devices
+    to find out what sample rates and sample widths are supported
+*** Also need to find radio control and user interface devices.
+*** The pattern of devices connected may determine the application to launch.
