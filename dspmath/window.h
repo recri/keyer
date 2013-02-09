@@ -29,7 +29,7 @@
 
 typedef enum {
   WINDOW_RECTANGULAR = 0, 
-  WINDOW_HANNING = 1,
+  WINDOW_HANNING = 1,		/* Hann */
   WINDOW_WELCH = 2,
   WINDOW_PARZEN = 3,
   WINDOW_BARTLETT = 4,
@@ -43,6 +43,13 @@ typedef enum {
   WINDOW_BLACKMAN_NUTTALL = 12,
   WINDOW_NUTTALL = 13,
   WINDOW_FLAT_TOP = 14,
+  WINDOW_TUKEY = 15,
+  WINDOW_COSINE = 16,
+  WINDOW_LANCZOS = 17,
+  WINDOW_TRIANGULAR = 18,
+  WINDOW_GAUSSIAN = 19,
+  WINDOW_BARTLETT_HANN = 20,
+  WINDOW_KAISER = 21
 } window_type_t;
 
 static char *window_names[] = {
@@ -61,6 +68,13 @@ static char *window_names[] = {
   "blackman-nuttall",
   "nuttall",
   "flat-top",
+  "tukey",
+  "cosine",
+  "lanczos",
+  "triangular",
+  "gaussian",
+  "bartlett-hann",
+  "kaiser",
   NULL
 };
 
@@ -219,7 +233,32 @@ static float window_get(const window_type_t type, const int size, int k) {
     return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg) + a4 * cos(4 * arg);
 
   }
-    
+  case WINDOW_TUKEY: {
+    // Tukey window is an interpolation between a Hann and a rectangular window
+    // parameterized by alpha, somewhat like a raised cosine keyed tone
+    return 0;
+  }
+  case WINDOW_COSINE: {
+    // also known as the sine window
+    return sin(pi*k / (size-1));
+  }
+  case WINDOW_LANCZOS: {
+    return 0;// sinc(2*k/(size-1)), normalized sinc(x) = sin(pi x) / (pi x), sinc(0) == 1
+  }
+  case WINDOW_TRIANGULAR: {
+    return 2.0 / (size+1) * ((size+1)/2.0 - fabs(k-(size-1)/2.0));
+  }
+  case WINDOW_GAUSSIAN: {
+    // gaussian parameterized by sigma <= 0.5
+    const double sigma = 0.5;
+    return exp(-0.5 * pow((k - (size-1) / 2.0) / (sigma * (size-1) / 2.0), 2));
+  }
+  case WINDOW_BARTLETT_HANN: {
+    return 0;
+  }
+  case WINDOW_KAISER: {
+    return 0;
+  }
   }
   return 1.0 / 0.0;
 }

@@ -42,13 +42,14 @@ snit::type sdrkit::keyer-tone {
     option -chan -default 1 -configuremethod Configure
     option -note -default 0 -configuremethod Configure
     option -freq -default 600.0 -configuremethod Configure
-    option -min-freq -default -23500 -configuremethod Configure
-    option -max-freq -default  23500 -configuremethod Configure
+    option -min-freq -default 220 -configuremethod Configure
+    option -max-freq -default 880 -configuremethod Configure
     option -gain -default -30.0 -configuremethod Configure
     option -min-gain -default -160.0 -configuremethod Configure
     option -max-gain -default  160.0 -configuremethod Configure
     option -rise -default 5 -configuremethod Configure
     option -fall -default 5 -configuremethod Configure
+    option -verbose -default 0 -configuremethod Configure
 
     option -sub-controls {
 	chan spinbox { -format {Midi Channel} -from 1 -to 16}
@@ -66,6 +67,7 @@ snit::type sdrkit::keyer-tone {
 	$self configure {*}$args
 	$self configure -sample-rate [sdrtcl::jack -server $options(-server) sample-rate]
 	install common using sdrkit::common-sdrtcl %AUTO% -name $options(-name) -parent $self -options [myvar options]
+	after 100 [list $self configure -verbose 1]
     }
     destructor {
 	catch {::sdrkitx::$options(-name) deactivate}
@@ -78,7 +80,7 @@ snit::type sdrkit::keyer-tone {
     method build-ui {w pw minsizes weights} {
 	if {$w eq {none}} return
 	foreach {opt type opts} $options(-sub-controls) {
-	    if {$opt eq {freq}} { lappend opts -from [expr {-$options(-sample-rate)/2.0}] -to [expr {$options(-sample-rate)/2.0}] }
+	    if {$opt eq {freq}} { lappend opts -from $options(-min-freq) -to $options(-max-freq) }
 	    $common window $w $opt $type $opts [myvar options(-$opt)] [mymethod Set -$opt] $options(-$opt)
 	    grid $w.$opt -sticky ew
 	}

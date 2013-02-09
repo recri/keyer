@@ -38,12 +38,17 @@ snit::type sdrkit::keyer {
     option -out-ports {out_i out_q midi_out}
     option -options {}
 
+    #option -option -default xxx -configuremethod Configure
+
     option -sub-components {
 	debounce {Debounce} keyer-debounce {}
 	iambic {Iambic} keyer-iambic {}
 	tone {Tone} keyer-tone {}
 	ptt {PTT} keyer-ptt {}
     }
+
+    option -parts-enable { tone }
+
     option -port-connections {
 	{} in-ports debounce in-ports
 	debounce out-ports iambic in-ports
@@ -52,13 +57,18 @@ snit::type sdrkit::keyer {
 	tone out-ports {} out-ports
 	ptt out-ports {} out-ports
     }
+
     option -opt-connections {
     }
 
-    variable data -array { parts {} }
+    option -source {}
+    option -sink {}
 
-    option -keyer-source {}
-    option -keyer-sink {}
+    variable data -array {
+	enabled 0
+	active 0
+	parts {}
+    }
 
     component common
     delegate method * to common
@@ -130,10 +140,39 @@ snit::type sdrkit::keyer {
 	}
 	foreach {name1 opts1 name2 opts2} $options(-opt-connections) {
 	}
+	if {$options(-source) ne {}} {
+	    # puts "source $options(-source)"
+	    foreach src $options(-source) dst {midi_in} {
+		lassign [$self resolve-port-name [split $src :]] sname sport
+		# puts "rx $options(-component) connect-ports $sname $sport $options(-name) $dst"
+		$options(-component) connect-ports $sname $sport $options(-name) $dst		
+	    }
+	}
+	if {$options(-sink) ne {}} {
+	    # puts "sink $options(-sink)"
+	    foreach src {midi_out out_i out_q} dst $options(-sink) {
+		lassign [$self resolve-port-name [split $dst :]] dname dport
+		# puts "rx $options(-component) connect-ports $options(-name) $src $dname $dport"
+		$options(-component) connect-ports $options(-name) $src $dname $dport
+	    }
+	}
+	foreach name $options(-parts-enable) {
+	    set data($name-enable) 1
+	    $self Enable $name
+	}
+
     }
     method is-active {} { return 1 }
     method activate {} {}
     method deactivate {} {}
+    method Configure {opt val} {
+	set options($opt) $val
+	switch -- $opt {
+	    default {
+		error "unanticipated option \"$opt\""
+	    }
+	}
+    }
     method Enable {name} {
 	if {$data($name-enable)} {
 	    $options(-component) part-enable $options(-name)-$name

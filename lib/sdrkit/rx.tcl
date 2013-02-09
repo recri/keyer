@@ -38,11 +38,6 @@ snit::type sdrkit::rx {
     option -out-ports {out_i out_q}
     option -options {}
 
-    #{
-    #	-mode -rf-gain -iq-swap -iq-delay -iq-correct -lo-freq -agc-mode -af-gain
-    #	-cw-freq -bpf-width -bpf-offset -low -high
-    #}
-
     option -mode -default CWU -configuremethod Configure
     option -rf-gain -default 0 -configuremethod Configure
     option -iq-swap -default 0 -configuremethod Configure
