@@ -21,7 +21,7 @@ HWRATE=96000			# hardware rate
 HWBUFFER=1024			# hardware buffer
 SI570="--si570"
 IQ="--iq"			# reversed on x-fi usb
-LOG=~/Projects/keyer/logs/`date --rfc-3339=date`
+LOG=~/Projects/keyer/logs/`date --rfc-3339=seconds | sed -e 's/ /-/'`
 ADAPTER=1
 XFI=0
 
@@ -45,6 +45,7 @@ for f in $*; do
 	--qi) IQ="--qi";;
 	--iq) IQ="--iq";;
 	--xfi) XFI=1; ADAPTER=0;;
+	--16k) HWRATE=16000;;
 	--48k) HWRATE=48000;;
 	--96k) HWRATE=96000;;
 	--192k) HWRATE=192000;;
