@@ -1,0 +1,25 @@
+* Test the suitability of a sound card for SDR usage
+** Sound card test from CCRMA: https://ccrma.stanford.edu/realsimple/soundcard_test/
+*** Prereq - cd player with line out, or signal generator!
+*** Select the card for input, select line in, disable any boost, using the mixer interface.
+*** Play a tone from a CD player or signal generator, adjust to full scale without distortion or clipping.
+*** Unplug all inputs and measure the noise floor
+*** Sweep a tone from CD player or signal generator, 20 Hz .. 20000 Hz, note the frequency response.
+** Sound card test : http://www.telepostinc.com/soundcards.html
+*** The Syba has a one sample delay on one channel
+** So, following the one channel tone, send an IQ tone from -20K .. +20K
+** Allow attempts to balance from single sample delays and further
+** What source works better?
+   CD with line out seems pretty rarified these days.
+   No MP3 Player I've seen has anything but headphone out, so a bit amped I guess.
+   And I gave all my MP3 players away, so did Mom.
+   No, I still have a cell phone.
+   So play test sources through a cell phone?
+** Bits of resolution testing
+   Send the same signals through and truncate the input signal at different resolutions
+   At some truncation the signal starts to sound worse than it did when played without truncation.
+   That's a bit less than the real resolution of the converter.
+** Two tone testing
+   Send tones separated by different numbers of Hertz at different signal levels.
+   At which level does the stronger tone start to mask the weaker tone.
+** $15.95 AD9850/9851 synthesizer boards do 0-40MHz, hmm.

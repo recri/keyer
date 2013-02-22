@@ -18,6 +18,9 @@
    90 degrees.
 ** And the SDR software will see images.
    Even small imbalances in gain or phase of the IQ channels will produce images.
+* Alex's Rocky
+  synchronously detects images of signals at 30dB or more,
+  then the description breaks down into another process.
 * Youssef's SDR# optimizes away image power
 ** take a buffer of raw samples
 ** repeat:
@@ -51,4 +54,14 @@
    For large mu relative to the magnitude of error signal, the filter blows up.
    For smaller mu's, the filter oscillates from overcorrection.
    As mu gets smaller still, the filter settles down.
-  
+* The current DTTSP source in the ab2kt branch:
+    COMPLEX y;
+    CXBimag(sigbuf, i) += iq->phase * CXBreal(sigbuf, i);
+    CXBreal(sigbuf, i) *= iq->gain;
+    y = Cadd(CXBdata(sigbuf, i), Cmul(iq->w[0], Conjg(CXBdata(sigbuf, i))));
+    iq->w[0] = Csub(Cscl(iq->w[0], 1.0 - iq->mu * 0.000001), Cscl(Cmul(y, y), iq->mu));
+    CXBdata(sigbuf, i) = y;
+** The application of the static phase and gain corrections is not going to expand
+   easily into a simple complex multiplication.  imag += phase * real, real \*= gain.
+** The application of the dynamic phase is not going to resolve easily into a simple
+   phase and gain correction.  sample += w * cconj(sample)

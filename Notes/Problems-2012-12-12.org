@@ -1,3 +1,31 @@
+* Newest plan - 2013-02-17
+**  The basic radio is an overlap save filter
+***  on the front end coverts raw incoming IQ samples from time to frequency domain,
+*** the front end result is used to generate spectrum displays and waterfalls
+**** with some smoothing applied, the overlap save introduces some smoothing in itself
+*** the front end result is used to derive IQ amplitude and phase balance corrections
+**** Adjustment to     
+*** the back end performs the transformations,
+    all of which can be combined into a sparse banded matrix multiplication
+    against the frequency bins.
+**** applies the IQ amplitude and phase balance corrections
+     maybe this isn't so good when projected into the frequency domain, but try it
+**** translates the baseband frequency to a desired offset by rotating the coefficients
+**** decimates the sample rate by linear combination of frequency bin coefficients
+**** bandpass filtering to desired bandwidth within the decimated sample rate
+**** optional application of notch filters in the bandpass
+*** and converts the translated, decimated, band-passed, and notched frequency bins
+    back to the time domain at the reduced sample rate
+*** the agc and detection phases run at the decimated sample rate
+* Newest plan
+** The basic toplevel sdrkit component wrapper needs to start jack if necessary
+** Parts of the component need to work before jack is started
+** Startup component
+*** Poll for usb devices
+*** Poll for alsa devices
+*** Poll for hid devices
+*** Start jack with appropriate devices
+*** Start sdrkit toplevel component with appropriate devices
 * Newest problem list
 ** Stopped working on it and it stopped working.
 ** bin/keyer doesn't create a working keyer
