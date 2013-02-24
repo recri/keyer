@@ -1,0 +1,18 @@
+#!/bin/bash
+##
+## this is the script I use to monitor the qtradio backend
+## and keep it running even though dspserver is more reliable
+## at crashing than running.
+
+while true; do
+    sleep 10
+    case `~/Projects/keyer/bin/qtradio-check-backend | wc -l` in
+	0|1|2)
+	    ~/Projects/keyer/bin/qtradio-kill-backend
+	    sleep 1
+	    ~/Projects/keyer/bin/qtradio-start-backend
+	    ;;
+	*)
+	    ;;
+    esac
+done
