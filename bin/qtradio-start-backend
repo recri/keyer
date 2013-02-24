@@ -22,9 +22,9 @@ HWBUFFER=1024			# hardware buffer
 SI570="--si570"
 IQ="--iq"			# reversed on x-fi usb
 LOG=~/Projects/keyer/logs/`date --rfc-3339=seconds | sed -e 's/ /-/'`
-ADAPTER=1
+ADAPTER=0
 XFI=0
-
+DEBUG=0
 # figure out which radio
 case `usbsoftrock status | grep '^Xtall Freq' | sed -e 's/.*: *//'` in
     114.294666) RADIO=RX;;
@@ -38,6 +38,11 @@ case "$RADIO"-"$SCARD" in
     RX-IOx)
 	echo "detected Ensemble RX with IOx, setting --qi"
 	IQ="--qi";;
+    RX-Dongle)
+	echo "detected Ensemble RX with Syba dongle, rate -> 48000"
+	HWRATE=48000
+	OBRATE=48000
+	;;
 esac
 
 for f in $*; do
@@ -55,6 +60,7 @@ for f in $*; do
 	--hw:3) HWDEV=hw:3;;
 	--si570) SI570=--si570;;
 	--noadapter) ADAPTER=no;;
+	--debug) DEBUG=1;;
 	*)
 	    echo "unknown argument: $f"
 	    exit 1
@@ -73,12 +79,16 @@ fi
 
 echo "jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 -X raw"
 jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 -X raw > $LOG-jackd.log 2>&1 &
+JACKD_PID=$!
 sleep 1
 echo "softrock --jack $SI570 $IQ --samplerate $HWRATE"
-nohup softrock --jack $SI570 $IQ --samplerate $HWRATE > $LOG-softrock.log 2>&1 &
+softrock --jack $SI570 $IQ --samplerate $HWRATE > $LOG-softrock.log 2>&1 &
+SOFTROCK_PID=$!
+
 sleep 1
 echo "dspserver --lo 10000"
-nohup dspserver --lo 10000 > $LOG-dspserver.log 2>&1 &
+dspserver --lo 10000 > $LOG-dspserver.log 2>&1 &
+DSPSERVER_PID=$!
 
 ##
 ## default jackd server: started above
@@ -94,6 +104,16 @@ if [ $ADAPTER -eq 1 ]; then
     echo "jack_load audioadapter -i \"-D -C$OBDEV,0 -P$OBDEV,1 -q 0 -r $OBRATE\""
     jack_load audioadapter -i "-D -C$OBDEV,0 -P$OBDEV,1 -q 0 -r $OBRATE"
 fi
+
+##
+## connect the debugger to the dspserver process
+## requires "continue" to restart running
+##
+if [ $DEBUG -eq 1 ]; then
+    sudo gdb ~/Sources/ghpsdr3-alex/trunk/src/dspserver/dspserver $DSPSERVER_PID
+fi
+
+
 ##
 ## network manager to get midi controls
 ##
