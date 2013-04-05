@@ -1,0 +1,8 @@
+* Here I am thinking of how to make it over again
+** The current structure is failing to operate,
+   it's broken somewhere and I haven't found the problem.
+** It's hard to wire together
+** I want to separate the controllers from the computation
+** I want the details of blocks to disappear from the flow graph
+** There's a conflict between starting up jackd and not starting
+   until you know what you're doing.

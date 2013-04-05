@@ -1,14 +1,14 @@
 #
-# connections draws a collapsable tree for the dsp components
-# in the radio and shows which components are connected
-# it also allows the configuration and controls of each component
-# to be printed to standard output
+# connections draws a collapsable tree for components
+# and shows which components are connected
+# the components and connections are provided by another
+# snit component.
 #
 package provide sdrkit::startup-jconn 1.0
 
 package require Tk
 package require snit
-#package require sdrtcl::jack
+#package require sdrtcl::jack; # this must be deferred
 package require sdrtk::lvtreeview
 package require sdrtk::lcanvas
 
@@ -16,145 +16,63 @@ namespace eval sdrkit {}
 
 snit::type sdrkit::jackconn {
 
+    variable data -array {
+	items {}
+	connections {}
+    }
+
     option -server -readonly yes -default default
 
     constructor {args} {
 	$self configure {*}$args
-    }
-
-    # start
-    proc start {} {
-	uplevel #0 [list package require sdrtcl::jack]
+	set data(items) [dict create]
+	set data(connections) {}
     }
 
     # get the list of port names
     method get-items {} {
-	start
-	set ports [sdrtcl::jack -server $options(-server) list-ports]
-	foreach p $ports {
-	    puts $p
-	}
-	if {0} {
-	    foreach item [$options(-control) part-list] {
-		set enabled [string is true -strict [$options(-control) part-is-enabled $item]]
-		set activated [string is true -strict [$options(-control) part-is-active $item ]]
-		if { ! [dict exists $data(items) $item]} {
-		    set parent [find-parent $item $data(items)]
-		    set name [trim-parent-prefix $parent $item]
-		    dict set data(items) $item [dict create item $item type [$options(-control) part-type $item] parent $parent name $name]
-		    foreach w {lft rgt} {
-			$win.$w insert $parent end -id $item -text $name -tag $item
+	uplevel #0 [list package require sdrtcl::jack]
+	set data(items) [dict create]
+	set data(connections) [list]
+	foreach {p dict} [sdrtcl::jack -server $options(-server) list-ports] {
+	    dict set data(items) $p $dict
+	    switch [dict get $dict direction] {
+		input {
+		    foreach source [dict get $dict connections] {
+			puts "$source connects to $p"
+			lappend data(connections) $source $p
 		    }
 		}
-		dict set data(items) $item enabled $enabled
-		dict set data(items) $item activated $activated
-		#puts "$item enabled=$enabled [$options(-control) ccget $item -enable]"
-		#puts "$item activated=$activated [$options(-control) ccget $item -activate]"
-		if {$activated} {
-		    foreach w {lft rgt} {
-			$win.$w tag configure $item -foreground black -background white
-		    }
-		} elseif {$enabled} {
-		    foreach w {lft rgt} {
-			$win.$w tag configure $item -foreground black -background white
-		    }
-		} else {
-		    foreach w {lft rgt} {
-			$win.$w tag configure $item -foreground grey -background white
-		    }
-		}
-		switch $options(-show) {
-		    port {
-			foreach pname [$self find-ports $item] {
-			    set pitem $item:$pname
-			    if { ! [dict exists $data(items) $pitem]} {
-				set pdict [dict create type port item $item parent $item name $pname]
-				dict set data(items) $pitem $pdict
-				if {[llength [$self find-port-connections-from $pitem]] || [string match *capture* $pname]} {
-				    $win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem]
-				}
-				if {[llength [$self find-port-connections-to $pitem]] || [string match *playback* $pname]} {
-				    $win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem]
-				}
-			    }
-			}
-		    }
-		    active {
-			foreach {pitem pdict} [$self find-active $item $ports] {
-			    if { ! [dict exists $data(items) $pitem]} {
-				set pname [lindex [split $pitem :] 1]
-				dict set pdict item $item
-				dict set pdict parent $item
-				dict set pdict name $pname
-				dict set data(items) $pitem $pdict
-				switch [dict get $pdict direction] {
-				    output { $win.lft insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
-				    input { $win.rgt insert $item end -id $pitem -text $pname -tags [list $item $pitem] }
-				}
-			    }
-			}
-		    }
-		    opt {
-			foreach oname [$self find-opts $item] {
-			    set oitem $item:$oname
-			    dict set data(items) $oitem [dict create type opt item $item parent $item name $oname]
-			    $win.lft insert $item end -id $oitem -text $oname -tags [list $item $oitem]
-			    $win.rgt insert $item end -id $oitem -text $oname -tags [list $item $oitem]
-			}
+		output {
+		    foreach dest [dict get $dict connections] {
+			puts "$p connects to $dest"
+			lappend data(connections) $p $dest
 		    }
 		}
 	    }
 	}
-    }
-
-    # does the item exist
-    method exists-item {item} {
-    }
-
-    # get the dictionary for $item
-    method get-item-dict {item} {
-    }
-
-    # get the value for $value at $item
-    method get-item-value {item value} {
-    }
-
-    # set the value for $value at $item
-    method set-item-value {item value v} {
-    }
-
-    # unset the value for $value at $item
-    method unset-item-value {item value} {
+	return [dict keys $data(items)]
     }
 
     # get the list of connections
     method get-connections {} {
-	set data(connections) {}
-	foreach item [$self get-items] {
-	    set idict [$self get $item]
-	    switch [dict get $idict type] {
-		audio - midi {
-		    if {[dict get $idict direction] eq {output}} {
-			# use the latest list-ports, not the first one
-			foreach o [dict get $ports $item connections] {
-			    lappend data(connections) $item $o
-			}
-		    }
-		}
-		port {
-		    foreach dest [$self find-port-connections-from $item] {
-			lappend data(connections) $item [join $dest :]
-		    }
-		}
-		opt {
-		    foreach dest [$self find-opt-connections $item] {
-			# puts "adding connection $item -> $dest"
-			lappend data(connections) $item [join $dest :]
-		    }
-		}
-	    }
-	}
+	return $data(connections)
     }
+
+    # does the item exist
+    method exists-item {item} { return [dict exists $data(items) $item] }
+
+    # get the dictionary for $item
+    method get-item-dict {item} { return [dict get $data(items) $item] }
+
+    # get the value for $value at $item
+    method get-item-value {item value} { return [dict get $data(items) $item $value] }
+
+    # set the value for $value at $item
+    method set-item-value {item value v} { return [dict set data(items) $item $value $v] }
+
+    # unset the value for $value at $item
+    method unset-item-value {item value} { dict unset data(items) $item $value }
 
     proc find-parent {child items} {
 	set parent {}
@@ -214,7 +132,6 @@ snit::widget sdrkit::startup-jconn {
     option -control -readonly yes
     option -server -readonly yes -default default
     option -defer-ms -default 100
-    option -show -default port -type {snit::enum -values {opt port active}}
     option -filter -default 0 -type snit::boolean
     
     variable data -array {
@@ -234,6 +151,8 @@ snit::widget sdrkit::startup-jconn {
 	install lft using sdrtk::lvtreeview $win.lft -scrollbar left -width 100 -show tree
 	install ctr using sdrtk::lcanvas $win.ctr -width 100
 	install rgt using sdrtk::lvtreeview $win.rgt -scrollbar right -width 100 -show tree
+
+	## this should be an option
 	install jc using sdrkit::jackconn $win.jc -server $options(-server)
 	
 	$ctr bind <Configure> [mymethod defer-update-canvas]
@@ -246,14 +165,16 @@ snit::widget sdrkit::startup-jconn {
 	}
 	
 	grid [ttk::frame $win.top] -row 0 -column 0
-	pack [ttk::label $win.top.l -text "connections of "] -side left
-	pack [ttk::menubutton $win.top.show -textvar [myvar data(show)] -menu $win.top.show.m] -side left
-	menu $win.top.show.m -tearoff no
-	foreach v {opt port active} l {{option value graph} {potential dsp graph} {active dsp graph}}  {
-	    $win.top.show.m add radiobutton -label $l -variable [myvar data(show)] -value $l -command [mymethod do-over $v]
-	    if {$v eq $options(-show)} { set data(show) $l }
+	## all this might be irrelevant
+	if {0} {
+	    pack [ttk::label $win.top.l -text "connections of "] -side left
+	    pack [ttk::menubutton $win.top.show -textvar [myvar data(show)] -menu $win.top.show.m] -side left
+	    menu $win.top.show.m -tearoff no
+	    foreach v {opt port active} l {{option value graph} {potential dsp graph} {active dsp graph}}  {
+		$win.top.show.m add radiobutton -label $l -variable [myvar data(show)] -value $l -command [mymethod do-over $v]
+		if {$v eq $options(-show)} { set data(show) $l }
+	    }
 	}
-	
 	grid $pane -row 1 -column 0 -sticky nsew
 	$pane add $lft -weight 1
 	$pane add $ctr -weight 2
@@ -292,24 +213,6 @@ snit::widget sdrkit::startup-jconn {
 	}
     }
     
-    method do-over {v} {
-	set options(-show) $v
-	foreach item [$jc get-items] {
-	    switch [$jc get-item-value $item type] {
-		ctl - ui - hw - dsp - jack - physical {}
-		port - audio - midi - opt {
-		    if {[$lft exists $item]} { $lft delete $item }
-		    if {[$rgt exists $item]} { $rgt delete $item }
-		    #dict unset data(items) $item
-		}
-		default {
-		    puts "unknown type: [dict get $data(items) $item type]"
-		}
-	    }
-	}
-	$self update
-    }
-    
     method jack-started {} {
 	return [$options(-container) jack-started]
     }
@@ -332,6 +235,12 @@ snit::widget sdrkit::startup-jconn {
 	return $sel
     }
     
+    ##
+    ## the canvas part of the display shows the connections
+    ## which are drawn as splines
+    ## uncertain whether connections to offscreen components
+    ## are drawn or not
+    ##
     method defer-update-canvas {} {
 	if {$data(update-canvas-pending) == 0} {
 	    set data(update-canvas-pending) 1
@@ -378,7 +287,7 @@ snit::widget sdrkit::startup-jconn {
 	    set srgt [$self find-selection rgt]
 	}
 	if {[$self jack-started]} {
-	    foreach {i o} [$self get-connections] {
+	    foreach {i o} [$jc get-connections] {
 		# puts "preparing to draw $i ([dict exists $data(items) $i]) -> $o ([dict exists $data(items) $o])"
 		if {$options(-filter) && [lsearch $slft $i] < 0} continue
 		if {$options(-filter) && [lsearch $srgt $o] < 0} continue

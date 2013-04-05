@@ -28,6 +28,16 @@ package require alsa::device
 package require alsa::pcm
 package require sdrkit::startup-jconn
 
+#
+# we need the component wrapper
+#
+package require sdrkit::component
+
+#
+# create the namespace for the component wrappers
+#
+namespace eval sdrkitv {}
+
 namespace eval sdrkit {}
 
 snit::type sdrkit::startup {
@@ -41,9 +51,9 @@ snit::type sdrkit::startup {
     constructor {args} {
 	$self configure {*}$args
 	pack [ttk::notebook .tab] -fill both -expand true
-	foreach item {usb alsa jack jack-details jack-connections} {
-	    .tab add [$item-panel .tab.$item -container $self] -text $item
-	    $item-update .tab.$item
+	foreach item {usb alsa jack jack-details jack-connections app} {
+	    .tab add [$self $item-panel .tab.$item -container $self] -text $item
+	    $self $item-update .tab.$item
 	}
     }
 
@@ -53,6 +63,10 @@ snit::type sdrkit::startup {
 	foreach {opt val} $args {
 	    set options($opt) $val
 	}
+    }
+
+    method rename-panel {w name} {
+	.tab tab $w -text $name
     }
 
     #
@@ -74,7 +88,7 @@ snit::type sdrkit::startup {
 	0b33:0020 dial
     } 
 
-    proc usb-refresh {} {
+    method usb-refresh {} {
 	set devs {}
 	usb::init
 	foreach d [usb::get_device_list] {
@@ -95,18 +109,18 @@ snit::type sdrkit::startup {
     }
     
     # usb report window
-    proc usb-panel {w args} {
+    method usb-panel {w args} {
 	ttk::frame $w
 	return $w
     }
     
-    proc usb-update {w} {
+    method usb-update {w} {
 	foreach c [pack slaves $w] {
 	    pack forget $c
 	    $c destroy
 	}
 	set i 0
-	foreach c [usb-refresh] {
+	foreach c [$self usb-refresh] {
 	    array set dev $c
 	    incr i
 	    set id [format {%04x:%04x} $dev(idVendor) $dev(idProduct)]
@@ -137,7 +151,7 @@ snit::type sdrkit::startup {
 	{HDA Intel PCH} -
     }
 
-    proc alsa-refresh {} {
+    method alsa-refresh {} {
 	set devs {}
 	foreach {c sname lname} [alsa::device cards] {
 	    set dev [list card $c name $sname longname $lname devs [alsa::device devices $c]]
@@ -147,18 +161,18 @@ snit::type sdrkit::startup {
 	return $devs
     }
     
-    proc alsa-panel {w args} {
+    method alsa-panel {w args} {
 	ttk::frame $w
 	return $w
     }
     
-    proc alsa-update {w} {
+    method alsa-update {w} {
 	foreach c [pack slaves $w] {
 	    pack forget $c
 	    $c destroy
 	}
 	set i 0
-	foreach c [alsa-refresh] {
+	foreach c [$self alsa-refresh] {
 	    array set dev $c
 	    incr i
 	    set l1 [ttk::label $w.x$i -text $dev(card)]
@@ -167,45 +181,45 @@ snit::type sdrkit::startup {
 	}
     }
     
-    proc alsa-device-list {} {
+    method alsa-device-list {} {
 	set devices {}
-	foreach x [alsa-refresh] {
+	foreach x [$self alsa-refresh] {
 	    array set y $x
 	    lappend devices $y(name)
 	}
 	return $devices
     }
 
-    proc alsa-device-primary-default {} {
-	foreach device [alsa-device-list] {
+    method alsa-device-primary-default {} {
+	foreach device [$self alsa-device-list] {
 	    if {[info exists audiodevices1($device)] && $audiodevices1($device) ne {-}} {
 		return $device
 	    }
 	}
-	return [lindex [alsa-device-list] 1]
+	return [lindex [$self alsa-device-list] 1]
     }
-    proc alsa-device-secondary-default {} {
-	foreach device [alsa-device-list] {
+    method  alsa-device-secondary-default {} {
+	foreach device [$self alsa-device-list] {
 	    if {[info exists audiodevices2($device)]} {
 		return $device
 	    }
 	}
-	return [lindex [alsa-device-list] 0]
+	return [lindex [$self alsa-device-list] 0]
     }
 
-    proc alsa-rate-list {} {
+    method alsa-rate-list {} {
 	return {16000 24000 48000 96000 192000}
     }
 
-    proc alsa-rate-default {device} {
+    method alsa-rate-default {device} {
 	if {[info exists audiodevices1($device)]} {
 	    return $audiodevices1($device)
 	}
 	return 96000
     }
 
-    proc alsa-device-for-name {name} {
-	foreach x [alsa-refresh] {
+    method alsa-device-for-name {name} {
+	foreach x [$self alsa-refresh] {
 	    array set y $x
 	    if {$y(name) eq $name} {
 		#puts "matched: $x"
@@ -223,62 +237,70 @@ snit::type sdrkit::startup {
     #
     # provide feedback on server status, overruns, connections, etc 
     #
-    proc jack-control {args} {
+    method jack-control {args} {
 	catch [list exec jack_control {*}$args 2>&1] result
 	return $result
     }
-    proc jack-status {} {
-	return [lindex [split [jack-control status] \n] 1]
+    method jack-status {} {
+	return [lindex [split [$self jack-control status] \n] 1]
     }
 
     method jack-started {} {
-	return [expr {[jack-status] ne {stopped}}]
+	return [expr {[$self jack-status] ne {stopped}}]
     }
 
-    proc jack-start {w} {
+    method jack-start {w} {
 	set cmds [list \
 		      [list jack-control ds alsa] \
-		      [list jack-control dps device [jack-primary-device $w]] \
-		      [list jack-control dps rate [jack-primary-rate $w]] \
+		      [list jack-control dps device [$self jack-primary-device $w]] \
+		      [list jack-control dps rate [$self jack-primary-rate $w]] \
 		      [list jack-control start] \
-		      [list jack-control ips audioadapter device [jack-secondary-device $w]] \
-		      [list jack-control ips audioadapter rate [jack-secondary-rate $w]] \
+		      [list jack-control ips audioadapter device [$self jack-secondary-device $w]] \
+		      [list jack-control ips audioadapter rate [$self jack-secondary-rate $w]] \
 		      [list jack-control iload audioadapter] \
 		     ]
 	foreach cmd $cmds {
-	    puts "$cmd -> [{*}$cmd]"
+	    puts "$cmd -> [$self {*}$cmd]"
 	}
+	$self app-launch [$self sdrkit-app $w]
     }
 
-    proc jack-stop {w} {
-	jack-control iunload audioadapter
-	jack-control stop
+    method jack-stop {w} {
+	$self jack-control iunload audioadapter
+	$self jack-control stop
     }
 
-    proc jack-primary-device {w} { return [alsa-device-for-name [option-menu-selected $w.pam]] }
-    proc jack-primary-rate {w} { return [option-menu-selected $w.prm] }
-    proc jack-secondary-device {w} { return [alsa-device-for-name [option-menu-selected $w.sam]] }
-    proc jack-secondary-rate {w} { return [option-menu-selected $w.srm] }
+    method jack-primary-device {w} { return [$self alsa-device-for-name [option-menu-selected $w.pam]] }
+    method jack-primary-rate {w} { return [option-menu-selected $w.prm] }
+    method jack-secondary-device {w} { return [$self alsa-device-for-name [option-menu-selected $w.sam]] }
+    method jack-secondary-rate {w} { return [option-menu-selected $w.srm] }
 
-    proc jack-panel {w args} {
+    method sdrkit-app-list {} { return {none keyer rx rxtx loopback} }
+    method sdrkit-app-default {} { return {keyer} }
+    method sdrkit-app {w} { return [option-menu-selected $w.a.app] }
+
+    method jack-panel {w args} {
 	upvar #0 $w data
 	ttk::frame $w
-	set primary [alsa-device-primary-default]
-	grid [ttk::label $w.pal -text {primary}] [option-menu $w.pam [alsa-device-list] $primary] \
-	    [ttk::label $w.prl -text {@}] [option-menu $w.prm [alsa-rate-list] [alsa-rate-default $primary]] -sticky ew
-	grid [ttk::label $w.sal -text {secondary}] [option-menu $w.sam [alsa-device-list] [alsa-device-secondary-default]] \
-	    [ttk::label $w.srl -text {@}] [option-menu $w.srm [alsa-rate-list] [alsa-rate-default $primary]] -sticky ew
+	set primary [$self alsa-device-primary-default]
+	grid [ttk::label $w.pal -text {primary}] [option-menu $w.pam [$self alsa-device-list] $primary] \
+	    [ttk::label $w.prl -text {@}] [option-menu $w.prm [$self alsa-rate-list] [$self alsa-rate-default $primary]] -sticky ew
+	grid [ttk::label $w.sal -text {secondary}] [option-menu $w.sam [$self alsa-device-list] [$self alsa-device-secondary-default]] \
+	    [ttk::label $w.srl -text {@}] [option-menu $w.srm [$self alsa-rate-list] [$self alsa-rate-default $primary]] -sticky ew
 	grid [ttk::frame $w.s] -columnspan 4
 	pack [ttk::label $w.s.status -textvar ${w}(status)] -side left
-	pack [ttk::button $w.s.start -text start -command [myproc jack-start $w]] -side left
-	pack [ttk::button $w.s.stop -text stop -command [myproc jack-stop $w]] -side left
-	jack-update-status $w
+	pack [ttk::button $w.s.start -text start -command [mymethod jack-start $w]] -side left
+	pack [ttk::button $w.s.stop -text stop -command [mymethod jack-stop $w]] -side left
+	$self jack-update-status $w
+	grid [ttk::frame $w.a] -columnspan 4
+	pack [ttk::label $w.a.lab -text application] -side left
+	pack [option-menu $w.a.app [$self sdrkit-app-list] [$self sdrkit-app-default]]
 	return $w
     }
 
-    proc jack-update-status {w} {
+    method jack-update-status {w} {
 	upvar #0 $w data
-	set data(status) [jack-status]
+	set data(status) [$self jack-status]
 	if {$data(status) eq {stopped}} {
 	    $w.s.start configure -state normal
 	    $w.s.stop configure -state disabled
@@ -286,32 +308,78 @@ snit::type sdrkit::startup {
 	    $w.s.start configure -state disabled
 	    $w.s.stop configure -state normal
 	}
-	after 100 [myproc jack-update-status $w]
+	after 100 [mymethod jack-update-status $w]
     }
 
-    proc jack-update {w} {
+    method jack-update {w} {
     }
 
     #
     # this should show the additional options necessary
     # to start the jack server as we need it to run
     #
-    proc jack-details-panel {w args} {
+    method jack-details-panel {w args} {
 	ttk::frame $w
 	return $w
     }
-    proc jack-details-update {w} {
+    method jack-details-update {w} {
     }
 
     #
     # this displays the jack clients active
     # and their connections
     #
-    proc jack-connections-panel {w args} {
+    method jack-connections-panel {w args} {
 	startup-jconn $w {*}$args
 	return $w
     }
-    proc jack-connections-update {w} {
+    method jack-connections-update {w} {
+    }
+
+    method app-panel {w args} {
+	set data(app-window) $w
+	set data(app-args) {}
+	foreach {name value} $args {
+	    if {$name in {-container}} {
+		continue
+	    } else {
+		lappend data(app-args) $name $value
+	    }
+	}
+	ttk::frame $w
+	return $w
+    }
+
+    method app-update {w} {
+    }
+    method app-launch {name} {
+	$self rename-panel $data(app-window) $name
+	switch $name {
+	    none { }
+	    keyer {
+		package require sdrkit::$name
+		sdrkit::component ::sdrkitv::$name -window $data(app-window) -name $name -subsidiary sdrkit::$name -subsidiary-opts $data(app-args) -enable true -activate true \
+		    -source system:midi_capture_1 -sink {system:playback_1 system:playback_2}
+	    }
+	    rx {
+		# -rx-source "$RXSOURCE" -rx-sink "$RXSINK" "$@"
+		package require sdrkit::$name
+		sdrkit::component ::sdrkitv::$name -window $data(app-window) -name $name -subsidiary sdrkit::$name -subsidiary-opts $data(app-args) -enable true -activate true \
+		    -rx-source {system:capture_1 system:capture_2} -rx-sink {audio_adapter:playback_1 audio_adapter:playback_2}
+	    }
+	    rxtx {
+		package require sdrkit::$name
+		sdrkit::component ::sdrkitv::$name -window $data(app-window) -name $name -subsidiary sdrkit::$name -subsidiary-opts $data(app-args) -enable true -activate true \
+		    -rx-source {system:capture_1 system:capture_2} -rx-sink {audio_adapter:playback_1 audio_adapter:playback_2} \
+		    -tx-source {system:playback_1 system:playback_2} -rx-sink {audio_adapter:capture_1 audio_adapter:capture_2} \
+	    }
+	    loopback {
+		# -rx-source "$RXSOURCE" -rx-sink "$RXSINK" "$@"
+	    }
+	    default {
+		error "unknown app name $name"
+	    }
+	}
     }
 
 }
