@@ -5,11 +5,11 @@
 ## at crashing than running.
 
 while true; do
-    sleep 10
+    sleep 30
     case `~/Projects/keyer/bin/qtradio-check-backend | wc -l` in
 	0|1|2)
 	    ~/Projects/keyer/bin/qtradio-kill-backend
-	    sleep 1
+	    sleep 30
 	    ~/Projects/keyer/bin/qtradio-start-backend
 	    ;;
 	*)
