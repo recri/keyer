@@ -1,8 +1,173 @@
 * Here I am thinking of how to make it over again
 ** The current structure is failing to operate,
-   it's broken somewhere and I haven't found the problem.
-** It's hard to wire together
+   it's broken somewhere and I haven't found the problem,
+   and trying to find the problem isn't working.
+** It's hard to wire together in general
 ** I want to separate the controllers from the computation
 ** I want the details of blocks to disappear from the flow graph
 ** There's a conflict between starting up jackd and not starting
    until you know what you're doing.
+* So here's the new proposal
+  We're building an SDR software kit.
+** It's something like the Gnu Radio and Gnu Radio Companion, except:
+*** it doesn't require the GRC user interface to build applications
+*** it doesn't require applications to have any user interface at all
+*** but an application can have a user interface before the computational engine is started, too
+*** if an application has a user interface, it can run in the application
+    or it could run on a separate machine remote from the application
+*** the computational engine is not GNU Radio
+**** no version of Boost is required
+**** no version of Qt is required
+**** no version of Wx is required
+**** no version of cmake is required
+**** no version of python is required 
+**** and it doesn't have the mysterious latency issues that GNU Radio
+    seems to have in some reports on the mailing list.
+** But it is like GRC because we assemble SDR applications from blocks
+   and we may make a wire up the blocks UI at some point, we'll see.
+** But it's not like GRC in a lot of ways
+
+** Use tcl-8.6
+*** Use itcl for object abstraction
+    Itcl 4.0 incorporates many aspects of snit,
+    but more importantly it implements inheritance.
+*** Use threads if helpful
+    There is the possibility of starting an interpreter in the Jack process thread
+    and running a channel from the control thread into the process thread.  Would be
+    an extra credit project, and I'm not sure it is worth the effort.
+*** Use channel scripting to implement hairy modems
+    Appears that channels can have stacks of scripts pushed onto them
+    which should be an ideal way to implement the typical HF modem
+    FEC expansion + bit interleaving + bit padding + redundant transmission ->
+    majority voting + bit trimming + bit deinterleaving + FEC contraction
+*** Use the sqlite and tcldb packages for persistent storage
+    We will want to remember resource capabilities, of sound cards in particular,
+    and the apps which particular resource sets want to be used to implement.
+    Then we have all the station/channel/LQA data which ALE wants us to remember.
+*** Might consider using Rust,
+    except it doesn't script
+    and there is no ui.
+** Target a usb key drive install of Ubuntu
+*** Do a clean Ubuntu install onto a USB key drive
+*** Update the install to latest packages
+*** Install git and pull the repo for sdrkit
+*** Hand build packages for things Ubuntu hasn't adopted that we need
+**** jack 
+**** tcl/tk
+*** Or that our users might find useful
+**** gnuradio
+**** QtRadio
+**** dspserver and hardware servers
+**** sdrshell
+*** Build and install sdrkit
+** The goal
+*** A kit of SDR packages that use Jack, Tcl, and C to implement SDR lego.
+*** Application startup discovers available resources for SDR.
+**** Sample source and sink devices.
+**** Control devices.
+**** Radio devices.
+**** Need an API for device discovery so others can add new devices
+*** Or discovers an already operating SDR app with Jack server.
+**** And connect to it, one way or another
+*** Application can run with a UI or without.
+    The UI can attach to a running application, control it, and exit.
+*** UI can attach to an application locally or from a remote system.
+*** Application can run in a single process or in multiple processes.
+    That is, an additional block can start up as a separate process
+    and remain a separate process, or join the existing process.
+*** Application can run on a single processor or distributed over multiple processors.
+    Using Jack network transport or RTP we can connect parts of the application over the network.
+*** Application can implement a single channel single modulation radio.
+    That is, a typical HF radio single channel transceiver.
+*** Application can plug in as many modulators/demodulators as are required.
+    Able to skim multiple CW and digital modes out of pass band
+** In operation a network of blocks is connected
+   via Jack sample streams
+   and Jack midi streams
+   and Tcl control streams
+   other transports are possible,
+   but I'm not interested in implementing them
+*** base band and/or audio samples for DSP travel as Jack sample streams
+*** switching and/or control messages travel as Jack midi streams
+    these are the messages that need to be inside the processing loop
+*** control messages also travel via Tcl
+*** there are input devices which source samples into the system
+*** there are output devices which sink sample from the system
+*** there are controllers and effectors which 
+*** devices and blocks connect to binding posts
+    the binding posts exist whether or not Jack is running
+** But the structure starts much earlier
+   before there is any Jack server
+   and before there are any blocks
+** The block life cycle is
+*** Instantiation
+    Blocks may be instantiated without a Jack server
+**** Configuration
+     Blocks may be configured at instantiation or while instantiated.
+     all configuration options are available in this state.
+     Blocks which need to know Jack server parameters will
+     need to be configured with the correct Jack server to query
+     (The multiple named Jack server feature is incompletely implemented
+     in Jack.)
+**** Connection
+     Connections from blocks are to bus points rather than to other blocks
+*** Activation
+    Blocks begin processing samples and midi events when activated
+    and continue until deactivated
+** Blocks may be connected without a Jack server
+   the connections become Jack connections when activated
+** Blocks have no necessary user interface
+*** block reconfiguration is restricted to that which can legally happen
+    during the Jack process callback, ie no reallocation
+*** block reconfigurations that are too heavy for 
+* Here's the list of possible features
+** Control messages only travel on midi streams
+*** won't work, there needs to be some way to control blocks
+    even before Jack is launched
+*** Okay, so there is the control channel via the widget command, every block
+    establishes a widget command on instantiation, and the command can be called
+    both locally and remotely
+*** The purpose of control via midi is that it happens inside the Jack transport
+    so it can be synchronized with sample processing.
+    I imagine whole filter tap arrays being passed via midi
+**** Better check that the midi transport will deliver them first.
+**** Okay, so prototype a block and try sending it various parameters    
+** Application launches with no Jack server or fixed computation graph
+   can launch with an empty computation graph and accumulate the parts
+   which is what the current builder does, but opaquely.
+** I would say that every block contains a process function
+   which handles sample and midi event processing,
+   but the compound blocks may contain several.
+** Application can start with or without running Jack server
+*** Application can stop running Jack server
+*** Application can start Jack server
+*** If Jack server supports multiple named Jack servers
+   then application could manage and use all of them.
+**
+* Some more kits to build
+**  WB6DHW BPF Kit #20 http://www.qsl.net/k5bcq/Kits/Kits.html,
+    $19 for base kit,
+    $9 for pc board (Option #1),
+    $10 for toroids (Option #2),
+    $10 for SMT inductors (Option #3)
+    $4 for shipping up to 2.
+    Need one for the RXTX after breaking the existing band pass filter,
+    and one for the SR TNG board, and one for each bare Softrock I convert.
+    So get two, one with toroids and one with SMT inductors.
+    Has 3 data lines which select one of 8 BPF.
+** WB6DHW 100W Low Pass Filter Kit http://wb6dhw.com/For_Sale.html#MPLPF, 3" x 7.2"
+   $13 PCB, $85 PCB+parts,
+   I2C decoder included for 7 relay switched low pass filters.
+   Probably a little overengineered for my purposes.
+** No kit yet, but 12V minty double boost.
+   So the minty double boost is plugged into a USB.
+   It draws power from the USB to charge a 12V LiPo battery.
+   It passes the USB data lines onto a USB controller.
+   It draws 5V power for the USB pass through from a second 12V battery.
+   It switches the charging and discharging function between the two 12V
+   batteries, assuming there isn't some clever controller that does this
+   with one battery.  We want to run off battery, but we want to keep the
+   power in the radio clean.
+   The controller is probably the same controller that drives the radio,
+   too, so the data lines don't actually pass through to any where, they
+   get interpreted and implemented by the controller.

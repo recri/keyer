@@ -1,4 +1,10 @@
 * Ascii/Iambic morse keyer (and more) using Jack audio connection kit.
+  -----------
+  This project is broken and undergoing its third or fourth redesign.
+  None of the applications work.  Nothing to see here, move along.
+
+  Working plan can be found in Notes/revision.org.
+  -----------
   This is a morse code keyer consisting of Jack Audio Connection Kit
   plugins, a Teensyduino hardware interface, and a variety of
   additional Tcl hosted SDR tools for testing and playing with them.
