@@ -1,4 +1,4 @@
-* Here I am thinking of how to make it over again
+* Here I am, April, 2013, thinking of how to make it over again
 ** The current structure is failing to operate,
    it's broken somewhere and I haven't found the problem,
    and trying to find the problem isn't working.
@@ -9,7 +9,7 @@
    until you know what you're doing.
 * So here's the new proposal
   We're building an SDR software kit.
-** It's something like the Gnu Radio and Gnu Radio Companion, except:
+** Not like the Gnu Radio and Gnu Radio Companion because:
 *** it doesn't require the GRC user interface to build applications
 *** it doesn't require applications to have any user interface at all
 *** but an application can have a user interface before the computational engine is started, too
@@ -23,11 +23,11 @@
 **** no version of python is required 
 **** and it doesn't have the mysterious latency issues that GNU Radio
     seems to have in some reports on the mailing list.
-** But it is like GRC because we assemble SDR applications from blocks
+** But like GRC because we assemble SDR applications from blocks
    and we may make a wire up the blocks UI at some point, we'll see.
 ** But it's not like GRC in a lot of ways
-
-** Use tcl-8.6
+* Positive characteristics
+** Using tcl-8.6 as the scripting layer.
 *** Use itcl for object abstraction
     Itcl 4.0 incorporates many aspects of snit,
     but more importantly it implements inheritance.
@@ -45,8 +45,11 @@
     and the apps which particular resource sets want to be used to implement.
     Then we have all the station/channel/LQA data which ALE wants us to remember.
 *** Might consider using Rust,
-    except it doesn't script
-    and there is no ui.
+    except it doesn't script and there is no ui support.
+** Reuse the existing sdrtcl extensions
+   but redo them with a new life cycle
+*** Extensions load without activation.
+*** They do not need to connect to the jack server until activated.
 ** Target a usb key drive install of Ubuntu
 *** Do a clean Ubuntu install onto a USB key drive
 *** Update the install to latest packages
@@ -59,6 +62,8 @@
 **** QtRadio
 **** dspserver and hardware servers
 **** sdrshell
+**** chirp
+**** whatever else is useful as stand alone amateur radio software
 *** Build and install sdrkit
 ** The goal
 *** A kit of SDR packages that use Jack, Tcl, and C to implement SDR lego.
@@ -159,15 +164,54 @@
    $13 PCB, $85 PCB+parts,
    I2C decoder included for 7 relay switched low pass filters.
    Probably a little overengineered for my purposes.
-** No kit yet, but 12V minty double boost.
-   So the minty double boost is plugged into a USB.
-   It draws power from the USB to charge a 12V LiPo battery.
-   It passes the USB data lines onto a USB controller.
-   It draws 5V power for the USB pass through from a second 12V battery.
-   It switches the charging and discharging function between the two 12V
-   batteries, assuming there isn't some clever controller that does this
-   with one battery.  We want to run off battery, but we want to keep the
-   power in the radio clean.
-   The controller is probably the same controller that drives the radio,
-   too, so the data lines don't actually pass through to any where, they
-   get interpreted and implemented by the controller.
+** No kit yet, but 12V rechargeable battery.
+*** Want a 12V battery to drive the Softrock Ensemble RxTx, but want to recharge it
+    from the 5V USB power.
+*** There's nothing apparently tricky about a LiPo charger that charges multiple
+    batteries in series.  Apply the charging voltage and control the charging current,
+    the same current will flow through each of the cells in series.  The current needs
+    to be controlled, and any microprocessor can do the job.
+    Or so it is claimed in
+    http://electronics.stackexchange.com/questions/34566/charging-a-12-6v-3slipo-from-5v-usb-or-similar-voltage
+    but that appears to be only partially tr
+*** Well, actually it is tricky, at least for the high C batteries used in RC applications, they all use
+    balancing chargers that push charging current through a string of batteries in series while monitoring
+    each of the cells in the string to maintain balance.  If balance is lost, then one of the cells can run
+    away and a fire or explosion could result.
+*** This is the first appendix to the RxTx then, the new controller, the stm32f4 or teensy 3.0, sitting on a 3S
+    LiPo stack (3 LiPo batteries hooked up in series), with USB power logic to pull the necessary current to
+    recharge the stack after boosting the USB voltage to the 3S voltage, with current sensing to avoid a melt
+    down, with a 5V wall wart charging capacity for fast recharge, and enough filtering to keep the switching
+    frequencies out of the radio.  I'm thinking the Adafruit or Sparkfun JST connected LiPo's, so three JST
+    jacks and no particular battery box, there will just be three identical cells,
+    3 x https://www.sparkfun.com/products/8483 so 2000mAh at $16.95
+*** Aha, eevblog.com has a series on a battery powered lab supply, uSupply, now using a rechargeable battery and USB charging.
+    It's been through multiple revisions but the last version looks like it's going to happen.
+    He's using a 5Ah LiPo which gets charged off the USB power.
+    The USB power goes through a DC-DC isolator before going into a single LiPo charger IC.
+    The battery powers a 2.5V AVR chip that controls everything.
+    USB serial goes through an FTDI USB-Serial chip to the AVR Serial interface.
+    The AVR monitors several PSU values via ADC and generates a few voltages with PWM.
+    The rest of the pins are dedicated to various bench supply user interface functions.
+    I would leave most of the user interface off and program the AVR over a serial or i2c interface
+    or replace the AVR with part of my own MCU.
+    But the uSupply has a switching boost regulator which is probably going to make it unsuitable for use with
+    a sensitive radio receiver.
+*** Bunnie's open hardware laptop
+    has a battery/power controller which uses a bunch of TI chips to manage a two, three, or four cell LiPo
+    battery pack.  It wants to have an 18-24V power brick to supply the charger.  It does balanced charging
+    on RC battery packs.
+*** So, suppose you took a 3S RC battery pack
+    The main current wiring goes from the bottom of the first cell to the top of the third cell going through
+    all three cells in series.
+    The balance wiring has four wires, top and bottom of the string and at the junctions between the cells,
+    so it can connect to the top and bottom of any of the three cells.
+    I presume that the balance charger drives a charging current through all three cells, senses the state of each
+    cell, and adds additional current to any cell that is lagging the string.
+    Suppose you took a single cell battery charger running off USB power and switched it between the three cells in the string.
+    Let the time spent with each cell be proportional to the charge required by the cell.
+    This would balance charge the string, would it not?
+    Now, can you do that while drawing power from the string?
+    This would only require a 2 pole N throw switch for an N cell series string
+    to move the charger from cell to cell.  
+    The one of 8 fet bus switches should be able to do it, but they may not handle the current.

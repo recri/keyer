@@ -1,0 +1,137 @@
+#!/usr/bin/wish8.5
+
+#
+# for the moment, the dssdr is just a firmata application
+# so it uses the standard firmata Arduino application and
+# simply twiddles bits remotely and fools with the I2C bus.
+#
+
+#
+# show inputs and outputs of Teensy
+# manipulate outputs
+# talk to Si570
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+lappend auto_path [file join [file dirname $script] .. lib]
+
+package require Tk
+package require si570
+package require tfirmata
+
+#
+# old     input-specs {PTT_OUT 16 KEY_RGT 15 KEY_LFT 14 DC_PLUG 12}
+# old	  output-specs {LED 13 PTT_IN 17}
+# old PTT_IN = A3 = 17 (input to SR63ng, output from Teensy)
+# old PTT_OUT = A2 = 16 (output from SR63ng, input to Teensy)
+# old KEY_RGT = A1 = 15 (from stereo jack, pullup)
+# old KEY_LFT = A0 = 14 (from stereo jack, pullup)
+# old LED = = 13
+# old 18 19 twi
+# old     input-specs {PTT_OUT 15 KEY_RGT 13 KEY_LFT 14 DC_PLUG 17}
+# old	input-specs {PTT_OUT 15 KEY_RGT 20 KEY_LFT 14 DC_PLUG 17}
+# old	output-specs {PTT_IN 16}
+#
+array set data {
+    specs {
+	in KEY_RGT 0 1
+	in KEY_LFT 1 1
+	in PTT_OUT 2 0
+	in DC_PLUG 4 1
+	out PTT_IN 3 0
+    }
+}
+
+proc main {argv} {
+    global data
+
+    # board config and callback commands
+    set data(bd) [tfirmata::open /dev/ttyACM0]
+    
+    puts "tfirmata::open returned $data(bd)"
+    puts "version = [$data(bd) version]"
+    puts "state = [$data(bd) state all]"
+
+    # SCL = A5 = 19
+    # SDA = A4 = 18
+
+    $data(bd) dcommand updateGuiInputs
+    $data(bd) acommand updateGuiAnalogs
+    $data(bd) period 100
+    $data(bd) dstream 0 1 2 3 4 on
+    
+    set row -1
+    foreach {mode name pin val} $data(specs) {
+	lappend data($mode-pins) $pin
+	$data(bd) mode $pin $mode
+	$data(bd) dset $pin $val
+	set data($pin) $val
+	switch $mode {
+	    in {
+		grid [ttk::labelframe .p$pin -text "in: $name"] -column 0 -row [incr row]
+		pack [ttk::label .p$pin.label -textvar data($pin)]
+	    }
+	    out {
+		grid [ttk::labelframe .p$pin -text "out: $name"] -column 0 -row [incr row]
+		pack [ttk::checkbutton .p$pin.button -textvar data($pin) -command [list updateToggleOutput $pin]]
+	    }
+	}
+    }
+    set row -1
+    foreach {reg name fields} {
+	7 {High Speed/N1 Dividers} {7:5 HS_DIV[2:0] 4:0 N1[6:2]} 
+	8 {Reference Frequency} {7:6 N1[1:0] 5:0 RFREQ[37:32]}
+	9 {Reference Frequency} {7:0 RFREQ[31:24]}
+	10 {Reference Frequency} {7:0 RFREQ[23:16]}
+	11 {Reference Frequency} {7:0 RFREQ[15:8]}
+	12 {Reference Frequency} {7:0 RFREQ[7:0]}
+	13 {High Speed/N1 Dividers} {7:5 HS_DIV_7PPM[2:0] 4:0 N1_7PPM[6:2]}
+	14 {Reference Frequency} {7:6 N1_7PPM[1:0] 5:0 RFREQ_7PPM[37:32]}
+	15 {Reference Frequency} {7:0 RFREQ_7PPM[31:24]}
+	16 {Reference Frequency} {7:0 RFREQ_7PPM[23:16]}
+	17 {Reference Frequency} {7:0 RFREQ_7PPM[15:8]}
+	18 {Reference Frequency} {7:0 RFREQ_7PPM[7:0]}
+	135 {Reset/Freeze/Memory Control} {7 RST_REG 6 NewFreq 5 {Freeze M} 4 {Freeze VCADC}  0 RECALL}
+	137 {Freeze DCO} {4 {Freeze DCO}}
+    } {
+	grid [ttk::labelframe .reg$reg -text "$reg: $name"] -column 1 -row [incr row]
+	pack [ttk::label .reg$reg.label -text $fields]
+    }
+    
+    # case DS_SI570_FREEZE_DCO:
+    # i2c_put(0x55, 137, i2c_get(0x55, 137) | 0x10);
+    # sysExEncodeString("ok", obuff+3);
+    # break;
+    # case DS_SI570_UNFREEZE_DCO: /*  */
+    # i2c_put(0x55, 137, i2c_get(0x55, 137) & ~0x10);
+    # sysExEncodeString("ok", obuff+3);
+    # break;
+    # case DS_SI570_NEW_FREQ: /*  */
+    # i2c_put(0x55, 135, i2c_get(0x55, 135) | 0x40);
+    # while (i2c_get(0x55, 135) & 0x40);
+    # sysExEncodeString("ok", obuff+3);
+    # break;
+    # case MIDIKEYER_SI570_RECALL_F0: /*  */
+    # i2c_put(0x55, 135, i2c_get(0x55, 135) | 0x01);
+    # while (i2c_get(0x55, 135) & 0x01);
+    # sysExEncodeString("ok", obuff+3);
+    # break;
+
+}
+
+proc updateToggleOutput {pin} {
+    global data
+    set v [expr {$data($pin)^1}]
+    $data(bd) dset $pin $v
+    set data($pin) $v
+}
+
+proc updateGuiInputs {args} {
+    global data
+    foreach pin $data(in-pins) { set data($pin) [$data(bd) dget $pin] }
+}
+
+proc updateGuiAnalogs {args} {
+    puts "updateGuiAnalogs $args"
+}
+
+main $argv
