@@ -1,0 +1,11 @@
+--2013-05-15 08:58:02--  http://www.joshharrison.net/oblique-strategies/
+Resolving www.joshharrison.net (www.joshharrison.net)... 67.222.107.188
+Connecting to www.joshharrison.net (www.joshharrison.net)|67.222.107.188|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 2347 (2.3K) [text/html]
+Saving to: ‘index.html.2’
+
+     0K ..                                                    100% 91.3M=0s
+
+2013-05-15 08:58:02 (91.3 MB/s) - ‘index.html.2’ saved [2347/2347]
+

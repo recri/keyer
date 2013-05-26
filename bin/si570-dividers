@@ -1,0 +1,47 @@
+#!/usr/bin/tclsh
+
+set DCO_MIN 4850.0;		# MHz
+set DCO_MAX 5620.0;		# MHz
+set XTAL 114.285;		# MHz, more or less
+
+proc frange {divider} {
+    #puts "fmin (divider = $divider) = [expr {$::DCO_MIN/$divider}] MHz"
+    #puts "fmax (divider = $divider) = [expr {$::DCO_MAX/$divider}] MHz"
+    return [format {%.3f %.3f} [expr {$::DCO_MIN/$divider}] [expr {$::DCO_MAX/$divider}]]
+}
+
+puts "RFREQ_MIN = [expr {$DCO_MIN/$XTAL}]"
+puts "RFREQ_MAX = [expr {$DCO_MAX/$XTAL}]"
+puts "f (divider = 4) [frange 4] MHz"
+puts "f (divider = 1408) [frange 1408] MHz"
+exit 0
+foreach hs_div {4 5 6 7 9 11} {
+    for {set n1 0} {$n1 < 128} {incr n1} {
+	set d [expr {$hs_div*($n1+1)}]
+	lappend divider($d) [list $hs_div $n1]
+	incr combos
+    }
+}
+
+# 548 dividers
+# range 4 .. 1408
+# maximum 1408
+#puts [array size divider]
+foreach d [lsort -integer [array names divider]] {
+    # incr alts([llength $divider($d)])
+    # puts "$d [llength $divider($d)]"
+    lassign [frange $d] lo hi
+    lassign [format {%.3f %.3f} [expr {$lo/4}] [expr {$hi/4}]] lo4 hi4
+    lassign [format {%.3f %.3f} [expr {$lo/16}] [expr {$hi/16}]] lo16 hi16
+    puts "divider $d range $lo $hi MHz, range/4 $lo4 $hi4, range/16 $lo16 $hi16"
+}
+
+# 382 with one factoring
+# 119 with two factorings
+# 40 with three factorings
+# 7 with four factorings
+#foreach a [lsort -integer [array names alts]] {
+#    puts "$a -> $alts($a)"
+#}
+
+
