@@ -59,6 +59,7 @@ proc tfirmata::open {port} {
         # message callbacks
         variable digitalCallback ""
         variable analogCallback ""
+	variable freqCountCallback ""
 
         # twi callbacks, stored in a dict, where keys are TWI device address,
         # values are a list of dicts, where each dict specifies the callback
@@ -106,9 +107,10 @@ proc tfirmata::subCmd {cmd args} {
     if {$subCmd == ""} {
         error "no tfirmata sub command provided"
     }
-    if {$subCmd ni {mode dstream astream dget dset aget aset version state \
+    if {$subCmd ni {mode dstream astream dget dset aget aset version state 
             amapping errors dcommand acommand period servolimits twiconfig 
-            twiget twiset close}} {
+            twiget twiset close
+	    freqcount fcommand}} {
         error "unknown tfirmata subcommand '$subCmd'"
     }
     set command $cmd
@@ -193,8 +195,7 @@ proc tfirmata::dstream {args} {
 		puts "$port - [expr {$port > [getNumPorts]}] = $port > [getNumPorts] = getNumPorts"
                 error "invalid port '$port'"
             }
-            puts -nonewline [set [ns]::fd] \
-                    [binary format cc [expr 0xd0 + $port] $en] 
+            puts -nonewline [set [ns]::fd] [binary format cc [expr 0xd0 + $port] $en] 
             flush [set [ns]::fd]
         }
     }
@@ -231,8 +232,7 @@ proc tfirmata::astream {args} {
             if {![dict exists [set [ns]::analogMapping] $pin]} {
                 error "invalid analog pin '$pin'"
             }
-            puts -nonewline [set [ns]::fd] \
-                    [binary format cc [expr 0xc0 + $pin] $en] 
+            puts -nonewline [set [ns]::fd] [binary format cc [expr 0xc0 + $pin] $en] 
             flush [set [ns]::fd]
         }
     }
@@ -280,8 +280,7 @@ proc tfirmata::dset {args} {
         set v [lindex [set [ns]::digitalOuts] $port]
         set ls [expr {$v & 0x7f}]
         set ms [expr {($v >> 7) & 0x7f}]
-        puts -nonewline [set [ns]::fd] \
-                [binary format ccc [expr 0x90 + $port] $ls $ms]
+        puts -nonewline [set [ns]::fd] [binary format ccc [expr 0x90 + $port] $ls $ms]
         flush [set [ns]::fd]
     }
 }
@@ -303,8 +302,7 @@ proc tfirmata::aset {args} {
     foreach {pin val} $args {
         set lsb [expr {$val & 0x7f}]
         set msb [expr {($val >> 7) & 0x7f}]
-        puts -nonewline [set [ns]::fd] \
-                [binary format H2H2cccH2 f0 6f $pin $lsb $msb f7] 
+        puts -nonewline [set [ns]::fd] [binary format H2H2cccH2 f0 6f $pin $lsb $msb f7] 
         flush [set [ns]::fd]
     }
 }
@@ -368,8 +366,7 @@ proc tfirmata::period {ms} {
     if {[string is integer $ms] && $ms >= 0 && $ms <= 0x3fff} {
         set lsb [expr {$ms & 0x7f}]
         set msb [expr {($ms >> 8) & 0x7f}]
-        puts -nonewline [set [ns]::fd] \
-                [binary format H2H2ccH2 f0 7a $lsb $msb f7] 
+        puts -nonewline [set [ns]::fd] [binary format H2H2ccH2 f0 7a $lsb $msb f7] 
         flush [set [ns]::fd]
     } else {
         error "analog sampling period should be between 0 and 0x3fff"
@@ -417,17 +414,16 @@ proc tfirmata::servolimits {args} {
             }
             set min [lindex $limits 0]
             set max [lindex $limits 1]
-            if {![string is integer $min] || $min < 0 || $min > 0x3fff || \
-                    ![string is integer $max] || $max < 0 || $max > 0x3fff || \
-                    $min >= $max} {
+            if {![string is integer $min] || $min < 0 || $min > 0x3fff || 
+		![string is integer $max] || $max < 0 || $max > 0x3fff ||
+		$min >= $max} {
                 error "invalid servolimits limits"
             }
             set minLsb [expr {$min & 0x7f}]
             set minMsb [expr {($min >> 7) & 0x7f}]
             set maxLsb [expr {$max & 0x7f}]
             set maxMsb [expr {($max >> 7) & 0x7f}]
-            puts -nonewline [set [ns]::fd] [binary format H2H2cccccH2 f0 70 \
-                    $pin $minLsb $minMsb $maxLsb $maxMsb f7] 
+            puts -nonewline [set [ns]::fd] [binary format H2H2cccccH2 f0 70 $pin $minLsb $minMsb $maxLsb $maxMsb f7] 
             flush [set [ns]::fd]
         }
     }
@@ -465,7 +461,7 @@ proc tfirmata::twiget {args} {
             }
             set repeat 1
         } elseif {$arg == "-stop"} {
-            if {$i != 0 || [llength $args] != 2]} {
+            if {$i != 0 || [llength $args] != 2} {
                 error "twiget arguments error"
             }
             set address [lindex $args 1]
@@ -476,8 +472,7 @@ proc tfirmata::twiget {args} {
             # send message to arduino to clear read
             set bytes [decompose $address]
             lset bytes 1 0x18
-            puts -nonewline [set [ns]::fd] [binary format \
-                    H2H2ccH2 f0 76 {*}$bytes f7]
+            puts -nonewline [set [ns]::fd] [binary format H2H2ccH2 f0 76 {*}$bytes f7]
             flush [set [ns]::fd]
 
             dict unset [ns]::twiCallbacks $address
@@ -520,8 +515,7 @@ proc tfirmata::twiget {args} {
         if {$entriesIndex != -1} {
             deleteTwiCallback $twiAddr $entriesIndex
         }
-        set d [dict create twiControl $twiControl \
-                numBytes $numTwiReadBytes repeat $repeat code $code]
+        set d [dict create twiControl $twiControl numBytes $numTwiReadBytes repeat $repeat code $code]
         addTwiCallback $twiAddr $d
     }
 
@@ -532,8 +526,7 @@ proc tfirmata::twiget {args} {
     } else {
         lset bytes 1 0x08
     }
-    puts -nonewline [set [ns]::fd] [binary format \
-            H2H2[string repeat c [llength $bytes]]H2 f0 76 {*}$bytes f7]
+    puts -nonewline [set [ns]::fd] [binary format H2H2[string repeat c [llength $bytes]]H2 f0 76 {*}$bytes f7]
     flush [set [ns]::fd]
 
     # block for response from arduino if no TWI callback provided
@@ -556,21 +549,81 @@ proc tfirmata::twiget {args} {
 # perform write message on TWI
 proc tfirmata::twiset {args} {
     if {[llength $args] < 2} {
-        error "twiget arguments error"
+        error "twiset arguments error"
     }
     set twiAddr [lindex $args 0]
     if {![string is integer $twiAddr] || $twiAddr < 0 || $twiAddr > 0x7f} {
-        error "twiget address error"
+        error "twiset address error"
     }
     foreach arg [lrange $args 1 end] {
         if {![string is integer $arg] || $arg < 0 || $arg > 0xff} {
-            error "twiget bytes error"
+            error "twiset bytes error"
         }
     }
     set data [decompose {*}$args]
-    puts -nonewline [set [ns]::fd] [binary format \
-            H2H2[string repeat c [llength $data]]H2 f0 76 {*}$data f7]
+    puts -nonewline [set [ns]::fd] [binary format H2H2[string repeat c [llength $data]]H2 f0 76 {*}$data f7]
     flush [set [ns]::fd]
+}
+
+# get the frequency counter
+proc tfirmata::freqcount {args} {
+    if {[llength $args] < 2} {
+	error "freqcount arguments error"
+    }
+    set pin [lindex $args 0]
+    if {![string is integer $pin] || $pin < 0 || $pin > 33} {
+	error "freqcount pin error"
+    }
+    set gate [lindex $args 1]
+    if {![string is integer $gate] || $gate < 10 || $gate > 250} {
+	error "freqcount gate error"
+    }
+    set data [decompose {*}$args]
+    puts -nonewline [set [ns]::fd] [binary format H2H2[string repeat c [llength $data]]H2 f0 00 {*}$data f7]
+    flush [set [ns]::fd]
+}
+
+proc tfirmata::fcommand {cmd} {
+    set [ns]::freqCountCallback $cmd
+}
+
+# parses buf for SysEx frequency counter reply message.
+# Returns -1 if format error, 0 if not enough bytes in buf,
+# or number of bytes consumed if successfully parsed
+proc tfirmata::parseFreqCountMsg {buf} {
+    # 2 for sysex, 2 for freqCountResponse, 16 for count, 2 for end sysex
+    if {[string length $buf] < 22} {
+        return 0
+    }
+    set bytes [list]
+    set i 4
+    while {1} {
+        if {$i + 2 > [string length $buf]} {
+            return 0 
+        }
+        if {[string range $buf $i $i+1] == "f7"} {
+            break
+        }
+        if {$i + 4 > [string length $buf]} {
+            return 0 
+        }
+        set ls [expr 0x[string range $buf $i $i+1]]
+        set ms [expr 0x[string range $buf $i+2 $i+3]]
+        if {$ls & 0x80 || $ms & 0x80} {
+            return -1
+        }
+        lappend bytes [expr {$ms << 7 | $ls}]
+        incr i 4
+    }
+    if {[llength $bytes] != 4} {
+	return -1
+    }
+    lassign $bytes b0 b1 b2 b3
+    set count [expr {($b0<<24)|($b1<<16)|($b2<<8)|$b3}]
+    if {[set [ns]::freqCountCallback] != ""} {
+        uplevel #0 [list [set [ns]::freqCountCallback] $count]
+    } 
+    return [incr i 2]
 }
 
 # get number of receive errors
@@ -611,8 +664,7 @@ proc tfirmata::parseSerialReadData {fd} {
                 return
             }
             set b [expr 0x[string range $rxBuf 0 1]]
-            if {$b == 0xf9 || ($b >=0x90 && $b <= 0x9f) || \
-                    ($b >= 0xe0 && $b <= 0xef) || $b == 0xf0} {
+            if {$b == 0xf9 || ($b >=0x90 && $b <= 0x9f) || ($b >= 0xe0 && $b <= 0xef) || $b == 0xf0} {
                 break
             } else {
                 set rxBuf [string range $rxBuf 2 end]
@@ -646,6 +698,8 @@ proc tfirmata::parseSerialReadData {fd} {
                 set rv [parsePinStateMsg $rxBuf]
             } elseif {$b == 0x77} {
                 set rv [parseTwiMsg $rxBuf]
+	    } elseif {$b == 0x01} {
+		set rv [parseFreqCountMsg $rxBuf]
             } else {
                 set rv 0
             }

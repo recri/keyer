@@ -142,11 +142,13 @@ snit::widgetadaptor sdrtk::dial {
     method Button-release {w} { puts "Button-release $w" }
 
     method Thumb-press {w x y} {
+	#puts "Thumb-press $w $x $y"
 	set data(phi-press) [expr {atan2($y-$data(yc),$x-$data(xc))}]
 	set data(turn-resid) 0
     }
 
     method Thumb-motion {w x y} {
+	#puts "Thumb-motion $w $x $y"
 	set phi0 $data(phi-press)
 	set data(phi-press) [expr {atan2($y-$data(yc),$x-$data(xc))}]
 	set data(turn-resid) [expr {($data(phi-press)-$phi0)/$data(step)+$data(turn-resid)}]
@@ -162,7 +164,8 @@ snit::widgetadaptor sdrtk::dial {
 	}
     }
 
-    method rotate {steps} {
+    method Rotate {steps} {
+	#puts "Rotate $steps"
 	## rotate thumb
 	set dphi [expr {$data(step)*$steps}]
 	## get current thumb coordinates
@@ -177,8 +180,8 @@ snit::widgetadaptor sdrtk::dial {
 	## set current thumb coordinates
 	$hull coords thumb $x1 $y1 [expr {$x1+$x}] [expr {$y1+$y}]
     }
-
-    method position {step} {
+    
+    method Position {step} {
 	set data(phi) [expr {$data(step)*$step}]
 	set w [winfo width $win]
 	set h [winfo height $win]
@@ -189,23 +192,23 @@ snit::widgetadaptor sdrtk::dial {
 	set thumb [list $xc $yc [expr {$xc+$tl*cos($data(phi))}] [expr {$yc+$tl*sin($data(phi))}]]
 	$hull coords thumb $thumb
     }
-
+    
     method Window-configure {w h} {
 	#puts "ui-dial window-configure $w $h"
 	set r  [expr {min($w,$h)/2.0}];				# radius of space available
 	set xc [expr {$w/2.0}];					# center of space available
 	set yc [expr {$h/2.0}];					# center of space available
 	set dr [expr {$r*$options(-radius)/100.0}];		# dial radius
-
+	
 	set br [expr {$r*$options(-button-radius)/100.0}]
-
+	
 	set tl [expr {$r*$options(-thumb-length)/100.0}];	# thumb length
-
+	
 	set gr [expr {$r*$options(-graticule-radius)/100.0}];	# graticule radius
 	set dial [list [expr {$xc-$dr}] [expr {$yc-$dr}] [expr {$xc+$dr}] [expr {$yc+$dr}]]
 	set button [list [expr {$xc-$br}] [expr {$yc-$br}] [expr {$xc+$br}] [expr {$yc+$br}]]
 	set thumb [list $xc $yc [expr {$xc+$tl*cos($data(phi))}] [expr {$yc+$tl*sin($data(phi))}]]
-
+	
 	if {$options(-graticule) <= 0} {
 	    set graticule [list $xc $yc $xc $yc]
 	    set mask [list $xc $yc $xc $yc]

@@ -1,14 +1,14 @@
-#!/usr/bin/wish8.5
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
 
 #
-# for the moment, the dssdr is just a firmata application
+# for the moment, the dssdr is a firmata application
 # so it uses the standard firmata Arduino application and
 # simply twiddles bits remotely and fools with the I2C bus.
 #
 
 #
-# show inputs and outputs of Teensy
-# manipulate outputs
+# show inputs and outputs of Teensy and manipulate outputs
 # talk to Si570
 #
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
@@ -18,20 +18,10 @@ package require Tk
 package require si570
 package require tfirmata
 
-#
-# old     input-specs {PTT_OUT 16 KEY_RGT 15 KEY_LFT 14 DC_PLUG 12}
-# old	  output-specs {LED 13 PTT_IN 17}
-# old PTT_IN = A3 = 17 (input to SR63ng, output from Teensy)
-# old PTT_OUT = A2 = 16 (output from SR63ng, input to Teensy)
-# old KEY_RGT = A1 = 15 (from stereo jack, pullup)
-# old KEY_LFT = A0 = 14 (from stereo jack, pullup)
-# old LED = = 13
-# old 18 19 twi
-# old     input-specs {PTT_OUT 15 KEY_RGT 13 KEY_LFT 14 DC_PLUG 17}
-# old	input-specs {PTT_OUT 15 KEY_RGT 20 KEY_LFT 14 DC_PLUG 17}
-# old	output-specs {PTT_IN 16}
-#
 array set data {
+    in-pins {}
+    getfreq-instance 0
+    setfreq-instance 0
     specs {
 	in KEY_RGT 0 1
 	in KEY_LFT 1 1
@@ -39,45 +29,13 @@ array set data {
 	in DC_PLUG 4 1
 	out PTT_IN 3 0
     }
-}
-
-proc main {argv} {
-    global data
-
-    # board config and callback commands
-    set data(bd) [tfirmata::open /dev/ttyACM0]
-    
-    puts "tfirmata::open returned $data(bd)"
-    puts "version = [$data(bd) version]"
-    puts "state = [$data(bd) state all]"
-
-    # SCL = A5 = 19
-    # SDA = A4 = 18
-
-    $data(bd) dcommand updateGuiInputs
-    $data(bd) acommand updateGuiAnalogs
-    $data(bd) period 100
-    $data(bd) dstream 0 1 2 3 4 on
-    
-    set row -1
-    foreach {mode name pin val} $data(specs) {
-	lappend data($mode-pins) $pin
-	$data(bd) mode $pin $mode
-	$data(bd) dset $pin $val
-	set data($pin) $val
-	switch $mode {
-	    in {
-		grid [ttk::labelframe .p$pin -text "in: $name"] -column 0 -row [incr row]
-		pack [ttk::label .p$pin.label -textvar data($pin)]
-	    }
-	    out {
-		grid [ttk::labelframe .p$pin -text "out: $name"] -column 0 -row [incr row]
-		pack [ttk::checkbutton .p$pin.button -textvar data($pin) -command [list updateToggleOutput $pin]]
-	    }
-	}
+    freqs {
+	calibrate startup 0.75 1.25 2.5 3.5 5.0 7.0 10.0 14.0 15.0 18.068 20.0 getfreq getregs
     }
-    set row -1
-    foreach {reg name fields} {
+    dfreqs {
+	-3200 -1600 -800 -400 -200 -100 -50 +50 +100 +200 +400 +800 +1600 +3200
+    }
+    si570regs {
 	7 {High Speed/N1 Dividers} {7:5 HS_DIV[2:0] 4:0 N1[6:2]} 
 	8 {Reference Frequency} {7:6 N1[1:0] 5:0 RFREQ[37:32]}
 	9 {Reference Frequency} {7:0 RFREQ[31:24]}
@@ -92,30 +50,232 @@ proc main {argv} {
 	18 {Reference Frequency} {7:0 RFREQ_7PPM[7:0]}
 	135 {Reset/Freeze/Memory Control} {7 RST_REG 6 NewFreq 5 {Freeze M} 4 {Freeze VCADC}  0 RECALL}
 	137 {Freeze DCO} {4 {Freeze DCO}}
-    } {
-	grid [ttk::labelframe .reg$reg -text "$reg: $name"] -column 1 -row [incr row]
-	pack [ttk::label .reg$reg.label -text $fields]
     }
-    
-    # case DS_SI570_FREEZE_DCO:
-    # i2c_put(0x55, 137, i2c_get(0x55, 137) | 0x10);
-    # sysExEncodeString("ok", obuff+3);
-    # break;
-    # case DS_SI570_UNFREEZE_DCO: /*  */
-    # i2c_put(0x55, 137, i2c_get(0x55, 137) & ~0x10);
-    # sysExEncodeString("ok", obuff+3);
-    # break;
-    # case DS_SI570_NEW_FREQ: /*  */
-    # i2c_put(0x55, 135, i2c_get(0x55, 135) | 0x40);
-    # while (i2c_get(0x55, 135) & 0x40);
-    # sysExEncodeString("ok", obuff+3);
-    # break;
-    # case MIDIKEYER_SI570_RECALL_F0: /*  */
-    # i2c_put(0x55, 135, i2c_get(0x55, 135) | 0x01);
-    # while (i2c_get(0x55, 135) & 0x01);
-    # sysExEncodeString("ok", obuff+3);
-    # break;
+    display-freq {7 076 000}
+    display-if-offset-kHz 10
+    display-setfreq {7 066 000}
+    display-getfreq {7 066 000}
+}
 
+set data(si570_i2c_addr) $si570::I2C_ADDR
+set data(si570_startup_freq) $si570::STARTUP_FREQ
+set data(si570_xtal_freq) $si570::XTAL_FREQ
+set data(si570_divider) 4
+set data(si570_min_dco) $::si570::DCO_LOW
+set data(si570_max_dco) $::si570::DCO_HIGH
+
+proc exit-if-dot {w} {
+    if {$w eq {.}} {
+	global data
+	if {[info exists data(bd)]} {
+	    tfirmata::close
+	}
+	exit 0
+    }
+}
+
+proc radio-panel {w} {
+    ttk::frame $w
+    global data
+
+    set r 0
+    grid [ttk::label $w.f -width 10 -font {fixed 20} -anchor e -textvar data(display-freq)] -column 1 -row $r -sticky ew
+    grid [ttk::label $w.fhz -width 2 -font {fixed 20} -anchor e -text Hz] -column 2 -row $r -sticky ew 
+    incr r
+    grid [ttk::label $w.ifl -text {if freq} -font {fixed 10}] -column 0 -row $r -sticky e
+    grid [ttk::spinbox $w.if -width 3 -font {fixed 10} -textvar data(display-if-offset-kHz) -from -100 -to 100] -column 1 -row $r -sticky e
+    grid [ttk::label $w.ifhz -width 2 -font {fixed 10} -anchor e -text kHz] -column 2 -row $r -sticky ew 
+    incr r
+    grid [ttk::label $w.sfl -text {set freq} -font {fixed 10}] -column 0 -row $r -sticky e
+    grid [ttk::label $w.sf -width 10 -font {fixed 10} -anchor e -textvar data(display-setfreq)] -column 1 -row $r -sticky ew
+    grid [ttk::label $w.sfhz -width 2 -font {fixed 10} -anchor e -text Hz] -column 2 -row $r -sticky ew 
+    incr r
+    grid [ttk::label $w.gfl -text {get freq} -font {fixed 10}] -column 0 -row $r -sticky e
+    grid [ttk::label $w.gf -width 10 -font {fixed 10} -anchor e -textvar data(display-getfreq)] -column 1 -row $r -sticky ew
+    grid [ttk::label $w.gfhz -width 2 -font {fixed 10} -anchor e -text Hz] -column 2 -row $r -sticky ew 
+    incr r
+    grid [ttk::label $w.fcl -text {counted} -font {fixed 10}] -column 0 -row $r -sticky e
+    grid [ttk::label $w.fc -width 10 -font {fixed 10} -anchor e -textvar data(display-counted)] -column 1 -row $r -sticky ew
+    grid [ttk::label $w.fchz -width 2 -font {fixed 10} -anchor e -text Hz] -column 2 -row $r -sticky ew 
+    incr r
+    grid [ttk::frame $w.tune$r] -columnspan 3 -row $r
+    set t -1
+    foreach {d l} {-500 -500 -100 -100 -50 -50 50 +50 100 +100 500 +500} {
+	grid [ttk::button $w.tune$r.b[incr t] -text $l -width 5 -command [list setdfreq-hz $d]] -row $r -column $t
+    }
+    incr r
+    grid [ttk::frame $w.tune$r] -columnspan 3 -row $r
+    set t -1
+    foreach {d l} {-10e3 -10k -5e3 -5k -1e3 -1k 1e3 +1k 5e3 +5k 10e3 +10k} {
+	grid [ttk::button $w.tune$r.b[incr t] -text $l -width 5 -command [list setdfreq-hz $d]] -row $r -column $t
+    }
+    incr r
+    grid [ttk::frame $w.tune$r] -columnspan 3 -row $r
+    set t -1
+    foreach {d l} {-5e6 -5M -1e6 -1M -500e3 -500k 500e3 +500k 1e6 +1M 5e6 +5M} {
+	grid [ttk::button $w.tune$r.b[incr t] -text $l -width 5 -command [list setdfreq-hz $d]] -row $r -column $t
+    }
+    incr r
+    grid [ttk::frame $w.tune$r] -columnspan 3 -row $r
+    foreach c {calibrate count wink} {
+	pack [ttk::button $w.tune$r.$c -text $c -command [list $c]] -side left
+    }
+    incr r
+    grid [canvas $w.pan -height 64 -bg black -xscrollcommand [list $w.xpan set]] -columnspan 3 -row $r -sticky ew
+    foreach p {2 3 4 5 6 7 8} {	# powers of 10
+	foreach d {1 2 3 4 5 6 7 8 9} {
+	    set f [expr {$d*pow(10.0, $p)}]
+	    if {$f < 1000} {
+		set s [expr {int($f)}]
+		set u "Hz"
+	    } elseif {$f < 1e6} {
+		set s [expr {int($f/1000)}]
+		set u "kHz"
+	    } elseif {$f < 1e9} {
+		set s [expr {int($f/1e6)}]
+		set u "MHz"
+	    } else {
+		set s [expr {int($f/1e9)}]
+		set u "GHz"
+	    }
+	    set y [expr {log($f)}]
+	    #puts "$s $u $y"
+	}
+    }
+    incr r
+    grid [ttk::scrollbar $w.xpan -orient horizontal -command [list $w.pan xview]] -columnspan 3 -row $r -sticky ew
+
+    return $w
+}
+
+proc tune-panel {w} {
+    ttk::frame $w
+    global data
+
+    set firstrow 1
+    set col 0
+    set row $firstrow
+    set win 0
+
+    foreach f $data(freqs) {
+	set wf $w.f[incr win]
+	grid [ttk::frame $wf] -column $col -row $row -sticky ew
+	switch $f {
+	    startup {
+		pack [ttk::button $wf.button -text "tune startup" -command [list setstartup]] -fill x
+	    }
+	    calibrate {
+		pack [ttk::button $wf.button -text "calibrate" -command [list calibrate]] -fill x
+	    }
+	    getfreq {
+		pack [ttk::button $wf.button -text "get freq" -command [list getfreq]] -fill x
+	    }
+	    getregs {
+		pack [ttk::button $wf.button -text "get regs" -command [list getregs]] -fill x
+	    }
+	    default {
+		pack [ttk::button $wf.button -text "tune $f MHz" -command [list setfreq $f]] -fill x
+	    }
+	}
+	incr row
+    }
+
+    set col 1
+    set row $firstrow
+
+    foreach f $data(dfreqs) {
+	set wf $w.f[incr win]
+	grid [ttk::frame $wf] -column $col -row $row -sticky ew
+	pack [ttk::button $wf.button -text "tune $f ppm" -command [list setdfreq-ppm $f]] -fill x
+	incr row
+    }
+
+    return $w
+}
+
+proc pin-panel {w} {
+    ttk::frame $w
+    global data
+    foreach {mode name pin val} $data(specs) {
+	lappend data($mode-pins) $pin
+	$data(bd) mode $pin $mode
+	$data(bd) dset $pin $val
+	set data($pin) $val
+	grid [ttk::frame $w.p$pin] -sticky ew
+	pack [ttk::label $w.p$pin.label -text "$mode: $name"] -side left
+	switch $mode {
+	    in {
+		pack [ttk::label $w.p$pin.value -textvar data($pin)] -side right -fill x
+	    }
+	    out {
+		pack [ttk::checkbutton $w.p$pin.button -textvar data($pin) -command [list updateToggleOutput $pin]] -side right -fill x
+	    }
+	}
+    }
+    return $w
+}
+
+proc extender-panel {w} {
+    ttk::frame $w
+    global data
+    if {0} {
+	foreach val {0x1111 0x2222 0x4444 0x8888} {
+	    set w .v[incr win]
+	    grid [ttk::frame $w] -column $col -row $row -sticky ew
+	    pack [ttk::button $w.button -text "setpins $val" -command [list setpins $val]] -fill x
+	    incr row
+	}
+    }
+    if {0} {
+	set w .v[incr win]
+	grid [ttk::frame $w] -column $col -row $row -sticky ew
+	pack [ttk::button $w.button -text "getpins" -command [list getpins]] -fill x
+	incr row
+
+	set w .v[incr win]
+	grid [ttk::frame $w] -column $col -row $row -sticky ew
+	pack [ttk::button $w.button -text "probe 0x12" -command [list probe 0x12]] -fill x
+	incr row
+    }
+
+    return $w
+}
+
+proc main {argv} {
+    global data
+
+    bind . <Destroy> [list exit-if-dot %W]
+    # board config and callback commands
+    set data(bd) [tfirmata::open /dev/ttyACM0]
+    
+    #puts "tfirmata::open returned $data(bd)"
+    #puts "version = [$data(bd) version]"
+    #puts "state = [$data(bd) state all]"
+
+    # SCL = A5 = 19
+    # SDA = A4 = 18
+
+    $data(bd) dcommand updateGuiInputs
+    $data(bd) acommand updateGuiAnalogs
+    $data(bd) period 100
+    $data(bd) dstream 0 1 2 3 4 on
+    $data(bd) mode 13 out 0 in
+    $data(bd) twiconfig
+    
+    pack [ttk::notebook .nb] -fill both -expand true
+    foreach {c w t} {
+	radio-panel r Radio
+	tune-panel t Tuning
+	pin-panel p Pins
+	extender-panel e Extender
+    } {
+	.nb add [$c .nb.$w] -text $t
+    }
+
+    #foreach {reg name fields} $data(si570regs {
+	#grid [ttk::labelframe .reg$reg -text "$reg: $name"] -column 1 -row [incr row]
+	#pack [ttk::label .reg$reg.label -text $fields]
+    #}
 }
 
 proc updateToggleOutput {pin} {
@@ -132,6 +292,214 @@ proc updateGuiInputs {args} {
 
 proc updateGuiAnalogs {args} {
     puts "updateGuiAnalogs $args"
+}
+
+##
+## si570 fun and games
+##
+proc si570_i2c_addr {} { return $::data(si570_i2c_addr) }
+proc si570_xtal_freq {} { return $::data(si570_xtal_freq) }
+proc si570_startup_freq {} { return $::data(si570_startup_freq) }
+proc si570_divider {} { return $::data(si570_divider) }
+proc si570_min_dco {} { return $::data(si570_min_dco) }
+proc si570_max_dco {} { return $::data(si570_max_dco) }
+
+proc si570_freeze_dco {} { tfirmata::twiset $si570::I2C_ADDR 137 0x10 }
+proc si570_unfreeze_dco {} { tfirmata::twiset $si570::I2C_ADDR 137 0x00 }
+proc si570_new_freq {} { tfirmata::twiset $si570::I2C_ADDR 135 0x40 }
+proc si570_is_changing {} { return [expr {([tfirmata::twiget $si570::I2C_ADDR 135 1] & 0x40) != 0}] }
+proc si570_freeze_m {} { tfirmata::twiset $si570::I2C_ADDR 135 0x20 }
+proc si570_unfreeze_m {} { tfirmata::twiset $si570::I2C_ADDR 135 0x00 }
+proc si570_recall {} { tfirmata::twiset $si570::I2C_ADDR 135 1 }
+proc si570_is_recalling {} { return [expr {([tfirmata::twiget $si570::I2C_ADDR 135 1] & 1) != 0}] }
+proc si570_get_regs {} { return [tfirmata::twiget $si570::I2C_ADDR 7 6] }
+proc si570_put_regs {regs} { tfirmata::twiset $si570::I2C_ADDR 7 {*}$regs }
+
+proc format-freq {Hz} {
+    switch [string length $Hz] {
+	1 - 2 - 3 { return $Hz }
+	4 - 5 - 6 { return "[string range $Hz 0 end-3] [string range $Hz end-2 end]" }
+	7 - 8 - 9 { return "[string range $Hz 0 end-6] [string range $Hz end-5 end-3] [string range $Hz end-2 end]" }
+	default { error "cannot format-freq $Hz with [string length $Hz] digits" }
+    }
+}
+proc unformat-freq {freq} { return [regsub -all { } $freq {}] }
+proc set-display-freq {Hz} { set ::data(display-freq) [format-freq $Hz] }
+proc get-display-freq {} { return [unformat-freq $::data(display-freq)] }
+proc set-display-getfreq {Hz} { set ::data(display-getfreq) [format-freq $Hz] }
+proc get-display-getfreq {} { return [unformat-freq $::data(display-getfreq)] }
+proc set-display-setfreq {Hz} { set ::data(display-setfreq) [format-freq $Hz] }
+proc get-display-setfreq {} { return [unformat-freq $::data(display-setfreq)] }
+proc set-display-counted {Hz} { set ::data(display-counted) [format-freq $Hz] }
+proc get-display-counted {Hz} { return [unformat-freq $::data(display-counted)] }
+
+proc calibrate {} {
+    global data
+    # reset the si570 to startup frequency
+    si570_recall
+    # wait for the reset to take
+    while {[si570_is_recalling]} { after 1 }
+    # read the registers
+    set regs [si570_get_regs] 
+    # calculate the trimmed crystal frequency
+    # save the correction for future reference
+    set data(si570_xtal_freq) [si570::calculate_xtal $regs $si570::STARTUP_FREQ]
+    puts "calibrated xtal $data(si570_xtal_freq) versus $si570::XTAL_FREQ"
+}
+
+proc setstartup {} {
+    puts "setstartup"
+    si570_recall
+    while {[si570_is_recalling]} { after 1 }
+}
+
+proc setregs {MHz i vars mode} {
+    # set freq [si570::calculate_frequency $regs $xtal]
+    set-display-setfreq [expr {int(1e6*[format %.6f $MHz])}]
+    set-display-freq [expr {[get-display-setfreq]+$::data(display-if-offset-kHz)*1000}]
+    set regs [si570::variables_to_registers $vars]
+    switch $mode {
+	fast {
+	    # 10 usec with no glitch, 3500ppm
+	    si570_freeze_m
+	    si570_put_regs $regs
+	    si570_unfreeze_m
+	}
+	slow {
+	    # 10 msec with glitch while dco frozen
+	    si570_freeze_dco
+	    si570_put_regs $regs
+	    si570_unfreeze_dco
+	    si570_new_freq
+	    # while {[si570_is_changing]} { puts si570_is_changing; after 1 }
+	}
+    }
+    puts "setfreq $i $mode {$regs} {$vars} $MHz"
+    getfreq
+}
+
+proc setfreq {MHz {mode {}}} {
+    global data
+    set f [expr {$data(si570_divider)*$MHz}]
+    set i [incr data(setfreq-instance)]
+    set xtal [si570_xtal_freq]
+    set vars0 [si570::registers_to_variables [si570_get_regs]]
+    set divider [si570::calculate_divider $vars0]
+    set dco [expr {$f*$divider}]
+    if {$dco >= [si570_min_dco] && $dco <= [si570_max_dco]} {
+	# this frequency change can be accommodated by changing rfreq
+	# possibly requiring multiple hops of fast tuning
+	# get the current variables
+	lassign $vars0 hs_div n1 rf0 p0
+	set rf [expr {$dco/$xtal}]
+	for {set ppm [expr {1e6*abs($rf-$rf0)/$rf0}]} {$ppm > 3500} {set ppm [expr {1e6*abs($rf-$rf0)/$rf0}]} {
+	    if {$rf < $rf0} {
+		set rf0 [expr {$rf0-3500e-6*$rf0}]
+	    } else {
+		set rf0 [expr {$rf0+3500e-6*$rf0}]
+	    }
+	    set vars0 [list $hs_div $n1 $rf0]
+	    set MHz0 [expr {[si570::calculate_frequency $vars0 $xtal]/$data(si570_divider)}]
+	    setregs $MHz0 $i $vars0 fast
+	}
+	setregs $MHz $i [list $hs_div $n1 $rf] fast
+    } else {
+	# this frequency change requires divider reprogramming
+	set data(solutions) [si570::find_solutions $f $xtal]
+	if {[llength $data(solutions)] == 0} { error "unable to calculate registers for $MHz" }
+	setregs $MHz $i [si570::choose_solution $data(solutions)] slow
+    }
+}
+
+proc setdfreq-hz {hz} {
+    setfreq [expr {([get-display-setfreq]+$hz)/1.0e6}]
+}
+
+proc setdfreq-ppm {ppm} {
+    set xtal [si570_xtal_freq]
+    set regs [si570_get_regs]
+    set freq [expr {[si570::calculate_frequency $regs $xtal]/4.0}]
+    set ifreq [expr {int($freq*1e6)}]
+    if {abs($ifreq-[get-display-getfreq]) > 1} {
+	puts "setdfreq-ppm $ifreq vs [get-display-getfreq]"
+	set regs2 [si570_get_regs]
+	puts "setdfreq-ppm $regs vs $regs2"
+    }
+    set dfreq [expr {$freq*double($ppm)*1e-6}]
+    set nfreq [expr {$freq+$dfreq}]
+    puts "setdfreq-ppm got $regs => $freq += $dfreq -> $nfreq"
+    setfreq $nfreq fast
+}
+
+proc getfreq {} {
+    global data
+    set i [incr data(getfreq-instance)]
+    #puts "getfreq-$i"
+    set xtal [si570_xtal_freq]
+    #puts "getfreq-$i got xtal $xtal"
+    set regs [si570_get_regs]
+    #puts "getfreq-$i got regs $regs"
+    set vars [si570::registers_to_variables $regs]
+    #puts "getfreq-$i got vars $vars"
+    set prop [si570::variables_to_proportion {*}$vars $xtal]
+    #puts "getfreq-$i got prop $prop"
+    set freq [expr {[si570::calculate_frequency $regs $xtal]/4.0}]
+    #puts "getfreq-$i got freq $freq"
+    set-display-getfreq [expr {int(1e6*[format %.6f $freq])}]
+    puts "getfreq $i {$regs} {$vars} $prop $freq"
+}
+
+proc getregs {} {
+    # puts "getregs   0..7: [tfirmata::twiget $si570::I2C_ADDR 0 7]"
+    puts "getregs  7..12: [tfirmata::twiget $si570::I2C_ADDR 7 6]"
+    # puts "getregs 13..18: [tfirmata::twiget $si570::I2C_ADDR 13 6]"
+    puts "getregs 135: [tfirmata::twiget $si570::I2C_ADDR 135 1] 137: [tfirmata::twiget $si570::I2C_ADDR 137 1]"
+}
+
+proc count {} {
+    tfirmata::fcommand [list ::countresult]
+    tfirmata::freqcount 0 100
+}
+
+proc ::countresult {args} {
+    puts "countresult $args"
+    #puts "tfirmata::freqcount 0 100 returned {$::data(fc)}"
+    #if {$::data(fc) ne {}} {
+    #set-display-counted [expr {10*$::data(fc)}]
+    #}
+}
+
+proc wink {} {
+    after 1 [list wink-led 100 0 00000101010111000001010101110000010101011100000]
+}
+proc wink-led {clk state program} {
+    set newstate [string index $program 0]
+    set newprogram [string range $program 1 end]
+    if {$state != $newstate} {
+	tfirmata::dset 13 $newstate
+    }
+    if {$newprogram ne {}} {
+	after $clk [list wink-led $clk $newstate $newprogram]
+    }
+}
+
+##
+## pcf8575 manipulation
+##
+proc setpins {vals} {
+    puts "setpins $vals -> [tfirmata::twiset 0x20 [expr {$vals&255}] [expr {($vals>>8)&255}]]"
+}
+
+proc getpins {} {
+    puts "getpins -> [format {%02x%02x} {*}[tfirmata::twiget 0x20 2]]"
+}
+
+proc getpinsresult {args} {
+    puts "getpinsresult $args"
+}
+
+proc probe {addr} {
+    puts "probe $addr -> [tfirmata::twiset $addr]"
 }
 
 main $argv

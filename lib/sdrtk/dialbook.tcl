@@ -224,8 +224,8 @@ snit::widget sdrtk::dialbook {
     ##
     ##
     method Adjust {step} {
-	# puts "$self Adjust $step"
-	$dial rotate $step
+	#puts "$self Adjust $step"
+	$dial Rotate $step
 	if {$data(menu)} {
 	    
 	} else {
