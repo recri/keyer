@@ -24,8 +24,7 @@ package require sdrkit::startup-alsa
 package require sdrkit::startup-jack
 package require sdrkit::startup-usb
 package require sdrtk::vtext
-package require sdrtcl::midi-tap
-package require sdrtcl::midi-insert
+package require sdrtcl::midi
 package require sdrtcl::jack-client
 package require sdrutil::util
 
@@ -180,7 +179,7 @@ proc log-cmds args {
 }
 
 proc poll-midi-in {} {
-    foreach event [midi-in get] {
+    foreach event [midi get] {
 	puts $event
     }
     set ::data(midi-in-poll) [after 100 poll-midi-in]
@@ -191,22 +190,18 @@ proc jackchanged {cmd} {
     switch $cmd {
 	start {
 	    log-cmds {jack-client register} \
-		{midi-in register} \
-		{midi-in activate} \
-		{midi-in start} \
-		{midi-out register} \
-		{midi-out activate} \
-		{jack-client connect system:midi_capture_1 midi-in:midi_in} \
-		{jack-client connect midi-out:midi_out system:midi_playback_1}
+		{midi register} \
+		{midi activate} \
+		{midi start} \
+		{jack-client connect system:midi_capture_1 dssdr:midi_in} \
+		{jack-client connect dssdr:midi_out system:midi_playback_1}
 	    set data(midi-in-poll) [after 100 poll-midi-in]
 	}
 	stop {
 	    catch {after cancel $::data(midi-in-poll)}
-	    log-cmds {midi-in stop} \
-		{midi-in deactivate} \
-		{midi-in deregister} \
-		{midi-out deactivate} \
-		{midi-out deregister} \
+	    log-cmds {midi stop} \
+		{midi deactivate} \
+		{midi deregister} \
 		{jack-client deregister}
 	}
     }
@@ -223,6 +218,5 @@ set data(jack) [sdrkit::startup-jack ::myjack -alsa $data(alsa) -onchange jackch
 .t add [sdrtk::vtext .t.l -scrollbar right -width 20] -text log
 
 log-cmds {sdrtcl::jack-client jack-client} \
-    {sdrtcl::midi-tap midi-in} \
-    {sdrtcl::midi-insert midi-out}
+    {sdrtcl::midi midi -client dssdr}
     
