@@ -56,7 +56,7 @@ snit::type sdrkit::startup-jack {
     # provide feedback on server status, overruns, connections, etc 
     #
     method control {args} {
-	catch [list exec jack_control {*}$args 2>&1] result
+	catch [list exec jack_control {*}$args 2>@1] result
 	return $result
     }
     method status {} {
