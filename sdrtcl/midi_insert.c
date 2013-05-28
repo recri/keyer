@@ -21,6 +21,7 @@
 */
 
 #define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_VERSION 2
 
 #include "framework.h"
 #include "../dspmath/midi_buffer.h"

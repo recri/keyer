@@ -24,5 +24,5 @@ all-clean:: clean
 	rm -f pkgIndex.tcl
 
 pkgIndex.tcl: $(wildcard *.so) $(filter-out pkgIndex.tcl, $(wildcard *.tcl))
-	echo 'pkg_mkIndex .' | tclsh
+	echo 'pkg_mkIndex .' | tclsh8.6
 

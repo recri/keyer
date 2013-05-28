@@ -16,11 +16,17 @@ package provide sdrkit::dial 1.0.0
 
 package require Tk
 package require snit
-package require sdrkit::common-component
 package require sdrtk::dialbook
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
+package require sdrkit::startup-alsa
+package require sdrkit::startup-jack
+package require sdrkit::startup-usb
+package require sdrtk::vtext
+package require sdrtcl::midi-tap
+package require sdrtcl::midi-insert
+package require sdrtcl::jack-client
 package require sdrutil::util
 
 namespace eval sdrkit {}
@@ -109,7 +115,7 @@ snit::widget sdrkit::dial {
 	    -lo-tune-rate { $self configure $opt $val }
 	}
 	if {$options(-command) ne {}} {
-	    $options(-command) set $opt $val
+	    $options(-command) $win.dial set $opt $val
 	}
     }
 }
@@ -122,16 +128,16 @@ array set data {
 
 }
 
-proc dcommand {args} {
+proc dcommand {w cmd opt val} {
     # puts "dcommand $args"
-    lassign $args cmd opt val
+    # lassign $args cmd opt val
     switch -- $cmd {
 	set {
 	    switch -- $opt {
 		-freq {
-		    set fc [expr {$val-[.d.dial.lo-freq cget -value]}]
-		    set fu [expr {$fc / [.d.dial.harmonic cget -value]}]
-		    set fo [expr {$fu * [.d.dial.divider cget -value]}]
+		    set fc [expr {$val-[$w.lo-freq cget -value]}]
+		    set fu [expr {$fc / [$w.harmonic cget -value]}]
+		    set fo [expr {$fu * [$w.divider cget -value]}]
 		    puts "tune $fo to get $val"
 		}
 		-tuner {
@@ -142,4 +148,81 @@ proc dcommand {args} {
     }
 }
 
-pack [sdrkit::dial .d -command dcommand] -side top -fill both
+#
+# present an option menu
+#
+proc option-menu {w options defopt} {
+    upvar #0 $w data
+    set data(options) $options
+    set data(selected) $defopt
+    ttk::menubutton $w -textvar ${w}(selected) -menu $w.m
+    menu $w.m -tearoff no
+    foreach option $options {
+	$w.m add radiobutton -label $option -value $option -variable ${w}(selected)
+    }
+    return $w
+}
+proc option-menu-selected {w} {
+    upvar #0 $w data
+    return $data(selected)
+}
+
+
+proc log {msg} {
+    # puts "[clock format [clock seconds]] $msg"
+    .t.l insert end "[clock format [clock seconds]] $msg\n"
+}
+
+proc log-cmds args {
+    foreach cmd $args {
+	log "$cmd -> [{*}$cmd]"
+    }
+}
+
+proc poll-midi-in {} {
+    foreach event [midi-in get] {
+	puts $event
+    }
+    set ::data(midi-in-poll) [after 100 poll-midi-in]
+}
+
+proc jackchanged {cmd} {
+    # puts "jackchanged $cmd"
+    switch $cmd {
+	start {
+	    log-cmds {jack-client register} \
+		{midi-in register} \
+		{midi-in activate} \
+		{midi-in start} \
+		{midi-out register} \
+		{midi-out activate} \
+		{jack-client connect system:midi_capture_1 midi-in:midi_in} \
+		{jack-client connect midi-out:midi_out system:midi_playback_1}
+	    set data(midi-in-poll) [after 100 poll-midi-in]
+	}
+	stop {
+	    catch {after cancel $::data(midi-in-poll)}
+	    log-cmds {midi-in stop} \
+		{midi-in deactivate} \
+		{midi-in deregister} \
+		{midi-out deactivate} \
+		{midi-out deregister} \
+		{jack-client deregister}
+	}
+    }
+}
+
+pack [ttk::notebook .t] -side top -fill both -expand true
+.t add [sdrkit::dial .t.d -command dcommand] -text dial
+set data(usb) [sdrkit::startup-usb ::myusb]
+set data(alsa) [sdrkit::startup-alsa ::myalsa]
+set data(jack) [sdrkit::startup-jack ::myjack -alsa $data(alsa) -onchange jackchanged]
+.t add [$data(jack) panel .t.j -onchange jackchanged] -text jack
+.t add [$data(alsa) panel .t.a] -text alsa
+.t add [$data(usb) panel .t.u] -text usb
+.t add [sdrtk::vtext .t.l -scrollbar right -width 20] -text log
+
+log-cmds {sdrtcl::jack-client jack-client} \
+    {sdrtcl::midi-tap midi-in} \
+    {sdrtcl::midi-insert midi-out}
+    

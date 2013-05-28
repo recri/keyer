@@ -1,5 +1,5 @@
-CFLAGS=-std=c99 -g -O3 -I/usr/include/tcl8.5 -DUSE_TCL_STUBS 
-CPPFLAGS= -g -O3 -I/usr/include/tcl8.5 -DUSE_TCL_STUBS 
+CFLAGS=-std=c99 -g -O3 -I/usr/include/tcl8.6 -DUSE_TCL_STUBS 
+CPPFLAGS= -g -O3 -I/usr/include/tcl8.6 -DUSE_TCL_STUBS 
 
 JACK_CFLAGS=$(shell pkg-config --cflags jack)
 ALSA_CFLAGS=$(shell pkg-config --cflags alsa)
@@ -18,7 +18,7 @@ OSCZD_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_zd_
 FIR_BPF_C_CFLAGS=-DFILTER_BAND_PASS -DFILTER_COMPLEX
 FIR_LPF_R_CFLAGS=-DFILTER_LOW_PASS -DFILTER_REAL
 
-LIBS=-ltclstub8.5 -lm
+LIBS=-ltclstub8.6 -lm
 JACK_LIBS=$(shell pkg-config --libs jack)
 JACKSERVER_LIBS=-ljackserver
 ALSA_LIBS=$(shell pkg-config --libs alsa)
