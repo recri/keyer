@@ -23,6 +23,7 @@
 package provide sdrkit::startup-jack 1.0.0
 
 package require snit
+package require dbus-jack
 
 snit::type sdrkit::startup-jack {
 
@@ -34,9 +35,9 @@ snit::type sdrkit::startup-jack {
 
     option -alsa {}
 
-    option -primary-device {}
+    option -primary-card {}
     option -primary-rate {}
-    option -secondary-device {}
+    option -secondary-card {}
     option -secondary-rate {}
     option -duplex false
     option -onchange {}
@@ -55,55 +56,44 @@ snit::type sdrkit::startup-jack {
     #
     # provide feedback on server status, overruns, connections, etc 
     #
-    method control {args} {
-	catch [list exec jack_control {*}$args 2>@1] result
-	return $result
-    }
-    method status {} {
-	return [lindex [split [$self control status] \n] 1]
-    }
 
-    method started {} {
-	return [expr {[$self status] ne {stopped}}]
-    }
+    method status {} { return [expr {[$self started]?"started":"stopped"}] }
+    method started {} { return [dbus-jack::is-started] }
 
     method start {w} {
-	set options(-primary-device) [$self alsa-device-for-name [option-menu-selected $w.pam]]
+	set options(-primary-card) [option-menu-selected $w.pam]
 	set options(-primary-rate) [option-menu-selected $w.prm]
-	set options(-secondary-device) [$self alsa-device-for-name [option-menu-selected $w.sam]]
+	set options(-secondary-card) [option-menu-selected $w.sam]
 	set options(-secondary-rate) [option-menu-selected $w.srm]
-	set cmds [list \
-		      [list control ds alsa] \
-		      [list control dps device $options(-primary-device)] \
-		      [list control dps capture $options(-primary-device)] \
-		      [list control dps playback $options(-primary-device)] \
-		      [list control dps rate $options(-primary-rate)] \
-		      [list control start] \
-		      [list control ips audioadapter device $options(-secondary-device)] \
-		      [list control ips audioadapter rate $options(-secondary-rate)] \
-		      [list control iload audioadapter] \
-		     ]
-	foreach cmd $cmds { log "$cmd ->\n\t[$self {*}$cmd]" }
-	if {$options(-onchange) ne {}} {
-	    $options(-onchange) start
-	}
+	dbus-jack::set-driver alsa
+	dbus-jack::set-driver-param device $options(-primary-card)
+	dbus-jack::set-driver-param capture $options(-primary-card)
+	dbus-jack::set-driver-param playback $options(-primary-card)
+	dbus-jack::set-driver-param rate $options(-primary-rate)
+	dbus-jack::set-driver-param midi-driver raw
+	dbus-jack::set-internal-param {internals audioadapter} device $options(-secondary-card)
+	dbus-jack::set-internal-param {internals audioadapter} capture $options(-secondary-card)
+	dbus-jack::set-internal-param {internals audioadapter} playback $options(-secondary-card)
+	dbus-jack::set-internal-param {internals audioadapter} rate $options(-secondary-rate)
+	dbus-jack::start-server
+	dbus-jack::load-internal audioadapter 
+	if {$options(-onchange) ne {}} { $options(-onchange) start }
     }
 
     method stop {w} {
-	if {$options(-onchange) ne {}} {
-	    $options(-onchange) stop
-	}
-	log "control iunload audioadapter -> \n\t[$self control iunload audioadapter]"
-	log "control stop ->\n\t[$self control stop]"
+	if {$options(-onchange) ne {}} { $options(-onchange) stop }
+	dbus-jack::unload-internal audioadapter
+	dbus-jack::stop-server
     }
 
     method panel {w args} {
 	upvar #0 $w data
 	ttk::frame $w
-	set primary [$self alsa-device-primary-default]
-	grid [ttk::label $w.pal -text {primary}] [option-menu $w.pam [$self alsa-device-list] $primary] \
+	set primary [$self alsa-card-primary-default]
+	set secondary [$self alsa-card-secondary-default]
+	grid [ttk::label $w.pal -text {primary}] [option-menu $w.pam [$self alsa-card-list] $primary] \
 	    [ttk::label $w.prl -text {@}] [option-menu $w.prm [$self alsa-rate-list] [$self alsa-rate-default $primary]] -sticky ew
-	grid [ttk::label $w.sal -text {secondary}] [option-menu $w.sam [$self alsa-device-list] [$self alsa-device-secondary-default]] \
+	grid [ttk::label $w.sal -text {secondary}] [option-menu $w.sam [$self alsa-card-list] $secondary] \
 	    [ttk::label $w.srl -text {@}] [option-menu $w.srm [$self alsa-rate-list] [$self alsa-rate-default $primary]] -sticky ew
 	grid [ttk::frame $w.s] -columnspan 4
 	pack [ttk::label $w.s.status -textvar ${w}(status)] -side left
@@ -113,12 +103,14 @@ snit::type sdrkit::startup-jack {
 	return $w
     }
 
-    method alsa-device-list {} { return [$options(-alsa) device-list] }
-    method alsa-device-primary-default {} { return [$options(-alsa) device-primary-default] }
-    method alsa-device-secondary-default {} { return [$options(-alsa) device-secondary-default] }
+    method alsa-card-list {} { return [$options(-alsa) card-list] }
+    method alsa-card-primary-default {} { return [$options(-alsa) card-primary-default] }
+    method alsa-card-secondary-default {} { return [$options(-alsa) card-secondary-default] }
     method alsa-rate-list {} { return [$options(-alsa) rate-list] }
-    method alsa-rate-default {device} { return [$options(-alsa) rate-default $device] }
-    method alsa-device-for-name {name} { return [$options(-alsa) device-for-name $name] }
+    method alsa-rate-default {card} { return [$options(-alsa) rate-default $card] }
+
+    # this should use dbus-jack signals rather than polling
+    # though polling through dbus directly is better than launching a process
 
     method update-status {w} {
 	upvar #0 $w data
@@ -144,6 +136,7 @@ snit::type sdrkit::startup-jack {
 	ttk::frame $w
 	return $w
     }
+
     method details-update {w} {
     }
 

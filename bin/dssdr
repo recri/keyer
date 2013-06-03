@@ -50,6 +50,7 @@ package require sdrtcl::jack-client
 
 package require sdrutil::util
 
+package require dbus-jack
 
 namespace eval sdrkit {}
 
@@ -208,6 +209,19 @@ proc poll-midi-in {} {
     set ::data(midi-in-poll) [after 100 poll-midi-in]
 }
 
+proc jackhandler {dict args} {
+    switch [dict get $dict member] {
+	ServerStarted { jackchanged start }
+	ServerStopped { jackchanged stop }
+	default {
+	    error "unknown jack signal [dict get $dict member]"
+	}
+    }
+}
+	
+dbus-jack::jack-listen ServerStarted jackhandler
+dbus-jack::jack-listen ServerStopped jackhandler
+
 proc jackchanged {cmd} {
     # puts "jackchanged $cmd"
     switch $cmd {
@@ -247,15 +261,31 @@ proc jackchanged {cmd} {
     }
 }
 
+proc sysex-send {msg} {
+    midi put [binary format cccca*c 0xF0 0x7D 0x7C 0x7B $msg 0xF7]
+}
+
+proc button-wink {} { sysex-send "wink" }
+proc button-temp {} { sysex-send "temp" }
+proc button-bandgap {} { sysex-send "bandgap" }
+
 pack [ttk::notebook .t] -side top -fill both -expand true
 .t add [sdrkit::dial .t.d -command dcommand] -text dial
 set data(usb) [sdrkit::startup-usb ::myusb]
 set data(alsa) [sdrkit::startup-alsa ::myalsa]
-set data(jack) [sdrkit::startup-jack ::myjack -alsa $data(alsa) -onchange jackchanged]
-.t add [$data(jack) panel .t.j -onchange jackchanged] -text jack
-.t add [$data(alsa) panel .t.a] -text alsa
-.t add [$data(usb) panel .t.u] -text usb
+set data(jack) [sdrkit::startup-jack ::myjack -alsa $data(alsa)]
+.t add [ttk::frame .t.jau] -text devices
+pack [ttk::labelframe .t.jau.j -text jack] -side top -fill x
+pack [$data(jack) panel .t.jau.j.f] -fill x
+pack [ttk::labelframe .t.jau.a -text alsa] -side top -fill x
+pack [$data(alsa) panel .t.jau.a.f] -fill x
+pack [ttk::labelframe .t.jau.u -text usb] -side top -fill x
+pack [$data(usb) panel .t.jau.u.f] -fill x
 .t add [sdrtk::vtext .t.l -scrollbar right -width 20] -text log
+pack [ttk::frame .m] -side bottom
+foreach b {wink temp bandgap} {
+    pack [ttk::button .m.$b -text $b -command [list button-$b]] -side left
+}
 
 log-cmds {sdrtcl::jack-client jack-client} \
     {sdrtcl::midi midi -client dssdr}

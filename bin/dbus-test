@@ -1,0 +1,154 @@
+#!/usr/bin/tclsh8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+package require dbus-tcl
+## package require dbus-intf
+package require tdom
+
+## list all the owners and the names they own
+## tclsh8.6 ~/Sources/dbus-tcl1.1/demos/qdbus.tcl
+proc names {} {
+    global bus
+    set svc [dbus info service]
+    set path [dbus info path]
+    foreach n [dbus call $bus -dest $svc $path $svc ListNames] {
+	set o [dbus call $bus -dest $svc $path $svc GetNameOwner $n]
+	if {$o eq $n} {
+	    lappend owner($o)
+	} else {
+	    lappend owner($o) $n
+	}
+    }
+    foreach o [lsort [array names owner]] {
+	puts $o
+	foreach n [lsort $owner($o)] {
+	    puts " $n"
+	}
+    }
+}
+
+## List all node paths of an application on the dbus
+## tclsh8.6 ~/Sources/dbus-tcl1.1/demos/qdbus.tcl org.jackaudio.service
+proc tree {name {path /}} {
+    global bus
+    puts $path
+    if {$path eq "/"} {set prefix ""} else {set prefix $path}
+    set svc [dbus info service]
+    set xml [dbus call $bus -dest $name $path $svc.Introspectable Introspect]
+    dom parse $xml doc
+    foreach n [$doc selectNodes /node/node] {
+	tree $name $prefix/[$n getAttribute name]
+    }
+}
+
+# Translations from dbus signature to Qt type names
+set typename {
+    {} void i int s QString b bool a{sv} QVariantMap v QDBusVariant
+    x qlonglong d double as QStringList ay QByteArray
+}
+
+# Create a description of the argument type
+proc typename {sig} {
+    global typename
+    if {[dict exists $typename $sig]} {
+	return [dict get $typename $sig]
+    } else {
+	return [format {QDBusRawType::%s} $sig]
+    }
+}
+
+# Obtain the xml specification for a node of the application
+proc introspect {name path} {
+    global bus
+    set svc [dbus info service]
+    return [dbus call $bus -dest $name $path $svc.Introspectable Introspect]
+}
+
+## List the properties, methods and signals for a specific path
+## tclsh8.6 ~/Sources/dbus-tcl1.1/demos/qdbus.tcl org.jackaudio.service /org/jackaudio/Controller
+proc query {name path} {
+    dom parse [introspect $name $path] doc
+    foreach n [$doc selectNodes /node/interface] {
+	set intf [$n getAttribute name]
+	set prop {}
+	set slot {}
+	foreach s [$n childNodes] {
+	    # Skip comments
+	    if {[$s nodeType] ne "ELEMENT_NODE"} continue
+
+	    if {[$s nodeName] eq "property"} {
+		dict set prop [$s getAttribute name ""] $s
+	    } else {
+		dict set slot [$s getAttribute name ""] $s
+	    }
+	}
+	# properties
+	foreach name [lsort [dict keys $prop]] {
+	    set p [dict get $prop $name]
+	    set access [$p getAttribute access readwrite]
+	    set t [$p selectNodes {./annotation[@name="com.trolltech.QtDBus.QtTypeName"]}]
+	    if {[llength $t]} {
+		set type [$t getAttribute value ""]
+	    } else {
+		set type [typename [$p getAttribute type ""]]
+	    }
+	    puts "property $access $type $intf.$name"
+	}
+	# methods and signals
+	foreach name [lsort [dict keys $slot]] {
+	    set s [dict get $slot $name]
+	    set str [$s nodeName]
+	    set out ""
+	    set args {}
+	    foreach a [$s selectNodes ./arg] {
+		set dir [$a getAttribute direction in]
+		if {$dir eq "out"} {
+		    set out [$a getAttribute type ""]
+		} else {
+		    set arg [typename [$a getAttribute type ""]]
+		    if {[$a hasAttribute name]} {
+			append arg " " [$a getAttribute name]
+		    }
+		    lappend args $arg
+		}
+	    }
+	    append str " " [typename $out] " " $intf.$name
+	    puts [format {%s(%s)} $str [join $args ", "]]
+	}
+    }
+}    
+
+##
+##
+##
+
+puts "dbus connect -> [dbus connect]"
+
+foreach i {machineid local name path pending serverid service version} {
+    puts "dbus info $i -> [dbus info $i]"
+}
+
+set bus session
+puts "------- names --------"
+names
+puts "------- tree org.jackaudio.service ----"
+tree org.jackaudio.service
+puts "------- query org.jackaudio.service /org/jackaudio/Controller --------"
+query org.jackaudio.service /org/jackaudio/Controller

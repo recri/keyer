@@ -25,13 +25,29 @@ extern "C"
 
 /*
 ** MIDI commands semi-implemented
+** We use note-on and note-off to change logical signals.
+** Most information travels as SYSEX strings.
+** Our sysex is formatted:
+** (uint8_t[]){
+**	MIDI_SYSEX, MIDI_SYSEX_VENDOR, MIDI_SYSEX_SUBV1, MIDI_SYSEX_SUBV2, ..., MIDI_SYSEX_END
+** }
+** It appears as an educational, rather than a commercial, vendor.
+** And it allows 14 bits of shared educational sysex address space.
+**
+** Within our payload we implement a simplified subset of Tcl commands in 7 bit ascii.
+** So "set f 0x1339e0" would set a frequency to 1260 kHz.
 */
 #define MIDI_NOTE_OFF		0x80
 #define MIDI_NOTE_ON		0x90
-#define MIDI_NOTE_TOUCH		0xA0
-#define MIDI_CHAN_CONTROL	0xB0
+#define MIDI_NOTE_AFTERTOUCH	0xA0
+#define MIDI_CONTROL_CHANGE	0xB0
+#define MIDI_PROGRAM_CHANGE	0xC0
+#define MIDI_CHANNEL_PRESSURE	0xD0
+#define MIDI_PITCHWHEEL_CHANGE	0xE0  
 #define MIDI_SYSEX		0xF0
-#define MIDI_SYSEX_VENDOR	0x7D
+#define MIDI_SYSEX_VENDOR	0x7D /* this is the educational vendor id */
+#define MIDI_SYSEX_SUBV1	0x7C
+#define MIDI_SYSEX_SUBV2	0x7B
 #define MIDI_SYSEX_END		0xF7
 
 #ifdef __cplusplus

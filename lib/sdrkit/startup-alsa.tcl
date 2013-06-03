@@ -45,26 +45,40 @@ snit::type sdrkit::startup-alsa {
     #
     # enumerate alsa devices
     #
+    variable cards -array {}
 
-    # audio device names and sample rate
-    typevariable  audiodevices1 -array {
+    # audio device names and preferred sample rate
+    # in preference order
+    typevariable audiodevices1 {
 	{VIA USB Dongle} 96000
 	{iMic USB audio system} 48000
+	{HDA Intel PCH} 96000
 	{Teensy MIDI} -
-	{HDA Intel PCH} -
     }
-    typevariable audiodevices2 -array {
-	{HDA Intel PCH} -
+    typevariable audiodevices2 {
+	{HDA Intel PCH} 96000
     }
 
     method refresh {} {
-	set devs {}
-	foreach {c sname lname} [alsa::device cards] {
-	    set dev [list card $c name $sname longname $lname devs [alsa::device devices $c]]
-	    lappend devs $dev
+	array unset cards
+	foreach {card sname lname} [alsa::device cards] {
+	    # puts "$c $sname $lname"
+	    lappend cards($card) card $card name $sname longname $lname devs [alsa::device devices $card]
+	    set primary [lsearch $audiodevices1 $sname]
+	    set secondary [lsearch $audiodevices2 $sname]
+	    if {$primary >= 0} {
+		lappend cards($card) primary [expr {[llength $audiodevices1]-$primary}] rate [lindex $audiodevices1 [incr primary]]
+	    } else {
+		lappend cards($card) primary $primary rate -
+	    }
+	    if {$secondary >= 0} {
+		lappend cards($card) secondary [expr {[llength $audiodevices2]-$secondary}]
+	    } else {
+		lappend cards($card) secondary $secondary
+	    }
+	    #puts $cards($card)
 	}
-	#foreach x [alsa::pcm list] { lappend devs [list pcm $x] }
-	return $devs
+	return [array get cards]
     }
     
     method panel {w args} {
@@ -73,67 +87,63 @@ snit::type sdrkit::startup-alsa {
 	return $w
     }
     
+    method card-list {} {
+	$self refresh
+	return [lsort [array names cards]]
+    }
+
     method update {w} {
 	foreach c [pack slaves $w] {
 	    pack forget $c
 	    $c destroy
 	}
 	set i 0
-	foreach c [$self refresh] {
-	    array set dev $c
+	foreach card [$self card-list] {
+	    array set info $cards($card)
 	    incr i
-	    set l1 [ttk::label $w.x$i -text $dev(card)]
-	    set l2 [ttk::label $w.y$i -text $dev(name)]
-	    grid $l1 $l2 -sticky e
-	}
+	    set l1 [ttk::label $w.x$i -text $info(card)]
+	    set l2 [ttk::label $w.y$i -text $info(name)]
+	    set l3 [ttk::label $w.z$i -text $info(primary)]
+	    set l4 [ttk::label $w.a$i -text $info(secondary)]
+	    set l5 [ttk::label $w.b$i -text $info(rate)]
+	    grid $l1 $l2 $l3 $l4 $l5 -sticky e
+ 	}
     }
     
-    method device-list {} {
-	set devices {}
-	foreach x [$self refresh] {
-	    array set y $x
-	    lappend devices $y(name)
+    method card-primary-default {} {
+	set max -1
+	foreach card [$self card-list] {
+	    if { ! [info exists can]} { set can $card }
+	    array set info $cards($card)
+	    if {$info(primary) > $max} {
+		set max $info(primary)
+		set can $card
+	    }
 	}
-	return $devices
+	return $can
     }
 
-    method device-primary-default {} {
-	foreach device [$self device-list] {
-	    if {[info exists audiodevices1($device)] && $audiodevices1($device) ne {-}} {
-		return $device
+    method card-secondary-default {} {
+	set max -1
+	foreach card [$self card-list] {
+	    if { ! [info exists can]} { set can $card }
+	    array set info $cards($card)
+	    if {$info(secondary) >= $max} {
+		set max $info(secondary)
+		set can $card
 	    }
 	}
-	return [lindex [$self device-list] 1]
-    }
-    method  device-secondary-default {} {
-	foreach device [$self device-list] {
-	    if {[info exists audiodevices2($device)]} {
-		return $device
-	    }
-	}
-	return [lindex [$self device-list] 0]
+	return $can
     }
 
     method rate-list {} {
-	return {16000 24000 48000 96000 192000}
+	return {8000 16000 24000 32000 48000 96000 192000}
     }
 
-    method rate-default {device} {
-	if {[info exists audiodevices1($device)]} {
-	    return $audiodevices1($device)
-	}
+    method rate-default {card} {
+	array set info $cards($card)
+	if {$info(rate) ne {-}} { return $info(rate) }
 	return 96000
-    }
-
-    method device-for-name {name} {
-	foreach x [$self refresh] {
-	    array set y $x
-	    if {$y(name) eq $name} {
-		#puts "matched: $x"
-		return $y(card)
-	    }
-	}
-	error "no match for audio device name {$name}"
     }
 
 }
