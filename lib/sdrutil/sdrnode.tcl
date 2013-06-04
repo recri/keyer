@@ -37,7 +37,8 @@
 # Okay, that works, but the downside is that dbus doesn't observe the
 # same granularity as jack, so while I can open multiple jack clients
 # in a single process, only one connection to dbus can be made per
-# process.
+# process.  That only appears to be a bit deal, in fact I only planned
+# to open one midi node, a pnode, for each process anyway.
 #
 # The basic unit of the network is the fnode which controls one input,
 # output, or processing element.  An fnode controls a slider or a dial
