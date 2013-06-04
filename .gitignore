@@ -12,3 +12,7 @@ test/test-window
 test/*.txt
 logs/*
 retired/*
+pkey
+cert
+cert.req
+dspserver.conf
