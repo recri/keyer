@@ -20,6 +20,10 @@
 #
 # dssdr nodes
 #
+# the components of dssdr organize as a peer to peer network over dbus
+# and MIDI.
+#
+# the messages 
 # dssdr organizes itself as a peer to peer network over MIDI, but
 # before it can do that it needs to start the jack server.  Since the
 # jack server is started as a dbus service under Ubuntu, it makes
@@ -108,14 +112,14 @@
 #
 # implement a pnode in Tcl
 # 
-package provide sdrnode 1.0
+package provide node-sdr 1.0
 
-namespace eval ::sdrnode {
+namespace eval ::node-sdr {
     set name "noname"
     set type "notype"
     set addr "noaddr"
-    set fnodes {}
-    set pnodes {}
+    set fnodes {};		# fnodes below this node
+    set pnodes {};		# pnodes known to this node
     set vars {name type addr fnodes pnodes}
     set started false
     set midi {}
@@ -124,7 +128,7 @@ namespace eval ::sdrnode {
 #
 # set the name of this node
 #
-proc ::sdrnode::set-name {newname} {
+proc ::node-sdr::set-name {newname} {
     variable name
     set name $newname
 }
@@ -132,7 +136,7 @@ proc ::sdrnode::set-name {newname} {
 #
 # set the type of this node
 #
-proc ::sdrnode::set-type {newtype} {
+proc ::node-sdr::set-type {newtype} {
     variable type
     set type $newtype
 }
@@ -140,7 +144,7 @@ proc ::sdrnode::set-type {newtype} {
 #
 # start this node
 #
-proc ::sdrnode::start {} {
+proc ::node-sdr::start {} {
     variable started
     if { ! $started} {
 	
@@ -148,16 +152,16 @@ proc ::sdrnode::start {} {
 }
     
 #
-# the join function
+# the join function for an fnode connecting to this pnode
 # 
-proc ::sdrnode::join {rxcallback} {
+proc ::node-sdr::join {rxcallback} {
     start
 }
 
 #
 # the send function
 #
-proc ::sdrnode::send {source dest msg} {
+proc ::node-sdr::send {source dest msg} {
     variable midi
     start
     $midi put [binary format cccca*c 0xF0 0x7D 0x7C 0x7B "$dest $source $msg" 0xF7]

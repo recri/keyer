@@ -17,12 +17,12 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide dbus-dssdr 1.0
+package provide dbus-sdr 1.0
 
 package require dbus
 package require dbus-jack
 
-namespace eval ::dbus-dssdr:: {
+namespace eval ::dbus-sdr:: {
 }
 
 #
@@ -31,7 +31,7 @@ namespace eval ::dbus-dssdr:: {
 # the object path is /org/sdrkit/Controller
 # the interface is org.sdrkit.Control
 # 
-if { ! [info exists ::dbus-dssdr::signals]} {
+if { ! [info exists ::dbus-sdr::signals]} {
     if {[catch {dbus name -replace org.sdrkit.service} error]} {
 	# we are not the owner of the name, but we may become owner at some point
 	puts "failed, do not own org.sdrkit.service"
@@ -39,16 +39,16 @@ if { ! [info exists ::dbus-dssdr::signals]} {
 	# we are the owner of the name
 	puts "succeeded, own org.sdrkit.service"
     }
-    array set ::dbus-dssdr::signals {}
+    array set ::dbus-sdr::signals {}
     dbus filter add -type signal -path /org/sdrkit/Controller
-    foreach member {PortsConnect PortsDisconnect ClientRegister ClientDeregister ClientActivate ClientDeactivate} {
-	set ::dbus-dssdr::signals($member) {}
-	dbus listen /org/sdrkit/Controller $member ::dbus-dssdr::handler
+    foreach member {Connect Disconnect Register Deregister Message} {
+	set ::dbus-sdr::signals($member) {}
+	dbus listen /org/sdrkit/Controller $member ::dbus-sdr::handler
     }
-    #puts [array get ::dbus-dssdr::signals]
+    #puts [array get ::dbus-sdr::signals]
 }
 
-proc ::dbus-dssdr::handler {dict args} {
+proc ::dbus-sdr::handler {dict args} {
     variable signals
     set member [dict get $dict member]
     catch {log "signal $member received"}
@@ -58,12 +58,12 @@ proc ::dbus-dssdr::handler {dict args} {
 	    if {$index >= 0} {
 		set signals($member) [lreplace $signals($member) $index $index]
 	    }
-	    catch {log "removing dbus-dssdr::signal $handler from $member signal handling: $error"}
+	    catch {log "removing dbus-sdr::signal $handler from $member signal handling: $error"}
 	}
     }
 }
 
-proc ::dbus-dssdr::listen {member script} {
+proc ::dbus-sdr::listen {member script} {
     variable signals
     set index [lsearch $signals($member) $script]
     if {$index >= 0} {
@@ -75,34 +75,34 @@ proc ::dbus-dssdr::listen {member script} {
     }
 }
 
-proc ::dbus-dssdr::call {interface method {sig {}} args} {
+proc ::dbus-sdr::call {interface method {sig {}} args} {
     return [dbus call session -dest org.sdrkit.service -signature $sig /org/sdrkit/Controller org.sdrkit.$interface $method {*}$args]
 }
 
-proc ::dbus-dssdr::signal {member} {
+proc ::dbus-sdr::signal {member} {
     return [dbus signal session /org/sdrkit/Controller org.sdrkit.Control $member]
 }
 
 #
 # interfaces
 #
-proc ::dbus-dssdr::control {method {sig {}} args} { return [call Control $method $sig {*}$args] }
+proc ::dbus-sdr::control {method {sig {}} args} { return [call Control $method $sig {*}$args] }
 
 #
 # signal/listener test
 #
-proc ::dbus-dssdr::start-listeners {} {
+proc ::dbus-sdr::start-listeners {} {
     variable signals
     foreach s [array names signals] {
-	listen $s ::dbus-dssdr::dummy-handler
+	listen $s ::dbus-sdr::dummy-handler
     }
 }
 
-proc ::dbus-dssdr::dummy-handler {dict args} {
+proc ::dbus-sdr::dummy-handler {dict args} {
     puts stderr "[dict get $dict member] $args"
 }
 
-proc ::dbus-dssdr::dummy-life-cycle {} {
+proc ::dbus-sdr::dummy-life-cycle {} {
     variable signals
     foreach s [array names signals] {
 	puts "signal $s: [signal $s]"
@@ -116,5 +116,5 @@ proc ::dbus-dssdr::dummy-life-cycle {} {
 # when the jack server starts, then the components can register, activate, and create ports.
 # when all the ports are created, then the ports can be connected
 # 
-proc ::dbus-dssdr::manage-life-cycle {} {
+proc ::dbus-sdr::manage-life-cycle {} {
 }
