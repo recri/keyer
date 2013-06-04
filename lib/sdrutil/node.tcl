@@ -34,77 +34,10 @@
 # our jack management functions.  All I have to do is figure out how
 # to enable all of it from dbus-tcl
 #
-# interface org.freedesktop.DBus.Introspectable
-#	method QString Introspect()
-# interface org.jackaudio.JackControl
-#	method void AddSlaveDriver(QString driver_name)
-#	method QDBusRawType::u GetBufferSize()
-#	method double GetLatency()
-#	method double GetLoad()
-#	method QDBusRawType::u GetSampleRate()
-#	method QDBusRawType::u GetXruns()
-#	method bool IsRealtime()
-#	method bool IsStarted()
-#	method void LoadInternal(QString internal)
-#	method void RemoveSlaveDriver(QString driver_name)
-#	method void ResetXruns()
-#	signal void ServerStarted()
-#	signal void ServerStopped()
-#	method void SetBufferSize(QDBusRawType::u buffer_size_frames)
-#	method void StartServer()
-#	method void StopServer()
-#	method void SwitchMaster()
-#	method void UnloadInternal(QString internal)
-# interface org.jackaudio.Configure
-#	method QDBusRawType::a(vs) GetParameterConstraint(QStringList parameter)
-#	method QDBusRawType::(ysss) GetParameterInfo(QStringList parameter)
-#	method QDBusVariant GetParameterValue(QStringList parameter)
-#	method QDBusRawType::a(ysss) GetParametersInfo(QStringList parent)
-#	method QStringList ReadContainer(QStringList parent)
-#	method void ResetParameterValue(QStringList parameter)
-#	method void SetParameterValue(QStringList parameter, QDBusVariant value)
-# interface org.jackaudio.JackPatchbay
-#	signal void ClientAppeared(QDBusRawType::t new_graph_version, QDBusRawType::t client_id, QString client_name)
-#	signal void ClientDisappeared(QDBusRawType::t new_graph_version, QDBusRawType::t client_id, QString client_name)
-#	method void ConnectPortsByID(QDBusRawType::t port1_id, QDBusRawType::t port2_id)
-#	method void ConnectPortsByName(QString client1_name, QString port1_name, QString client2_name, QString port2_name)
-#	method void DisconnectPortsByConnectionID(QDBusRawType::t connection_id)
-#	method void DisconnectPortsByID(QDBusRawType::t port1_id, QDBusRawType::t port2_id)
-#	method void DisconnectPortsByName(QString client1_name, QString port1_name, QString client2_name, QString port2_name)
-#	method QStringList GetAllPorts()
-#	method qlonglong GetClientPID(QDBusRawType::t client_id)
-#	method QDBusRawType::a(tstststst) GetGraph(QDBusRawType::t known_graph_version)
-#	signal void GraphChanged(QDBusRawType::t new_graph_version)
-#	signal void PortAppeared(QDBusRawType::t new_graph_version,
-#				QDBusRawType::t client_id, QString client_name, 
-#				QDBusRawType::t port_id, QString port_name, 
-#				QDBusRawType::u port_flags, QDBusRawType::u port_type)
-#	signal void PortDisappeared(QDBusRawType::t new_graph_version,
-#				QDBusRawType::t client_id, QString client_name,
-#				QDBusRawType::t port_id, QString port_name)
-#	signal void PortRenamed(QDBusRawType::t new_graph_version, QDBusRawType::t port_id,
-#				QDBusRawType::t client_id, QString client_name,
-#				QString port_old_name, QString port_new_name)
-#	signal void PortsConnected(QDBusRawType::t new_graph_version,
-#				QDBusRawType::t client1_id, QString client1_name,
-#				QDBusRawType::t port1_id, QString port1_name,
-#				QDBusRawType::t client2_id, QString client2_name,
-#				QDBusRawType::t port2_id, QString port2_name,
-#				QDBusRawType::t connection_id)
-#	signal void PortsDisconnected(QDBusRawType::t new_graph_version,
-#				QDBusRawType::t client1_id, QString client1_name,
-#				QDBusRawType::t port1_id, QString port1_name, 
-#				QDBusRawType::t client2_id, QString client2_name,
-#				QDBusRawType::t port2_id, QString port2_name,
-#				QDBusRawType::t connection_id)
-# interface org.jackaudio.SessionManager
-#	method QString GetClientNameByUuid(QString uuid)
-#	method QString GetState()
-#	method QString GetUuidForClientName(QString name)
-#	method bool HasSessionCallback(QString client_name)
-#	method QDBusRawType::a(sssu) Notify(bool queue, QString target, QDBusRawType::u type, QString path)
-#	method void ReserveClientName(QString name, QString uuid)
-#	signal void StateChanged(QDBusRawType::u type, QString target)
+# Okay, that works, but the downside is that dbus doesn't observe the
+# same granularity as jack, so while I can open multiple jack clients
+# in a single process, only one connection to dbus can be made per
+# process.
 #
 # The basic unit of the network is the fnode which controls one input,
 # output, or processing element.  An fnode controls a slider or a dial
@@ -174,9 +107,9 @@
 #
 # implement a pnode in Tcl
 # 
-package provide node 1.0
+package provide sdrnode 1.0
 
-namespace eval node {
+namespace eval ::sdrnode {
     set name "noname"
     set type "notype"
     set addr "noaddr"
@@ -190,7 +123,7 @@ namespace eval node {
 #
 # set the name of this node
 #
-proc ::node::set-name {newname} {
+proc ::sdrnode::set-name {newname} {
     variable name
     set name $newname
 }
@@ -198,7 +131,7 @@ proc ::node::set-name {newname} {
 #
 # set the type of this node
 #
-proc ::node::set-type {newtype} {
+proc ::sdrnode::set-type {newtype} {
     variable type
     set type $newtype
 }
@@ -206,7 +139,7 @@ proc ::node::set-type {newtype} {
 #
 # start this node
 #
-proc ::node::start {} {
+proc ::sdrnode::start {} {
     variable started
     if { ! $started} {
 	
@@ -216,14 +149,14 @@ proc ::node::start {} {
 #
 # the join function
 # 
-proc ::node::join {rxcallback} {
+proc ::sdrnode::join {rxcallback} {
     start
 }
 
 #
 # the send function
 #
-proc ::node::send {source dest msg} {
+proc ::sdrnode::send {source dest msg} {
     variable midi
     start
     $midi put [binary format cccca*c 0xF0 0x7D 0x7C 0x7B "$dest $source $msg" 0xF7]

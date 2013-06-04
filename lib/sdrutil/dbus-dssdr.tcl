@@ -20,13 +20,14 @@
 package provide dbus-dssdr 1.0
 
 package require dbus
+package require dbus-jack
 
 namespace eval ::dbus-dssdr:: {
 }
 
 #
 # gad, dbus is so confusing
-# the name of our service is org.sdrkit.service
+# the name/address of our service is org.sdrkit.service
 # the object path is /org/sdrkit/Controller
 # the interface is org.sdrkit.Control
 # 
@@ -107,4 +108,13 @@ proc ::dbus-dssdr::dummy-life-cycle {} {
 	puts "signal $s: [signal $s]"
 	after 500
     }
+}
+
+#
+# the application life cycle follows the jack server.
+# when the jack server is stopped, then all the dsp and midi components are stopped.
+# when the jack server starts, then the components can register, activate, and create ports.
+# when all the ports are created, then the ports can be connected
+# 
+proc ::dbus-dssdr::manage-life-cycle {} {
 }
