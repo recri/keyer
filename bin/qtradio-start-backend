@@ -27,6 +27,7 @@ XFI=0
 DEBUG=0
 # figure out which radio
 case `usbsoftrock status | grep '^Xtall Freq' | sed -e 's/.*: *//'` in
+    114.285000) RADIO=RX;;	# new rom, different report
     114.294666) RADIO=RX;;
     114.359895) RADIO=RXTX;;
     *) echo "unknown radio";;
