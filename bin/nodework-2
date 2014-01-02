@@ -26,13 +26,29 @@ lappend auto_path [file join [file dirname $script] .. lib]
 package require Tk
 
 package require dbus-sdr
-#package require node-sdr
 
-package require sdrtcl::midi
-package require sdrtcl::jack-client
+package require sdrtk::vtext
+package require sdrkit::startup-usb
+package require sdrkit::startup-alsa
+package require sdrkit::startup-jack
 
-array set data {
-    nodes {node1 node2 node3 node4 node5}
+#
+# present an option menu
+#
+proc option-menu {w options defopt} {
+    upvar #0 $w data
+    set data(options) $options
+    set data(selected) $defopt
+    ttk::menubutton $w -textvar ${w}(selected) -menu $w.m
+    menu $w.m -tearoff no
+    foreach option $options {
+	$w.m add radiobutton -label $option -value $option -variable ${w}(selected)
+    }
+    return $w
+}
+proc option-menu-selected {w} {
+    upvar #0 $w data
+    return $data(selected)
 }
 
 proc log {msg} {
@@ -44,56 +60,6 @@ proc log-cmds args {
     foreach cmd $args {
 	log "$cmd -> [{*}$cmd]"
     }
-}
-
-proc poll-midi-in {} {
-    foreach event [midi get] {
-	puts $event
-    }
-    set ::data(midi-in-poll) [after 100 poll-midi-in]
-}
-
-proc jackchanged {cmd} {
-    # puts "jackchanged $cmd"
-    switch $cmd {
-	start {
-	    jack-client register
-	    midi register
-	    midi activate
-	    midi start
-	    # we eventually need to be connected to every midi port
-	    # that appears as it appears
-	    # for now we settle for connecting to all the ports that
-	    # have appeared
-	    foreach {port attrib} [jack-client list-ports] {
-		array set p $attrib
-		if {$p(type) eq {midi}} {
-		    # puts "$port -> {$attrib}"
-		    if { ! [string match {dssdr:*} $port]} {
-			if {$p(direction) eq {output}} {
-			    jack-client connect $port dssdr:midi_in
-			} elseif {$p(direction) eq {input}} {
-			    jack-client connect dssdr:midi_out $port
-			} else {
-			    error "midi $port -> {$attrib}???"
-			}
-		    }
-		}
-	    }
-	    set data(midi-in-poll) [after 100 poll-midi-in]
-	}
-	stop {
-	    catch {after cancel $::data(midi-in-poll)}
-	    catch {midi stop}
-	    catch {midi deactivate}
-	    catch {midi deregister}
-	    catch {jack-client deregister}
-	}
-    }
-}
-
-proc sysex-send {msg} {
-    midi put [binary format cccca*c 0xF0 0x7D 0x7C 0x7B $msg 0xF7]
 }
 
 proc mainline {} {
@@ -108,19 +74,6 @@ proc mainline {} {
     pack [ttk::frame .m] -side bottom
 }
 
-switch -glob $argv {
-    main* {
-    }
-    node* {
-    }
-}
-
-if {$argv ne {}} {
-    set data(nodes) $argv
-}
-
-sdrtcl::jack-client jack-client
-foreach node $data(nodes) {
-    sdrtcl::midi $node
-}
+mainline   
+after 100 [list dbus-sdr::join-request]
 

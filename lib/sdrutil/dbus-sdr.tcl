@@ -23,47 +23,209 @@ package require dbus
 package require dbus-jack
 
 namespace eval ::dbus-sdr:: {
+    set service {org.sdrkit.service}
+    set object {/org/sdrkit/Service}
+    set interface {org.sdrkit.Service}
+
+    set owner {}
+    set serial 0
+    set pnodes {}
+
+    set verbose 5
+    set replies {}
+}
+
+proc ::dbus-sdr::owner {} {
+    variable owner
+    return $owner
+}
+
+proc ::dbus-sdr::random-byte {} {
+    set b {0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ}
+    set n [string length $b]
+    return [string index $b [expr {int(rand()*$n)}]]
+}
+
+proc ::dbus-sdr::add-pnode-addr {addr} {
+    variable pnodes
+    if { ! [find-pnode-addr $addr]} { lappend pnodes $addr }
+}
+
+proc ::dbus-sdr::find-pnode-addr {addr} {
+    variable pnodes
+    return [expr {[lsearch $pnodes $addr] >= 0}]
+}
+
+proc ::dbus-sdr::pick-pnode-addr {} {
+    variable addr
+    for {set a [random-byte]} {[find-pnode-addr $a]} {set a [random-byte]} {}
+    set addr $a
+    log 5 "pick-pnode-addr chooses {$addr}"
+}
+    
+proc ::dbus-sdr::log {level msg} {
+    variable verbose
+    if {$verbose >= $level} { catch { ::log $msg } }
+}
+
+proc ::dbus-sdr::join-request {} {
+    variable signals;		# array of signal handlers
+    variable owner;		# owner of org.sdrkit.service or not
+    variable joined;		# have successfully joined the group
+    variable addr;		# proposed or accepted address of joining
+    variable serial;		# running serial number for messages
+    variable timeout;		# after handler cookie
+    variable jserial;		# serial number of our join request
+
+    if { ! [info exists signals]} {
+	# stage 1 -- no signals array
+	# connect to dbus sdrkit service
+	if {[catch {dbus name org.sdrkit.service} error]} {
+	    # we are not the owner of the name, but we may become owner at some point
+	    set owner false
+	    log 1 "client of org.sdrkit.service"
+	} else {
+	    # we are the owner of the name
+	    set owner true
+	    log 1 "owner of org.sdrkit.service"
+	}
+	# stage 1a -- initialize signal handler array
+	array set signals {}
+	dbus filter add -type signal -path /org/sdrkit/Service
+	# Connect Disconnect Register Deregister 
+	foreach member {Join Message} {
+	    set signals($member) {}
+	    dbus listen /org/sdrkit/Service $member ::dbus-sdr::signal-handler
+	}
+	# stage 1b -- start our join handler
+	listen-for Join ::dbus-sdr::join-handler
+	# stage 1c -- choose random address
+	pick-pnode-addr
+	# stage 1d -- declare victory
+	if {$owner} {
+	    set joined 1
+	    return $addr
+	}
+	# stage 1e -- begin the join process
+	# set timeout handler for join request
+	set timeout [after 200 ::dbus-sdr::join-timeout]
+	# assign serial number for join request
+	set jserial [incr serial]
+	# send join request
+	send-signal Join [list * $addr $jserial {join request}]
+	# wait for join to complete
+	vwait joined
+	# return our address
+	return $addr
+    } elseif { ! [info exists joined]} {
+	# stage 2 -- not joined
+	# wait for the join to complete
+	vwait joined
+	return $addr
+    } else {
+	# stage 3 -- joined
+	return $addr
+    }
 }
 
 #
-# gad, dbus is so confusing
-# the name/address of our service is org.sdrkit.service
-# the object path is /org/sdrkit/Controller
-# the interface is org.sdrkit.Control
-# 
-if { ! [info exists ::dbus-sdr::signals]} {
-    if {[catch {dbus name -replace org.sdrkit.service} error]} {
-	# we are not the owner of the name, but we may become owner at some point
-	puts "failed, do not own org.sdrkit.service"
+# two sided handler
+# in already joined node, respond to requests to join from new nodes
+# in new node, handle responses from already joined nodes
+proc ::dbus-sdr::join-handler {dict args} {
+    variable joined
+    variable addr
+    variable serial
+    variable pnodes
+    variable replies
+    variable jserial
+
+    lassign [lindex $args 0] to from mserial message
+    if {[info exists joined]} {
+	# in already joined node
+	switch -glob $message {
+	    {join request} {
+		if {[find-pnode-addr $from]} {
+		    send-signal Join [list $from $addr [incr serial] "join no $mserial"]
+		} else {
+		    send-signal Join [list $from $addr [incr serial] "join yes $mserial"]
+		}
+	    }
+	    {join yes *} -
+	    {join no *} {
+		# replies not of interest to us
+	    }
+	    {join confirm} {
+		lappend pnodes $from
+	    }
+	    default { error "join-handler: unrecognized message 1: $args" }
+	}
     } else {
-	# we are the owner of the name
-	puts "succeeded, own org.sdrkit.service"
+	# in new node
+	switch -glob $message {
+	    {join request} {
+		# no opinion until we join
+	    }
+	    {join yes *} -
+	    {join no *} {
+	    	if {$to eq $addr && [lindex $message 2] == $jserial} {
+		    lappend replies [list $from $message]
+		}
+	    }
+	    {join confirm} {
+		# not our problem
+	    }
+	    default { error "join-handler: unrecognized message 2: $args" }
+	}
     }
-    array set ::dbus-sdr::signals {}
-    dbus filter add -type signal -path /org/sdrkit/Controller
-    foreach member {Connect Disconnect Register Deregister Message} {
-	set ::dbus-sdr::signals($member) {}
-	dbus listen /org/sdrkit/Controller $member ::dbus-sdr::handler
-    }
-    #puts [array get ::dbus-sdr::signals]
+    #log 5 "join-handler $args"
 }
 
-proc ::dbus-sdr::handler {dict args} {
+proc ::dbus-sdr::join-timeout {} {
+    variable replies
+    variable joined
+    variable addr
+    variable serial
+    variable jserial
+    log 5 [join $replies \n]
+    lassign {0 0} no yes
+    foreach r $replies {
+	lassign $r from message
+	add-pnode-addr $from
+	switch -glob $message {
+	    *no { incr no }
+	    *yes { incr yes }
+	    default {
+	    }
+	}
+    }
+    if {$no == 0} {
+	set joined true
+	send-signal Join [list * $addr [incr serial] {join confirm}]
+    } else {
+	pick-pnode-addr
+	set timeout [after 200 ::dbus-sdr::join-timeout]
+	set jserial [incr serial]
+	send-signal Join [list * $addr $jserial {join request}]
+    }
+}
+
+proc ::dbus-sdr::signal-handler {dict args} {
     variable signals
     set member [dict get $dict member]
-    catch {log "signal $member received"}
+    log 5 "handle: $member $args"
     foreach handler $signals($member) {
 	if {[catch {{*}$handler $dict {*}$args} error]} {
 	    set index [lsearch $signals($member) $handler]
 	    if {$index >= 0} {
 		set signals($member) [lreplace $signals($member) $index $index]
 	    }
-	    catch {log "removing dbus-sdr::signal $handler from $member signal handling: $error"}
+	    log 1 "removing dbus-sdr::signal $handler from $member signal handling: $error"
 	}
     }
 }
 
-proc ::dbus-sdr::listen {member script} {
+proc ::dbus-sdr::listen-for {member script} {
     variable signals
     set index [lsearch $signals($member) $script]
     if {$index >= 0} {
@@ -75,46 +237,13 @@ proc ::dbus-sdr::listen {member script} {
     }
 }
 
-proc ::dbus-sdr::call {interface method {sig {}} args} {
-    return [dbus call session -dest org.sdrkit.service -signature $sig /org/sdrkit/Controller org.sdrkit.$interface $method {*}$args]
+proc ::dbus-sdr::call-method {interface method {sig {}} args} {
+    log 5 "call-method: $member $args"
+    return [dbus call session -dest org.sdrkit.service -signature $sig /org/sdrkit/Service org.sdrkit.$interface $method {*}$args]
 }
 
-proc ::dbus-sdr::signal {member} {
-    return [dbus signal session /org/sdrkit/Controller org.sdrkit.Control $member]
+proc ::dbus-sdr::send-signal {member args} {
+    log 5 "send-signal: $member $args"
+    return [dbus signal session /org/sdrkit/Service org.sdrkit.Service $member {*}$args]
 }
 
-#
-# interfaces
-#
-proc ::dbus-sdr::control {method {sig {}} args} { return [call Control $method $sig {*}$args] }
-
-#
-# signal/listener test
-#
-proc ::dbus-sdr::start-listeners {} {
-    variable signals
-    foreach s [array names signals] {
-	listen $s ::dbus-sdr::dummy-handler
-    }
-}
-
-proc ::dbus-sdr::dummy-handler {dict args} {
-    puts stderr "[dict get $dict member] $args"
-}
-
-proc ::dbus-sdr::dummy-life-cycle {} {
-    variable signals
-    foreach s [array names signals] {
-	puts "signal $s: [signal $s]"
-	after 500
-    }
-}
-
-#
-# the application life cycle follows the jack server.
-# when the jack server is stopped, then all the dsp and midi components are stopped.
-# when the jack server starts, then the components can register, activate, and create ports.
-# when all the ports are created, then the ports can be connected
-# 
-proc ::dbus-sdr::manage-life-cycle {} {
-}

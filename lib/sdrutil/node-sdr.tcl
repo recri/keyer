@@ -110,19 +110,43 @@
 #
 
 #
+# so a new pnode cannot be addressed until it finds its unique address, but
+# it can call a method on the name-holder to get an address.
+#
+# a join request as a broadcast signal with a proposed address will be nak'ed
+# by everyone who knows the proposed address is already taken.  The nak can be
+# broadcast and ignored by the rightful owner of the address, yet received by
+# the joiner.  That is, there is no exclusivity in the routing, because there
+# is no routing on the dbus.  Every message/signal goes everywhere.
+#
 # implement a pnode in Tcl
 # 
 package provide node-sdr 1.0
 
+package require dbus-sdr
+
 namespace eval ::node-sdr {
-    set name "noname"
-    set type "notype"
-    set addr "noaddr"
+    set name {noname}
+    set type {notype}
+    set addr {noaddr}
     set fnodes {};		# fnodes below this node
     set pnodes {};		# pnodes known to this node
     set vars {name type addr fnodes pnodes}
     set started false
     set midi {}
+    if {$addr eq {noaddr}} {
+	# must join
+	set addr [::dbus-sdr::random-byte]
+	if { ! [::dbus-sdr::owner]} {
+	    join 
+	}
+    }
+}
+
+proc ::node-sdr::random-addr {} {
+    set b {0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ}
+    set n [string length $b]
+    return [lindex $b [expr {int(rand()*$n)}]]
 }
 
 #
@@ -161,10 +185,8 @@ proc ::node-sdr::join {rxcallback} {
 #
 # the send function
 #
-proc ::node-sdr::send {source dest msg} {
+proc ::node-sdr::send {source dest serial msg} {
     variable midi
     start
     $midi put [binary format cccca*c 0xF0 0x7D 0x7C 0x7B "$dest $source $msg" 0xF7]
 }
-
-
