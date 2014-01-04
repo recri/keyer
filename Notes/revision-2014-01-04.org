@@ -1,0 +1,30 @@
+* Revision as of 2014-01-04
+  Succumbing to laziness, I've decided to build SDR radios by using
+** Linux as the host system
+** Jack as the sample and midi stream transport
+** Ladish as the session handler which defines
+*** The Jack setup as a Ladish studio
+*** The DSP computations as Ladish rooms and projects
+*** Allows graphical definition and presentation of computational flow
+    using gladish and claudia
+*** Allows script and command line manipulation of computational flow
+    using ladish_control or other dbus clients
+** Hamlib as the means of controlling the SDR radios
+** Tcl as the means of implementing the hamlib rigctld
+** Tcl/Tk as the means of implementing a generic UI which talks with rigctld
+** A few sdr-core inspired extensions to hamlib
+   to transfer spectrum and meter data to the UI client
+** SIP as the means of transferring audio and control streams
+   Essentially VoIP phones with an additional RTP/MIDI channel
+   so they can transfer:
+*** Audio received
+*** Audio to transmit
+*** hamlib rigctl
+*** hamlib rotctl
+*** sdr-core spectrum and meter channels
+** dspmath/* - Basic dsp modules coded in C / C++
+** sdrtcl/* - Basic and compound dsp modules wrapped as loadable tcl modules
+** bin/sdrtcl-* - Basic and compound dsp modules wrapped as jack clients
+   connected as libtcl/comm clients back to hamlib net rigctld.
+** bin/ladish-* - Radios and radio components wrapped as ladish clients
+** ladish-projects/* - ladish project descriptions

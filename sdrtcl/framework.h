@@ -20,30 +20,23 @@
 
 /*
 ** the framework provides the glue for creating Tcl commands,
-** cleaning up after them when they're deleted, processing options,
+** cleaning up after them when they're deleted,
+** processing options,
 ** and parsing sub-command ensembles.
-**
 */
 
 /*
-** FRAMEWORK_VERSION 1 creates a connection to the jack server
-** when a jack linked command is created.
-** FRAMEWORK_VERSION 2 only creates a connection to the jack server
-** when the register subcommand is called.
+** needs some way to indicate that -server and -client are not
+** available after command creation.
+** needs some way to indicate that live options have been modified.
 */
-#ifndef FRAMEWORK_VERSION
-#define FRAMEWORK_VERSION 1
-#endif
-
-#if FRAMEWORK_VERSION != 1 && FRAMEWORK_VERSION != 2
-#error "framework version is neither 1 nor 2"
-#endif
 
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
+#include <jack/session.h>
 #include <tcl.h>
 
 #include "../dspmath/midi_buffer.h"
@@ -132,6 +125,7 @@ typedef struct {
   Tcl_Obj *command_name;
   Tcl_Obj *server_name;
   Tcl_Obj *client_name;
+  Tcl_Obj *client_uuid;
   Tcl_Obj *subcommands_string;
   int verbose;
   int activated;
@@ -513,23 +507,6 @@ static int fw_subcommand_is_busy(ClientData clientData, Tcl_Interp *interp, int 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(fp->busy));
   return TCL_OK;
 }
-static int fw_client_register(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv);
-static int fw_subcommand_register(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  framework_t *fp = (framework_t *)clientData;
-  if (fp->client) return fw_error_obj(interp, Tcl_ObjPrintf("%s is already a jack client, cannot register", Tcl_GetString(objv[0])));
-  return fw_client_register(clientData, interp, argc, objv);
-}
-static int fw_client_deregister(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv);
-static int fw_subcommand_deregister(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  framework_t *fp = (framework_t *)clientData;
-  if ( ! fp->client) return fw_error_obj(interp, Tcl_ObjPrintf("%s is not a jack client, cannot deregister", Tcl_GetString(objv[0])));
-  return fw_client_deregister(clientData, interp, argc, objv);
-}
-static int fw_subcommand_is_registered(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  framework_t *fp = (framework_t *)clientData;
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(fp->client != NULL));
-  return TCL_OK;
-}
 static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
   if (fp->busy) {
@@ -577,9 +554,7 @@ static jack_port_t *framework_midi_output(void *p, int i) {
 static int framework_is_active(void *arg) {
   return ((framework_t *)arg)->activated;
 }
-static int framework_is_registered(void *arg) {
-  return ((framework_t *)arg)->client != NULL;
-}
+
 static int sdrkit_sample_rate(void *arg) {
   return (int)jack_get_sample_rate(((framework_t *)arg)->client);
 }
@@ -690,6 +665,7 @@ static void framework_delete2(void *arg, int outside_shutdown) {
   if (dsp->command_name != NULL) Tcl_DecrRefCount(dsp->command_name);
   if (dsp->server_name != NULL) Tcl_DecrRefCount(dsp->server_name);
   if (dsp->client_name != NULL) Tcl_DecrRefCount(dsp->client_name);
+  if (dsp->client_uuid != NULL) Tcl_DecrRefCount(dsp->client_uuid);
   if (dsp->subcommands_string != NULL) Tcl_DecrRefCount(dsp->subcommands_string);
   if (dsp->method_list != NULL) Tcl_DecrRefCount(dsp->method_list);
   if (dsp->option_list != NULL) Tcl_DecrRefCount(dsp->option_list);
@@ -706,6 +682,23 @@ static void framework_shutdown(void *arg) {
 /* delete called outside shutdown callback */
 static void framework_delete(void *arg) {
   framework_delete2(arg, 1);
+}
+
+/* session event callback */
+static void framework_session_callback(jack_session_event_t *event, void *arg) {
+  fprintf(stderr, "framework_session_callback(event->client_uuid = %s)\n", event->client_uuid);
+  fprintf(stderr, "framework_session_callback(arg = %lx)\n", (unsigned long)arg);
+  framework_t *dsp = (framework_t *)arg;
+  // construct a command line to recreate our state
+  Tcl_Obj *command_line = Tcl_ObjPrintf("sdrtcl-%s %s -u %s", Tcl_GetString(dsp->class_name), Tcl_GetString(dsp->command_name), event->client_uuid);
+  // add more options
+  event->command_line = Tcl_GetString(command_line);
+  event->flags = (jack_session_flags_t)0;
+  fprintf(stderr, "session command line: %s\n", event->command_line);
+  jack_session_reply(dsp->client, event);
+  event->command_line = NULL;
+  Tcl_DecrRefCount(command_line);  
+  jack_session_event_free(event);
 }
 
 /* report jack status in strings */
@@ -735,17 +728,58 @@ static void framework_dump_template(const framework_t *atemplate) {
   for (int i = 0; atemplate->subcommands[i].name != NULL; i += 1) fprintf(stderr, "  %d %s\n", i, atemplate->subcommands[i].name);  
 }
 
-/* register a client with the jack server */
-/* the basic puzzle here is to figure out how to restore on failure */
-static int fw_client_register(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  framework_t *data = (framework_t *)clientData;
+/* keyer module factory command */
+/* usage: keyer_module_type_name command_name [options] */
+static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const framework_t *atemplate, size_t data_size) {
+  // test for insufficient arguments
+  if (argc < 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s name [option value ...]", Tcl_GetString(objv[0])));
+  // framework_dump_template(template);
+  // decide if this wants to open as a jack client
+  int wants_jack = fw_option_lookup((char *)"-server", atemplate->options) >= 0;
+  // check for some sanity
+  if (atemplate->command == NULL)
+    return fw_error_str(interp, "command pointer?");
+  if (wants_jack) {
+    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs != 0 && atemplate->process == NULL)
+      return fw_error_str(interp, "jack ports but no jack process callback?");
+    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs == 0 && atemplate->process != NULL)
+      return fw_error_str(interp, "no jack ports for jack process callback?");
+  }
+  // get class and command name
+  char *class_name = Tcl_GetString(objv[0]);
+  char *command_name = Tcl_GetString(objv[1]);
+
+  // allocate command data
+  framework_t *data = (framework_t *)Tcl_Alloc(data_size);
+  if (data == NULL)
+    return fw_error_str(interp, "memory allocation afailure");
+
+  // initialize command data
+  memset(data, 0, data_size);
+  memcpy(data, atemplate, sizeof(framework_t));
+  data->cdelete = NULL;		// deferred until after data->init is called
+  data->class_name = objv[0];
+  Tcl_IncrRefCount(data->class_name);
+  data->command_name = objv[1];
+  Tcl_IncrRefCount(data->command_name);
+  // fprintf(stderr, "%s data->command %lx, atemplate->command %lx\n", command_name, (long)data->command, (long)atemplate->command);
+
+  // parse command line options
+  if (fw_option_create(data, interp, argc, objv) != TCL_OK) {
+    framework_delete(data);
+    return TCL_ERROR;
+  }
+
   jack_status_t status = (jack_status_t)0;
   char *server_name = NULL;
   char *client_name = NULL;
+
+  if (wants_jack) {
     // get jack server and client names
     server_name = data->server_name != NULL ? Tcl_GetString(data->server_name) :
       getenv("JACK_DEFAULT_SERVER") != NULL ? getenv("JACK_DEFAULT_SERVER") : (char *)"default";
-    client_name = data->client_name != NULL ? Tcl_GetString(data->client_name) : Tcl_GetString(data->command_name);
+    client_name = data->client_name != NULL ? Tcl_GetString(data->client_name) : command_name;
 
     // remove namespaces from client name
     if (strrchr(client_name, ':') != NULL) {
@@ -757,7 +791,6 @@ static int fw_client_register(ClientData clientData, Tcl_Interp *interp, int arg
     }
     // fprintf(stderr, "framework_factory: cmd_name %s, client_name %s\n", cmd_name, client_name);
 
-    // install determined server and client name
     if (data->server_name == NULL) {
       data->server_name = Tcl_NewStringObj(server_name, -1);
       Tcl_IncrRefCount(data->server_name);
@@ -768,20 +801,35 @@ static int fw_client_register(ClientData clientData, Tcl_Interp *interp, int arg
     }
 
     // create jack client
-    data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
-    // fprintf(stderr, "framework_factory: client %p\n", client);  
-    if (data->client == NULL) {
-      framework_jack_status_report(interp, status);
-      /* framework_delete(data);  this is too brutal,  */
-      return fw_error_obj(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
+    if (data->client_uuid == NULL) {
+      data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
+      if (data->client == NULL) {
+	framework_jack_status_report(interp, status);
+	framework_delete(data);
+	return fw_error_obj(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
+      }
+    } else {
+      data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName|JackSessionID), &status, server_name, Tcl_GetString(data->client_uuid));
+      if (data->client == NULL) {
+	framework_jack_status_report(interp, status);
+	framework_delete(data);
+	return fw_error_obj(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName|JackSessionID, ..., %s, %s) failed",
+						  client_name, server_name, Tcl_GetString(data->client_uuid)));
+      }
     }
+    // fprintf(stderr, "framework_factory: client %p\n", client);  
 
     // create jack ports
-    if (data->port_list != NULL) Tcl_DecrRefCount(data->port_list);
     data->port_list = Tcl_NewListObj(0, NULL);
     Tcl_IncrRefCount(data->port_list);
     int n = data->n_inputs+data->n_outputs+data->n_midi_inputs+data->n_midi_outputs;
     if (n > 0) {
+      data->port = (jack_port_t **)Tcl_Alloc(n*sizeof(jack_port_t *));
+      if (data->port == NULL) {
+	framework_delete(data);
+	return fw_error_str(interp, "memory allocation failure");
+      }
+      memset(data->port, 0, n*sizeof(jack_port_t *));
       // fprintf(stderr, "framework_factory: port %p\n", data->port);  
       char buf[256];
       for (int i = 0; i < data->n_inputs; i++) {
@@ -810,81 +858,6 @@ static int fw_client_register(ClientData clientData, Tcl_Interp *interp, int arg
       }
     }
 
-    // set callbacks
-    jack_on_shutdown(data->client, framework_shutdown, data);
-    if (data->process) jack_set_process_callback(data->client, data->process, data);
-    if (data->sample_rate) jack_set_sample_rate_callback(data->client, data->sample_rate, data);
-    // if (data->buffer_size) jack_set_buffer_size_callback(data->client, data->buffer_size, data);
-    // if (data->xrun) jack_set_xrun_callback(data->client, data->xrun, data);
-    // client registration
-    // port registration
-    // graph reordering
-    // port connect
-    return TCL_OK;
-}
-
-/* unregister a client with the jack server */
-static int fw_client_deregister(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  framework_t *data = (framework_t *)clientData;
-  jack_client_close(data->client);
-  data->client = NULL;
-  return TCL_OK;
-}
-
-/* keyer module factory command */
-/* usage: keyer_module_type_name command_name [options] */
-static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const framework_t *atemplate, size_t data_size) {
-  // test for insufficient arguments
-  if (argc < 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s name [option value ...]", Tcl_GetString(objv[0])));
-  // framework_dump_template(template);
-  // check for some sanity
-  if (atemplate->command == NULL)
-    return fw_error_str(interp, "command pointer?");
-#if FRAMEWORK_USES_JACK
-    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs != 0 && atemplate->process == NULL)
-      return fw_error_str(interp, "jack ports but no jack process callback?");
-    if (atemplate->n_inputs+atemplate->n_outputs+atemplate->n_midi_inputs+atemplate->n_midi_outputs == 0 && atemplate->process != NULL)
-      return fw_error_str(interp, "no jack ports for jack process callback?");
-#endif
-  // get class and command name
-  char *class_name = Tcl_GetString(objv[0]);
-  char *command_name = Tcl_GetString(objv[1]);
-
-  // allocate command data
-  framework_t *data = (framework_t *)Tcl_Alloc(data_size);
-  if (data == NULL)
-    return fw_error_str(interp, "memory allocation afailure");
-
-  // initialize command data
-  memset(data, 0, data_size);
-  memcpy(data, atemplate, sizeof(framework_t));
-  data->cdelete = NULL;		// deferred until after data->init is called
-  data->class_name = objv[0];
-  Tcl_IncrRefCount(data->class_name);
-  data->command_name = objv[1];
-  Tcl_IncrRefCount(data->command_name);
-  // fprintf(stderr, "%s data->command %lx, atemplate->command %lx\n", command_name, (long)data->command, (long)atemplate->command);
-
-  // parse command line options
-  if (fw_option_create(data, interp, argc, objv) != TCL_OK) {
-    framework_delete(data);
-    return TCL_ERROR;
-  }
-
-#if FRAMEWORK_USES_JACK
-    // allocate memory for jack ports and other stuff
-    int n = data->n_inputs+data->n_outputs+data->n_midi_inputs+data->n_midi_outputs;
-    if (n > 0) {
-      data->port = (jack_port_t **)Tcl_Alloc(n*sizeof(jack_port_t *));
-      if (data->port == NULL) {
-	framework_delete(data);
-	return fw_error_str(interp, "memory allocation failure");
-      }
-      memset(data->port, 0, n*sizeof(jack_port_t *));
-      // fprintf(stderr, "framework_factory: port %p\n", data->port);  
-    }
-
     // create midi event merge
     if (data->n_midi_inputs+data->n_midi_buffers) {
       int n = data->n_midi_inputs+data->n_midi_buffers;
@@ -899,12 +872,12 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
       }
       memset(data->midi, 0, n*sizeof(framework_midi_t));
     }
-#endif
+  }
   // finish initialization the object data
   // returns data pointer on success, error string on failure
   // failure does not leave command specific stuff to be cleaned up
   if (data->init != NULL) {
-    void *p = data->init((void *)data);
+    void *p = atemplate->init((void *)data);
     if (p != data) {
       // initialization failed
       framework_delete(data);
@@ -915,12 +888,19 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
 
   // create server_name, client_name, class_name, and command_name objects
 
-#if FRAMEWORK_USES_JACK && FRAMEWORK_VERSION == 1
-  if (fw_client_register(data, interp, argc, objv) != TCL_OK) {
-    framework_delete(data);
-    return TCL_ERROR;
+  if (wants_jack) {
+    // set callbacks
+    jack_on_shutdown(data->client, framework_shutdown, data);
+    jack_set_session_callback (data->client, framework_session_callback, data);
+    if (data->process) jack_set_process_callback(data->client, data->process, data);
+    if (data->sample_rate) jack_set_sample_rate_callback(data->client, data->sample_rate, data);
+    // if (data->buffer_size) jack_set_buffer_size_callback(data->client, data->buffer_size, data);
+    // if (data->xrun) jack_set_xrun_callback(data->client, data->xrun, data);
+    // client registration
+    // port registration
+    // graph reordering
+    // port connect
   }
-#endif
   // create Tcl command
   // fprintf(stderr, "create command %s at %lx\n", command_name, (long)data->command);
   Tcl_CreateObjCommand(interp, command_name, data->command, (ClientData)data, framework_delete);
@@ -953,4 +933,48 @@ static int framework_init(Tcl_Interp *interp, const char *pkg, const char *pkg_v
   return TCL_OK;
 }
 
+#endif
+#if 0
+void session_callback (jack_session_event_t *event, void *arg) {
+        // this is a direct reply and we dont have state to save here.
+        // in a gtk app we would forward the event to the gui thread
+        // using g_idle_add() and execute similar code there.
+
+	char retval[100];
+
+	snprintf (retval, 100, "jack_simple_client %s", event->client_uuid);
+	event->command_line = strdup (retval);
+
+	jack_session_reply( client, event );
+
+	if (event->type == JackSessionSaveAndQuit) {
+		simple_quit = 1;
+	}
+
+	jack_session_event_free (event);
+}
+
+int main( int argc, char **argv ) {
+
+        // [some stuff deleted]
+
+	if( argc == 1 )
+		client = jack_client_open (client_name, JackNullOption, &status );
+	else if( argc == 2 )
+		client = jack_client_open (client_name, JackSessionID, &status, argv[1] );
+
+        // [some more stuff]
+
+	/* tell the JACK server to call `session_callback()' if
+	   the session is saved.
+	*/
+
+	jack_set_session_callback (client, session_callback, NULL);
+
+        // [even more stuff]
+
+	while (!simple_quit)
+		sleep(1);
+
+}
 #endif

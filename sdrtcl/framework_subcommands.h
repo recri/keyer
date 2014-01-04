@@ -24,9 +24,6 @@
   { "info",      fw_subcommand_info,      "get the type, methods, options, or doc strings for a command" },
   { "is-busy",   fw_subcommand_is_busy,   "see if the command will throw a busy error if we access it" },
 #if FRAMEWORK_USES_JACK
-  { "register",	 fw_subcommand_register,  "open connection to jack server", },
-  { "deregister",fw_subcommand_deregister,"close connection to jack server", },
-  { "is-registered",fw_subcommand_is_registered,"is connected to jack server", },
   { "activate",  fw_subcommand_activate,  "activate a jack client" },
   { "deactivate",fw_subcommand_deactivate,"deactivate a jack client" },
   { "is-active", fw_subcommand_is_active, "test if a jack client is active" },

@@ -47,6 +47,7 @@ set name [file tail $script]
 namespace eval ::main {
     array set data {
 	verbose 0
+	finished 0
 	defaults {
 	    radio rx
 	}
@@ -86,6 +87,7 @@ proc ::main::select-radio {radio} {
 		puts "package require sdrtcl::$component -> [package require sdrtcl::$component]"
 		puts "sdrtcl::$component $name -> [sdrtcl::$component $name]"
 	    }
+	    return
 	}
     }
     error "$radio not found as possible radio"
@@ -119,6 +121,7 @@ proc ::main::list {} {
 }
 
 proc ::main::main {argv} {
+    variable data
     foreach arg $argv {
 	switch -glob -- $arg {
 	    --radio=* { select-radio [string range $arg 8 end] }
@@ -145,6 +148,7 @@ proc ::main::main {argv} {
 	    }
 	}
     }
+    vwait data(finished)
 }
 
 ::main::main $argv
