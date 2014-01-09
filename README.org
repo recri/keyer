@@ -1,26 +1,24 @@
 * Ascii/Iambic morse keyer (and more) using Jack audio connection kit.
   -----------
-  This project is broken and undergoing its third or fourth redesign.
-  None of the applications work.  Nothing to see here, move along.
-
-  Working plan can be found in Notes/revision.org.
+  Fifth redesign in progress, see Notes/revision-2014-01-04.org for the latest plan.
   -----------
-  This is a morse code keyer consisting of Jack Audio Connection Kit
-  plugins, a Teensyduino hardware interface, and a variety of
-  additional Tcl hosted SDR tools for testing and playing with them.
-
-  The larger project growing here is a kit for building building
-  software defined radios which uses Jack and Tcl to solder the pieces
-  together. 
+  This is a kit for building software defined radios on linux which uses a variety
+  of packages:
+** ALSA - the advanced linux sound architecture
+** Jack - the jack audio construction kit
+** Ladish - the linux audio session manager
+** Dbus - the desktop application bus
+** Hamlib - the rig and rotator control library
+** Tcl - the tool command language
+** Tk - the UI toolkit based on tcl
 * Prerequisites
   I've written these instructions as I use them on a laptop running
-  Ubuntu 11.10, the Oneiric Ocelot release.  It is also being tested
-  on Ubuntu 12.04, the Precise Pangolin release.  Most of it is generic 
+  Ubuntu 13.10, the Saucy Salamander release.  Most of it is generic 
   enough to work on other current Linux systems with minor
   translations of package management tools and package names. It's
   also generic enough to port to MacOS or Windows.  But I don't run
   other Linux systems, MacOS, or Windows so asking me to help you make
-  it work may be a lost cause, unless you want moral support.
+  it work may be a lost cause.
 
   I will be assuming that you have installed the keyer sources in your
   home directory, which I abbreviate as "~".  So I will refer to the
@@ -35,39 +33,21 @@
    | build-essential    |
    | git-core           |
    | jackd2             |
+   | gladish            |
    | libfftw3-dev       |
    | libjack-jackd2-dev |
-   | qjackctl           |
    | tk-dev             |
    | tcllib             |
-   | tkcon              |
-   | libusb-dev
+   | libusb-dev         |
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
    listed.
 
    The "apt-get" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt-get install build-essential git-core jackd2 libfftw3-dev libjack-jackd2-dev qjackctl tk-dev tcllib tkcon libusb-dev
+   sudo apt-get install build-essential git-core jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib libusb-dev
    #+END_EXAMPLE
 
-   Note that Ubuntu 11.10 has some confusion in the packaging of jackd.
-   Some audio packages were built against jackd1 and some against the
-   jackd agnostic package, so some audio libraries will force
-   installation  of the old jackd version 1 package.  I force jackd2
-   because it's what I use.  I don't know if jackd1 will work.
-
-   Also, there is a bug in qjackctl that unnecessarily disables PulseAudio.
-   Edit /usr/bin/qjackctl and make the non-comment part look like this:
-   #+BEGIN_EXAMPLE
-#!/bin/sh
-PROGRAM="/usr/lib/qjackctl/qjackctl.real"
-#PASUSPENDER="`whereis -b pasuspender | cut -d ':' -f 2 | tr -d ' '`"
-#( [ -x "${PASUSPENDER}" ] && ${PASUSPENDER} -- ${PROGRAM} ${@} ) || ${PROGRAM} ${@}
-${PROGRAM} ${@}
-exit 0
-   #+END_EXAMPLE
-   to avoid the problem, or leave it as it is.  This project doesn't use PulseAudio.
 ** Getting the source
    The sources are archived at https://github.com/recri/keyer.
    Assuming that you installed the git packages and want the
@@ -157,122 +137,7 @@ exit 0
   described [[http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html][here]]. It should work with this software if the MIDI note
   is set properly.
 * Usage
-  My basic usage pattern is to use qjackctl to configure my jack
-  server, start the server, control the server, and manually make
-  connections between modules. 
-
-  On the qjackctl Setup>Settings panel, I have:
-  | on             |  Realtime |
-  | MIDI Driver    |       raw |
-  | Priority       | (default) |
-  | Frames/Period  |      1024 |
-  | Sample Rate    |     96000 |
-  | Periods/Buffer |         2 |
-  | Port Maximum   |       512 |
-
-  Some of the commands will automatically make connections to a
-  default set of ports, if the port names match with their
-  expectations.  You can view what happens and what fails to happen
-  with qjackctl.  The most usual problems are that the MidiKey
-  hiccupped and moved from system:capture_1 to system:capture_2, or
-  that you already have another keyer widget running which has claimed
-  the Jack client names.
-  
-  bin/keyer-control, bin/keyer-scope, and bin/pileup are written to
-  automatically hook themselves up in a useful way, and they are
-  the applications which I try to test to make sure they work before
-  each push back to github.
-
-  You can configure your jack server to "autolaunch" whenever an
-  application tries to open it, but the result will be that you get a 
-  bunch of messages from jackd which appear to come from your
-  application, the messages look pretty much the same whether jackd
-  succeeds or fails to start, and the autolaunched jackd may or may
-  not be visible and controllable from qjackctl.  So turn off the
-  autolaunch feature and use qjackctl so you can see what's
-  happening.
-
-  All of the commands in ~/keyer/bin are Tcl/Tk scripts. I'm only
-  going to talk about the ones that make the keyer work.  The rest
-  of it is other parts of a software defined radio software kit that
-  gets soldered together with Jack and Tcl. Some of it may work, some
-  of it used to work, some of it never worked, some of it has been
-  abandoned, some of it is experimental code that may yet be abandoned
-  or changed beyond recognition.  So, if you're curious, try it.  If
-  you're still curious, open it in a text editor.  All the code is
-  either in the script file, or part of standard Tcl/Tk, or it's in
-  ~/keyer/lib.
-** keyer-control - launch and control ascii and iambic midi keyers
-   By default, keyer-control starts a complete iambic keyer and a
-   complete ascii keyer.  It implements the following command line
-   options to customize its operation.  These are all option names
-   preceded by two hyphens.
-   
-   |------------------+----------------------------------------|
-   | --ascii 0        | turns off the ascii keyer module       |
-   | --debounce 0     | turns off the debounce module          |
-   | --dttsp_iambic 1 | turns on the dttsp keyer               |
-   | --iambic 0       | turns off the iambic keyer             |
-   | --ptt 0          | turns off the ptt module               |
-   |------------------+----------------------------------------|
-   | --ascii-*        | passes -* to the ascii keyer           |
-   | --ascii_tone-*   | passes -* to the ascii tone generator  |
-   | --debounce-*     | passes -* to the switch debouncer      |
-   | --dttsp_iambic-* | passes -* to the dttsp keyer           |
-   | --iambic-*       | passes -* to the iambic keyer          |
-   | --iambic_tone-*  | passes -* to the iambic tone generator |
-   |------------------+----------------------------------------|
-
-   I'm not going to enumerate all the suboptions that can be passed on
-   to the submodules because they're all exposed on the keyer-control
-   panel, even the ones that you shouldn't change.  The panel
-   remembers nothing, so if you get wedged, just quit and start over
-   again.
-
-   The iambic tone generator gets shared between the iambic and the
-   dttsp_iambic keyers.  I haven't tried running both at once -- the
-   control panel gets too tall for my laptop screen.
-** keyer-scope - watch keyer glitches
-   This is a work in progress for debugging keyer timing and tone
-   generation.  It connects to the system midi capture device to get
-   paddle input events, to the debouncer to get deglitched input
-   events, to the iambic keyer output to get the key logic output, to 
-   the PTT outputs to get the final ptt and key outputs, and to the
-   iambic keyer tone generator to get wave forms, and displays all the
-   signals on a multi-panel oscilloscope.
-
-   It also demonstrates the advantage of building software components
-   soldered together in Jack.  All the traces supplied by Jack are
-   available as test points without any modifications to the
-   underlying computation.  You can attach a meter, a scope, a
-   spectrum analyzer, or whatever to any Jack port and watch what its
-   doing.
-
-   But it's sort of rough.  The vertical scale control for the wave
-   form display, for instance, is the output gain on iambic tone
-   control.  Turn it up before you start recording.
-** pileup - morse code training
-   Pileup sends morse code for you to echo back with your keyer.
-
-   The words sent are either callsigns from the original pileup
-   program or words with up to N dit clocks from the start of the
-   first element to the end of the last element.
-
-   There is a limit on how many simultaneous voices can run.  It used
-   to be around 20, but I'm not sure what it is now.  The voices all
-   pileup on each other using random frequencies in a specified band,
-   using random speeds in a specified range, using random power levels
-   in a specified range.  They all break to hear what you're keying,
-   then start up again.  And the audio mutes the received voices to
-   echo your sidetone according to the ptt settings.
-
-   There is a simulated sideways waterfall display, which will become
-   a real waterfall eventually.   But you shouldn't look at it, you
-   should work to hear the code and echo it back. Play with your eyes
-   closed.
-
-   I'm doing 11 dit words at 18 wpm with a single voice.  I think the
-   judge is corrupt, but I haven't had time to investigate.
+  The usages are in flux.
 ** MidiKey - Teesyduino application
    The necessary steps should be listed in the comment at the head of
    MidiKey/MidiKey.ino.
@@ -307,7 +172,7 @@ exit 0
   provided an example of how not to make adjustments to DSP components
   on the fly.
 * Licensing
-  Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+  Copyright (C) 2011-2014 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by

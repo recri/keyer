@@ -19,7 +19,7 @@
 
 package provide dbus-sdr 1.0
 
-package require dbus
+package require dbus-tcl
 package require dbus-jack
 
 namespace eval ::dbus-sdr:: {

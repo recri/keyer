@@ -19,7 +19,7 @@
 
 package provide dbus-jack 1.0
 
-package require dbus
+package require dbus-tcl
 
 namespace eval ::dbus-jack:: {
 }

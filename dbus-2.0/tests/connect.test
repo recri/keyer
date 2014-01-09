@@ -1,0 +1,28 @@
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest 2
+    namespace import -force ::tcltest::*
+}
+
+package require dbus-tcl
+dbus connect
+
+test connect-1.1 {simple connect} -body {
+    dbus connect
+} -result session
+
+test connect-1.2 {connect to specified bus} -body {
+    dbus connect session
+} -result session
+
+test connect-1.3 {connect to specified bus} -body {
+    dbus connect foo
+} -returnCodes error -result {Connection Error:\
+Address does not contain a colon}
+
+test connect-1.4 {too many arguments} -body {
+    dbus connect session foo
+} -returnCodes error -result {wrong # args: should be "dbus connect ?busId?"}
+
+# cleanup
+cleanupTests
+return

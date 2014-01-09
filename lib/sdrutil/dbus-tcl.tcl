@@ -17,11 +17,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package provide dbus 1.0
+package provide dbus-tcl 1.0
 
-package require dbus-tcl
+package require dbus
 
-namespace eval ::dbus {
+namespace eval ::dbus-tcl {
     if { ! [::info exists bus]} {
 	::set bus [dbus connect]
     }

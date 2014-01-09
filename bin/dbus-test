@@ -18,8 +18,24 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-package require dbus-tcl
-## package require dbus-intf
+#
+# a generic script for starting sdrkit components by linking their
+# name to this script.
+# 
+set script [info script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join [file dirname $script] .. lib]
+
+#
+# find the name of the script, without reading links
+#
+set name [file tail $script]
+
+package require dbus
+package require dbif
 package require tdom
 
 ## list all the owners and the names they own

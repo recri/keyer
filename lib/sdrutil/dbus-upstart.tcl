@@ -23,7 +23,7 @@
 
 package provide dbus-upstart 1.0
 
-package require dbus
+package require dbus-tcl
 
 namespace eval ::dbus-upstart:: {
 }

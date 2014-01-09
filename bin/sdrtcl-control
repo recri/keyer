@@ -1,0 +1,140 @@
+#!/usr/bin/tclsh8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# start an sdrtcl dbus master
+# 
+set script [info script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join [file dirname $script] .. lib]
+
+#
+# find the name of the script, without reading links
+#
+set name [file tail $script]
+
+#
+# initialize data
+#
+array set data {
+    present {}
+    monitor {}
+    dict {}
+}
+
+#
+# prepare to communicate
+#
+package require dbif
+
+## connect to the bus
+dbif connect -replace -yield org.sdrkit.bus
+
+## listen for replacement
+dbif listen -interface org.freedesktop.DBus \
+    /org/freedesktop/DBus NameLost name {
+	set ::finished true
+    }
+
+## default bus and interface
+dbif default -bus session -interface org.sdrkit.Bus
+
+## roll call signal
+set ::rollcall [dbif signal / RollCall]
+
+## listen for the responses
+dbif listen / Present {name} {
+    lappend ::data(present) $name
+}
+
+proc sdrkit-introspect {name} {
+    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Introspectable Introspect]
+}
+proc sdrkit-get-all {name} {
+    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Properties GetAll org.sdrkit.Bus]
+}
+proc sdrkit-get-value {name key} {
+    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Properties Get org.sdrkit.Bus $key]
+}
+proc sdrkit-set-value {name key value} {
+    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Properties Set org.sdrkit.Bus $key $value]
+}
+
+proc list-equal {l1 l2} {
+    if {[llength $l1] != [llength $l2]} {
+	return 0
+    }
+    foreach i1 $l1 i2 $l2 {
+	if {$i1 ne $i2} {
+	    return 0
+	}
+    }
+    return 1
+}
+
+proc monitor {} {
+    # see how many components have reported
+    set n [llength $::data(present)]
+    # remember this outcome
+    lappend ::data(monitor) $n
+    # see if it's stable
+    if {[llength [lsearch -all -exact $::data(monitor) $n]] < 5} {
+	# still stabilizing
+	after 50 [list monitor]
+    } else {
+	# one quarter second at this level of response
+	set ::data(present) [lsort $::data(present)]
+	if { ! [list-equal $::data(present) [dict keys $::data(dict)]]} {
+	    puts "updating components to $::data(present)"
+	    set d [dict create]
+	    foreach name $::data(present) {
+		set p [dict create]
+		foreach {key value} [sdrkit-get-all $name] {
+		    dict set p $key $value
+		    puts "$key @ $name -> [sdrkit-get-value $name $key]"
+		}
+		dict set d $name $p
+	    }
+	    set ::data(dict) $d
+	}
+	after 250 [list background]
+    }
+}
+
+proc background {} {
+    puts "sdrkit component roll call"
+    # initialize the list of responders
+    set ::data(present) {}
+    # initialize monitor log
+    set ::data(monitor) {}
+    # announce roll call
+    dbif generate $::rollcall
+    # start monitor
+    after 50 [list monitor]
+}
+
+## call the first roll
+## should be done periodically until the respondants settle to a fixed list
+after 250 [list background]
+
+vwait ::finished
