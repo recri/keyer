@@ -1,0 +1,71 @@
+#!/usr/bin/wish8.5
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# start an sdrtcl dbus master and a hamlib rigctld
+# the controller polls the sdrtcl components and
+# builds an interface
+# 
+set script [info script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join [file dirname $script] .. lib]
+
+#
+# find the name of the script, without reading links
+#
+set name [file tail $script]
+
+#
+# prepare to communicate
+#
+package require dbus
+
+## connect to the bus
+dbus connect
+
+if {0} {
+
+    proc signal-received {name dict args} {
+	puts stderr "$name $args"
+    }
+
+    dbus listen {} AppAdded [list signal-received AppAdded]
+    dbus listen {} AppRemoved [list signal-received AppRemoved]
+    dbus listen {} AppStateChanged [list signal-received AppStateChanged]
+    dbus listen {} ClientDisappeared [list signal-received ClientDisappeared]
+    dbus listen {} ClientAppeared [list signal-received ClientAppeared]
+    dbus listen {} ProjectPropertiesChanged [list signal-received ProjectPropertiesChanged]
+} else {
+
+    proc monitor-received {dict args} {
+	set tag [dict get $dict type]:[dict get $dict interface].[dict get $dict member]@[dict get $dict path]
+	puts $tag
+	switch -glob $tag {
+	    * { puts "unmatched $tag" }
+	}
+    }
+
+    dbus monitor session monitor-received
+}
+
+vwait ::finished

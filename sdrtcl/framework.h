@@ -36,7 +36,6 @@
 #include <stddef.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
-#include <jack/session.h>
 #include <tcl.h>
 
 #include "../dspmath/midi_buffer.h"
@@ -125,7 +124,6 @@ typedef struct {
   Tcl_Obj *command_name;
   Tcl_Obj *server_name;
   Tcl_Obj *client_name;
-  Tcl_Obj *client_uuid;
   Tcl_Obj *subcommands_string;
   int verbose;
   int activated;
@@ -665,7 +663,6 @@ static void framework_delete2(void *arg, int outside_shutdown) {
   if (dsp->command_name != NULL) Tcl_DecrRefCount(dsp->command_name);
   if (dsp->server_name != NULL) Tcl_DecrRefCount(dsp->server_name);
   if (dsp->client_name != NULL) Tcl_DecrRefCount(dsp->client_name);
-  if (dsp->client_uuid != NULL) Tcl_DecrRefCount(dsp->client_uuid);
   if (dsp->subcommands_string != NULL) Tcl_DecrRefCount(dsp->subcommands_string);
   if (dsp->method_list != NULL) Tcl_DecrRefCount(dsp->method_list);
   if (dsp->option_list != NULL) Tcl_DecrRefCount(dsp->option_list);
@@ -682,23 +679,6 @@ static void framework_shutdown(void *arg) {
 /* delete called outside shutdown callback */
 static void framework_delete(void *arg) {
   framework_delete2(arg, 1);
-}
-
-/* session event callback */
-static void framework_session_callback(jack_session_event_t *event, void *arg) {
-  fprintf(stderr, "framework_session_callback(event->client_uuid = %s)\n", event->client_uuid);
-  fprintf(stderr, "framework_session_callback(arg = %lx)\n", (unsigned long)arg);
-  framework_t *dsp = (framework_t *)arg;
-  // construct a command line to recreate our state
-  Tcl_Obj *command_line = Tcl_ObjPrintf("sdrtcl-%s %s -u %s", Tcl_GetString(dsp->class_name), Tcl_GetString(dsp->command_name), event->client_uuid);
-  // add more options
-  event->command_line = Tcl_GetString(command_line);
-  event->flags = (jack_session_flags_t)0;
-  fprintf(stderr, "session command line: %s\n", event->command_line);
-  jack_session_reply(dsp->client, event);
-  event->command_line = NULL;
-  Tcl_DecrRefCount(command_line);  
-  jack_session_event_free(event);
 }
 
 /* report jack status in strings */
@@ -801,21 +781,11 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     }
 
     // create jack client
-    if (data->client_uuid == NULL) {
-      data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
-      if (data->client == NULL) {
-	framework_jack_status_report(interp, status);
-	framework_delete(data);
-	return fw_error_obj(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
-      }
-    } else {
-      data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName|JackSessionID), &status, server_name, Tcl_GetString(data->client_uuid));
-      if (data->client == NULL) {
-	framework_jack_status_report(interp, status);
-	framework_delete(data);
-	return fw_error_obj(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName|JackSessionID, ..., %s, %s) failed",
-						  client_name, server_name, Tcl_GetString(data->client_uuid)));
-      }
+    data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
+    if (data->client == NULL) {
+      framework_jack_status_report(interp, status);
+      framework_delete(data);
+      return fw_error_obj(interp, Tcl_ObjPrintf("jack_client_open(%s, JackServerName|JackUseExactName, ..., %s) failed", client_name, server_name));
     }
     // fprintf(stderr, "framework_factory: client %p\n", client);  
 
@@ -891,7 +861,6 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   if (wants_jack) {
     // set callbacks
     jack_on_shutdown(data->client, framework_shutdown, data);
-    jack_set_session_callback (data->client, framework_session_callback, data);
     if (data->process) jack_set_process_callback(data->client, data->process, data);
     if (data->sample_rate) jack_set_sample_rate_callback(data->client, data->sample_rate, data);
     // if (data->buffer_size) jack_set_buffer_size_callback(data->client, data->buffer_size, data);
@@ -933,48 +902,4 @@ static int framework_init(Tcl_Interp *interp, const char *pkg, const char *pkg_v
   return TCL_OK;
 }
 
-#endif
-#if 0
-void session_callback (jack_session_event_t *event, void *arg) {
-        // this is a direct reply and we dont have state to save here.
-        // in a gtk app we would forward the event to the gui thread
-        // using g_idle_add() and execute similar code there.
-
-	char retval[100];
-
-	snprintf (retval, 100, "jack_simple_client %s", event->client_uuid);
-	event->command_line = strdup (retval);
-
-	jack_session_reply( client, event );
-
-	if (event->type == JackSessionSaveAndQuit) {
-		simple_quit = 1;
-	}
-
-	jack_session_event_free (event);
-}
-
-int main( int argc, char **argv ) {
-
-        // [some stuff deleted]
-
-	if( argc == 1 )
-		client = jack_client_open (client_name, JackNullOption, &status );
-	else if( argc == 2 )
-		client = jack_client_open (client_name, JackSessionID, &status, argv[1] );
-
-        // [some more stuff]
-
-	/* tell the JACK server to call `session_callback()' if
-	   the session is saved.
-	*/
-
-	jack_set_session_callback (client, session_callback, NULL);
-
-        // [even more stuff]
-
-	while (!simple_quit)
-		sleep(1);
-
-}
 #endif

@@ -5,6 +5,7 @@ pkgIndex.tcl
 *.so
 *~
 *.log
+*.out
 test/test-ovsv
 test/test-osc
 test/test-osc2

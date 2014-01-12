@@ -38,6 +38,7 @@ set name [file tail $script]
 #
 set component [string range $name 7 end]
 
+package require dbus
 package require dbif
 package require sdrtcl::$component
 
@@ -48,12 +49,11 @@ sdrtcl::$component $command {*}$args
 $command activate
 
 ## connect to dbus
-dbif connect -replace -yield org.sdrkit.$command
-
-## default bus and interface
-dbif default -bus session -interface org.sdrkit.Bus
+dbus connect
+dbus name -replace -yield org.sdrkit.$command
 
 ## signal reply to rollcall
+puts "$component $command Present"
 set ::sig [dbif signal / Present {name}]
 
 ## set up properties
@@ -62,26 +62,23 @@ proc do-configure {oname value} {
 }
 
 foreach oname [$::command info options] {
-    if {$oname in {-uuid -server}} continue
+    if {$oname in {-client -server -verbose}} continue
     set pname [string totitle [join [split $oname -] {}]]
     if {[catch {$::command cget $oname} value]} {
 	puts "when cgetting $oname got $value"
 	continue
     }
+    set ::pnameof($oname) $pname
+    set ::onameof($pname) $oname
     set ::data($pname) $value
-    if {$oname in {-client}} {
-	set access read
-    } else {
-	set access readwrite
-    }
-    puts "$::command defines $pname property"
-    dbif property -access $access / $pname ::data($pname) [list do-configure $oname \[set $pname]]
+    #puts "$::command defines $pname property for $oname"
+    dbif property / $pname ::data($pname) [list do-configure $oname \[set $pname]]
 }
 
 ## listen for the roll call signal
-dbif listen / RollCall {} {
-    puts "$::command received roll call signal"
-    dbif generate $::sig $::command
+dbus listen / org.sdrkit.Bus.RollCall {
+    # puts "$::command received roll call signal"
+    dbus signal / org.sdrkit.Bus Present $::command
 }
 
 vwait finished
