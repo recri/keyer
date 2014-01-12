@@ -13,3 +13,5 @@ test/test-window
 test/*.txt
 logs/*
 retired/*
+dbus-2.0/doc/dbus.n
+dbus-2.0/doc/dbus.html

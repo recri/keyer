@@ -21,46 +21,50 @@
 #
 # start an sdrtcl component by name
 # 
+# get script name
 set script [info script]
 
-#
 # append the ../lib directory to the Tcl search path
-#
 lappend auto_path [file join [file dirname $script] .. lib]
 
-#
 # find the name of the script, without reading links
-#
 set name [file tail $script]
 
-#
-# start the component named
-#
+# get the component name
 set component [string range $name 7 end]
 
-package require dbus
-package require dbif
-package require sdrtcl::$component
-
-# puts "sdrtcl-component runs: sdrtcl::$component $argv"
+## sort out the rest of the arguments
 set command [lindex $argv 0]
 set args [lrange $argv 1 end]
+
+# prepare to dbus
+package require dbif
+
+## connect to dbus
+dbif default -bus session -interface org.sdrkit.Bus
+dbif connect -replace -yield org.sdrkit.$command
+
+## listen for the roll call signal
+dbif listen / RollCall {
+    puts "[clock milliseconds] get org.sdrkit.Bus.RollCall()"
+    dbus signal / org.sdrkit.Bus Present $::command
+}
+
+## prepare to component
+package require sdrtcl::$component
+
+## start the component
+puts "[clock milliseconds] sdrtcl-component runs: sdrtcl::$component $command $args"
 sdrtcl::$component $command {*}$args
 $command activate
 
-## connect to dbus
-dbus connect
-dbus name -replace -yield org.sdrkit.$command
-
-## signal reply to rollcall
-puts "$component $command Present"
-set ::sig [dbif signal / Present {name}]
-
-## set up properties
+## property setter function
 proc do-configure {oname value} {
+    puts "[clock milliseconds] $::command configure $oname $value"
     $::command configure $oname $value
 }
 
+## set up properties
 foreach oname [$::command info options] {
     if {$oname in {-client -server -verbose}} continue
     set pname [string totitle [join [split $oname -] {}]]
@@ -71,14 +75,8 @@ foreach oname [$::command info options] {
     set ::pnameof($oname) $pname
     set ::onameof($pname) $oname
     set ::data($pname) $value
-    #puts "$::command defines $pname property for $oname"
+    puts "[clock milliseconds] $::command defines $pname property for $oname"
     dbif property / $pname ::data($pname) [list do-configure $oname \[set $pname]]
 }
 
-## listen for the roll call signal
-dbus listen / org.sdrkit.Bus.RollCall {
-    # puts "$::command received roll call signal"
-    dbus signal / org.sdrkit.Bus Present $::command
-}
-
-vwait finished
+vwait ::finished
