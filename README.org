@@ -1,4 +1,4 @@
-* Ascii/Iambic morse keyer (and more) using Jack audio connection kit.
+* Software defined radio using Jack audio connection kit.
   -----------
   Fifth redesign in progress, see Notes/revision-2014-01-04.org for the latest plan.
   -----------
@@ -22,11 +22,9 @@
 
   I will be assuming that you have installed the keyer sources in your
   home directory, which I abbreviate as "~".  So I will refer to the
-  keyer source directory as "~/keyer" in all that follows.   It
-  doesn't depend on being there.  You can install it anywhere. That
-  isn't where I install it.  But these instructions will depend on you
-  making the necessary translation if you install the sources
-  someplace else.
+  keyer source directory as "~/keyer" in all that follows.   At the
+  moment it depends on being there and parts of the package won't work
+  correctly if installed elsewhere.
 ** Required packages
    Using your preferred Ubuntu package manager, you want to install
    the following packages:
@@ -36,7 +34,7 @@
    | gladish            |
    | libfftw3-dev       |
    | libjack-jackd2-dev |
-   | tk-dev             |
+   | tk8.6-dev          |
    | tcllib             |
    | libusb-dev         |
    These are not all the required packages.  Several other packages

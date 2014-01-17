@@ -8,7 +8,7 @@
 
 package require dbus 2.0
 package provide dbif 1.0
-package provide dbus-intf 1.0
+#package provide dbus-intf 1.0
 
 namespace eval dbus::dbif {
     # Setup some defaults in case the user doesn't specify certain options
