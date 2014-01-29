@@ -55,7 +55,15 @@ package require sdrtcl::$component
 
 ## start the component
 puts "[clock milliseconds] sdrtcl-component runs: sdrtcl::$component $command $args"
-sdrtcl::$component $command {*}$args
+switch -exact $component {
+    keyer-ascii {
+	package require morse::itu
+	sdrtcl::$component $command {*}$args -dict [morse-itu-dict]
+    }
+    default {
+	sdrtcl::$component $command {*}$args
+   }
+}
 $command activate
 
 ## property setter function
@@ -66,6 +74,7 @@ proc do-configure {oname value} {
 
 ## set up properties
 foreach oname [$::command info options] {
+    ## ignore the usual suspects
     if {$oname in {-client -server -verbose}} continue
     set pname [string totitle [join [split $oname -] {}]]
     if {[catch {$::command cget $oname} value]} {
@@ -78,5 +87,19 @@ foreach oname [$::command info options] {
     puts "[clock milliseconds] $::command defines $pname property for $oname"
     dbif property / $pname ::data($pname) [list do-configure $oname \[set $pname]]
 }
+
+## ignore individual options
+## ignore individual methods
+## install one method
+proc component {dict arg} {
+    if {[catch {$::command {*}$arg} result]} {
+	set type {error}
+    } else {
+	set type {result}
+    }
+    puts "[clock milliseconds] $type from $::command $arg -> $result"
+    return $result
+}
+dbus method session / org.sdrkit.Bus.Component [list component]
 
 vwait ::finished

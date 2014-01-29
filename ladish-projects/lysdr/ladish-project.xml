@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<!--
+ladish Project.
+-->
+<!-- Wed Jan  1 11:25:25 2014 -->
+<project name="lysdr" uuid="a5d5b683-d164-49b7-8534-499a7e0b5f12">
+  <room>
+    <port name="audio_capture_1" uuid="f3b66bdf-eabd-4c73-969e-852a8f18db60" type="audio" direction="capture" />
+    <port name="audio_capture_2" uuid="2d82eed7-bd61-4e76-8210-1aac23e1d769" type="audio" direction="capture" />
+    <port name="audio_capture_3" uuid="c65026bd-f6c8-4311-a00c-58d35a07f465" type="audio" direction="capture" />
+    <port name="audio_capture_4" uuid="5d5fe203-f90f-4b90-84b8-4531ff87cd2a" type="audio" direction="capture" />
+    <port name="midi_capture_1" uuid="b8c4c2c6-d44b-4f98-a691-872571025587" type="midi" direction="capture" />
+    <port name="midi_capture_2" uuid="802b3e39-b717-4c8f-9190-99b04b6e7d16" type="midi" direction="capture" />
+    <port name="audio_playback_1" uuid="db670a8a-c5b4-4965-a756-332fbe8dcded" type="audio" direction="playback" />
+    <port name="audio_playback_2" uuid="9499c01f-8150-440c-a7ca-65d451e59508" type="audio" direction="playback" />
+    <port name="audio_playback_3" uuid="d7022565-617f-4a12-9e21-6d480768f5b5" type="audio" direction="playback" />
+    <port name="audio_playback_4" uuid="efd3dd32-bde3-4a5c-b377-22c110d44a70" type="audio" direction="playback" />
+    <port name="midi_playback_1" uuid="cb439a96-74e6-4c60-8105-4fc35d33b9d5" type="midi" direction="playback" />
+    <port name="midi_playback_2" uuid="21f2812b-80e7-4fb7-b403-3ae5585854c0" type="midi" direction="playback" />
+  </room>
+  <jack>
+    <clients>
+      <client name="lysdr" uuid="0010df50-53c5-49d8-9f0a-75f31aadcd30">
+        <ports>
+          <port name="I input" uuid="63769254-da34-415d-83be-ec5f3f9c2ccf" />
+          <port name="Q input" uuid="547c3c22-81ed-40b8-a25b-710f090a8f06" />
+          <port name="L output" uuid="7f46482b-8879-4442-aa2b-c78afb3205f6" />
+          <port name="R output" uuid="f2b4e116-80e0-4774-8291-4eaf78386e4b" />
+        </ports>
+      </client>
+    </clients>
+  </jack>
+  <clients>
+    <client name="Capture" uuid="9c8ab1b7-211c-4056-bd91-94d63b3df9f2" naming="app">
+      <ports>
+        <port name="audio_capture_1" uuid="f3b66bdf-eabd-4c73-969e-852a8f18db60" type="audio" direction="output" />
+        <port name="audio_capture_2" uuid="2d82eed7-bd61-4e76-8210-1aac23e1d769" type="audio" direction="output" />
+        <port name="audio_capture_3" uuid="c65026bd-f6c8-4311-a00c-58d35a07f465" type="audio" direction="output" />
+        <port name="audio_capture_4" uuid="5d5fe203-f90f-4b90-84b8-4531ff87cd2a" type="audio" direction="output" />
+        <port name="midi_capture_1" uuid="b8c4c2c6-d44b-4f98-a691-872571025587" type="midi" direction="output" />
+        <port name="midi_capture_2" uuid="802b3e39-b717-4c8f-9190-99b04b6e7d16" type="midi" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1411.000000</key>
+        <key name="http://ladish.org/ns/canvas/y">1065.000000</key>
+      </dict>
+    </client>
+    <client name="Playback" uuid="e53018fe-4ae5-4d4c-b4a1-3b8f12e1ae91" naming="app">
+      <ports>
+        <port name="audio_playback_1" uuid="db670a8a-c5b4-4965-a756-332fbe8dcded" type="audio" direction="input" />
+        <port name="audio_playback_2" uuid="9499c01f-8150-440c-a7ca-65d451e59508" type="audio" direction="input" />
+        <port name="audio_playback_3" uuid="d7022565-617f-4a12-9e21-6d480768f5b5" type="audio" direction="input" />
+        <port name="audio_playback_4" uuid="efd3dd32-bde3-4a5c-b377-22c110d44a70" type="audio" direction="input" />
+        <port name="midi_playback_1" uuid="cb439a96-74e6-4c60-8105-4fc35d33b9d5" type="midi" direction="input" />
+        <port name="midi_playback_2" uuid="21f2812b-80e7-4fb7-b403-3ae5585854c0" type="midi" direction="input" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1695.000000</key>
+        <key name="http://ladish.org/ns/canvas/y">1064.000000</key>
+      </dict>
+    </client>
+    <client name="lysdr" uuid="2cb80ae8-7696-4ad1-950e-efd0a2a7ff5d" naming="app" app="cfcab6f4-99ba-4fd3-8f97-3392f9af20e2">
+      <ports>
+        <port name="I input" uuid="63769254-da34-415d-83be-ec5f3f9c2ccf" type="audio" direction="input" />
+        <port name="Q input" uuid="547c3c22-81ed-40b8-a25b-710f090a8f06" type="audio" direction="input" />
+        <port name="L output" uuid="7f46482b-8879-4442-aa2b-c78afb3205f6" type="audio" direction="output" />
+        <port name="R output" uuid="f2b4e116-80e0-4774-8291-4eaf78386e4b" type="audio" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1564.000000</key>
+        <key name="http://ladish.org/ns/canvas/y">1076.000000</key>
+      </dict>
+    </client>
+  </clients>
+  <connections>
+    <connection port1="f3b66bdf-eabd-4c73-969e-852a8f18db60" port2="63769254-da34-415d-83be-ec5f3f9c2ccf" />
+    <connection port1="2d82eed7-bd61-4e76-8210-1aac23e1d769" port2="547c3c22-81ed-40b8-a25b-710f090a8f06" />
+    <connection port1="7f46482b-8879-4442-aa2b-c78afb3205f6" port2="db670a8a-c5b4-4965-a756-332fbe8dcded" />
+    <connection port1="f2b4e116-80e0-4774-8291-4eaf78386e4b" port2="9499c01f-8150-440c-a7ca-65d451e59508" />
+  </connections>
+  <applications>
+    <application name="lysdr" uuid="cfcab6f4-99ba-4fd3-8f97-3392f9af20e2" terminal="false" level="0" autorun="true">~%2FSources%2FRadio%2Flysdr%2Fbuild%2Flysdr</application>
+  </applications>
+</project>

@@ -63,6 +63,9 @@ proc sdrkit-listen {path interface member script} {
     }
     dbus listen $path $interface.$member $script
 }
+proc sdrkit-call {name method args} {
+    return [dbus call -dest org.sdrkit.$name / org.sdrkit.Bus $method $args]
+}
 
 ## connect to the bus
 dbif default -bus session -interface org.sdrkit.Bus
@@ -114,7 +117,7 @@ proc monitor-rollcall {} {
 	# puts "[clock milliseconds] monitor-rollcall install $::data(present)"
 	# puts "updating components to $::data(present)"
 	set d [dict create]
-	foreach name $::data(present) {
+	foreach name [lsort $::data(present)] {
 	    # puts "[clock milliseconds] [sdrkit-introspect $name]"
 	    set p [dict create]
 	    foreach {key value} [sdrkit-get-all $name] {
@@ -122,9 +125,17 @@ proc monitor-rollcall {} {
 		# puts "$key @ $name -> [sdrkit-get-value $name $key]"
 	    }
 	    dict set d $name $p
+	    puts "[clock milliseconds] $name cdoc = {[sdrkit-call $name Component cdoc]}"
+	    puts "[clock milliseconds] $name methods = {[sdrkit-call $name Component info methods]}"
+	    puts "[clock milliseconds] $name options = {[sdrkit-call $name Component info options]}"
+	    foreach opt [sdrkit-call $name Component info options] {
+		puts "[clock milliseconds] $name $opt cdoc = {[sdrkit-call $name Component cdoc $opt]}"
+	    }
 	}
 	set ::data(dict) $d
-	puts "[clock milliseconds] $d"
+	dict for {name value} $d {
+	    puts "[clock milliseconds] $name [dict keys $value]"
+	}
     }
 }
 
@@ -141,5 +152,19 @@ foreach member {AppAdded AppRemoved AppStateChanged} {
 
 ## schedule the first roll call
 set ::data(after) [after 250 [list start-rollcall]]
+
+## handle incoming midi events
+proc midi-check {} {
+    foreach e [rigctld get] {
+	# puts "[clock milliseconds] midi-check $e"
+    }
+    set ::data(after-midi) [after 1000 [list midi-check]]
+}
+package require sdrtcl::midi
+puts "[clock milliseconds] started [sdrtcl::midi rigctld]"
+puts "[clock milliseconds] rigctld activate [rigctld activate]"
+puts "[clock milliseconds] rigctld start [rigctld start]"
+
+set ::data(after-midi) [after 1000 [list midi-check]]
 
 vwait ::finished

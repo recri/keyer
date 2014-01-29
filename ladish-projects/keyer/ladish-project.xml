@@ -2,8 +2,8 @@
 <!--
 ladish Project.
 -->
-<!-- Fri Jan 10 15:53:15 2014 -->
-<project name="keyer" uuid="d9b079e2-a066-4e1e-a3cc-659c38587fc8">
+<!-- Tue Jan 28 10:57:26 2014 -->
+<project name="keyer" uuid="f73e7f2d-bbfd-43ef-b281-b6943f54ca9d">
   <room>
     <port name="Left" uuid="871954a7-7c0f-4092-ae34-465e1f1bb0ca" type="audio" direction="capture" />
     <port name="Right" uuid="2dc1da00-cebd-47ea-a239-c30db9653e7c" type="audio" direction="capture" />
@@ -41,6 +41,57 @@ ladish Project.
           <port name="out_q" uuid="9c3eb05b-589d-453e-bca4-1677a94a4697" />
         </ports>
       </client>
+      <client name="key-ascii" uuid="ff646aa7-9c1a-4fc4-bcb7-0ce783cbc610">
+        <ports>
+          <port name="midi_out" uuid="c1ec5de5-2446-43e4-8845-912fa2d001c9" />
+        </ports>
+      </client>
+      <client name="key-tone2" uuid="b79a2fc4-738a-4374-9a7b-a553fa53c9ad">
+        <ports>
+          <port name="midi_in" uuid="dd7e0ad9-c8e5-49f0-b886-d6bbd7c2c9cb" />
+          <port name="out_i" uuid="41790825-57d2-491a-9175-0ed7e13d3d22" />
+          <port name="out_q" uuid="eef363f4-ffe2-4379-8a4d-16f7de875a21" />
+        </ports>
+      </client>
+      <client name="key-detone2" uuid="c400e53d-e0fd-4cd9-84ba-a55571798155">
+        <ports>
+          <port name="in_i" uuid="5d0553c6-9824-4533-b541-ca0a5bf5d085" />
+          <port name="midi_out" uuid="7eb47bdf-1d4a-4d3c-bfa0-1b28c875b2f9" />
+        </ports>
+      </client>
+      <client name="key-detime2" uuid="84dcbe2d-fc6c-4dc3-8bfb-5536504af574">
+        <ports>
+          <port name="midi_in" uuid="2b7eb4b0-f77f-4025-af3f-36b1249af8c5" />
+        </ports>
+      </client>
+      <client name="key-detone" uuid="09de4b18-dbb0-468e-af5f-c18a3a9b1aa4">
+        <ports>
+          <port name="in_i" uuid="ec9df843-16fd-433a-891b-eb96e78e623f" />
+          <port name="midi_out" uuid="f532aa53-a2ec-4a54-8d4e-637861191e61" />
+        </ports>
+      </client>
+      <client name="key-detime" uuid="7b6f48ba-01a1-4d22-aead-d41cd7c74a42">
+        <ports>
+          <port name="midi_in" uuid="bf390b6c-105e-44c3-8885-d8d54168436f" />
+        </ports>
+      </client>
+      <client name="key-detime3" uuid="d4b8ae69-1cd2-4d7e-96ff-3a4fd4e6aae5">
+        <ports>
+          <port name="midi_in" uuid="ee473364-12f1-48fe-a5ba-f7d424b9935d" />
+        </ports>
+      </client>
+      <client name="key-detone3" uuid="2aeb4320-ee60-4dab-8754-ea995e9a885b">
+        <ports>
+          <port name="in_i" uuid="3b009e0f-0744-4fa7-920f-7165250fe63a" />
+          <port name="midi_out" uuid="62bbace7-77f3-4cc4-9673-56702af97ff1" />
+        </ports>
+      </client>
+      <client name="rigctld" uuid="22f6162b-f385-40f6-8f52-37bf6a72d6e3">
+        <ports>
+          <port name="midi_in" uuid="7b40a9f2-1ad7-49c4-9d56-cd022dda316f" />
+          <port name="midi_out" uuid="cb618b0a-1fe5-4885-a3cf-62fbf4d94079" />
+        </ports>
+      </client>
     </clients>
   </jack>
   <clients>
@@ -64,8 +115,8 @@ ladish Project.
         <port name="MIDI" uuid="04f5fa90-f453-479d-8f3a-2f92cf78c604" type="midi" direction="input" />
       </ports>
       <dict>
-        <key name="http://ladish.org/ns/canvas/x">1668.0</key>
-        <key name="http://ladish.org/ns/canvas/y">1140.0</key>
+        <key name="http://ladish.org/ns/canvas/x">1770.2694457116781</key>
+        <key name="http://ladish.org/ns/canvas/y">1124.6123403284673</key>
       </dict>
     </client>
     <client name="key-debounce" uuid="c2c2969e-a048-487b-92e5-79c86e69641d" naming="app" app="07c93527-ac6f-414b-a3b7-9f56d59d97dd">
@@ -74,8 +125,8 @@ ladish Project.
         <port name="midi_out" uuid="485ed3fb-d228-40bb-ac4a-f05262d59e3d" type="midi" direction="output" />
       </ports>
       <dict>
-        <key name="http://ladish.org/ns/canvas/x">1112.0</key>
-        <key name="http://ladish.org/ns/canvas/y">1069.0</key>
+        <key name="http://ladish.org/ns/canvas/x">1094.6017518914166</key>
+        <key name="http://ladish.org/ns/canvas/y">1011.3537831143601</key>
       </dict>
     </client>
     <client name="key-iambic" uuid="c20b3f1c-bdd8-4643-953e-d9b9c7edb3be" naming="app" app="32b18e17-0981-473f-854b-d05318470b17">
@@ -84,8 +135,8 @@ ladish Project.
         <port name="midi_out" uuid="966ba320-b9aa-45fa-b103-b61c7483b19b" type="midi" direction="output" />
       </ports>
       <dict>
-        <key name="http://ladish.org/ns/canvas/x">1289.0</key>
-        <key name="http://ladish.org/ns/canvas/y">1119.0</key>
+        <key name="http://ladish.org/ns/canvas/x">1228.221296794249</key>
+        <key name="http://ladish.org/ns/canvas/y">1040.079569213614</key>
       </dict>
     </client>
     <client name="key-ptt" uuid="39c1fef3-d5fe-413c-99aa-fb1e01983c38" naming="app" app="72252d9d-41f7-407a-8ece-f608925d9c1a">
@@ -94,8 +145,8 @@ ladish Project.
         <port name="midi_out" uuid="9f121c19-ee2d-4eff-a958-cb3c3a542394" type="midi" direction="output" />
       </ports>
       <dict>
-        <key name="http://ladish.org/ns/canvas/x">1459.0</key>
-        <key name="http://ladish.org/ns/canvas/y">1174.0</key>
+        <key name="http://ladish.org/ns/canvas/x">1371.5877814127516</key>
+        <key name="http://ladish.org/ns/canvas/y">1088.240609359599</key>
       </dict>
     </client>
     <client name="key-tone" uuid="68bce948-a3da-4853-b73b-fbc2083221ec" naming="app" app="5635aa4d-8d5c-40e4-9142-df765e586af7">
@@ -105,8 +156,95 @@ ladish Project.
         <port name="out_q" uuid="9c3eb05b-589d-453e-bca4-1677a94a4697" type="audio" direction="output" />
       </ports>
       <dict>
-        <key name="http://ladish.org/ns/canvas/x">1466.0</key>
-        <key name="http://ladish.org/ns/canvas/y">1067.0</key>
+        <key name="http://ladish.org/ns/canvas/x">1527.0107208029194</key>
+        <key name="http://ladish.org/ns/canvas/y">1055.166799726278</key>
+      </dict>
+    </client>
+    <client name="key-ascii" uuid="7257b758-9e25-4775-8c05-4095e8cb90c3" naming="app" app="2108f775-09c1-4062-acca-c9510b4489f6">
+      <ports>
+        <port name="midi_out" uuid="c1ec5de5-2446-43e4-8845-912fa2d001c9" type="midi" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1384.470175638686</key>
+        <key name="http://ladish.org/ns/canvas/y">983.4929288321171</key>
+      </dict>
+    </client>
+    <client name="key-tone2" uuid="26632cab-7e9d-487c-8508-c6a3e7efe3f1" naming="app" app="ff1522a5-a746-4f94-81c5-b3e602559798">
+      <ports>
+        <port name="midi_in" uuid="dd7e0ad9-c8e5-49f0-b886-d6bbd7c2c9cb" type="midi" direction="input" />
+        <port name="out_i" uuid="41790825-57d2-491a-9175-0ed7e13d3d22" type="audio" direction="output" />
+        <port name="out_q" uuid="eef363f4-ffe2-4379-8a4d-16f7de875a21" type="audio" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1506.7615761861305</key>
+        <key name="http://ladish.org/ns/canvas/y">961.6712477189781</key>
+      </dict>
+    </client>
+    <client name="key-detone2" uuid="1fa4fae3-04fb-41e3-977b-00960eea0aea" naming="app" app="0a94d18a-0478-4b50-89b3-7f2da0312419">
+      <ports>
+        <port name="in_i" uuid="5d0553c6-9824-4533-b541-ca0a5bf5d085" type="audio" direction="input" />
+        <port name="midi_out" uuid="7eb47bdf-1d4a-4d3c-bfa0-1b28c875b2f9" type="midi" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1705.631329835767</key>
+        <key name="http://ladish.org/ns/canvas/y">960.8613708941607</key>
+      </dict>
+    </client>
+    <client name="key-detime2" uuid="668a7efc-157b-4129-982c-eac1e9c92c19" naming="app" app="002f38fb-c0d8-43a1-b5a9-6f65a9255314">
+      <ports>
+        <port name="midi_in" uuid="2b7eb4b0-f77f-4025-af3f-36b1249af8c5" type="midi" direction="input" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1823.3334283759125</key>
+        <key name="http://ladish.org/ns/canvas/y">960.4114393248178</key>
+      </dict>
+    </client>
+    <client name="key-detone" uuid="071b2da7-1c22-4a34-8054-0b78d31deaa7" naming="app" app="018e5768-f7c4-4279-846f-7321dd959ca4">
+      <ports>
+        <port name="in_i" uuid="ec9df843-16fd-433a-891b-eb96e78e623f" type="audio" direction="input" />
+        <port name="midi_out" uuid="f532aa53-a2ec-4a54-8d4e-637861191e61" type="midi" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1707.4760492700739</key>
+        <key name="http://ladish.org/ns/canvas/y">1047.023266423358</key>
+      </dict>
+    </client>
+    <client name="key-detime" uuid="9034418b-8800-48b5-9e51-06a59fa1d344" naming="app" app="623a4d26-1c8e-4199-a969-13e19178480e">
+      <ports>
+        <port name="midi_in" uuid="bf390b6c-105e-44c3-8885-d8d54168436f" type="midi" direction="input" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1830.0824019160586</key>
+        <key name="http://ladish.org/ns/canvas/y">1045.8984375</key>
+      </dict>
+    </client>
+    <client name="key-detime3" uuid="83398125-2cf9-4fa0-b402-a4a7038c0594" naming="app" app="5c997315-9b73-45d7-9cf2-b4b502100ee5">
+      <ports>
+        <port name="midi_in" uuid="ee473364-12f1-48fe-a5ba-f7d424b9935d" type="midi" direction="input" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1822.2085994525544</key>
+        <key name="http://ladish.org/ns/canvas/y">888.4223882299267</key>
+      </dict>
+    </client>
+    <client name="key-detone3" uuid="f7e63c41-425a-4d3f-96ff-b4e9a67d510f" naming="app" app="09d16ccf-8d84-4000-9281-d94ac553de11">
+      <ports>
+        <port name="in_i" uuid="3b009e0f-0744-4fa7-920f-7165250fe63a" type="audio" direction="input" />
+        <port name="midi_out" uuid="62bbace7-77f3-4cc4-9673-56702af97ff1" type="midi" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1698.4774178832115</key>
+        <key name="http://ladish.org/ns/canvas/y">888.4223882299272</key>
+      </dict>
+    </client>
+    <client name="rigctld" uuid="b61ecdcc-d52c-4424-8de0-4056a52b94c1" naming="app" app="c97de001-d0fc-40b9-bcc0-03eb8ed544a2">
+      <ports>
+        <port name="midi_in" uuid="7b40a9f2-1ad7-49c4-9d56-cd022dda316f" type="midi" direction="input" />
+        <port name="midi_out" uuid="cb618b0a-1fe5-4885-a3cf-62fbf4d94079" type="midi" direction="output" />
+      </ports>
+      <dict>
+        <key name="http://ladish.org/ns/canvas/x">1139.4312240159136</key>
+        <key name="http://ladish.org/ns/canvas/y">1136.0377064782688</key>
       </dict>
     </client>
   </clients>
@@ -115,14 +253,34 @@ ladish Project.
     <connection port1="485ed3fb-d228-40bb-ac4a-f05262d59e3d" port2="7b0e9857-72dc-496d-9699-4996bd195704" />
     <connection port1="966ba320-b9aa-45fa-b103-b61c7483b19b" port2="f24ec7b3-a67b-4b49-95c8-a3c80d2d7470" />
     <connection port1="9f121c19-ee2d-4eff-a958-cb3c3a542394" port2="04f5fa90-f453-479d-8f3a-2f92cf78c604" />
-    <connection port1="966ba320-b9aa-45fa-b103-b61c7483b19b" port2="91ec8ed7-cd58-4ded-b468-4925a058b6b7" />
     <connection port1="38ca99a6-04d3-4348-9b1c-94c515327912" port2="2776ef6f-39e1-4c5e-8920-3deeb409c3f5" />
     <connection port1="9c3eb05b-589d-453e-bca4-1677a94a4697" port2="b371a9a1-18cb-4932-813c-daf278cf2b20" />
+    <connection port1="9f121c19-ee2d-4eff-a958-cb3c3a542394" port2="91ec8ed7-cd58-4ded-b468-4925a058b6b7" />
+    <connection port1="c1ec5de5-2446-43e4-8845-912fa2d001c9" port2="dd7e0ad9-c8e5-49f0-b886-d6bbd7c2c9cb" />
+    <connection port1="41790825-57d2-491a-9175-0ed7e13d3d22" port2="2776ef6f-39e1-4c5e-8920-3deeb409c3f5" />
+    <connection port1="eef363f4-ffe2-4379-8a4d-16f7de875a21" port2="b371a9a1-18cb-4932-813c-daf278cf2b20" />
+    <connection port1="41790825-57d2-491a-9175-0ed7e13d3d22" port2="5d0553c6-9824-4533-b541-ca0a5bf5d085" />
+    <connection port1="7eb47bdf-1d4a-4d3c-bfa0-1b28c875b2f9" port2="2b7eb4b0-f77f-4025-af3f-36b1249af8c5" />
+    <connection port1="38ca99a6-04d3-4348-9b1c-94c515327912" port2="ec9df843-16fd-433a-891b-eb96e78e623f" />
+    <connection port1="f532aa53-a2ec-4a54-8d4e-637861191e61" port2="bf390b6c-105e-44c3-8885-d8d54168436f" />
+    <connection port1="62bbace7-77f3-4cc4-9673-56702af97ff1" port2="ee473364-12f1-48fe-a5ba-f7d424b9935d" />
+    <connection port1="871954a7-7c0f-4092-ae34-465e1f1bb0ca" port2="3b009e0f-0744-4fa7-920f-7165250fe63a" />
+    <connection port1="abc90af1-dcc4-41b3-b3eb-d4f5a9c4f708" port2="7b40a9f2-1ad7-49c4-9d56-cd022dda316f" />
+    <connection port1="cb618b0a-1fe5-4885-a3cf-62fbf4d94079" port2="04f5fa90-f453-479d-8f3a-2f92cf78c604" />
   </connections>
   <applications>
     <application name="key-debounce" uuid="07c93527-ac6f-414b-a3b7-9f56d59d97dd" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-debounce key-debounce %3Ekey-debounce.log 2%3E%261</application>
     <application name="key-iambic" uuid="32b18e17-0981-473f-854b-d05318470b17" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-iambic-ad5dz key-iambic %3Ekey-iambic.log 2%3E%261</application>
     <application name="key-ptt" uuid="72252d9d-41f7-407a-8ece-f608925d9c1a" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-ptt key-ptt %3Ekey-ptt.log 2%3E%261</application>
     <application name="key-tone" uuid="5635aa4d-8d5c-40e4-9142-df765e586af7" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-tone key-tone %3Ekey-tone.log 2%3E%261</application>
+    <application name="key-ascii" uuid="2108f775-09c1-4062-acca-c9510b4489f6" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-ascii key-ascii %3E key-ascii.log 2%3E%261</application>
+    <application name="key-tone2" uuid="ff1522a5-a746-4f94-81c5-b3e602559798" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-tone key-tone2 %3E key-tone2.log 2%3E%261</application>
+    <application name="key-detone2" uuid="0a94d18a-0478-4b50-89b3-7f2da0312419" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-detone key-detone2 %3E key-detone2.log 2%3E%261</application>
+    <application name="key-detime2" uuid="002f38fb-c0d8-43a1-b5a9-6f65a9255314" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-detime key-detime2 %3E key-detime2.log 2%3E%261</application>
+    <application name="key-detone" uuid="018e5768-f7c4-4279-846f-7321dd959ca4" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-detone key-detone %3E key-detone.log 2%3E%261</application>
+    <application name="key-detime" uuid="623a4d26-1c8e-4199-a969-13e19178480e" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-detime key-detime %3Ekey-detime.log 2%3E%261</application>
+    <application name="key-detime3" uuid="5c997315-9b73-45d7-9cf2-b4b502100ee5" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-detime key-detime3 %3Ekey-detime3.log 2%3E%261</application>
+    <application name="key-detone3" uuid="09d16ccf-8d84-4000-9281-d94ac553de11" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-detone key-detone3 %3E key-detone3.log 2%3E%261</application>
+    <application name="rigctld" uuid="c97de001-d0fc-40b9-bcc0-03eb8ed544a2" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-control-keyer %3E rigctld.log 2%3E%261</application>
   </applications>
 </project>
