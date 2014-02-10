@@ -347,8 +347,8 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get-window",_get_window,   "get the window used to compute the spectrum" },
-  { "get",	 _get,		"get a spectrum" },
+  { "get-window", _get_window, "get the window used to compute the spectrum" },
+  { "get", _get, "get a spectrum" },
   { NULL }
 };
 

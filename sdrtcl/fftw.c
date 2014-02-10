@@ -154,7 +154,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "exec",	 _exec, "execute the fft on the supplied data" },
+  { "exec", _exec, "execute the fft on the supplied data" },
   { NULL }
 };
 

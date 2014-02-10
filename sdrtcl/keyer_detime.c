@@ -155,7 +155,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get, "get the currently converted string of dits and dahs" },
+  { "get", _get, "get the currently converted string of dits and dahs" },
   { NULL }
 };
 

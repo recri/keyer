@@ -176,11 +176,11 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get,   "get the available midi events from Jack" },
-  { "start",	 _start, "start collecting events" },
-  { "state",     _state, "are we collecting events" },
-  { "stop",	 _stop,  "stop collecting events" },
-  { "put",	 _put,   "put a binary MIDI packet into Jack" },
+  { "get", _get, "get the available midi events from Jack" },
+  { "start", _start, "start collecting events" },
+  { "state", _state, "are we collecting events" },
+  { "stop", _stop, "stop collecting events" },
+  { "put", _put, "put a binary MIDI packet into Jack" },
   { NULL }
 };
 

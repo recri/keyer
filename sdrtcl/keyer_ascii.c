@@ -81,7 +81,7 @@ static void *_init(void *arg) {
   if (dp->opts.dict == NULL) {
     dp->opts.dict = Tcl_NewDictObj();
     Tcl_IncrRefCount(dp->opts.dict);
-    for (int i = 0; morse_coding_table[i][0] != NULL; i += 1) {
+    for (int i = 0; i < sizeof(morse_coding_table)/sizeof(morse_coding_table[0]); i += 1) {
       Tcl_UniChar ch;
       Tcl_UtfToUniChar(morse_coding_table[i][0], &ch);
       Tcl_DictObjPut(NULL, dp->opts.dict, Tcl_NewUnicodeObj(&ch, 1), Tcl_NewStringObj(morse_coding_table[i][1], -1));
@@ -275,10 +275,10 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "puts",	 _puts, "write strings to the queue for conversion to morse code" },
-  { "pending",   _pending, "how many bytes are queued for conversion to morse"  },
+  { "puts", _puts, "write strings to the queue for conversion to morse code" },
+  { "pending", _pending, "how many bytes are queued for conversion to morse"  },
   { "available", _available, "how many bytes are available for queuing" },
-  { "abort",     _abort, "abort conversion and discard all queued strings" },
+  { "abort", _abort, "abort conversion and discard all queued strings" },
   { NULL }
 };
 

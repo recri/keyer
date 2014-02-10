@@ -93,7 +93,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "puts",	 _puts, "put a binary MIDI packet into Jack" },
+  { "puts", _puts, "put a binary MIDI packet into Jack" },
   { NULL }
 };
 

@@ -253,10 +253,10 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get,                    "get an audio buffer" },
-  { "start",	 _start,		  "start collecting audio" },
-  { "state",     _state,		  "are we started?" },
-  { "stop",	 _stop,			  "stop collecting audio" },
+  { "get", _get, "get an audio buffer" },
+  { "start", _start, "start collecting audio" },
+  { "state", _state, "are we started?" },
+  { "stop", _stop, "stop collecting audio" },
   { NULL }
 };
 

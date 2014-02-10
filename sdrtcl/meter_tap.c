@@ -200,7 +200,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get,                    "get a meter record" },
+  { "get", _get, "get a meter record" },
   { NULL }
 };
 

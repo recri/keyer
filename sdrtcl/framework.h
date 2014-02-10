@@ -81,7 +81,7 @@ typedef struct {
 */
 
 typedef struct {
-  const char *name;			/* subcommand name */
+  const char *name;	/* subcommand name */
   int (*handler)(ClientData, Tcl_Interp *, int argc, Tcl_Obj* const *objv);
   const char *doc_string;
 } fw_subcommand_table_t;
@@ -358,59 +358,47 @@ static int fw_option_cget(ClientData clientData, Tcl_Interp *interp, int argc, T
   return TCL_OK;
 }
 
-/*
-** called by cdoc subcommand to process option arguments starting at objv[2]
-** if no arguments, give doc_string for command
-** if option argument, give doc_string for option
-** if subcommand argument, give doc_string for subcommand
-*/
-static int fw_option_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  framework_t *fp = (framework_t *)clientData;
-  if (argc == 2) {
-    Tcl_SetResult(interp, fp->doc_string, TCL_STATIC);
-    return TCL_OK;
-  }
-  if (argc != 3)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s cdoc [option|subcommand]", Tcl_GetString(objv[0])));
-  char *arg = Tcl_GetString(objv[2]);
-  int j = fw_option_lookup(arg, fp->options);
-  if (j >= 0) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(fp->options[j].doc_string, -1));
-    return TCL_OK;
-  }
-  if (arg[0] == '-') return fw_option_unrecognized_option_name(interp, Tcl_GetString(objv[2]));
-  for (int i = 0; fp->subcommands[i].name != NULL; i += 1)
-    if (strcmp(arg, fp->subcommands[i].name) == 0) {
-      Tcl_SetResult(interp, (char *)fp->subcommands[i].doc_string, TCL_STATIC);
-      return TCL_OK;
-    }
-  return fw_error_str(interp, (char *)"unrecognized subcommand");
-}
 
 /*
 ** provide common subcommand processing
 **
 ** allows commands to hand off command implementation
-** for configure, cget, and cdoc to common option processor
+** for configure, cget, and cset to common option processor
 ** while specifying their own implementations for everything else
 */
 
-static char *fw_subcommand_subcommands(ClientData clientData) {
-  framework_t *fp = (framework_t *)clientData;
-  if (fp->subcommands_string == NULL) {
-    const fw_subcommand_table_t *table = fp->subcommands;
-    fp->subcommands_string = Tcl_NewObj();
-    Tcl_IncrRefCount(fp->subcommands_string);
-    for (int i = 0; table[i].name != NULL; i += 1) {
-      if (i != 0) {
-	Tcl_AppendToObj(fp->subcommands_string, ", ", 2);
-	if (table[i+1].name == NULL)
-	  Tcl_AppendToObj(fp->subcommands_string, "or ", 3);
-      }
-      Tcl_AppendToObj(fp->subcommands_string, table[i].name, -1);
+static Tcl_Obj *fw_subcommand_error(char *subcmd, const fw_subcommand_table_t *table) {
+  Tcl_Obj *string = Tcl_NewObj();
+  for (int i = 0; table[i].name != NULL; i += 1) {
+    if (i != 0) {
+      Tcl_AppendToObj(string, ", ", 2);
+      if (table[i+1].name == NULL)
+	Tcl_AppendToObj(string, "or ", 3);
     }
+    Tcl_AppendToObj(string, table[i].name, -1);
   }
-  return Tcl_GetString(fp->subcommands_string);
+  Tcl_Obj *error = Tcl_ObjPrintf("unrecognized subcommand \"%s\", should one of %s", subcmd, Tcl_GetString(string));
+  Tcl_DecrRefCount(string);
+  return error;
+}
+static int fw_subcommand_dispatch_on(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv, const fw_subcommand_table_t *table, int arg) {
+  if (argc <= arg) {
+    if (arg == 1)
+      return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s subcommand [ ... ]", Tcl_GetString(objv[0])));
+    else
+      return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s %s subcommand [ ... ]", Tcl_GetString(objv[0]), Tcl_GetString(objv[1])));
+  }
+  char *subcmd = Tcl_GetString(objv[arg]);
+  for (int i = 0; table[i].name != NULL; i += 1)
+    if (strcmp(subcmd, table[i].name) == 0) 
+      return table[i].handler(clientData, interp, argc, objv);
+  return fw_error_obj(interp, fw_subcommand_error(subcmd, table));
+}
+static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  if (fp->busy && (argc != 2 || strcmp("is-busy", Tcl_GetString(objv[1])) != 0))
+    return fw_error_str(interp, "busy");
+  return fw_subcommand_dispatch_on(clientData, interp, argc, objv, fp->subcommands, 1);
 }
 
 static int fw_subcommand_configure(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -419,62 +407,100 @@ static int fw_subcommand_configure(ClientData clientData, Tcl_Interp *interp, in
 static int fw_subcommand_cget(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return fw_option_cget(clientData, interp, argc, objv);
 }
-static int fw_subcommand_cdoc(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return fw_option_cdoc(clientData, interp, argc, objv);
-}
-static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+static int fw_subcommand_info_command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
   char *cmd0 = Tcl_GetString(objv[0]);
-  if (argc <= 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info (doc|methods|options|ports) ...\"", cmd0));
-  char *cmd2 = Tcl_GetString(objv[2]);
-  if (strcmp(cmd2, "doc") == 0) {
-    if (argc <= 3)
-      return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info doc (type|method|option) ...\"", Tcl_GetString(objv[0])));
-    char *cmd3 = Tcl_GetString(objv[3]);
-    if (strcmp(cmd3, "type") == 0) // return doc_string for type
-      return fw_success_str(interp, fp->doc_string);
-    if (argc <= 4)
-      return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info doc (method|option) name\"", Tcl_GetString(objv[0])));
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info command\"", cmd0));
+  return fw_success_str(interp, fp->doc_string);
+}
+static int fw_subcommand_info_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  char *cmd0 = Tcl_GetString(objv[0]);
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info ports\"", cmd0));
+  return fw_success_obj(interp, fp->port_list);
+}
+static int fw_subcommand_info_options(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  char *cmd0 = Tcl_GetString(objv[0]);
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info options\"", cmd0));
+  if (fp->option_list == NULL) {
+    fp->option_list = Tcl_NewListObj(0, NULL);
+    Tcl_IncrRefCount(fp->option_list);
+    for (int i = 0; fp->options[i].name != NULL; i += 1)
+      Tcl_ListObjAppendElement(interp, fp->option_list, Tcl_NewStringObj(fp->options[i].name, -1));
+  }
+  return fw_success_obj(interp, fp->option_list);
+}
+static int fw_subcommand_info_methods(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  char *cmd0 = Tcl_GetString(objv[0]);
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info methods\"", cmd0));
+  if (fp->method_list == NULL) {
+    fp->method_list = Tcl_NewListObj(0, NULL);
+    Tcl_IncrRefCount(fp->method_list);
+    for (int i = 0; fp->subcommands[i].name != NULL; i += 1) {
+      Tcl_ListObjAppendElement(interp, fp->method_list, Tcl_NewStringObj(fp->subcommands[i].name, -1));
+    }
+  }
+  return fw_success_obj(interp, fp->method_list);
+}
+static int fw_subcommand_info_type(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  char *cmd0 = Tcl_GetString(objv[0]);
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info type\"", cmd0));
+  return fw_success_obj(interp, fp->class_name);
+}
+static int fw_subcommand_info_method(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  char *cmd0 = Tcl_GetString(objv[0]);
+  if (argc != 4 && argc != 5)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info method <method> ...\"", cmd0));
+  char *arg3 = Tcl_GetString(objv[3]);
+  if (argc == 4) {
+    for (int i = 0; fp->subcommands[i].name; i += 1)
+      if (strcmp(arg3, fp->subcommands[i].name) == 0)
+	return fw_success_str(interp, fp->subcommands[i].doc_string);
+    return fw_error_obj(interp, Tcl_ObjPrintf("method \"%s\" not found", arg3));
+  } else {
     char *arg4 = Tcl_GetString(objv[4]);
-    if (strcmp(cmd3, "method") == 0) { // return doc_string for method
-      for (int i = 0; fp->subcommands[i].name; i += 1)
-	if (strcmp(arg4, fp->subcommands[i].name) == 0)
-	  return fw_success_str(interp, fp->subcommands[i].doc_string);
-      return fw_error_obj(interp, Tcl_ObjPrintf("method \"%s\" not found", arg4));
-    }
-    if (strcmp(cmd3, "option") == 0) { // return doc_string for option
-      for (int i = 0; fp->options[i].name; i += 1)
-	if (strcmp(arg4, fp->options[i].name) == 0)
-	  return fw_success_str(interp, fp->options[i].doc_string);
-      return fw_error_obj(interp, Tcl_ObjPrintf("option \"%s\" not found", arg4));
-    }
-    return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info doc %s ...\" is not defined", cmd0, cmd3));
+#if 0
+    for (int i = 0; fp->subcommands[i].name; i += 1)
+      if (strcmp(arg3, fp->subcommands[i].name) == 0 && strcmp(arg4, fp->subcommands[i].name2) == 0)
+	return fw_success_str(interp, fp->subcommands[i].doc_string);
+#endif
+    return fw_error_obj(interp, Tcl_ObjPrintf("method \"%s %s\" not found", arg3, arg4));
   }
-  if (strcmp(cmd2, "type") == 0) // return type name
-    return fw_success_obj(interp, fp->class_name);
-  if (strcmp(cmd2, "methods") == 0) { // return list of methods
-    if (fp->method_list == NULL) {
-      fp->method_list = Tcl_NewListObj(0, NULL);
-      Tcl_IncrRefCount(fp->method_list);
-      for (int i = 0; fp->subcommands[i].name != NULL; i += 1)
-	Tcl_ListObjAppendElement(interp, fp->method_list, Tcl_NewStringObj(fp->subcommands[i].name, -1));
-    }
-    return fw_success_obj(interp, fp->method_list);
-  }
-  if (strcmp(cmd2, "options") == 0) { // return list of options
-    if (fp->option_list == NULL) {
-      fp->option_list = Tcl_NewListObj(0, NULL);
-      Tcl_IncrRefCount(fp->option_list);
-      for (int i = 0; fp->options[i].name != NULL; i += 1)
-	Tcl_ListObjAppendElement(interp, fp->option_list, Tcl_NewStringObj(fp->options[i].name, -1));
-    }
-    return fw_success_obj(interp, fp->option_list);
-  }
-  if (strcmp(cmd2, "ports") == 0) { // return list of ports
-    return fw_success_obj(interp, fp->port_list);
-  }
-  return fw_error_obj(interp, Tcl_ObjPrintf("\"%s info %s ...\" is not defined", cmd0, cmd2));
+}
+static int fw_subcommand_info_option(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  framework_t *fp = (framework_t *)clientData;
+  char *cmd0 = Tcl_GetString(objv[0]);
+  if (argc != 4)
+    return fw_error_obj(interp, Tcl_ObjPrintf("wrong # args: should be \"%s info option <option>\"", cmd0));
+  char *arg4 = Tcl_GetString(objv[3]);
+  for (int i = 0; fp->options[i].name; i += 1)
+    if (strcmp(arg4, fp->options[i].name) == 0)
+      return fw_success_str(interp, fp->options[i].doc_string);
+  return fw_error_obj(interp, Tcl_ObjPrintf("option \"%s\" not found", arg4));
+}
+static const fw_subcommand_table_t fw_info_subcommands[] = {
+  { "command", fw_subcommand_info_command,"get the doc string for a command" },
+  { "option",  fw_subcommand_info_option, "get the doc string for a command option" },
+  { "options", fw_subcommand_info_options,"get a list of options for a command" },
+  { "method",  fw_subcommand_info_method, "get the doc string for a command method" },
+  { "methods", fw_subcommand_info_methods,"get a list of methods for a command" },
+  { "type",    fw_subcommand_info_type,   "get the type of a command" },
+#if FRAMEWORK_USES_JACK
+  { "ports",   fw_subcommand_info_ports,  "get a list of ports for a command" },
+#endif
+  { NULL }
+};
+static int fw_subcommand_info(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  return fw_subcommand_dispatch_on(clientData, interp, argc, objv, fw_info_subcommands, 2);
 }
 static int fw_subcommand_activate(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   framework_t *fp = (framework_t *)clientData;
@@ -504,23 +530,6 @@ static int fw_subcommand_is_busy(ClientData clientData, Tcl_Interp *interp, int 
   framework_t *fp = (framework_t *)clientData;
   Tcl_SetObjResult(interp, Tcl_NewIntObj(fp->busy));
   return TCL_OK;
-}
-static int fw_subcommand_dispatch(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  framework_t *fp = (framework_t *)clientData;
-  if (fp->busy) {
-    if (argc == 2 && strcmp("is-busy", Tcl_GetString(objv[1])) == 0)
-      return fw_subcommand_is_busy(clientData, interp, argc, objv);
-    return fw_error_str(interp, "busy");
-  }
-  // fprintf(stderr, "fw_subcommand_dispatch(%lx, %lx, %d, %lx)\n", (long)clientData, (long)interp, argc, (long)objv);
-  const fw_subcommand_table_t *table = fp->subcommands;
-  if (argc < 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s subcommand [ ... ]", Tcl_GetString(objv[0])));
-  char *subcmd = Tcl_GetString(objv[1]);
-  for (int i = 0; table[i].name != NULL; i += 1)
-    if (strcmp(subcmd, table[i].name) == 0)
-      return table[i].handler(clientData, interp, argc, objv);
-  return fw_error_obj(interp, Tcl_ObjPrintf("unrecognized subcommand \"%s\", should one of %s", subcmd, fw_subcommand_subcommands(clientData)));
 }
 
 /*
