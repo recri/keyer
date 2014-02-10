@@ -36,6 +36,9 @@ esac
 SCARD=`cat /proc/asound/card1/id`
 # set defaults for radio soundcard combo
 case "$RADIO"-"$SCARD" in
+    RX-Creative)
+	echo "detected Ensemble RX with Creative, setting --qi"
+	IQ="--qi";;
     RX-IOx)
 	echo "detected Ensemble RX with IOx, setting --qi"
 	IQ="--qi";;
