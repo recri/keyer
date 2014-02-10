@@ -133,9 +133,9 @@ static int _port_type_size(ClientData clientData, Tcl_Interp *interp, int argc, 
 static int _time_to_frames(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
   if (argc != 3) return fw_error_str(interp, "jack-client time-to-frames time");
-  jack_time_t time;
+  long time;
   if (Tcl_GetLongFromObj(interp, objv[2], &time) != TCL_OK) return  TCL_ERROR;
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_time_to_frames(dp->fw.client, time)));
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_time_to_frames(dp->fw.client, (jack_time_t)time)));
   return TCL_OK;
 }
 static int _frames_to_time(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

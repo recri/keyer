@@ -161,7 +161,7 @@ extern "C" {
     }
     dp->modified = (dp->opts.period != save.period || dp->opts.steps != save.steps);
     if (dp->modified && dp->opts.steps > 8*sizeof(unsigned long)) {
-      Tcl_SetObjResult(interp, Tcl_ObjPrintf("steps %d is too large, must be <= %ld", dp->opts.steps, 8*sizeof(unsigned long)));
+      Tcl_SetObjResult(interp, Tcl_ObjPrintf("steps %d is too large, must be <= %ld", dp->opts.steps, (long)8*sizeof(unsigned long)));
       dp->opts = save;
       dp->modified = 0;
       return TCL_ERROR;

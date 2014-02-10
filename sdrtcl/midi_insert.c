@@ -59,7 +59,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
       if (event.size != 0) {
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, event.size);
 	if (buffer == NULL) {
-	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, event.size);
+	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, (long)event.size);
 	} else {
 	  memcpy(buffer, event.buffer, event.size);
 	  //fprintf(stderr, "midi_insert sent %x %x %x\n", buffer[0], buffer[1], buffer[2]);

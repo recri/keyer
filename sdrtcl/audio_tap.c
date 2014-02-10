@@ -146,7 +146,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
     jack_nframes_t wframe = sdrkit_last_frame_time(arg);
     size_t offset = (wframe&(data->buff_size-1));
     if (offset + nframes > data->buff_size) {
-      fprintf(stderr, "offset = %ld + nframes = %ld > size = %d\n", offset, (long)nframes, data->buff_size);
+      fprintf(stderr, "offset = %ld + nframes = %ld > size = %ld\n", (long)offset, (long)nframes, (long)data->buff_size);
       // need to implement a misaligned copy/set, but I'm betting that jacks frame time is buffer aligned
       // and I was winning the bet until I tried to use --driver netone
     } else {

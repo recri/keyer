@@ -104,9 +104,7 @@ static int alsa_info(ClientData clientData, Tcl_Interp *interp, char *token)
       Tcl_ListObjAppendElement(interp, devices, Tcl_ObjPrintf("%s,%d: %s [%s]: %s [%s]",
 							      name, dev,
 							      snd_ctl_card_info_get_id(info), snd_ctl_card_info_get_name(info),
-							      dev,
-							      snd_pcm_info_get_id(pcminfo),
-							      snd_pcm_info_get_name(pcminfo)));
+							      snd_pcm_info_get_id(pcminfo), snd_pcm_info_get_name(pcminfo)));
       // enumerate the subdevices of the card
       count = snd_pcm_info_get_subdevices_count(pcminfo);
       for (idx = 0; idx < count; idx++) {

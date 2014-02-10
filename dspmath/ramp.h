@@ -20,6 +20,7 @@
 
 #include "dspmath.h"
 #include "window.h"
+#include <stdlib.h>
 
 /*
 ** Blackman Harris attack/decay ramp
