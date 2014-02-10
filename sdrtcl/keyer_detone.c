@@ -114,7 +114,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",   _get,   "fetch the current detected power of the filter" },
+  { "get", _get, "fetch the current detected power of the filter" },
   { NULL }
 };
 

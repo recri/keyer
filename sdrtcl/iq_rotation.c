@@ -63,7 +63,7 @@ static const fw_option_table_t _options[] = {
 // the subcommands implemented by this command
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",   _get,   "fetch the current average rotation" },
+  { "get", _get, "fetch the current average rotation" },
   { NULL }
 };
 

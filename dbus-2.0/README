@@ -1,0 +1,48 @@
+$Id: README,v 1.2 2010/02/06 15:11:48 sbron Exp $
+
+
+About
+-----
+
+DBus-Tcl is a Tcl library for interacting with the DBus, a popular system
+for applications to talk to eachother. DBus can also be used to coordinate
+the lifecycle of a process. For more information about DBus, see
+http://www.freedesktop.org/wiki/Software/dbus
+
+
+Features
+--------
+
+   + Connect to the well-known and other local and remote buses.
+
+   + Emit and receive triggers
+
+   + Execute method calls in other applications and get the results back.
+
+   + Handle method calls from other applications in plain Tcl.
+
+   + Monitor traffic on selected buses.
+
+   + Ensure that only one instance of an application runs at the same time.
+
+
+Compiling
+---------
+
+The dbus-tcl package uses a TEA3-based build system. Building the package
+generally consists of running "./configure; make; make install" in the
+top-level directory. More details are available in the INSTALL file.
+
+*** NOTE ***
+
+Building the documentation requires the availability of the dtplite command,
+which is part of the doctools package in tcllib.
+
+
+Availability
+------------
+The Tcl DBus extension is hosted at SourceForge:
+	http://dbus-tcl.sourceforge.net/
+	http://sourceforge.net/projects/dbus-tcl
+
+The latest sources are available under the 'dbus-tcl' module in CVS.

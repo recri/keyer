@@ -5,6 +5,7 @@ pkgIndex.tcl
 *.so
 *~
 *.log
+*.out
 test/test-ovsv
 test/test-osc
 test/test-osc2
@@ -16,3 +17,6 @@ pkey
 cert
 cert.req
 dspserver.conf
+dbus-2.0/doc/dbus.n
+dbus-2.0/doc/dbus.html
+

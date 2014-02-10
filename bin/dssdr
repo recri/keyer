@@ -219,8 +219,8 @@ proc jackhandler {dict args} {
     }
 }
 	
-dbus-jack::jack-listen ServerStarted jackhandler
-dbus-jack::jack-listen ServerStopped jackhandler
+# dbus-jack::jack-listen ServerStarted jackhandler
+# dbus-jack::jack-listen ServerStopped jackhandler
 
 proc jackchanged {cmd} {
     # puts "jackchanged $cmd"
@@ -273,7 +273,7 @@ pack [ttk::notebook .t] -side top -fill both -expand true
 .t add [sdrkit::dial .t.d -command dcommand] -text dial
 set data(usb) [sdrkit::startup-usb ::myusb]
 set data(alsa) [sdrkit::startup-alsa ::myalsa]
-set data(jack) [sdrkit::startup-jack ::myjack -alsa $data(alsa)]
+set data(jack) [sdrkit::startup-jack ::myjack -alsa $data(alsa) -onchange jackchanged]
 .t add [ttk::frame .t.jau] -text devices
 pack [ttk::labelframe .t.jau.j -text jack] -side top -fill x
 pack [$data(jack) panel .t.jau.j.f] -fill x

@@ -175,7 +175,7 @@ $(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../dspmath/lo_mixer.h
 $(LIBDIR)/meter_tap.so: meter_tap.c framework.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/midi.so: midi.c framework.h ../dspmath/ring_buffer.h ../dspmath/midi_buffer.h
+$(LIBDIR)/midi.so: midi.c framework.h ../dspmath/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../dspmath/midi_buffer.h

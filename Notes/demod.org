@@ -1,0 +1,6 @@
+* Reading the RadCom series on SDR
+  by Steve Ireland VK6VZ and Phil Harman VK6APH
+* They give the following demodulation formulae in January 2007
+** PM = arctan2(Q, I)
+** FM = (q[t] i[t-1] - q[t-1] i[t]) / (q[t] q[t-1] + i[t] i[t-1])
+* The FM computation is a lot more reasonable than the PLL that DTTSP uses.

@@ -118,7 +118,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   if ( ! data->started)
-    return fw_error_obj(interp, Tcl_ObjPrintf("midi-tap %s is not running", Tcl_GetString(objv[0])));
+    return fw_error_obj(interp, Tcl_ObjPrintf("midi %s is not running", Tcl_GetString(objv[0])));
 
   /* return the collected events */
   Tcl_Obj *list = Tcl_NewListObj(0, NULL);
@@ -154,7 +154,7 @@ static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
 }
 static int _put(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 3)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s puts string", Tcl_GetString(objv[0])));
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s put string", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   int n;
   unsigned char *p = Tcl_GetByteArrayFromObj(objv[2], &n);
@@ -176,11 +176,11 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get,   "get the available midi events from Jack" },
-  { "start",	 _start, "start collecting events" },
-  { "state",     _state, "are we collecting events" },
-  { "stop",	 _stop,  "stop collecting events" },
-  { "put",	 _put,   "put a binary MIDI packet into Jack" },
+  { "get", _get, "get the available midi events from Jack" },
+  { "start", _start, "start collecting events" },
+  { "state", _state, "are we collecting events" },
+  { "stop", _stop, "stop collecting events" },
+  { "put", _put, "put a binary MIDI packet into Jack" },
   { NULL }
 };
 

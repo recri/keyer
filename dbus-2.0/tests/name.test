@@ -1,0 +1,68 @@
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest 2
+    namespace import -force ::tcltest::*
+}
+
+package require dbus-tcl
+dbus connect
+
+test name-1.1 {simple name} -body {
+    dbus name com.tclcode.test.name
+} -cleanup {
+    dbus release com.tclcode.test.name
+}
+
+test name-1.2 {normal option order} -body {
+    dbus name -noqueue -replace -yield com.tclcode.test.name
+} -cleanup {
+    dbus release com.tclcode.test.name
+}
+
+test name-1.3 {reverse option order} -body {
+    dbus name -yield -replace -noqueue com.tclcode.test.name
+} -cleanup {
+    dbus release com.tclcode.test.name
+}
+
+test name-1.4 {invalid name} -body {
+    dbus name test
+} -returnCodes error -result {Invalid bus name}
+
+test name-1.5 {invalid option} -body {
+    dbus name -release com.tclcode.test.name
+} -returnCodes error -result {bad option "-release":\
+  must be -noqueue, -replace, or -yield}
+
+test name-1.6 {name not aquired} -body {
+    dbus name -noqueue com.tclcode.test.noyield
+} -returnCodes error -result {Name exists}
+
+test name-1.7 {name request queued} -body {
+    dbus name com.tclcode.test.noyield
+} -cleanup {
+    dbus release com.tclcode.test.noyield
+} -returnCodes error -result {Name in use, request queued}
+
+test name-1.8 {double queue} -setup {
+    catch {dbus name com.tclcode.test.noyield}
+} -body {
+    dbus name com.tclcode.test.noyield
+} -cleanup {
+    dbus release com.tclcode.test.noyield
+} -returnCodes error -result {Name in use, request queued}
+
+test name-1.9 {acquire own name} -setup {
+    dbus name com.tclcode.test.name
+} -body {
+    dbus name com.tclcode.test.name
+} -cleanup {
+    dbus release com.tclcode.test.name
+} -returnCodes error -result {Already owner}
+
+test name-1.10 {register invalid name} -body {
+    dbus name foo
+} -returnCodes error -result {Invalid bus name}
+
+# cleanup
+cleanupTests
+return

@@ -1,0 +1,105 @@
+#!/usr/bin/tclsh8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# start an sdrtcl component by name
+# 
+# get script name
+set script [info script]
+
+# append the ../lib directory to the Tcl search path
+lappend auto_path [file join [file dirname $script] .. lib]
+
+# find the name of the script, without reading links
+set name [file tail $script]
+
+# get the component name
+set component [string range $name 7 end]
+
+## sort out the rest of the arguments
+set command [lindex $argv 0]
+set args [lrange $argv 1 end]
+
+# prepare to dbus
+package require dbif
+
+## connect to dbus
+dbif default -bus session -interface org.sdrkit.Bus
+dbif connect -replace -yield org.sdrkit.$command
+
+## listen for the roll call signal
+dbif listen / RollCall {
+    puts "[clock milliseconds] get org.sdrkit.Bus.RollCall()"
+    dbus signal / org.sdrkit.Bus Present $::command
+}
+
+## prepare to component
+package require sdrtcl::$component
+
+## start the component
+puts "[clock milliseconds] sdrtcl-component runs: sdrtcl::$component $command $args"
+switch -exact $component {
+    keyer-ascii {
+	package require morse::itu
+	sdrtcl::$component $command {*}$args -dict [morse-itu-dict]
+    }
+    default {
+	sdrtcl::$component $command {*}$args
+   }
+}
+$command activate
+
+## property setter function
+proc do-configure {oname value} {
+    puts "[clock milliseconds] $::command configure $oname $value"
+    $::command configure $oname $value
+}
+
+## set up properties
+foreach oname [$::command info options] {
+    ## ignore the usual suspects
+    if {$oname in {-client -server -verbose}} continue
+    set pname [string totitle [join [split $oname -] {}]]
+    if {[catch {$::command cget $oname} value]} {
+	puts "when cgetting $oname got $value"
+	continue
+    }
+    set ::pnameof($oname) $pname
+    set ::onameof($pname) $oname
+    set ::data($pname) $value
+    puts "[clock milliseconds] $::command defines $pname property for $oname"
+    dbif property / $pname ::data($pname) [list do-configure $oname \[set $pname]]
+}
+
+## ignore individual options
+## ignore individual methods
+## install one method
+proc component {dict arg} {
+    if {[catch {$::command {*}$arg} result]} {
+	set type {error}
+    } else {
+	set type {result}
+    }
+    puts "[clock milliseconds] $type from $::command $arg -> $result"
+    return $result
+}
+dbus method session / org.sdrkit.Bus.Component [list component]
+
+vwait ::finished

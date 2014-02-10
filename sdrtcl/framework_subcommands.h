@@ -18,18 +18,15 @@
 */
 #ifndef FRAMEWORK_SUBCOMMANDS_H
 #define FRAMEWORK_SUBCOMMANDS_H
-  { "configure", fw_subcommand_configure, "configure option values, or get list of options" },
-  { "cget",      fw_subcommand_cget,      "get an option value" },
-  { "cdoc",      fw_subcommand_cdoc,      "get the doc string for a command, a subcommand, or an option" },
-  { "info",      fw_subcommand_info,      "get the type, methods, options, or doc strings for a command" },
-  { "is-busy",   fw_subcommand_is_busy,   "see if the command will throw a busy error if we access it" },
+  { "configure", fw_subcommand_configure,   "configure option values, or get list of options" },
+  { "cget",      fw_subcommand_cget,        "get an option value" },
+  { "cset",      fw_subcommand_configure,   "set an option value" },
+  { "info",      fw_subcommand_info,        "get the doc string for a command" },
+  { "is-busy",   fw_subcommand_is_busy,     "see if the command will throw a busy error if we access it" },
 #if FRAMEWORK_USES_JACK
-  { "register",	 fw_subcommand_register,  "open connection to jack server", },
-  { "deregister",fw_subcommand_deregister,"close connection to jack server", },
-  { "is-registered",fw_subcommand_is_registered,"is connected to jack server", },
-  { "activate",  fw_subcommand_activate,  "activate a jack client" },
-  { "deactivate",fw_subcommand_deactivate,"deactivate a jack client" },
-  { "is-active", fw_subcommand_is_active, "test if a jack client is active" },
+  { "activate",  fw_subcommand_activate,    "activate a jack client" },
+  { "deactivate",fw_subcommand_deactivate,  "deactivate a jack client" },
+  { "is-active", fw_subcommand_is_active,   "test if a jack client is active" },
 #endif
 #else
 #error "framework_subcommands.h multiply included"

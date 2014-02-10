@@ -21,7 +21,7 @@
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 lappend auto_path [file join [file dirname $script] .. lib]
 
-set libdir [file normalize [file join [file dirname [info script]] .. lib sdrkit]]
+set libdir [file normalize [file join [file dirname [info script]] .. lib sdrtcl]]
 set so [info sharedlibextension]
 
 #
@@ -44,8 +44,9 @@ set dbclasses [dict create]
 
 set clist [concat [info commands] [info commands ::sdrtcl::*]]
 
-foreach file [glob [file join $libdir *$so]] {
+foreach file [lsort [glob [file join $libdir *$so]]] {
     set module [file root [file tail $file]]
+    puts "load $file -> ..."
     if {[catch {load $file} error]} {
 	puts "load $file -> $error"
 	incr results(load-failed)
@@ -58,10 +59,15 @@ foreach file [glob [file join $libdir *$so]] {
 	dict set commands $c module $module
     }
 }
+puts "all loaded"
 
 # puts "[array names modules] defined [array names commands]"
 foreach cmd [dict keys $commands] {
-    $cmd foo
+    # puts "$cmd foo"
+    if {[catch {$cmd foo} error]} {
+	puts "$cmd foo -> $error"
+	continue
+    }
     if {[catch {foo configure} error]} {
 	puts "$cmd doesn't configure: $error"
 	rename foo {}
@@ -71,6 +77,19 @@ foreach cmd [dict keys $commands] {
     foreach option $options {
 	foreach {oname dname cname dvalue value} $option break
 	dict set commands $cmd option $oname $option
+    }
+    puts "$cmd info command -> [foo info command]"
+    puts "$cmd info type -> [foo info type]"
+    #puts "$cmd -> info methods [foo info methods]"
+    foreach m [foo info methods] {
+	puts "$cmd info method $m -> [foo info method {*}$m]"
+    }
+    # puts "$cmd -> info options [foo info options]"
+    foreach o [foo info options] {
+	puts "$cmd info option $o -> [foo info option $o]"
+    }
+    if { ! [catch {foo info ports} error]} { 
+	puts "$cmd info ports -> [foo info ports]"
     }
     rename foo {}
 }

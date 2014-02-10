@@ -21,7 +21,6 @@
 */
 
 #define FRAMEWORK_USES_JACK 1
-#define FRAMEWORK_VERSION 2
 
 #include "framework.h"
 #include "../dspmath/ring_buffer.h"
@@ -131,10 +130,10 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get",	 _get, "get the available midi events from Jack" },
-  { "start",	 _start, "start collecting events" },
-  { "state",     _state, "are we collecting events" },
-  { "stop",	 _stop, "stop collecting events" },
+  { "get", _get, "get the available midi events from Jack" },
+  { "start", _start, "start collecting events" },
+  { "state", _state, "are we collecting events" },
+  { "stop", _stop, "stop collecting events" },
   { NULL }
 };
 

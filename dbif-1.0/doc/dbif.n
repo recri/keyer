@@ -1,0 +1,534 @@
+'\"
+'\" Generated from file 'doc/dbif.man' by tcllib/doctools with format 'nroff'
+'\" Copyright (c) 2008-2013 Schelte Bron
+'\"
+'\" The definitions below are for supplemental macros used in Tcl/Tk
+'\" manual entries.
+'\"
+'\" .AP type name in/out ?indent?
+'\"	Start paragraph describing an argument to a library procedure.
+'\"	type is type of argument (int, etc.), in/out is either "in", "out",
+'\"	or "in/out" to describe whether procedure reads or modifies arg,
+'\"	and indent is equivalent to second arg of .IP (shouldn't ever be
+'\"	needed;  use .AS below instead)
+'\"
+'\" .AS ?type? ?name?
+'\"	Give maximum sizes of arguments for setting tab stops.  Type and
+'\"	name are examples of largest possible arguments that will be passed
+'\"	to .AP later.  If args are omitted, default tab stops are used.
+'\"
+'\" .BS
+'\"	Start box enclosure.  From here until next .BE, everything will be
+'\"	enclosed in one large box.
+'\"
+'\" .BE
+'\"	End of box enclosure.
+'\"
+'\" .CS
+'\"	Begin code excerpt.
+'\"
+'\" .CE
+'\"	End code excerpt.
+'\"
+'\" .VS ?version? ?br?
+'\"	Begin vertical sidebar, for use in marking newly-changed parts
+'\"	of man pages.  The first argument is ignored and used for recording
+'\"	the version when the .VS was added, so that the sidebars can be
+'\"	found and removed when they reach a certain age.  If another argument
+'\"	is present, then a line break is forced before starting the sidebar.
+'\"
+'\" .VE
+'\"	End of vertical sidebar.
+'\"
+'\" .DS
+'\"	Begin an indented unfilled display.
+'\"
+'\" .DE
+'\"	End of indented unfilled display.
+'\"
+'\" .SO
+'\"	Start of list of standard options for a Tk widget.  The
+'\"	options follow on successive lines, in four columns separated
+'\"	by tabs.
+'\"
+'\" .SE
+'\"	End of list of standard options for a Tk widget.
+'\"
+'\" .OP cmdName dbName dbClass
+'\"	Start of description of a specific option.  cmdName gives the
+'\"	option's name as specified in the class command, dbName gives
+'\"	the option's name in the option database, and dbClass gives
+'\"	the option's class in the option database.
+'\"
+'\" .UL arg1 arg2
+'\"	Print arg1 underlined, then print arg2 normally.
+'\"
+'\" RCS: @(#) $Id: man.macros,v 1.1 2009/01/30 04:56:47 andreas_kupries Exp $
+'\"
+'\"	# Set up traps and other miscellaneous stuff for Tcl/Tk man pages.
+.if t .wh -1.3i ^B
+.nr ^l \n(.l
+.ad b
+'\"	# Start an argument description
+.de AP
+.ie !"\\$4"" .TP \\$4
+.el \{\
+.   ie !"\\$2"" .TP \\n()Cu
+.   el          .TP 15
+.\}
+.ta \\n()Au \\n()Bu
+.ie !"\\$3"" \{\
+\&\\$1	\\fI\\$2\\fP	(\\$3)
+.\".b
+.\}
+.el \{\
+.br
+.ie !"\\$2"" \{\
+\&\\$1	\\fI\\$2\\fP
+.\}
+.el \{\
+\&\\fI\\$1\\fP
+.\}
+.\}
+..
+'\"	# define tabbing values for .AP
+.de AS
+.nr )A 10n
+.if !"\\$1"" .nr )A \\w'\\$1'u+3n
+.nr )B \\n()Au+15n
+.\"
+.if !"\\$2"" .nr )B \\w'\\$2'u+\\n()Au+3n
+.nr )C \\n()Bu+\\w'(in/out)'u+2n
+..
+.AS Tcl_Interp Tcl_CreateInterp in/out
+'\"	# BS - start boxed text
+'\"	# ^y = starting y location
+'\"	# ^b = 1
+.de BS
+.br
+.mk ^y
+.nr ^b 1u
+.if n .nf
+.if n .ti 0
+.if n \l'\\n(.lu\(ul'
+.if n .fi
+..
+'\"	# BE - end boxed text (draw box now)
+.de BE
+.nf
+.ti 0
+.mk ^t
+.ie n \l'\\n(^lu\(ul'
+.el \{\
+.\"	Draw four-sided box normally, but don't draw top of
+.\"	box if the box started on an earlier page.
+.ie !\\n(^b-1 \{\
+\h'-1.5n'\L'|\\n(^yu-1v'\l'\\n(^lu+3n\(ul'\L'\\n(^tu+1v-\\n(^yu'\l'|0u-1.5n\(ul'
+.\}
+.el \}\
+\h'-1.5n'\L'|\\n(^yu-1v'\h'\\n(^lu+3n'\L'\\n(^tu+1v-\\n(^yu'\l'|0u-1.5n\(ul'
+.\}
+.\}
+.fi
+.br
+.nr ^b 0
+..
+'\"	# VS - start vertical sidebar
+'\"	# ^Y = starting y location
+'\"	# ^v = 1 (for troff;  for nroff this doesn't matter)
+.de VS
+.if !"\\$2"" .br
+.mk ^Y
+.ie n 'mc \s12\(br\s0
+.el .nr ^v 1u
+..
+'\"	# VE - end of vertical sidebar
+.de VE
+.ie n 'mc
+.el \{\
+.ev 2
+.nf
+.ti 0
+.mk ^t
+\h'|\\n(^lu+3n'\L'|\\n(^Yu-1v\(bv'\v'\\n(^tu+1v-\\n(^Yu'\h'-|\\n(^lu+3n'
+.sp -1
+.fi
+.ev
+.\}
+.nr ^v 0
+..
+'\"	# Special macro to handle page bottom:  finish off current
+'\"	# box/sidebar if in box/sidebar mode, then invoked standard
+'\"	# page bottom macro.
+.de ^B
+.ev 2
+'ti 0
+'nf
+.mk ^t
+.if \\n(^b \{\
+.\"	Draw three-sided box if this is the box's first page,
+.\"	draw two sides but no top otherwise.
+.ie !\\n(^b-1 \h'-1.5n'\L'|\\n(^yu-1v'\l'\\n(^lu+3n\(ul'\L'\\n(^tu+1v-\\n(^yu'\h'|0u'\c
+.el \h'-1.5n'\L'|\\n(^yu-1v'\h'\\n(^lu+3n'\L'\\n(^tu+1v-\\n(^yu'\h'|0u'\c
+.\}
+.if \\n(^v \{\
+.nr ^x \\n(^tu+1v-\\n(^Yu
+\kx\h'-\\nxu'\h'|\\n(^lu+3n'\ky\L'-\\n(^xu'\v'\\n(^xu'\h'|0u'\c
+.\}
+.bp
+'fi
+.ev
+.if \\n(^b \{\
+.mk ^y
+.nr ^b 2
+.\}
+.if \\n(^v \{\
+.mk ^Y
+.\}
+..
+'\"	# DS - begin display
+.de DS
+.RS
+.nf
+.sp
+..
+'\"	# DE - end display
+.de DE
+.fi
+.RE
+.sp
+..
+'\"	# SO - start of list of standard options
+.de SO
+.SH "STANDARD OPTIONS"
+.LP
+.nf
+.ta 4c 8c 12c
+.ft B
+..
+'\"	# SE - end of list of standard options
+.de SE
+.fi
+.ft R
+.LP
+See the \\fBoptions\\fR manual entry for details on the standard options.
+..
+'\"	# OP - start of full description for a single option
+.de OP
+.LP
+.nf
+.ta 4c
+Command-Line Name:	\\fB\\$1\\fR
+Database Name:	\\fB\\$2\\fR
+Database Class:	\\fB\\$3\\fR
+.fi
+..
+'\"	# CS - begin code excerpt
+.de CS
+.RS
+.nf
+.ta .25i .5i .75i 1i
+..
+'\"	# CE - end code excerpt
+.de CE
+.fi
+.RE
+..
+.de UL
+\\$1\l'|0\(ul'\\$2
+..
+.TH "dbif" n 1.0 dbif "Tcl D-Bus Interface"
+.BS
+.SH NAME
+dbif \- Application layer around the Tcl D-Bus library
+.SH SYNOPSIS
+package require \fBTcl  8.5\fR
+.sp
+package require \fBdbus  2.0\fR
+.sp
+package require \fBdbif  1.0\fR
+.sp
+\fBdbif\fR \fBconnect\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-noqueue\fR? ?\fB-replace\fR? ?\fB-yield\fR? ?\fIname\fR ...?
+.sp
+\fBdbif\fR \fBdefault\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR?
+.sp
+\fBdbif\fR \fBdelete\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR
+.sp
+\fBdbif\fR \fBerror\fR \fImessageID\fR \fIerrormessage\fR ?\fIerrorname\fR?
+.sp
+\fBdbif\fR \fBgenerate\fR \fIsignalID\fR ?\fIarg\fR ...?
+.sp
+\fBdbif\fR \fBget\fR \fImessageID\fR \fIname\fR
+.sp
+\fBdbif\fR \fBlisten\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR ?\fIarglist\fR? ?\fIinterp\fR? \fIbody\fR
+.sp
+\fBdbif\fR \fBmethod\fR ?\fB-async\fR? ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR ?\fIinputargs\fR ?\fIoutputargs\fR?? ?\fIinterp\fR? \fIbody\fR
+.sp
+\fBdbif\fR \fBproperty\fR ?\fB-access\fR \fImode\fR? ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR?:\fIsignature\fR? \fIvariable\fR ??\fIinterp\fR? \fIbody\fR?
+.sp
+\fBdbif\fR \fBreturn\fR \fImessageID\fR \fIreturnvalue\fR
+.sp
+\fBdbif\fR \fBsignal\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR ?\fIarglist\fR ??\fIinterp\fR? \fIargs\fR \fIbody\fR??
+.sp
+.BE
+.SH DESCRIPTION
+The \fBdbif\fR package provides a higher level wrapper around
+the low-level D-Bus commands provided by the dbus package. The package also
+handles calls to a number of standard D-Bus interfaces.
+The following interfaces are supported:
+.IP \(bu
+org.freedesktop.DBus.Peer
+.IP \(bu
+org.freedesktop.DBus.Introspectable
+.IP \(bu
+org.freedesktop.DBus.Properties
+.PP
+Access to all functions of the \fBdbif\fR package from within
+a Tcl program is done using the \fBdbif\fR command. The command
+supports several subcommands that determine what action is carried out.
+.TP
+\fBdbif\fR \fBconnect\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-noqueue\fR? ?\fB-replace\fR? ?\fB-yield\fR? ?\fIname\fR ...?
+Connect to a message bus and optionally request the D-Bus server to assign
+one or more names to the current application.
+.sp
+The \fB-yield\fR option specifies that the application will release the
+requested name when some other application requests the same name and has
+indicated that it wants to take over ownership of the name. The application
+will be informed by a signal when it loses ownership of the name.
+.sp
+The \fB-replace\fR option indicates that the application wants to take
+over the ownership of the name from the application that is currently the
+primary owner, if any. This request will only be honoured if the current
+owner has indicated that it will release the name on request. See also the
+\fB-yield\fR option.
+.sp
+If the requested name is currently in use and the -replace option has not
+been specified, or the \fB-replace\fR option was specified but the
+current owner is unwilling to give up its ownership, the name request will
+normally be queued. Then when the name is released by the current owner it
+is assigned to the next requester in the queue and a signal is sent to
+inform that requester that it is now the primary owner of the name. The
+\fB-noqueue\fR option may be specified to indicate that the name request
+should not be queued.
+.sp
+The command returns a list of names that have successfully been acquired.
+.TP
+\fBdbif\fR \fBdefault\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR?
+Generally an application will perform several \fBdbif\fR commands
+related to the same message bus and interface. To avoid having to pass the
+same values for the \fB-bus\fR and \fB-interface\fR options with all
+those commands, their defaults can be setup with the \fBdbif\fR
+\fBdefault\fR subcommand.
+.sp
+Valid values for \fIbustype\fR are \fBsession\fR and \fBsystem\fR.
+An interface name has to consist of at least two elements separated by
+a period ('.') character. Each element must only contain the characters
+"[A-Z][a-z][0-9]_" and must not begin with a digit.
+.sp
+The initial value for \fB-bus\fR is session. The initial value for
+\fB-interface\fR is taken from the first name requested for the
+application in a \fBdbif\fR \fBconnect\fR command. If no
+name was ever requested with the connect subcommand, it defaults to
+"com.tclcode.default".
+.TP
+\fBdbif\fR \fBdelete\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR
+While there currently is no way to remove individual signals, methods, or
+properties from the published interface, this subcommand allows the removal
+of a complete node.
+.TP
+\fBdbif\fR \fBerror\fR \fImessageID\fR \fIerrormessage\fR ?\fIerrorname\fR?
+Send a D-Bus error message in response to a D-Bus method call. If the
+\fIerrorname\fR argument is not specified, it defaults to
+"org.freedesktop.DBus.Error.Failed".
+.TP
+\fBdbif\fR \fBgenerate\fR \fIsignalID\fR ?\fIarg\fR ...?
+Generate a signal as defined by a previous \fBdbif\fR
+\fBsignal\fR command. If a body was specified with the signal definition,
+the provided arguments must match the args definition for the body. Otherwise
+they must match the arglist specified during the definition of the signal.
+.TP
+\fBdbif\fR \fBget\fR \fImessageID\fR \fIname\fR
+Access additional information about a D-Bus message. Recognized names are
+\fIbus\fR, \fImember\fR, \fIinterface\fR, \fIpath\fR, \fIsender\fR,
+\fIdestination\fR, \fImessagetype\fR, \fIsignature\fR, \fIserial\fR,
+\fIreplyserial\fR, \fInoreply\fR, \fIautostart\fR, and \fIerrorname\fR.
+.TP
+\fBdbif\fR \fBlisten\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR ?\fIarglist\fR? ?\fIinterp\fR? \fIbody\fR
+Start listening for the specified signal and execute \fIbody\fR when such a
+signal appears on the D-Bus.
+.sp
+The code in \fIbody\fR will be executed in the namespace the
+\fBdbif\fR \fBlisten\fR command was issued from.
+The \fIarglist\fR argument follows the special rules for dbif
+argument lists. See \fBARGUMENT LISTS\fR below for more information.
+.TP
+\fBdbif\fR \fBmethod\fR ?\fB-async\fR? ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR ?\fIinputargs\fR ?\fIoutputargs\fR?? ?\fIinterp\fR? \fIbody\fR
+Define a method that may be accessed through the D-Bus and execute \fIbody\fR
+when the method is invoked. The \fIinputargs\fR argument specifies which
+arguments must be provided by the caller. The \fIoutputargs\fR argument
+indicates the type of result the method returns.
+.sp
+If the body code doesn't generate a response message using the
+\fBdbif\fR \fBreturn\fR or \fBdbif\fR \fBerror\fR
+subcommands, the return value resulting from executing the body will be
+returned to the caller in a D-Bus return message. If an uncaught error
+occurs or the result of body doesn't match \fIoutputargs\fR, an error
+message will be returned to the caller instead.
+.sp
+When the \fB-async\fR option is specified, the result of the method body
+will not automatically be returned to the caller. In this case the body code
+must arrange for a result to be sent back to the caller using the
+\fBreturn\fR, or \fBerror\fR subcommands.
+.sp
+An additional variable \fBmsgid\fR will be passed to the method body. This
+variable contains a messageID that may be used in combination with the
+\fBget\fR, \fBreturn\fR, or \fBerror\fR subcommands. The messageID
+remains valid for a period of time (default 25 seconds), or until a response
+has been returned to the caller, whichever happens first.
+.sp
+The code in \fIbody\fR will be executed in the namespace the
+\fBdbif\fR \fBmethod\fR command was issued from.
+The \fIinputargs\fR and \fIoutputargs\fR arguments follow the special rules
+for dbif argument lists.
+See \fBARGUMENT LISTS\fR below for more information.
+.TP
+\fBdbif\fR \fBproperty\fR ?\fB-access\fR \fImode\fR? ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR?:\fIsignature\fR? \fIvariable\fR ??\fIinterp\fR? \fIbody\fR?
+Define a property that may be accessed through the D-Bus using methods defined
+by the org.freedesktop.DBus.Properties standard interface. The \fIvariable\fR
+argument defines the global variable holding the value of the property.
+.sp
+The \fB-access\fR option specifies whether the property can be viewed
+and/or modified through the D-Bus. Valid access modes are \fBread\fR,
+\fBwrite\fR, and \fBreadwrite\fR. If no access mode is specified, it
+defaults to readwrite.
+.sp
+The code in the optional \fIbody\fR argument will be executed when the
+property is modified through the D-Bus. During the execution of \fIbody\fR
+the global variable will still have its original value, if any. The new
+value for the property is passed to the script as an argument with the same
+name as the property. If execution of \fIbody\fR results in an error, the
+global variable will not be modified. This allows restrictions to be imposed
+on the value for the property.
+.sp
+The code in \fIbody\fR will be executed in the namespace the
+\fBdbif\fR \fBproperty\fR command was issued from or, if a slave
+interpreter was specified, in the current namespace of that slave interpreter
+at definition time..
+.TP
+\fBdbif\fR \fBreturn\fR \fImessageID\fR \fIreturnvalue\fR
+Send a D-Bus return message in response to a D-Bus method call.
+.TP
+\fBdbif\fR \fBsignal\fR ?\fB-bus\fR \fIbustype\fR? ?\fB-interface\fR \fIinterface\fR? \fIpath\fR \fIname\fR ?\fIarglist\fR ??\fIinterp\fR? \fIargs\fR \fIbody\fR??
+Define a signal that the application may emit. This command returns
+a signal identifier that may be used with the \fBdbif\fR
+\fBgenerate\fR subcommand to actually send the signal onto the D-Bus.
+If the optional \fIargs\fR and \fIbody\fR arguments are specified, body
+will be executed when the signal is transmitted on the D-Bus as a result
+of the \fBdbif\fR \fBgenerate\fR subcommand. It is the
+responsibility of the body code to produce a return value that matches
+the specified arglist.
+.sp
+The code in \fIbody\fR will be executed in the namespace the
+\fBdbif\fR \fBsignal\fR command was issued from.
+The \fIarglist\fR argument follows the special rules for dbif
+argument lists. See \fBARGUMENT LISTS\fR below for more information.
+.PP
+.SH "VALID NAMES"
+The dbif package enforces some limitations on names used with the
+\fBdbif\fR subcommands. All names must only use the characters
+"[A-Z][a-z][0-9]_". This limitation applies to method
+names, property names, signal names, and argument names. Out of this group,
+only argument names may begin with a digit.
+.PP
+Interface names and error names must consist of at least two elements
+separated by a period ('.') character. Each element must only contain the
+characters "[A-Z][a-z][0-9]_" and must not begin with a
+digit.
+.PP
+D-Bus names for applications must follow the same rules as interface names,
+except that also dash ('-') characters are allowed. Unique D-Bus names begin
+with a colon (':'). The elements of unique D-Bus names are allowed to begin
+with a digit.
+.PP
+Paths must start with a slash ('/') and must consist of elements separated
+by slash characters. Each element must only contain the characters
+"[A-Z][a-z][0-9]_". Empty elements are not allowed.
+.SH "ARGUMENT LISTS"
+Due to the fact that the D-Bus specification works with typed arguments, a
+slightly modified method for specifying argument lists has been adopted for
+the dbif package. The normal Tcl argument list as used with the
+\fBproc\fR and \fBapply\fR commands may still be used. In that case all
+arguments will be of the string type. To specify a different type, the
+variable name must be followed by a colon and the D-Bus signature
+specification for that argument. Example: to define the count argument as
+a 32-bit integer, it should be specified as count:i.
+.PP
+The following argument types are available:
+.TP
+s
+A UTF-8 encoded, nul-terminated Unicode string.
+.TP
+b
+A boolean, FALSE (0), or TRUE (1).
+.TP
+y
+A byte (8-bit unsigned integer).
+.TP
+n
+A 16-bit signed integer.
+.TP
+q
+A 16-bit unsigned integer.
+.TP
+i
+A 32-bit signed integer.
+.TP
+u
+A 32-bit unsigned integer.
+.TP
+x
+A 64-bit signed integer.
+.TP
+t
+A 64-bit unsigned integer.
+.TP
+d
+An 8-byte double in IEEE 754 format.
+.TP
+g
+A type signature.
+.TP
+o
+An object path.
+.TP
+a#
+A D-Bus array type, which is similar to a Tcl list. The # specifies
+the type of the array elements. This can be any type, including another
+array, a struct or a dict entry.
+.TP
+v
+A D-Bus variant type. Specifying this type will cause the code to
+automatically determine the type of the provided value (by looking at the
+internal representation).
+.TP
+(...)
+A struct. The string inside the parentheses defines the types of
+the arguments within the struct, which may consist of a combination of any
+of the existing types.
+.TP
+{##}
+A dict entry. Dict entries may only occur as array elements. The
+first # specifies the type of the dict key. This must be a basic type
+(one of 'sbynqiuxtdgo'). The second # specifies the type of the dict value.
+This can again be any existing type.
+.PP
+.PP
+Argument lists may contain optional arguments. The use of optional arguments
+will result in multiple prototypes being reported for the object when
+introspected. The special meaning of the \fBargs\fR argument does not
+translate well in the D-Bus concept. For that reason using \fIargs\fR as the
+last argument of an argument list should be avoided.
+.SH COPYRIGHT
+.nf
+Copyright (c) 2008-2013 Schelte Bron
+.fi
