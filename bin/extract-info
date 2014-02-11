@@ -63,6 +63,16 @@ puts "all loaded"
 
 # puts "[array names modules] defined [array names commands]"
 foreach cmd [dict keys $commands] {
+    if {$cmd in {
+	::sdrtcl::filter-fir
+	::sdrtcl::iq-correct-train0
+	::sdrtcl::iq-correct-train1
+	::sdrtcl::iq-correct-train2
+	::sdrtcl::window
+	::sdrtcl::window-polyphase
+    }} {
+	continue
+    }
     # puts "$cmd foo"
     if {[catch {$cmd foo} error]} {
 	puts "$cmd foo -> $error"
