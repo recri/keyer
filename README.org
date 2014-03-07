@@ -4,13 +4,13 @@
   -----------
   This is a kit for building software defined radios on linux which uses a variety
   of packages:
-** ALSA - the advanced linux sound architecture
-** Jack - the jack audio construction kit
-** Ladish - the linux audio session manager
-** Dbus - the desktop application bus
-** Hamlib - the rig and rotator control library
-** Tcl - the tool command language
-** Tk - the UI toolkit based on tcl
+  ALSA - the advanced linux sound architecture
+  Jack - the jack audio construction kit
+  Ladish - the linux audio session manager
+  Dbus - the desktop application bus
+  Hamlib - the rig and rotator control library
+  Tcl - the tool command language
+  Tk - the UI toolkit based on tcl
 * Prerequisites
   I've written these instructions as I use them on a laptop running
   Ubuntu 13.10, the Saucy Salamander release.  Most of it is generic 
