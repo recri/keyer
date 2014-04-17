@@ -17,6 +17,11 @@ pkey
 cert
 cert.req
 dspserver.conf
+dbif-1.0/config.status
+dbif-1.0/doc/dbif.html
+dbif-1.0/doc/dbif.n
+dbus-2.0/config.status
 dbus-2.0/doc/dbus.n
 dbus-2.0/doc/dbus.html
-
+lib/dbus
+lib/sdrutil/dbif.tcl
