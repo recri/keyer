@@ -125,11 +125,11 @@ proc monitor-rollcall {} {
 		# puts "$key @ $name -> [sdrkit-get-value $name $key]"
 	    }
 	    dict set d $name $p
-	    puts "[clock milliseconds] $name cdoc = {[sdrkit-call $name Component cdoc]}"
-	    puts "[clock milliseconds] $name methods = {[sdrkit-call $name Component info methods]}"
-	    puts "[clock milliseconds] $name options = {[sdrkit-call $name Component info options]}"
+	    puts "[clock milliseconds] $name info command = {[sdrkit-call $name Component info command]}"
+	    puts "[clock milliseconds] $name info methods = {[sdrkit-call $name Component info methods]}"
+	    puts "[clock milliseconds] $name info options = {[sdrkit-call $name Component info options]}"
 	    foreach opt [sdrkit-call $name Component info options] {
-		puts "[clock milliseconds] $name $opt cdoc = {[sdrkit-call $name Component cdoc $opt]}"
+		puts "[clock milliseconds] $name info option $opt = {[sdrkit-call $name Component info option $opt]}"
 	    }
 	}
 	set ::data(dict) $d
