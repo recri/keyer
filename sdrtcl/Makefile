@@ -39,6 +39,7 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 	$(LIBDIR)/keyer_iambic_dttsp.so \
 	$(LIBDIR)/keyer_iambic_ad5dz.so \
 	$(LIBDIR)/keyer_iambic_nd7pa.so \
+	$(LIBDIR)/keyer_iambic_k1el.so \
 	$(LIBDIR)/keyer_ptt.so \
 	$(LIBDIR)/keyer_ptt_mute.so \
 	$(LIBDIR)/keyer_tone.so
@@ -260,6 +261,9 @@ $(LIBDIR)/keyer_iambic_nd7pa.so: keyer_iambic_nd7pa.cc framework.h keyer_options
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_iambic_dttsp.so: keyer_iambic_dttsp.cc framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_dttsp.h
+	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/keyer_iambic_k1el.so: keyer_iambic_k1el.cc framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_k1el.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_ptt.so: keyer_ptt.c framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h

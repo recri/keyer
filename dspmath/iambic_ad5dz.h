@@ -208,6 +208,7 @@ public:
   bool _autoIws;		// automatically time space between words
   
   bool _update;			// update computed values
+
   byte _keyOut;			// output key state
   byte _keyIn;			// input key didah state, swapped
   byte _lastKeyIn;		// previous input key didah state

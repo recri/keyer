@@ -102,10 +102,14 @@ class iambic_k1el {
   float _iesLen;		// dits per space between dits and dahs
 
   bool _update;			// update computed values
-  int _keyerDuration;		// ticks to next keyer state transition
-  unsigned char _keyOut;	// output key state
 
-  unsigned long       _ditTime;                    // No. milliseconds per dit
+  unsigned char _keyOut;	// output key state
+  int _keyerDuration;		// ticks to next keyer state transition
+
+  int _ticksPerDit;
+  int _ticksPerDah;
+  int _ticksPerIes;
+
   unsigned char       _keyerControl;
   unsigned char	      _keyerState;
 
@@ -141,12 +145,12 @@ class iambic_k1el {
   ///////////////////////////////////////////////////////////////////////////////
 
   void update_PaddleLatch(int raw_dit_on, int raw_dah_on) {
-    if (_swap) {
-      if (raw_dit_on) keyerControl |= DAH_L;
-      if (raw_dah_on) keyerControl |= DIT_L;
+    if (_swapped) {
+      if (raw_dit_on) _keyerControl |= DAH_L;
+      if (raw_dah_on) _keyerControl |= DIT_L;
     } else {
-      if (raw_dit_on) keyerControl |= DIT_L;
-      if (raw_dah_on) keyerControl |= DAH_L;
+      if (raw_dit_on) _keyerControl |= DIT_L;
+      if (raw_dah_on) _keyerControl |= DAH_L;
     }
   }
 
@@ -212,7 +216,7 @@ class iambic_k1el {
       switch (_keyerState) {
 
       case IDLE:	// Wait for direct or latched paddle press
-	if (raw_dit_on || raw_dah_on || (keyerControl & (DIT_L|DAH_L))) {
+	if (raw_dit_on || raw_dah_on || (_keyerControl & (DIT_L|DAH_L))) {
 	  update_PaddleLatch(raw_dit_on, raw_dah_on);
 	  _keyerState = CHK_DIT;
 	  continue;
@@ -220,7 +224,7 @@ class iambic_k1el {
 	return _keyOut;
 
       case CHK_DIT:	// See if the dit paddle was pressed
-	if (keyerControl & DIT_L) {
+	if (_keyerControl & DIT_L) {
 	  _keyerControl |= DIT_PROC;
 	  _keyerDuration = _ticksPerDit;
 	  _keyerState = KEYED_PREP;
@@ -230,7 +234,7 @@ class iambic_k1el {
 	continue;
 
       case CHK_DAH:	// See if dah paddle was pressed
-	if (keyerControl & DAH_L) {
+	if (_keyerControl & DAH_L) {
 	  _keyerDuration = _ticksPerDah;
 	  _keyerState = KEYED_PREP;
 	  continue;
@@ -246,7 +250,7 @@ class iambic_k1el {
 
       case KEYED:	// Wait for timer to expire
 	if ((_keyerDuration -= ticks) > 0) {
-	  if (mode == 'B') update_PaddleLatch(raw_dit_on, raw_dah_on);	// early paddle latch in Iambic B mode
+	  if (_mode == 'B') update_PaddleLatch(raw_dit_on, raw_dah_on);	// early paddle latch in Iambic B mode
 	  return _keyOut;
 	}
 	_keyOut = 0;		       // key is off
@@ -272,7 +276,7 @@ class iambic_k1el {
       
     } // end while
   }
-}
+};
 
 extern "C" {
   typedef struct {
