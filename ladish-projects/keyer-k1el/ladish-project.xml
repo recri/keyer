@@ -2,8 +2,8 @@
 <!--
 ladish Project.
 -->
-<!-- Sat Apr 19 14:50:04 2014 -->
-<project name="keyer-ad5dz" uuid="3ac6271f-6464-416e-9671-5ff907d93fe4">
+<!-- Sat Apr 19 14:51:47 2014 -->
+<project name="keyer-k1el" uuid="3354e121-a581-4c66-9770-c7f52c97aecb">
   <room>
     <port name="Left" uuid="871954a7-7c0f-4092-ae34-465e1f1bb0ca" type="audio" direction="capture" />
     <port name="Right" uuid="2dc1da00-cebd-47ea-a239-c30db9653e7c" type="audio" direction="capture" />
@@ -280,7 +280,7 @@ ladish Project.
   </connections>
   <applications>
     <application name="key-debounce" uuid="07c93527-ac6f-414b-a3b7-9f56d59d97dd" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-debounce key-debounce %3Ekey-debounce.log 2%3E%261</application>
-    <application name="key-iambic" uuid="32b18e17-0981-473f-854b-d05318470b17" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-iambic-ad5dz key-iambic %3Ekey-iambic.log 2%3E%261</application>
+    <application name="key-iambic" uuid="32b18e17-0981-473f-854b-d05318470b17" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-iambic-k1el key-iambic %3Ekey-iambic.log 2%3E%261</application>
     <application name="key-ptt" uuid="72252d9d-41f7-407a-8ece-f608925d9c1a" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-ptt key-ptt %3Ekey-ptt.log 2%3E%261</application>
     <application name="key-tone" uuid="5635aa4d-8d5c-40e4-9142-df765e586af7" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-tone key-tone %3Ekey-tone.log 2%3E%261</application>
     <application name="key-ascii" uuid="2108f775-09c1-4062-acca-c9510b4489f6" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-ascii key-ascii %3E key-ascii.log 2%3E%261</application>
