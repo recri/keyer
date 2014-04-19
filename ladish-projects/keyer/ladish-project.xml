@@ -2,8 +2,8 @@
 <!--
 ladish Project.
 -->
-<!-- Tue Jan 28 10:57:26 2014 -->
-<project name="keyer" uuid="f73e7f2d-bbfd-43ef-b281-b6943f54ca9d">
+<!-- Sat Apr 19 14:39:29 2014 -->
+<project name="keyer" uuid="2c5c5832-b6c4-408b-a795-75422be227d0">
   <room>
     <port name="Left" uuid="871954a7-7c0f-4092-ae34-465e1f1bb0ca" type="audio" direction="capture" />
     <port name="Right" uuid="2dc1da00-cebd-47ea-a239-c30db9653e7c" type="audio" direction="capture" />
@@ -104,6 +104,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">981.0</key>
         <key name="http://ladish.org/ns/canvas/y">967.0</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">981.0</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">967.0</key>
       </dict>
     </client>
     <client name="Playback" uuid="e53018fe-4ae5-4d4c-b4a1-3b8f12e1ae91" naming="app">
@@ -117,6 +119,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1770.2694457116781</key>
         <key name="http://ladish.org/ns/canvas/y">1124.6123403284673</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1770.2694457116781</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1124.6123403284673</key>
       </dict>
     </client>
     <client name="key-debounce" uuid="c2c2969e-a048-487b-92e5-79c86e69641d" naming="app" app="07c93527-ac6f-414b-a3b7-9f56d59d97dd">
@@ -127,6 +131,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1094.6017518914166</key>
         <key name="http://ladish.org/ns/canvas/y">1011.3537831143601</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1094.6017518914166</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1011.3537831143601</key>
       </dict>
     </client>
     <client name="key-iambic" uuid="c20b3f1c-bdd8-4643-953e-d9b9c7edb3be" naming="app" app="32b18e17-0981-473f-854b-d05318470b17">
@@ -137,6 +143,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1228.221296794249</key>
         <key name="http://ladish.org/ns/canvas/y">1040.079569213614</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1228.221296794249</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1040.079569213614</key>
       </dict>
     </client>
     <client name="key-ptt" uuid="39c1fef3-d5fe-413c-99aa-fb1e01983c38" naming="app" app="72252d9d-41f7-407a-8ece-f608925d9c1a">
@@ -147,6 +155,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1371.5877814127516</key>
         <key name="http://ladish.org/ns/canvas/y">1088.240609359599</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1371.5877814127516</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1088.240609359599</key>
       </dict>
     </client>
     <client name="key-tone" uuid="68bce948-a3da-4853-b73b-fbc2083221ec" naming="app" app="5635aa4d-8d5c-40e4-9142-df765e586af7">
@@ -158,6 +168,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1527.0107208029194</key>
         <key name="http://ladish.org/ns/canvas/y">1055.166799726278</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1527.0107208029194</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1055.166799726278</key>
       </dict>
     </client>
     <client name="key-ascii" uuid="7257b758-9e25-4775-8c05-4095e8cb90c3" naming="app" app="2108f775-09c1-4062-acca-c9510b4489f6">
@@ -167,6 +179,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1384.470175638686</key>
         <key name="http://ladish.org/ns/canvas/y">983.4929288321171</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1384.470175638686</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">983.4929288321171</key>
       </dict>
     </client>
     <client name="key-tone2" uuid="26632cab-7e9d-487c-8508-c6a3e7efe3f1" naming="app" app="ff1522a5-a746-4f94-81c5-b3e602559798">
@@ -178,6 +192,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1506.7615761861305</key>
         <key name="http://ladish.org/ns/canvas/y">961.6712477189781</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1506.7615761861305</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">961.6712477189781</key>
       </dict>
     </client>
     <client name="key-detone2" uuid="1fa4fae3-04fb-41e3-977b-00960eea0aea" naming="app" app="0a94d18a-0478-4b50-89b3-7f2da0312419">
@@ -188,6 +204,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1705.631329835767</key>
         <key name="http://ladish.org/ns/canvas/y">960.8613708941607</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1705.631329835767</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">960.8613708941607</key>
       </dict>
     </client>
     <client name="key-detime2" uuid="668a7efc-157b-4129-982c-eac1e9c92c19" naming="app" app="002f38fb-c0d8-43a1-b5a9-6f65a9255314">
@@ -197,6 +215,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1823.3334283759125</key>
         <key name="http://ladish.org/ns/canvas/y">960.4114393248178</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1823.3334283759125</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">960.4114393248178</key>
       </dict>
     </client>
     <client name="key-detone" uuid="071b2da7-1c22-4a34-8054-0b78d31deaa7" naming="app" app="018e5768-f7c4-4279-846f-7321dd959ca4">
@@ -207,6 +227,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1707.4760492700739</key>
         <key name="http://ladish.org/ns/canvas/y">1047.023266423358</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1707.4760492700739</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1047.023266423358</key>
       </dict>
     </client>
     <client name="key-detime" uuid="9034418b-8800-48b5-9e51-06a59fa1d344" naming="app" app="623a4d26-1c8e-4199-a969-13e19178480e">
@@ -216,6 +238,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1830.0824019160586</key>
         <key name="http://ladish.org/ns/canvas/y">1045.8984375</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1830.0824019160586</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1045.8984375</key>
       </dict>
     </client>
     <client name="key-detime3" uuid="83398125-2cf9-4fa0-b402-a4a7038c0594" naming="app" app="5c997315-9b73-45d7-9cf2-b4b502100ee5">
@@ -225,6 +249,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1822.2085994525544</key>
         <key name="http://ladish.org/ns/canvas/y">888.4223882299267</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1822.2085994525544</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">888.4223882299267</key>
       </dict>
     </client>
     <client name="key-detone3" uuid="f7e63c41-425a-4d3f-96ff-b4e9a67d510f" naming="app" app="09d16ccf-8d84-4000-9281-d94ac553de11">
@@ -235,6 +261,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1698.4774178832115</key>
         <key name="http://ladish.org/ns/canvas/y">888.4223882299272</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1698.4774178832115</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">888.4223882299272</key>
       </dict>
     </client>
     <client name="rigctld" uuid="b61ecdcc-d52c-4424-8de0-4056a52b94c1" naming="app" app="c97de001-d0fc-40b9-bcc0-03eb8ed544a2">
@@ -245,6 +273,8 @@ ladish Project.
       <dict>
         <key name="http://ladish.org/ns/canvas/x">1139.4312240159136</key>
         <key name="http://ladish.org/ns/canvas/y">1136.0377064782688</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/x_split">1139.4312240159136</key>
+        <key name="http://kxstudio.sf.net/ns/canvas/y_split">1136.0377064782688</key>
       </dict>
     </client>
   </clients>
@@ -270,7 +300,7 @@ ladish Project.
   </connections>
   <applications>
     <application name="key-debounce" uuid="07c93527-ac6f-414b-a3b7-9f56d59d97dd" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-debounce key-debounce %3Ekey-debounce.log 2%3E%261</application>
-    <application name="key-iambic" uuid="32b18e17-0981-473f-854b-d05318470b17" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-iambic-ad5dz key-iambic %3Ekey-iambic.log 2%3E%261</application>
+    <application name="key-iambic" uuid="32b18e17-0981-473f-854b-d05318470b17" terminal="false" level="0" autorun="false">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-iambic-ad5dz key-iambic %3Ekey-iambic.log 2%3E%261</application>
     <application name="key-ptt" uuid="72252d9d-41f7-407a-8ece-f608925d9c1a" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-ptt key-ptt %3Ekey-ptt.log 2%3E%261</application>
     <application name="key-tone" uuid="5635aa4d-8d5c-40e4-9142-df765e586af7" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-tone key-tone %3Ekey-tone.log 2%3E%261</application>
     <application name="key-ascii" uuid="2108f775-09c1-4062-acca-c9510b4489f6" terminal="false" level="0" autorun="true">~%2Fkeyer%2Fbin%2Fsdrtcl-keyer-ascii key-ascii %3E key-ascii.log 2%3E%261</application>
