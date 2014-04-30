@@ -19,6 +19,7 @@ OBRATE=96000			# onboard rate
 HWDEV=hw:1			# 1 for sdr-widget, x-fi usb, etc
 HWRATE=96000			# hardware rate
 HWBUFFER=1024			# hardware buffer
+SHORTS=				# do not configure for 16 bits
 SI570="--si570"
 IQ="--iq"			# reversed on x-fi usb
 LOG=~/Projects/keyer/logs/`date --rfc-3339=seconds | sed -e 's/ /-/'`
@@ -43,10 +44,12 @@ case "$RADIO"-"$SCARD" in
 	echo "detected Ensemble RX with IOx, setting --qi"
 	IQ="--qi";;
     RX-Dongle)
+	#echo "detected Ensemble RX with Syba dongle, force 16bits"
+	#SHORTS=-S
 	echo "detected Ensemble RX with Syba dongle, rate -> 48000"
+	IQ="--qi"
 	HWRATE=48000
-	OBRATE=48000
-	;;
+	OBRATE=48000;;
 esac
 
 for f in $*; do
@@ -81,8 +84,8 @@ if [ $XFI -eq 1 ]; then
     OHWDEV=$OBDEV
 fi
 
-echo "jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 -X raw"
-jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER -i2 -o2 -n3 -X raw > $LOG-jackd.log 2>&1 &
+echo "jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER $SHORTS -i2 -o2 -n3 -X raw"
+jackd -T -s -dalsa -C$IHWDEV -P$OHWDEV -r$HWRATE -p$HWBUFFER $SHORTS -i2 -o2 -n3 -X raw > $LOG-jackd.log 2>&1 &
 JACKD_PID=$!
 sleep 1
 echo "softrock --jack $SI570 $IQ --samplerate $HWRATE"
