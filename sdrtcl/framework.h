@@ -40,6 +40,20 @@
 
 #include "../dspmath/midi_buffer.h"
 
+#if FRAMEWORK_OPTIONS_KEYER_TIMING // options that control the timing of morse code elements
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_DAH 1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_ILS 1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_IES 1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_IWS 1
+#endif
+
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS // options that alter the iambic keyer operation
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_ALSP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_AWSP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_MODE 1
+#endif
+
 /*
 ** option definitions
 */

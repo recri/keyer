@@ -32,126 +32,15 @@ lappend auto_path [file join [file dirname $script] .. lib]
 # find the name of the script, without reading links
 set name [file tail $script]
 
-# initialize data
-array set data { present {} monitor {} dict {} }
+package require ladish
 
-# prepare to dbus
-package require dbus
-package require dbif
-
-# dbus/dbif helpers
-proc sdrkit-ping {name} {
-    return [dbus call $name org.freedesktop.DBus.Peer Ping]
-}
-proc sdrkit-introspect {name} {
-    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Introspectable Introspect]
-}
-proc sdrkit-get-all {name} {
-    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Properties GetAll org.sdrkit.Bus]
-}
-proc sdrkit-get-value {name key} {
-    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Properties Get org.sdrkit.Bus $key]
-}
-proc sdrkit-set-value {name key value} {
-    return [dbus call -dest org.sdrkit.$name / org.freedesktop.DBus.Properties Set org.sdrkit.Bus $key $value]
-}
-proc sdrkit-listen {path interface member script} {
-    if {$path eq {}} {
-	dbus filter add -type signal -interface $interface -member $member
-    } else {
-	dbus filter add -type signal -path $path -interface $interface -member $member
-    }
-    dbus listen $path $interface.$member $script
-}
-proc sdrkit-call {name method args} {
-    return [dbus call -dest org.sdrkit.$name / org.sdrkit.Bus $method $args]
-}
-
-## connect to the bus
-dbif default -bus session -interface org.sdrkit.Bus
-dbif connect -replace -yield org.sdrkit.bus
-
-## listen for name replacement
-## NB, don't know if this works or not, never tried
-dbif listen -interface org.freedesktop.DBus /org/freedesktop/DBus NameLost { exit }
-
-## listen for the responses to the roll call
-dbif listen -interface org.sdrkit.Bus / Present name {
-    # puts "[clock milliseconds] org.sdrkit.Bus.Present($name)"
-    lappend ::data(present) $name
-}
-
-#
-# poll for components
-# after all changes have settled
-#
-proc start-rollcall {} {
-    # puts "[clock milliseconds]: start-rollcall"
-    # initialize the list of responders and monitor log
-    array set ::data {present {} monitor {}}
-    # announce roll call
-    # puts "[clock milliseconds] put org.sdrkit.Bus.RollCall()"
-    dbus signal / org.sdrkit.Bus RollCall
-    # start monitor
-    after 250 [list monitor-rollcall]
-}
-
-#
-# listen for responses to roll call
-# until the list stabilizes, then
-# find out what the components can do
-#
-proc monitor-rollcall {} {
-    # see how many components have reported
-    set n [llength $::data(present)]
-    # remember this outcome
-    lappend ::data(monitor) $n
-    # see if it's stable
-    if {[llength [lsearch -all -exact $::data(monitor) $n]] < 5} {
-	# puts "[clock milliseconds] monitor-rollcall go around again: $::data(monitor)"
-	# still stabilizing
-	after 100 [list monitor-rollcall]
-    } else {
-	# one quarter second at this level of response
-	set ::data(present) [lsort $::data(present)]
-	# puts "[clock milliseconds] monitor-rollcall install $::data(present)"
-	# puts "updating components to $::data(present)"
-	set d [dict create]
-	foreach name [lsort $::data(present)] {
-	    # puts "[clock milliseconds] [sdrkit-introspect $name]"
-	    set p [dict create]
-	    foreach {key value} [sdrkit-get-all $name] {
-		dict set p $key $value
-		# puts "$key @ $name -> [sdrkit-get-value $name $key]"
-	    }
-	    dict set d $name $p
-	    puts "[clock milliseconds] $name cdoc = {[sdrkit-call $name Component cdoc]}"
-	    puts "[clock milliseconds] $name methods = {[sdrkit-call $name Component info methods]}"
-	    puts "[clock milliseconds] $name options = {[sdrkit-call $name Component info options]}"
-	    foreach opt [sdrkit-call $name Component info options] {
-		puts "[clock milliseconds] $name $opt cdoc = {[sdrkit-call $name Component cdoc $opt]}"
-	    }
-	}
-	set ::data(dict) $d
-	dict for {name value} $d {
-	    puts "[clock milliseconds] $name [dict keys $value]"
-	}
+proc callback {d} {
+    dict for {name value} $d {
+	puts "[clock milliseconds] $name -> $value"
     }
 }
 
-proc signal-received {name dict args} {
-    #puts "[clock milliseconds] signal-received $name $args"
-    catch {after cancel $::data(after)}
-    set ::data(after) [after 250 start-rollcall]
-}
-    
-foreach member {AppAdded AppRemoved AppStateChanged} {
-    sdrkit-listen {} org.ladish.AppSupervisor $member [list signal-received $member]
-    sdrkit-listen {} org.ladish.AppSupervisor ${member}2 [list signal-received ${member}2]
-}    
-
-## schedule the first roll call
-set ::data(after) [after 250 [list start-rollcall]]
+sdrkit-ladish-connect callback
 
 ## handle incoming midi events
 proc midi-check {} {
@@ -160,6 +49,7 @@ proc midi-check {} {
     }
     set ::data(after-midi) [after 1000 [list midi-check]]
 }
+
 package require sdrtcl::midi
 puts "[clock milliseconds] started [sdrtcl::midi rigctld]"
 puts "[clock milliseconds] rigctld activate [rigctld activate]"

@@ -29,11 +29,29 @@ float freq, gain, rise, fall;
 // speed options
 float word, wpm;
 #endif
-#if FRAMEWORK_OPTIONS_KEYER_TIMING
 // element timing options
-float  dah, ies, ils, iws;
+#if FRAMEWORK_OPTIONS_KEYER_TIMING_DAH
+float  dah;
 #endif
-#if FRAMEWORK_OPTIONS_KEYER_OPTIONS
-int swap, alsp, awsp, mode;
+#if FRAMEWORK_OPTIONS_KEYER_TIMING_IES
+float  ies;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_TIMING_ILS
+float  ils;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_TIMING_IWS
+float  iws;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP
+int swap;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_ALSP
+int alsp;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_AWSP
+int awsp;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_MODE
+int mode;
 #endif
 #endif

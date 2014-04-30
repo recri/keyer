@@ -7,15 +7,25 @@ OLDSUBDIRS=
 SUBDIRS=$(CURSUBDIRS) $(OLDSUBDIRS)
 
 all::
+	cd dbus-2.0 && ./configure --with-tcl=/usr/lib/tcl8.6 && make prefix="`cd .. && pwd`" exec_prefix="`cd .. && pwd`" install-lib-binaries
+	cd dbif-1.0 && cp dbif.tcl ../lib/sdrutil
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 
 clean::
 	@find . -name '*~' -exec rm -f \{} \;
+	cd dbus-2.0 && make clean
+	cd dbif-1.0 && make clean
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) clean); done
 
 all-clean::
 	@find . -name '*~' -exec rm -f \{} \;
+	cd dbus-2.0 && make distclean
+	rm -fr lib/dbus
+	cd dbif-1.0 && make distclean
+	rm lib/sdrutil/dbif.tcl
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all-clean); done
+
+distclean:: all-clean
 
 #
 # this is the lazy programmer's version of configure/autoconf/automake

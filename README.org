@@ -4,16 +4,16 @@
   -----------
   This is a kit for building software defined radios on linux which uses a variety
   of packages:
-** ALSA - the advanced linux sound architecture
-** Jack - the jack audio construction kit
-** Ladish - the linux audio session manager
-** Dbus - the desktop application bus
-** Hamlib - the rig and rotator control library
-** Tcl - the tool command language
-** Tk - the UI toolkit based on tcl
+  - ALSA :: the advanced linux sound architecture
+  - Jack :: the jack audio construction kit
+  - Ladish :: the linux audio session manager
+  - Dbus :: the desktop application bus
+  - Hamlib :: the rig and rotator control library
+  - Tcl :: the tool command language
+  - Tk :: the UI toolkit based on tcl
 * Prerequisites
   I've written these instructions as I use them on a laptop running
-  Ubuntu 13.10, the Saucy Salamander release.  Most of it is generic 
+  Ubuntu 14.04, the Trusty Tahr release.  Most of it is generic 
   enough to work on other current Linux systems with minor
   translations of package management tools and package names. It's
   also generic enough to port to MacOS or Windows.  But I don't run
@@ -38,13 +38,14 @@
    | tk8.6-dev          |
    | tcllib             |
    | libusb-1.0-0-dev   |
+   | libdbus-1-dev      |
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
    listed.
 
    The "apt-get" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt-get install build-essential git-core libasound2-dev jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib libusb-1.0-0-dev
+   sudo apt-get install build-essential git-core libasound2-dev jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib libusb-1.0-0-dev libdbus-1-dev
    #+END_EXAMPLE
 
 ** Getting the source

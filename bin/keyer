@@ -19,7 +19,14 @@
 # 
 
 #
-# start a ladish keyer application
+# start, stop, and control a ladish keyer application
+# start the keyer automatically at startup
+# stop the keyer on shutdown
+# start a different keyer
+# change the parameters of the keyer
+# provide a mouse/keyboard midi event generator
+#
+
 # 
 # get script name
 set script [info script]
@@ -30,23 +37,133 @@ lappend auto_path [file join [file dirname $script] .. lib]
 # find the name of the script, without reading links
 set name [file tail $script]
 
-# get the component name
-set component [string range $name 7 end]
+package require Tk 8.6
+package require ladish 
+package require sdrtk::dialbook
+package require sdrtk::readout-enum
+package require sdrtk::readout-freq
+package require sdrtk::readout-value
+package require sdrtk::vtext
 
-## sort out the rest of the arguments
-set command [lindex $argv 0]
-set args [lrange $argv 1 end]
+## default studio and project
+array set ::data {
+    studio default
+    project keyer
+}
 
-## perform the command
-switch -exact $command {
-    start {
-	if {[lindex [exec ladish_control sisloaded] end] ne {no}} {
-	    error "studio is already loaded"
-	}
-	exec ladish_control sload default
-	exec ladish_control pload keyer [glob ~/keyer/ladish-projects/keyer]
+## test if the session is started
+proc ladish-session-is-started {} {
+    return [expr {[lindex [exec ladish_control sisloaded] end] ne {no}}]
+}
+
+## start a session
+proc ladish-start-session {studio project} {
+    # studio name is just the name
+    exec ladish_control sload $studio
+    # project name is directory path containing ladish-project.xml file
+    exec ladish_control pload keyer $project
+}
+
+## stop a session and wait for it to finish
+## there is a long delay between the command completion
+## and the actual termination of the session
+proc ladish-stop-session {} {
+    exec ladish_control sunload
+    while {[ladish-session-is-started]} { after 100 }
+}
+
+proc ladish-status {} {
+    return [sdrkit-ladish-status]
+}
+
+## enumerate the studios
+set ::data(studios) [dict create]
+
+proc ladish-load-studios {} {
+    set ::data(studios) [dict create]
+    foreach x [lsort [split [string trim [exec ladish_control slist]] \n]] {
+	if {$x eq {--- studio list}} continue
+	dict set ::data(studios) [lindex $x 0] 1
     }
-    stop {
-	exec ladish_control sunload
-   }
+    puts "studios: [dict keys $::data(studios)]"
+}
+
+## enumerate the projects
+set ::data(projects) [dict create]
+
+proc ladish-load-projects {} {
+    set ::data(projects) [dict create]
+    foreach x [lsort [glob ~/keyer/ladish-projects/*/ladish-project.xml]] {
+	set x [file dirname $x]
+	dict set ::data(projects) [file tail $x] $x
+    }
+    puts "projects: [dict keys $::data(projects)]"
+}
+
+ladish-load-studios
+ladish-load-projects
+
+proc update-studio {} {
+    ladish-start-session $::data(studio) [dict get $::data(projects) $::data(project)]
+}
+
+proc update-project {} {
+    exec ladish_control pload keyer [dict get $::data(projects) $::data(project)]
+}
+
+proc dial-set {opt value} {
+    switch $opt {
+	keyer-tone {
+	}
+	keyer-wpm {
+	}
+	ascii-tone {
+	}
+	ascii-wpm {
+	}
+    }
+}
+
+## set user interface
+pack [ttk::frame .m] -side top -fill x -expand true
+pack [ttk::menubutton .m.f -text file -menu .m.f.m] -side left
+menu .m.f.m -tearoff no
+.m.f.m add command -label quit -command {destroy .}
+pack [ttk::menubutton .m.s -text studio -menu .m.s.m] -side left
+menu .m.s.m -tearoff no
+dict for {name value} $::data(studios) { .m.s.m add radiobutton -label $name -value $name -variable ::data(studio) -command update-studio }
+pack [ttk::menubutton .m.p -text project -menu .m.p.m] -side left
+menu .m.p.m -tearoff no
+dict for {name value} $::data(projects) { .m.p.m add radiobutton -label $name -value $name -variable ::data(project) -command update-project }
+pack [::sdrtk::dialbook .dial] -side top -fill both -expand true
+foreach {opt type value opts} {
+    keyer-tone freq 800 {-text keyer-tone -units Hz -format %.0f}
+    keyer-wpm value 18 {-text keyer-wpm -format %.0f}
+    ascii-tone freq 800 {-text ascii-tone -units Hz -format %.0f}
+    ascii-wpm value 18 {-text ascii-wpm -format %.0f}
+} {
+    lappend opts -value $value -variable ::data(-$opt) -command [list dial-set -$opt]
+    switch $type {
+	enum { sdrtk::readout-enum .dial.$opt {*}$opts }
+	freq { sdrtk::readout-freq .dial.$opt {*}$opts }
+	value { sdrtk::readout-value .dial.$opt {*}$opts }
+	default { error "unanticipated type \"$type\"" }
+    }
+    .dial add .dial.$opt -text [.dial.$opt cget -text]
+}
+
+update idletasks
+# default session
+if {[dict exists $::data(studios) default] && [dict exists $::data(projects) keyer]} {
+    puts "ladish-start-session default [dict get $::data(projects) keyer]"
+    ladish-start-session default [dict get $::data(projects) keyer]
+    while { ! [ladish-session-is-started]} { puts "waiting for session to start"; after 100 }
+    puts "session started"
+    set ::data(dict) [ladish-status]
+    puts "dict received $::data(dict)"
+    dict for {name value} $::data(dict) {
+	dict for {name1 value1} $value {
+	    puts "$name $name1 $value1"
+	}
+    }
 }
