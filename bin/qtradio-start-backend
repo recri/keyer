@@ -50,6 +50,11 @@ case "$RADIO"-"$SCARD" in
 	IQ="--qi"
 	HWRATE=48000
 	OBRATE=48000;;
+    RX-system)
+	echo "detected Ensemble RX with Griffin iMic"
+	IQ="--qi"
+	HWRATE=48000
+	OBRATE=48000;;
 esac
 
 for f in $*; do
