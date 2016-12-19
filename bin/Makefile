@@ -15,11 +15,16 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-all::
+all:: midicw
+
+OSC_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D
+midicw: midicw.c
+	$(CC) $(CFLAGS) $(OSC_CFLAGS) -o midicw midicw.c -lm -ljack -lpthread
 
 clean::
 	rm -f *~
 
 all-clean:: clean
+
 
 

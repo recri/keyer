@@ -6,6 +6,7 @@ pkgIndex.tcl
 *~
 *.log
 *.out
+bin/midicw
 test/test-ovsv
 test/test-osc
 test/test-osc2
@@ -20,8 +21,10 @@ dspserver.conf
 dbif-1.0/config.status
 dbif-1.0/doc/dbif.html
 dbif-1.0/doc/dbif.n
+dbif-1.0/Makefile
 dbus-2.0/config.status
 dbus-2.0/doc/dbus.n
 dbus-2.0/doc/dbus.html
+dbus-2.0/Makefile
 lib/dbus
 lib/sdrutil/dbif.tcl

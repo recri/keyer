@@ -1,3 +1,25 @@
+/* -*- mode: c++; tab-width: 8 -*- */
+/*
+  Copyright (C) 2016 by Roger E Critchlow Jr, Charlestown, MA, USA.
+
+  Modified to use the dspmath keyed_tone module to generate a shaped key tone
+  with no calls to transcendental functions.
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+*/
+ 
 /*
     Copyright 2011 Glen Overby
 
@@ -61,14 +83,29 @@
 
 jack_port_t *input_port;
 jack_port_t *output_port;
-jack_default_audio_sample_t ramp=0.0;
-jack_default_audio_sample_t note_on;
 unsigned char cwnote = 60;	/* note value for CW tone */
 unsigned char cwpitch = 0x3c;	/* pitch value from MIDI device for CW key */
 unsigned char pttpitch = 0x3b;	/* pitch value from MIDI device for PTT button */
 jack_default_audio_sample_t note_frqs[128];
 
+/* tone implementation */
+
+#include "../dspmath/keyed_tone.h"
+
+keyed_tone_t tone;
+struct {
+  int	freq;	/* frequency of keyed tone */
+  int	gain;	/* gain in decibels of keyed tone */
+  int	rise;	/* rise time in milliseconds */
+  int	fall;	/* fall time in milliseconds */
+  int	srate;	/* samples per second */
+} tone_opts = {
+  600, -30, 5, 5, 48000
+};
+
 char running = 1;
+
+/* ptt implementation */
 
 int pttstate = 0;		/* PTT state: 0x01 = key, 0x02 = ptt-button */
 #define PTT_KEY 0x01
@@ -180,7 +217,7 @@ int udpopen()
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = IPPROTO_UDP;
 	if ((rc = getaddrinfo(remotehost, service, &hints, &addr)) != 0) {
-		fprintf(stderr, "getaddrinfo(localhost, %s) = rc\n", service, rc);
+		fprintf(stderr, "getaddrinfo(localhost, %s) = rc %d\n", service, rc);
 		return -1;
 	}
 
@@ -245,7 +282,7 @@ int tcpopen()
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 	if ( (rc = getaddrinfo(remotehost, service, &hints, &addr)) != 0 ) {
-		fprintf(stderr, "getaddrinfo(localhost, %s) = rc\n", service, rc);
+		fprintf(stderr, "getaddrinfo(localhost, %s) = rc %d\n", service, rc);
 		return -1;
 	}
 	if ((sockfd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
@@ -369,16 +406,6 @@ void ptt_thread(void)
 	pthread_exit(0);
 }
 
-
-void calc_note_frqs(jack_default_audio_sample_t srate)
-{
-	int i;
-	for(i=0; i<128; i++)
-	{
-		note_frqs[i] = (2.0 * 440.0 / 32.0) * pow(2, (((jack_default_audio_sample_t)i - 9.0) / 12.0)) / srate;
-	}
-}
-
 /*
 JACK Callback, to process events and audio.
  */
@@ -418,21 +445,21 @@ int process(jack_nframes_t nframes, void *arg)
 				/* note on */
 				note = *(in_event.buffer + 1);
 				if (note == cwpitch) {
-					note_on = 1.0;
+					keyed_tone_on(&tone);
 					pttstate |= PTT_KEY;
 					ptton |= PTT_KEY;
 					pttchanged = 1;
 				} else if (note == pttpitch) {
-					note_on = 0.0;
+					keyed_tone_off(&tone);
 					pttstate |= PTT_PTT;
 					ptton |= PTT_PTT;
 					pttchanged = 1;
 				} else
-					note_on = 0.0;
+					keyed_tone_off(&tone);
 			} else if( ((*(in_event.buffer)) & 0xf0) == 0x80 ) {
 				/* note off */
 				note = *(in_event.buffer + 1);
-				note_on = 0.0;
+				keyed_tone_off(&tone);
 				if (note == cwpitch) {
 					pttstate &= ~(PTT_KEY);
 					pttchanged = 1;
@@ -449,9 +476,7 @@ int process(jack_nframes_t nframes, void *arg)
 				event_sample = nframes+1;
 			}
 		}
-		ramp += note_frqs[cwnote];
-		ramp = (ramp > 1.0) ? ramp - 2.0 : ramp;
-		out[i] = note_on*sin(2*M_PI*ramp);
+		out[i] = keyed_tone_process(&tone);
 	}
 	if (pttchanged) {
 		sem_post(&ptt_run);
@@ -464,7 +489,7 @@ int srate(jack_nframes_t nframes, void *arg)
 #ifdef DEBUG
 	printf("the sample rate is now %" PRIu32 "/sec\n", nframes);
 #endif
-	calc_note_frqs((jack_default_audio_sample_t)nframes);
+	keyed_tone_update(&tone, tone_opts.gain, tone_opts.freq, tone_opts.rise, tone_opts.fall, tone_opts.srate = nframes);
 	return 0;
 }
 
@@ -474,24 +499,24 @@ void jack_shutdown(void *arg)
 	exit(1);
 }
 
+
 int main(int argc, char **argv)
 {
 	char	*clientname = "midicw";
-	int	ufreq = 0;
 	int	opt;
 
 	jack_client_t *client;
 	int	i;
 	struct sigaction siga;
 
-	while ((opt = getopt(argc, argv, "d:f:hn:r:t:")) != -1) {
+	while ((opt = getopt(argc, argv, "d:f:hn:r:t:e:g:")) != -1) {
 		switch (opt) {
 		case 'd':
 			pttdelay = atoi(optarg);
 			break;
 
 		case 'f':
-			ufreq = atoi(optarg);
+			tone_opts.freq = atoi(optarg);
 			break;
 
 		case 'h':
@@ -516,9 +541,14 @@ int main(int argc, char **argv)
 			/* use syntax: host:port */
 			remoteport = atoi(optarg);
 			break;
-
+		case 'e':/* envelope in milliseconds */
+			tone_opts.rise = tone_opts.fall = atoi(optarg);
+			break;
+		case 'g':/* gain in dB */
+			tone_opts.gain = atoi(optarg);
+			break;
 		case '?':
-			printf("unknown option '%s'\n", optopt);
+			printf("unknown option '%c'\n", optopt);
 			exit(1);
 		}
 	}
@@ -540,12 +570,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	
-	calc_note_frqs(jack_get_sample_rate (client));
+	tone_opts.srate = jack_get_sample_rate (client);
+	keyed_tone_init(&tone, tone_opts.gain, tone_opts.freq, tone_opts.rise, tone_opts.fall, tone_opts.srate);
 
 	/* Find the note that is equal to or greater than the requested frequency */
-	if (ufreq) {
+	if (tone_opts.freq) {
 		float f;
-		f = (float)ufreq / jack_get_sample_rate (client);
+		f = (float)tone_opts.freq / tone_opts.srate;
 		for(i=0;i < 128; i++) {
 			if (note_frqs[i] >= f) {
 				cwnote = i;
@@ -556,14 +587,6 @@ int main(int argc, char **argv)
 		printf("ufreq: %d %f => bucket %d %f\n", ufreq, f, cwnote, note_frqs[cwnote]);
 #endif
 	}
-
-#ifdef DEBUG
-	printf("Note Frequencies:\n");
-	for(i=0;i < 128; i++) {
-		printf("[%3d] %f %f\n", i, note_frqs[i],
-		(2.0 * 440.0 / 32.0) * pow(2, (((jack_default_audio_sample_t)i - 9.0) / 12.0)));
-	}
-#endif
 
 	jack_set_process_callback (client, process, 0);
 
