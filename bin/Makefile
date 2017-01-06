@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# Copyright (C) 2016, 2017 by Roger E Critchlow Jr, Santa Fe, NM, USA.
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,12 +19,12 @@ all:: midicw
 
 OSC_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D
 midicw: midicw.c
-	$(CC) $(CFLAGS) $(OSC_CFLAGS) -o midicw midicw.c -lm -ljack -lpthread
+	$(CC) -std=gnu99 $(CFLAGS) $(OSC_CFLAGS) -o midicw midicw.c -lm -ljack -lpthread
 
 clean::
 	rm -f *~
 
 all-clean:: clean
-
+	rm -f midicw
 
 
