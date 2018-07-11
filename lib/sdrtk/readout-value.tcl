@@ -41,6 +41,8 @@ snit::widget sdrtk::readout-value {
     option -offset -default 0 -configuremethod Redisplay
     option -step -default 1 -configuremethod Configure
     option -variable -default {} -configuremethod Configure
+    option -min -default {} -configuremethod Configure
+    option -max -default {} -configuremethod Configure
     option -command {}
 
     delegate option -text to hull
@@ -56,7 +58,8 @@ snit::widget sdrtk::readout-value {
     
     method adjust {step} {
 	#puts "$self adjust $step: $options(-value) +  $step * $options(-step)"
-	$self configure -value [expr {$options(-value)+$step*$options(-step)}]
+	set newvalue [$self bound [expr {$options(-value)+$step*$options(-step)}]]
+	$self configure -value $newvalue
     }
 
     method Display {} {
@@ -68,7 +71,14 @@ snit::widget sdrtk::readout-value {
 	$self Display
     }
 
+    method bound {val} {
+	if {$options(-min) ne {}} { set val [expr {max($val,$options(-min))}] } 
+	if {$options(-max) ne {}} { set val [expr {min($val,$options(-max))}] }
+	return $val
+    }
+    
     method {Configure -value} {val} {
+	set val [$self bound $val]
 	if {$options(-value) != $val} {
 	    set options(-value) $val
 	    if {$options(-variable) ne {}} { set $options(-variable) $val }
@@ -101,6 +111,14 @@ snit::widget sdrtk::readout-value {
 	    trace add variable $options(-variable) write [mymethod TraceWrite]
 	    $self TraceWrite
 	}
+    }
+    method {Configure -min} {val} {
+	set options(-min) $val
+	$self Configure -value $options(-value)
+    }
+    method {Configure -max} {val} {
+	set options(-max) $val
+	$self Configure -value $options(-value)
     }
     method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
 }

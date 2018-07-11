@@ -164,6 +164,28 @@ static int _disconnect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
   }
   return TCL_OK;
 }
+#if 0
+/* 
+** session api should be once per process.
+** callback comes in the audio thread, should be queued to the foreground.
+** should be able to set a tcl variable with the session event pointer value
+** and the foreground should be able to detect the change to the variable.
+** or, better, the registering jack client thingy can post the event into its 
+** client data structure which the foreground can poll, the poll returns: no event,
+** save template, save state, of save state and quit.
+**
+** okay, so there's one command to establish a session api monitor, it is passed
+** the command name and arguments that launched the app which it squirrels away.
+** it establishes a session callback and manages the client uuid.  When the session
+** event arrives, it stores a point into its client data structure.  Meanwhile, there
+** is an after loop running in the main app which polls for session events, when it
+** gets one, it acts on it.
+*/
+int 	jack_set_session_callback (jack_client_t *client, JackSessionCallback session_callback, void *arg) JACK_WEAK_EXPORT
+int 	jack_session_reply (jack_client_t *client, jack_session_event_t *event) JACK_WEAK_EXPORT
+void 	jack_session_event_free (jack_session_event_t *event) JACK_WEAK_EXPORT
+char * 	jack_client_get_uuid (jack_client_t *client) JACK_WEAK_EXPORT
+#endif
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return framework_command(clientData, interp, argc, objv);
 }

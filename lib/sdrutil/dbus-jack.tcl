@@ -25,12 +25,21 @@ namespace eval ::dbus-jack:: {
 }
 
 if { ! [info exists ::dbus-jack::signals]} {
+    dbus connect session
     array set ::dbus-jack::signals {}
-    dbus filter add -type signal -path /org/jackaudio/Controller
+    if {[catch {
+	dbus filter session add -type signal -path /org/jackaudio/Controller
+    } error]} {
+	puts "error from {dbus filter session add -type signal -path /org/jackaudio/Controller} $error"
+    }
     foreach member {ServerStarted ServerStopped ClientAppeared ClientDisappeared GraphChanged
 	PortAppeared PortDisappeared PortRenamed PortsConnected PortsDisconnected StateChanged} {
 	set ::dbus-jack::signals($member) {}
-	dbus listen /org/jackaudio/Controller $member ::dbus-jack::jack-signal
+	if {[catch {
+	    dbus listen session /org/jackaudio/Controller $member ::dbus-jack::jack-signal
+	} error]} {
+	    puts "error from {dbus listen session /org/jackaudio/Controller $member ::dbus-jack::jack-signal} $error"
+	}
     }
     #puts [array get ::dbus-jack::signals]
 }

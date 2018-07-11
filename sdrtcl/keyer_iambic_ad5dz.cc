@@ -141,7 +141,8 @@ extern "C" {
       /* clock the iambic keyer */
       if (dp->k.clock(dp->raw_dit, dp->raw_dah, 1) != dp->key_out) {
 	dp->key_out ^= 1;
-	char midi_note_event[] = { (dp->key_out ? MIDI_NOTE_ON : MIDI_NOTE_OFF) | (dp->opts.chan-1), dp->opts.note, 0 };
+	unsigned char midi_note_event[] = { (unsigned char)((dp->key_out ? MIDI_NOTE_ON : MIDI_NOTE_OFF) | (dp->opts.chan-1)),
+					    (unsigned char)dp->opts.note, 0 };
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
 	if (buffer == NULL) {
 	  fprintf(stderr, "jack won't buffer 3 midi bytes!\n");

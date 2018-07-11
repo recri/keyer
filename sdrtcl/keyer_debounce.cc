@@ -83,7 +83,7 @@ extern "C" {
   }
 
   static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note) {
-    unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
+    unsigned char midi[] = { (unsigned char)(cmd | (dp->opts.chan-1)), (unsigned char)note, 0 };
     unsigned char* buffer = jack_midi_event_reserve(midi_out, t, 3);
     if (buffer == NULL) {
       fprintf(stderr, "jack won't buffer 3 midi bytes!\n");

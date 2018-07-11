@@ -178,7 +178,7 @@ snit::type sdrkit::control {
     method port-active-connections-to {pair} {
 	set active {}
 	set candidates [$self part-rewrite-connections-to {*}$pair [$self port-connections-to $pair]]
-	# puts "port-active-connections-to: $pair candidates={$candidates}"
+	puts "port-active-connections-to: $pair candidates={$candidates}"
 	foreach source $candidates {
 	    lassign $source part port
 	    set type [$self part-type $part]
@@ -424,7 +424,9 @@ snit::type sdrkit::control {
     ## pair will always be a part name opt name pair, or part name port name pair 
     ##
     method X-exists {x tag} { return [dict exists $data($x) $tag] }
-    method X-get {x tag} { return [dict get $data($x) $tag] }
+    method X-get {x tag} { 
+	return [dict get $data($x) $tag]
+    }
     method X-add {x tag} {
 	if {[dict exists $data($x) $tag]} { error "$x \"$tag\" exists" }
 	dict set data($x) $tag {}

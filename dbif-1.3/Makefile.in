@@ -1,0 +1,146 @@
+# Makefile.in --
+#
+# See the file "license.terms" for information on usage and redistribution
+# of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# RCS: @(#) $Id$
+
+PKG_TCL_SOURCES	= @PKG_TCL_SOURCES@
+
+SHELL		= @SHELL@
+
+srcdir		= @srcdir@
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+
+libdir		= @libdir@
+datarootdir	= @datarootdir@
+mandir		= @mandir@
+docdir		= @docdir@
+htmldir		= @htmldir@
+moduledir	= @moduledir@
+
+PKG_DIR		= $(PACKAGE_NAME)-$(PACKAGE_VERSION)
+pkglibdir       = $(libdir)/$(PACKAGE_NAME)
+
+INSTALL		= @INSTALL@
+INSTALL_PROGRAM	= @INSTALL_PROGRAM@
+INSTALL_DATA	= @INSTALL_DATA@
+INSTALL_SCRIPT	= @INSTALL_SCRIPT@
+
+PACKAGE_NAME	= @PACKAGE_NAME@
+PACKAGE_TARNAME	= @PACKAGE_TARNAME@
+PACKAGE_VERSION	= @PACKAGE_VERSION@
+
+TCLSH_PROG      = @TCLSH_PROG@
+TCLSH           = $(PKG_ENV) $(TCLSH_ENV) $(TCLSH_PROG)
+
+DTPLITE_PROG    = @DTPLITE_PROG@
+DTPLITE         = $(DTPLITE_PROG)
+
+MODULE_NAME	= dbif-$(PACKAGE_VERSION).tm
+
+all: module doc
+
+module: $(MODULE_NAME)
+
+doc: doc/dbif.html doc/dbif.n
+
+$(MODULE_NAME): $(PKG_TCL_SOURCES)
+ 	# Gmake will ignore $> and BSD make will ignore $+
+	cp $+ $> $@
+
+doc/dbif.n: $(srcdir)/doc/dbif.man
+ 	# Gmake will ignore $> and BSD make will ignore $+.
+	$(DTPLITE) -o $@ nroff $+ $>
+
+doc/dbif.html: $(srcdir)/doc/dbif.man
+ 	# Gmake will ignore $> and BSD make will ignore $+.
+	$(DTPLITE) -o $@ html $+ $>
+
+VPATH = $(srcdir)
+
+COMPRESS	= tar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
+DIST_ROOT	= /tmp/dist
+DIST_DIR	= $(DIST_ROOT)/$(PKG_DIR)
+
+dist-clean:
+	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).tar.*
+
+dist: dist-clean
+	mkdir -p $(DIST_DIR)
+	cp -p $(srcdir)/ChangeLog $(srcdir)/INSTALL* $(srcdir)/README* \
+		$(srcdir)/license* $(srcdir)/dbif.m4 $(srcdir)/aclocal.m4 \
+		$(srcdir)/configure $(srcdir)/*.in $(srcdir)/*.ac $(DIST_DIR)/
+	chmod 664 $(DIST_DIR)/Makefile.in $(DIST_DIR)/aclocal.m4
+	chmod 775 $(DIST_DIR)/configure $(DIST_DIR)/configure.ac
+
+	for i in $(srcdir)/*.tcl; do \
+	    if [ -f $$i ]; then \
+		cp -p $$i $(DIST_DIR)/ ; \
+	    fi; \
+	done;
+
+	mkdir $(DIST_DIR)/tclconfig
+	cp $(srcdir)/tclconfig/install-sh $(srcdir)/tclconfig/tcl.m4 \
+		$(DIST_DIR)/tclconfig/
+	chmod 664 $(DIST_DIR)/tclconfig/tcl.m4
+	chmod +x $(DIST_DIR)/tclconfig/install-sh
+
+	list='demos examples doc generic library mac tests unix win'; \
+	for p in $$list; do \
+	    if test -d $(srcdir)/$$p ; then \
+		mkdir $(DIST_DIR)/$$p; \
+		cp -p $(srcdir)/$$p/*.* $(DIST_DIR)/$$p/; \
+	    fi; \
+	done
+
+	(cd $(DIST_ROOT); $(COMPRESS);)
+
+clean:
+	-test -z "$(BINARIES)" || rm -f $(BINARIES)
+	-rm -f *.$(OBJEXT) core *.core
+	-rm -f doc/dbif.html doc/dbif.n
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
+
+distclean: clean
+	-rm -f *.tab.c
+	-rm -f $(CONFIG_CLEAN_FILES)
+	-rm -f config.cache config.log config.status
+
+install: all install-module @INSTALLDOC@
+
+install-module: module
+	@mkdir -p $(DESTDIR)$(moduledir)
+	@echo " Install $(MODULE_NAME) $(DESTDIR)$(moduledir)"; \
+	$(INSTALL_DATA) $(MODULE_NAME) $(DESTDIR)$(moduledir); \
+
+install-libraries:
+	@mkdir -p $(DESTDIR)$(pkglibdir)
+	@list='$(PKG_TCL_SOURCES)'; for p in $$list; do \
+	  if test -f $(srcdir)/$$p; then \
+	    destp=`basename $$p`; \
+	    echo " Install $$destp $(DESTDIR)$(pkglibdir)/$$destp"; \
+	    $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(pkglibdir)/$$destp; \
+	  fi; \
+	done
+	@echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
+	$(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir); \
+
+install-doc: doc
+	@mkdir -p $(DESTDIR)$(mandir)/mann
+	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+	@-list='doc/*.n'; for i in $$list; do \
+	    echo "Installing $$i"; \
+	    rm -f $(DESTDIR)$(mandir)/mann/`basename $$i`; \
+	    $(INSTALL_DATA) $$i $(DESTDIR)$(mandir)/mann ; \
+	done
+	@mkdir -p $(DESTDIR)$(htmldir)
+	@echo "Installing documentation in $(DESTDIR)$(htmldir)"
+	@-list='doc/*.html $(srcdir)/license*'; for i in $$list; do \
+	    echo "Installing $$i"; \
+	    rm -f $(DESTDIR)$(htmldir)/`basename $$i`; \
+	    $(INSTALL_DATA) $$i $(DESTDIR)$(htmldir) ; \
+	done
+
+.PHONY: doc

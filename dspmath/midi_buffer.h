@@ -191,13 +191,13 @@ static int midi_buffer_queue_command(midi_buffer_t *bp, unsigned duration, unsig
 }  
 static int midi_buffer_queue_note_on(midi_buffer_t *bp, unsigned duration, int chan, int note, int vel) {
   midi_buffer_event_t e;
-  unsigned char note_on[] = { MIDI_NOTE_ON|(chan-1), note, vel };
+  unsigned char note_on[] = { (unsigned char)(MIDI_NOTE_ON|(chan-1)), (unsigned char)note, (unsigned char)vel };
   return midi_buffer_queue_command(bp, duration, note_on, 3) > 0 ? 1 : -1;
 }
 
 static int midi_buffer_queue_note_off(midi_buffer_t *bp, unsigned duration, int chan, int note, int vel) {
   midi_buffer_event_t e;
-  unsigned char note_off[] = { MIDI_NOTE_OFF|(chan-1), note, vel };
+  unsigned char note_off[] = { (unsigned char)(MIDI_NOTE_OFF|(chan-1)), (unsigned char)note, (unsigned char)vel };
   return midi_buffer_queue_command(bp, duration, note_off, 3) > 0 ? 1 : -1;
 }
 

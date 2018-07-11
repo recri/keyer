@@ -2,26 +2,28 @@ VSN_FFTW3=3.2.2
 VSN_JACK=1.9.7
 VSN_TCL=8.6
 VSN_TK=8.6
+VSN_DBUS=2.2
+VSN_DBIF=1.3
 CURSUBDIRS=sdrtcl bin lib/morse lib/sdrkit lib/sdrtk lib/sdrutil
 OLDSUBDIRS=
 SUBDIRS=$(CURSUBDIRS) $(OLDSUBDIRS)
 
 all::
-	cd dbus-2.0 && ./configure --with-tcl=/usr/lib/tcl8.6 && make prefix="`cd .. && pwd`" exec_prefix="`cd .. && pwd`" install-lib-binaries
-	cd dbif-1.0 && cp dbif.tcl ../lib/sdrutil
+	cd dbus-$(VSN_DBUS) && ./configure --with-tcl=/usr/lib/tcl8.6 && make prefix="`cd .. && pwd`" exec_prefix="`cd .. && pwd`" install-lib-binaries
+	cd dbif-$(VSN_DBIF) && cp dbif.tcl ../lib/sdrutil
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 
 clean::
 	@find . -name '*~' -exec rm -f \{} \;
-	cd dbus-2.0 && make clean
-	cd dbif-1.0 && make clean
+	cd dbus-$(VSN_DBUS) && make clean
+	-cd dbif-$(VSN_DBIF) && make clean
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) clean); done
 
 all-clean::
 	@find . -name '*~' -exec rm -f \{} \;
-	cd dbus-2.0 && make distclean
+	cd dbus-$(VSN_DBUS) && make distclean
 	rm -fr lib/dbus
-	cd dbif-1.0 && make distclean
+	-cd dbif-$(VSN_DBIF) && make distclean
 	rm lib/sdrutil/dbif.tcl
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all-clean); done
 

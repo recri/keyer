@@ -23,8 +23,9 @@
 // if this isn't the first thing included, then random_r may end up undefined
 // feature macros are extremely weird, since anyone can include the
 // same file with the defines off
-#define _SVID_SOURCE 
-#define _BSD_SOURCE
+// #define _SVID_SOURCE 
+// #define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <stdlib.h>
 
 #include "dspmath.h"

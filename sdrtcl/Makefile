@@ -155,7 +155,7 @@ $(LIBDIR)/iq_correct_train.so: iq_correct_train.c framework.h ../dspmath/dspmath
 $(LIBDIR)/iq_delay.so: iq_delay.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/iq_noise.so: iq_noise.c framework.h ../dspmath/dspmath.h ../dspmath/iq_noise.h
+$(LIBDIR)/iq_noise.so: iq_noise.c framework.h ../dspmath/dspmath.h ../dspmath/iq_noise.h ../dspmath/random_uniform.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/iq_rotation.so: iq_rotation.c framework.h ../dspmath/dspmath.h ../dspmath/iq_rotation.h
@@ -197,7 +197,7 @@ $(LIBDIR)/mod_fm.so: mod_fm.c framework.h ../dspmath/mod_fm.h
 $(LIBDIR)/mod_ssb.so: mod_ssb.c framework.h ../dspmath/mod_ssb.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/noise.so: noise.c framework.h ../dspmath/dspmath.h ../dspmath/noise.h
+$(LIBDIR)/noise.so: noise.c framework.h ../dspmath/dspmath.h ../dspmath/noise.h ../dspmath/random_uniform.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/oscillator.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h

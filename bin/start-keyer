@@ -1,0 +1,216 @@
+#!/usr/bin/wish8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [info script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join [file dirname $script] .. lib]
+
+# yet another, start up the components of a keyer, link them, 
+# see how jack/ladish/qjackctl treat us, provide a direct
+# interface to the widgets, ..., works pretty well.
+
+package require sdrtcl::jack-client
+
+set data(components) {debounce ad5dz dttsp k1el nd7pa ptt tone}
+set data(keyers) {ad5dz dttsp k1el nd7pa}
+set data(-keyer) ad5dz
+set data(keyer) ad5dz
+
+proc load-graph {} {
+    # load keyer components
+    foreach c $::data(components) {
+	set fc keyer-$c
+	if {$c in $::data(keyers)} { set fc keyer-iambic-$c }
+	# load package from ../lib/sdrtcl
+	package require sdrtcl::$fc
+	# instantiate component
+	sdrtcl::$fc $c
+	# activate component
+	$c activate
+	# collect the component options
+	set ::data(config-$c) [$c configure]
+    }
+    
+    # make default connections
+    jack connect debounce:midi_out $::data(-keyer):midi_in
+    jack connect $::data(-keyer):midi_out ptt:midi_in
+    jack connect ptt:midi_out tone:midi_in
+}
+
+proc set-keyer {keyer} {
+    foreach k $::data(keyers) {
+	jack disconnect debounce:midi_out $k:midi_in
+	jack disconnect $k:midi_out ptt:midi_in
+    }
+    jack connect debounce:midi_out $keyer:midi_in
+    jack connect $keyer:midi_out ptt:midi_in
+}
+
+# options
+# all of this can be recreated by inspection of component -configure and component info option opt
+set data(all-options) {
+    { {}
+	{-keyer keyer Keyer ad5dz ad5dz {choice of keyer implementation}
+	    {ad5dz dttsp k1el nd7pa}}
+    }
+    { {debounce ad5dz dttsp k1el nd7pa ptt tone}
+	{-chan channel Channel 1 1 {midi channel} {1-16}}
+	{-note note Note 0 0 {base midi note} {0-127}}
+    }
+    { debounce
+	{-period period Period 0.0002 0.0002 {key sampling period in milliseconds}}
+	{-steps steps Steps 6 6 {number of consistent samples define stability}}
+    }
+    { {ad5dz dttsp k1el nd7pa}
+	{-swap swap Bool 0 0 {swap the dit and dah paddles}}
+	{-wpm wpm Words 18.0 18.0 {words per minute}}
+    }
+    { ptt
+	{-delay delay Delay 0.0 0.0 {delay of keyer on behind ptt on in seconds}}
+	{-hang hang Hang 1.0 1.0 {hang time of ptt off behind keyer off in seconds}}
+    }
+    { tone
+	{-freq frequency Hertz 700.0 700.0 {frequency of tone in hertz}}
+	{-gain gain Decibel -30.0 -30.0 {level of tone in decibels}}
+	{-rise rise Ramp 5.0 5.0 {rise time in milliseconds}}
+	{-fall fall Ramp 5.0 5.0 {fall time in milliseconds}}
+    }
+    { ad5dz 
+	{-mode mode Char A A {iambic keyer mode}}
+	{-word word Dits 50.0 50.0 {dits in a word}}
+	{-dah dah Dits 3.0 3.0 {dah length in dits}}
+	{-ies ies Dits 1.0 1.0 {inter-element space in dits}}
+	{-ils ils Dits 3.0 3.0 {inter-letter space in dits}}
+	{-iws iws Dits 7.0 7.0 {inter-word space in dits}}
+	{-alsp alsp Bool 0 0 {auto letter spacing}}
+	{-awsp awsp Bool 0 0 {auto word spacing}}
+    }
+    { dttsp
+	{-mode mode Mode A A {iambic mode A or B}}
+	{-mdit mdit Memo 0 0 {keep a dit memory}}
+	{-mdah mdah Memo 0 0 {keep a dah memory}}
+	{-mide mide Memo 0 0 {remember key state at mid-element}}
+	{-alsp alsp Bool 0 0 {auto letter spacing}}
+	{-awsp awsp Bool 0 0 {auto word spacing}}
+	{-weight weight Weight 50 50 {adjust relative weight of dit and dah}}
+    }
+    { k1el 
+	{-dah dah Dits 3.0 3.0 {dah length in dits}}
+	{-ies ies Dits 1.0 1.0 {inter-element space in dits}}
+	{-mode mode Char A A {iambic keyer mode}}
+	{-word word Dits 50.0 50.0 {dits in a word}}
+    }
+    { nd7pa 
+	{-dah dah Dits 3.0 3.0 {dah length in dits}}
+	{-ies ies Dits 1.0 1.0 {inter-element space in dits}}
+    }
+}
+
+# user interface
+package require sdrtk::dialbook
+package require sdrtk::readout-enum
+package require sdrtk::readout-freq
+package require sdrtk::readout-value
+package require sdrtk::vtext
+
+set data(options) {
+    keyer enum ad5dz {-text keyer -values {ad5dz dttsp k1el nd7pa}} 
+    keyer-wpm value 18 {-text wpm -format %.0f -min 5.0 -max 200.0 -step 0.5}
+    keyer-swap enum false {-text swap -values {true false}}
+    tone-freq freq 800 {-text freq -units Hz -format %.0f -min 500 -max 1500 -step 1}
+    tone-rise value 5.0 {-text rise-time -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1}
+    tone-fall value 5.0 {-text fall-time -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1}
+    tone-gain value -30 {-text volume -units dB -format %.1f -min -50 -max 0 -step 0.1}
+    ptt-delay value 0.0 {-text ptt-delay -units ms -format %.2f -min 0.0 -max 1000 -step 0.01}
+    ptt-hang value 0.0 {-text ptt-hang -units ms -format %.1f -min 0.0 -max 1000 -step 0.1}
+    midi-chan value 1 {-text midi-channel -format %.0f -min 1 -max 16}
+    midi-note value 0 {-text midi-base-note -format %.0f -min 0 -max 127}
+}
+
+proc dial-set {opt val} {
+    switch -glob -- $opt {
+	-keyer { 
+	    set-keyer $val 
+	    # find current option values for new keyer
+	}
+	-debounce-* { debounce configure [string range $opt 9 end] $val }
+	-keyer-* { $::data(-keyer) configure [string range $opt 6 end] $val }
+	-tone-* { catch { tone configure [string range $opt 5 end] $val } }
+	-ptt-* { ptt configure [string range $opt 4 end] $val }
+	default { puts "default dial-set $args" }
+    }
+}
+
+proc load-ui {} {
+    pack [::sdrtk::dialbook .dial] -side top -fill both -expand true
+    foreach {opt type value opts} $::data(options) {
+	lappend opts -value $value -variable ::data(-$opt) -command [list dial-set -$opt]
+	switch $type {
+	    enum { sdrtk::readout-enum .dial.$opt {*}$opts }
+	    freq { sdrtk::readout-freq .dial.$opt {*}$opts }
+	    value { sdrtk::readout-value .dial.$opt {*}$opts }
+	    default { error "unanticipated type \"$type\"" }
+	}
+	.dial add .dial.$opt -text [.dial.$opt cget -text]
+    }
+}
+
+proc load-opts {opts} {
+    foreach {opt val} $opts {
+	set ::data($opt) $val
+	set-dial $opt $val
+    }
+}
+
+proc main {argv} {
+    set server default
+    set uuid {}
+    set opts {}
+    foreach {opt val} $argv {
+	if {$opt eq {-server}} {
+	    set server $val;	# select jack server
+	} elseif {$opt eq {-uuid}} {
+	    set uuid $val;	# identify saved jack client
+	} else {
+	    lappend opts $opt $val
+	}
+    }
+    if {$uuid ne {}} {
+	sdrtcl::jack-client jack -server default -uuid $uuid
+    } else {
+	sdrtcl::jack-client jack -server default
+    }
+    load-graph
+    load-ui
+    load-opts $opts
+    set-keyer $::data(-keyer)
+
+    # install application icon
+    set dir [file join [file dirname [info script]] .. icons]
+    image create photo icon1 -file [file join $dir qrv96.png]
+    image create photo icon2 -file [file join $dir qrv48.png]
+    wm iconphoto . -default icon1 icon2
+}
+
+main $argv
+

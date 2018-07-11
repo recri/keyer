@@ -138,6 +138,7 @@ typedef struct {
   Tcl_Obj *command_name;
   Tcl_Obj *server_name;
   Tcl_Obj *client_name;
+  Tcl_Obj *uuid_name;
   Tcl_Obj *subcommands_string;
   int verbose;
   int activated;
@@ -686,6 +687,7 @@ static void framework_delete2(void *arg, int outside_shutdown) {
   if (dsp->command_name != NULL) Tcl_DecrRefCount(dsp->command_name);
   if (dsp->server_name != NULL) Tcl_DecrRefCount(dsp->server_name);
   if (dsp->client_name != NULL) Tcl_DecrRefCount(dsp->client_name);
+  if (dsp->uuid_name != NULL) Tcl_DecrRefCount(dsp->uuid_name);
   if (dsp->subcommands_string != NULL) Tcl_DecrRefCount(dsp->subcommands_string);
   if (dsp->method_list != NULL) Tcl_DecrRefCount(dsp->method_list);
   if (dsp->option_list != NULL) Tcl_DecrRefCount(dsp->option_list);
@@ -777,13 +779,14 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   jack_status_t status = (jack_status_t)0;
   char *server_name = NULL;
   char *client_name = NULL;
+  char *uuid_name = NULL;
 
   if (wants_jack) {
     // get jack server and client names
     server_name = data->server_name != NULL ? Tcl_GetString(data->server_name) :
       getenv("JACK_DEFAULT_SERVER") != NULL ? getenv("JACK_DEFAULT_SERVER") : (char *)"default";
     client_name = data->client_name != NULL ? Tcl_GetString(data->client_name) : command_name;
-
+    uuid_name = data->uuid_name     != NULL ? Tcl_GetString(data->uuid_name) : NULL;
     // remove namespaces from client name
     if (strrchr(client_name, ':') != NULL) {
       client_name = strrchr(client_name, ':')+1;
@@ -804,7 +807,7 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     }
 
     // create jack client
-    data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name);
+    data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name, uuid_name);
     if (data->client == NULL) {
       framework_jack_status_report(interp, status);
       framework_delete(data);

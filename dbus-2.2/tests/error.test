@@ -1,0 +1,54 @@
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest 2
+    namespace import -force ::tcltest::*
+}
+
+package require dbus-tcl
+dbus connect
+set me [dbus info name]
+
+test error-1.1 {simple error} -body {
+    dbus error $me 42
+} -result {^\d+$} -match regexp
+
+test error-1.2 {simple error with message} -body {
+    dbus error $me 42 foo
+} -result {^\d+$} -match regexp
+
+test error-1.3 {simple error on specified bus} -body {
+    dbus error session $me 42
+} -result {^\d+$} -match regexp
+
+test error-1.4 {simple error with message on bus} -body {
+    dbus error session $me 42 foo
+} -result {^\d+$} -match regexp
+
+test error-1.5 {error with too many arguments} -body {
+    dbus error $me 42 foo bar
+} -returnCodes error -result {wrong # args:\
+  should be "dbus error ?busId? ?-name string? destination serial ?message?"}
+
+test error-1.6 {error with too many arguments on bus} -body {
+    dbus error session $me 42 foo bar
+} -returnCodes error -result {wrong # args:\
+  should be "dbus error ?busId? ?-name string? destination serial ?message?"}
+
+test error-1.7 {error with invalid destination} -body {
+    dbus error foo 42
+} -returnCodes error -result {Invalid destination}
+
+test error-1.8 {error with invalid serial} -body {
+    dbus error $me foo
+} -returnCodes error -result {Invalid serial}
+
+test error-1.9 {error with name option} -body {
+    dbus error -name org.freedesktop.DBus.Error.UnknownObject $me 42
+} -result {^\d+$} -match regexp
+
+test error-1.10 {error with invalid name option} -body {
+    dbus error -name foo $me 42
+} -returnCodes error -result {Invalid error name}
+
+# cleanup
+cleanupTests
+return
