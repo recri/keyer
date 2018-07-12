@@ -59,7 +59,6 @@ extern "C" {
     void *p = iambic_dttsp_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
     dp->millis_per_frame = 1000.0f / jack_get_sample_rate(dp->fw.client);
     dp->modified = 1;
-    _update(dp);
     return arg;
   }
 
@@ -142,14 +141,14 @@ extern "C" {
       data->opts = save;
       return TCL_ERROR;
     }
-    data->modified = (data->opts.key_opts.wpm != save.key_opts.wpm ||
-		      data->opts.key_opts.mode != save.key_opts.mode ||
-		      data->opts.key_opts.want_dit_mem != save.key_opts.want_dit_mem ||
-		      data->opts.key_opts.want_dah_mem != save.key_opts.want_dah_mem ||
-		      data->opts.key_opts.need_midelemodeB != save.key_opts.need_midelemodeB ||
-		      data->opts.key_opts.autocharspacing != save.key_opts.autocharspacing ||
-		      data->opts.key_opts.autowordspacing != save.key_opts.autowordspacing ||
-		      data->opts.key_opts.weight != save.key_opts.weight);
+    data->modified = data->modified || data->opts.key_opts.wpm != save.key_opts.wpm ||
+      data->opts.key_opts.mode != save.key_opts.mode ||
+      data->opts.key_opts.want_dit_mem != save.key_opts.want_dit_mem ||
+      data->opts.key_opts.want_dah_mem != save.key_opts.want_dah_mem ||
+      data->opts.key_opts.need_midelemodeB != save.key_opts.need_midelemodeB ||
+      data->opts.key_opts.autocharspacing != save.key_opts.autocharspacing ||
+      data->opts.key_opts.autowordspacing != save.key_opts.autowordspacing ||
+      data->opts.key_opts.weight != save.key_opts.weight;
     return TCL_OK;
   }
 

@@ -153,8 +153,8 @@ extern "C" {
       dp->opts = save;
       return TCL_ERROR;
     }
-    dp->modified = (dp->opts.word != save.word || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
-		    dp->opts.ies != save.ies || dp->opts.swap != save.swap || dp->opts.mode != save.mode);
+    dp->modified = dp->modified || dp->opts.word != save.word || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
+		    dp->opts.ies != save.ies || dp->opts.swap != save.swap || dp->opts.mode != save.mode;
     return TCL_OK;
   }
 

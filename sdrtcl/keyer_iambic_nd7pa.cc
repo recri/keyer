@@ -70,7 +70,6 @@ extern "C" {
     dp->raw_dah = 0;
     dp->key_out = 0;
     dp->modified = 1;
-    _update(dp);
     return arg;
   }
 
@@ -150,8 +149,8 @@ extern "C" {
       dp->opts = save;
       return TCL_ERROR;
     }
-    dp->modified = (dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
-		    dp->opts.ies != save.ies || dp->opts.swap != save.swap);
+    dp->modified = dp->modified || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
+      dp->opts.ies != save.ies || dp->opts.swap != save.swap;
     return TCL_OK;
   }
 

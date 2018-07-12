@@ -344,7 +344,7 @@ static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int ar
 	return TCL_ERROR;
       }
       if (Tcl_ListObjAppendElement(interp, result, Tcl_NewListObj(5, entry)) != TCL_OK) {
-	// fprintf(stderr, "cannot append element to result for %s???\n", table[i].name);
+	fprintf(stderr, "cannot append element to result for %s???\n", table[i].name);
 	return TCL_ERROR;
       }
     }
@@ -804,6 +804,10 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
     if (data->client_name == NULL) {
       data->client_name = Tcl_NewStringObj(client_name, -1);
       Tcl_IncrRefCount(data->client_name);
+    }
+    if (data->uuid_name == NULL) {
+      data->uuid_name = Tcl_NewStringObj("", -1);
+      Tcl_IncrRefCount(data->uuid_name);
     }
 
     // create jack client
