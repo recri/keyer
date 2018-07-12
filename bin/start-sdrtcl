@@ -161,16 +161,16 @@ proc dial-set {comp opt val} {
     if {[catch {
 	$comp configure $opt $val
     } error]} {
-	puts "dial-set $comp $opt $val threw $error"
+	# puts "dial-set $comp $opt $val threw $error"
 	# could search for potential matches and configure them all?
 	# assuming it's a component option without the component prefixed?
 	foreach {ocomp copt type value opts} $::data(options) {
 	    if {$copt eq $opt} {
-		puts "dial-set tryng $ocomp configure $opt $val"
+		# puts "dial-set tryng $ocomp configure $opt $val"
 		$ocomp configure $opt $val
-		puts "dial-set: cget [$ocomp cget $opt]"
+		# puts "dial-set: cget [$ocomp cget $opt]"
 		set ::data(-$ocomp:$opt) $val
-		puts "dial-set: set the ::data(-$ocomp:$opt) $val"
+		# puts "dial-set: set the ::data(-$ocomp:$opt) $val"
 	    }
 	}
     }
