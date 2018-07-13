@@ -34,8 +34,8 @@
   { "-fall",     "fall",      "Ramp",    "5.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.fall),      "fall time in milliseconds" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_SPEED // options that control the speed of morse code
-  { "-word",     "word",      "Dits",    "50.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.word),      "dits in a word" },
   { "-wpm",      "wpm",       "Words",   "18.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.wpm),	  "words per minute" },
+  { "-word",     "word",      "Dits",    "50.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.word),      "dits in a word" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_DAH
   { "-dah",      "dah",       "Dits",    "3.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dah),	  "dah length in dits" },

@@ -74,7 +74,6 @@ static void *_init(void *arg) {
   dp->ptt_on = 0;
   dp->key_on = 0;
   dp->modified = dp->fw.busy = 1;
-  _update(dp);
   return arg;
 }
 
@@ -167,7 +166,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     dp->opts = save;
     return TCL_ERROR;
   }
-  dp->modified = dp->fw.busy = (dp->opts.ptt_delay != save.ptt_delay || dp->opts.ptt_hang != save.ptt_hang);
+  dp->modified = dp->fw.busy = (dp->modified || dp->opts.ptt_delay != save.ptt_delay || dp->opts.ptt_hang != save.ptt_hang);
   return TCL_OK;
 }
 

@@ -1,0 +1,53 @@
+#!/usr/bin/wish8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [info script]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+
+image create photo digits -file [file join $dirname .. images 0123456789WPM.png]
+pack [label .digits -image digits] -side top -fill x
+pack [frame .d] -side top -fill x
+set dx [expr {[image width digits]/14.0}]
+set off 0
+set wid [expr {int($dx+0.5)}]
+set hgt 48
+set y [expr {int(($hgt-[image height digits])/2)}]
+for {set i 0} {$i < 14} {incr i} {
+    set x1 [expr {int($i*$dx+$off)}]
+    set x2 [expr {int(($i+1)*$dx+$off)}]
+    image create photo digit$i -height 48 -width $wid
+    digit$i put {{{white}}} -to 0 0 [image width digit$i] [image height digit$i]
+    digit$i copy digits -from $x1 0 $x2 [image height digits] -to 0 $y
+    pack [label .d.digit$i -image digit$i -borderwidth 16] -side left
+}
+image create photo icon -width [expr {2*$wid}] -height $hgt
+icon copy digit1 -to 0 0
+icon copy digit8 -to $wid 0
+#icon copy digit11 -to [expr {2*$wid}] 0
+#icon copy digit12 -to [expr {3*$wid}] 0
+#icon copy digit13 -to [expr {4*$wid}] 0
+pack [label .icon -image icon] -side top -fill x
+wm iconphoto . -default icon icon

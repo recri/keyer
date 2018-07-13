@@ -78,7 +78,6 @@ extern "C" {
       void *p = debouncer_init(&dp->deb[i], &dp->dopts); if (p != &dp->deb[i]) return p;
     }
     dp->modified = 1;
-    _update(dp);
     return arg;
   }
 
@@ -159,7 +158,7 @@ extern "C" {
       dp->opts = save;
       return TCL_ERROR;
     }
-    dp->modified = (dp->opts.period != save.period || dp->opts.steps != save.steps);
+    dp->modified = dp->modified || dp->opts.period != save.period || dp->opts.steps != save.steps;
     if (dp->modified && dp->opts.steps > 8*sizeof(unsigned long)) {
       Tcl_SetObjResult(interp, Tcl_ObjPrintf("steps %d is too large, must be <= %ld", dp->opts.steps, (long)8*sizeof(unsigned long)));
       dp->opts = save;

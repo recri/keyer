@@ -158,22 +158,44 @@ proc populate-options {} {
 }
 
 proc dial-set {comp opt val} {
-    if {[catch {
-	$comp configure $opt $val
-    } error]} {
-	# puts "dial-set $comp $opt $val threw $error"
-	# could search for potential matches and configure them all?
+    if {$comp eq {*}} {
+	# search for potential matches and configure them all.
 	# assuming it's a component option without the component prefixed?
 	foreach {ocomp copt type value opts} $::data(options) {
 	    if {$copt eq $opt} {
 		# puts "dial-set tryng $ocomp configure $opt $val"
-		$ocomp configure $opt $val
+		dial-set $ocomp $opt $val
+		# $ocomp configure $opt $val
 		# puts "dial-set: cget [$ocomp cget $opt]"
 		set ::data(-$ocomp:$opt) $val
 		# puts "dial-set: set the ::data(-$ocomp:$opt) $val"
 	    }
 	}
+    } else {
+	dict set ::data(busy) $comp $opt $val
+    } 
+}
+
+proc dial-set-timeout {} {
+    dict for {comp opts} $::data(busy) {
+	# puts "dial-set-timeout $comp {$opts}"
+	if { ! [$comp is-busy]} {
+	    if {[catch {
+		$comp configure {*}$opts
+		set ::data(busy) [dict unset $::data(busy) $comp]
+	    } error]} {
+		puts "dial-set $comp configure $opts threw $error"
+	    }
+	} else {
+	    # puts "$comp is-busy"
+	}
     }
+    after 100 dial-set-timeout
+}
+
+proc dial-set-init {} {
+    set ::data(busy) [dict create]
+    dial-set-timeout
 }
 
 proc load-ui {} {
@@ -181,12 +203,12 @@ proc load-ui {} {
     foreach {comp opt type value opts} $::data(options) {
 	lappend opts -value $value -variable ::data(-$comp:$opt) -command [list dial-set $comp $opt]
 	switch $type {
-	    enum { sdrtk::readout-enum .dial.$comp:$opt {*}$opts }
-	    freq { sdrtk::readout-freq .dial.$comp:$opt {*}$opts }
-	    value { sdrtk::readout-value .dial.$comp:$opt {*}$opts }
+	    enum { sdrtk::readout-enum .dial.x$comp:$opt {*}$opts }
+	    freq { sdrtk::readout-freq .dial.x$comp:$opt {*}$opts }
+	    value { sdrtk::readout-value .dial.x$comp:$opt {*}$opts }
 	    default { error "unanticipated type \"$type\"" }
 	}
-	.dial add .dial.$comp:$opt -text [.dial.$comp:$opt cget -text]
+	.dial add .dial.x$comp:$opt -text [.dial.x$comp:$opt cget -text]
     }
 }
 
@@ -213,17 +235,15 @@ proc main {argv} {
 	sdrtcl::jack-client jack -server default
     }
     # load the modules
-    foreach comp $comps {
-	load-component $comp
-    }
+    foreach comp $comps { load-component $comp }
+    # initialize the dial-set timer
+    dial-set-init
     # extract and filter the options from the modules
     populate-options
     # build the ui with the extracted options
     load-ui
     # load the options collected from the command line
-    foreach {opt val} $opts {
-	dial-set * $opt $val
-    }
+    foreach {opt val} $opts { dial-set * $opt $val }
 
     # install application icon
     set dir [file join [file dirname [info script]] .. icons]

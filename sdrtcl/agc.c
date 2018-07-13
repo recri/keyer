@@ -157,8 +157,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     }
     data->modified = data->fw.busy = 1;
   }
-  if (data->modified && ! data->fw.activated)
-    _update(data);
   return TCL_OK;
 }
 

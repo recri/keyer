@@ -1,0 +1,8 @@
+* Well, a lot of that plan did not pan out.
+** Gladish and Claudia stopped reading all my saved ladish projects.
+** Installing Claudia puts my packages into an unrecoverable state.
+** Ladish.org is dead, with the message "ladish is not dead, the site is down".
+** Jack has promulgated its own session api, which seems more sensible.
+** dbus wrappers clog up everything to enable the Ladish session managers
+   which stopped loading my saved projects, and haven't successfully saved
+   or restored a project this week.

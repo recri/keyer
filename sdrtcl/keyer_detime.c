@@ -144,7 +144,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = data->fw.busy = (data->opts.word != save.word || data->opts.wpm != save.wpm);
+  data->modified = data->fw.busy = (data->modified || data->opts.word != save.word || data->opts.wpm != save.wpm);
   return TCL_OK;
 }
 

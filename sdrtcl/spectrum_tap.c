@@ -189,7 +189,6 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   data->jack_buffer_size = sdrkit_buffer_size(arg);
   void *p = _preconfigure(data); if (p != data) return p;
-  _update(data);
   return arg;
 }
 
@@ -329,8 +328,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       return fw_error_str(interp, p);
     }
     Tcl_DecrRefCount(save.result_type_obj);
-    if ( ! framework_is_active(data) )
-      _update(data);
   }
   return TCL_OK;
 }

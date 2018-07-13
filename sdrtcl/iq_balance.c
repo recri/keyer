@@ -44,7 +44,6 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *e = iq_balance_init(&data->iqb, &data->opts); if (e != &data->iqb) return e;
   data->modified = data->fw.busy = 1;
-  _update(data);
   return arg;
 }
 
@@ -71,7 +70,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = data->fw.busy = save.sine_phase != data->opts.sine_phase || save.linear_gain != data->opts.linear_gain;
+  data->modified = data->fw.busy = data->modified || save.sine_phase != data->opts.sine_phase || save.linear_gain != data->opts.linear_gain;
   if (data->modified) {
     void *e = iq_balance_preconfigure(&data->iqb, &data->opts);
     if (e != &data->iqb) {

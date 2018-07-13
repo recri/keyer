@@ -154,8 +154,8 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-    { "-swap", "swap",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap), "swap the dit and dah paddles" },
     { "-wpm",  "wpm",     "Words",   "18.0", fw_option_float,   fw_flag_none, offsetof(_t, opts.key_opts.wpm), "words per minute" },
+    { "-swap", "swap",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap), "swap the dit and dah paddles" },
     { "-mode", "mode",    "Mode",    "A",    fw_option_char,    fw_flag_none, offsetof(_t, opts.key_opts.mode), "iambic mode A or B" },
     { "-mdit", "mdit",    "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.want_dit_mem), "keep a dit memory" },
     { "-mdah", "mdah",	  "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.want_dah_mem), "keep a dah memory" },

@@ -46,7 +46,6 @@ static void *_init(void *arg) {
   data->opts.sample_rate = sdrkit_sample_rate(arg);
   void *p = filter_complex_bandpass_init(&data->bpf, &data->opts); if (p != &data->bpf) return p;
   data->modified = data->fw.busy = 1;
-  _update(data);
   return arg;
 }
 

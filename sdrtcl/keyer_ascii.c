@@ -258,12 +258,12 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     return TCL_ERROR;
   }
 
-  data->modified = data->fw.busy = (data->opts.word != save.word ||
+  data->modified = data->fw.busy = data->modified || data->opts.word != save.word ||
 				    data->opts.wpm != save.wpm ||
 				    data->opts.dah != save.dah ||
 				    data->opts.ies != save.ies ||
 				    data->opts.ils != save.ils ||
-				    data->opts.iws != save.iws);
+				    data->opts.iws != save.iws;
   return TCL_OK;
 }
 
