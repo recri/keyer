@@ -35,19 +35,19 @@ typedef struct {
   float *ramp;			/* ramp values */
 } ramp_t;
 
-static void ramp_update(ramp_t *r, float ms, int samples_per_second) {
+static void ramp_update(ramp_t *r, float ms, int samples_per_second, int window) {
   r->target = samples_per_second * (ms / 1000.0f);
   if (r->target < 1) r->target = 1;
   if ((r->target & 1) == 0) r->target += 1;
   r->current = 0;
   r->ramp = realloc(r->ramp, r->target*sizeof(float));
   for (int i = 0; i < r->target; i += 1)
-    r->ramp[i] = window_get(WINDOW_BLACKMAN_HARRIS, 2*r->target-1, i);
+    r->ramp[i] = window_get(window, 2*r->target-1, i);
 }
 
-static void ramp_init(ramp_t *r, float ms, int samples_per_second) {
+static void ramp_init(ramp_t *r, float ms, int samples_per_second, int window) {
   r->ramp = NULL;
-  ramp_update(r, ms, samples_per_second);
+  ramp_update(r, ms, samples_per_second, window);
 }
 
 static void ramp_start_rise(ramp_t *r) {

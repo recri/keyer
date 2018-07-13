@@ -37,6 +37,7 @@ snit::widget sdrtk::readout-enum {
     option -step -default 0.1
     option -font -default {Helvetica 20} -configuremethod Configure
     option -variable -default {} -configuremethod Configure
+    option -info -default {} -configuremethod Configure
     option -command {}
 
     delegate option -text to hull
@@ -97,6 +98,9 @@ snit::widget sdrtk::readout-enum {
 	    trace add variable $options(-variable) write [mymethod TraceWrite]
 	    $self TraceWrite
 	}
+    }
+    method {Configure -info} {val} {
+	set options(-info) $val
     }
     method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
 }

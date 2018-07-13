@@ -43,6 +43,7 @@ snit::widget sdrtk::readout-value {
     option -variable -default {} -configuremethod Configure
     option -min -default {} -configuremethod Configure
     option -max -default {} -configuremethod Configure
+    option -info -default {} -configuremethod Configure
     option -command {}
 
     delegate option -text to hull
@@ -119,6 +120,9 @@ snit::widget sdrtk::readout-value {
     method {Configure -max} {val} {
 	set options(-max) $val
 	$self Configure -value $options(-value)
+    }
+    method {Configure -info} {val} {
+	set options(-info) $val
     }
     method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
 }
