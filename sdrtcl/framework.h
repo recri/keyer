@@ -36,6 +36,7 @@
 #include <stddef.h>
 #include <jack/jack.h>
 #include <jack/midiport.h>
+#include <jack/session.h>
 #include <tcl.h>
 
 #include "../dspmath/midi_buffer.h"
@@ -145,6 +146,7 @@ typedef struct {
   int busy;
   jack_client_t *client;
   jack_port_t **port;
+  jack_session_event_t *session_event;
   framework_midi_t *midi;
   Tcl_Obj *method_list, *option_list, *port_list;
 } framework_t;

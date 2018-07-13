@@ -54,30 +54,33 @@ typedef struct {
   ramp_t fall;			/* tone off ramp */
 } keyed_tone_t;
 
-static void keyed_tone_update(keyed_tone_t *p, float gain_dB, float freq, float rise, float fall, unsigned sample_rate) {
+static void keyed_tone_update(keyed_tone_t *p, float gain_dB, float freq, float rise, int rise_window, 
+			      float fall, int fall_window, unsigned sample_rate) {
   p->gain = powf(10.0f, gain_dB / 20.0f);
   oscillator_update(&p->tone, freq, sample_rate);
-  ramp_update(&p->rise, rise, sample_rate);
-  ramp_update(&p->fall, fall, sample_rate);
+  ramp_update(&p->rise, 1, rise, rise_window, sample_rate);
+  ramp_update(&p->fall, 0, fall, fall_window, sample_rate);
 }
 
-static void *keyed_tone_init(keyed_tone_t *p, float gain_dB, float freq, float rise, float fall, unsigned sample_rate) {
+static void *keyed_tone_init(keyed_tone_t *p, float gain_dB, float freq, float rise, int rise_window, 
+			     float fall, int fall_window, unsigned sample_rate) {
   p->state = KEYED_TONE_OFF;
   p->gain = powf(10.0f, gain_dB / 20.0f);
   oscillator_init(&p->tone, freq, 0.0f, sample_rate);
-  ramp_init(&p->rise, rise, sample_rate);
-  ramp_init(&p->fall, fall, sample_rate);
+  ramp_init(&p->rise, 1, rise, rise_window, sample_rate);
+  ramp_init(&p->fall, 0, fall, fall_window, sample_rate);
   return p;
 }
 
 static void keyed_tone_on(keyed_tone_t *p) {
   p->state = KEYED_TONE_RISE;
-  ramp_start_rise(&p->rise);
+  oscillator_set_zero_phase(&p->tone);
+  ramp_start(&p->rise);
 }
 
 static void keyed_tone_off(keyed_tone_t *p) {
   p->state = KEYED_TONE_FALL;
-  ramp_start_fall(&p->fall);
+  ramp_start(&p->fall);
 }
 
 static float _Complex keyed_tone_process(keyed_tone_t *p) {

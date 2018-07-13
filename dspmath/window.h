@@ -78,6 +78,34 @@ static char *window_names[] = {
   NULL
 };
 
+#ifdef FRAMEWORK_H
+static fw_option_custom_t window_mode_custom_option[] = {
+  { "rectangular", WINDOW_RECTANGULAR },
+  { "hanning", WINDOW_HANNING },
+  { "welch", WINDOW_WELCH },
+  { "parzen", WINDOW_PARZEN },
+  { "bartlett", WINDOW_BARTLETT },
+  { "hamming", WINDOW_HAMMING },
+  { "blackman2", WINDOW_BLACKMAN2 },
+  { "blackman3", WINDOW_BLACKMAN3 },
+  { "blackman4", WINDOW_BLACKMAN4 },
+  { "exponential", WINDOW_EXPONENTIAL },
+  { "riemann", WINDOW_RIEMANN },
+  { "blackman-harris", WINDOW_BLACKMAN_HARRIS },
+  { "blackman-nuttall", WINDOW_BLACKMAN_NUTTALL },
+  { "nuttall", WINDOW_NUTTALL },
+  { "flat-top", WINDOW_FLAT_TOP },
+  { "tukey", WINDOW_TUKEY },
+  { "cosine", WINDOW_COSINE },
+  { "lanczos", WINDOW_LANCZOS },
+  { "triangular", WINDOW_TRIANGULAR },
+  { "gaussian", WINDOW_GAUSSIAN },
+  { "bartlett-hann", WINDOW_BARTLETT_HANN },
+  { "kaiser", WINDOW_KAISER },
+  { NULL, -1 }
+};
+#endif
+
 /** 
 * @file window.c
 * @brief Functions to allow windowing on the signal 

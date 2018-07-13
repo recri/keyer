@@ -80,6 +80,11 @@ static void oscillator_set_phase(oscillator_t *o, float radians) {
   o->y = osin(radians);
 }
 
+static void oscillator_set_zero_phase(oscillator_t *o) {
+  o->x = 1 * o->xi;
+  o->y = 0;
+}
+
 static float complex oscillator_process(oscillator_t *o) {
   ofloat t = (o->x + o->y) * o->c;
   ofloat nx = t-o->y;
@@ -107,6 +112,10 @@ static void oscillator_set_phase(oscillator_t *o, float radians) {
   o->phase = radians;
 }
 
+static void oscillator_set_zero_phase(oscillator_t *o) {
+  o->phase = 0;
+}
+
 static float complex oscillator_process(oscillator_t *o) {
   o->phase += o->dphase;
   while (o->phase > otwo_pi) o->phase -= otwo_pi;
@@ -130,6 +139,10 @@ static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_s
 
 static void oscillator_set_phase(oscillator_t *o, float radians) {
   o->phase = ocos(radians) + I * osin(radians);
+}
+
+static void oscillator_set_zero_phase(oscillator_t *o) {
+  o->phase = 1;
 }
 
 static float complex oscillator_process(oscillator_t *o) {
