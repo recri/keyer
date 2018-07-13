@@ -489,7 +489,8 @@ int srate(jack_nframes_t nframes, void *arg)
 #ifdef DEBUG
 	printf("the sample rate is now %" PRIu32 "/sec\n", nframes);
 #endif
-	keyed_tone_update(&tone, tone_opts.gain, tone_opts.freq, tone_opts.rise, tone_opts.fall, tone_opts.srate = nframes);
+	keyed_tone_update(&tone, tone_opts.gain, tone_opts.freq, tone_opts.rise, WINDOW_BLACKMAN_HARRIS, 
+			  tone_opts.fall, WINDOW_BLACKMAN_HARRIS, tone_opts.srate = nframes);
 	return 0;
 }
 
@@ -571,7 +572,8 @@ int main(int argc, char **argv)
 	}
 	
 	tone_opts.srate = jack_get_sample_rate (client);
-	keyed_tone_init(&tone, tone_opts.gain, tone_opts.freq, tone_opts.rise, tone_opts.fall, tone_opts.srate);
+	keyed_tone_init(&tone, tone_opts.gain, tone_opts.freq, tone_opts.rise, WINDOW_BLACKMAN_HARRIS, 
+			tone_opts.fall, WINDOW_BLACKMAN_HARRIS, tone_opts.srate);
 
 	/* Find the note that is equal to or greater than the requested frequency */
 	if (tone_opts.freq) {

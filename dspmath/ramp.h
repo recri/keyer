@@ -23,47 +23,38 @@
 #include <stdlib.h>
 
 /*
-** Blackman Harris attack/decay ramp
-** uses 1/2 of the Blackman Harris window function
-** from sin(0 .. 0.5) for ramp on
-** from sin(0.5 .. 1.0) for ramp off
+** Arbitrary window function ramp
 */
 typedef struct {
-  int do_rise;			/* rising or falling ramp */
   int target;			/* sample length of ramp */
   int current;			/* current sample point in ramp */
   float *ramp;			/* ramp values */
 } ramp_t;
 
-static void ramp_update(ramp_t *r, float ms, int samples_per_second, int window) {
+static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {
+  printf("ramp_update do_rise=%d, ms=%f, window=%d, sr=%d\n", do_rise, ms, window, samples_per_second);
   r->target = samples_per_second * (ms / 1000.0f);
   if (r->target < 1) r->target = 1;
   if ((r->target & 1) == 0) r->target += 1;
   r->current = 0;
   r->ramp = realloc(r->ramp, r->target*sizeof(float));
+  int off = do_rise ? 0 : r->target;
   for (int i = 0; i < r->target; i += 1)
-    r->ramp[i] = window_get(window, 2*r->target-1, i);
+    r->ramp[i] = window_get(window, 2*r->target-1, i+off);
 }
 
-static void ramp_init(ramp_t *r, float ms, int samples_per_second, int window) {
+static void ramp_init(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {
   r->ramp = NULL;
-  ramp_update(r, ms, samples_per_second, window);
+  ramp_update(r, do_rise, ms, window, samples_per_second);
 }
 
-static void ramp_start_rise(ramp_t *r) {
-  r->do_rise = 1;
-  r->current = 0;
-}
-
-static void ramp_start_fall(ramp_t *r) {
-  r->do_rise = 0;
+static void ramp_start(ramp_t *r) {
   r->current = 0;
 }
 
 static float ramp_next(ramp_t *r) {
-  r->current += 1;
-  float v = r->current < r->target ? r->ramp[r->current] : 1;
-  return r->do_rise ? v : 1-v;
+  if (r->current >= r->target) r->current = r->target - 1;
+  return r->ramp[r->current++];
 }
 
 static int ramp_done(ramp_t *r) {
