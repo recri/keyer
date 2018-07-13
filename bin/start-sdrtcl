@@ -90,6 +90,7 @@ proc populate-options {} {
     foreach {component name} $::data(components) {
 	foreach config [$name configure] {
 	    foreach {opt oname oclass odefault ovalue} $config break
+	    set info [$name info option $opt]
 	    # note: opt is the option name in configure and cget commands
 	    # oname is the option name in the option database (not used here)
 	    # oclass is the option class name in the option database
@@ -106,42 +107,59 @@ proc populate-options {} {
 		    # midi-note value 0 {-text midi-base-note -format %.0f -min 0 -max 127}
 		}
 		-wpm {
-		    lappend ::data(options) $name -wpm value $ovalue {-text speed -format %.0f -units wpm -min 5.0 -max 200.0 -step 0.5}
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text $oname -info $info -format %.0f -units wpm -min 5.0 -max 200.0 -step 0.5]
 		}
-		-swap {
-		    lappend ::data(options) $name -swap enum $ovalue {-text swap -values {0 1}}
+		-swap - -mdit - -mdah - -mide - -alsp - -awsp {
+		    # made into a generic boolean option specification
+		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values {0 1}]
 		}
 		-mode {
-		    lappend ::data(options) $name -mode enum $ovalue {-text mode -values {A B}}
+		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values {A B}]
 		}
-		-word - -dah - -ies - -ils - -iws - -alsp - -awsp { 
-		    # ignore these for the minute
+		-word {
+		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values {50 60}]
+		}
+		-dah - -ies - -ils - -iws { 
+		    set min [expr {0.5*$ovalue}]
+		    set max [expr {1.5*$ovalue}]
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text $oname -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
 		    continue
 		}
-		-mdit - -mdah - -mide - -weight {
-		    # more to ignore
-		    # dttsp -mdit mdit Memo 0 0 keep a dit memory
-		    # dttsp -mdah mdah Memo 0 0 keep a dah memory
-		    # dttsp -mide mide Memo 0 0 remember key state at mid-element
+		-weight {
 		    # dttsp -weight weight Weight 50 50 adjust relative weight of dit and dah
+		    continue
 		}
 		-freq {
-		    lappend ::data(options) $name -freq freq $ovalue {-text freq -units Hz -format %.0f -min 500 -max 1500 -step 1}
+		    lappend ::data(options) $name $opt freq $ovalue \
+			[list -text $oname -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
 		}
-		-rise {
-		    lappend ::data(options) $name -rise value $ovalue {-text rise-time -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1}
+		-rise - -fall {
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text $oname -info $info -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1]
 		}
-		-fall {
-		    lappend ::data(options) $name -fall value $ovalue {-text fall-time -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1}
+		-rise-window - -fall-window {
+		    # rise-window Window hanning hanning rise ramp window
+		    # fall-window Window hanning hanning fall ramp window
+		    # obtain list of windows name with:
+		    # package require sdrtcl::window
+		    # sdrtcl::window foo 128
+		    # and scraping error message
+		    set windows {rectangular hanning welch parzen bartlett hamming blackman2 blackman3 blackman4 exponential riemann blackman-harris blackman-nuttall nuttall flat-top tukey cosine lanczos triangular gaussian bartlett-hann kaiser}
+		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values $windows]
 		}
 		-gain {
-		    lappend ::data(options) $name -gain value $ovalue {-text volume -units dB -format %.1f -min -50 -max 0 -step 0.1}
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text $oname -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
 		}
 		-delay {
-		    lappend ::data(options) $name -delay value $ovalue {-text ptt-delay -units ms -format %.2f -min 0.0 -max 1000 -step 0.01}
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text $oname -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
 		}
 		-hang {
-		    lappend ::data(options) $name -hang value $ovalue {-text ptt-hang -units ms -format %.1f -min 0.0 -max 1000 -step 0.1}
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text $oname -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
 		}
 		-period {
 		    # for the debouncer
@@ -236,6 +254,7 @@ proc main {argv} {
     }
     # load the modules
     foreach comp $comps { load-component $comp }
+
     # initialize the dial-set timer
     dial-set-init
     # extract and filter the options from the modules
