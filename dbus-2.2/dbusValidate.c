@@ -222,7 +222,7 @@ int DBus_CheckName(Tcl_Obj* name)
    /* Names may not be "" and must not exceed the maximum name length */
    if (length == 0 || length > DBUS_MAXIMUM_NAME_LENGTH) return FALSE;
    s += DBus_ValidNameChars(s);
-   return (s == '\0');
+   return (*s == '\0');
 }
 
 /*

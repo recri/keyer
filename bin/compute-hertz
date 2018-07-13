@@ -1,0 +1,15 @@
+#!/usr/bin/tclsh
+
+# so there are frequencies and sample rates where one period of the wave
+# fits into an integral number of samples, so you could compute one period
+# of the wave form and simply recycle it as the samples go by.
+#
+
+
+foreach sr {48000 96000 192000} {
+    foreach hz {200 300 400 500 600 700 800 900 1000} {
+	# (samples / second) / (cycles / second) => samples / cycle
+	set wave [expr {double($sr)/double($hz)}]
+	puts "[format "%6d sr %4d hz $wave" $sr $hz]"
+    }
+}

@@ -32,7 +32,7 @@ typedef struct {
 } ramp_t;
 
 static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {
-  printf("ramp_update do_rise=%d, ms=%f, window=%d, sr=%d\n", do_rise, ms, window, samples_per_second);
+  // printf("ramp_update do_rise=%d, ms=%f, window=%d, sr=%d\n", do_rise, ms, window, samples_per_second);
   r->target = samples_per_second * (ms / 1000.0f);
   if (r->target < 1) r->target = 1;
   if ((r->target & 1) == 0) r->target += 1;
