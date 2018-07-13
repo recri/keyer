@@ -133,7 +133,9 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   float save_freq = dp->opts.freq, save_gain = dp->opts.gain, save_rise = dp->opts.rise, save_fall = dp->opts.fall;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
   dp->modified = dp->fw.busy = dp->modified || 
-    (save_freq != dp->opts.freq) || (save_gain != dp->opts.gain || save_rise != dp->opts.rise || save_fall != dp->opts.fall);
+    save_freq != dp->opts.freq || save_gain != dp->opts.gain || 
+    save_rise != dp->opts.rise || save_fall != dp->opts.fall || 
+    save_rise_window != dp->opts.rise_window || save_fallwindow != dp->opts.fall_window ;
   return TCL_OK;
 }
 
