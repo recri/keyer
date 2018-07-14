@@ -28,7 +28,7 @@ int window;
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_SPEED
 // speed options
-float word, wpm;
+float wpm; int word;
 #endif
 // element timing options
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_DAH
