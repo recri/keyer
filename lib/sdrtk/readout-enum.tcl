@@ -31,6 +31,7 @@ package require snit
 snit::widget sdrtk::readout-enum {
     hulltype ttk::labelframe
     component lvalue
+    component lunits
 
     option -value -default 0 -configuremethod Configure
     option -values -default {0 1 2 3} -configuremethod Configure
@@ -38,6 +39,7 @@ snit::widget sdrtk::readout-enum {
     option -font -default {Helvetica 20} -configuremethod Configure
     option -variable -default {} -configuremethod Configure
     option -info -default {} -configuremethod Configure
+    option -units -default {} -configuremethod Configure
     option -command {}
 
     delegate option -text to hull
@@ -46,8 +48,9 @@ snit::widget sdrtk::readout-enum {
     variable pointer 0
 
     constructor {args} {
-	install lvalue using ttk::label $win.value -textvar [myvar value] -width 15 -font $options(-font) -anchor c
-	grid $win.value
+	install lvalue using ttk::label $win.value -textvar [myvar value] -width 15 -font $options(-font) -anchor e
+	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
+	grid $win.value $win.units
 	$self configure {*}$args
     }
     
@@ -73,7 +76,7 @@ snit::widget sdrtk::readout-enum {
     method {Configure -value} {val} {
 	if {$options(-value) ne $val} {
 	    set options(-value) $val
-	    if {$options(-variable) ne {}} { set $options(-variable) $val }
+ 	    if {$options(-variable) ne {}} { set $options(-variable) $val }
 	    if {$options(-command) ne {}} { {*}$options(-command) $val }
 	    $self Display
 	}
@@ -101,6 +104,9 @@ snit::widget sdrtk::readout-enum {
     }
     method {Configure -info} {val} {
 	set options(-info) $val
+    }
+    method {Configure -units} {val} {
+	set options(-units) $val
     }
     method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
 }

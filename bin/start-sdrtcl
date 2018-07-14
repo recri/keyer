@@ -82,6 +82,7 @@ package require sdrtk::dialbook
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
+package require sdrtk::vtext
 
 set data(options) {}
 
@@ -108,23 +109,23 @@ proc populate-options {} {
 		}
 		-wpm {
 		    lappend ::data(options) $name $opt value $ovalue \
-			[list -text $oname -info $info -format %.0f -units wpm -min 5.0 -max 200.0 -step 0.5]
+			[list -text "$name $opt" -info $info -format %.0f -units wpm -min 5.0 -max 200.0 -step 0.5]
 		}
 		-swap - -mdit - -mdah - -mide - -alsp - -awsp {
 		    # made into a generic boolean option specification
-		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values {0 1}]
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -values {0 1}]
 		}
 		-mode {
-		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values {A B}]
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -values {A B}]
 		}
 		-word {
-		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values {50 60}]
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -units dits -values {50 60}]
 		}
 		-dah - -ies - -ils - -iws { 
 		    set min [expr {0.5*$ovalue}]
 		    set max [expr {1.5*$ovalue}]
 		    lappend ::data(options) $name $opt value $ovalue \
-			[list -text $oname -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
+			[list -text "$name $opt" -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
 		    continue
 		}
 		-weight {
@@ -133,11 +134,11 @@ proc populate-options {} {
 		}
 		-freq {
 		    lappend ::data(options) $name $opt freq $ovalue \
-			[list -text $oname -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
+			[list -text "$name $opt" -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
 		}
 		-rise - -fall {
 		    lappend ::data(options) $name $opt value $ovalue \
-			[list -text $oname -info $info -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1]
+			[list -text "$name $opt" -info $info -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1]
 		}
 		-rise-window - -fall-window {
 		    # rise-window Window hanning hanning rise ramp window
@@ -147,19 +148,19 @@ proc populate-options {} {
 		    # sdrtcl::window foo 128
 		    # and scraping error message
 		    set windows {rectangular hanning welch parzen bartlett hamming blackman2 blackman3 blackman4 exponential riemann blackman-harris blackman-nuttall nuttall flat-top tukey cosine lanczos triangular gaussian bartlett-hann kaiser}
-		    lappend ::data(options) $name $opt enum $ovalue [list -text $oname -info $info -values $windows]
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -values $windows]
 		}
 		-gain {
 		    lappend ::data(options) $name $opt value $ovalue \
-			[list -text $oname -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
+			[list -text "$name $opt" -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
 		}
 		-delay {
 		    lappend ::data(options) $name $opt value $ovalue \
-			[list -text $oname -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
+			[list -text "$name $opt" -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
 		}
 		-hang {
 		    lappend ::data(options) $name $opt value $ovalue \
-			[list -text $oname -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
+			[list -text "$name $opt" -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
 		}
 		-period {
 		    # for the debouncer
@@ -167,10 +168,22 @@ proc populate-options {} {
 		-steps {
 		    # for the debouncer
 		}
+		-dict {
+		    # for the ascii keyer
+		}
 		default {
 		    puts "$name $config [$name info option $opt]"
 		}
 	    }
+	}
+    }
+}
+
+proc update-window-title {} {
+    foreach name [array names ::data] {
+	if {[string range $name end-3 end] eq {-wpm}} {
+	    wm title . $::data($name)
+	    break
 	}
     }
 }
@@ -191,7 +204,7 @@ proc dial-set {comp opt val} {
 	}
     } else {
 	dict set ::data(busy) $comp $opt $val
-    } 
+    }
 }
 
 proc dial-set-timeout {} {
@@ -201,6 +214,7 @@ proc dial-set-timeout {} {
 	    if {[catch {
 		$comp configure {*}$opts
 		set ::data(busy) [dict unset $::data(busy) $comp]
+		after idle update-window-title
 	    } error]} {
 		puts "dial-set $comp configure $opts threw $error"
 	    }
@@ -216,9 +230,45 @@ proc dial-set-init {} {
     dial-set-timeout
 }
 
+proc text-store-memory-selection {m} {
+    dict set ::data(memory) $m [selection get]
+}
+proc text-send-memory {m} {
+    ascii puts [dict get $::data(memory) $m]
+}
+proc text-send-selection {} {
+    ascii puts [selection get]
+}
+proc text-stop-sending {} {
+    ascii abort
+}
+proc text-option-menu {w x y} {
+    if { ! [winfo exists $w.m] } {
+	menu $w.m -tearoff no
+	menu $w.m.s -tearoff no
+	menu $w.m.r -tearoff no
+	foreach m {0 1 2 3 4} {
+	    $w.m.s add command -label "Mem $m" -command [list text-store-memory-selection $m]
+	    $w.m.r add command -label "Mem $m" -command [list text-send-memory $m]
+	}
+	$w.m add command -label {Send Selection} -command [list text-send-selection]
+	$w.m add cascade -label {Save Selection} -menu $w.m.s
+	$w.m add cascade -label {Send Saved} -menu $w.m.r
+	$w.m add command -label {Stop Sending} -command [list text-stop-sending]
+    }
+    tk_popup $w.m $x $y
+}
+proc text-widget {w} {
+    text $w -width 30 -height 15 -undo true -exportselection true
+    bind $w <ButtonPress-3> [list text-option-menu $w %X %Y]
+    #.text insert end {this is a text window with no text in it except this}
+    return $w
+}
+
 proc load-ui {} {
-    pack [::sdrtk::dialbook .dial] -side top -fill both -expand true
+    grid [::sdrtk::dialbook .dial] -row 0
     foreach {comp opt type value opts} $::data(options) {
+	# puts "$comp $opt $type $value {$opts}"
 	lappend opts -value $value -variable ::data(-$comp:$opt) -command [list dial-set $comp $opt]
 	switch $type {
 	    enum { sdrtk::readout-enum .dial.x$comp:$opt {*}$opts }
@@ -228,6 +278,7 @@ proc load-ui {} {
 	}
 	.dial add .dial.x$comp:$opt -text [.dial.x$comp:$opt cget -text]
     }
+    grid [text-widget .text] -row 1
 }
 
 proc main {argv} {
