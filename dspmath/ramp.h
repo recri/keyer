@@ -38,9 +38,12 @@ static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int sample
   if ((r->target & 1) == 0) r->target += 1;
   r->current = 0;
   r->ramp = realloc(r->ramp, r->target*sizeof(float));
-  int off = do_rise ? 0 : r->target;
-  for (int i = 0; i < r->target; i += 1)
+  int off = do_rise ? 0 : r->target-1;
+  for (int i = 0; i < r->target; i += 1) {
     r->ramp[i] = window_get(window, 2*r->target-1, i+off);
+    printf(" %.5f", r->ramp[i]);
+  }
+  printf("\n");
 }
 
 static void ramp_init(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {

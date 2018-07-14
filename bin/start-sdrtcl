@@ -75,6 +75,12 @@ proc load-component {name} {
     $name2 activate
     # remember this
     lappend ::data(components) $component $name2
+    # remember if this is special
+    switch -glob $component {
+	keyer-iambic-* { lappend ::data(keyer) $name2 }
+	keyer-ascii { lappend ::data(ascii) $name2 }
+	keyer-tone { lappend ::data(tone) $name2 }
+    }
 }
 
 # user interface components
@@ -140,7 +146,7 @@ proc populate-options {} {
 		    lappend ::data(options) $name $opt value $ovalue \
 			[list -text "$name $opt" -info $info -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1]
 		}
-		-rise-window - -fall-window {
+		-window - -rise-window - -fall-window {
 		    # rise-window Window hanning hanning rise ramp window
 		    # fall-window Window hanning hanning fall ramp window
 		    # obtain list of windows name with:
@@ -282,10 +288,13 @@ proc load-ui {} {
 }
 
 proc main {argv} {
+    # initialize
     set server default
     set uuid {}
     set opts {}
     set comps {}
+    
+    # process arguments
     foreach {opt val} $argv {
 	if {$opt eq {-server}} {
 	    set server $val;	# select jack server
@@ -297,21 +306,34 @@ proc main {argv} {
 	    lappend opts $opt $val; # save options
 	}
     }
+
     # initiate jack session
     if {$uuid ne {}} {
 	sdrtcl::jack-client jack -server default -uuid $uuid
     } else {
 	sdrtcl::jack-client jack -server default
     }
-    # load the modules
+
+    # load the component modules
     foreach comp $comps { load-component $comp }
+
+    # handle special associations:
+    # if ascii and keyer then ascii is slaved to keyer
+    # if ascii then load a text window
+    # if tone then gang rise&fall and rise-window&fall-window (could be multiple tones)
+    #if {[info exists ::data(keyer)]} { puts "keyer is $::data(keyer)" }
+    #if {[info exists ::data(ascii)]} { puts "ascii is $::data(ascii)" }
+    #if {[info exists ::data(tone)]} { puts "tone is $::data(tone)" }
 
     # initialize the dial-set timer
     dial-set-init
+
     # extract and filter the options from the modules
     populate-options
+
     # build the ui with the extracted options
     load-ui
+
     # load the options collected from the command line
     foreach {opt val} $opts { dial-set * $opt $val }
 

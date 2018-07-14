@@ -31,11 +31,9 @@
   { "-freq",     "frequency", "Hertz",   "700.0",   fw_option_float,   fw_flag_none,        offsetof(_t, opts.freq),	  "frequency of tone in hertz" },
   { "-gain",     "gain",      "Decibel", "-30.0",   fw_option_float,   fw_flag_none,        offsetof(_t, opts.gain),	  "level of tone in decibels" },
   { "-rise",     "rise",      "Ramp",    "5.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.rise),	  "rise time in milliseconds" },
-  { "-rise-window","rise-window","Window","blackman-harris",fw_option_custom,fw_flag_none,  offsetof(_t, opts.rise_window),
-      "rise ramp window", window_mode_custom_option },
   { "-fall",     "fall",      "Ramp",    "5.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.fall),      "fall time in milliseconds" },
-  { "-fall-window","fall-window","Window","hanning",fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.fall_window),
-      "fall ramp window", window_mode_custom_option },
+  { "-window",   "window",    "Window",  "hanning", fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.window),    "ramp window", 
+      window_mode_custom_option },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_SPEED // options that control the speed of morse code
   { "-wpm",      "wpm",       "Words",   "18.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.wpm),	  "words per minute" },

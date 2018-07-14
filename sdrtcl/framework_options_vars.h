@@ -24,7 +24,7 @@ int chan, note;
 #if FRAMEWORK_OPTIONS_KEYER_TONE
 // tone options    
 float freq, gain, rise, fall;
-int rise_window, fall_window;
+int window;
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_SPEED
 // speed options
