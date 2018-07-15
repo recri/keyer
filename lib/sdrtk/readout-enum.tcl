@@ -155,7 +155,7 @@ snit::widget sdrtk::readout-enum {
 	    if {[catch { $self configure -value $options(-menu-value) }  error]} {
 		puts "TraceMenuWrite {$args} caught $error"
 	    } else {
-		puts "TraceMenuWrite {$args}"
+		# puts "TraceMenuWrite {$args}"
 	    }
 	}
     }
