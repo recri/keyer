@@ -318,12 +318,15 @@ proc text-option-menu {w x y} {
 	    $w.m.r add command -label "Mem $m" -command [list text-send-memory $m]
 	}
 	$w.m add command -label {Send Selection} -command [list text-send-selection]
-	$w.m add cascade -label {Save Selection} -menu $w.m.s
+	$w.m add separator
 	$w.m add cascade -label {Send Saved} -menu $w.m.r
+	$w.m add cascade -label {Save Selection} -menu $w.m.s
+	$w.m add separator
+	$w.m add command -label {Send From File} -command [list text-send-file $w]
+	$w.m add command -label {Insert From File} -command [list text-load-file $w]
+	$w.m add command -label {Save To File} -command [list text-save-file $w]
+	$w.m add separator
 	$w.m add command -label {Stop Sending} -command [list text-stop-sending]
-	$w.m add command -label {Insert File} -command [list text-load-file $w]
-	$w.m add command -label {Send File} -command [list text-send-file $w]
-	$w.m add command -label {Save File} -command [list text-save-file $w]
 	
     }
     tk_popup $w.m $x $y
