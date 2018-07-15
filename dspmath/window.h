@@ -49,36 +49,18 @@ typedef enum {
   WINDOW_TRIANGULAR = 18,
   WINDOW_GAUSSIAN = 19,
   WINDOW_BARTLETT_HANN = 20,
-  WINDOW_KAISER = 21
+  WINDOW_KAISER = 21,
+  WINDOW_BLACKMAN = 22,
+  WINDOW_EXPONENTIAL_30 = 23,
+  WINDOW_EXPONENTIAL_60 = 24,
+  WINDOW_EXPONENTIAL_90 = 25,
+  WINDOW_GAUSSIAN_10 = 26,
+  WINDOW_GAUSSIAN_25 = 27
 } window_type_t;
 
-static char *window_names[] = {
-  "rectangular", 
-  "hanning",
-  "welch",
-  "parzen",
-  "bartlett",
-  "hamming",
-  "blackman2",
-  "blackman3",
-  "blackman4",
-  "exponential",
-  "riemann",
-  "blackman-harris",
-  "blackman-nuttall",
-  "nuttall",
-  "flat-top",
-  "tukey",
-  "cosine",
-  "lanczos",
-  "triangular",
-  "gaussian",
-  "bartlett-hann",
-  "kaiser",
-  NULL
-};
-
 #ifdef FRAMEWORK_H
+/* these can be listed in any order */
+/* unimplemented windows are commented out */
 static fw_option_custom_t window_mode_custom_option[] = {
   { "rectangular", WINDOW_RECTANGULAR },
   { "hanning", WINDOW_HANNING },
@@ -90,18 +72,24 @@ static fw_option_custom_t window_mode_custom_option[] = {
   { "blackman3", WINDOW_BLACKMAN3 },
   { "blackman4", WINDOW_BLACKMAN4 },
   { "exponential", WINDOW_EXPONENTIAL },
+  { "exponential-30", WINDOW_EXPONENTIAL_30 },
+  { "exponential-60", WINDOW_EXPONENTIAL_60 },
+  { "exponential-90", WINDOW_EXPONENTIAL_90 },
   { "riemann", WINDOW_RIEMANN },
   { "blackman-harris", WINDOW_BLACKMAN_HARRIS },
   { "blackman-nuttall", WINDOW_BLACKMAN_NUTTALL },
   { "nuttall", WINDOW_NUTTALL },
   { "flat-top", WINDOW_FLAT_TOP },
-  { "tukey", WINDOW_TUKEY },
+  /*  { "tukey", WINDOW_TUKEY }, */
   { "cosine", WINDOW_COSINE },
-  { "lanczos", WINDOW_LANCZOS },
+  /* { "lanczos", WINDOW_LANCZOS }, */
   { "triangular", WINDOW_TRIANGULAR },
   { "gaussian", WINDOW_GAUSSIAN },
+  { "gaussian-10", WINDOW_GAUSSIAN_10 },
+  { "gaussian-25", WINDOW_GAUSSIAN_25 },
   { "bartlett-hann", WINDOW_BARTLETT_HANN },
-  { "kaiser", WINDOW_KAISER },
+  /* { "kaiser", WINDOW_KAISER }, */
+  { "blackman", WINDOW_BLACKMAN },
   { NULL, -1 }
 };
 #endif
@@ -169,67 +157,62 @@ Bridgewater, NJ 08807
 * @return void
 */
 /* ---------------------------------------------------------------------------- */
+static float cosine_series1(const int size, const int k, const double a0, const double a1) {
+  return a0 - a1 * cos((dtwo_pi * k) / (size-1));
+}    
+static float cosine_series2(const int size, const int k, const double a0, const double a1, const double a2) {
+  return cosine_series1(size, k, a0, a1) + a2 * cos((2 * dtwo_pi * k) / (size-1));
+}
+static float cosine_series3(const int size, const int k, const double a0, const double a1, const double a2, const double a3) {
+  return cosine_series2(size, k, a0, a1, a2) - a3 * cos((3 * dtwo_pi * k) / (size-1));
+}
+static float cosine_series4(const int size, const int k, const double a0, const double a1, const double a2, const double a3, const double a4) {
+  return cosine_series3(size, k, a0, a1, a2, a3) + a4 * cos((4 * dtwo_pi * k) / (size-1));
+}
+static float gaussian(const int size, const int k, const double sigma) {
+  return exp(-0.5 * square((k - (size-1) / 2.0) / (sigma * (size-1) / 2.0)));
+}
+static float exponential(const int size, const int k, const double decay) {
+  double tau = (size / 2.0) * (8.69 / decay); /* for decay over half window of decay decibels */
+  return exp(-fabs(k-(size-1)/2.0)/tau);
+}
+
 static float window_get(const window_type_t type, const int size, int k) {
+  /* apply symmetry up front */
+  if (k > (size>>1)) k = (size-1)-k;
+  /* compute the type */
   switch (type) {
   case WINDOW_RECTANGULAR: return 1.0;
-  case WINDOW_HANNING: {	/* Hann would be more accurate */
-    const int midn = size >> 1;
-    if (k > midn) k = (size-1) - k;
-    return 0.5 - 0.5 * cos(k * dtwo_pi / (size-1));
-  }
-  case WINDOW_WELCH: {
-    const int midn = size >> 1;
-    const int midm1 = (size - 1) / 2;
-    const int midp1 = (size + 1) / 2;
-    if (k > midn) k = size-1 - k;
-    return 1.0 - sqr( (k - midm1) / (double) midp1);
-  }
+  case WINDOW_TRIANGULAR: return 1.0 - fabs( (k - ((size-1)/2.0)) / (size/2.0) );
+  case WINDOW_BARTLETT: return 1.0 - fabs( (k - ((size-1)/2.0)) / ((size-1)/2.0) );
+  case WINDOW_BARTLETT_HANN: return 0.62 - 0.48 * fabs((double)k/(size-1)-0.5) -0.38 * cos(k * dtwo_pi / (size-1));
+  case WINDOW_WELCH: return 1.0 - sqr( (k - ((size-1)/2.0)) / ((size-1)/2.0) );
   case WINDOW_PARZEN: {
-    const int midn = size >> 1;
-    const int midm1 = (size - 1) / 2;
-    const int midp1 = (size + 1) / 2;
-    if (k > midn) k = size-1 - k;
-    return 1.0 - fabs( (k - midm1) / (double) midp1);
+    // the wikipedia definition runs from -N/2 to N/2, so 0 == -N/2
+    k -= (size>>1);
+    return (fabs(k) <= size/4.0) ? 
+      1.0 - 6.0*sqr(k/(size/2.0)) * (1-fabs(k)/(size/2.0)) :
+      2.0  * cube(1.0 - fabs(k) / (size/2.0) );
   }
-  case WINDOW_BARTLETT: {
-    const int midn = size >> 1;
-    if (k > midn) k = size-1 - k;
-    return k / (double)midn;
-  }
-  case WINDOW_HAMMING: {
-    const int midn = size >> 1;
-    if (k > midn) k = size-1 - k;
-    return 0.54 - 0.46 * cos(k * dtwo_pi / (size-1));
-  }
-  case WINDOW_BLACKMAN2: {	/* using Chebyshev polynomial equivalents here */
-    const int midn = size >> 1;
-    if (k > midn) k = size-1 - k;
-    double cx = cos(k * dtwo_pi / size);
-    return .34401 + (cx * (-.49755 + (cx * .15844)));
-  }
-  case WINDOW_BLACKMAN3: {
-    const int midn = size >> 1;
-    if (k > midn) k = size-1 - k;
-    double cx = cos(k * dtwo_pi / size);
-    return .21747 + (cx * (-.45325 + (cx * (.28256 - (cx * .04672)))));
-  }
-  case WINDOW_BLACKMAN4: {
-    const int midn = size >> 1;
-    if (k > midn) k = size-1 - k;
-    double cx = cos(k * dtwo_pi / size);
-    return .084037 + (cx * (-.29145 + (cx * (.375696 + (cx * (-.20762 + (cx * .041194)))))));
-  }
-  case WINDOW_EXPONENTIAL: {
-    const int midn = size >> 1;
-    const double expn = log(2.0) / midn + 1.0;
-    double expsum = 1.0;
-    for (int i = 0, j = size - 1; i <= midn; i++, j--) {
-      if (i == k || j == k)
-	return expsum - 1.0;
-      expsum *= expn;
-    }
-    break;
-  }
+  case WINDOW_HANNING:  return cosine_series1(size, k, 0.50, 0.50);    /* Hann */
+  case WINDOW_HAMMING:  return cosine_series1(size, k, 0.54, 0.46);
+  case WINDOW_BLACKMAN: return cosine_series2(size, k, 0.42, 0.50, 0.08); /* per wikipedia */
+  case WINDOW_BLACKMAN2: /* using Chebyshev polynomial equivalents here */
+    return .34401 + (cos(k * dtwo_pi / size) * 
+		     (-.49755 + (cos(k * dtwo_pi / size) * .15844)));
+  case WINDOW_BLACKMAN3:
+    return .21747 + (cos(k * dtwo_pi / size) * 
+		     (-.45325 + (cos(k * dtwo_pi / size) * 
+				 (.28256 - (cos(k * dtwo_pi / size) * .04672)))));
+  case WINDOW_BLACKMAN4:
+    return .084037 + (cos(k * dtwo_pi / size) * 
+		      (-.29145 + (cos(k * dtwo_pi / size) * 
+				  (.375696 + (cos(k * dtwo_pi / size) * 
+					      (-.20762 + (cos(k * dtwo_pi / size) * .041194)))))));
+  case WINDOW_EXPONENTIAL:      return exponential(size, k, 10); /* decays 10 dB over half window */
+  case WINDOW_EXPONENTIAL_30:   return exponential(size, k, 30); /* decays 30 dB over half window */
+  case WINDOW_EXPONENTIAL_60:   return exponential(size, k, 60); /* decays 60 dB over half window */
+  case WINDOW_EXPONENTIAL_90:   return exponential(size, k, 90); /* decays 90 dB over half window */
   case WINDOW_RIEMANN: {
     const int midn = size >> 1;
     if (midn == k) return 1.0;
@@ -237,58 +220,25 @@ static float window_get(const window_type_t type, const int size, int k) {
     const double cx = (midn - k) * dtwo_pi / size;
     return sin(cx) / cx;
   }
-  case WINDOW_BLACKMAN_HARRIS: {
-    // corrected per wikipedia
-    const double a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168;
-    const double arg = k * dtwo_pi / (size - 1);
-    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg);
-  }
-  case WINDOW_BLACKMAN_NUTTALL: {
-    // corrected and renamed per wikipedia
-    const double a0 = 0.3635819, a1 = 0.4891775, a2 = 0.1365995, a3 = 0.0106411;
-    const double arg = k * dtwo_pi / (size - 1);
-    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg);
-  }
-  case WINDOW_NUTTALL: {
-    // wikipedia's version
-    const double a0 = 0.355768, a1 = 0.487396, a2 = 0.144232, a3 = 0.012604;
-    const double arg = k * dtwo_pi / (size - 1);
-    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg);
-  }
-  case WINDOW_FLAT_TOP: {
-    const double a0 = 1.0, a1 = 1.93, a2 = 1.29, a3 = 0.388, a4 = 0.032;
-    const double arg = k * dtwo_pi / (size - 1);
-    return a0 - a1 * cos(arg) + a2 * cos(2 * arg) - a3 * cos(3 * arg) + a4 * cos(4 * arg);
+  case WINDOW_BLACKMAN_HARRIS:  return cosine_series3(size, k, 0.3587500, 0.4882900, 0.1412800, 0.0116800);
+  case WINDOW_BLACKMAN_NUTTALL: return cosine_series3(size, k, 0.3635819, 0.4891775, 0.1365995, 0.0106411);
+  case WINDOW_NUTTALL:          return cosine_series3(size, k, 0.3557680, 0.4873960, 0.1442320, 0.0126040);
+  case WINDOW_FLAT_TOP:         return cosine_series4(size, k, 1.0000000, 1.9300000, 1.2900000, 0.3880000, 0.032);
+     // also known as the sine window
+  case WINDOW_COSINE:           return sin(pi*k / (size-1));
 
-  }
-  case WINDOW_TUKEY: {
+  case WINDOW_GAUSSIAN:         return gaussian(size, k, 0.50);
+  case WINDOW_GAUSSIAN_25:      return gaussian(size, k, 0.25);
+  case WINDOW_GAUSSIAN_10:	return gaussian(size, k, 0.10);
+
     // Tukey window is an interpolation between a Hann and a rectangular window
     // parameterized by alpha, somewhat like a raised cosine keyed tone
-    return 0;
+  case WINDOW_TUKEY:            return 0;
+    // sinc(2*k/(size-1)), normalized sinc(x) = sin(pi x) / (pi x), sinc(0) == 1
+  case WINDOW_LANCZOS:          return 0;
+  case WINDOW_KAISER:           return 0; // needs modified bessel function
+  default:			return 0.0;
   }
-  case WINDOW_COSINE: {
-    // also known as the sine window
-    return sin(pi*k / (size-1));
-  }
-  case WINDOW_LANCZOS: {
-    return 0;// sinc(2*k/(size-1)), normalized sinc(x) = sin(pi x) / (pi x), sinc(0) == 1
-  }
-  case WINDOW_TRIANGULAR: {
-    return 2.0 / (size+1) * ((size+1)/2.0 - fabs(k-(size-1)/2.0));
-  }
-  case WINDOW_GAUSSIAN: {
-    // gaussian parameterized by sigma <= 0.5
-    const double sigma = 0.5;
-    return exp(-0.5 * pow((k - (size-1) / 2.0) / (sigma * (size-1) / 2.0), 2));
-  }
-  case WINDOW_BARTLETT_HANN: {
-    return 0;
-  }
-  case WINDOW_KAISER: {
-    return 0;
-  }
-  }
-  return 1.0 / 0.0;
 }
 static void window_make(const window_type_t type, const int size, float *window) {
   for (int i = 0; i < size; i++)

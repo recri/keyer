@@ -81,6 +81,7 @@ static float maxf(float a, float b) { return a > b ? a : b; }
 static float squaref(float x) { return x * x; }
 
 static double square(double x) { return x * x; }
+static double cube(double x) { return x * x * x; }
 
 /*
 ** these are functions you learn to use in computer graphics

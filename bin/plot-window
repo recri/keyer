@@ -32,9 +32,9 @@ proc draw {w} {
     set ::data(yscale) [expr {-(0.75*[winfo height $w]/2)/max(abs($::data(miny)),$::data(maxy))}]
     #puts $xy
     $w coords window $::data(xy)
-    puts ".c scale all 0 0 $::data(xscale) $::data(yscale)"
+    # puts ".c scale all 0 0 $::data(xscale) $::data(yscale)"
     $w scale all 0 0 $::data(xscale) $::data(yscale)
-    puts ".c move all $::data(xoff) $::data(yoff)"
+    # puts ".c move all $::data(xoff) $::data(yoff)"
     $w move all $::data(xoff) $::data(yoff)
 }
 
@@ -51,7 +51,7 @@ proc replot {} {
 	}
     }
     binary scan $ys f* ys
-    puts "scanned [llength $ys] items"
+    # puts "scanned [llength $ys] items"
     set ::data(xy) {}
     set x 0
     set ::data(miny) +1e9
@@ -62,7 +62,7 @@ proc replot {} {
 	set ::data(miny) [expr {min($y,$::data(miny))}]
 	set ::data(maxy) [expr {max($y,$::data(maxy))}]
     }
-    puts "$x points, min $::data(miny) max $::data(maxy)"
+    # puts "$x points, min $::data(miny) max $::data(maxy)"
     draw .c
 }
 
@@ -74,55 +74,14 @@ proc validate-size {} {
     }
 }
 
-set windows {
-    rectangular
-    hanning
-    welch
-    parzen
-    bartlett
-    hamming
-    blackman2
-    blackman3
-    blackman4
-    exponential
-    riemann
-    blackman-harris
-    blackman-nuttall
-    nuttall
-    flat-top
-    tukey
-    cosine
-    lanczos
-    triangular
-    gaussian
-    bartlett-hann
-    kaiser
+proc get-window-types {} {
+    catch { sdrtcl::window foo 512 } error
+    regexp {^unknown window type, should be one of (.*)$} $error all error
+    regsub -all {, (or )?} $error { } error
+    return [lsort [split $error]]
 }
 
-set windowtypes {
-  "rectangular" 
-  "hanning"
-  "welch"
-  "parzen"
-  "bartlett"
-  "hamming"
-  "blackman2"
-  "blackman3"
-  "blackman4"
-  "exponential"
-  "riemann"
-    blackman-harris
-    blackman-nuttall
-    nuttall
-    flat-top
-    tukey
-    cosine
-    lanczos
-    triangular
-    gaussian
-    bartlett-hann
-    kaiser
-}
+set windowtypes [get-window-types]
 
 set spectrumtypes {
     "polyphase1"
@@ -147,7 +106,7 @@ proc main {argv} {
     set ::data(type) [lindex $::windowtypes 0]
     pack [ttk::label .m.el -text {window size}] -side left
     pack [ttk::entry .m.e -textvar ::data(size) -validate all -validatecommand validate-size] -side left
-    set ::data(size) 128
+    set ::data(size) 512
     pack [ttk::button .m.p -text plot -command replot]
     bind .c <Configure> [list draw %W]
     replot

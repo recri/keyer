@@ -25,9 +25,9 @@
 #define FRAMEWORK_USES_OPTIONS 0
 #define FRAMEWORK_USES_SUBCOMMANDS 0
 
+#include "framework.h"		// shifted up to get window_mode_custom_option table
 #include "../dspmath/dspmath.h"
 #include "../dspmath/window.h"
-#include "framework.h"
 
 /*
 ** create fft and filter windows.
@@ -37,20 +37,20 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   if (argc != 3) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s type size", Tcl_GetString(objv[0])));
   char *type_name = Tcl_GetString(objv[1]);
   int itype = -1;
-  for (int i = 0; window_names[i] != NULL; i += 1)
-    if (strcmp(window_names[i], type_name) == 0) {
-      itype = i;
+  for (int i = 0; window_mode_custom_option[i].name != NULL; i += 1)
+    if (strcmp(window_mode_custom_option[i].name, type_name) == 0) {
+      itype = window_mode_custom_option[i].value;
       break;
     }
   if (itype < 0) {
     Tcl_AppendResult(interp, "unknown window type, should be one of ", NULL);
-    for (int i = 0; window_names[i] != NULL; i += 1) {
+    for (int i = 0; window_mode_custom_option[i].name != NULL; i += 1) {
       if (i > 0) {
 	Tcl_AppendResult(interp, ", ", NULL);
-	if (window_names[i+1] == NULL)
+	if (window_mode_custom_option[i+1].name == NULL)
 	  Tcl_AppendResult(interp, "or ", NULL);
       }
-      Tcl_AppendResult(interp, window_names[i], NULL);
+      Tcl_AppendResult(interp, window_mode_custom_option[i].name, NULL);
     }
     return TCL_ERROR;
   }

@@ -92,6 +92,14 @@ package require sdrtk::vtext
 
 set data(options) {}
 
+proc get-window-types {} {
+    package require sdrtcl::window
+    catch { sdrtcl::window foo 512 } error
+    regexp {^unknown window type, should be one of (.*)$} $error all error
+    regsub -all {, (or )?} $error { } error
+    return [lsort [split $error]]
+}
+
 proc populate-options {} {
     # populate the list in ::data(options) for load-ui to implement
     foreach {component name} $::data(components) {
@@ -154,11 +162,7 @@ proc populate-options {} {
 		    # sdrtcl::window foo 128
 		    # and scraping error message
 		    # unimplemented:  tukey lanczos bartlett-hann kaiser
-		    set windows {
-			rectangular hanning welch parzen bartlett hamming blackman2 blackman3
-			blackman4 exponential riemann blackman-harris blackman-nuttall nuttall flat-top cosine
-			triangular gaussian
-		    }
+		    set windows [get-window-types]
 		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -values $windows]
 		}
 		-gain {
