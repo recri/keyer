@@ -1,4 +1,4 @@
-#!/usr/bin/tclsh8.6
+#!/usr/bin/wish8.6
 # -*- mode: Tcl; tab-width: 8; -*-
 #
 # Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
@@ -18,152 +18,398 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-#
-# start, stop, and control a ladish keyer application
-# start the keyer automatically at startup
-# stop the keyer on shutdown
-# start a different keyer
-# change the parameters of the keyer
-# provide a mouse/keyboard midi event generator
-#
-
-# 
-# get script name
 set script [info script]
+set dirname [file dirname $script]
 
+#
 # append the ../lib directory to the Tcl search path
-lappend auto_path [file join [file dirname $script] .. lib]
+#
+lappend auto_path [file join $dirname .. lib]
 
-# find the name of the script, without reading links
-set name [file tail $script]
+#
+# find the list of sdrtcl::*
+#
+set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}} | sed -e s/sdrtcl:://g]
 
-package require Tk 8.6
-package require ladish 
+#
+# will need this to implement -uuid
+#
+package require sdrtcl::jack-client
+
+# load an sdrtcl component
+# name is name1 or a name1@name2
+# name1 specifies the sdrtcl component
+# and name2 specifies the jack client name to use for it
+# name2 defaults to name1
+# name1 can be any string which uniquely identifies an sdrtcl component
+# ambiguous ones throw an error with the list that matched
+# 
+proc load-component {name} {
+    # name1 identifies the sdrtcl component
+    # name2 is the jack client name
+    set name1 $name
+    set name2 $name
+    if {[llength [split $name @]] == 2} {
+	foreach {name1 name2} [split $name @] break
+    }
+    # search through the sdrtcl component list
+    # for components which match name1
+    set candidates {}
+    foreach c $::packages {
+	if {[string equal $name1 $c]} {
+	    set candidates [list $c]
+	    break
+	} elseif {[string match *$name1* $c]} {
+	    lappend candidates $c
+	}
+    }
+    if {[llength $candidates] == 0} { error "no match for component '$name'" }
+    if {[llength $candidates] > 1} { error "too many matches for component '$name', '[join $candidates {, }]'" }
+    # we found one candidate
+    set component [lindex $candidates 0]
+    # load the implementation
+    package require sdrtcl::$component
+    # instantiate component
+    sdrtcl::$component $name2
+    # activate component
+    $name2 activate
+    # remember this
+    lappend ::data(components) $component $name2
+    # remember if this is special
+    switch -glob $component {
+	keyer-iambic-* { lappend ::data(keyer) $name2 }
+	keyer-ascii { lappend ::data(ascii) $name2 }
+	keyer-tone { lappend ::data(tone) $name2 }
+    }
+}
+
+# user interface components
 package require sdrtk::dialbook
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
 package require sdrtk::vtext
 
-## default studio and project
-array set ::data {
-    studio default
-    project keyer
-}
+set data(options) {}
 
-## test if the session is started
-proc ladish-session-is-started {} {
-    return [expr {[lindex [exec ladish_control sisloaded] end] ne {no}}]
-}
-
-## start a session
-proc ladish-start-session {studio project} {
-    # studio name is just the name
-    exec ladish_control sload $studio
-    # project name is directory path containing ladish-project.xml file
-    exec ladish_control pload keyer $project
-}
-
-## stop a session and wait for it to finish
-## there is a long delay between the command completion
-## and the actual termination of the session
-proc ladish-stop-session {} {
-    exec ladish_control sunload
-    while {[ladish-session-is-started]} { after 100 }
-}
-
-proc ladish-status {} {
-    return [sdrkit-ladish-status]
-}
-
-## enumerate the studios
-set ::data(studios) [dict create]
-
-proc ladish-load-studios {} {
-    set ::data(studios) [dict create]
-    foreach x [lsort [split [string trim [exec ladish_control slist]] \n]] {
-	if {$x eq {--- studio list}} continue
-	dict set ::data(studios) [lindex $x 0] 1
-    }
-    puts "studios: [dict keys $::data(studios)]"
-}
-
-## enumerate the projects
-set ::data(projects) [dict create]
-
-proc ladish-load-projects {} {
-    set ::data(projects) [dict create]
-    foreach x [lsort [glob ~/keyer/ladish-projects/*/ladish-project.xml]] {
-	set x [file dirname $x]
-	dict set ::data(projects) [file tail $x] $x
-    }
-    puts "projects: [dict keys $::data(projects)]"
-}
-
-ladish-load-studios
-ladish-load-projects
-
-proc update-studio {} {
-    ladish-start-session $::data(studio) [dict get $::data(projects) $::data(project)]
-}
-
-proc update-project {} {
-    exec ladish_control pload keyer [dict get $::data(projects) $::data(project)]
-}
-
-proc dial-set {opt value} {
-    switch $opt {
-	keyer-tone {
-	}
-	keyer-wpm {
-	}
-	ascii-tone {
-	}
-	ascii-wpm {
-	}
-    }
-}
-
-## set user interface
-pack [ttk::frame .m] -side top -fill x -expand true
-pack [ttk::menubutton .m.f -text file -menu .m.f.m] -side left
-menu .m.f.m -tearoff no
-.m.f.m add command -label quit -command {destroy .}
-pack [ttk::menubutton .m.s -text studio -menu .m.s.m] -side left
-menu .m.s.m -tearoff no
-dict for {name value} $::data(studios) { .m.s.m add radiobutton -label $name -value $name -variable ::data(studio) -command update-studio }
-pack [ttk::menubutton .m.p -text project -menu .m.p.m] -side left
-menu .m.p.m -tearoff no
-dict for {name value} $::data(projects) { .m.p.m add radiobutton -label $name -value $name -variable ::data(project) -command update-project }
-pack [::sdrtk::dialbook .dial] -side top -fill both -expand true
-foreach {opt type value opts} {
-    keyer-tone freq 800 {-text keyer-tone -units Hz -format %.0f}
-    keyer-wpm value 18 {-text keyer-wpm -format %.0f}
-    ascii-tone freq 800 {-text ascii-tone -units Hz -format %.0f}
-    ascii-wpm value 18 {-text ascii-wpm -format %.0f}
-} {
-    lappend opts -value $value -variable ::data(-$opt) -command [list dial-set -$opt]
-    switch $type {
-	enum { sdrtk::readout-enum .dial.$opt {*}$opts }
-	freq { sdrtk::readout-freq .dial.$opt {*}$opts }
-	value { sdrtk::readout-value .dial.$opt {*}$opts }
-	default { error "unanticipated type \"$type\"" }
-    }
-    .dial add .dial.$opt -text [.dial.$opt cget -text]
-}
-
-update idletasks
-# default session
-if {[dict exists $::data(studios) default] && [dict exists $::data(projects) keyer]} {
-    puts "ladish-start-session default [dict get $::data(projects) keyer]"
-    ladish-start-session default [dict get $::data(projects) keyer]
-    while { ! [ladish-session-is-started]} { puts "waiting for session to start"; after 100 }
-    puts "session started"
-    set ::data(dict) [ladish-status]
-    puts "dict received $::data(dict)"
-    dict for {name value} $::data(dict) {
-	dict for {name1 value1} $value {
-	    puts "$name $name1 $value1"
+proc populate-options {} {
+    # populate the list in ::data(options) for load-ui to implement
+    foreach {component name} $::data(components) {
+	foreach config [$name configure] {
+	    foreach {opt oname oclass odefault ovalue} $config break
+	    set info [$name info option $opt]
+	    # note: opt is the option name in configure and cget commands
+	    # oname is the option name in the option database (not used here)
+	    # oclass is the option class name in the option database
+	    # odefault is the default value
+	    # ovalue is the current value
+	    switch -- $opt {
+		-server - -client - -uuid - -verbose { continue }
+		-chan {
+		    # these apply to the whole keyer chain,
+		    # midi-chan value 1 {-text midi-channel -format %.0f -min 1 -max 16}
+		}
+		-note {
+		    # these apply to the whole keyer chain,
+		    # midi-note value 0 {-text midi-base-note -format %.0f -min 0 -max 127}
+		}
+		-wpm {
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text "$name $opt" -info $info -format %.0f -units wpm -min 5.0 -max 200.0 -step 0.5]
+		}
+		-swap - -mdit - -mdah - -mide - -alsp - -awsp {
+		    # made into a generic boolean option specification
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -values {0 1}]
+		}
+		-mode {
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -values {A B}]
+		}
+		-word {
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -units dits -values {50 60}]
+		}
+		-dah - -ies - -ils - -iws { 
+		    set min [expr {0.5*$ovalue}]
+		    set max [expr {1.5*$ovalue}]
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text "$name $opt" -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
+		    continue
+		}
+		-weight {
+		    # dttsp -weight weight Weight 50 50 adjust relative weight of dit and dah
+		    continue
+		}
+		-freq {
+		    lappend ::data(options) $name $opt freq $ovalue \
+			[list -text "$name $opt" -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
+		}
+		-rise - -fall {
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text "$name $opt" -info $info -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1]
+		}
+		-window - -rise-window - -fall-window {
+		    # rise-window Window hanning hanning rise ramp window
+		    # fall-window Window hanning hanning fall ramp window
+		    # obtain list of windows name with:
+		    # package require sdrtcl::window
+		    # sdrtcl::window foo 128
+		    # and scraping error message
+		    # unimplemented:  tukey lanczos bartlett-hann kaiser
+		    set windows {
+			rectangular hanning welch parzen bartlett hamming blackman2 blackman3
+			blackman4 exponential riemann blackman-harris blackman-nuttall nuttall flat-top cosine
+			triangular gaussian
+		    }
+		    lappend ::data(options) $name $opt enum $ovalue [list -text "$name $opt" -info $info -values $windows]
+		}
+		-gain {
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text "$name $opt" -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
+		}
+		-delay {
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text "$name $opt" -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
+		}
+		-hang {
+		    lappend ::data(options) $name $opt value $ovalue \
+			[list -text "$name $opt" -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
+		}
+		-period {
+		    # for the debouncer
+		}
+		-steps {
+		    # for the debouncer
+		}
+		-dict {
+		    # for the ascii keyer
+		}
+		default {
+		    puts "$name $config [$name info option $opt]"
+		}
+	    }
 	}
     }
 }
+
+proc update-window-title {} {
+    foreach name [array names ::data] {
+	if {[string range $name end-3 end] eq {-wpm}} {
+	    wm title . $::data($name)
+	    break
+	}
+    }
+}
+
+proc dial-set {comp opt val} {
+    if {$comp eq {*}} {
+	# search for potential matches and configure them all.
+	# assuming it's a component option without the component prefixed?
+	foreach {ocomp copt type value opts} $::data(options) {
+	    if {$copt eq $opt} {
+		# puts "dial-set tryng $ocomp configure $opt $val"
+		dial-set $ocomp $opt $val
+		# $ocomp configure $opt $val
+		# puts "dial-set: cget [$ocomp cget $opt]"
+		set ::data(-$ocomp:$opt) $val
+		# puts "dial-set: set the ::data(-$ocomp:$opt) $val"
+	    }
+	}
+    } else {
+	dict set ::data(busy) $comp $opt $val
+    }
+}
+
+proc dial-set-timeout {} {
+    dict for {comp opts} $::data(busy) {
+	# puts "dial-set-timeout $comp {$opts}"
+	if { ! [$comp is-busy]} {
+	    if {[catch {
+		$comp configure {*}$opts
+		set ::data(busy) [dict unset $::data(busy) $comp]
+		after idle update-window-title
+	    } error]} {
+		puts "dial-set $comp configure $opts threw $error"
+	    }
+	} else {
+	    # puts "$comp is-busy"
+	}
+    }
+    after 100 dial-set-timeout
+}
+
+proc dial-set-init {} {
+    set ::data(busy) [dict create]
+    dial-set-timeout
+}
+
+#
+# text window management
+# text window is for preparing text to send to the ascii-keyer
+# could also be used to present the output from the manual key
+# or cw decoded from audio.
+#
+proc read-file {file} {
+    set fp [open $file r]
+    set data [read $fp]
+    close $fp
+    return $data
+}
+proc write-file {file data} {
+    set fp [open $file w]
+    puts -nonewline $fp $data
+    close $fp
+}
+proc text-window-timeout {} {
+    # I'm seeing available taking 50-60 units per character sent
+    if {$::data(ascii-puts) ne {} && [$::data(ascii) available] > 8192/2} {
+	# set tbytes [string length $::data(ascii-puts)]
+	set text [string range $::data(ascii-puts) 0 39]
+	set ::data(ascii-puts) [string range $::data(ascii-puts) 40 end]
+	# set sbytes [string length $text]
+	# set rbytes [string length $::data(ascii-puts)]
+	# set avail0 [$::data(ascii) available]
+	$::data(ascii) puts [string toupper $text]
+	# set avail1 [$::data(ascii) available]
+	# puts "put $tbytes=$rbytes+$sbytes bytes sent, $avail0 went to $avail1, [expr {double($avail0-$avail1)/$sbytes}] avail/byte"
+    }
+    after 100 [list text-window-timeout]
+}
+proc text-window-init {} {
+    set ::data(ascii-puts) {}
+    text-window-timeout
+}
+proc text-store-memory-selection {m} {
+    dict set ::data(memory) $m [selection get]
+}
+proc text-send-memory {m} {
+    append ::data(ascii-puts) [dict get $::data(memory) $m]
+}
+proc text-send-selection {} {
+    append ::data(ascii-puts) [selection get]
+}
+proc text-stop-sending {} {
+    set ::data(ascii-puts) {}
+    $::data(ascii) abort
+}
+proc text-load-file {w} {
+    set filename [tk_getOpenFile -title {Insert from file}]
+    if {$filename ne {}} {
+	$w insert current [read-file $filename]
+    }
+}
+proc text-send-file {w} {
+    set filename [tk_getOpenFile -title {Send from file}]
+    if {$filename ne {}} {
+	lappend ::data(ascii-puts) [read-file $filename]
+    }
+}
+proc text-save-file {w} {
+    set filename [tk_getSaveFile -title {Save to file}]
+    if {$filename ne {}} {
+	write-file $filename [$w get 1.0 end]
+    }
+}
+proc text-option-menu {w x y} {
+    if { ! [winfo exists $w.m] } {
+	menu $w.m -tearoff no
+	menu $w.m.s -tearoff no
+	menu $w.m.r -tearoff no
+	foreach m {0 1 2 3 4} {
+	    $w.m.s add command -label "Mem $m" -command [list text-store-memory-selection $m]
+	    $w.m.r add command -label "Mem $m" -command [list text-send-memory $m]
+	}
+	$w.m add command -label {Send Selection} -command [list text-send-selection]
+	$w.m add cascade -label {Save Selection} -menu $w.m.s
+	$w.m add cascade -label {Send Saved} -menu $w.m.r
+	$w.m add command -label {Stop Sending} -command [list text-stop-sending]
+	$w.m add command -label {Insert File} -command [list text-load-file $w]
+	$w.m add command -label {Send File} -command [list text-send-file $w]
+	$w.m add command -label {Save File} -command [list text-save-file $w]
+	
+    }
+    tk_popup $w.m $x $y
+}
+proc text-widget {w} {
+    text $w -width 30 -height 15 -undo true -exportselection true
+    bind $w <ButtonPress-3> [list text-option-menu $w %X %Y]
+    #.text insert end {this is a text window with no text in it except this}
+    return $w
+}
+proc load-ui {} {
+    grid [::sdrtk::dialbook .dial] -row 0
+    foreach {comp opt type value opts} $::data(options) {
+	# puts "$comp $opt $type $value {$opts}"
+	# set ::data(-$comp:$opt) {}
+	lappend opts -value $value -variable ::data(-$comp:$opt) -command [list dial-set $comp $opt]
+	switch $type {
+	    enum { sdrtk::readout-enum .dial.x$comp:$opt {*}$opts }
+	    freq { sdrtk::readout-freq .dial.x$comp:$opt {*}$opts }
+	    value { sdrtk::readout-value .dial.x$comp:$opt {*}$opts }
+	    default { error "unanticipated type \"$type\"" }
+	}
+	.dial add .dial.x$comp:$opt -text [.dial.x$comp:$opt cget -text]
+    }
+    if {[info exists ::data(ascii)] && [llength $::data(ascii)] == 1} {
+	grid [text-widget .text] -row 1
+	text-window-init
+    }
+}
+
+proc main {argv} {
+    # initialize
+    set server default
+    set uuid {}
+    set opts {}
+    set comps {}
+    
+    # process arguments
+    foreach {opt val} $argv {
+	if {$opt eq {-server}} {
+	    set server $val;	# select jack server
+	} elseif {$opt eq {-uuid}} {
+	    set uuid $val;	# identify saved jack client
+	} elseif {$opt eq {-start}} {
+	    lappend comps $val
+	} else {
+	    lappend opts $opt $val; # save options
+	}
+    }
+
+    # initiate jack session
+    if {$uuid ne {}} {
+	sdrtcl::jack-client jack -server default -uuid $uuid
+    } else {
+	sdrtcl::jack-client jack -server default
+    }
+
+    # load the component modules
+    foreach comp $comps { load-component $comp }
+
+    # handle special associations:
+    # if ascii and keyer then ascii is slaved to keyer
+    # if ascii then load a text window
+    # if tone then gang rise&fall and rise-window&fall-window (could be multiple tones)
+    #if {[info exists ::data(keyer)]} { puts "keyer is $::data(keyer)" }
+    #if {[info exists ::data(ascii)]} { puts "ascii is $::data(ascii)" }
+    #if {[info exists ::data(tone)]} { puts "tone is $::data(tone)" }
+
+    # initialize the dial-set timer
+    dial-set-init
+
+    # extract and filter the options from the modules
+    populate-options
+
+    # build the ui with the extracted options
+    load-ui
+
+    # load the options collected from the command line
+    foreach {opt val} $opts { dial-set * $opt $val }
+
+    # install application icon
+    set dir [file join [file dirname [info script]] .. icons]
+    image create photo icon1 -file [file join $dir qrv96.png]
+    image create photo icon2 -file [file join $dir qrv48.png]
+    wm iconphoto . -default icon1 icon2
+}
+
+main $argv
+

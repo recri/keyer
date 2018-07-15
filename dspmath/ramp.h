@@ -41,9 +41,9 @@ static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int sample
   int off = do_rise ? 0 : r->target-1;
   for (int i = 0; i < r->target; i += 1) {
     r->ramp[i] = window_get(window, 2*r->target-1, i+off);
-    printf(" %.5f", r->ramp[i]);
+    // printf(" %.5f", r->ramp[i]);
   }
-  printf("\n");
+  // printf("\n");
 }
 
 static void ramp_init(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {
