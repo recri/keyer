@@ -236,17 +236,35 @@ proc dial-set-init {} {
     dial-set-timeout
 }
 
+#
+# text management
+#
+proc text-window-timeout {} {
+    if {[llength $::data(ascii-puts)]} {
+	set text [lindex $::data(ascii-puts) 0]
+	set ::data(ascii-puts) [lrange $::data(ascii-puts) 1 end]
+	set avail0 [$::data(ascii) available]
+	$::data(ascii) puts [string toupper $text]
+	puts "put [string length $text] bytes, $avail0 went to [$::data(ascii) available]"
+    }
+    after 100 [list text-window-timeout]
+}
+proc text-window-init {} {
+    set ::data(ascii-puts) {}
+    text-window-timeout
+}
 proc text-store-memory-selection {m} {
     dict set ::data(memory) $m [selection get]
 }
 proc text-send-memory {m} {
-    ascii puts [dict get $::data(memory) $m]
+    lappend ::data(ascii-puts) [dict get $::data(memory) $m]
 }
 proc text-send-selection {} {
-    ascii puts [selection get]
+    lappend ::data(ascii-puts) [selection get]
 }
 proc text-stop-sending {} {
-    ascii abort
+    set ::data(ascii-puts) {}
+    $::data(ascii) abort
 }
 proc text-option-menu {w x y} {
     if { ! [winfo exists $w.m] } {
@@ -270,11 +288,11 @@ proc text-widget {w} {
     #.text insert end {this is a text window with no text in it except this}
     return $w
 }
-
 proc load-ui {} {
     grid [::sdrtk::dialbook .dial] -row 0
     foreach {comp opt type value opts} $::data(options) {
 	# puts "$comp $opt $type $value {$opts}"
+	# set ::data(-$comp:$opt) {}
 	lappend opts -value $value -variable ::data(-$comp:$opt) -command [list dial-set $comp $opt]
 	switch $type {
 	    enum { sdrtk::readout-enum .dial.x$comp:$opt {*}$opts }
@@ -284,7 +302,10 @@ proc load-ui {} {
 	}
 	.dial add .dial.x$comp:$opt -text [.dial.x$comp:$opt cget -text]
     }
-    grid [text-widget .text] -row 1
+    if {[info exists ::data(ascii)] && [llength $::data(ascii)] == 1} {
+	grid [text-widget .text] -row 1
+	text-window-init
+    }
 }
 
 proc main {argv} {

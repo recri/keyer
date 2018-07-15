@@ -62,6 +62,8 @@ snit::widgetadaptor sdrtk::dialbook-tab {
     destructor {
     }
 
+    method menu-entry {w text} { return [$data(window) menu-entry $w $text] }
+    
     method get-text {} { return [$hull cget -text] }
     method get-window {} { return $data(window) }
     method get-label {} { return $win }
@@ -232,6 +234,56 @@ snit::widget sdrtk::dialbook {
 	    if {$data(current) ne {}} { [$data(current) get-window] adjust $step }
 	}
     }
+    # since tk on ubuntu 18.04 is using microscopic check/radio/cascade markers
+    # rewrite the labels of this menu to do the job
+    # ack, tk has totally microscopic check and radio and cascade menu markers
+    # ☐ ☑ ☒ ballot box, checked box, x'ed box, ▼ menu?
+    # ◉ fisheye, ► menu?, 🔘 radiobutton, ⊙ circled dot, ⊚ circled circle,
+    # ○ empty circle, ◉ filled, ◯ bigger empty circle, ◎ hollow
+    # not great, the fonts picked by Tk don't preserve widths.
+    proc menu-labels-decorate-legibly {m} {
+	set n [$m index last]
+	# puts "menu $m has $n entries"
+	if {$n eq {none}} { set n -1 }
+	for {set i 0} {$i <= $n} {incr i} {
+	    switch [$m type $i] {
+		command - separator - tearoff {
+		    # no action required
+		}
+		checkbutton {
+		    set label [$m entrycget $i -label]
+		    set var [$m entrycget $i -variable]
+		    set onval [$m entrycget $i -onvalue]
+		    set offval [$m entrycget $i -offvalue]
+		    if {[uplevel \#0 [list set $var]] eq $onval} {
+			set label "☑ $label"
+		    } else {
+			set label "☐ $label"
+		    }
+		    $m entryconfigure $i -label $label -indicatoron 0
+		}
+		radiobutton {
+		    set label [$m entrycget $i -label]
+		    set var [$m entrycget $i -variable]
+		    set val [$m entrycget $i -value]
+		    if {[uplevel \#0 [list set $var]] eq $val} {
+			set label "◉ $label"
+		    } else {
+			set label "◎ $label"
+		    }
+		    $m entryconfigure $i -label $label -indicatoron 0
+		}
+		cascade {
+		    set label [$m entrycget $i -label]
+		    $m entryconfigure $i -label "  $label ►"
+		    menu-labels-decorate-legibly [$m entrycget $i -menu]
+		}
+		default {
+		    puts "$m type $i => [$m type $i]"
+		}
+	    }
+	}
+    }
     method Press {} {
 	# puts "$self Press"
 	if {$data(menu)} {
@@ -242,24 +294,36 @@ snit::widget sdrtk::dialbook {
 	    # redone in a way that uses the rotational input
 	    set data(menu) true
 	    if { ! [winfo exists $win.menu]} {
-		menu $win.menu -tearoff no
+		menu $win.menu -tearoff no -font {Helvetica 12 bold}
 	    } else {
 		$win.menu delete 0 end
 	    }
+	    # okay, change this so that enumerated values present a checkbutton or cascade to radiobutton
+	    # and change to use a reverse lru ordering of the tabs
 	    set data(menu-select) $data(current)
+	    set i 0
 	    foreach atab $data(tabs) {
 		set text [$atab get-text]
-		$win.menu add radiobutton -label $text -value $atab -variable [myvar data(menu-select)] -command [mymethod MenuInvoke $atab]
+		# puts "$win.menu add radiobutton -label {$text} -value {$atab}"
+		# puts "$atab menu-entry -> {[$atab menu-entry $text]}"
+		set menu [$atab menu-entry $win.menu.m$i $text]
+		if {$menu eq {}} {
+		    $win.menu add radiobutton -label $text -value $atab -variable [myvar data(menu-select)] -command [mymethod MenuInvoke $atab]
+		} else {
+		    $win.menu add {*}$menu
+		    incr i
+		}
 	    }
-	    bind $win.menu <<MenuSelect>> [mymethod MenuSelect]
-	    bind $win.menu <Unmap> [mymethod MenuUnmap]
-	    tk_popup $win.menu [winfo pointerx $win] [winfo pointery $win] [$win.menu index [$data(current) cget -text]]
+	    menu-labels-decorate-legibly $win.menu
+	    bind $win.menu <<MenuSelect>> +[mymethod MenuSelect]
+	    bind $win.menu <Unmap> +[mymethod MenuUnmap]
+	    tk_popup $win.menu [winfo pointerx $win] [winfo pointery $win] [lsearch $data(tabs) $data(current)]
 	}
     }
 
     method MenuSelect {} {
-	set atab [$win.menu entrycget active -value]
-	if {$atab ne {}} { $self DisplayTab $atab }
+	set index [$win.menu index active]
+	if {$index ne {none}} { $self DisplayTab [lindex $data(tabs) $index] }
     }
 
     method MenuInvoke {atab} {
@@ -280,7 +344,7 @@ snit::widget sdrtk::dialbook {
     method FindWindow {window} {
 	foreach tab $data(tabs) { if {[$tab get-window] eq $window} { return $tab } }
     }
-	
+
     method FindIndex {tabid} {
 	switch -regexp $tabid {
 	    {^end$} { return [llength $data(tabs)] }

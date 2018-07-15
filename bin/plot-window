@@ -74,6 +74,31 @@ proc validate-size {} {
     }
 }
 
+set windows {
+    rectangular
+    hanning
+    welch
+    parzen
+    bartlett
+    hamming
+    blackman2
+    blackman3
+    blackman4
+    exponential
+    riemann
+    blackman-harris
+    blackman-nuttall
+    nuttall
+    flat-top
+    tukey
+    cosine
+    lanczos
+    triangular
+    gaussian
+    bartlett-hann
+    kaiser
+}
+
 set windowtypes {
   "rectangular" 
   "hanning"
@@ -86,8 +111,17 @@ set windowtypes {
   "blackman4"
   "exponential"
   "riemann"
-  "blackmanharris"
-  "nuttall"
+    blackman-harris
+    blackman-nuttall
+    nuttall
+    flat-top
+    tukey
+    cosine
+    lanczos
+    triangular
+    gaussian
+    bartlett-hann
+    kaiser
 }
 
 set spectrumtypes {

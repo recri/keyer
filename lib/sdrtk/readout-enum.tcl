@@ -41,6 +41,7 @@ snit::widget sdrtk::readout-enum {
     option -info -default {} -configuremethod Configure
     option -units -default {} -configuremethod Configure
     option -command {}
+    option -menu-value {}
 
     delegate option -text to hull
 
@@ -52,12 +53,32 @@ snit::widget sdrtk::readout-enum {
 	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
 	grid $win.value $win.units
 	$self configure {*}$args
+	trace add variable [myvar options(-value)] write [mymethod TraceSelfWrite]
+	trace add variable [myvar options(-menu-value)] write [mymethod TraceMenuWrite]
     }
     
     method adjust {step} {
 	set n [llength $options(-values)]
 	set pointer [expr {fmod($pointer+$step*$options(-step)+$n, $n)}]
 	$self configure -value [lindex $options(-values) [expr {int($pointer)}]]
+    }
+
+    method menu-entry {m text} {
+	if {[llength $options(-values)] == 2 && [lsearch $options(-values) {0}] >= 0  && [lsearch $options(-values) {1}] >= 0} {
+	    # simple checkbutton
+	    return [list checkbutton -label $text -variable [myvar options(-menu-value)]]
+	} else {
+	    # cascade to radiobuttons
+	    if { ! [winfo exists $m]} {
+		menu $m -tearoff no -font {Helvetica 12 bold}
+	    } else {
+		$m delete 0 end
+	    }
+	    foreach v $options(-values) {
+		$m add radiobutton -label $v -value $v -variable [myvar options(-menu-value)]
+	    }
+	    return [list cascade -label $text -menu $m]
+	}
     }
 
     method Display {} {
@@ -76,7 +97,12 @@ snit::widget sdrtk::readout-enum {
     method {Configure -value} {val} {
 	if {$options(-value) ne $val} {
 	    set options(-value) $val
- 	    if {$options(-variable) ne {}} { set $options(-variable) $val }
+ 	    #if {$options(-variable) ne {} && [set $options(-variable)] ne $val} {
+		set $options(-variable) $val
+	    #}
+	    if {$options(-menu-value) eq {} || $options(-menu-value) ne $val} {
+		set options(-menu-value) $val
+	    }
 	    if {$options(-command) ne {}} { {*}$options(-command) $val }
 	    $self Display
 	}
@@ -99,7 +125,7 @@ snit::widget sdrtk::readout-enum {
 	set options(-variable) $val
 	if {$options(-variable) ne {}} {
 	    trace add variable $options(-variable) write [mymethod TraceWrite]
-	    $self TraceWrite
+	    # $self TraceWrite
 	}
     }
     method {Configure -info} {val} {
@@ -108,5 +134,29 @@ snit::widget sdrtk::readout-enum {
     method {Configure -units} {val} {
 	set options(-units) $val
     }
-    method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
+    method TraceWrite {args} { 
+	return
+	if {[catch { $self configure -value [set $options(-variable)] } error]} {
+	    puts "TraceWrite {$args} caught $error"
+	} else {
+	    puts "TraceWrite {$args}"
+	}
+    }
+    method TraceSelfWrite {args} {
+	return
+	if {[catch { $self configure -value [set $options(-variable)] } error]} {
+	    puts "TraceWrite {$args} caught $error"
+	} else {
+	    puts "TraceWrite {$args}"
+	}
+    }
+    method TraceMenuWrite {args} { 
+	if {$options(-menu-value) ne $options(-value)} {
+	    if {[catch { $self configure -value $options(-menu-value) }  error]} {
+		puts "TraceMenuWrite {$args} caught $error"
+	    } else {
+		puts "TraceMenuWrite {$args}"
+	    }
+	}
+    }
 }
