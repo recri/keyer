@@ -21,10 +21,9 @@ clean::
 
 all-clean::
 	@find . -name '*~' -exec rm -f \{} \;
-	cd dbus-$(VSN_DBUS) && make distclean
-	rm -fr lib/dbus
-	-cd dbif-$(VSN_DBIF) && make distclean
-	rm lib/sdrutil/dbif.tcl
+	-cd dbus-$(VSN_DBUS) && make distclean
+	-rm -fr lib/dbus
+	-rm lib/sdrutil/dbif.tcl
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all-clean); done
 
 distclean:: all-clean

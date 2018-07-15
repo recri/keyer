@@ -303,7 +303,7 @@ proc text-load-file {w} {
 proc text-send-file {w} {
     set filename [tk_getOpenFile -title {Send from file}]
     if {$filename ne {}} {
-	lappend ::data(ascii-puts) [read-file $filename]
+	append ::data(ascii-puts) [read-file $filename]
     }
 }
 proc text-save-file {w} {

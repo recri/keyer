@@ -39,13 +39,15 @@
    | tcllib             |
    | libusb-1.0-0-dev   |
    | libdbus-1-dev      |
+   | libgsl-dev         |
+
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
    listed.
 
    The "apt-get" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt-get install build-essential git-core libasound2-dev jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib libusb-1.0-0-dev libdbus-1-dev
+   sudo apt-get install build-essential git-core libasound2-dev jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib libusb-1.0-0-dev libdbus-1-dev libgsl-dev
    #+END_EXAMPLE
 
 ** Getting the source

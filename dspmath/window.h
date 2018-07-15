@@ -26,6 +26,7 @@
 */
 
 #include "dspmath.h"
+#include <gsl/gsl_sf_bessel.h>
 
 typedef enum {
   WINDOW_RECTANGULAR = 0, 
@@ -68,6 +69,7 @@ static fw_option_custom_t window_mode_custom_option[] = {
   { "parzen", WINDOW_PARZEN },
   { "bartlett", WINDOW_BARTLETT },
   { "hamming", WINDOW_HAMMING },
+  { "blackman", WINDOW_BLACKMAN },
   { "blackman2", WINDOW_BLACKMAN2 },
   { "blackman3", WINDOW_BLACKMAN3 },
   { "blackman4", WINDOW_BLACKMAN4 },
@@ -80,16 +82,15 @@ static fw_option_custom_t window_mode_custom_option[] = {
   { "blackman-nuttall", WINDOW_BLACKMAN_NUTTALL },
   { "nuttall", WINDOW_NUTTALL },
   { "flat-top", WINDOW_FLAT_TOP },
-  /*  { "tukey", WINDOW_TUKEY }, */
   { "cosine", WINDOW_COSINE },
-  /* { "lanczos", WINDOW_LANCZOS }, */
+  { "lanczos", WINDOW_LANCZOS },
   { "triangular", WINDOW_TRIANGULAR },
   { "gaussian", WINDOW_GAUSSIAN },
   { "gaussian-10", WINDOW_GAUSSIAN_10 },
   { "gaussian-25", WINDOW_GAUSSIAN_25 },
   { "bartlett-hann", WINDOW_BARTLETT_HANN },
-  /* { "kaiser", WINDOW_KAISER }, */
-  { "blackman", WINDOW_BLACKMAN },
+  /*  { "tukey", WINDOW_TUKEY }, */
+  /*  { "kaiser", WINDOW_KAISER }, */
   { NULL, -1 }
 };
 #endif
@@ -176,7 +177,9 @@ static float exponential(const int size, const int k, const double decay) {
   double tau = (size / 2.0) * (8.69 / decay); /* for decay over half window of decay decibels */
   return exp(-fabs(k-(size-1)/2.0)/tau);
 }
-
+static float sinc(const float x) { // sinc(x) = sin(pi x) / (pi x), sinc(0) == 1
+  return x == 0 ? 1 : sin(x * pi) / (x * pi);
+}
 static float window_get(const window_type_t type, const int size, int k) {
   /* apply symmetry up front */
   if (k > (size>>1)) k = (size-1)-k;
@@ -234,9 +237,12 @@ static float window_get(const window_type_t type, const int size, int k) {
     // Tukey window is an interpolation between a Hann and a rectangular window
     // parameterized by alpha, somewhat like a raised cosine keyed tone
   case WINDOW_TUKEY:            return 0;
-    // sinc(2*k/(size-1)), normalized sinc(x) = sin(pi x) / (pi x), sinc(0) == 1
-  case WINDOW_LANCZOS:          return 0;
-  case WINDOW_KAISER:           return 0; // needs modified bessel function
+  case WINDOW_KAISER: {
+    // I_0(pi alpha sqrt(1 - square(2 k / (size-1)))) / I_0(pi alpha), alpha typically 3
+    const float alpha = 3;
+    return gsl_sf_bessel_I0(pi * alpha * sqrt(1 - square(2.0 * k / (size-1)))) / gsl_sf_bessel_I0(pi * alpha);
+  }
+  case WINDOW_LANCZOS:          return sinc(2.0*k/(size-1) - 1.0);
   default:			return 0.0;
   }
 }
