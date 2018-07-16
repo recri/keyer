@@ -87,15 +87,31 @@ static void _update(void *arg) {
 }
 
 /*
+** send midi key event through
+*/
+static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note) {
+  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
+  unsigned char* buffer = jack_midi_event_reserve(midi_out, t, 3);
+  if (buffer == NULL) {
+    fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
+  } else {
+    memcpy(buffer, midi, 3);
+  }
+}
+
+/*
 ** Jack process callback
 */
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   float *out_i = jack_port_get_buffer(framework_output(dp,0), nframes);
   float *out_q = jack_port_get_buffer(framework_output(dp,1), nframes);
+  void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
   framework_midi_event_init(&dp->fw, NULL, nframes);
   /* possibly implement updated options */
   _update(dp);
+  /* this is important, very strange if omitted */
+  jack_midi_clear_buffer(midi_out);
   /* avoid denormalized numbers */
   AVOID_DENORMALS;
   /* for all frames in the buffer */
@@ -105,12 +121,19 @@ static int _process(jack_nframes_t nframes, void *arg) {
     int port;
     while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
       if (event.size == 3) {
-	char channel = (event.buffer[0]&0xF)+1;
-	char note = event.buffer[1];
+	const char channel = (event.buffer[0]&0xF)+1;
+	const unsigned char command = event.buffer[0]&0xF0;
+	const char note = event.buffer[1];
 	if (channel == dp->opts.chan && note == dp->opts.note) {
-	  switch (event.buffer[0]&0xF0) {
-	  case MIDI_NOTE_OFF: keyed_tone_off(&dp->tone); break;
-	  case MIDI_NOTE_ON:  keyed_tone_on(&dp->tone); break;
+	  switch (command) {
+	  case MIDI_NOTE_OFF:
+	    keyed_tone_off(&dp->tone);
+	    _send(dp, midi_out, i, command, note);
+	    break;
+	  case MIDI_NOTE_ON:
+	    keyed_tone_on(&dp->tone); 
+	    _send(dp, midi_out, i, command, note);
+	    break;
 	  }
 	}
       }
@@ -155,7 +178,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  0, 2, 1, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  0, 2, 1, 1, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component that translates a MIDI key signal into an I/Q oscillator audio signal"
 };
 
