@@ -30,7 +30,7 @@
 
 typedef enum {
   WINDOW_RECTANGULAR = 0, 
-  WINDOW_HANNING = 1,		/* Hann */
+  WINDOW_HANN = 1,		/* "Hanning" */
   WINDOW_WELCH = 2,
   WINDOW_PARZEN = 3,
   WINDOW_BARTLETT = 4,
@@ -64,7 +64,7 @@ typedef enum {
 /* unimplemented windows are commented out */
 static fw_option_custom_t window_mode_custom_option[] = {
   { "rectangular", WINDOW_RECTANGULAR },
-  { "hanning", WINDOW_HANNING },
+  { "hann", WINDOW_HANN },
   { "welch", WINDOW_WELCH },
   { "parzen", WINDOW_PARZEN },
   { "bartlett", WINDOW_BARTLETT },
@@ -197,7 +197,7 @@ static float window_get(const window_type_t type, const int size, int k) {
       1.0 - 6.0*sqr(k/(size/2.0)) * (1-fabs(k)/(size/2.0)) :
       2.0  * cube(1.0 - fabs(k) / (size/2.0) );
   }
-  case WINDOW_HANNING:  return cosine_series1(size, k, 0.50, 0.50);    /* Hann */
+  case WINDOW_HANN:  return cosine_series1(size, k, 0.50, 0.50);    /* "Hanning" */
   case WINDOW_HAMMING:  return cosine_series1(size, k, 0.54, 0.46);
   case WINDOW_BLACKMAN: return cosine_series2(size, k, 0.42, 0.50, 0.08); /* per wikipedia */
   case WINDOW_BLACKMAN2: /* using Chebyshev polynomial equivalents here */
