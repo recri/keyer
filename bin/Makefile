@@ -19,7 +19,7 @@ all:: midicw
 
 OSC_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D
 midicw: midicw.c
-	$(CC) -std=gnu99 $(CFLAGS) $(OSC_CFLAGS) -o midicw midicw.c -lm -ljack -lpthread
+	$(CC) -std=gnu99 $(CFLAGS) $(OSC_CFLAGS) -o midicw midicw.c -lgsl -lgslcblas -lm -ljack -lpthread
 
 clean::
 	rm -f *~
