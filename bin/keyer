@@ -36,6 +36,21 @@ set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl]
 #
 package require sdrtcl::jack-client
 
+#
+# utilities
+#
+proc read-file {file} {
+    set fp [open $file r]
+    set data [read $fp]
+    close $fp
+    return $data
+}
+proc write-file {file data} {
+    set fp [open $file w]
+    puts -nonewline $fp $data
+    close $fp
+}
+
 # load an sdrtcl component
 # name is name1 or a name1@name2
 # name1 specifies the sdrtcl component
@@ -80,6 +95,8 @@ proc load-component {name} {
 	keyer-iambic-* { lappend ::data(keyer) $name2 }
 	keyer-ascii { lappend ::data(ascii) $name2 }
 	keyer-tone { lappend ::data(tone) $name2 }
+	keyer-detime { lappend ::data(detime) $name2 }
+	keyer-detone { lappend ::data(detone) $name2 }
     }
 }
 
@@ -186,6 +203,12 @@ proc populate-options {} {
 		-dict {
 		    # for the ascii keyer
 		}
+		-bandwidth {
+		    # for the unkeyer detone module
+		    # bandwidth BWHertz 100.0 100.0 bandwidth of output signal in Hz
+		    lappend ::data(options) $name $opt freq $ovalue \
+			[list -text "$name $opt" -info $info -units Hz -format %.0f -min 10 -max 1000 -step 1]
+		}
 		default {
 		    puts "$name $config [$name info option $opt]"
 		}
@@ -197,7 +220,7 @@ proc populate-options {} {
 proc update-window-title {} {
     foreach name [array names ::data] {
 	if {[string range $name end-3 end] eq {-wpm}} {
-	    wm title . $::data($name)
+	    wm title . "$::data($name) wpm"
 	    break
 	}
     }
@@ -251,18 +274,7 @@ proc dial-set-init {} {
 # could also be used to present the output from the manual key
 # or cw decoded from audio.
 #
-proc read-file {file} {
-    set fp [open $file r]
-    set data [read $fp]
-    close $fp
-    return $data
-}
-proc write-file {file data} {
-    set fp [open $file w]
-    puts -nonewline $fp $data
-    close $fp
-}
-proc text-window-timeout {} {
+proc text-window-timeout {w} {
     # I'm seeing available taking 50-60 units per character sent
     if {$::data(ascii-puts) ne {} && [$::data(ascii) available] > 8192/2} {
 	# set tbytes [string length $::data(ascii-puts)]
@@ -275,11 +287,11 @@ proc text-window-timeout {} {
 	# set avail1 [$::data(ascii) available]
 	# puts "put $tbytes=$rbytes+$sbytes bytes sent, $avail0 went to $avail1, [expr {double($avail0-$avail1)/$sbytes}] avail/byte"
     }
-    after 100 [list text-window-timeout]
+    after 100 [list text-window-timeout $w]
 }
-proc text-window-init {} {
+proc text-window-init {w} {
     set ::data(ascii-puts) {}
-    text-window-timeout
+    text-window-timeout $w
 }
 proc text-store-memory-selection {m} {
     dict set ::data(memory) $m [selection get]
@@ -340,6 +352,41 @@ proc text-widget {w} {
     bind $w <ButtonPress-3> [list text-option-menu $w %X %Y]
     return $w
 }
+
+#
+# read only text widget, receiving decoded morse
+#
+package require morse::morse
+package require morse::itu
+
+proc read-text-window-init {w} {
+    after 100 [list read-text-window-timeout $w]
+}
+proc read-text-window-timeout {w} {
+    #$w insert end [morse-to-text [morse-itu-dict] [$::data(detime) get]]
+    $w insert end [$::data(detime) get]\n
+    after 100 [list read-text-window-timeout $w]
+}
+proc read-text-save-file {w dolog} {
+    set filename [tk_getSaveFile -title {Log to file}]
+    if {$filename ne {}} {
+	write-file $filename [$w get 1.0 end]
+    }
+}
+proc read-text-option-menu {w x y} {
+    if { ! [winfo exists $w.m] } {
+	menu $w.m -tearoff no
+	$w.m add command -label {Save To File} -command [list read-text-save-file $w]
+	
+    }
+    tk_popup $w.m $x $y
+}
+proc read-text-widget {w} {
+    text $w -width 30 -height 15 -exportselection true
+    bind $w <ButtonPress-3> [list read-text-option-menu $w %X %Y]
+    return $w
+}
+
 proc load-ui {} {
     pack [ttk::panedwindow .p] -side top -fill both -expand true
     .p add [::sdrtk::dialbook .p.dial]
@@ -358,7 +405,11 @@ proc load-ui {} {
     }
     if {[info exists ::data(ascii)] && [llength $::data(ascii)] == 1} {
 	.p add [text-widget .p.text]
-	text-window-init
+	text-window-init .p.text
+    }
+    if {[info exists ::data(detime)] && [llength $::data(detime)] == 1} {
+	.p add [read-text-widget .p.rcvd]
+	read-text-window-init .p.rcvd
     }
 }
 
