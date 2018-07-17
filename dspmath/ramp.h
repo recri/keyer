@@ -37,13 +37,36 @@ static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int sample
   if (r->target < 1) r->target = 1;
   if ((r->target & 1) == 0) r->target += 1;
   r->current = 0;
-  r->ramp = realloc(r->ramp, r->target*sizeof(float));
+  float *ramp = r->ramp = realloc(r->ramp, r->target*sizeof(float));
   int off = do_rise ? 0 : r->target-1;
-  for (int i = 0; i < r->target; i += 1) {
-    r->ramp[i] = window_get(window, 2*r->target-1, i+off);
-    // printf(" %.5f", r->ramp[i]);
+  for (int i = 0; i < r->target; i += 1)
+    ramp[i] = window_get(window, 2*r->target-1, i+off);
+  if (do_rise) {
+    // torture the initial sample weight to be zero
+    if (ramp[0] != 0) {
+      float fudge = ramp[0];
+      for (int i = 0; i < r->target; i += 1)
+	ramp[i] -= fudge;
+    }
+    // torture the final sample weight to be 1
+    if (ramp[r->target-1] != 1) {
+      float fudge = 1.0 / ramp[r->target-1];
+      for (int i = 0; i < r->target; i += 1)
+	ramp[i] *= fudge;
+    }
+  } else {
+    // torture the final sample into a 0
+    if (ramp[r->target-1] != 0) {
+      float fudge = ramp[r->target-1];
+      for (int i = 0; i < r->target; i += 1)
+	ramp[i] -= fudge;
+    }
+    if (ramp[0] != 1) {
+      float fudge = 1 / ramp[0];
+      for (int i = 0; i < r->target; i += 1)
+	ramp[i] *= fudge;
+    }
   }
-  // printf("\n");
 }
 
 static void ramp_init(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {
