@@ -1,0 +1,16 @@
+I just wrote filename/procedurename and
+thought of having the ability to run parts of scripts
+just like that from the shell command line.
+Earlier thinking of being in a text file and
+having earlier lines structured as name: value
+being accessible as variables ${name} like.
+
+There are dozens of scripting languages in use
+which could be parsed on the fly and mounted
+to extend the file system to see the structured
+data of the file as functions and variables and
+classes.
+
+Tcl is particularly easy to see this way as a
+shell extension, since the syntax of Tcl matches
+much of the shell syntax.

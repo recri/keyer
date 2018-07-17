@@ -80,6 +80,25 @@ snit::widget sdrtk::readout-enum {
 	    return [list cascade -label $text -menu $m]
 	}
     }
+    method button-entry {m text} {
+	if {[llength $options(-values)] == 2 && {0} in $options(-values) && {1} in $options(-values)} {
+	    # simple checkbutton
+	    return [ttk::checkbutton $m -text $text -variable [myvar options(-menu-value)]]
+	} else {
+	    # cascade to radiobuttons
+	    ttk::menubutton $m -text $text
+	    if { ! [winfo exists $m.m]} {
+		menu $m.m -tearoff no -font {Helvetica 12 bold}
+	    } else {
+		$m.m delete 0 end
+	    }
+	    $m configure -menu $m.m
+	    foreach v $options(-values) {
+		$m.m add radiobutton -label $v -value $v -variable [myvar options(-menu-value)]
+	    }
+	    return $m
+	}
+    }
 
     method Display {} {
 	set value $options(-value)

@@ -64,6 +64,7 @@ snit::widget sdrtk::readout-value {
     }
 
     method menu-entry {w text} { return {} }
+    method button-entry {w text} { return {} }
     
     method Display {} {
 	set value [format $options(-format) [expr {double($options(-value))*$options(-scale)+$options(-offset)}]]

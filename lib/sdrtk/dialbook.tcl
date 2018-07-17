@@ -51,19 +51,30 @@ snit::widgetadaptor sdrtk::dialbook-tab {
     delegate option -underline to hull
 
     variable data -array {}
-
+    
     constructor {window args} {
 	# the hull is the label displayed for tab selection
 	installhull using ttk::label
 	set data(window) $window
 	$self configure {*}$args
+	# puts "dialbook create tab window {$window} text {[$self cget -text]} self {$self}"
+	# create button here
+	# create menu here
     }
 
     destructor {
     }
 
-    method menu-entry {w text} { return [$data(window) menu-entry $w $text] }
-    
+    method menu-entry {w text} { 
+	return [$data(window) menu-entry $w $text]
+    }
+    method button-entry {w text} { 
+	if { ! [winfo exists $w] } {
+	    $data(window) button-entry $w $text
+	}
+	return $w
+    }
+
     method get-text {} { return [$hull cget -text] }
     method get-window {} { return $data(window) }
     method get-label {} { return $win }
@@ -72,6 +83,7 @@ snit::widgetadaptor sdrtk::dialbook-tab {
 snit::widget sdrtk::dialbook {
     component tab
     component dial
+    component grid
     option -class undefined
     option {-cursor cursor Cursor} {}
     option {-style style Style} {}
@@ -95,14 +107,18 @@ snit::widget sdrtk::dialbook {
 	displayed {}
 	menu false
 	counter 0
+	button {}
     }
 
     constructor {args} {
 	install tab using ttk::frame $win.tab
 	install dial using sdrtk::dial $win.dial
+	install grid using ttk::frame $win.grid
+	
 	$self configure {*}$args
-	grid $win.tab -row 0
-	grid $win.dial -row 1 -sticky nsew
+	grid $win.tab -row 0 -column 0 -columnspan 2 -sticky ew
+	grid $win.dial -row 1 -column 0 -sticky nsew
+	grid $win.grid -row 1 -column 1 -sticky nsew
 	bind $win.dial <<DialCW>> [mymethod Adjust 1]
 	bind $win.dial <<DialCCW>> [mymethod Adjust -1]
 	bind $win.dial <<DialPress>> [mymethod Press]
@@ -130,6 +146,7 @@ snit::widget sdrtk::dialbook {
 	}
 	lappend data(tabs) [$self NewTab $window {*}$args]
 	$self UpdateLists
+	$self LayoutGrid
     }
 
     # Removes the tab specified by tabid, unmaps and unmanages the associated window.
@@ -308,7 +325,9 @@ snit::widget sdrtk::dialbook {
 		# puts "$atab menu-entry -> {[$atab menu-entry $text]}"
 		set menu [$atab menu-entry $win.menu.m$i $text]
 		if {$menu eq {}} {
-		    $win.menu add radiobutton -label $text -value $atab -variable [myvar data(menu-select)] -command [mymethod MenuInvoke $atab]
+		    $win.menu add radiobutton -label $text \
+			-value $atab -variable [myvar data(menu-select)] \
+			-command [mymethod MenuInvoke $atab]
 		} else {
 		    $win.menu add {*}$menu
 		    incr i
@@ -392,6 +411,43 @@ snit::widget sdrtk::dialbook {
 	$self UpdateLists
     }
 
+    proc makewname {w} {
+	# this comes from set w x$comp:$opt in keyer/load-ui
+	set result [lindex [split [$w get-window] .] end]
+	# puts "makewname $w: label [$w get-label] window [$w get-window] text [$w get-text] result $result"
+	return $result
+    }
+
+    method LayoutGrid {} {
+	set row 0; set col 0; set maxrow 8
+	foreach atab $data(tabs) {
+	    set button $win.grid.[makewname $atab]
+	    if { ! [winfo exist $button] } {
+		$atab button-entry $button [$atab get-text]
+		if { ! [winfo exist $button] } {
+		    ttk::radiobutton $button -text [$atab get-text] \
+			-value $atab -variable [myvar data(menu-select)] \
+			-command [mymethod MenuInvoke $atab]
+		    if { ! [winfo exist $button] } {
+			error "no window for $button"
+		    }
+		}
+	    }
+	    bind $button <Enter> [mymethod EnterTab $atab]
+	    bind $button <Leave> [mymethod LeaveTab $atab]
+	    grid $button -row $row -column $col -sticky ew
+	    if {[incr row] > $maxrow} { set row 0; incr col }
+	}
+    }
+    method EnterTab {atab} {
+	#puts "EnterTab $atab"
+	$self DisplayTab $atab
+    }
+    method LeaveTab {atab} {
+	#puts "LeaveTab $atab"
+	$self UpdateCurrent
+    }
+
     method UpdateLists {} {
 	set data(wd) 0
 	set data(ht) 0
@@ -406,10 +462,10 @@ snit::widget sdrtk::dialbook {
 	}
 	set data(wd) [tcl::mathfunc::max {*}$data(wd)]
 	set data(ht) [tcl::mathfunc::max {*}$data(ht)]
+	grid columnconfigure $win.tab 0 -minsize $data(wd)
+	grid rowconfigure $win.tab 0 -minsize $data(ht)
 	# puts "$self UpdateLists tabs $data(tabs) wd $data(wd) ht $data(ht)"
-	if { ! $data(menu)} {
-	    $self UpdateCurrent
-	}
+	# if { ! $data(menu)} { $self UpdateCurrent }
     }
 
     method UpdateCurrent {} {
