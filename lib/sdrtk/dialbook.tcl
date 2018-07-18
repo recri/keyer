@@ -23,6 +23,15 @@
 # this manages a group of tabs associated with a rotary encoder
 # controller.
 #
+# initially planned to use the rotary encoder to select options to dial
+# as well as option value, but never got the finite set select properly
+# done so reverted to checkbuttons, radiobuttons, and menubuttons in a
+# grid.  Need to go back to the original plan sometime.  Make it work 
+# with keyboard focus, Enter to select the menu of options, Up and Down
+# to select the option, Enter to pick the option, Up and Down to select
+# the option value, possibly with Ctrl Meta Super Shift prefixes to accelerate.
+
+#
 package provide sdrtk::dialbook 1.0
 
 package require Tk

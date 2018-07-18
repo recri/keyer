@@ -1,0 +1,17 @@
+This release of Tcl/Tk on a high resolution monitor is very hard to read.
+
+I've set the UI scaling to 275% in the system settings>devices>display and
+most of Gnome is honoring that scaling, but Tk is drawing microscopic indicators
+on radiobutton and checkbutton menu entries.  I've hacked the ttk::radiobutton and
+ttk::checkbutton to increase -indicator-radius, and that works for the buttons, but
+I need to know what the scaling is set to on the current system or I'll blow up the
+UI on a low resolution device.
+
+There used to be a value:
+	dconf get /com/ubuntu/user-interface/scaling-factor
+which was an integer scale in units of 8th's, but that directory no longer exists
+for dconf.
+
+People have pointed to:
+	gsettings get org.gnome.desktop.interface scaling-factor
+as the gnome equivalent, but that returns a 0 on my system.

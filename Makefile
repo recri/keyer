@@ -13,6 +13,8 @@ all::
 	cd dbif-$(VSN_DBIF) && cp dbif.tcl ../lib/sdrutil
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) all); done
 
+make:: all
+
 clean::
 	@find . -name '*~' -exec rm -f \{} \;
 	cd dbus-$(VSN_DBUS) && make clean

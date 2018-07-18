@@ -333,18 +333,21 @@ proc text-window-init {w} {
     set ::data(ascii-puts) {}
     text-window-timeout $w
 }
-proc text-store-memory-selection {m} {
-    dict set ::data(memory) $m [selection get]
-}
-proc text-send-memory {m} {
-    append ::data(ascii-puts) [dict get $::data(memory) $m]
-}
-proc text-send-selection {} {
-    append ::data(ascii-puts) [selection get]
+proc text-send {w text} {
+    append ::data(ascii-puts) $text
 }
 proc text-stop-sending {} {
     set ::data(ascii-puts) {}
     [get-ascii] abort
+}
+proc text-store-memory-selection {m} {
+    dict set ::data(memory) $m [selection get]
+}
+proc text-send-memory {m} {
+    text-send $w [dict get $::data(memory) $m]
+}
+proc text-send-selection {w} {
+    text-send $w [selection get]
 }
 proc text-load-file {w} {
     set filename [tk_getOpenFile -title {Insert from file}]
@@ -354,15 +357,19 @@ proc text-load-file {w} {
 }
 proc text-send-file {w} {
     set filename [tk_getOpenFile -title {Send from file}]
-    if {$filename ne {}} {
-	append ::data(ascii-puts) [read-file $filename]
-    }
+    if {$filename ne {}} { text-send $w [read-file $filename] }
 }
 proc text-save-file {w} {
     set filename [tk_getSaveFile -title {Save to file}]
-    if {$filename ne {}} {
-	write-file $filename [$w get 1.0 end]
-    }
+    if {$filename ne {}} { write-file $filename [$w get 1.0 end] }
+}
+proc text-insert-command-line {w} {
+    $w insert current [build-command-line]
+}
+proc text-send-line {w} {
+    set i0 [$w index {current linestart}]
+    set i1 [$w index current]
+    text-send $w [$w get $i0 $i1]
 }
 proc text-option-menu {w x y} {
     if { ! [winfo exists $w.m] } {
@@ -373,7 +380,7 @@ proc text-option-menu {w x y} {
 	    $w.m.s add command -label "Mem $m" -command [list text-store-memory-selection $m]
 	    $w.m.r add command -label "Mem $m" -command [list text-send-memory $m]
 	}
-	$w.m add command -label {Send Selection} -command [list text-send-selection]
+	$w.m add command -label {Send Selection} -command [list text-send-selection $w]
 	$w.m add separator
 	$w.m add cascade -label {Send Saved} -menu $w.m.r
 	$w.m add cascade -label {Save Selection} -menu $w.m.s
@@ -382,18 +389,27 @@ proc text-option-menu {w x y} {
 	$w.m add command -label {Insert From File} -command [list text-load-file $w]
 	$w.m add command -label {Save To File} -command [list text-save-file $w]
 	$w.m add separator
-	$w.m add command -label {Stop Sending} -command [list text-stop-sending]
+	$w.m add command -label {Stop Sending} -command [list text-stop-sending $w]
 	$w.m add separator
-	$w.m add command -label {Command Line} -command [list build-command-line]
+	$w.m add command -label {Insert Command Line} -command [list text-insert-command-line $w]
+	$w.m add command -label {Help} -command [list text-help $w]
     }
     tk_popup $w.m $x $y
 }
 proc text-widget {w} {
     text $w -width 30 -height 15 -undo true -exportselection true
     bind $w <ButtonPress-3> [list text-option-menu $w %X %Y]
+    bind $w <Key-Return> +[list text-send-line $w]
     return $w
 }
-
+proc text-help {w} {
+    foreach tag [bind $w] {
+	puts "$tag [bind $w $tag]"
+    }
+    foreach tag [bind Text]] {
+	puts "$tag [bind Text $tag]"
+    }
+}
 #
 # read only text widget, receiving decoded morse
 #
