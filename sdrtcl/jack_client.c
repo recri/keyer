@@ -23,6 +23,7 @@
 
 typedef struct {
   framework_t fw;
+  jack_session_event_t *session_event;
 } _t;
 
 static int _list_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -177,15 +178,55 @@ static int _disconnect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
 ** okay, so there's one command to establish a session api monitor, it is passed
 ** the command name and arguments that launched the app which it squirrels away.
 ** it establishes a session callback and manages the client uuid.  When the session
-** event arrives, it stores a point into its client data structure.  Meanwhile, there
+** event arrives, it stores a pointer into its client data structure.  Meanwhile, there
 ** is an after loop running in the main app which polls for session events, when it
 ** gets one, it acts on it.
 */
-int 	jack_set_session_callback (jack_client_t *client, JackSessionCallback session_callback, void *arg) JACK_WEAK_EXPORT
-int 	jack_session_reply (jack_client_t *client, jack_session_event_t *event) JACK_WEAK_EXPORT
-void 	jack_session_event_free (jack_session_event_t *event) JACK_WEAK_EXPORT
-char * 	jack_client_get_uuid (jack_client_t *client) JACK_WEAK_EXPORT
+// int jack_set_session_callback (jack_client_t *client, JackSessionCallback session_callback, void *arg) JACK_WEAK_EXPORT
+// int jack_session_reply (jack_client_t *client, jack_session_event_t *event) JACK_WEAK_EXPORT
+// void jack_session_event_free (jack_session_event_t *event) JACK_WEAK_EXPORT
+// char *jack_client_get_uuid (jack_client_t *client) JACK_WEAK_EXPORT
 #endif
+void _session_callback( jack_session_event_t *event, void *arg ) {
+  _t *dp = (_t *)arg;
+  // post the session event to the command data
+  dp->session_event = event;
+}
+static int _session_register(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *dp = (_t *)clientData;
+  if (argc != 2) return fw_error_str(interp, "jack-client session-register"); 
+  // make sure that the session event pointer is null
+  dp->session_event = NULL;
+  // register a session callback
+  jack_set_session_callback (dp->fw.client, _session_callback, (void *)dp);
+  return TCL_OK;
+}
+static int _session_poll(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *dp = (_t *)clientData;
+  if (argc != 2) return fw_error_str(interp, "jack-client session-event-poll");
+  // if there is a session_event, return the type, the uuid and the session_dir in a list
+  if (dp->session_event != NULL) {
+    Tcl_Obj *result[] = {
+      Tcl_NewIntObj(dp->session_event->type), 
+      Tcl_NewStringObj(dp->session_event->client_uuid, -1),
+      Tcl_NewStringObj(dp->session_event->session_dir, -1),
+      NULL
+    };
+    Tcl_SetObjResult(interp, Tcl_NewListObj(3, result));
+  }
+  return TCL_OK;
+}
+static int _session_reply(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *dp = (_t *)clientData;
+  if (argc != 3) return fw_error_str(interp, "jack-client session-event-reply command-line"); 
+  dp->session_event->command_line = Tcl_GetString(objv[2]);
+  jack_session_reply(dp->fw.client, dp->session_event);
+  dp->session_event->command_line = NULL;
+  jack_session_event_free(dp->session_event);
+  dp->session_event = NULL;
+  return TCL_OK;
+}
+
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return framework_command(clientData, interp, argc, objv);
 }
@@ -213,6 +254,9 @@ static const fw_subcommand_table_t _subcommands[] = {
   { "list-ports", _list_ports,  "get a list of the ports open on the jack server" },
   { "connect", _connect,        "connect ports on the jack server" },
   { "disconnect", _disconnect,  "disconnect ports on the jack server" },
+  { "session-register", _session_register, "register for jack session management" },
+  { "session-poll", _session_poll, "poll for receipt of a jack_session_event" },
+  { "session-reply", _session_reply, "reply to a jack_session_event" },
   { NULL }
 };
 
@@ -227,7 +271,6 @@ static const framework_t _template = {
   0, 0, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component that interacts with a Jack server"
 };
-
 
 // the command which returns jack client information
 // and implements port management

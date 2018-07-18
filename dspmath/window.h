@@ -29,6 +29,7 @@
 #include <gsl/gsl_sf_bessel.h>
 
 typedef enum {
+  WINDOW_NONE = -1,
   WINDOW_RECTANGULAR = 0, 
   WINDOW_HANN = 1,		/* "Hanning" */
   WINDOW_WELCH = 2,
@@ -63,6 +64,7 @@ typedef enum {
 /* these can be listed in any order */
 /* unimplemented windows are commented out */
 static fw_option_custom_t window_mode_custom_option[] = {
+  { "none", WINDOW_NONE },
   { "rectangular", WINDOW_RECTANGULAR },
   { "hann", WINDOW_HANN },
   { "welch", WINDOW_WELCH },
@@ -216,13 +218,6 @@ static float window_get(const window_type_t type, const int size, int k) {
   case WINDOW_EXPONENTIAL_30:   return exponential(size, k, 30); /* decays 30 dB over half window */
   case WINDOW_EXPONENTIAL_60:   return exponential(size, k, 60); /* decays 60 dB over half window */
   case WINDOW_EXPONENTIAL_90:   return exponential(size, k, 90); /* decays 90 dB over half window */
-  case WINDOW_RIEMANN: {
-    const int midn = size >> 1;
-    if (midn == k) return 1.0;
-    if (k > midn) k = size-1 - k;
-    const double cx = (midn - k) * dtwo_pi / size;
-    return sin(cx) / cx;
-  }
   case WINDOW_BLACKMAN_HARRIS:  return cosine_series3(size, k, 0.3587500, 0.4882900, 0.1412800, 0.0116800);
   case WINDOW_BLACKMAN_NUTTALL: return cosine_series3(size, k, 0.3635819, 0.4891775, 0.1365995, 0.0106411);
   case WINDOW_NUTTALL:          return cosine_series3(size, k, 0.3557680, 0.4873960, 0.1442320, 0.0126040);
@@ -242,12 +237,36 @@ static float window_get(const window_type_t type, const int size, int k) {
     const float alpha = 3;
     return gsl_sf_bessel_I0(pi * alpha * sqrt(1 - square(2.0 * k / (size-1)))) / gsl_sf_bessel_I0(pi * alpha);
   }
+  case WINDOW_RIEMANN: {
+    const int midn = size >> 1;
+    if (midn == k) return 1.0;
+    if (k > midn) k = size-1 - k;
+    const double cx = (midn - k) * dtwo_pi / size;
+    return sin(cx) / cx;
+  }
   case WINDOW_LANCZOS:          return sinc(2.0*k/(size-1) - 1.0);
   default:			return 0.0;
   }
 }
+static float window_get2(const window_type_t type1, const window_type_t type2, const int size, int k) {
+  float val = 0;
+  if (type1 != WINDOW_NONE) {
+    val = window_get(type1, size, k);
+    if (type2 != WINDOW_NONE) {
+      val *= window_get(type2, size, k);
+    }
+  }
+  return val;
+}
+static void window_make2(const window_type_t type1, const window_type_t type2, const int size, float *window) {
+  if (type1 == WINDOW_NONE)
+    for (int i = 0; i < size; i++) window[i] = 0;
+  else if (type2 == WINDOW_NONE)
+    for (int i = 0; i < size; i++) window[i] = window_get(type1, size, i);
+  else
+    for (int i = 0; i < size; i++) window[i] = window_get(type1, size, i) * window_get(type2, size, i);
+}
 static void window_make(const window_type_t type, const int size, float *window) {
-  for (int i = 0; i < size; i++)
-    window[i] = window_get(type, size, i);
+  return window_make2(type, WINDOW_NONE, size, window);
 }
 #endif

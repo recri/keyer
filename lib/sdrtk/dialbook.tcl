@@ -117,8 +117,8 @@ snit::widget sdrtk::dialbook {
 	
 	$self configure {*}$args
 	grid $win.tab -row 0 -column 0 -columnspan 2 -sticky ew
-	grid $win.dial -row 1 -column 0 -sticky nsew
-	grid $win.grid -row 1 -column 1 -sticky nsew
+	grid $win.grid -row 1 -column 0 -sticky nsew
+	grid $win.dial -row 1 -column 1 -sticky nsew
 	bind $win.dial <<DialCW>> [mymethod Adjust 1]
 	bind $win.dial <<DialCCW>> [mymethod Adjust -1]
 	bind $win.dial <<DialPress>> [mymethod Press]
@@ -212,11 +212,12 @@ snit::widget sdrtk::dialbook {
 	    }
 	    return {}
 	}
-	set current [$self Tab $tabid]
+	set current [$self FindTab $tabid]
 	if {$current eq {}} {
 	    return
 	}
 	set data(current) $current
+	set data(menu-select) $current
 	$self UpdateCurrent
     }
 
@@ -401,7 +402,7 @@ snit::widget sdrtk::dialbook {
 	    grid forget [$data(displayed) get-window]
 	}
 	set data(displayed) $atab
-	grid [$atab get-window] -in $win.tab -sticky [$atab cget -sticky] -row 0 -column 0
+	grid [$atab get-window] -in $win.tab -sticky ew -row 0 -column 0
 	grid columnconfigure $win.tab 0 -minsize $data(wd)
 	grid rowconfigure $win.tab 0 -minsize $data(ht)
     }

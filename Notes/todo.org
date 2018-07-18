@@ -151,3 +151,4 @@
 ** TODO - sdrkit_jack.c: provide missing jack status information.
 ** TODO - bin/invaders: callsign-invaders ear/key training game.
 ** TODO - keyer_skimmer.c: to identify active frequencies in passband and start keyer_detone -> keyer_decode -> ascii.
+** TODO - component -configure -option should return the configuration table row for -option

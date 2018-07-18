@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 /*
-** Arbitrary window function ramp
+** Arbitrary window or window product function ramp
 */
 typedef struct {
   int target;			/* sample length of ramp */
@@ -31,7 +31,7 @@ typedef struct {
   float *ramp;			/* ramp values */
 } ramp_t;
 
-static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {
+static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int window2, int samples_per_second) {
   // printf("ramp_update do_rise=%d, ms=%f, window=%d, sr=%d\n", do_rise, ms, window, samples_per_second);
   r->target = samples_per_second * (ms / 1000.0f);
   if (r->target < 1) r->target = 1;
@@ -40,7 +40,7 @@ static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int sample
   float *ramp = r->ramp = realloc(r->ramp, r->target*sizeof(float));
   int off = do_rise ? 0 : r->target-1;
   for (int i = 0; i < r->target; i += 1)
-    ramp[i] = window_get(window, 2*r->target-1, i+off);
+    ramp[i] = window_get2(window, window2, 2*r->target-1, i+off);
   if (do_rise) {
     // torture the initial sample weight to be zero
     if (ramp[0] != 0) {
@@ -69,9 +69,9 @@ static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int sample
   }
 }
 
-static void ramp_init(ramp_t *r, int do_rise, float ms, int window, int samples_per_second) {
+static void ramp_init(ramp_t *r, int do_rise, float ms, int window, int window2, int samples_per_second) {
   r->ramp = NULL;
-  ramp_update(r, do_rise, ms, window, samples_per_second);
+  ramp_update(r, do_rise, ms, window, window2, samples_per_second);
 }
 
 static void ramp_start(ramp_t *r) {

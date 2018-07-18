@@ -86,7 +86,7 @@ snit::widget sdrtk::readout-value {
 	if {$options(-value) != $val} {
 	    set options(-value) $val
 	    if {$options(-variable) ne {}} { set $options(-variable) $val }
-	    if {$options(-command) ne {}} { {*}$options(-command) $val }
+	    if {$options(-command) ne {}} { {*}$options(-command) [format $options(-format) $val] }
 	    $self Display
 	}
     }

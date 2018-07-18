@@ -67,7 +67,8 @@ static void *_init(void *arg) {
   if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
   // dp->opts.chan = 1;
   // dp->opts.note = 0;
-  void *p = keyed_tone_init(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall, dp->opts.window, sdrkit_sample_rate(arg));
+  void *p = keyed_tone_init(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall,
+			    dp->opts.window, dp->opts.window2, sdrkit_sample_rate(arg));
   if (p != &dp->tone) return p;
   return arg;
 }
@@ -82,7 +83,8 @@ static void _update(void *arg) {
     if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _update fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.fall);
     if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _update rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
     dp->modified = dp->fw.busy = 0;
-    keyed_tone_update(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall, dp->opts.window, sdrkit_sample_rate(arg));
+    keyed_tone_update(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall, 
+		      dp->opts.window, dp->opts.window2, sdrkit_sample_rate(arg));
   }
 }
 
