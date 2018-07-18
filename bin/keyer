@@ -169,7 +169,7 @@ proc populate-component-options {component name} {
 	    }
 	    -wpm {
 		lappend ::data(options) $name $opt value $ovalue \
-		    [list -text $opt -info $info -format %.0f -units wpm -min 5.0 -max 200.0 -step 0.5]
+		    [list -text $opt -info $info -format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5]
 	    }
 	    -swap - -mdit - -mdah - -mide - -alsp - -awsp {
 		lappend ::data(options) $name $opt enum $ovalue [list -text $opt -info $info -values {0 1}]

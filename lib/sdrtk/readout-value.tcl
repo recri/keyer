@@ -58,7 +58,7 @@ snit::widget sdrtk::readout-value {
     }
     
     method adjust {step} {
-	#puts "$self adjust $step: $options(-value) +  $step * $options(-step)"
+	# puts "$self adjust $step: $options(-value) +  $step * $options(-step)"
 	set newvalue [$self bound [expr {$options(-value)+$step*$options(-step)}]]
 	$self configure -value $newvalue
     }

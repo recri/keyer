@@ -253,14 +253,18 @@ snit::widget sdrtk::dialbook {
     ##
     ##
     method Adjust {step} {
-	#puts "$self Adjust $step"
+	#puts "$self Adjust $step for $data(current) menu $data(menu)"
 	$dial Rotate $step
 	if {$data(menu)} {
 	    
 	} else {
-	    if {$data(current) ne {}} { [$data(current) get-window] adjust $step }
+	    if {$data(current) ne {}} {
+		# puts "$self Adjust $step [$data(current) get-window] adjust $step"
+		[$data(current) get-window] adjust $step 
+	    }
 	}
     }
+
     # since tk on ubuntu 18.04 is using microscopic check/radio/cascade markers
     # rewrite the labels of this menu to do the job
     # ack, tk has totally microscopic check and radio and cascade menu markers
