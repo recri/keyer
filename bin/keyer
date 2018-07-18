@@ -57,12 +57,17 @@ proc write-file {file data} {
 #
 proc get-server {} { return [dict get $::data(main) -server] }
 proc get-uuid {} { return [dict get $::data(main) -uuid] }
+proc has-dial {} { return 1 }
 proc get-ascii {} { return [dict get $::data(main) -ascii] }
 proc set-ascii {name} { dict set ::data(main) -ascii $name }
 proc has-ascii {} { return [dict exists $::data(main) -ascii] }
+proc has-memories {} { return 0 }
 proc get-detime {} { return [dict get $::data(main) -detime] }
 proc set-detime {name} { dict set ::data(main) -detime $name }
 proc has-detime {} { return [dict exists $::data(main) -detime] }
+proc get-insert {} { return [dict get $::data(main) -insert] }
+proc set-insert {name} { dict set ::data(main) -insert $name }
+proc has-insert {} { return [dict exists $::data(main) -insert] }
 
 # load an sdrtcl component
 # name is name1 or a name1@name2
@@ -255,16 +260,42 @@ proc prefer-component-options {{prefs {-wpm -swap -mode -freq -gain -rise -fall 
 }
 
 #
+# control window.
+# this one line frame controls which other windows are displayed
+# and acts as a focus target for controlling the keyer while 
+# minimized.
+#
+proc keyer-widget {w} {
+    ttk::frame $w
+    foreach {tag text} {
+	dial Settings
+	insert Keys
+	memories Memories
+	ascii {Input Text}
+	detime {Output Text}
+    } {
+	if {[has-$tag]} {
+	    ttk::checkbutton $w.$tag -text $text -variable ::data(show-$tag) -command [list keyer-widget-show $w $tag]
+	    pack $w.$tag -side left
+	}
+    }
+    return $w
+}
+proc keyer-widget-show {w tag} {
+    if {$::data(show-$tag)} {
+	.p add .p.$tag
+    } else {
+	.p forget .p.$tag
+    }
+}
+#
 # dial setting
 #
-
 proc update-window-title {} {
-    
-    foreach name [array names ::data] {
-	if {[string range $name end-3 end] eq {-wpm}} {
-	    wm title . "$value(-wpm) wpm"
-	    break
-	}
+    if {$::value(-window2) ne {none}} {
+	wm title . "keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
+    } else {
+	wm title . "keyer $::value(-wpm) wpm $::value(-window)"
     }
 }
 
@@ -315,6 +346,22 @@ proc dial-set-init {} {
 }
 
 #
+# insert window management
+# a simple frame which, when focused, generates key events
+# for control, alt, and shift keys
+#
+proc insert-widget {w} {
+    ttk::frame $w
+    grid [label $w.dit -text Dit] -row 0 -column 0 -sticky ew
+    grid [label $w.dah -text Dah] -row 0 -column 1 -sticky ew
+    grid [label $w.key -text Key] -row 0 -column 2 -sticky ew
+    bind $w <Button-3> [list insert-widget-menu $w %X %Y]
+    return $w
+}
+proc insert-widget-menu {w x y} {
+}
+
+#
 # text window management
 # text window is for preparing text to send to the ascii-keyer
 # could also be used to present the output from the manual key
@@ -328,10 +375,6 @@ proc text-window-timeout {w} {
 	[get-ascii] puts [string toupper $text]
     }
     after 100 [list text-window-timeout $w]
-}
-proc text-window-init {w} {
-    set ::data(ascii-puts) {}
-    text-window-timeout $w
 }
 proc text-send {w text} {
     append ::data(ascii-puts) $text
@@ -400,6 +443,8 @@ proc text-widget {w} {
     text $w -width 30 -height 15 -undo true -exportselection true
     bind $w <ButtonPress-3> [list text-option-menu $w %X %Y]
     bind $w <Key-Return> +[list text-send-line $w]
+    set ::data(ascii-puts) {}
+    text-window-timeout $w
     return $w
 }
 proc text-help {w} {
@@ -410,18 +455,16 @@ proc text-help {w} {
 	puts "$tag [bind Text $tag]"
     }
 }
+
 #
 # read only text widget, receiving decoded morse
 #
 package require morse::morse
 package require morse::itu
 
-proc read-text-window-init {w} {
-    after 100 [list read-text-window-timeout $w]
-}
 proc read-text-window-timeout {w} {
-    #$w insert end [morse-to-text [morse-itu-dict] [$::data(detime) get]]
-    $w insert end [$::data(detime) get]\n
+    #$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
+    $w insert end [[get-detime] get]\n
     after 100 [list read-text-window-timeout $w]
 }
 proc read-text-save-file {w dolog} {
@@ -441,10 +484,15 @@ proc read-text-option-menu {w x y} {
 proc read-text-widget {w} {
     text $w -width 30 -height 15 -exportselection true
     bind $w <ButtonPress-3> [list read-text-option-menu $w %X %Y]
+    after 100 [list read-text-window-timeout $w]
     return $w
 }
 
+#
+# load the entire ui for the program
+#
 proc load-ui {} {
+    pack [keyer-widget .k] -side top -fill x -expand true
     pack [ttk::panedwindow .p] -side top -fill both -expand true
     .p add [::sdrtk::dialbook .p.dial]
     foreach {comp opt type value opts} $::data(options) {
@@ -469,17 +517,20 @@ proc load-ui {} {
 	.p.dial add .p.dial.$w -text [.p.dial.$w cget -text]
     }
     if {[.p.dial select] eq {}} { .p.dial select 0 }
+    set ::data(show-dial) 1
     # puts "current dialbook selection {[.p.dial select]} of {[.p.dial tabs]}"
+    if {[has-insert]} { 
+	.p add [insert-widget .p.insert]
+	set ::data(show-insert) 1
+    }
+    # memories-widget
     if {[has-ascii]} {
-	set ascii [dict get $::data(main) -ascii]
-	if {[llength $ascii] == 1} {
-	    .p add [text-widget .p.text]
-	    text-window-init .p.text
-	}
+	.p add [text-widget .p.ascii]
+	set ::data(show-ascii) 1
     }
     if {[has-detime]} {
-	.p add [read-text-widget .p.rcvd]
-	read-text-window-init .p.rcvd
+	.p add [read-text-widget .p.detime]
+	set ::data(show-detime) 1
     }
 }
 
@@ -541,6 +592,7 @@ proc main {argv} {
 		dict lappend ::data(main) -start $val
 		# remember if this is special
 		switch -glob $component {
+		    midi-insert { set-insert $name2 }
 		    keyer-ascii { set-ascii $name2 }
 		    keyer-detime { set-detime $name2 }
 		}

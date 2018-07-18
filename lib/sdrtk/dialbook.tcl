@@ -125,9 +125,12 @@ snit::widget sdrtk::dialbook {
 	install grid using ttk::frame $win.grid
 	
 	$self configure {*}$args
-	grid $win.tab -row 0 -column 0 -columnspan 2 -sticky ew
-	grid $win.grid -row 1 -column 0 -sticky nsew
-	grid $win.dial -row 1 -column 1 -sticky nsew
+	pack $win.tab -side top -fill x -expand true
+	# grid $win.tab -row 0 -column 0 -columnspan 2 -sticky ew
+	pack $win.grid -side left -fill both -expand true
+	#grid $win.grid -row 1 -column 0 -sticky nsew
+	pack $win.dial -side right
+	#grid $win.dial -row 1 -column 1 -sticky nsew
 	bind $win.dial <<DialCW>> [mymethod Adjust 1]
 	bind $win.dial <<DialCCW>> [mymethod Adjust -1]
 	bind $win.dial <<DialPress>> [mymethod Press]
