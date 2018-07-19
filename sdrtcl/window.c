@@ -32,33 +32,39 @@
 /*
 ** create fft and filter windows.
 */
-static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  // check for usage
-  if (argc != 3) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s type size", Tcl_GetString(objv[0])));
-  char *type_name = Tcl_GetString(objv[1]);
-  int itype = -1;
+static int _get_window(Tcl_Interp *interp, const char *type_name, int *itype) {
+  *itype = -1;
   for (int i = 0; window_mode_custom_option[i].name != NULL; i += 1)
     if (strcmp(window_mode_custom_option[i].name, type_name) == 0) {
-      itype = window_mode_custom_option[i].value;
-      break;
+      *itype = window_mode_custom_option[i].value;
+      return TCL_OK;
     }
-  if (itype < 0) {
-    Tcl_AppendResult(interp, "unknown window type, should be one of ", NULL);
-    for (int i = 0; window_mode_custom_option[i].name != NULL; i += 1) {
-      if (i > 0) {
-	Tcl_AppendResult(interp, ", ", NULL);
-	if (window_mode_custom_option[i+1].name == NULL)
-	  Tcl_AppendResult(interp, "or ", NULL);
-      }
-      Tcl_AppendResult(interp, window_mode_custom_option[i].name, NULL);
+  Tcl_AppendResult(interp, "unknown window type, should be one of ", NULL);
+  for (int i = 0; window_mode_custom_option[i].name != NULL; i += 1) {
+    if (i > 0) {
+      Tcl_AppendResult(interp, ", ", NULL);
+      if (window_mode_custom_option[i+1].name == NULL)
+	Tcl_AppendResult(interp, "or ", NULL);
     }
-    return TCL_ERROR;
+    Tcl_AppendResult(interp, window_mode_custom_option[i].name, NULL);
   }
-  int size;
-  if (Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK) return TCL_ERROR;
+  return TCL_ERROR;
+}
+static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  // check for usage
+  int itype = -1, size, itype2 = -1;
+  if (argc != 3 && argc != 4) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s type ?type2 size?", Tcl_GetString(objv[0])));
+  if (_get_window(interp, Tcl_GetString(objv[1]), &itype) != TCL_OK) return TCL_ERROR;
+  if (argc == 3) {
+    if (Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK) return TCL_ERROR;
+    itype2 = WINDOW_NONE;
+  } else {
+    if (_get_window(interp, Tcl_GetString(objv[2]), &itype2) != TCL_OK) return TCL_ERROR;
+    if (Tcl_GetIntFromObj(interp, objv[3], &size) != TCL_OK) return TCL_ERROR;
+  }
   Tcl_Obj *result = Tcl_NewObj();
   float *window = (float *)Tcl_SetByteArrayLength(result, size*sizeof(float));
-  window_make(itype, size, window);
+  window_make2(itype, itype2, size, window);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }

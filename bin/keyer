@@ -431,7 +431,7 @@ proc text-window-timeout {w} {
 proc text-send {w text} {
     append ::data(ascii-puts) $text
 }
-proc text-stop-sending {} {
+proc text-stop-sending {w} {
     set ::data(ascii-puts) {}
     [get-ascii] abort
 }

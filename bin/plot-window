@@ -47,7 +47,7 @@ proc replot {} {
 	    set ys [spectrum-tap get-window]
 	}
 	default {
-	    set ys [sdrtcl::window $::data(type) $::data(size)]
+	    set ys [sdrtcl::window $::data(type) $::data(type2) $::data(size)]
 	}
     }
     binary scan $ys f* ys
@@ -78,7 +78,10 @@ proc get-window-types {} {
     catch { sdrtcl::window foo 512 } error
     regexp {^unknown window type, should be one of (.*)$} $error all error
     regsub -all {, (or )?} $error { } error
-    return [lsort [split $error]]
+    set error [lsort [split $error]]
+    set i [lsearch $error none]
+    if {$i >= 0} { set error [concat none [lreplace $error $i $i]] }
+    return $error
 }
 
 set windowtypes [get-window-types]
@@ -100,10 +103,15 @@ proc main {argv} {
     pack [ttk::label .m.wl -text {window type: }] -side left
     pack [ttk::menubutton .m.w -textvar ::data(type) -menu .m.w.m] -side left
     menu .m.w.m -tearoff no
-    foreach t $::windowtypes { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
+    foreach t [lrange $::windowtypes 1 end] { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
     .m.w.m add separator
     foreach t $::spectrumtypes { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
-    set ::data(type) [lindex $::windowtypes 0]
+    set ::data(type) {hann}
+    pack [label .m.w1 -text {*}] -side left
+    pack [ttk::menubutton .m.w2 -textvar ::data(type2) -menu .m.w2.m] -side left
+    menu .m.w2.m -tearoff no
+    foreach t $::windowtypes { .m.w2.m add radiobutton -label $t -variable ::data(type2) -value $t -command replot }
+    set ::data(type2) {none}
     pack [ttk::label .m.el -text {window size}] -side left
     pack [ttk::entry .m.e -textvar ::data(size) -validate all -validatecommand validate-size] -side left
     set ::data(size) 512
