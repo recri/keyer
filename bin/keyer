@@ -78,6 +78,9 @@ proc has-insert {} { return [has-var -insert] }
 proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
 proc has-argvopts {} { return [has-var -argvopts] }
 proc get-argvopts {} { return [get-var -argvopts] }
+proc get-title {} { return [get-var -title] }
+proc set-title {name} { set-var -title $name }
+proc has-title {} { return [has-var -title] }
 
 # load an sdrtcl component
 # name is name1 or a name1@name2
@@ -301,14 +304,6 @@ proc keyer-widget-show {w tag} {
 #
 # dial setting
 #
-proc update-window-title {} {
-    if {$::value(-window2) ne {none}} {
-	wm title . "keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
-    } else {
-	wm title . "keyer $::value(-wpm) wpm $::value(-window)"
-    }
-}
-
 proc dial-set {opt val} {
     if {[opt-is-defined $opt]} {
 	set ::value($opt) $val
@@ -319,7 +314,6 @@ proc dial-set {opt val} {
 		if {[catch {
 		    $comp configure {*}$opts
 		    set ::data(busy) [dict unset ::data(busy) $comp]
-		    after idle update-window-title
 		} error]} {
 		    puts "dial-set configure $opts threw $error"
 		}
@@ -334,18 +328,29 @@ proc dial-set {opt val} {
 
 proc dial-set-timeout {} {
     dict for {comp opts} $::data(busy) {
-	# puts "dial-set-timeout $comp {$opts}"
 	if { ! [$comp is-busy]} {
 	    if {[catch {
 		$comp configure {*}$opts
 		set ::data(busy) [dict unset $::data(busy) $comp]
-		after idle update-window-title
 	    } error]} {
 		puts "dial-set configure $opts threw $error"
 	    }
 	} else {
 	    # puts "$comp is-busy"
 	}
+    }
+    if {[info exists ::value(-window2)]} {
+	if {$::value(-window2) ne {none}} {
+	    set title "keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
+	} else {
+	    set title "keyer $::value(-wpm) wpm $::value(-window)"
+	}
+    } else {
+	set title "keyer"
+    }
+    if { ! [has-title] || [get-title] ne $title} {
+	wm title . $title
+	set-title $title
     }
     after 100 dial-set-timeout
 }
