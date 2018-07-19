@@ -55,19 +55,29 @@ proc write-file {file data} {
 #
 # miscellaneous accessors
 #
-proc get-server {} { return [dict get $::data(main) -server] }
-proc get-uuid {} { return [dict get $::data(main) -uuid] }
+proc get-var {var} { return [dict get $::data(main) $var] }
+proc set-var {var val} { return [dict set ::data(main) $var $val] }
+proc has-var {var} { return [dict exists $::data(main) $var] }
+proc lappend-var {var args} { dict lappend ::data(main) $var {*}$args }
+proc get-server {} { return [get-var -server] }
+proc get-uuid {} { return [get-var -uuid] }
 proc has-dial {} { return 1 }
-proc get-ascii {} { return [dict get $::data(main) -ascii] }
-proc set-ascii {name} { dict set ::data(main) -ascii $name }
-proc has-ascii {} { return [dict exists $::data(main) -ascii] }
+proc get-keyer {} { return [get-var -keyer] }
+proc set-keyer {name} { set-var -keyer $name }
+proc has-keyer {} { return [has-var -keyer] }
+proc get-ascii {} { return [get-var -ascii] }
+proc set-ascii {name} { set-var -ascii $name }
+proc has-ascii {} { return [has-var -ascii] }
 proc has-memories {} { return 0 }
-proc get-detime {} { return [dict get $::data(main) -detime] }
-proc set-detime {name} { dict set ::data(main) -detime $name }
-proc has-detime {} { return [dict exists $::data(main) -detime] }
-proc get-insert {} { return [dict get $::data(main) -insert] }
-proc set-insert {name} { dict set ::data(main) -insert $name }
-proc has-insert {} { return [dict exists $::data(main) -insert] }
+proc get-detime {} { return [get-var -detime] }
+proc set-detime {name} { set-var -detime $name }
+proc has-detime {} { return [has-var -detime] }
+proc get-insert {} { return [get-var -insert] }
+proc set-insert {name} { set-var -insert $name }
+proc has-insert {} { return [has-var -insert] }
+proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
+proc has-argvopts {} { return [has-var -argvopts] }
+proc get-argvopts {} { return [get-var -argvopts] }
 
 # load an sdrtcl component
 # name is name1 or a name1@name2
@@ -352,15 +362,43 @@ proc dial-set-init {} {
 #
 proc insert-widget {w} {
     ttk::frame $w
-    grid [label $w.dit -text Dit] -row 0 -column 0 -sticky ew
-    grid [label $w.dah -text Dah] -row 0 -column 1 -sticky ew
-    grid [label $w.key -text Key] -row 0 -column 2 -sticky ew
-    bind $w <Button-3> [list insert-widget-menu $w %X %Y]
+    grid [ttk::menubutton $w.dit -text Dit -menu $w.dit.m] -row 0 -column 0 -sticky ew
+    menu $w.dit.m -tearoff no
+    $w.dit.m add checkbutton -label {Send Dits} -variable ::data(insert-send-dits) -command [list insert-send $w dit]
+    grid [ttk::menubutton $w.dah -text Dah -menu $w.dah.m] -row 0 -column 1 -sticky ew
+    menu $w.dah.m -tearoff no
+    $w.dit.m add checkbutton -label {Send Dahs} -variable ::data(insert-send-dahs) -command [list insert-send $w dah]
+    grid [ttk::menubutton $w.key -text Key -menu $w.key.m] -row 0 -column 2 -sticky ew
+    menu $w.key.m -tearoff no
+    $w.key.m add checkbutton -label {Key Down} -variable ::data(insert-send-key) -command [list insert-send $w key]
+    insert-widget-bind $w Shift_R key
+    insert-widget-bind $w Alt_R dit
+    insert-widget-bind $w Control_R dah
     return $w
 }
-proc insert-widget-menu {w x y} {
+proc insert-widget-bind {w tag element} {
+    bind $w <KeyPress-$tag> [insert-key $w $element down]
+    bind $w <KeyRelease-$tag> [insert-key $w $element up]
 }
-
+proc insert-send {w element} {
+}
+proc insert-key {w element updown} {
+    switch $element {
+	dit { set note 0 }
+	dah { set note 1 }
+	key { set note 2 }
+	default { error "insert-key $w ??$element?? $updown" }
+    }
+    switch $updown {
+	up { set cmd 0x80;	#define MIDI_NOTE_OFF
+	}
+	down { set cmd 0x90;	#define MIDI_NOTE_ON
+	}
+	default { error "insert-key $w $element ??$updown??" } 
+    }
+    puts "insert $cmd $::value(-chan) $::value(-note)+$note 127"
+    [get-insert] puts [binary format ccc [expr {$cmd|($::value(-chan)-1)}] [expr {$::value(-note)+$note}] 127]
+}
 #
 # text window management
 # text window is for preparing text to send to the ascii-keyer
@@ -592,16 +630,17 @@ proc main {argv} {
 		dict lappend ::data(main) -start $val
 		# remember if this is special
 		switch -glob $component {
-		    midi-insert { set-insert $name2 }
+		    keyer-iambic-* { set-keyer $name2 }
 		    keyer-ascii { set-ascii $name2 }
 		    keyer-detime { set-detime $name2 }
+		    midi-insert { set-insert $name2 }
 		}
 		# load its options
 		populate-component-options $component $name2
 	    }
 	    default {
 		# save command line options until everything loads
-		dict lappend ::data(main) -argvopts $opt $val; # save options
+		lappend-var -argvopts $opt $val; # save options
 	    }
 	}
     }
@@ -618,8 +657,10 @@ proc main {argv} {
     # load the dial-set dependent options
     
     # load the options collected from the command line
-    foreach {opt val} [dict get $::data(main) -argvopts] { 
-	dial-set $opt $val
+    if {[has-argvopts]} {
+	foreach {opt val} [get-argvopts] { 
+	    dial-set $opt $val
+	}
     }
     
     # install application icon
