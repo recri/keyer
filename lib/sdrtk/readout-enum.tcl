@@ -95,7 +95,8 @@ snit::widget sdrtk::readout-enum {
 	    $m configure -menu $m.m
 	    set i 0
 	    foreach v $options(-values) {
-		$m.m add radiobutton -label $v -value $v -variable [myvar options(-menu-value)] -columnbreak [expr {([incr i]%10)==0}]
+		$m.m add radiobutton -label $v -value $v -variable [myvar options(-menu-value)] -columnbreak [expr {($i%10)==0}]
+		incr i
 	    }
 	    return $m
 	}

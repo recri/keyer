@@ -146,7 +146,12 @@ proc get-window-types {} {
     catch { sdrtcl::window foo 512 } error
     regexp {^unknown window type, should be one of (.*)$} $error all error
     regsub -all {, (or )?} $error { } error
-    return [lsort [split $error]]
+    set error [lsort $error]
+    set i [lsearch $error {none}]
+    if {$i >= 0} {
+	set error [concat none [lreplace $error $i $i]]
+    }
+    return $error
 }
 
 # all components in the app share values for identically spelled options
@@ -218,7 +223,11 @@ proc populate-component-options {component name} {
 		lappend ::data(options) $name $opt value $ovalue \
 		    [list -text $opt -info $info -units ms -format %.1f -min 1.0 -max 10.0 -step 0.1]
 	    }
-	    -window - -rise-window - -fall-window - -window2 {
+	    -window {
+		lappend ::data(options) $name $opt enum $ovalue \
+		    [list -text $opt -info $info -values [lrange [get-window-types] 1 end]]
+	    }
+	    -window2 {
 		lappend ::data(options) $name $opt enum $ovalue \
 		    [list -text $opt -info $info -values [get-window-types]]
 	    }
