@@ -41,6 +41,7 @@ static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int window
   int off = do_rise ? 0 : r->target-1;
   for (int i = 0; i < r->target; i += 1)
     ramp[i] = window_get2(window, window2, 2*r->target-1, i+off);
+#if 0
   if (do_rise) {
     // torture the initial sample weight to be zero
     if (ramp[0] != 0) {
@@ -67,6 +68,7 @@ static void ramp_update(ramp_t *r, int do_rise, float ms, int window, int window
 	ramp[i] *= fudge;
     }
   }
+#endif
 }
 
 static void ramp_init(ramp_t *r, int do_rise, float ms, int window, int window2, int samples_per_second) {
