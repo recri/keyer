@@ -21,7 +21,7 @@
   { "configure", fw_subcommand_configure,   "configure option values, or get list of options" },
   { "cget",      fw_subcommand_cget,        "get an option value" },
   { "cset",      fw_subcommand_configure,   "set an option value" },
-  { "info",      fw_subcommand_info,        "get the doc string for a command" },
+  { "info",      fw_subcommand_info,        "get the doc string(s) for a command" },
   { "is-busy",   fw_subcommand_is_busy,     "see if the command will throw a busy error if we access it" },
 #if FRAMEWORK_USES_JACK
   { "activate",  fw_subcommand_activate,    "activate a jack client" },

@@ -23,7 +23,7 @@ lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
 package require sdrtcl::window
-package require sdrtcl::spectrum-tap
+# package require sdrtcl::spectrum-tap
 
 proc draw {w} {
     set ::data(xoff) 0
@@ -32,6 +32,7 @@ proc draw {w} {
     set ::data(yscale) [expr {-(0.75*[winfo height $w]/2)/max(abs($::data(miny)),$::data(maxy))}]
     #puts $xy
     $w coords window $::data(xy)
+    $w coords frame $::data(minx) 0 $::data(maxx) 0 $::data(maxx) 1 $::data(minx) 1 $::data(minx) 0
     # puts ".c scale all 0 0 $::data(xscale) $::data(yscale)"
     $w scale all 0 0 $::data(xscale) $::data(yscale)
     # puts ".c move all $::data(xoff) $::data(yoff)"
@@ -62,6 +63,8 @@ proc replot {} {
 	set ::data(miny) [expr {min($y,$::data(miny))}]
 	set ::data(maxy) [expr {max($y,$::data(maxy))}]
     }
+    set ::data(minx) 0
+    set ::data(maxx) [expr {$x-1}]
     # puts "$x points, min $::data(miny) max $::data(maxy)"
     draw .c
 }
@@ -96,16 +99,17 @@ set spectrumtypes {
 }
 
 proc main {argv} {
-    sdrtcl::spectrum-tap spectrum-tap
+    # sdrtcl::spectrum-tap spectrum-tap
     pack [canvas .c -background black] -side top -fill both -expand true
     .c create line 0 0 0 0 -fill white -tags window
+    .c create line 0 0 0 0 0 0 0 0 -fill grey -tags frame
     pack [ttk::frame .m] -side top -fill x
     pack [ttk::label .m.wl -text {window type: }] -side left
     pack [ttk::menubutton .m.w -textvar ::data(type) -menu .m.w.m] -side left
     menu .m.w.m -tearoff no
     foreach t [lrange $::windowtypes 1 end] { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
-    .m.w.m add separator
-    foreach t $::spectrumtypes { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
+    # .m.w.m add separator
+    # foreach t $::spectrumtypes { .m.w.m add radiobutton -label $t -variable ::data(type) -value $t -command replot }
     set ::data(type) {hann}
     pack [label .m.w1 -text {*}] -side left
     pack [ttk::menubutton .m.w2 -textvar ::data(type2) -menu .m.w2.m] -side left
