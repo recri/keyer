@@ -348,11 +348,17 @@ proc dial-set-timeout {} {
 	    # puts "$comp is-busy"
 	}
     }
-    if {[info exists ::value(-window2)]} {
+    if {[info exists ::value(-wpm)] && [info exists ::value(-window2)]} {
 	if {$::value(-window2) ne {none}} {
 	    set title "keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
 	} else {
 	    set title "keyer $::value(-wpm) wpm $::value(-window)"
+	}
+    } elseif {[info exists ::value(-freq)] && [info exists ::value(-window2)]} {
+	if {$::value(-window2) ne {none}} {
+	    set title "keyer $::value(-freq) Hz $::value(-window)*$::value(-window2)"
+	} else {
+	    set title "keyer $::value(-freq) Hz $::value(-window)"
 	}
     } else {
 	set title "keyer"

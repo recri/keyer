@@ -92,6 +92,13 @@ jack_default_audio_sample_t note_frqs[128];
 
 #include "../dspmath/keyed_tone.h"
 
+#ifndef WINDOW
+#define WINDOW WINDOW_BLACKMAN_HARRIS
+#endif
+#ifndef WINDOW2
+#define WINDOW2 WINDOW_NONE
+#endif
+
 keyed_tone_t tone;
 struct {
   int	freq;	/* frequency of keyed tone */
@@ -490,7 +497,7 @@ int srate(jack_nframes_t nframes, void *arg)
 	printf("the sample rate is now %" PRIu32 "/sec\n", nframes);
 #endif
 	keyed_tone_update(&tone, tone_opts.gain, tone_opts.freq, tone_opts.rise, 
-			  tone_opts.fall, WINDOW_BLACKMAN_HARRIS, WINDOW_NONE, tone_opts.srate = nframes);
+			  tone_opts.fall, WINDOW, WINDOW2, tone_opts.srate = nframes);
 	return 0;
 }
 
