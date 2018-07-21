@@ -8,6 +8,8 @@
 
 package require udp
 
+package provide osc 1.0
+
 namespace eval osc {
     proc encode {type data} {
 	switch $type {

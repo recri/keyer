@@ -4,7 +4,7 @@ VSN_TCL=8.6
 VSN_TK=8.6
 VSN_DBUS=2.2
 VSN_DBIF=1.3
-CURSUBDIRS=sdrtcl bin lib/morse lib/sdrkit lib/sdrtk lib/sdrutil
+CURSUBDIRS=sdrtcl bin lib/morse lib/sdrkit lib/sdrtk lib/sdrutil lib/osc
 OLDSUBDIRS=
 SUBDIRS=$(CURSUBDIRS) $(OLDSUBDIRS)
 

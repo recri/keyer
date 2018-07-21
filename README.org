@@ -37,6 +37,7 @@
    | libjack-jackd2-dev |
    | tk8.6-dev          |
    | tcllib             |
+   | tcl-udp            |
    | libusb-1.0-0-dev   |
    | libdbus-1-dev      |
    | libgsl-dev         |
@@ -47,7 +48,7 @@
 
    The "apt-get" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt-get install build-essential git-core libasound2-dev jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib libusb-1.0-0-dev libdbus-1-dev libgsl-dev
+   sudo apt-get install build-essential git-core libasound2-dev jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib tcl-udp libusb-1.0-0-dev libdbus-1-dev libgsl-dev
    #+END_EXAMPLE
 
 ** Getting the source
