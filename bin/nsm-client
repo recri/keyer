@@ -33,13 +33,20 @@ set name [file tail $script]
 package require osc
 
 # get the server url
-if {[info exists env(NSM_URL)]} {
-    regexp {^osc.(udp|tcp)://([a-zA-Z0-9.]+):(\d+)/$} all transport host port
+if { ! [info exists env(NSM_URL)]} {
+    error "no env(NSM_URL) found"
+}
+
+if {[catch {
+    regexp {^osc.(udp|tcp)://([a-zA-Z0-9.]+):(\d+)/$} $env(NSM_URL) all transport host port
     set s [osc::connect $host $port]
     fconfigure $s -blocking 0 -encoding binary
     puts $s
     fileevent $s readable [list dispatch $s]
+} error]} {
+    error "failed to make connection to nmsd"
 }
+
 proc dispatch {socket} {
     puts "dispatch $socket"
     set packet [read $socket]
@@ -49,4 +56,8 @@ proc dispatch {socket} {
     }
 }
 
+set capabilities {:dirty:}; # :dirty:switch:progress:
+
+osc::send $s [osc::message /nsm/server/announce nsm-client $capabilities nsm-client 1 2 [pid]]
+							     
 vwait forever
