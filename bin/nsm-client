@@ -1,0 +1,52 @@
+#!/usr/bin/tclsh8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# 
+# get script name
+set script [info script]
+
+# append the ../lib directory to the Tcl search path
+lappend auto_path [file join [file dirname $script] .. lib]
+
+# find the name of the script, without reading links
+set name [file tail $script]
+
+# load osc
+package require osc
+
+# get the server url
+if {[info exists env(NSM_URL)]} {
+    regexp {^osc.(udp|tcp)://([a-zA-Z0-9.]+):(\d+)/$} all transport host port
+    set s [osc::connect $host $port]
+    fconfigure $s -blocking 0 -encoding binary
+    puts $s
+    fileevent $s readable [list dispatch $s]
+}
+proc dispatch {socket} {
+    puts "dispatch $socket"
+    set packet [read $socket]
+    puts "read [string length $packet] bytes"
+    if {[eof $socket]} {
+        fileevent $socket readable {}
+    }
+}
+
+vwait forever

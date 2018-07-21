@@ -1,0 +1,66 @@
+#!/usr/bin/wish
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# Copyright (C) 2018 by Roger E Critchlow Jr, Charlestown, MA, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+pack [ttk::frame .row1] -side top -fill x -expand true
+pack [ttk::label .rlabel -text { ratio: }] -in .row1 -side left
+pack [ttk::label .rview -textvariable ::data(ratio)] -in .row1 -side left
+pack [ttk::scale .ratio -from -1000 -to +1000 -variable ::data(raw-ratio) -command scale-ratio -length 512] -in .row1 -side left -fill x -expand true
+
+pack [ttk::scale .row2] -side top -fill x -expand true
+pack [ttk::label .wlabel -text { weight: }] -in .row2 -side left
+pack [ttk::label .wview -textvariable ::data(weight)] -in .row2 -side left
+pack [ttk::scale .weight -from -1000 -to +1000 -variable ::data(raw-weight) -command scale-weight -length 512] -in .row2 -side left -fill x -expand true
+
+proc scale-ratio {raw} {
+    set ::data(ratio) [format %.3f [expr {$raw/1000.0}]]
+    update-timing
+}
+proc scale-weight {raw} {
+    set ::data(weight) [format %.3f [expr {$raw/1000.0}]]
+    update-timing
+}
+proc update-timing {} {
+    set ratio $::data(ratio)
+    set weight $::data(weight)
+    set dit [format %0.3f [expr {1.0 + $ratio + $weight}]]
+    set dah [format %0.3f [expr {3.0 - $ratio + $weight}]]
+    set ies [format %0.3f [expr {1.0 - $weight}]]
+    set ils [format %0.3f [expr {3.0 - $weight}]]
+    set iws [format %0.3f [expr {7.0 - $weight}]]
+    array set ::data [list dit $dit dah $dah ies $ies ils $ils iws $iws]
+    update-drawing
+}
+pack [ttk::frame .row3] -side top -fill x
+pack [ttk::label .ldit -text { dit: }]  -in .row3 -side left
+pack [ttk::label .dit -textvariable ::data(dit)] -in .row3 -side left
+pack [ttk::label .ldah -text { dah: }] -in .row3 -side left
+pack [ttk::label .dah -textvariable ::data(dah)] -in .row3 -side left
+pack [ttk::label .lies -text { ies: }] -in .row3 -side left
+pack [ttk::label .ies -textvariable ::data(ies)] -in .row3 -side left
+pack [ttk::label .lils -text { ils: }] -in .row3 -side left
+pack [ttk::label .ils -textvariable ::data(ils)] -in .row3 -side left
+pack [ttk::label .liws -text { iws: }] -in .row3 -side left
+pack [ttk::label .iws -textvariable ::data(iws)] -in .row3 -side left
+
+pack [canvas .c] -side  top -fill both -expand true
+proc update-drawing {} {
+}
+array set ::data {raw-ratio 0 raw-weight 0 ratio 0.000 weight 0.000}
+update-timing

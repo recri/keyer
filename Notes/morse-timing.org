@@ -1,0 +1,34 @@
+* Morse timing
+** I've implemented a scheme which fixes the dit length at 1*dit_clock
+   then allows dah, ies, ils, and iws to be expressed as multiples of
+   the dit_clock.
+** TWQRQ does it this way
+** user specifies ratio and weight which compute as follows
+   wpm = new_wpm;
+   base_time = 1200.0 / wpm;                   /* true dit time */
+
+   /* adjust for ratio and weight time */
+   dit_time = (1.0 * base_time * dit_factor) + weight;
+   dah_time = (3.0 * base_time * dah_factor) + weight;
+
+   ies_time = (1.0 * base_time) - weight;
+   ils_time = (3.0 * base_time) - weight;
+   iws_time = (7.0 * base_time) - weight;
+/*------------------------------------------------------------------------*/
+   dit_factor = 1.0 + (ratio / 100.0) / 1.0;
+   dah_factor = 1.0 - (ratio / 100.0) / 3.0;
+/* substitute into above */
+   dit_time = (1.0 * base_time * (1.0 + (ratio / 100.0) / 1.0)) + weight;
+   dah_time = (3.0 * base_time * (1.0 - (ratio / 100.0) / 3.0)) + weight;
+/* distribute product */
+   dit_time = ((1.0 * base_time * 1.0 + 1.0 * base_time * (ratio / 100.0) / 1.0)) + weight;
+   dah_time = ((3.0 * base_time * 1.0 - 3.0 * base_time * (ratio / 100.0) / 3.0)) + weight;
+/* factor out base_time */
+   dit_time = ((1.0 * 1.0 + 1.0 * (ratio / 100.0) / 1.0)) * base_time + weight;
+   dah_time = ((3.0 * 1.0 - 3.0 * (ratio / 100.0) / 3.0)) * base_time + weight;
+/* clean out the ones and extra parens and add back the spaces */
+   dit_time = (1.0 + (ratio / 100.0)) * base_time + weight;
+   dah_time = (3.0 - (ratio / 100.0)) * base_time + weight;
+   ies_time = (1.0) * base_time - weight;
+   ils_time = (3.0) * base_time - weight;
+   iws_time = (7.0) * base_time - weight;
