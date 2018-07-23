@@ -71,6 +71,7 @@ private:
   float _tick;			// microseconds per tick
   bool _swapped;		// true if paddles are swapped
   float _wpm;			// words per minute
+  float _ditLen;		// dits per dit
   float _dahLen;		// dits per dah
   float _iesLen;		// dits per space between dits and dahs
 
@@ -80,7 +81,7 @@ private:
     float microsPerDit = 60000000.0 / (_wpm * 50);
 
     // tick timing
-    _ticksPerDit = microsPerDit / _tick + 0.5;
+    _ticksPerDit = (microsPerDit * _ditLen) / _tick + 0.5;
     _ticksPerDah = (microsPerDit * _dahLen) / _tick + 0.5;
     _ticksPerIes = (microsPerDit * _iesLen) / _tick + 0.5;
   }
@@ -163,6 +164,9 @@ public:
   // swap the dit and dah paddles
   void setSwapped(bool swapped) { _swapped = swapped; }
   bool getSwapped() { return _swapped; } 
+  // set the dit length in dits
+  void setDit(float ditLen) { _ditLen = ditLen; update(); }
+  float getDit() { return _ditLen; }
   // set the dah length in dits
   void setDah(float dahLen) { _dahLen = dahLen; update(); }
   float getDah() { return _dahLen; }

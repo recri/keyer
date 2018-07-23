@@ -47,17 +47,103 @@ if {[catch {
     error "failed to make connection to nmsd"
 }
 
+# packet is a message or a bundle
+# message is address:string types:string ...
+# strings and blobs are padded with nul to multiple of 4 length
+# required types
+# i	int32
+# f	float32
+# s	OSC-string
+# b	OSC-blob
+# optional types
+# h	64 bit big-endian two's complement integer
+# t	OSC-timetag
+# d	64 bit ("double") IEEE 754 floating point number
+# S	Alternate type represented as an OSC-string (for example, for systems that differentiate "symbols" from "strings")
+# c	an ascii character, sent as 32 bits
+# r	32 bit RGBA color
+# m	4 byte MIDI message. Bytes from MSB to LSB are: port id, status byte, data1, data2
+# T	True. No bytes are allocated in the argument data.
+# F	False. No bytes are allocated in the argument data.
+# N	Nil. No bytes are allocated in the argument data.
+# I	Infinitum. No bytes are allocated in the argument data.
+# [	Indicates the beginning of an array. The tags following are for data in the Array until a close brace tag is reached.
+# ]	Indicates the end of an array.
+
+#
+# tcl isn't much help with these nul terminated strings
+#
+proc osc-decode-string-length {p} {
+    for {set i 3} {$i < [string length $p]} {incr i 4} {
+	if {[string index $p $i] eq "\0"} {
+	    return [incr i 1]
+	}
+    }
+    error "no nul termination found in $p"
+}
+proc osc-decode {packet} {
+    set i1 [osc-decode-string-length $packet]
+    binary scan $packet "A$i1 a*" address rest
+    puts "scanned address {$address} from $i1 bytes got [string length $address] rest [string length $rest]"
+    set i2 [osc-decode-string-length $rest]
+    binary scan $rest "A$i2 a*" types rest
+    puts "scanned types ${types} from $i2 bytes got [string length $types] rest [string length $rest]"
+    set args {}
+    foreach t [split $types {}] {
+	switch $t {
+	    i { set tt I }
+	    f { set tt R }
+	    h { set tt W }
+	    t { set tt W }
+	    d { set tt Q }
+	    c { set tt I }
+	    r { set tt I }
+	    m { set tt I }
+	    , { continue }
+	    s - S {
+		set i3 [osc-decode-string-length $rest]
+		binary scan $rest "A$i3 a*" arg rest; lappend args $arg
+		puts "scanned $t {$arg} from $i3 bytes got [string length $arg] rest [string length $rest]"
+		continue
+	    }
+	    b {
+		binary scan $rest "I a*" count rest 
+		binary scan $rest "a$count a*" arg rest; lappend args $arg
+		# skip any padding
+		set p [expr {$count % 4}]
+		if {$p != 0} { binary scan $rest "a$p a*" padding rest }
+		continue
+	    }
+	    T { lappend args 1; continue }
+	    F { lappend args 0; continue }
+	    N { lappend args {}; continue }
+	    I { lappend args [expr {1.0/0.0}]; continue }
+	    default {
+		# should ignore whole message if not understanding any of it
+		error "unrecognized osc type $t"
+	    }
+	}
+	binary scan $rest "$tt a*" arg rest; lappend args $arg
+	puts "scanned $t {$arg} as $tt"
+    }
+    return [list $address $types $args]
+}
+proc osc-encode {address types args} {
+}
 proc dispatch {socket} {
-    puts "dispatch $socket"
+    # puts "dispatch $socket"
     set packet [read $socket]
-    puts "read [string length $packet] bytes"
+    puts "read {$packet}"
+    if {$packet ne {}} {
+	puts [osc-decode $packet]
+    }
     if {[eof $socket]} {
-        fileevent $socket readable {}
+	fileevent $socket readable {}
     }
 }
 
 set capabilities {:dirty:}; # :dirty:switch:progress:
 
 osc::send $s [osc::message /nsm/server/announce nsm-client $capabilities nsm-client 1 2 [pid]]
-							     
+
 vwait forever

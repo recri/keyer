@@ -77,6 +77,7 @@ public:
     setMode('A');
     setWord(50);
     setWpm(15);
+    setDit(1);
     setDah(3);
     setIes(1);
     setIls(3);
@@ -152,6 +153,9 @@ public:
   // swap the dit and dah paddles
   void setSwapped(bool swapped) { _swapped = swapped; }
   bool getSwapped() { return _swapped; } 
+  // set the dit length in dits
+  void setDit(float ditLen) { _ditLen = ditLen; _update = true; }
+  float getDit() { return _ditLen; }
   // set the dah length in dits
   void setDah(float dahLen) { _dahLen = dahLen; _update = true; }
   float getDah() { return _dahLen; }
@@ -178,7 +182,7 @@ public:
       // microsecond timing
       float microsPerDit = 60000000.0 / (_wpm * _word);
       // tick timing
-      _ticksPerDit = microsPerDit / _tick + 0.5;
+      _ticksPerDit = (microsPerDit * _ditLen) / _tick + 0.5;
       _ticksPerDah = (microsPerDit * _dahLen) / _tick + 0.5;
       _ticksPerIes = (microsPerDit * _iesLen) / _tick + 0.5;
       _ticksPerIls = (microsPerDit * _ilsLen) / _tick + 0.5;
@@ -200,6 +204,7 @@ public:
   char _mode;			// mode B or mode A or ...
   float _word;			// dits per word, 50 or 60
   float _wpm;			// words per minute
+  float _ditLen;		// dits per dit
   float _dahLen;		// dits per dah
   float _iesLen;		// dits per space between dits and dahs
   float _ilsLen;		// dits per space between letters

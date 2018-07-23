@@ -19,6 +19,7 @@
 #define MORSE_TIMING_H
 
 typedef struct {
+  unsigned base;		/* base dit clock */
   unsigned dit;
   unsigned dah;
   unsigned ies;
@@ -28,12 +29,14 @@ typedef struct {
   unsigned fall;
 } morse_timing_t;
 
-static void morse_timing(morse_timing_t *samples_per, unsigned sample_rate, float word, float wpm, float dah, float ies, float ils, float iws) {
+static void morse_timing(morse_timing_t *samples_per, unsigned sample_rate, float word, float wpm, 
+			 float dit, float dah, float ies, float ils, float iws) {
   /* dit samples = (samples_per_second * second_per_minute) / (words_per_minute * dits_per_word)  */
-  samples_per->dit = (unsigned) ((sample_rate * 60) / (wpm * word));
-  samples_per->dah = dah * samples_per->dit;
-  samples_per->ies = ies * samples_per->dit;
-  samples_per->ils = ils * samples_per->dit;
-  samples_per->iws = iws * samples_per->dit;
+  samples_per->base = (unsigned) ((sample_rate * 60) / (wpm * word));
+  samples_per->dit = dit * samples_per->base;
+  samples_per->dah = dah * samples_per->base;
+  samples_per->ies = ies * samples_per->base;
+  samples_per->ils = ils * samples_per->base;
+  samples_per->iws = iws * samples_per->base;
 }
 #endif

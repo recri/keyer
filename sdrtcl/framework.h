@@ -42,6 +42,7 @@
 #include "../dspmath/midi_buffer.h"
 
 #if FRAMEWORK_OPTIONS_KEYER_TIMING // options that control the timing of morse code elements
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_DIT 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_DAH 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_ILS 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_IES 1

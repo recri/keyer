@@ -41,6 +41,9 @@
   { "-wpm",      "wpm",       "Words",   "18.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.wpm),	  "words per minute" },
   { "-word",     "word",      "Dits",    "50",      fw_option_int,     fw_flag_none,	    offsetof(_t, opts.word),      "dits in a word" },
 #endif
+#if FRAMEWORK_OPTIONS_KEYER_TIMING_DIT
+  { "-dit",      "dit",       "Dits",    "1.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dit),	  "dit length in dits" },
+#endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_DAH
   { "-dah",      "dah",       "Dits",    "3.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dah),	  "dah length in dits" },
 #endif

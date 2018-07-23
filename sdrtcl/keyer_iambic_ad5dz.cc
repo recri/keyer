@@ -64,6 +64,7 @@ extern "C" {
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
       dp->k.setWord(dp->opts.word);
       dp->k.setWpm(dp->opts.wpm);
+      dp->k.setDit(dp->opts.dit);
       dp->k.setDah(dp->opts.dah);
       dp->k.setIes(dp->opts.ies);
       dp->k.setIls(dp->opts.ils);
@@ -161,7 +162,7 @@ extern "C" {
       return TCL_ERROR;
     }
     dp->modified = dp->modified || dp->opts.wpm != save.wpm || dp->opts.swap != save.swap || 
-      dp->opts.mode != save.mode || dp->opts.word != save.word || dp->opts.dah != save.dah || 
+      dp->opts.mode != save.mode || dp->opts.word != save.word || dp->opts.dit != save.dit || dp->opts.dah != save.dah || 
       dp->opts.ies != save.ies || dp->opts.ils != save.ils || dp->opts.iws != save.iws || 
       dp->opts.alsp != save.alsp || dp->opts.awsp != save.awsp;
     return TCL_OK;

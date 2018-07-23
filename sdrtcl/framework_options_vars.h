@@ -31,6 +31,9 @@ int window, window2;
 float wpm; int word;
 #endif
 // element timing options
+#if FRAMEWORK_OPTIONS_KEYER_TIMING_DIT
+float  dit;
+#endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_DAH
 float  dah;
 #endif

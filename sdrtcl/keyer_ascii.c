@@ -67,7 +67,8 @@ static void _update(_t *dp) {
     if (dp->fw.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
     /* update timing computations */
     // maybe this wasn't the best idea
-    morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
+    morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, 
+		 dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
   }
 }
 
@@ -77,7 +78,8 @@ static void *_init(void *arg) {
   dp->n_slash = 0;
   dp->abort = 0;
   void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
-  morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
+  morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm,
+	       dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
   if (dp->opts.dict == NULL) {
     dp->opts.dict = Tcl_NewDictObj();
     Tcl_IncrRefCount(dp->opts.dict);
