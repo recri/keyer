@@ -111,6 +111,8 @@ snit::widgetadaptor sdrtk::dial {
 	# make the cursor motion keys adjust the dial
 	bind $win <Up> [list event generate %W <<DialCW>>]
 	bind $win <Down> [list event generate %W <<DialCCW>>]
+	bind $win <KP_Add> [list event generate %W <<DialCW>>]
+	bind $win <KP_Subtract> [list event generate %W <<DialCCW>>]
 	# Grab the powermate rotation events
 	# Grab the midikey rotation events
 	if {$options(-self-responder)} {

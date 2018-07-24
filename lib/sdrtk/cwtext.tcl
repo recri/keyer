@@ -164,6 +164,8 @@ snit::widgetadaptor sdrtk::cwtext {
     }
 
     # external functions moved in here for convenience
+    # not actually used because Stop sending requires
+    # other actions to implement in the sender component
     method options-menu {x y} {
 	if {[winfo exists $win.m]} { destroy $win.m }
 	menu $win.m -tearoff no
@@ -189,7 +191,10 @@ snit::widgetadaptor sdrtk::cwtext {
 	set val [tk_chooseColor -parent $w -initialcolor [$w cget $opt] -title $title]
 	if {$val ne {}} { $w configure $opt $val }
     }
-    proc choose-font {w args} { $w configure -font $args }
+    proc choose-font {w font args} { 
+	# puts "choose-font $w $font {$args}"
+	$w configure -font $font
+    }
     method choose {opt} {
 	switch $opt {
 	    file {
