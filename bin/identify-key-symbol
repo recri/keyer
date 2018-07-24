@@ -1,0 +1,2 @@
+#!/usr/bin/wish
+bind . <KeyPress> [list puts "%K"]
