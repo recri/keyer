@@ -29,15 +29,17 @@ extern "C" {
 
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED	1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_DIT 1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_DAH 1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_IES 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP 1
 
 #include "framework.h"
 #include "../dspmath/midi.h"
 
   typedef struct {
 #include "framework_options_vars.h"
-    float wpm;
-    float  dah, ies;
-    int swap;
   } options_t;
 
   typedef struct {
@@ -58,6 +60,7 @@ extern "C" {
       /* keyer recomputation */
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
       dp->k.setWpm(dp->opts.wpm);
+      dp->k.setDit(dp->opts.dit);
       dp->k.setDah(dp->opts.dah);
       dp->k.setIes(dp->opts.ies);
       dp->k.setSwapped(dp->opts.swap != 0);
@@ -156,11 +159,12 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-    { "-wpm",      "wpm",       "Words",   "18.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.wpm),	  "words per minute" },
-    { "-dah",      "dah",       "Dits",    "3.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dah),	  "dah length in dits" },
-    { "-ies",	 "ies",	      "Dits",    "1.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.ies),	  "inter-element space in dits" },
-    { "-swap",	 "swap",      "Bool",    "0",	    fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.swap),	  "swap the dit and dah paddles" },
-    { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
+    { "-wpm",  "wpm",  "Words", "18.0", fw_option_float,   fw_flag_none, offsetof(_t, opts.wpm),  "words per minute" },
+    { "-dit",  "dit",  "Dits",  "1.0",  fw_option_float,   fw_flag_none, offsetof(_t, opts.dit),  "dit length in dits" },
+    { "-dah",  "dah",  "Dits",  "3.0",  fw_option_float,   fw_flag_none, offsetof(_t, opts.dah),  "dah length in dits" },
+    { "-ies",  "ies",  "Dits",  "1.0",  fw_option_float,   fw_flag_none, offsetof(_t, opts.ies),  "inter-element space in dits" },
+    { "-swap", "swap", "Bool",  "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap), "swap the dit and dah paddles" },
+    { NULL,    NULL,   NULL,    NULL,   fw_option_none,    fw_flag_none, 0, NULL }
   };
 
   static const fw_subcommand_table_t _subcommands[] = {

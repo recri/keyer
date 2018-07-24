@@ -29,6 +29,7 @@ extern "C" {
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
 #define FRAMEWORK_OPTIONS_KEYER_SPEED	1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING_DIT 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_DAH 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_IES 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP 1
@@ -60,6 +61,7 @@ extern "C" {
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
       dp->k.setWord(dp->opts.word);
       dp->k.setWpm(dp->opts.wpm);
+      dp->k.setDit(dp->opts.dit);
       dp->k.setDah(dp->opts.dah);
       dp->k.setIes(dp->opts.ies);
       dp->k.setSwapped(dp->opts.swap != 0);
