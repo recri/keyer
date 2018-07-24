@@ -140,7 +140,6 @@ typedef struct {
   Tcl_Obj *command_name;
   Tcl_Obj *server_name;
   Tcl_Obj *client_name;
-  Tcl_Obj *uuid_name;
   Tcl_Obj *subcommands_string;
   int verbose;
   int activated;
@@ -352,6 +351,23 @@ static int fw_option_configure(ClientData clientData, Tcl_Interp *interp, int ar
       }
     }
     Tcl_SetObjResult(interp, result);
+    return TCL_OK;
+  } else if (argc == 3) {
+    // configuration for one option
+    int i = fw_option_lookup(Tcl_GetString(objv[2]), table);
+    if (i < 0) return fw_option_unrecognized_option_name(interp, Tcl_GetString(objv[2]));
+    Tcl_Obj *entry[] = {
+      Tcl_NewStringObj(table[i].name, -1),
+      Tcl_NewStringObj(table[i].db_name, -1),
+      Tcl_NewStringObj(table[i].class_name, -1),
+      Tcl_NewStringObj(table[i].default_value, -1),
+      fw_option_get_value_obj(clientData, interp, table+i)
+    };
+    if (entry[4] == NULL) {
+      // fprintf(stderr, "no value for %s???\n", table[i].name);
+      return TCL_ERROR;
+    }
+    Tcl_SetObjResult(interp, Tcl_NewListObj(5, entry));
     return TCL_OK;
   } else {
     // the caller had better be prepared to restore clientData on error
@@ -690,7 +706,6 @@ static void framework_delete2(void *arg, int outside_shutdown) {
   if (dsp->command_name != NULL) Tcl_DecrRefCount(dsp->command_name);
   if (dsp->server_name != NULL) Tcl_DecrRefCount(dsp->server_name);
   if (dsp->client_name != NULL) Tcl_DecrRefCount(dsp->client_name);
-  if (dsp->uuid_name != NULL) Tcl_DecrRefCount(dsp->uuid_name);
   if (dsp->subcommands_string != NULL) Tcl_DecrRefCount(dsp->subcommands_string);
   if (dsp->method_list != NULL) Tcl_DecrRefCount(dsp->method_list);
   if (dsp->option_list != NULL) Tcl_DecrRefCount(dsp->option_list);
@@ -782,14 +797,12 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   jack_status_t status = (jack_status_t)0;
   char *server_name = NULL;
   char *client_name = NULL;
-  char *uuid_name = NULL;
 
   if (wants_jack) {
     // get jack server and client names
     server_name = data->server_name != NULL ? Tcl_GetString(data->server_name) :
       getenv("JACK_DEFAULT_SERVER") != NULL ? getenv("JACK_DEFAULT_SERVER") : (char *)"default";
     client_name = data->client_name != NULL ? Tcl_GetString(data->client_name) : command_name;
-    uuid_name = data->uuid_name     != NULL ? Tcl_GetString(data->uuid_name) : NULL;
     // remove namespaces from client name
     if (strrchr(client_name, ':') != NULL) {
       client_name = strrchr(client_name, ':')+1;
@@ -808,13 +821,9 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
       data->client_name = Tcl_NewStringObj(client_name, -1);
       Tcl_IncrRefCount(data->client_name);
     }
-    if (data->uuid_name == NULL) {
-      data->uuid_name = Tcl_NewStringObj("", -1);
-      Tcl_IncrRefCount(data->uuid_name);
-    }
 
     // create jack client
-    data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name, uuid_name);
+    data->client = jack_client_open(client_name, (jack_options_t)(JackServerName|JackUseExactName), &status, server_name, NULL);
     if (data->client == NULL) {
       framework_jack_status_report(interp, status);
       framework_delete(data);

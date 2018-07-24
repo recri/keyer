@@ -51,6 +51,7 @@ static void *_init(void *arg) {
   data->opts.sample_rate = sdrkit_sample_rate(arg);
   void *p = filter_overlap_save_init(&data->ovsv, &data->opts); if (p != &data->ovsv) return p;
   data->modified = data->fw.busy = 1;
+  _update(data);
   return arg;
 }
 

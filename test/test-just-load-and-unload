@@ -64,20 +64,28 @@ foreach file [glob [file join $libdir *$so]] {
 		default {
 		    if {[catch {$cmd foo} error]} {
 			puts "$cmd foo threw $error"
+		    } elseif {[foo is-busy]} {
+			puts "$cmd foo is busy"
 		    } else {
-			foreach tail {{info type} {info doc type} {info methods} {info options} {info ports}} {
+			foreach tail {{info type} {info methods} {info options} {info ports}} {
 			    catch {foo {*}$tail} result
 			    puts "* $cmd $tail -> $result"
 			}
 			foreach o [foo info options] {
-			    puts "* $cmd info doc option $o -> [foo info doc option $o]"
+			    catch {foo info option $o} result
+			    puts "* $cmd info option $o -> $result"
+			}
+			foreach o [foo info options] {
+			    catch {foo configure $o} result
+			    puts "* $cmd configure $o -> $result"
 			}
 			foreach m [foo info methods] {
-			    puts "* $cmd info doc method $m -> [foo info doc method $m]"
+			    catch {foo info method $m} result
+			    puts "* $cmd info method $m -> $result"
 			}
 		    }
-		    rename foo {}
-		    rename $cmd {}
+		    catch {rename foo {}}
+		    catch {rename $cmd {}}
 		}
 	    }
 	}

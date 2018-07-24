@@ -171,8 +171,8 @@ extern "C" {
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
     // debounce options
-    { "-period",  "period",  "Period",   "0.0002",  fw_option_float, fw_flag_none, offsetof(_t, opts.period), "key sampling period in milliseconds" },
-    { "-steps",   "steps",   "Steps",    "6",       fw_option_int,   fw_flag_none, offsetof(_t, opts.steps),  "number of consistent samples define stability" },
+    { "-period", "period", "Period", "0.2", fw_option_float, fw_flag_none, offsetof(_t, opts.period), "key sampling period in milliseconds" },
+    { "-steps",  "steps",  "Steps",  "6",   fw_option_int,   fw_flag_none, offsetof(_t, opts.steps),  "number of consistent samples desired" },
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 

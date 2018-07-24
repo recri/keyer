@@ -186,7 +186,6 @@ static int _disconnect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
 // int jack_session_reply (jack_client_t *client, jack_session_event_t *event) JACK_WEAK_EXPORT
 // void jack_session_event_free (jack_session_event_t *event) JACK_WEAK_EXPORT
 // char *jack_client_get_uuid (jack_client_t *client) JACK_WEAK_EXPORT
-#endif
 void _session_callback( jack_session_event_t *event, void *arg ) {
   _t *dp = (_t *)arg;
   // post the session event to the command data
@@ -226,6 +225,7 @@ static int _session_reply(ClientData clientData, Tcl_Interp *interp, int argc, T
   dp->session_event = NULL;
   return TCL_OK;
 }
+#endif
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return framework_command(clientData, interp, argc, objv);
@@ -254,9 +254,11 @@ static const fw_subcommand_table_t _subcommands[] = {
   { "list-ports", _list_ports,  "get a list of the ports open on the jack server" },
   { "connect", _connect,        "connect ports on the jack server" },
   { "disconnect", _disconnect,  "disconnect ports on the jack server" },
+#if 0
   { "session-register", _session_register, "register for jack session management" },
   { "session-poll", _session_poll, "poll for receipt of a jack_session_event" },
   { "session-reply", _session_reply, "reply to a jack_session_event" },
+#endif
   { NULL }
 };
 

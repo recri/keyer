@@ -32,11 +32,6 @@ lappend auto_path [file join $dirname .. lib]
 set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}} | sed -e s/sdrtcl:://g]
 
 #
-# will need this to implement -uuid
-#
-package require sdrtcl::jack-client
-
-#
 # utilities
 #
 proc read-file {file} {
@@ -349,18 +344,18 @@ proc dial-set-timeout {} {
     }
     if {[info exists ::value(-wpm)] && [info exists ::value(-window2)]} {
 	if {$::value(-window2) ne {none}} {
-	    set title "keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
+	    set title "recri keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
 	} else {
-	    set title "keyer $::value(-wpm) wpm $::value(-window)"
+	    set title "recri keyer $::value(-wpm) wpm $::value(-window)"
 	}
     } elseif {[info exists ::value(-freq)] && [info exists ::value(-window2)]} {
 	if {$::value(-window2) ne {none}} {
-	    set title "keyer $::value(-freq) Hz $::value(-window)*$::value(-window2)"
+	    set title "recri keyer $::value(-freq) Hz $::value(-window)*$::value(-window2)"
 	} else {
-	    set title "keyer $::value(-freq) Hz $::value(-window)"
+	    set title "recri keyer $::value(-freq) Hz $::value(-window)"
 	}
     } else {
-	set title "keyer"
+	set title "recri keyer"
     }
     if { ! [has-title] || [get-title] ne $title} {
 	wm title . $title
@@ -580,14 +575,6 @@ proc build-command-line {} {
     return [join $argv { }]
 }
 
-proc session-event-poll {} {
-    set result [jack session-poll]
-    if {$result ne {}} {
-	puts $result
-    }
-    after 100 session-event-poll
-}
-
 proc main {argv} {
     # initialize
     set ::data(main) [dict create -server {} -uuid {} options {}]
@@ -611,12 +598,6 @@ proc main {argv} {
 		dict set ::data(main) $opt $val;	# identify saved jack client
 	    }
 	    -start {
-		# start the jack client machinery just once
-		if {[info command jack] eq {}} {
-		    sdrtcl-instance sdrtcl::jack-client jack
-		    jack session-register
-		    session-event-poll
-		}
 		# start a component
 		foreach {component name2} [load-component $val] break
 		# remember its parts

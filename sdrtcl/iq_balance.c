@@ -44,6 +44,7 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *e = iq_balance_init(&data->iqb, &data->opts); if (e != &data->iqb) return e;
   data->modified = data->fw.busy = 1;
+  _update(data);
   return arg;
 }
 

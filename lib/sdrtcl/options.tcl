@@ -199,37 +199,37 @@ namespace eval ::sdrtcl::options {
     }
 }
 
-proc ::sdrkit-module-has-info {module} {
+proc ::sdrtcl-module-has-info {module} {
     return [info exists ::sdrtcl::options::modules($module)]
 }
-proc ::sdrkit-module-factory {module} {
+proc ::sdrtcl-module-factory {module} {
     return [lindex $::sdrtcl::options::modules($module) 0]
 }
-proc ::sdrkit-module-type {module} {
+proc ::sdrtcl-module-type {module} {
     return [lindex $::sdrtcl::options::modules($module) 1]
 }
-proc ::sdrkit-option-note-configure {factory configure} {
+proc ::sdrtcl-option-note-configure {factory configure} {
     lassign $configure opt dbname clname defval curval
 }
-proc ::sdrkit-option-has-info {opt} {
+proc ::sdrtcl-option-has-info {opt} {
     return [info exists ::sdrtcl::options::options($opt)]
 }
-proc ::sdrkit-option-mark-seen {opt} {
+proc ::sdrtcl-option-mark-seen {opt} {
     lappend ::sdrtcl::options::options($opt) mark seen
 }
-proc ::sdrkit-dbname-has-info {dbname} {
+proc ::sdrtcl-dbname-has-info {dbname} {
     return [info exists ::sdrtcl::options::dbnames($dbname)]
 }
-proc ::sdrkit-dbname-mark-seen {dbname} {
+proc ::sdrtcl-dbname-mark-seen {dbname} {
     lappend ::sdrtcl::options::dbnames($dbname) mark seen
 }
-proc ::sdrkit-clname-has-info {clname} {
+proc ::sdrtcl-clname-has-info {clname} {
     return [info exists ::sdrtcl::options::clnames($clname)]
 }
-proc ::sdrkit-clname-mark-seen {clname} {
+proc ::sdrtcl-clname-mark-seen {clname} {
     lappend ::sdrtcl::options::clnames($clname) mark seen
 }
-proc ::sdrkit-get-props {factory opt dbname clname} {
+proc ::sdrtcl-get-props {factory opt dbname clname} {
     return $::sdrtcl::options::options($opt)
 }
 

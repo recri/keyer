@@ -21,7 +21,6 @@
 #define FRAMEWORK_OPTIONS_H
   { "-server",  "server",     "Server",  "default", fw_option_obj,     fw_flag_create_only, offsetof(_t, fw.server_name), "jack server name" },
   { "-client",  "client",     "Client",  NULL,      fw_option_obj,     fw_flag_create_only, offsetof(_t, fw.client_name), "jack client name" },
-  { "-uuid",    "uuid",       "Uuid",    NULL,      fw_option_obj,     fw_flag_create_only, offsetof(_t, fw.uuid_name),   "jack client uuid" },
   { "-verbose", "verbose",    "Verbose", "0",       fw_option_int,     fw_flag_none,	    offsetof(_t, fw.verbose),     "amount of diagnostic output" },
 #if FRAMEWORK_OPTIONS_MIDI // options that define the MIDI operation
   { "-chan",     "channel",   "Channel", "1",       fw_option_int,     fw_flag_none,        offsetof(_t, opts.chan),      "midi channel" },

@@ -189,6 +189,8 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   data->jack_buffer_size = sdrkit_buffer_size(arg);
   void *p = _preconfigure(data); if (p != data) return p;
+  data->modified = data->fw.busy = 1;
+  _update(data);
   return arg;
 }
 

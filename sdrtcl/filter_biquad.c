@@ -43,6 +43,7 @@ static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = filter_biquad_init(&data->bq); if (p != &data->bq) return p;
   data->modified = data->fw.busy = 1;
+  _update(data);
   return arg;
 }
 

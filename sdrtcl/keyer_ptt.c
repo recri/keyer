@@ -74,6 +74,7 @@ static void *_init(void *arg) {
   dp->ptt_on = 0;
   dp->key_on = 0;
   dp->modified = dp->fw.busy = 1;
+  _update(dp);
   return arg;
 }
 
