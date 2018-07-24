@@ -134,6 +134,13 @@ snit::widget sdrtk::dialbook {
 	bind $win.dial <<DialCW>> [mymethod Adjust 1]
 	bind $win.dial <<DialCCW>> [mymethod Adjust -1]
 	bind $win.dial <<DialPress>> [mymethod Press]
+	#? bind $win <Enter> [list focus $win.dial]
+	#bind $win.dial <FocusIn> [list puts "FocusIn $win.dial"]
+	#bind $win.dial <FocusOut> [list puts "FocusOut $win.dial"]
+	#bind $win <FocusIn> [list puts "FocusIn $win"]
+	#bind $win <FocusOut> [list puts "FocusOut $win"]
+	#bind $win <ButtonPress-1> +[list focus $win.dial]
+	bind $win.dial <ButtonPress-1> +[list focus $win.dial]
     }
 
     #
@@ -256,7 +263,7 @@ snit::widget sdrtk::dialbook {
     ##
     ##
     method Adjust {step} {
-	puts "$self Adjust $step for $data(current) menu $data(menu)"
+	#puts "$self Adjust $step for $data(current) menu $data(menu)"
 	$dial Rotate $step
 	if {$data(menu)} {
 	    
@@ -269,6 +276,7 @@ snit::widget sdrtk::dialbook {
     }
 
     method Press {} {
+	if {0} {
 	# puts "$self Press"
 	if {$data(menu)} {
 	    # select currently addressed tab
@@ -304,6 +312,7 @@ snit::widget sdrtk::dialbook {
 	    bind $win.menu <Unmap> +[mymethod MenuUnmap]
 	    tk_popup $win.menu [winfo pointerx $win] [winfo pointery $win] [lsearch $data(tabs) $data(current)]
 	}
+    }
     }
 
     method MenuSelect {} {
