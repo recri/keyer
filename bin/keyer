@@ -432,20 +432,28 @@ proc cwtext-window-timeout {w} {
     }
     after 100 [list cwtext-window-timeout $w]
 }
-proc cwtext-stop-sending {w} {
-    $w abort
-    [get-ascii] abort
-}
+
+proc cwtext-stop-sending {w} { $w abort; [get-ascii] abort }
+
 proc cwtext-insert-command-line {w} {
     $w insert current [build-command-line]
 }
-proc cstext-send-line {w} {
-    set i0 [$w index {current linestart}]
-    set i1 [$w index current]
-    cwtext-send $w [$w get $i0 $i1]
-}
+
 proc cwtext-option-menu {w x y} {
     if { ! [winfo exists $w.m] } {
+	menu $w.m -tearoff no
+	$w.m add command -label {Stop sending} -command [list cwtext-stop-sending $w]
+	$w.m add command -label {Clear window} -command [list $w clear]
+	$w.m add separator
+	$w.m add command -label {Send file} -command [list $w choose file]
+	$w.m add separator
+	$w.m add command -label {Font} -command [list $w choose font]
+	$w.m add command -label {Background} -command [list $w choose background]
+	$w.m add command -label {Sent Color} -command [list $w choose sentcolor]
+	$w.m add command -label {Unsent Color} -command [list $w choose unsentcolor]
+	$w.m add command -label {Skipped Color} -command [list $w choose skippedcolor]
+    }
+    if {0} {
 	menu $w.m -tearoff no
 	menu $w.m.s -tearoff no
 	menu $w.m.r -tearoff no
@@ -473,18 +481,10 @@ proc cwtext-widget {w} {
     package require sdrtk::cwtext
     sdrtk::cwtext $w -width 30 -height 15 -exportselection true
     bind $w <ButtonPress-3> [list cwtext-option-menu $w %X %Y]
-    bind $w <Escape> [list $w abort]
+    bind $w <Escape> [list cwtext-stop-sending $w]
     set ::data(ascii-puts) {}
     cwtext-window-timeout $w
     return $w
-}
-proc cwtext-help {w} {
-    foreach tag [bind $w] {
-	puts "$tag [bind $w $tag]"
-    }
-    foreach tag [bind Text]] {
-	puts "$tag [bind Text $tag]"
-    }
 }
 
 #
