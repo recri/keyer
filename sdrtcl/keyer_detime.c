@@ -29,7 +29,8 @@
 
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
-#define FRAMEWORK_OPTIONS_KEYER_SPEED	1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED_WPM 1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED_WORD 1
 
 #include "framework.h"
 #include "../dspmath/midi.h"

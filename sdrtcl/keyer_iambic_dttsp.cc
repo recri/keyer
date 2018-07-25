@@ -27,13 +27,18 @@ extern "C" {
 
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED_WPM 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_ALSP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_AWSP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_MODE 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT 1
 
 #include "framework.h"
 #include "../dspmath/midi.h"
 
   typedef struct {
 #include "framework_options_vars.h"
-    int swap;
     iambic_dttsp_options_t key_opts;
   } options_t;
 
@@ -154,15 +159,9 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-    { "-wpm",  "wpm",     "Words",   "18.0", fw_option_float,   fw_flag_none, offsetof(_t, opts.key_opts.wpm), "words per minute" },
-    { "-swap", "swap",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap), "swap the dit and dah paddles" },
-    { "-mode", "mode",    "Mode",    "A",    fw_option_char,    fw_flag_none, offsetof(_t, opts.key_opts.mode), "iambic mode A or B" },
     { "-mdit", "mdit",    "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.want_dit_mem), "keep a dit memory" },
     { "-mdah", "mdah",	  "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.want_dah_mem), "keep a dah memory" },
     { "-mide", "mide",    "Memo",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.need_midelemodeB), "remember key state at mid-element" },
-    { "-alsp", "alsp",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.autocharspacing), "auto letter spacing" },
-    { "-awsp", "awsp",	  "Bool",    "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.key_opts.autowordspacing), "auto word spacing" },
-    { "-weight","weight", "Weight",  "50",   fw_option_int,     fw_flag_none, offsetof(_t, opts.key_opts.weight), "adjust relative weight of dit and dah" },
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 

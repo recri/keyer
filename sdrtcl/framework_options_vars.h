@@ -26,9 +26,12 @@ int chan, note;
 float freq, gain, rise, fall;
 int window, window2;
 #endif
-#if FRAMEWORK_OPTIONS_KEYER_SPEED
+#if FRAMEWORK_OPTIONS_KEYER_SPEED_WPM
 // speed options
-float wpm; int word;
+float wpm; 
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_SPEED_WORD
+int word;
 #endif
 // element timing options
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_DIT
@@ -57,5 +60,14 @@ int awsp;
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_MODE
 int mode;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT
+float weight;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_RATIO
+float ratio;
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP
+float comp;
 #endif
 #endif

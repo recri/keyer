@@ -33,7 +33,8 @@ extern "C" {
 
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
-#define FRAMEWORK_OPTIONS_KEYER_SPEED	1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED_WPM 1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED_WORD 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING	1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS	1
 
@@ -64,11 +65,17 @@ extern "C" {
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
       dp->k.setWord(dp->opts.word);
       dp->k.setWpm(dp->opts.wpm);
-      dp->k.setDit(dp->opts.dit);
-      dp->k.setDah(dp->opts.dah);
-      dp->k.setIes(dp->opts.ies);
-      dp->k.setIls(dp->opts.ils);
-      dp->k.setIws(dp->opts.iws);
+
+      float microsPerDit = 60000000.0 / (dp->opts.wpm * dp->opts.word);
+      float r = (dp->opts.ratio-50)/100.0; // why 50 is zero is left as an exercise
+      float w = (dp->opts.weight-50)/100.0;
+      float c = 1000.0 * dp->opts.comp / microsPerDit;
+      dp->k.setDit(dp->opts.dit+r+w-c);
+      dp->k.setDah(dp->opts.dah-r+w-c);
+      dp->k.setIes(dp->opts.ies  -w+c);
+      dp->k.setIls(dp->opts.ils  -w+c);
+      dp->k.setIws(dp->opts.iws  -w+c);
+
       dp->k.setAutoIls(dp->opts.alsp != 0);
       dp->k.setAutoIws(dp->opts.awsp != 0);
       dp->k.setSwapped(dp->opts.swap != 0);
@@ -164,7 +171,8 @@ extern "C" {
     dp->modified = dp->modified || dp->opts.wpm != save.wpm || dp->opts.swap != save.swap || 
       dp->opts.mode != save.mode || dp->opts.word != save.word || dp->opts.dit != save.dit || dp->opts.dah != save.dah || 
       dp->opts.ies != save.ies || dp->opts.ils != save.ils || dp->opts.iws != save.iws || 
-      dp->opts.alsp != save.alsp || dp->opts.awsp != save.awsp;
+      dp->opts.alsp != save.alsp || dp->opts.awsp != save.awsp ||
+      dp->opts.weight != save.weight || dp->opts.ratio != save.ratio || dp->opts.comp != save.comp;
     return TCL_OK;
   }
 

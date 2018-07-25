@@ -204,9 +204,14 @@ proc populate-component-options {component name} {
 		    [list -text $opt -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
 		continue
 	    }
-	    -weight {
+	    -weight - -ratio {
 		lappend ::data(options) $name $opt value $ovalue \
-		    [list -text $opt -info $info -format %.0f -units percent -min 25 -max 75 -step 1]
+		    [list -text $opt -info $info -format %.1f -units % -min 0.0 -max 100.0 -step 0.1]
+		continue
+	    }
+	    -comp {
+		lappend ::data(options) $name $opt value $ovalue \
+		    [list -text $opt -info $info -format %.1f -units ms -min -15.0 -max 15.0 -step 0.1]
 		continue
 	    }
 	    -freq {

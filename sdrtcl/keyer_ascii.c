@@ -36,9 +36,13 @@
 */
 
 #define FRAMEWORK_USES_JACK 1
-#define FRAMEWORK_OPTIONS_MIDI	1
-#define FRAMEWORK_OPTIONS_KEYER_SPEED	1
-#define FRAMEWORK_OPTIONS_KEYER_TIMING	1
+#define FRAMEWORK_OPTIONS_MIDI 1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED_WPM 1
+#define FRAMEWORK_OPTIONS_KEYER_SPEED_WORD 1
+#define FRAMEWORK_OPTIONS_KEYER_TIMING 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_RATIO 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP 1
 
 #include "../dspmath/midi.h"
 #include "../dspmath/midi_buffer.h"
@@ -68,7 +72,8 @@ static void _update(_t *dp) {
     /* update timing computations */
     // maybe this wasn't the best idea
     morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, 
-		 dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
+		 dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws,
+		 dp->opts.weight, dp->opts.ratio, dp->opts.comp);
   }
 }
 
@@ -79,7 +84,8 @@ static void *_init(void *arg) {
   dp->abort = 0;
   void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
   morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm,
-	       dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws);
+	       dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws,
+	       dp->opts.weight, dp->opts.ratio, dp->opts.comp);
   if (dp->opts.dict == NULL) {
     dp->opts.dict = Tcl_NewDictObj();
     Tcl_IncrRefCount(dp->opts.dict);
@@ -260,12 +266,17 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     return TCL_ERROR;
   }
 
-  data->modified = data->fw.busy = data->modified || data->opts.word != save.word ||
+  data->modified = data->fw.busy = data->modified || 
+				    data->opts.word != save.word ||
 				    data->opts.wpm != save.wpm ||
+				    data->opts.dit != save.dit ||
 				    data->opts.dah != save.dah ||
 				    data->opts.ies != save.ies ||
 				    data->opts.ils != save.ils ||
-				    data->opts.iws != save.iws;
+				    data->opts.iws != save.iws ||
+				    data->opts.weight != save.weight || 
+				    data->opts.ratio != save.ratio || 
+				    data->opts.comp != save.comp;
   return TCL_OK;
 }
 

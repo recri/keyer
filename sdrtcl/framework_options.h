@@ -23,49 +23,60 @@
   { "-client",  "client",     "Client",  NULL,      fw_option_obj,     fw_flag_create_only, offsetof(_t, fw.client_name), "jack client name" },
   { "-verbose", "verbose",    "Verbose", "0",       fw_option_int,     fw_flag_none,	    offsetof(_t, fw.verbose),     "amount of diagnostic output" },
 #if FRAMEWORK_OPTIONS_MIDI // options that define the MIDI operation
-  { "-chan",     "channel",   "Channel", "1",       fw_option_int,     fw_flag_none,        offsetof(_t, opts.chan),      "midi channel" },
+  { "-chan",     "chan",      "Chan",    "1",       fw_option_int,     fw_flag_none,        offsetof(_t, opts.chan),      "midi channel" },
   { "-note",     "note",      "Note",    "0",	    fw_option_int,     fw_flag_none,        offsetof(_t, opts.note),      "base midi note" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TONE // options that control the keyer tone generator
-  { "-freq",     "frequency", "Hertz",   "700.0",   fw_option_float,   fw_flag_none,        offsetof(_t, opts.freq),	  "frequency of tone in hertz" },
-  { "-gain",     "gain",      "Decibel", "-30.0",   fw_option_float,   fw_flag_none,        offsetof(_t, opts.gain),	  "level of tone in decibels" },
-  { "-rise",     "rise",      "Ramp",    "5.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.rise),	  "rise time in milliseconds" },
-  { "-fall",     "fall",      "Ramp",    "5.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.fall),      "fall time in milliseconds" },
-  { "-window",   "window",    "Window",  "hann",    fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.window),    "first ramp window", 
+  { "-freq",     "freq",      "Freq",   "700.0",  fw_option_float,   fw_flag_none,        offsetof(_t, opts.freq),	  "frequency of tone in hertz" },
+  { "-gain",     "gain",      "Gain",   "-30.0",  fw_option_float,   fw_flag_none,        offsetof(_t, opts.gain),	  "level of tone in decibels" },
+  { "-rise",     "rise",      "Rise",    "5.0",   fw_option_float,   fw_flag_none,	    offsetof(_t, opts.rise),	  "rise time in milliseconds" },
+  { "-fall",     "fall",      "Fall",    "5.0",   fw_option_float,   fw_flag_none,	    offsetof(_t, opts.fall),      "fall time in milliseconds" },
+  { "-window",   "window",    "Window",  "hann",  fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.window),    "first ramp window", 
       window_mode_custom_option },
-  { "-window2",  "window2",   "Window",  "none",    fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.window2),   "second ramp window", 
+  { "-window2",  "window2",   "Window",  "none",  fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.window2),   "second ramp window", 
       window_mode_custom_option },
 #endif
-#if FRAMEWORK_OPTIONS_KEYER_SPEED // options that control the speed of morse code
-  { "-wpm",      "wpm",       "Words",   "18.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.wpm),	  "words per minute" },
-  { "-word",     "word",      "Dits",    "50",      fw_option_int,     fw_flag_none,	    offsetof(_t, opts.word),      "dits in a word" },
+#if FRAMEWORK_OPTIONS_KEYER_SPEED_WPM // options that control the speed of morse code
+  { "-wpm",      "wpm",       "Words",   "18.0",  fw_option_float,   fw_flag_none,	    offsetof(_t, opts.wpm),	  "words per minute" },
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_SPEED_WORD
+  { "-word",     "word",      "Word",    "50",    fw_option_int,     fw_flag_none,	    offsetof(_t, opts.word),      "dits in a word" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_DIT
-  { "-dit",      "dit",       "Dits",    "1.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dit),	  "dit length in dits" },
+  { "-dit",      "dit",       "Dit",     "1.0",   fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dit),	  "dit length in dits" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_DAH
-  { "-dah",      "dah",       "Dits",    "3.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dah),	  "dah length in dits" },
+  { "-dah",      "dah",       "Dah",    "3.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.dah),	  "dah length in dits" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_IES
-  { "-ies",	 "ies",	      "Dits",    "1.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.ies),	  "inter-element space in dits" },
+  { "-ies",	 "ies",	      "Ies",    "1.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.ies),	  "inter-element space in dits" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_ILS
-  { "-ils",	 "ils",	      "Dits",    "3.0",	    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.ils),	  "inter-letter space in dits" },
+  { "-ils",	 "ils",	      "Ils",    "3.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.ils),	  "inter-letter space in dits" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TIMING_IWS
-  { "-iws",	 "iws",	      "Dits",    "7.0",     fw_option_float,   fw_flag_none,	    offsetof(_t, opts.iws),	  "inter-word space in dits" },
+  { "-iws",	 "iws",	      "Iws",    "7.0",    fw_option_float,   fw_flag_none,	    offsetof(_t, opts.iws),	  "inter-word space in dits" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP
-  { "-swap",	 "swap",      "Bool",    "0",	    fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.swap),	  "swap the dit and dah paddles" },
+  { "-swap",	 "swap",      "Swap",    "0",     fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.swap),	  "swap the dit and dah paddles" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_ALSP
-  { "-alsp",	 "alsp",      "Bool",    "0",	    fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.alsp),	  "auto letter spacing" },
+  { "-alsp",	 "alsp",      "Alsp",    "0",	    fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.alsp),	  "auto letter spacing" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_AWSP
-  { "-awsp",	 "awsp",      "Bool",    "0",	    fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.awsp),	  "auto word spacing" },
+  { "-awsp",	 "awsp",      "Awsp",    "0",	    fw_option_boolean, fw_flag_none,	    offsetof(_t, opts.awsp),	  "auto word spacing" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_MODE
-  { "-mode",	 "mode",      "Char",    "A",	    fw_option_char,    fw_flag_none,	    offsetof(_t, opts.mode),	  "iambic keyer mode" },
+  { "-mode",	 "mode",      "Mode",    "A",	    fw_option_char,    fw_flag_none,	    offsetof(_t, opts.mode),	  "iambic keyer mode" },
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT
+  { "-weight",	 "weight",    "Weight",  "50",	    fw_option_float,    fw_flag_none,	    offsetof(_t, opts.weight),	  "keyer mark/space weight" },
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_RATIO
+  { "-ratio",	 "ratio",    "Ratio",    "50",	    fw_option_float,    fw_flag_none,	    offsetof(_t, opts.ratio),	  "keyer dit/dah ratio" },
+#endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP
+  { "-comp",     "comp",     "Comp",      "0",	    fw_option_float,    fw_flag_none,	    offsetof(_t, opts.comp),       "keyer ms compensation" },
 #endif
 #else
 #error "framework_options.h multiply included"
