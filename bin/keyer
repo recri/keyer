@@ -69,6 +69,9 @@ proc has-detime {} { return [has-var -detime] }
 proc get-insert {} { return [get-var -insert] }
 proc set-insert {name} { set-var -insert $name }
 proc has-insert {} { return [has-var -insert] }
+proc get-tap {} { return [get-var -tap ] }
+proc set-tap {name} { set-var -tap $name }
+proc has-tap {} { return [has-var -tap ] }
 proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
 proc has-argvopts {} { return [has-var -argvopts] }
 proc get-argvopts {} { return [get-var -argvopts] }
@@ -292,8 +295,9 @@ proc keyer-widget {w} {
 	dial Settings
 	insert Keys
 	memories Memories
-	ascii {Input Text}
-	detime {Output Text}
+	ascii Input
+	detime Output
+	tap Events
     } {
 	if {[has-$tag]} {
 	    ttk::checkbutton $w.$tag -text $text -variable ::data(show-$tag) -command [list keyer-widget-show $w $tag]
@@ -520,6 +524,52 @@ proc read-text-widget {w} {
 }
 
 #
+# midi tap text widget, receiving midi events for timing check
+#
+
+set ::tapframe 0
+proc tap-window-timeout {w} {
+    #$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
+    if {[[get-tap] state]} {
+	foreach event [[get-tap] get] {
+	    foreach {frame midi} $event break
+	    binary scan $midi c* bytes
+	    set out [format {%ld %ld} $frame [expr {$frame-$::tapframe}]]
+	    set ::tapframe $frame
+	    foreach b $bytes {
+		append out [format { %02x} [expr {$b&0xff}]]
+	    }
+	    $w insert end $out\n
+	}	
+    }
+    after 100 [list tap-window-timeout $w]
+}
+proc tap-save-file {w dolog} {
+    set filename [tk_getSaveFile -title {Midi log to file}]
+    if {$filename ne {}} {
+	write-file $filename [$w get 1.0 end]
+    }
+}
+proc tap-option-menu {w x y} {
+    if { ! [winfo exists $w.m] } {
+	menu $w.m -tearoff no
+	$w.m add command -label {Save To File} -command [list tap-save-file $w]
+	$w.m add command -label {Clear} -command [list $w delete 1.0 end]
+	$w.m add command -label {Start} -command [list [get-tap] start]
+	$w.m add command -label {Stop} -command [list [get-tap] stop]
+
+    }
+    tk_popup $w.m $x $y
+}
+proc tap-widget {w} {
+    text $w -width 30 -height 15 -exportselection true
+    bind $w <ButtonPress-3> [list tap-option-menu $w %X %Y]
+    [get-tap] start
+    after 100 [list tap-window-timeout $w]
+    return $w
+}
+
+#
 # load the entire ui for the program
 #
 proc load-ui {} {
@@ -562,6 +612,10 @@ proc load-ui {} {
     if {[has-detime]} {
 	.p add [read-text-widget .p.detime]
 	set ::data(show-detime) 1
+    }
+    if {[has-tap]} {
+	.p add [tap-widget .p.tap]
+	set ::data(show-tap) 1
     }
 }
 
@@ -613,6 +667,7 @@ proc main {argv} {
 		    keyer-ascii { set-ascii $name2 }
 		    keyer-detime { set-detime $name2 }
 		    midi-insert { set-insert $name2 }
+		    midi-tap { set-tap $name2 }
 		}
 		# load its options
 		populate-component-options $component $name2

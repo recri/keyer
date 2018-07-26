@@ -38,6 +38,8 @@ static void morse_timing(morse_timing_t *samples_per, unsigned sample_rate, floa
   float r = (ratio-50)/100.0;
   float w = (weight-50)/100.0;
   float c = comp / ms_per_dit; /* ms / ms_per_dit */
+  /* printf("morse_timing sr %u, word %f, wpm %f, dit %f, dah %f, ies %f, ils %f, iws %f, weight %f, ratio %f, comp %f\n",
+     sample_rate, word, wpm, dit, dah, ies, ils, iws, weight, ratio, comp); */
   /* printf("morse_timing r %f, w %f, c %f\n", r, w, c); */
   /* samples_per_dit = (samples_per_second * second_per_minute) / (words_per_minute * dits_per_word)  */
   samples_per->base = (unsigned) ((sample_rate * 60) / (wpm * word));
@@ -46,5 +48,8 @@ static void morse_timing(morse_timing_t *samples_per, unsigned sample_rate, floa
   samples_per->ies = (ies  -w-c) * samples_per->base;
   samples_per->ils = (ils  -w-c) * samples_per->base;
   samples_per->iws = (iws  -w-c) * samples_per->base;
+  /* printf("morse_timing base %u, dit %u, dah %u, ies %u, ils %u, iws %u\n",
+     samples_per->base, samples_per->dit, samples_per->dah, samples_per->ies, samples_per->ils, samples_per->iws); */
+
 }
 #endif

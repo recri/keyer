@@ -58,6 +58,7 @@ typedef struct {
 typedef struct {
   framework_t fw;
   morse_timing_t samples_per;
+  morse_timing_t pre_samples_per;
   int modified;
   options_t opts;
   int abort;
@@ -65,34 +66,31 @@ typedef struct {
   midi_buffer_t midi;
 } _t;
 
-static void _update(_t *dp) {
-  if (dp->modified) {
-    dp->modified = dp->fw.busy = 0;
-    if (dp->fw.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
+static void _update(_t *data) {
+  if (data->modified) {
+    if (data->fw.verbose > 2) fprintf(stderr, "%s:%d: _update\n", __FILE__, __LINE__);
     /* update timing computations */
-    // maybe this wasn't the best idea
-    morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm, 
-		 dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws,
-		 dp->opts.weight, dp->opts.ratio, dp->opts.comp);
+    data->samples_per = data->pre_samples_per;
+    data->modified = data->fw.busy = 0;
   }
 }
 
 static void *_init(void *arg) {
-  _t *dp = (_t *)arg;
-  dp->n_prosign = 0;
-  dp->n_slash = 0;
-  dp->abort = 0;
-  void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
-  morse_timing(&dp->samples_per, sdrkit_sample_rate(dp), dp->opts.word, dp->opts.wpm,
-	       dp->opts.dit, dp->opts.dah, dp->opts.ies, dp->opts.ils, dp->opts.iws,
-	       dp->opts.weight, dp->opts.ratio, dp->opts.comp);
-  if (dp->opts.dict == NULL) {
-    dp->opts.dict = Tcl_NewDictObj();
-    Tcl_IncrRefCount(dp->opts.dict);
+  _t *data = (_t *)arg;
+  data->n_prosign = 0;
+  data->n_slash = 0;
+  data->abort = 0;
+  void *p = midi_buffer_init(&data->midi); if (p != &data->midi) return p;
+  morse_timing(&data->samples_per, sdrkit_sample_rate(data), data->opts.word, data->opts.wpm,
+	       data->opts.dit, data->opts.dah, data->opts.ies, data->opts.ils, data->opts.iws,
+	       data->opts.weight, data->opts.ratio, data->opts.comp);
+  if (data->opts.dict == NULL) {
+    data->opts.dict = Tcl_NewDictObj();
+    Tcl_IncrRefCount(data->opts.dict);
     for (int i = 0; i < sizeof(morse_coding_table)/sizeof(morse_coding_table[0]); i += 1) {
       Tcl_UniChar ch;
       Tcl_UtfToUniChar(morse_coding_table[i][0], &ch);
-      Tcl_DictObjPut(NULL, dp->opts.dict, Tcl_NewUnicodeObj(&ch, 1), Tcl_NewStringObj(morse_coding_table[i][1], -1));
+      Tcl_DictObjPut(NULL, data->opts.dict, Tcl_NewUnicodeObj(&ch, 1), Tcl_NewStringObj(morse_coding_table[i][1], -1));
     }
   }
   return arg;
@@ -102,27 +100,27 @@ static void *_init(void *arg) {
 ** jack process callback
 */
 static int _process(jack_nframes_t nframes, void *arg) {
-  _t *dp = (_t *)arg;
-  void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
+  _t *data = (_t *)arg;
+  void* midi_out = jack_port_get_buffer(framework_midi_output(data,0), nframes);
   jack_midi_event_t event;
   
   // find out what there is to do
-  framework_midi_event_init(&dp->fw, &dp->midi, nframes);
+  framework_midi_event_init(&data->fw, &data->midi, nframes);
   // clear the jack output buffer
   jack_midi_clear_buffer(midi_out);
   // update our options
-  _update(dp);
+  _update(data);
   // handle an abort signal
-  if (dp->abort) {
-    midi_buffer_init(&dp->midi);
+  if (data->abort) {
+    midi_buffer_init(&data->midi);
     unsigned char *buffer = jack_midi_event_reserve(midi_out, 0, 3);
-    unsigned char note_off[] = { MIDI_NOTE_OFF|(dp->opts.chan-1), dp->opts.note, 0 };
+    unsigned char note_off[] = { MIDI_NOTE_OFF|(data->opts.chan-1), data->opts.note, 0 };
     if (buffer == NULL) {
       fprintf(stderr, "%s:%d: jack won't buffer %d midi bytes!\n", __FILE__, __LINE__, 3);
     } else {
       memcpy(buffer, note_off, 3);
     }
-    dp->abort = 0;
+    data->abort = 0;
     return 0;
   }
 
@@ -130,7 +128,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   for(int i = 0; i < nframes; i += 1) {
     // process all midi output events at this sample frame
     int port;
-    while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
+    while (framework_midi_event_get(&data->fw, i, &event, &port)) {
       if (event.size != 0) {
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, event.size);
 	if (buffer == NULL) {
@@ -144,35 +142,35 @@ static int _process(jack_nframes_t nframes, void *arg) {
   return 0;
 }
 
-static int _flush_midi(_t *dp) {
-  return midi_buffer_queue_flush(&dp->midi) >= 0;
+static int _flush_midi(_t *data) {
+  return midi_buffer_queue_flush(&data->midi) >= 0;
 }
 
-static void _unflush_midi(_t *dp) {
-  midi_buffer_queue_drop(&dp->midi);
+static void _unflush_midi(_t *data) {
+  midi_buffer_queue_drop(&data->midi);
 }
 
 /*
 ** queue a string of . and - as midi events
 ** terminate with an inter letter space unless continues
 */
-static int _queue_midi(_t *dp, Tcl_UniChar c, char *p, int continues) {
+static int _queue_midi(_t *data, Tcl_UniChar c, char *p, int continues) {
   /* normal send single character */
   if (p == NULL) {
     if (c == ' ') {
-      if (midi_buffer_queue_delay(&dp->midi, dp->samples_per.iws-dp->samples_per.ils) < 0) return 0;
+      if (midi_buffer_queue_delay(&data->midi, data->samples_per.iws-data->samples_per.ils) < 0) return 0;
     }
   } else {
     while (*p != 0) {
       if (*p == '.') {
-	if (midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dit, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dit, data->opts.chan, data->opts.note, 0) < 0) return 0;
       } else if (*p == '-') {
-	if (midi_buffer_queue_note_on(&dp->midi, dp->samples_per.dah, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dah, data->opts.chan, data->opts.note, 0) < 0) return 0;
       }
       if (p[1] != 0 || continues) {
-	if (midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ies, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_off(&data->midi, data->samples_per.ies, data->opts.chan, data->opts.note, 0) < 0) return 0;
       } else {
-	if (midi_buffer_queue_note_off(&dp->midi, dp->samples_per.ils, dp->opts.chan, dp->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_off(&data->midi, data->samples_per.ils, data->opts.chan, data->opts.note, 0) < 0) return 0;
       }
       p += 1;
     }
@@ -180,9 +178,9 @@ static int _queue_midi(_t *dp, Tcl_UniChar c, char *p, int continues) {
   return 1;
 }
 
-static char *morse_unicoding(_t *dp, Tcl_UniChar c) {
+static char *morse_unicoding(_t *data, Tcl_UniChar c) {
   Tcl_Obj *value;
-  if (Tcl_DictObjGet(NULL, dp->opts.dict, Tcl_NewUnicodeObj(&c, 1), &value) == TCL_OK && value != NULL)
+  if (Tcl_DictObjGet(NULL, data->opts.dict, Tcl_NewUnicodeObj(&c, 1), &value) == TCL_OK && value != NULL)
     return Tcl_GetString(value);
   return NULL;
 }
@@ -192,24 +190,24 @@ static char *morse_unicoding(_t *dp, Tcl_UniChar c) {
 ** but implement an escape to allow prosign construction
 */
 static int _queue_unichar(Tcl_UniChar c, void *arg) {
-  _t *dp = (_t *)arg;
+  _t *data = (_t *)arg;
   
   if (c == '\\') {
     /* use \ab to send prosign of a concatenated to b with no inter-letter space */
     /* multiple slashes to get longer prosigns, so \\sos or \s\os */
-    dp->n_slash += 1;
-  } else if (dp->n_slash != 0) {
-    dp->prosign[dp->n_prosign++] = c;
-    if (dp->n_prosign == dp->n_slash+1) {
-      for (int i = 0; i < dp->n_prosign; i += 1) {
-	if ( ! _queue_midi(dp, dp->prosign[i], morse_unicoding(dp, dp->prosign[i]), i != dp->n_prosign-1)) return 0;
+    data->n_slash += 1;
+  } else if (data->n_slash != 0) {
+    data->prosign[data->n_prosign++] = c;
+    if (data->n_prosign == data->n_slash+1) {
+      for (int i = 0; i < data->n_prosign; i += 1) {
+	if ( ! _queue_midi(data, data->prosign[i], morse_unicoding(data, data->prosign[i]), i != data->n_prosign-1)) return 0;
       }
-      dp->n_prosign = 0;
-      dp->n_slash = 0;
-      _flush_midi(dp);
+      data->n_prosign = 0;
+      data->n_slash = 0;
+      _flush_midi(data);
     }
   } else {
-    if ( ! _queue_midi(dp, c, morse_unicoding(dp, c), 0)) return 0;
+    if ( ! _queue_midi(data, c, morse_unicoding(data, c), 0)) return 0;
   }
   return 1;
 }
@@ -266,17 +264,15 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     return TCL_ERROR;
   }
 
-  data->modified = data->fw.busy = data->modified || 
-				    data->opts.word != save.word ||
-				    data->opts.wpm != save.wpm ||
-				    data->opts.dit != save.dit ||
-				    data->opts.dah != save.dah ||
-				    data->opts.ies != save.ies ||
-				    data->opts.ils != save.ils ||
-				    data->opts.iws != save.iws ||
-				    data->opts.weight != save.weight || 
-				    data->opts.ratio != save.ratio || 
-				    data->opts.comp != save.comp;
+  if ( data->opts.wpm != save.wpm ||
+       data->opts.weight != save.weight || data->opts.ratio != save.ratio || data->opts.comp != save.comp ||
+       data->opts.dit != save.dit || data->opts.dah != save.dah || data->opts.word != save.word ||
+       data->opts.ies != save.ies || data->opts.ils != save.ils || data->opts.iws != save.iws ) {
+    morse_timing(&data->pre_samples_per, sdrkit_sample_rate(data), data->opts.word, data->opts.wpm, 
+		 data->opts.dit, data->opts.dah, data->opts.ies, data->opts.ils, data->opts.iws,
+		 data->opts.weight, data->opts.ratio, data->opts.comp);
+    data->modified = data->fw.busy = 1;
+  }
   return TCL_OK;
 }
 
