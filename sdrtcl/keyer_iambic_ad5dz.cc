@@ -70,11 +70,11 @@ extern "C" {
       float r = (dp->opts.ratio-50)/100.0; // why 50 is zero is left as an exercise
       float w = (dp->opts.weight-50)/100.0;
       float c = 1000.0 * dp->opts.comp / microsPerDit;
-      dp->k.setDit(dp->opts.dit+r+w-c);
-      dp->k.setDah(dp->opts.dah-r+w-c);
-      dp->k.setIes(dp->opts.ies  -w+c);
-      dp->k.setIls(dp->opts.ils  -w+c);
-      dp->k.setIws(dp->opts.iws  -w+c);
+      dp->k.setDit(dp->opts.dit+r+w+c);
+      dp->k.setDah(dp->opts.dah-r+w+c);
+      dp->k.setIes(dp->opts.ies  -w-c);
+      dp->k.setIls(dp->opts.ils  -w-c);
+      dp->k.setIws(dp->opts.iws  -w-c);
 
       dp->k.setAutoIls(dp->opts.alsp != 0);
       dp->k.setAutoIws(dp->opts.awsp != 0);

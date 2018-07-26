@@ -33,16 +33,18 @@ static void morse_timing(morse_timing_t *samples_per, unsigned sample_rate, floa
 			 float dit, float dah, float ies, float ils, float iws,
 			 float weight, float ratio, float comp) {
   /* ms_per_dit = (ms_per_second * second_per_minute) / (words_per_minute * dits_per_word */
+  /*            = (ms_per_minute) / (dits_per_minute) */
   float ms_per_dit = (1000 * 60) / (wpm * word);
   float r = (ratio-50)/100.0;
   float w = (weight-50)/100.0;
   float c = comp / ms_per_dit; /* ms / ms_per_dit */
+  /* printf("morse_timing r %f, w %f, c %f\n", r, w, c); */
   /* samples_per_dit = (samples_per_second * second_per_minute) / (words_per_minute * dits_per_word)  */
   samples_per->base = (unsigned) ((sample_rate * 60) / (wpm * word));
-  samples_per->dit = (dit+r+w-c) * samples_per->base;
-  samples_per->dah = (dah-r+w-c) * samples_per->base;
-  samples_per->ies = (ies  -w+c) * samples_per->base;
-  samples_per->ils = (ils  -w+c) * samples_per->base;
-  samples_per->iws = (iws  -w+c) * samples_per->base;
+  samples_per->dit = (dit+r+w+c) * samples_per->base;
+  samples_per->dah = (dah-r+w+c) * samples_per->base;
+  samples_per->ies = (ies  -w-c) * samples_per->base;
+  samples_per->ils = (ils  -w-c) * samples_per->base;
+  samples_per->iws = (iws  -w-c) * samples_per->base;
 }
 #endif
