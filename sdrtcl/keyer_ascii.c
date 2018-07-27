@@ -57,8 +57,8 @@ typedef struct {
 
 typedef struct {
   framework_t fw;
-  morse_timing_t samples_per;
-  morse_timing_t pre_samples_per;
+  morse_timing_t samples_per;	  /* live samples timings per element */
+  morse_timing_t pre_samples_per; /* precompute sample timings per element */
   int modified;
   options_t opts;
   int abort;

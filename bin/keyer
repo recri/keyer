@@ -428,13 +428,13 @@ proc insert-key {w element updown} {
 #
 proc cwtext-window-timeout {w} {
     # I'm seeing available taking 50-60 units per character sent
-    if { (! [[get-ascii] is-busy]) && [[get-ascii] pending] < 30} {
+    if { (! [[get-ascii] is-busy]) && [[get-ascii] pending] < 40} {
 	set text [$w nextchar]
 	if {$text ne {}} {
 	    [get-ascii] puts [string toupper $text]
 	}
     }
-    after 100 [list cwtext-window-timeout $w]
+    after 20 [list cwtext-window-timeout $w]
 }
 
 proc cwtext-stop-sending {w} { $w abort; [get-ascii] abort }
@@ -502,7 +502,7 @@ proc read-text-window-timeout {w} {
     $w insert end [[get-detime] get]\n
     after 100 [list read-text-window-timeout $w]
 }
-proc read-text-save-file {w dolog} {
+proc read-text-save-file {w} {
     set filename [tk_getSaveFile -title {Log to file}]
     if {$filename ne {}} {
 	write-file $filename [$w get 1.0 end]
@@ -544,7 +544,7 @@ proc tap-window-timeout {w} {
     }
     after 100 [list tap-window-timeout $w]
 }
-proc tap-save-file {w dolog} {
+proc tap-save-file {w} {
     set filename [tk_getSaveFile -title {Midi log to file}]
     if {$filename ne {}} {
 	write-file $filename [$w get 1.0 end]
@@ -603,19 +603,23 @@ proc load-ui {} {
     if {[has-insert]} { 
 	.p add [insert-widget .p.insert]
 	set ::data(show-insert) 1
+	# add options for insert widget
     }
     # memories-widget
     if {[has-ascii]} {
 	.p add [cwtext-widget .p.ascii]
 	set ::data(show-ascii) 1
+	# add options for cwtext widget
     }
     if {[has-detime]} {
 	.p add [read-text-widget .p.detime]
 	set ::data(show-detime) 1
+	# add options for read-text widget
     }
     if {[has-tap]} {
 	.p add [tap-widget .p.tap]
 	set ::data(show-tap) 1
+	# add options for tap widget
     }
 }
 
@@ -635,9 +639,21 @@ proc build-command-line {} {
 }
 
 proc main {argv} {
+
     # initialize
     set ::data(main) [dict create -server {} -uuid {} options {}]
 
+    # see what jack thinks we're doing
+    package require sdrtcl::jack
+    set bs [sdrtcl::jack buffer-size]; # samples per buffer
+    set sr [sdrtcl::jack sample-rate]; # samples per second
+    # ms-per-buffer = ($bs samples-per-buffer) * ((1000 ms-per-second) / ($sr samples-per-second))
+    set mspbs [expr {$bs * 1000.0 / $sr}]
+    dict set ::data(main) jack buffer-size $bs
+    dict set ::data(main) jack sample-rate $sr
+    dict set ::data(main) jack ms-per-buffer $mspbs
+    # puts "$mspbs ms per buffer"
+    
     # style, abolish invisible indicators
     ttk::style configure "." -indicatordiameter 12
     ttk::style configure TCheckbutton -relief raised
@@ -645,6 +661,9 @@ proc main {argv} {
     
     # make a usage message
     if {$argv eq {} || $argv eq {help}} {
+	puts {usage: keyer -start <module> ?...? ?-option <value> ...?}
+	destroy .
+	exit 1
     }
 
     # process arguments
@@ -689,6 +708,7 @@ proc main {argv} {
     load-ui
     
     # load the dial-set dependent options
+    # ?I'm not sure what this comment means?
     
     # load the options collected from the command line
     if {[has-argvopts]} {
@@ -705,4 +725,3 @@ proc main {argv} {
 }
 
 main $argv
-
