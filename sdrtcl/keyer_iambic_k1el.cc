@@ -35,6 +35,9 @@ extern "C" {
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_IES 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_MODE 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_RATIO 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP 1
 
 #include "framework.h"
 #include "../dspmath/midi.h"
@@ -62,9 +65,13 @@ extern "C" {
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
       dp->k.setWord(dp->opts.word);
       dp->k.setWpm(dp->opts.wpm);
-      dp->k.setDit(dp->opts.dit);
-      dp->k.setDah(dp->opts.dah);
-      dp->k.setIes(dp->opts.ies);
+      float microsPerDit = 60000000.0 / (dp->opts.wpm * dp->opts.word);
+      float r = (dp->opts.ratio-50)/100.0; // why 50 is zero is left as an exercise
+      float w = (dp->opts.weight-50)/100.0;
+      float c = 1000.0 * dp->opts.comp / microsPerDit;
+      dp->k.setDit(dp->opts.dit+r+w+c);
+      dp->k.setDah(dp->opts.dah-r+w+c);
+      dp->k.setIes(dp->opts.ies  -w-c);
       dp->k.setSwapped(dp->opts.swap != 0);
       dp->k.setMode(dp->opts.mode);
     }
@@ -157,7 +164,8 @@ extern "C" {
       return TCL_ERROR;
     }
     dp->modified = dp->modified || dp->opts.word != save.word || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
-		    dp->opts.ies != save.ies || dp->opts.swap != save.swap || dp->opts.mode != save.mode;
+      dp->opts.ies != save.ies || dp->opts.swap != save.swap || dp->opts.mode != save.mode ||
+      dp->opts.weight != save.weight || dp->opts.ratio != save.ratio || dp->opts.comp != save.comp;
     return TCL_OK;
   }
 

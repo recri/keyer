@@ -72,9 +72,6 @@ extern "C" {
       dp->k.setDit(dp->opts.dit+r+w+c);
       dp->k.setDah(dp->opts.dah-r+w+c);
       dp->k.setIes(dp->opts.ies  -w-c);
-      /* dp->k.setDit(dp->opts.dit); */
-      /* dp->k.setDah(dp->opts.dah); */
-      /* dp->k.setIes(dp->opts.ies); */
       dp->k.setSwapped(dp->opts.swap != 0);
     }
   }
@@ -165,7 +162,8 @@ extern "C" {
       return TCL_ERROR;
     }
     dp->modified = dp->modified || dp->opts.wpm != save.wpm || dp->opts.dah != save.dah ||
-      dp->opts.ies != save.ies || dp->opts.swap != save.swap;
+      dp->opts.ies != save.ies || dp->opts.swap != save.swap ||
+      dp->opts.weight != save.weight || dp->opts.ratio != save.ratio || dp->opts.comp != save.comp;
     return TCL_OK;
   }
 
