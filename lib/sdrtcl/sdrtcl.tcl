@@ -16,6 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+package require snit
+
 package provide sdrtcl 1.0.0
 
 namespace eval ::sdrtcl {}
@@ -81,4 +83,41 @@ set sdrtcl::smeter {
     {S3		0.8		-109	-2}
     {S2		0.4		-115	-8}
     {S1		0.2		-121	-14}
+}
+
+#
+# a snit type that acts like an sdrtcl extension type
+# or at least like some of them
+#
+snit::type sdrtcl::sdrtcl {
+    pragma -hastypeinfo    no 
+    # options
+    # supplies the info dictionary
+    option -info -default {}
+
+    # common sdrtcl options
+    option -verbose -default 0;	#
+    # common options for jack, um, all sdrtcl framework commands have -server and -client
+    # they may omit the code for port handling
+    option -server -default {};	# jack specific, create only
+    option -client -default {}; # jack specific, create only
+    # common jack midi options
+    # option -chan -default 1;	# jack midi specific
+    # option -note -default 0;	# jack midi specific
+
+    # methods
+    # configure handled by snit
+    # cget handled by snit
+    method cset {opt value} { $self configure $opt $value }
+    # info extends base
+    #var info [dict create command {} option [dict create] method [dict create]]
+    method {info type} {} { return [$type info type] }
+    method {info options} {} { return [$type info options] }
+    method {info methods} {} { return [$type info methods] }
+    method {info type} {} { return [$type info type] }
+    method {info command} {} { return [dict get $options(-info) command] }
+    method {info option} {opt} { return [dict get $options(-info) option $opt] }
+    method {info method} {met} { return [dict get $options(-info) method $met] }
+    # method {info ports} {} { return [dict get $info ports] }; # jack specific
+    #
 }

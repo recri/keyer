@@ -163,23 +163,36 @@ proc opt-primary {opt} { return [lindex [opt-components $opt] 0] }
 proc opt-get-opts {} { return [dict keys $::data(defines)] }
 
 proc populate-component-options {component name} {
+    # most of this could be greatly simplified by defining a 'type' for each
+    # option which specified the kind of values, ranges, step size, etc.
+    # for the options.  also of interest is whether we are dealing with a live
+    # jack component or something that throw busy errors,
+    # everything so far has been an sdrtcl:: jack component, but they could be 
+    # wrapped, I'd almost prefer them to handle the busy defer on their own, but
+    # then I'd need a timer associated to the wrappers, a type component as it
+    # were.
     foreach config [$name configure] {
-	foreach {opt oname oclass odefault ovalue} $config break
-	set info [$name info option $opt]
-	
-	dict set ::data(default) $opt $odefault
 	# note: opt is the option name in configure and cget commands
 	# oname is the option name in the option database (not used here)
 	# oclass is the option class name in the option database
 	# odefault is the default value
 	# ovalue is the current value
-
+	# info is the tool tip for the option, not presently used
+	foreach {opt oname oclass odefault ovalue} $config break
+	set info [$name info option $opt]
+	# remember the default value for command line generation
+	dict set ::data(default) $opt $odefault
+	# process the option
 	switch -- $opt {
 	    -server - -client - -uuid - -verbose {
 		# these are fixed, as in not modifiable
 		continue 
 	    }
 	    -chan {
+		# remember each option component name, option name, and current value
+		# the {value} is the class of readout component that handles this option
+		# the list is additional options for the readout
+		# midi channel could as well be an {enum} with 16 values.
 		lappend ::data(options) $name $opt value $ovalue \
 		    [list -text $opt -info $info -format %.0f -min 1 -max 16 -step 1]
 	    }
@@ -187,7 +200,7 @@ proc populate-component-options {component name} {
 		lappend ::data(options) $name $opt value $ovalue \
 		    [list -text $opt -info $info -format %.0f -min 0 -max 127 -step 1]
 	    }
-	    -wpm {
+	    -wpm - -key-wpm - -kbd-wpm {
 		lappend ::data(options) $name $opt value $ovalue \
 		    [list -text $opt -info $info -format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5]
 	    }
@@ -221,7 +234,7 @@ proc populate-component-options {component name} {
 		lappend ::data(options) $name $opt freq $ovalue \
 		    [list -text $opt -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
 	    }
-	    -rise - -fall {
+	    -rise - -fall - -risefall {
 		lappend ::data(options) $name $opt value $ovalue \
 		    [list -text $opt -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
 	    }
@@ -661,8 +674,10 @@ proc main {argv} {
     
     # make a usage message
     if {$argv eq {} || $argv eq {help}} {
-	puts {usage: keyer -start <module> ?...? ?-option <value> ...?}
-	destroy .
+	set usage {usage: keyer -start <module> ?...? ?-option <value> ...?}
+	puts $usage
+	# tk_messageBox -message $usage -type ok
+	# destroy .
 	exit 1
     }
 
@@ -671,9 +686,6 @@ proc main {argv} {
 	switch -- $opt {
 	    -server {
 		dict set ::data(main) $opt $val;	# select jack server
-	    }
-	    -uuid {
-		dict set ::data(main) $opt $val;	# identify saved jack client
 	    }
 	    -start {
 		# start a component
@@ -690,6 +702,17 @@ proc main {argv} {
 		}
 		# load its options
 		populate-component-options $component $name2
+	    }
+	    -split {
+		# split a joined option into
+	    }
+	    -join {
+		# join two options into one
+	    }
+	    -alias {
+		# invent an option name which targets a component option
+		# -alias '-kbd-wpm keybd -wpm' -alias '-key-wpm keyer -wpm' (splits -wpm)
+		# -alias '-risefall keyer-tone -rise keyer-tone -fall' (joins -rise and -fall)
 	    }
 	    default {
 		# save command line options until everything loads

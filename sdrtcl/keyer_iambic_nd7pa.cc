@@ -30,11 +30,14 @@ extern "C" {
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI	1
 #define FRAMEWORK_OPTIONS_KEYER_SPEED_WPM 1
-#define FRAMEWORK_OPTIONS_KEYER_SPEED_WORD 1
+  /* #define FRAMEWORK_OPTIONS_KEYER_SPEED_WORD 1 */
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_DIT 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_DAH 1
 #define FRAMEWORK_OPTIONS_KEYER_TIMING_IES 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_SWAP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_RATIO 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP 1
 
 #include "framework.h"
 #include "../dspmath/midi.h"
@@ -61,9 +64,17 @@ extern "C" {
       /* keyer recomputation */
       dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
       dp->k.setWpm(dp->opts.wpm);
-      dp->k.setDit(dp->opts.dit);
-      dp->k.setDah(dp->opts.dah);
-      dp->k.setIes(dp->opts.ies);
+
+      float microsPerDit = 60000000.0 / (dp->opts.wpm * 50);
+      float r = (dp->opts.ratio-50)/100.0; // why 50 is zero is left as an exercise
+      float w = (dp->opts.weight-50)/100.0;
+      float c = 1000.0 * dp->opts.comp / microsPerDit;
+      dp->k.setDit(dp->opts.dit+r+w+c);
+      dp->k.setDah(dp->opts.dah-r+w+c);
+      dp->k.setIes(dp->opts.ies  -w-c);
+      /* dp->k.setDit(dp->opts.dit); */
+      /* dp->k.setDah(dp->opts.dah); */
+      /* dp->k.setIes(dp->opts.ies); */
       dp->k.setSwapped(dp->opts.swap != 0);
     }
   }
@@ -160,11 +171,6 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-    { "-wpm",  "wpm",  "Words", "18.0", fw_option_float,   fw_flag_none, offsetof(_t, opts.wpm),  "words per minute" },
-    { "-dit",  "dit",  "Dits",  "1.0",  fw_option_float,   fw_flag_none, offsetof(_t, opts.dit),  "dit length in dits" },
-    { "-dah",  "dah",  "Dits",  "3.0",  fw_option_float,   fw_flag_none, offsetof(_t, opts.dah),  "dah length in dits" },
-    { "-ies",  "ies",  "Dits",  "1.0",  fw_option_float,   fw_flag_none, offsetof(_t, opts.ies),  "inter-element space in dits" },
-    { "-swap", "swap", "Bool",  "0",    fw_option_boolean, fw_flag_none, offsetof(_t, opts.swap), "swap the dit and dah paddles" },
     { NULL,    NULL,   NULL,    NULL,   fw_option_none,    fw_flag_none, 0, NULL }
   };
 
