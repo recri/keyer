@@ -1,0 +1,11 @@
+* The recri keyer as of 2018-07-30
+  The keyer components have been resuscitated at the urging
+  of Chuck Vaughn (aa0hww).  When last Chuck contacted me
+  the keyer components were being managed by ladish, the
+  linux audio session manager.  This turned out to be a mistake
+  as all the session managers have pretty much withered away.
+** The script that starts the keyer is ~/keyer/bin/keyer
+   It does not of itself start anything at all, the keyer
+   you get depends on what you ask it to start.  
+** ~/keyer/bin/keyer -start ad5dz
+   this command line

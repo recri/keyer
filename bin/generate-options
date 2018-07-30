@@ -1,0 +1,130 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# Copyright (C) 2018 by Roger E Critchlow Jr, Charlestown, MA, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# we are generating and regenerating the data accessed by
+# package require sdrtcl::options which is somewhat confused
+# as we start the project, probably reflecting my own confusion
+# about how this part of the machine should work.
+#
+# in a radio, or any kind of machine for that matter, we have
+# lots of parts which need to be connected together correctly
+# and tuned to operate together.
+#
+# the parts of sdrtcl are mostly jack clients which operate on 
+# audio samples and midi events.  The audio sample interface is 
+# pretty straightforward. The midi interface is considerably 
+# hairier.
+# [Note to self, simplify the midi interface so it can be used
+#  with less apprehension.]
+# The less common parts are factories for dsp parts, windowing
+# functions, fft's, FIR filters, etc.
+#
+# so, our goal here is to identify the types of the sdrtcl
+# modules, and, more importantly identify the types of their
+# options, so that we know enough to build a decent user 
+# interface with validated input for the options.
+#
+
+package require Tk
+package require snit
+
+#
+set script [info script]
+
+set dirname [file dirname $script]
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+#
+# find the list of sdrtcl::*
+#
+set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}}]
+
+#
+# blacklist some
+#
+set blacklist {
+}
+
+set ::options [dict create package {} option {} dbname {} clname {} config {}]
+set ::configs [dict create]
+
+foreach p $::packages {
+    puts "processing $p"
+    dict set ::options package $p {}
+    set before [info commands sdrtcl::*]
+    if {[catch {package require $p} error]} {
+	puts "require $p -> $error"
+	dict set ::options package $p type failed
+    } else {
+	dict set ::options package $p type loaded
+	dict set ::options package $p commands {}
+	foreach cmd [info commands sdrtcl::*] {
+	    puts "processing $cmd in $p"
+	    if {[lsearch $before $cmd] >= 0} continue
+	    dict set ::options command $cmd package $p
+	    # dict lappend ::options package $p commands $cmd
+	    dict set ::options package $p commands [concat [dict get $::options package $p commands] $cmd]
+	    if {[catch {$cmd foo} error]} {
+		puts "$p foo -> $error"
+		catch {rename foo {}}
+		catch {rename $cmd {}}
+		continue
+	    }
+	    if { ! [catch {foo info command} result]} {
+		# snit types have no info command
+		dict set ::options commands $cmd command $result
+	    }
+	    dict set ::options commands $cmd type [foo info type]
+	    dict set ::options commands $cmd methods [foo info methods]
+	    dict set ::options commands $cmd options [foo info options]
+	    if { ! [catch {foo info ports} result]} {
+		# non-jack dsp types have not ports
+		dict set ::options commands $cmd ports $result
+	    }
+	    foreach m [foo info methods] {
+		if { ! [catch {foo info method $m} result]} {
+		    dict set ::options commands $cmd method $m $result
+		}
+	    }
+	    foreach o [foo info options] {
+		if { ! [catch {foo info option $o} result]} {
+		    dict set ::options commands $cmd option $o $result
+		}
+		set conf [foo configure $o]
+		dict set ::options commands $cmd config $o $conf
+		dict lappend ::configs $conf $cmd
+	    }
+	    catch {rename foo {}}
+	}
+    }
+    # puts "finished processing $p"
+    catch {rename $p {}}
+}
+pack [text .text] -side top -fill both -expand true
+.text configure -tabs [expr {16*[font measure [.text cget -font] abcdefgh]/8.0}]
+foreach config [lsort [dict keys $::configs]] {
+    set n [llength [dict get $::configs $config]]
+    .text insert end [join [list $n {*}$config] \t]\n
+}
