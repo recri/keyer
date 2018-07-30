@@ -1,11 +1,44 @@
 * The recri keyer as of 2018-07-30
-  The keyer components have been resuscitated at the urging
+**  The recri keyer has been resuscitated at the urging
   of Chuck Vaughn (aa0hww).  When last Chuck contacted me
   the keyer components were being managed by ladish, the
   linux audio session manager.  This turned out to be a mistake
   as all the session managers have pretty much withered away.
+**  I still list gladish as a prerequisite, but it's largely a
+  convenient way to get jack started consistently - by setting
+  up jack options and saving the 'studio' that contains the
+  options - and a convenient way to connect up jack components
+  that the keyer has loaded.  I no longer use any of the session
+  management features.
+** You need to cover those two issues before you try to use
+   this keyer.  You have to start the jack server and you need
+   to be able to connect jack components together.  Gladish can
+   do the job, but there are many alternatives.
 ** The script that starts the keyer is ~/keyer/bin/keyer
-   It does not of itself start anything at all, the keyer
-   you get depends on what you ask it to start.  
+   and it is best explained by way of examples.  To start
+   a simple iambic keyer we run:
+	bin/keyer -start ad5dz -start keyer-tone
+   this starts my iambic keyer component, sdrtcl::keyer-iambic-ad5dz,
+   and a the keyed oscillator component, sdrtcl::keyer-tone, and builds
+   a user interface that lets us control the options to these components.
+*** The name given to -start needs to match exactly one of the packages
+    listed in lib/sdrtcl/pkgIndex.tcl.  The sdrtcl:: namespace is common
+    to all the packages, so it can always be omitted.  ad5dz uniquely
+    identifies the iambic keyer, but abbreviating keyer-tone to 'tone'
+    ends up matching the keyer-detone component.
+*** The start name is also used as a jack client name for the component
+    and if you switch to gladish, or claudia, or patchage, or qjackctl,
+    or some other jack patch panel you should find that the ad5dz and
+    keyer-tone components are waiting there for you to connect them up.
+*** Or perhaps you didn't start jack before you ran the keyer command
+    in which case you got a bunch of errors as keyer tried to connect
+    with jack.  No problem, start jack with the manager or your choice
+    and run the keyer command again.
+*** The start component can be given a nickname with the syntax component@nickname
+    and the nickname becomes the jack client name. So we can start our keyer
+    example again with:
+	bin/keyer -start ad5dz@key -start keyer-tone@tone
+    then when we switch to the jack patch panel we find a 'key' and a 'tone'
+    component to hook up.
 ** ~/keyer/bin/keyer -start ad5dz
    this command line
