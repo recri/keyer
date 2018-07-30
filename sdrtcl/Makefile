@@ -5,8 +5,6 @@ JACK_CFLAGS=$(shell pkg-config --cflags jack)
 ALSA_CFLAGS=$(shell pkg-config --cflags alsa)
 LIBUSB_CFLAGS=$(shell pkg-config --cflags libusb-1.0)
 FFTW3_CFLAGS=$(shell pkg-config --cflags fftw3f)
- # $(shell pkg-config --cflags libgsl) did not compute
-LIBGSL_CFLAGS=''
 OSC_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D -DOSCILLATOR_INIT_NAME=Oscillator_Init -DOSCILLATOR_STRING_NAME=\"sdrtcl::oscillator\"
 
 OSCF_CFLAGS=-DOSCILLATOR_F -DOSCILLATOR_INIT_NAME=Oscillator_f_Init -DOSCILLATOR_STRING_NAME=\"sdrtcl::oscillator-f\" -DNO_GAIN
@@ -25,7 +23,6 @@ JACKSERVER_LIBS=-ljackserver
 ALSA_LIBS=$(shell pkg-config --libs alsa)
 LIBUSB_LIBS=$(shell pkg-config --libs libusb-1.0)
 FFTW3_LIBS=$(shell pkg-config --libs fftw3f)
-LIBGSL_LIBS=-lgsl -lgslcblas
 
 LIBDIR=../lib/sdrtcl
 
@@ -224,10 +221,10 @@ $(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../dspmath/dspmath.h ../dsp
 	gcc -fPIC -shared -o $@ $(OSCZD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/spectrum_tap.so: spectrum_tap.c framework.h ../dspmath/window.h ../dspmath/polyphase_fft.h
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBGSL_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/window.so: window.c framework.h ../dspmath/window.h
-	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBGSL_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/window_polyphase.so: window_polyphase.c framework.h ../dspmath/polyphase_fft.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
@@ -276,7 +273,7 @@ $(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../dspmath/midi.h ../d
 
 $(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/keyed_tone.h\
 	 ../dspmath/ramp.h ../dspmath/window.h
-	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBGSL_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/usb.so: usb.c
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(LIBUSB_CFLAGS) $< $(LIBUSB_LIBS) $(LIBS)

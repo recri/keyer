@@ -16,6 +16,10 @@
    and adjusts the rise time of the envelope to be steeper as the keying speed rises,
    or increases the bandwidth of the signal with keying speed to bw (HZ) = 1.5 key speed (WPM).
    What he does is somewhat more complicated and mysterious than that, but that's my read.
+** Ted Williams in TWQRQ
+   Implements Hann, and several others, including Hamming, but the others are all multiplied
+   by the Hann, they're product windows.
+   
 * Dit clock vs wpm
 | WPM | dit(ms) | dit(Hz) |
 |  10 |     120 |     8.3 |

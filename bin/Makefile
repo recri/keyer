@@ -20,7 +20,7 @@ all:: midicw
 OSC_CFLAGS=-DOSCILLATOR_Z -DOSCILLATOR_D
 KEY_CFLAGS=-DWINDOW=WINDOW_BLACKMAN_HARRIS -DWINDOW2=WINDOW_NONE
 midicw: midicw.c
-	$(CC) -std=gnu99 $(CFLAGS) $(OSC_CFLAGS) -o midicw midicw.c -lgsl -lgslcblas -lm -ljack -lpthread
+	$(CC) -std=gnu99 $(CFLAGS) $(OSC_CFLAGS) -o midicw midicw.c -lm -ljack -lpthread
 
 clean::
 	rm -f *~

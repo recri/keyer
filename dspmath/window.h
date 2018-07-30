@@ -26,7 +26,9 @@
 */
 
 #include "dspmath.h"
+#if 0
 #include <gsl/gsl_sf_bessel.h>
+#endif
 
 typedef enum {
   WINDOW_NONE = -1,
@@ -233,9 +235,13 @@ static float window_get(const window_type_t type, const int size, int k) {
     // parameterized by alpha, somewhat like a raised cosine keyed tone
   case WINDOW_TUKEY:            return 0;
   case WINDOW_KAISER: {
+#if 0
     // I_0(pi alpha sqrt(1 - square(2 k / (size-1)))) / I_0(pi alpha), alpha typically 3
     const float alpha = 3;
     return gsl_sf_bessel_I0(pi * alpha * sqrt(1 - square(2.0 * k / (size-1)))) / gsl_sf_bessel_I0(pi * alpha);
+#else
+    return 0;
+#endif
   }
   case WINDOW_RIEMANN: {
     const int midn = size >> 1;
