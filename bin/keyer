@@ -48,31 +48,44 @@ proc write-file {file data} {
 
 #
 # miscellaneous accessors
-#
+
 proc get-var {var} { return [dict get $::data(main) $var] }
 proc set-var {var val} { return [dict set ::data(main) $var $val] }
 proc has-var {var} { return [dict exists $::data(main) $var] }
 proc lappend-var {var args} { dict lappend ::data(main) $var {*}$args }
 
+proc has-setups {} { return [has-var -setups] }
+proc get-setups {} { return [get-var -setups] }
+proc set-setups {val} { set-var -setups $val }
+
 proc has-server {} { return [has-var -server] }
 proc get-server {} { return [get-var -server] }
 proc set-server {server} { set-var -server $server }
+
 proc has-dial {} { return 1 }
+proc has-details {} { return 1 }
+
 proc get-ascii {} { return [get-var -ascii] }
 proc set-ascii {name} { set-var -ascii $name }
 proc has-ascii {} { return [has-var -ascii] }
+
 proc has-memories {} { return 0 }
+
 proc get-detime {} { return [get-var -detime] }
 proc set-detime {name} { set-var -detime $name }
 proc has-detime {} { return [has-var -detime] }
+
 proc get-insert {} { return [get-var -insert] }
 proc set-insert {name} { set-var -insert $name }
 proc has-insert {} { return [has-var -insert] }
+
 proc get-tap {} { return [get-var -tap ] }
 proc set-tap {name} { set-var -tap $name }
 proc has-tap {} { return [has-var -tap ] }
 
-proc lappend-start {val} { lappend-var -start $val }
+proc lappend-start {args} { lappend-var -start {*}$args }
+proc get-start {} { return [get-var -start] }
+proc has-start {} { return [has-var -start ] }
 
 proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
 proc has-argvopts {} { return [has-var -argvopts] }
@@ -81,12 +94,26 @@ proc get-argvopts {} { return [get-var -argvopts] }
 proc get-title {} { return [get-var -title] }
 proc set-title {title} { set-var -title $title }
 proc has-title {} { return [has-var -title] }
+
 proc get-prefer {} { return [get-var -prefer] }
-proc set-prefer {opts} { set-var -prefer $opts }
+proc lappend-prefer {args} { lappend-var -prefer {*}$args }
 proc has-prefer {} { return [has-var -prefer] }
+
+proc get-merge {} { return [get-var -merge] }
+proc lappend-merge {args} { lappend-var -merge {*}$args }
+proc has-merge {} { return [has-var -merge] }
+
+proc get-show {} { return [get-var -show] }
+proc lappend-show {args} { lappend-var -show {*}$args }
+proc has-show {} { return [has-var -show] }
+
 proc get-hide {} { return [get-var -hide] }
-proc set-hide {opts} { set-var -hide $opts }
+proc lappend-hide {args} { lappend-var -hide {*}$args }
 proc has-hide {} { return [has-var -hide] }
+
+proc get-join {} { return [get-var -join] }
+proc lappend-join {args} { lappend-var -join {*}$args }
+proc has-join {} { return [has-var -join] }
 
 # all components in the app share values for identically spelled options
 # except where overridden
@@ -195,25 +222,41 @@ proc get-window-types {} {
 }
 
 proc populate-option {name opt2 opt oname oclass odefault ovalue} {
-    # component is the 
-    # opt2 is a possibly composite name
+    # name is the component
+    # opt2 is a possibly composite name which references opt
     # opt is the option name in configure and cget commands
     # oname is the option name in the option database (not used here)
-    # oclass is the option class name in the option database
+    # oclass is the option class name in the option database (not used here)
     # odefault is the default value
     # ovalue is the current value
     # info is the tool tip for the option, not presently used
     set info [$name info option $opt]
-    # remember the default value for command line generation
-    dict set ::data(default) $opt2 $odefault
-    # only keep the first of a series of definitions for the same $opt
-    if {[opt-is-defined $opt2]} {
-	# this is not the first appearance, daisy chain from the first
+
+    # we are going to either define an option for -$name$opt2
+    # or a merged option for plain $opt2 which covers all versions of $opt2
+
+    # only keep the first of a series of definitions for the same $opt2
+    # these are the merged versions
+    if {[is-merge $opt2]} {
+	if { ! [opt-is-defined $opt2]} {
+	    # this is the first appearance of this $opt
+	    opt-define $opt2 $name $opt
+	    set text $opt2
+	    set name {}
+	} else {
+	    # this is not the first appearance, daisy chain from the first
 	    opt-add-dependent $opt2 $name $opt
 	    return
 	}
-    # this is the first appearance of this $opt
-    opt-define $opt2 $name $opt
+    } else {
+	if { ! [opt-is-defined -$name$opt2]} {
+	    opt-define -$name$opt2 $name $opt
+	    set text -$name$opt2
+	} else {
+	    opt-add-dependent -$name$opt2 $name $opt
+	    return
+	}
+    }
     # look for further guidance
     switch -glob -- $opt2 {
 	-server - -client - -verbose {
@@ -227,76 +270,76 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	    # the list is additional options for the readout
 	    # midi channel could as well be an {enum} with 16 values.
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -format %.0f -min 1 -max 16 -step 1]
+		[list -text $text -info $info -format %.0f -min 1 -max 16 -step 1]
 	}
 	-note {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -format %.0f -min 0 -max 127 -step 1]
+		[list -text $text -info $info -format %.0f -min 0 -max 127 -step 1]
 	}
-	-wpm - -*-wpm {
+	-wpm {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5]
+		[list -text $text -info $info -format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5]
 	}
 	-swap - -mdit - -mdah - -mide - -alsp - -awsp {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $opt2 -info $info -values {0 1}]
+	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $text -info $info -values {0 1}]
 	}
 	-mode {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $opt2 -info $info -values {A B}]
+	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $text -info $info -values {A B}]
 	}
 	-word {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $opt2 -info $info -units dits -values {50 60}]
+	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $text -info $info -units dits -values {50 60}]
 	}
 	-dit - -dah - -ies - -ils - -iws { 
 	    set min [expr {0.5*$ovalue}]
 	    set max [expr {1.5*$ovalue}]
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
+		[list -text $text -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
 	}
 	-weight - -ratio {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -format %.1f -units % -min 0.0 -max 100.0 -step 0.1]
+		[list -text $text -info $info -format %.1f -units % -min 0.0 -max 100.0 -step 0.1]
 	}
 	-comp {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -format %.1f -units ms -min -15.0 -max 15.0 -step 0.1]
+		[list -text $text -info $info -format %.1f -units ms -min -15.0 -max 15.0 -step 0.1]
 	}
-	-freq - -*-freq {
+	-freq {
 	    lappend ::data(options) $name $opt2 $opt freq $ovalue \
-		[list -text $opt2 -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
+		[list -text $text -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
 	}
-	-rise - -fall - -rise-fall - -*-rise - -*-fall - -*-rise-fall {
+	-rise - -fall - -rise-fall {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
+		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
 	}
-	-window - -*-window {
+	-window {
 	    lappend ::data(options) $name $opt2 $opt enum $ovalue \
-		[list -text $opt2 -info $info -values [lrange [get-window-types] 1 end]]
+		[list -text $text -info $info -values [lrange [get-window-types] 1 end]]
 	}
-	-window2 - -*-window {
+	-window2 {
 	    lappend ::data(options) $name $opt2 $opt enum $ovalue \
-		[list -text $opt2 -info $info -values [get-window-types]]
+		[list -text $text -info $info -values [get-window-types]]
 	}
 	-gain {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
+		[list -text $text -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
 	}
 	-delay {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
+		[list -text $text -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
 	}
 	-hang {
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
+		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
 	}
 	-period {
 	    # for the debouncer
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -units ms -format %.3f -min 0.0 -max 1.000 -step 0.001]
+		[list -text $text -info $info -units ms -format %.3f -min 0.0 -max 1.000 -step 0.001]
 	}
 	-steps {
 	    # for the debouncer
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
-		[list -text $opt2 -info $info -format %.0f -min 1 -max 32 -step 1]
+		[list -text $text -info $info -format %.0f -min 1 -max 32 -step 1]
 	}
 	-dict {
 	    # for the ascii keyer
@@ -305,10 +348,10 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	    # for the unkeyer detone module
 	    # bandwidth BWHertz 100.0 100.0 bandwidth of output signal in Hz
 	    lappend ::data(options) $name $opt2 $opt freq $ovalue \
-		[list -text $opt2 -info $info -units Hz -format %.0f -min 10 -max 1000 -step 1]
+		[list -text $text -info $info -units Hz -format %.0f -min 10 -max 1000 -step 1]
 	}
 	default {
-	    puts "$name $config [$name info option $opt]"
+	    puts "$name $opt2 {$opt $oname $oclass $odefault $ovalue} $info"
 	}
     }
 }
@@ -335,12 +378,12 @@ proc prefer-component-options {prefs} {
     set options $::data(options)
     set ::data(options) {}
     foreach {comp opt2 opt type value opts} $options {
-	if {[lsearch $prefs $opt] >= 0} {
+	if {[is-prefer $opt]} {
 	    lappend ::data(options) $comp $opt2 $opt $type $value $opts
 	}
     }
     foreach {comp opt2 opt type value opts} $options {
-	if {[lsearch $prefs $opt] < 0} {
+	if { ! [is-prefer $opt]} {
 	    lappend ::data(options) $comp $opt2 $opt $type $value $opts
 	}
     }
@@ -369,6 +412,7 @@ proc keyer-widget {w} {
 	ascii Input
 	detime Output
 	tap Events
+	details Details
     } {
 	if {[has-$tag]} {
 	    ttk::checkbutton $w.$tag -text $text -variable ::data(show-$tag) -command [list keyer-widget-show $w $tag]
@@ -642,19 +686,63 @@ proc tap-widget {w} {
 }
 
 #
+# manage option preferences
+# some of these should match patterns in the lists
+#
+proc is-matched {opt list} {
+    foreach pat $list { if {[string match $pat $opt]} { return 1 } }
+    return 0
+}
+proc is-prefer {opt} { return [is-matched $opt [get-prefer]] }
+proc is-show {opt} { return [is-matched $opt [get-show]] }
+proc is-hide {opt} { return [is-matched $opt [get-hide]] }
+proc is-merge {opt} { return [is-matched $opt [get-merge]] }
+proc is-join {opt} { return [expr {[lsearch [get-join] $opt]+1}] }
+proc is-argvopts {opt} { return [expr {[lsearch [get-argvopts] $opt] >= 0}] }
+
+#
 # load the entire ui for the program
 #
 proc load-ui {} {
     pack [keyer-widget .k] -side top -fill x -expand true
     pack [ttk::panedwindow .p] -side top -fill both -expand true
     .p add [::sdrtk::dialbook .p.dial]
+    # .p add [text .p.details] 
+    text .p.details -tabs 8
     foreach {comp opt2 opt type value opts} $::data(options) {
+	if {$comp eq {}} {
+	    set text $opt2
+	} else {
+	    set text -$comp$opt2
+	}
 	# if already processed, skip
-	if {[info exists ::value($opt2)]} continue
-	set ::value($opt2) $value
-	set ::defval($opt2) $value
-	lappend opts -value $value -variable ::value($opt2) -command [list dial-set $opt2]
-	set w x$opt2
+	if {[info exists ::value($text)]} continue
+
+	# set up the details display
+	set ::prefer($text) [is-prefer $text]
+	set ::show($text) [is-show $text]
+	set ::hide($text) [is-hide $text]
+	set ::merge($text) [is-merge $text]
+	set ::join($text) [is-join $text]
+	set ::argvopts($text) [is-argvopts $text]
+	set ::defval($text) $value
+	set ::value($text) $value
+	.p.details insert end [expr {$::prefer($text)?{P}:{-}}]
+	.p.details insert end [expr {$::show($text)?{S}:{-}}]
+	.p.details insert end [expr {$::hide($text)?{H}:{-}}]
+	.p.details insert end [expr {$::merge($text)?{M}:{-}}]
+	.p.details insert end [expr {$::join($text)?{J}:{-}}]
+	.p.details insert end [expr {$::argvopts($text)?{A}:{-}}]\t
+	.p.details insert end [format %16s $text]\t
+	.p.details insert end [format {default: %8s} $::defval($text)]\t
+	.p.details insert end [format {value: %8s} $::value($text)]\t
+	#.p.details window create end -create [list button .p.details.edit -text Edit -command [list option-edit $text ]]
+	.p.details insert end \n
+
+	if {$::hide($text) && ! $::show($text)} continue
+					      
+	lappend opts -value $value -variable ::value($text) -command [list dial-set $text]
+	set w x$text
 	switch $type {
 	    enum { sdrtk::readout-enum .p.dial.$w {*}$opts }
 	    freq { sdrtk::readout-freq .p.dial.$w {*}$opts }
@@ -665,18 +753,20 @@ proc load-ui {} {
     }
     if {[.p.dial select] eq {}} { .p.dial select 0 }
     set ::data(show-dial) 1
+
     # puts "current dialbook selection {[.p.dial select]} of {[.p.dial tabs]}"
     if {[has-insert]} { 
 	.p add [insert-widget .p.insert]
 	set ::data(show-insert) 1
 	# add options for insert widget
+	# -ditkey -dahkey -key
     }
     # memories-widget
     if {[has-ascii]} {
 	.p add [cwtext-widget .p.ascii]
 	set ::data(show-ascii) 1
 	# add options for cwtext widget
-	# -sentcolor -unsentcolor -skippedcolor -background
+	# -sentcolor -unsentcolor -skippedcolor -background -font
     }
     if {[has-detime]} {
 	.p add [read-text-widget .p.detime]
@@ -694,9 +784,7 @@ proc load-ui {} {
 proc build-command-line {} {
     set argv [file normalize $::script]
     if {[get-server] ne {}} { lappend argv -server [get-server] }
-    foreach start [dict get $::data(main) -start] {
-	lappend argv -start $start
-    }
+    lappend argv -start [get-start]
     # prefer specifically named options
     # to the ones that are only inferred from component inspection
     foreach opt [opt-get-opts] {
@@ -707,11 +795,49 @@ proc build-command-line {} {
     return [join $argv { }]
 }
 
+# process a list of arguments, always formatted as -option value pairs
+proc main-argv {argv} {
+    foreach {opt val} $argv {
+	switch -- $opt { 
+	    -run { # run one or more saved setups
+		foreach v $val {
+		    main-argv [lrange [dict get [get-setups] $v] 1 end]
+		}
+	    }
+	    -server { # specify the jack server to run in
+		set-var $opt $val
+	    }
+	    -title { # specify the window title
+		set-title $val
+	    }
+	    -prefer { # list of preferred options which appear in this order
+		lappend-prefer {*}$val
+	    }
+	    -hide { # list of hidden options which should not be exposed
+		lappend-hide {*}$val
+	    }
+	    -show { # list of shown options which should be exposed
+		lappend-show {*}$val
+	    }
+	    -merge { # list of options which should be merged into one option
+		lappend-merge {*}$val
+	    }
+	    -join { # list of option pairs which should be ganged together
+		lappend-join {*}$val
+	    }
+	    -start { # list of sdrtcl::* modules that should be started in this setup
+		lappend-start {*}$val
+	    }
+	    default { # save plain command line options until everything loads
+		lappend-argvopts $opt $val; # save option
+	    }
+	}
+    }
+}
+
 proc main {argv} {
-    
     # initialize
-    set ::data(main) [dict create -server {} options {}]
-    
+    set ::data(main) [dict create -server {} options {} -prefer {} -hide {} -show {} -merge {} -join {}]
     # see what jack thinks we're doing
     package require sdrtcl::jack
     set bs [sdrtcl::jack buffer-size]; # samples per buffer
@@ -730,99 +856,91 @@ proc main {argv} {
     ttk::style configure TCheckbutton -relief raised
     ttk::style configure TRadiobutton -relief raised
     
+    # load or create ~/.config/keyer/keyer.tcl
+    if { ! [file exists ~/.config/keyer/keyer.tcl] || 
+	 [catch {source ~/.config/keyer/keyer.tcl} result]} {
+	# config file does not exist or error reading it
+	if { ! [file exists ~/.config]} { file mkdir ~/.config }
+	if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
+	write-file ~/.config/keyer/keyer.tcl {
+	    dict create {*}{
+		key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-rise-fall 4.0 }
+		kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-rise-fall 6.6 }
+		key+kbd { keyer -run {key kbd}}
+		ptt { keyer -start {keyer-ptt@ptt} }
+		deb { keyer -start {keyer-debounce@deb} }
+		cas { keyer -start {midi-insert@cas} }
+		tap { keyer -start {midi-tap@tap} }
+		out { keyer -start {keyer-detone@detone keyer-detime@out} }
+	    }
+	}
+	if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
+	    error "failed to create default configs: $result"
+	}
+    }
+    set-setups $result
+
     # make a usage message
     if {$argv eq {} || $argv eq {help}} {
-	set usage {
-usage: keyer ?-start module ...? ?-option value ...?
-
-module can be any string which uniquely specifies a package
-in ~/keyer/lib/sdrtcl/pkgIndex.tcl, optionally followed by
-@name to indicate that 'name' should be used as the jack
-client name for the module.
-
-option can be any option that any of the modules started
-defines.
-
--hide '-option ...' options to be hidden in the user 
--prefer '-option ...' options to be listed first in the user interface
--title 'short string' title to be displayed in window title bar
-}
-	puts $usage
-	# tk_messageBox -message $usage -type ok
-	# destroy .
+	puts "usage: keyer ?-run [join [dict keys [get-setups]] {|}] ...?"
 	exit 1
     }
     
-    # process arguments
-    foreach {opt val} $argv {
-	switch -- $opt {
-	    -server { set-var $opt $val }
-	    -title { set-title $val }
-	    -prefer { set-prefer $val }
-	    -hide { set-hide $val }
-	    -start {
-		# start a component
-		foreach {component name2} [load-component $val] break
-		# remember its parts
-		lappend-start $val
-		component-define $name2
-		# remember if this is special
-		switch -glob $component {
-		    keyer-ascii { set-ascii $name2 }
-		    keyer-detime { set-detime $name2 }
-		    midi-insert { set-insert $name2 }
-		    midi-tap { set-tap $name2 }
-		}
-		# load its options
-		populate-component-options $component $name2
+    # process arguments, first pass just to collect everything
+    main-argv $argv
+
+    # start components and collect their options
+    foreach v [get-start] {
+	# start a component
+	foreach {component name2} [load-component $v] break
+	component-define $name2
+	# remember if this is special
+	switch -glob $component {
+	    keyer-ascii { set-ascii $name2 }
+	    keyer-detime { set-detime $name2 }
+	    midi-insert { set-insert $name2 }
+	    midi-tap { set-tap $name2 }
+	}
+	# load its options
+	populate-component-options $component $name2
+    }
+    
+    # process command line options for additional option definitions
+    foreach {opt val} [get-argvopts] {
+	if {[opt-is-defined $opt]} continue; # already defined
+	set parts [split [string trim $opt -] -]
+	if {[llength $parts] < 2} continue; # not enough to work out
+	# find a prefixed component name, if any
+	foreach {name option1 option2} $parts break
+	if {[component-is-defined $name] } {
+	    if {[llength $parts] == 3 && [opt-is-defined -$name-$option1] && [opt-is-defined -$name-$option2]} {
+		# -component-option1-option2: explicit component joined option
+		populate-option $name -$option1-$option2 {*}[$name configure -$option1]
+		populate-option $name -$option1-$option2 {*}[$name configure -$option2]
 	    }
-	    default {
-		# save command line options until everything loads
-		set parts [split [string trim $opt -] -]
-		if {[opt-is-defined $opt] || [llength $parts] < 2} {
-		    lappend-argvopts $opt $val; # save option
-		    continue
-		}
-		# find a prefixed component name, if any
-		foreach {name option1 option2} $parts break
-		if {[component-is-defined $name] } {
-		    if {[llength $parts] == 2 && [opt-is-defined -$option1]} {
-			# -component-option: explicit component option
-			populate-option $name $opt {*}[$name configure -$option1]
-		    } elseif {[llength $parts] == 3 && [opt-is-defined -$option1] && [opt-is-defined -$option2]} {
-			# -component-option1-option2: explicit component joined option
-			populate-option $name $opt {*}[$name configure -$option1]
-			populate-option $name $opt {*}[$name configure -$option2]
-		    }
-		    lappend-argvopts $opt $val; # save option
-		} else {
-		    foreach {option1 option2} $parts break
-		    if {[llength $parts] == 2 && [opt-is-defined -$option1] && [opt-is-defined -$option2]} {
-			# -option1-option2: joined option
-			# iterate over components with both options
-			foreach name [find-components -$option1 -$option2] {
-			    populate-option $name $opt {*}[$name configure -$option1]
-			    populate-option $name $opt {*}[$name configure -$option2]
-			}
-		    }
-		    lappend-argvopts $opt $val; # save option
+	} else {
+	    foreach {option1 option2} $parts break
+	    if {[llength $parts] == 2 && [opt-is-defined -$option1] && [opt-is-defined -$option2]} {
+		# -option1-option2: joined option
+		# iterate over components with both options
+		foreach name [find-components -$option1 -$option2] {
+		    populate-option $name $opt {*}[$name configure -$option1]
+		    populate-option $name $opt {*}[$name configure -$option2]
 		}
 	    }
 	}
     }
 
+    # merge options into single controls
+    #if {[has-merge]} { merge-component-options [get-merge] }
+    # join options into ganged controls
+    #if {[has-join]} { join-component-optiosn [get-join] }
     # sort the preferred options to the top
-    if {[has-prefer]} {
-	prefer-component-options [get-prefer]
-    } else {
-	prefer-component-options {-wpm -swap -mode -freq -gain -rise -fall -window -window2}
-    }
+    if {[has-prefer]} { prefer-component-options [get-prefer] }
     # disappear options of no interest
-    if {[has-hide]} {
-	hide-component-options [get-hide]
-    } else {
-	hide-component-options {-alsp -awsp -dit -dah -ies -ils -iws -word}
-    }
+    #if {[has-hide]} { hide-component-options [get-hide] }
+    # reappear options with declared interest
+    #if {[has-show]} { show-component-options [get-show] }
     
     # initialize the dial-set timer
     dial-set-init
