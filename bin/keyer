@@ -31,6 +31,7 @@ lappend auto_path [file join $dirname .. lib]
 #
 set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}} | sed -e s/sdrtcl:://g]
 
+
 #
 # utilities
 #
@@ -200,11 +201,13 @@ proc load-component {name} {
 }
 
 # user interface components
+package require snit
+namespace eval ::sdrtk {}
 package require sdrtk::dialbook
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
-package require sdrtk::vtext
+
 
 set data(options) {}
 
@@ -467,6 +470,7 @@ proc dial-set-timeout {} {
 	    # puts "$comp is-busy"
 	}
     }
+    # hmm, none of this is going to work any more
     if {[info exists ::value(-wpm)] && [info exists ::value(-window2)]} {
 	if {$::value(-window2) ne {none}} {
 	    set title "recri keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
@@ -499,45 +503,80 @@ proc dial-set-init {} {
 # a simple frame which, when focused, generates key events
 # for control, alt, and shift keys
 #
-proc insert-widget {w} {
-    ttk::frame $w
-    grid [ttk::menubutton $w.dit -text Dit -menu $w.dit.m] -row 0 -column 0 -sticky ew
-    menu $w.dit.m -tearoff no
-    $w.dit.m add checkbutton -label {Send Dits} -variable ::data(insert-send-dits) -command [list insert-send $w dit]
-    grid [ttk::menubutton $w.dah -text Dah -menu $w.dah.m] -row 0 -column 1 -sticky ew
-    menu $w.dah.m -tearoff no
-    $w.dit.m add checkbutton -label {Send Dahs} -variable ::data(insert-send-dahs) -command [list insert-send $w dah]
-    grid [ttk::menubutton $w.key -text Key -menu $w.key.m] -row 0 -column 2 -sticky ew
-    menu $w.key.m -tearoff no
-    $w.key.m add checkbutton -label {Key Down} -variable ::data(insert-send-key) -command [list insert-send $w key]
-    insert-widget-bind $w Shift_R key
-    insert-widget-bind $w Alt_R dit
-    insert-widget-bind $w Control_R dah
-    return $w
-}
-proc insert-widget-bind {w tag element} {
-    bind $w <KeyPress-$tag> [insert-key $w $element down]
-    bind $w <KeyRelease-$tag> [insert-key $w $element up]
-}
-proc insert-send {w element} {
-}
-proc insert-key {w element updown} {
-    switch $element {
-	dit { set note 0 }
-	dah { set note 1 }
-	key { set note 2 }
-	default { error "insert-key $w ??$element?? $updown" }
+snit::widgetadaptor midi-insert {
+    option -ditkey -default Alt_R -configuremethod Configure 
+    option -dahkey -default Control_R -configuremethod Configure 
+    option -key -default none -configuremethod Configure
+    option -insert -default {} -configuremethod Configure
+
+    method delete {args} {}
+    method insert {args} {}
+    delegate method ins to hull as insert
+    delegate method del to hull as delete
+    
+    delegate method * to hull
+    delegate option * to hull
+
+    variable chan
+    variable base
+    
+    method exposed-options {} { return {-ditkey -dahkey -key} }
+    method is-busy {} { return 0 }
+    
+    constructor {args} {
+	installhull using text
+	$self configure -width 30 -height 1 {*}$args
+	$self bind-key $options(-ditkey) dit
+	$self bind-key $options(-dahkey) dah
+	set chan [$options(-insert) cget -chan]
+	set base [$options(-insert) cget -note]
+	$self label
     }
-    switch $updown {
-	up { set cmd 0x80;	#define MIDI_NOTE_OFF
+
+    method label {} {
+	$self del 1.0 end
+	if {$options(-ditkey) ne {none} && $options(-dahkey) ne {none}} {
+	    $self ins end "click this window then press $options(-ditkey) for dit, $options(-dahkey) for dah"
+	} elseif {$options(-key) ne {none}} {
+	    $self ins end "click this window then press $options(-key) for straight key"
+	} else {
+	    $self ins end "configure a key with -ditkey, -dahkey, or -key"
 	}
-	down { set cmd 0x90;	#define MIDI_NOTE_ON
-	}
-	default { error "insert-key $w $element ??$updown??" } 
+	$self tag add center 1.0 end
+	$self tag configure center -justify center
     }
-    puts "insert $cmd $::value(-chan) $::value(-note)+$note 127"
-    [get-insert] puts [binary format ccc [expr {$cmd|($::value(-chan)-1)}] [expr {$::value(-note)+$note}] 127]
+
+    method bind-key {tag element} {
+	if {$tag ne {none}} {
+	    bind $win <KeyPress-$tag> [mymethod insert-key $element down]
+	    bind $win <KeyRelease-$tag> [mymethod insert-key $element up]
+	}
+    }
+    
+    method unbind-key {tag element} {
+	if {$tag ne {none}} {
+	    
+	}
+    }
+
+    variable map -array {dit 0 dah 1 key 0 up 0x80 down 0x90}
+
+    method insert-key {element updown} {
+	$options(-insert) puts [binary format ccc [expr {$map($updown)|($chan-1)}] [expr {$base+$map($element)}] 0]
+    }
+
+    method rebind-key {opt val element} {
+	$self unbind-key $options($opt) $element
+	set options($opt) $val
+	$self bind-key $options($opt) $element
+	$self label
+    }
+    method {Configure -ditkey} {val} { $self rebind-key -ditkey $val dit }
+    method {Configure -dahkey} {val} { $self rebind-key -dahkey $val dah }
+    method {Configure -key} {val} { $self rebind-key -key $val key }
+    method {Configure -insert} {val} { set options(-insert) $val }
 }
+
 #
 # cwtext window management
 # cwtext window is a live text entry for sending to the ascii-keyer
@@ -558,7 +597,8 @@ proc cwtext-stop-sending {w} { $w abort; [get-ascii] abort }
 proc cwtext-insert-command-line {w} {
     $w insert current [build-command-line]
 }
-
+proc cwtext-set {w op opt} {
+}
 proc cwtext-option-menu {w x y} {
     if { ! [winfo exists $w.m] } {
 	menu $w.m -tearoff no
@@ -568,10 +608,10 @@ proc cwtext-option-menu {w x y} {
 	$w.m add command -label {Send file} -command [list $w choose file]
 	$w.m add separator
 	$w.m add command -label {Font} -command [list $w choose font]
-	$w.m add command -label {Background} -command [list $w choose background]
-	$w.m add command -label {Sent Color} -command [list $w choose sentcolor]
-	$w.m add command -label {Unsent Color} -command [list $w choose unsentcolor]
-	$w.m add command -label {Skipped Color} -command [list $w choose skippedcolor]
+	$w.m add command -label {Background} -command [list cwtext-set $w choose background]
+	$w.m add command -label {Sent Color} -command [list cwtext-set $w choose sentcolor]
+	$w.m add command -label {Unsent Color} -command [list cwtext-set $w choose unsentcolor]
+	$w.m add command -label {Skipped Color} -command [list cwtext-set $w choose skippedcolor]
     }
     if {0} {
 	menu $w.m -tearoff no
@@ -642,47 +682,58 @@ proc read-text-widget {w} {
 #
 # midi tap text widget, receiving midi events for timing check
 #
+snit::widgetadaptor midi-tap {
+    option -tap -default {} -configuremethod Configure 
 
-set ::tapframe 0
-proc tap-window-timeout {w} {
-    #$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
-    if {[[get-tap] state]} {
-	foreach event [[get-tap] get] {
-	    foreach {frame midi} $event break
-	    binary scan $midi c* bytes
-	    set out [format {%ld %ld} $frame [expr {$frame-$::tapframe}]]
-	    set ::tapframe $frame
-	    foreach b $bytes {
-		append out [format { %02x} [expr {$b&0xff}]]
-	    }
-	    $w insert end $out\n
-	}	
+    delegate method * to hull
+    delegate option * to hull
+    
+    variable tapframe 0
+
+    method {Configure -tap} {val} { set options(-tap) $val }
+
+    method timeout {} {
+	#$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
+	if {[$options(-tap) state]} {
+	    foreach event [$options(-tap) get] {
+		foreach {frame midi} $event break
+		binary scan $midi c* bytes
+		set out [format {%ld %ld} $frame [expr {$frame-$tapframe}]]
+		set tapframe $frame
+		foreach b $bytes {
+		    append out [format { %02x} [expr {$b&0xff}]]
+		}
+		$self insert end $out\n
+	    }	
+	}
+	after 100 [mymethod timeout]
     }
-    after 100 [list tap-window-timeout $w]
-}
-proc tap-save-file {w} {
-    set filename [tk_getSaveFile -title {Midi log to file}]
-    if {$filename ne {}} {
-	write-file $filename [$w get 1.0 end]
+
+    method save-file {} {
+	set filename [tk_getSaveFile -title {Midi log to file}]
+	if {$filename ne {}} {
+	    write-file $filename [$self get 1.0 end]
+	}
     }
-}
-proc tap-option-menu {w x y} {
-    if { ! [winfo exists $w.m] } {
-	menu $w.m -tearoff no
-	$w.m add command -label {Save To File} -command [list tap-save-file $w]
-	$w.m add command -label {Clear} -command [list $w delete 1.0 end]
-	$w.m add command -label {Start} -command [list [get-tap] start]
-	$w.m add command -label {Stop} -command [list [get-tap] stop]
-	
+
+    method option-menu {x y} {
+	if { ! [winfo exists $win.m] } {
+	    menu $win.m -tearoff no
+	    $win.m add command -label {Save To File} -command [mymethod save-file]
+	    $win.m add command -label {Clear} -command [mymethod delete 1.0 end]
+	    $win.m add command -label {Start} -command [list $options(-tap) start]
+	    $win.m add command -label {Stop} -command [list $options(-tap) stop]
+	}
+	tk_popup $win.m $x $y
     }
-    tk_popup $w.m $x $y
-}
-proc tap-widget {w} {
-    text $w -width 30 -height 15 -exportselection true
-    bind $w <ButtonPress-3> [list tap-option-menu $w %X %Y]
-    [get-tap] start
-    after 100 [list tap-window-timeout $w]
-    return $w
+    
+    constructor {args} {
+	installhull using text
+	$self configure -width 30 -height 15 {*}$args
+	bind $win <ButtonPress-3> [mymethod option-menu $win %X %Y]
+	$options(-tap) start
+	after 100 [mymethod timeout]
+    }
 }
 
 #
@@ -703,6 +754,15 @@ proc is-argvopts {opt} { return [expr {[lsearch [get-argvopts] $opt] >= 0}] }
 #
 # load the entire ui for the program
 #
+proc widget-opts {w c opts} {
+    # widget $w associated with component $c has options $opts
+    foreach opt $opts {
+	opt-define -$c$opt $w $opt
+	set ::value(-$c$opt) [$w cget $opt]
+	set ::defval(-$c$opt) ::value(-$c$opt)
+    }
+}
+
 proc load-ui {} {
     pack [keyer-widget .k] -side top -fill x -expand true
     pack [ttk::panedwindow .p] -side top -fill both -expand true
@@ -756,28 +816,27 @@ proc load-ui {} {
 
     # puts "current dialbook selection {[.p.dial select]} of {[.p.dial tabs]}"
     if {[has-insert]} { 
-	.p add [insert-widget .p.insert]
+	.p add [midi-insert .p.insert -insert [get-insert]]
 	set ::data(show-insert) 1
-	# add options for insert widget
-	# -ditkey -dahkey -key
+	widget-opts .p.insert [get-insert] [.p.insert exposed-options]
     }
     # memories-widget
     if {[has-ascii]} {
 	.p add [cwtext-widget .p.ascii]
 	set ::data(show-ascii) 1
 	# add options for cwtext widget
-	# -sentcolor -unsentcolor -skippedcolor -background -font
+	widget-opts .p.ascii [get-ascii] {-sentcolor -unsentcolor -skippedcolor -background -font}
     }
     if {[has-detime]} {
 	.p add [read-text-widget .p.detime]
 	set ::data(show-detime) 1
 	# add options for read-text widget
-	# -color1 -color2 -background
+	widget-opts .p.detime [get-detime] {-color1 -color2 -background}
     }
     if {[has-tap]} {
-	.p add [tap-widget .p.tap]
+	.p add [midi-tap .p.tap -tap [get-tap]]
 	set ::data(show-tap) 1
-	# add options for tap widget
+	widget-opts .p.tap [get-tap] {}
     }
 }
 

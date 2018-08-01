@@ -21,6 +21,7 @@
 */
 
 #define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "framework.h"
 #include "../dspmath/midi_buffer.h"
@@ -30,8 +31,13 @@
 */
 
 typedef struct {
+#include "framework_options_vars.h"
+} options_t;
+
+typedef struct {
   framework_t fw;
   midi_buffer_t midi;
+  options_t opts;
 } _t;
 
 static void *_init(void *arg) {

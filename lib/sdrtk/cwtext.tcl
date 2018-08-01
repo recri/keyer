@@ -213,6 +213,7 @@ snit::widgetadaptor sdrtk::cwtext {
 	    unsentcolor { choose-color $win -unsentcolor {Pick unsent color} }
 	}
     }
+    method is-busy {} { return 0 }
 }
 
 if {0 && [string match *cwtext.tcl $argv0]} {

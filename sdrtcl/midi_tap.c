@@ -21,6 +21,7 @@
 */
 
 #define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "framework.h"
 #include "../dspmath/ring_buffer.h"
@@ -30,10 +31,15 @@
 */
 
 typedef struct {
+#include "framework_options_vars.h"
+} options_t;
+
+typedef struct {
   framework_t fw;
   ring_buffer_t rb;
   unsigned char buff[8192];
   int started;
+  options_t opts;
 } _t;
 
 static int _writeable(_t *data, size_t bytes) {
