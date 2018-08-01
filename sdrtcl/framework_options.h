@@ -27,13 +27,14 @@
   { "-note",     "note",      "Note",    "0",	    fw_option_int,     fw_flag_none,        offsetof(_t, opts.note),      "base midi note" },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TONE // options that control the keyer tone generator
-  { "-freq",     "freq",      "Freq",   "700.0",  fw_option_float,   fw_flag_none,        offsetof(_t, opts.freq),	  "frequency of tone in hertz" },
-  { "-gain",     "gain",      "Gain",   "-30.0",  fw_option_float,   fw_flag_none,        offsetof(_t, opts.gain),	  "level of tone in decibels" },
-  { "-rise",     "rise",      "Rise",    "5.0",   fw_option_float,   fw_flag_none,	    offsetof(_t, opts.rise),	  "rise time in milliseconds" },
-  { "-fall",     "fall",      "Fall",    "5.0",   fw_option_float,   fw_flag_none,	    offsetof(_t, opts.fall),      "fall time in milliseconds" },
-  { "-window",   "window",    "Window",  "hann",  fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.window),    "first ramp window", 
+  { "-freq", "freq", "Freq", "700.0", fw_option_float, fw_flag_none, offsetof(_t, opts.freq), "frequency of tone in hertz" },
+  { "-gain", "gain", "Gain", "-30.0", fw_option_float, fw_flag_none, offsetof(_t, opts.gain), "level of tone in decibels" },
+  { "-rise", "rise", "Rise", "5.0", fw_option_float, fw_flag_none, offsetof(_t, opts.rise), "rise time in milliseconds" },
+  { "-fall", "fall", "Fall", "5.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fall), "fall time in milliseconds" },
+  { "-ramp", "ramp", "Ramp", "5.0", fw_option_float, fw_flag_none, offsetof(_t, opts.ramp), "rise and fall time in milliseconds" },
+  { "-window", "window", "Window", "hann", fw_option_custom, fw_flag_none, offsetof(_t, opts.window), "first ramp window", 
       window_mode_custom_option },
-  { "-window2",  "window2",   "Window",  "none",  fw_option_custom,  fw_flag_none,	    offsetof(_t, opts.window2),   "second ramp window", 
+  { "-window2", "window2", "Window", "none", fw_option_custom, fw_flag_none, offsetof(_t, opts.window2), "second ramp window", 
       window_mode_custom_option },
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_SPEED_WPM // options that control the speed of morse code

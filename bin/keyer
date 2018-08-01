@@ -26,10 +26,20 @@
 # save the result as a preset command for later access
 #
 # todo
-# [ ] make the -rise-fall option sort after the -rise and -fall that it joins
-# [ ] make the -rise-fall option update the displayed -rise and -fall option values too
+# [-] make the -rise-fall option sort after the -rise and -fall that it joins
+# [-] make the -rise-fall option update the displayed -rise and -fall option values too
+# [x] replace -rise-fall with -ramp option in the keyer-tone itself
 # [x] wrap more of this into snit
-# [ ] generate the command line for a configured setup, save it, restore it
+# [x] generate the command line for a configured setup, save it, restore it
+# [x] start using tklib
+# [x] prompt for name for saved setup
+# [ ] balloon help for options
+# [ ] balloon help for setups
+# [ ] balloon help for components
+# [ ] add empty units box to readout-enum
+# [ ] implement dialbook dial labels
+# [ ] implement recursive dialbook, where groups of related, boring options are pushed down into boxes
+# [ ] implement dialbook detents and dial limits so it doesn't just spin.
 #
 
 #
@@ -77,6 +87,12 @@ proc lappend-var {var args} { dict lappend ::data(main) $var {*}$args }
 proc has-setups {} { return [has-var -setups] }
 proc get-setups {} { return [get-var -setups] }
 proc set-setups {val} { set-var -setups $val }
+proc add-setup {name val} {
+    set old [get-setups]
+    dict set old $name $val
+    set-setups $old
+}
+proc get-setup {name} { return [dict get [get-setups] $name] }
 
 proc has-server {} { return [has-var -server] }
 proc get-server {} { return [get-var -server] }
@@ -326,12 +342,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	    opt-describe $text $name $opt2 $opt freq $ovalue \
 		[list -text $text -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
 	}
-	-rise - -fall {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
-	}
-	-rise-fall {
-	    # insert into order with associated -rise and -fall
+	-rise - -fall - -ramp {
 	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
 	}
@@ -416,7 +427,7 @@ proc keyer-widget {w} {
 	    pack $w.$tag -side left
 	}
     }
-    pack [ttk::button $w.save -text {Save} -command [list save-setup]] -side left
+    pack [ttk::button $w.save -text {Save} -command [list save-current-setup]] -side left
     return $w
 }
 proc keyer-widget-show {w tag} {
@@ -435,6 +446,9 @@ proc dial-set {opt val} {
 	set ::value($opt) $val
 	foreach {comp opt2} [opt-component-opts $opt] {
 	    dict set ::data(busy) $comp $opt2 $val
+	    #okay, if you coerce -rise and -fall to follow -ramp, then their values will appear
+	    #to be modified and they will get thrown into the saved command line, hmmph.
+	    #if {$opt2 eq {-ramp}} { set ::value(-$comp-rise) $val; set ::value(-$comp-fall) $val }
 	    if { ! [$comp is-busy]} {
 		set opts [dict get $::data(busy) $comp]
 		if {[catch {
@@ -839,49 +853,99 @@ proc load-ui {} {
     }
 }
 
+package require getstring
+namespace import getstring::*
+
+proc save-current-setup {} {
+    # prompt for name?
+    if {[tk_getString .gs text "Name for setup:"]} {
+	add-setup $text [build-command-line]
+	save-setups
+    }
+}
+
+proc save-setups {} {
+    set fp [open ~/.config/keyer/keyer.tcl w]
+    puts $fp "dict create {*}{"
+    dict for {key value} [get-setups] {
+	puts $fp "  $key { $value }"
+    }
+    puts $fp "}"
+    close $fp
+}
+
+proc init-setups {} {
+    # config file does not exist or error reading it
+    if { ! [file exists ~/.config]} { file mkdir ~/.config }
+    if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
+    set-setups [dict create {*}{
+	key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
+	kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
+	ptt { keyer -start {keyer-ptt@ptt} }
+	deb { keyer -start {keyer-debounce@deb} }
+	cas { keyer -start {midi-insert@cas} }
+	tap { keyer -start {midi-tap@tap} }
+	out { keyer -start {keyer-detone@detone keyer-detime@out} }
+	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
+	1ch { keyer -merge {*-chan *-note} }
+	key+kbd { keyer -run {key kbd nod 1ch}}
+    }]
+    save-setups
+    if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
+	error "failed to create default configs: $result"
+    }
+    return $result
+}
+
+proc load-setups {} {
+    if { ! [file exists ~/.config/keyer/keyer.tcl] || 
+	 [catch {source ~/.config/keyer/keyer.tcl} result]} {
+	set result [init-setups]
+    }
+    set-setups $result
+}
+
+proc build-command-line {} {
+    set argv [file tail $::script]
+    if {[get-server] ne {}} { lappend argv -server [get-server] }
+    lappend argv -start [get-start]
+    # prefer specifically named options
+    # to the ones that are only inferred from component inspection
+    foreach opt [opt-get-opts] {
+	if { ! [info exists ::value($opt)]} continue
+	if {$::value($opt) ne $::defval($opt)} {
+	    lappend argv $opt $::value($opt)
+	}
+    }
+    # now find the pertinent -merge -hide etc lists
+    if {[has-merge]} { lappend argv -merge [lsort -unique [get-merge]] }
+    if {[has-hide]} { lappend argv -hide [lsort -unique [get-hide]] }
+    return $argv
+}
+
 # process a list of arguments, always formatted as -option value pairs
 proc main-argv {argv} {
     foreach {opt val} $argv {
+	# -server - jack server
+	# -title - window title
+	# -run - saved setups to run
+	# -start - components to start
+	# -hide - option patterns to hide
+	# -merge - option patterns to merge
+	# otherwise - -option value pair to aply
 	switch -- $opt { 
-	    -run { # run one or more saved setups
-		foreach v $val {
-		    main-argv [lrange [dict get [get-setups] $v] 1 end]
-		}
-	    }
-	    -server { # specify the jack server to run in
-		set-var $opt $val
-	    }
-	    -title { # specify the window title
-		set-title $val
-	    }
-	    -hide { # list of hidden options which should not be exposed
-		lappend-hide {*}$val
-	    }
-	    -merge { # list of options which should be merged into one option
-		lappend-merge {*}$val
-	    }
-	    -start { # list of sdrtcl::* modules that should be started in this setup
-		lappend-start {*}$val
-	    }
-	    default { # save plain command line options until everything loads
-		lappend-argvopts $opt $val; # save option
-	    }
+	    -server { set-server $val }
+	    -title { set-title $val }
+	    -run { foreach v $val { main-argv [lrange [get-setup $v] 1 end] } }
+	    -start { lappend-start {*}$val }
+	    -hide { lappend-hide {*}$val }
+	    -merge { lappend-merge {*}$val }
+	    default { lappend-argvopts $opt $val }
 	}
     }
 }
 
 proc main {argv} {
-    # see what jack thinks we're doing
-    package require sdrtcl::jack
-    set bs [sdrtcl::jack buffer-size]; # samples per buffer
-    set sr [sdrtcl::jack sample-rate]; # samples per second
-    
-    # ms-per-buffer = ($bs samples-per-buffer) * ((1000 ms-per-second) / ($sr samples-per-second))
-    set mspbs [expr {$bs * 1000.0 / $sr}]
-    
-    set-var -buffer-size $bs
-    set-var -sample-rate $sr
-    set-var -ms-per-buffer $mspbs
     
     # style, abolish invisible indicators
     ttk::style configure "." -indicatordiameter 12
@@ -889,29 +953,8 @@ proc main {argv} {
     ttk::style configure TRadiobutton -relief raised
     
     # load or create ~/.config/keyer/keyer.tcl
-    if { ! [file exists ~/.config/keyer/keyer.tcl] || 
-	 [catch {source ~/.config/keyer/keyer.tcl} result]} {
-	# config file does not exist or error reading it
-	if { ! [file exists ~/.config]} { file mkdir ~/.config }
-	if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
-	write-file ~/.config/keyer/keyer.tcl {
-	    dict create {*}{
-		key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-rise-fall 4.0 }
-		kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-rise-fall 6.6 }
-		key+kbd { keyer -run {key kbd}}
-		ptt { keyer -start {keyer-ptt@ptt} }
-		deb { keyer -start {keyer-debounce@deb} }
-		cas { keyer -start {midi-insert@cas} }
-		tap { keyer -start {midi-tap@tap} }
-		out { keyer -start {keyer-detone@detone keyer-detime@out} }
-	    }
-	}
-	if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
-	    error "failed to create default configs: $result"
-	}
-    }
-    set-setups $result
-
+    load-setups
+    
     # make a usage message
     if {$argv eq {} || $argv eq {help}} {
 	puts "usage: keyer ?-run [join [dict keys [get-setups]] {|}] ...?"
@@ -920,7 +963,7 @@ proc main {argv} {
     
     # process arguments, first pass just to collect everything
     main-argv $argv
-
+    
     # start components and collect their options
     foreach v [get-start] {
 	# start a component
@@ -962,13 +1005,13 @@ proc main {argv} {
 	    }
 	}
     }
-
+    
     # initialize the dial-set timer
     dial-set-init
-	
+    
     # build the ui with the extracted options
     load-ui
-	
+    
     # load the options collected from the command line
     if {[has-argvopts]} {
 	foreach {opt val} [get-argvopts] { 
@@ -977,7 +1020,7 @@ proc main {argv} {
 	    }
 	}
     }
-	
+    
     # install application icon
     set dir [file join $::dirname .. icons]
     image create photo icon1 -file [file join $dir qrv96.png]

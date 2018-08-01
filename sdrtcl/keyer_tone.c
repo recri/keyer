@@ -158,7 +158,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   dp->modified = dp->fw.busy = dp->modified || 
     save.freq != dp->opts.freq || save.gain != dp->opts.gain || 
     save.rise != dp->opts.rise || save.fall != dp->opts.fall || 
-    save.window != dp->opts.window || save.window2 != dp->opts.window2;
+    save.window != dp->opts.window || save.window2 != dp->opts.window2 ||
+    save.ramp != dp->opts.ramp;
+  if (save.ramp != dp->opts.ramp)
+    dp->opts.rise = dp->opts.fall = dp->opts.ramp;
   return TCL_OK;
 }
 
