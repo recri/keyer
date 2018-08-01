@@ -28,7 +28,7 @@
 # todo
 # [ ] make the -rise-fall option sort after the -rise and -fall that it joins
 # [ ] make the -rise-fall option update the displayed -rise and -fall option values too
-# [ ] wrap more of this into snit
+# [x] wrap more of this into snit
 # [ ] generate the command line for a configured setup, save it, restore it
 #
 
@@ -64,7 +64,7 @@ proc write-file {file data} {
 }
 
 # initialize
-set ::data(main) [dict create -server {} options {} -hide {} -merge {}]
+set ::data(main) [dict create -server {} -hide {} -merge {}]
 
 #
 # miscellaneous accessors
@@ -136,7 +136,12 @@ proc opt-add-dependent {opt comp opt2} { dict lappend ::data(defines) $opt $comp
 proc opt-component-opts {opt} { return [dict get $::data(defines) $opt] }
 proc opt-primary {opt} { return [lindex [opt-components-opts $opt] 0] }
 proc opt-get-opts {} { return [dict keys $::data(defines)] }
-proc opt-describe {opt desc} { dict set ::data(desc) $opt $desc }
+proc opt-describe {opt args} { 
+    dict set ::data(desc) $opt $args
+    dict lappend ::data(desc) opts $opt
+}
+proc opts-with-descriptions {} { return [dict get $::data(desc) opts] }
+proc opt-description {opt} { return [dict get $::data(desc) $opt] }
 
 proc component-is-defined {comp} { return [dict exists $::data(components) $comp] }
 proc component-define {comp} { dict set ::data(components) $comp {}}
@@ -222,8 +227,6 @@ package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
 
-set data(options) {}
-
 proc get-window-types {} {
     package require sdrtcl::window
     catch { sdrtcl::window foo 512 } error
@@ -285,81 +288,81 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	    # the {value} is the class of readout component that handles this option
 	    # the list is additional options for the readout
 	    # midi channel could as well be an {enum} with 16 values.
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -format %.0f -min 1 -max 16 -step 1]
 	}
 	-note {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -format %.0f -min 0 -max 127 -step 1]
 	}
 	-wpm {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5]
 	}
 	-swap - -mdit - -mdah - -mide - -alsp - -awsp {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $text -info $info -values {0 1}]
+	    opt-describe $text $name $opt2 $opt enum $ovalue [list -text $text -info $info -values {0 1}]
 	}
 	-mode {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $text -info $info -values {A B}]
+	    opt-describe $text $name $opt2 $opt enum $ovalue [list -text $text -info $info -values {A B}]
 	}
 	-word {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue [list -text $text -info $info -units dits -values {50 60}]
+	    opt-describe $text $name $opt2 $opt enum $ovalue [list -text $text -info $info -units dits -values {50 60}]
 	}
 	-dit - -dah - -ies - -ils - -iws { 
 	    set min [expr {0.5*$ovalue}]
 	    set max [expr {1.5*$ovalue}]
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
 	}
 	-weight - -ratio {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -format %.1f -units % -min 0.0 -max 100.0 -step 0.1]
 	}
 	-comp {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -format %.1f -units ms -min -15.0 -max 15.0 -step 0.1]
 	}
 	-freq {
-	    lappend ::data(options) $name $opt2 $opt freq $ovalue \
+	    opt-describe $text $name $opt2 $opt freq $ovalue \
 		[list -text $text -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
 	}
 	-rise - -fall {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
 	}
 	-rise-fall {
 	    # insert into order with associated -rise and -fall
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
 	}
 	-window {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue \
+	    opt-describe $text $name $opt2 $opt enum $ovalue \
 		[list -text $text -info $info -values [lrange [get-window-types] 1 end]]
 	}
 	-window2 {
-	    lappend ::data(options) $name $opt2 $opt enum $ovalue \
+	    opt-describe $text $name $opt2 $opt enum $ovalue \
 		[list -text $text -info $info -values [get-window-types]]
 	}
 	-gain {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
 	}
 	-delay {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
 	}
 	-hang {
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
 	}
 	-period {
 	    # for the debouncer
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units ms -format %.3f -min 0.0 -max 1.000 -step 0.001]
 	}
 	-steps {
 	    # for the debouncer
-	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+	    opt-describe $text $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -format %.0f -min 1 -max 32 -step 1]
 	}
 	-dict {
@@ -368,7 +371,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	-bandwidth {
 	    # for the unkeyer detone module
 	    # bandwidth BWHertz 100.0 100.0 bandwidth of output signal in Hz
-	    lappend ::data(options) $name $opt2 $opt freq $ovalue \
+	    opt-describe $text $name $opt2 $opt freq $ovalue \
 		[list -text $text -info $info -units Hz -format %.0f -min 10 -max 1000 -step 1]
 	}
 	default {
@@ -636,9 +639,18 @@ package require morse::itu
 snit::widgetadaptor ro-text {
     option -detime -default {}
     
+    method delete {args} { }
+    method insert {args} { }
+    
+    delegate method * to hull
+    delegate option * to hull
+    
+    delegate method ins to hull as insert
+    delegate method del to hull as delete
     
     method is-busy {} { return 0 }
-    method exposed-options {} { return {-color1 -color2 -background} }
+    # {-color1 -color2 -background}
+    method exposed-options {} { return {} }
 
     method timeout {} {
 	$self insert end [$options(-detime) get]\n
@@ -685,6 +697,9 @@ snit::widgetadaptor midi-tap {
     
     variable tapframe 0
 
+    method exposed-options {} { return {} }
+    method is-busy {} { return 0 }
+
     method {Configure -tap} {val} { set options(-tap) $val }
 
     method timeout {} {
@@ -714,8 +729,10 @@ snit::widgetadaptor midi-tap {
     method option-menu {x y} {
 	if { ! [winfo exists $win.m] } {
 	    menu $win.m -tearoff no
-	    $win.m add command -label {Save To File} -command [mymethod save-file]
 	    $win.m add command -label {Clear} -command [mymethod delete 1.0 end]
+	    $win.m add separator
+	    $win.m add command -label {Save To File} -command [mymethod save-file]
+	    $win.m add separator
 	    $win.m add command -label {Start} -command [list $options(-tap) start]
 	    $win.m add command -label {Stop} -command [list $options(-tap) stop]
 	}
@@ -750,9 +767,7 @@ proc widget-opts {w c opts} {
     # widget $w associated with component $c has options $opts
     foreach opt $opts {
 	opt-define -$c$opt $w $opt
-	set ::value(-$c$opt) [$w cget $opt]
-	set ::defval(-$c$opt) $::value(-$c$opt)
-	#puts "define -$c$opt val $::value(-$c$opt) "
+	set ::defval(-$c$opt) [set ::value(-$c$opt) [$w cget $opt]]
     }
 }
 
@@ -762,7 +777,8 @@ proc load-ui {} {
     .p add [::sdrtk::dialbook .p.dial]
     # .p add [text .p.details] 
     text .p.details -tabs 8
-    foreach {comp opt2 opt type value opts} $::data(options) {
+    foreach o [opts-with-descriptions] {
+	foreach {comp opt2 opt type value opts} [opt-description $o] break
 	if {$comp eq {}} {
 	    set text $opt2
 	} else {
@@ -772,21 +788,17 @@ proc load-ui {} {
 	if {[info exists ::value($text)]} continue
 
 	# set up the details display
-	set ::hide($text) [is-hide $text]
-	set ::merge($text) [is-merge $text]
-	set ::argvopts($text) [is-argvopts $text]
-	set ::defval($text) $value
-	set ::value($text) $value
-	.p.details insert end [expr {$::hide($text)?{H}:{-}}]
-	.p.details insert end [expr {$::merge($text)?{M}:{-}}]
-	.p.details insert end [expr {$::argvopts($text)?{A}:{-}}]\t
+	set ::defval($text) [set ::value($text) $value]
+	.p.details insert end [expr {[is-hide $text]?{H}:{-}}]
+	.p.details insert end [expr {[is-merge $text]?{M}:{-}}]
+	.p.details insert end [expr {[is-argvopts $text]?{A}:{-}}]\t
 	.p.details insert end [format %16s $text]\t
 	.p.details insert end [format {default: %8s} $::defval($text)]\t
 	.p.details insert end [format {value: %8s} $::value($text)]\t
 	#.p.details window create end -create [list button .p.details.edit -text Edit -command [list option-edit $text ]]
 	.p.details insert end \n
 
-	if {$::hide($text)} continue
+	if {[is-hide $text]} continue
 					      
 	lappend opts -value $value -variable ::value($text) -command [list dial-set $text]
 	set w x$text
@@ -825,27 +837,6 @@ proc load-ui {} {
 	set ::data(show-tap) 1
 	widget-opts .p.tap [get-tap] {}
     }
-}
-
-proc save-setup {} {
-    puts [build-command-line]
-}
-
-proc build-command-line {} {
-    set argv [file normalize $::script]
-    if {[get-server] ne {}} { lappend argv -server [get-server] }
-    lappend argv -start [get-start]
-    # prefer specifically named options
-    # to the ones that are only inferred from component inspection
-    foreach opt [opt-get-opts] {
-	if { ! [info exists ::value($opt)]} continue
-	if {$::value($opt) ne $::defval($opt)} {
-	    lappend argv $opt $::value($opt)
-	}
-    }
-    # now find the pertinent -merge -hide etc lists
-    # now find the auxiliary options for the UI components
-    return $argv
 }
 
 # process a list of arguments, always formatted as -option value pairs
