@@ -19,8 +19,25 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+# this is the mega-keyer script
+# start arbitrary collections of sdrtcl components
+# wire up their options into a dialbook
+# hide, merge, or fuse options
+# save the result as a preset command for later access
+#
+# todo
+# [ ] make the -rise-fall option sort after the -rise and -fall that it joins
+# [ ] make the -rise-fall option update the displayed -rise and -fall option values too
+# [ ] wrap more of this into snit
+# [ ] generate the command line for a configured setup, save it, restore it
+#
+
+#
+# use the script location to find the rest of the libraries
+#
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
 set dirname [file dirname $script]
+
 #
 # append the ../lib directory to the Tcl search path
 #
@@ -30,7 +47,6 @@ lappend auto_path [file join $dirname .. lib]
 # find the list of sdrtcl::*
 #
 set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}} | sed -e s/sdrtcl:://g]
-
 
 #
 # utilities
@@ -47,9 +63,12 @@ proc write-file {file data} {
     close $fp
 }
 
+# initialize
+set ::data(main) [dict create -server {} options {} -hide {} -merge {}]
+
 #
 # miscellaneous accessors
-
+#
 proc get-var {var} { return [dict get $::data(main) $var] }
 proc set-var {var val} { return [dict set ::data(main) $var $val] }
 proc has-var {var} { return [dict exists $::data(main) $var] }
@@ -96,41 +115,33 @@ proc get-title {} { return [get-var -title] }
 proc set-title {title} { set-var -title $title }
 proc has-title {} { return [has-var -title] }
 
-proc get-prefer {} { return [get-var -prefer] }
-proc lappend-prefer {args} { lappend-var -prefer {*}$args }
-proc has-prefer {} { return [has-var -prefer] }
-
 proc get-merge {} { return [get-var -merge] }
 proc lappend-merge {args} { lappend-var -merge {*}$args }
 proc has-merge {} { return [has-var -merge] }
-
-proc get-show {} { return [get-var -show] }
-proc lappend-show {args} { lappend-var -show {*}$args }
-proc has-show {} { return [has-var -show] }
 
 proc get-hide {} { return [get-var -hide] }
 proc lappend-hide {args} { lappend-var -hide {*}$args }
 proc has-hide {} { return [has-var -hide] }
 
-proc get-join {} { return [get-var -join] }
-proc lappend-join {args} { lappend-var -join {*}$args }
-proc has-join {} { return [has-var -join] }
+# options are created in component specific versions -$comp$opt
+# or as merged versions where all identically spelled options
+# are set as a group
 
-# all components in the app share values for identically spelled options
-# except where overridden
 set ::data(defines) [dict create]
-array set ::value {}
-array set ::defval {}
+array set ::value {};		# current option value
+array set ::defval {};		# original option value
 proc opt-is-defined {opt} { return [dict exists $::data(defines) $opt] }
-proc opt-define {opt comp {opt2 {}}} { dict lappend ::data(defines) $opt $comp [expr {$opt2 ne {} ? $opt2 : $opt}] }
-proc opt-add-dependent {opt comp {opt2 {}}} { dict lappend ::data(defines) $opt $comp [expr {$opt2 ne {} ? $opt2 : $opt}]}
+proc opt-define {opt comp opt2} { dict lappend ::data(defines) $opt $comp $opt2 }
+proc opt-add-dependent {opt comp opt2} { dict lappend ::data(defines) $opt $comp $opt2 }
 proc opt-component-opts {opt} { return [dict get $::data(defines) $opt] }
 proc opt-primary {opt} { return [lindex [opt-components-opts $opt] 0] }
 proc opt-get-opts {} { return [dict keys $::data(defines)] }
+proc opt-describe {opt desc} { dict set ::data(desc) $opt $desc }
 
 proc component-is-defined {comp} { return [dict exists $::data(components) $comp] }
 proc component-define {comp} { dict set ::data(components) $comp {}}
 proc components {} { return [dict keys $::data(components)] }
+
 proc find-components {opt1 opt2} {
     array set found {}
     foreach {comp opt} [opt-component-opts $opt1] {
@@ -201,13 +212,15 @@ proc load-component {name} {
 }
 
 # user interface components
+# primary user interface component is the dialbook
+# which isn't finished.
+
 package require snit
 namespace eval ::sdrtk {}
 package require sdrtk::dialbook
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
-
 
 set data(options) {}
 
@@ -310,7 +323,12 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	    lappend ::data(options) $name $opt2 $opt freq $ovalue \
 		[list -text $text -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
 	}
-	-rise - -fall - -rise-fall {
+	-rise - -fall {
+	    lappend ::data(options) $name $opt2 $opt value $ovalue \
+		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
+	}
+	-rise-fall {
+	    # insert into order with associated -rise and -fall
 	    lappend ::data(options) $name $opt2 $opt value $ovalue \
 		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
 	}
@@ -373,33 +391,6 @@ proc populate-component-options {component name} {
     }
 }
 
-# sort the options so the most used are first
-# remove options 
-#  pref {-wpm -swap -mode -freq -gain -rise -fall -window -window2}
-#  hide {-alsp -awsp}
-proc prefer-component-options {prefs} {
-    set options $::data(options)
-    set ::data(options) {}
-    foreach {comp opt2 opt type value opts} $options {
-	if {[is-prefer $opt]} {
-	    lappend ::data(options) $comp $opt2 $opt $type $value $opts
-	}
-    }
-    foreach {comp opt2 opt type value opts} $options {
-	if { ! [is-prefer $opt]} {
-	    lappend ::data(options) $comp $opt2 $opt $type $value $opts
-	}
-    }
-}
-proc hide-component-options {hide} {
-    set options $::data(options)
-    set ::data(options) {}
-    foreach {comp opt2 opt type value opts} $options {
-	if {[lsearch $hide $opt] < 0} {
-	    lappend ::data(options) $comp $opt2 $opt $type $value $opts
-	}
-    }
-}
 #
 # control window.
 # this one line frame controls which other windows are displayed
@@ -422,6 +413,7 @@ proc keyer-widget {w} {
 	    pack $w.$tag -side left
 	}
     }
+    pack [ttk::button $w.save -text {Save} -command [list save-setup]] -side left
     return $w
 }
 proc keyer-widget-show {w tag} {
@@ -501,7 +493,9 @@ proc dial-set-init {} {
 #
 # insert window management
 # a simple frame which, when focused, generates key events
-# for control, alt, and shift keys
+# for whichever keys you choose.
+# take its midi_out to an oscillator for a straight key or
+# to an iambic keyer for a squeeze paddle.
 #
 snit::widgetadaptor midi-insert {
     option -ditkey -default Alt_R -configuremethod Configure 
@@ -581,70 +575,56 @@ snit::widgetadaptor midi-insert {
 # cwtext window management
 # cwtext window is a live text entry for sending to the ascii-keyer
 #
-proc cwtext-window-timeout {w} {
-    # I'm seeing available taking 50-60 units per character sent
-    if { (! [[get-ascii] is-busy]) && [[get-ascii] pending] < 40} {
-	set text [$w nextchar]
-	if {$text ne {}} {
-	    [get-ascii] puts [string toupper $text]
-	}
-    }
-    after 20 [list cwtext-window-timeout $w]
-}
+package require sdrtk::cwtext
 
-proc cwtext-stop-sending {w} { $w abort; [get-ascii] abort }
+snit::widgetadaptor cw-text {
+    option -ascii -default {}
+    
+    delegate method * to hull
+    delegate option * to hull
+    
+    constructor {args} {
+	installhull using sdrtk::cwtext
+	$self configure -width 30 -height 15 -exportselection true {*}$args
+	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
+	bind $win <Escape> [mymethod stop-sending]
+	$self timeout 
+    }
 
-proc cwtext-insert-command-line {w} {
-    $w insert current [build-command-line]
-}
-proc cwtext-set {w op opt} {
-}
-proc cwtext-option-menu {w x y} {
-    if { ! [winfo exists $w.m] } {
-	menu $w.m -tearoff no
-	$w.m add command -label {Stop sending} -command [list cwtext-stop-sending $w]
-	$w.m add command -label {Clear window} -command [list $w clear]
-	$w.m add separator
-	$w.m add command -label {Send file} -command [list $w choose file]
-	$w.m add separator
-	$w.m add command -label {Font} -command [list $w choose font]
-	$w.m add command -label {Background} -command [list cwtext-set $w choose background]
-	$w.m add command -label {Sent Color} -command [list cwtext-set $w choose sentcolor]
-	$w.m add command -label {Unsent Color} -command [list cwtext-set $w choose unsentcolor]
-	$w.m add command -label {Skipped Color} -command [list cwtext-set $w choose skippedcolor]
-    }
-    if {0} {
-	menu $w.m -tearoff no
-	menu $w.m.s -tearoff no
-	menu $w.m.r -tearoff no
-	foreach m {0 1 2 3 4} {
-	    $w.m.s add command -label "Mem $m" -command [list cwtext-store-memory-selection $m]
-	    $w.m.r add command -label "Mem $m" -command [list cwtext-send-memory $m]
+    method is-busy {} { return 0 }
+    method exposed-options {} { return {-sentcolor -unsentcolor -skippedcolor -background -font} }
+
+    method timeout {} {
+	if { (! [$options(-ascii) is-busy]) && [$options(-ascii) pending] < 40} {
+	    set text [$self nextchar]
+	    if {$text ne {}} {
+		$options(-ascii) puts [string toupper $text]
+	    }
 	}
-	$w.m add command -label {Send Selection} -command [list cwtext-send-selection $w]
-	$w.m add separator
-	$w.m add cascade -label {Send Saved} -menu $w.m.r
-	$w.m add cascade -label {Save Selection} -menu $w.m.s
-	$w.m add separator
-	$w.m add command -label {Send From File} -command [list cwtext-send-file $w]
-	$w.m add command -label {Insert From File} -command [list cwtext-load-file $w]
-	$w.m add command -label {Save To File} -command [list cwtext-save-file $w]
-	$w.m add separator
-	$w.m add command -label {Stop Sending} -command [list cwtext-stop-sending $w]
-	$w.m add separator
-	$w.m add command -label {Insert Command Line} -command [list cwtext-insert-command-line $w]
-	$w.m add command -label {Help} -command [list cwtext-help $w]
+	after 20 [mymethod timeout]
     }
-    tk_popup $w.m $x $y
-}
-proc cwtext-widget {w} {
-    package require sdrtk::cwtext
-    sdrtk::cwtext $w -width 30 -height 15 -exportselection true
-    bind $w <ButtonPress-3> [list cwtext-option-menu $w %X %Y]
-    bind $w <Escape> [list cwtext-stop-sending $w]
-    set ::data(ascii-puts) {}
-    cwtext-window-timeout $w
-    return $w
+
+    method stop-sending {} {
+	$self abort
+	$options(-ascii) abort
+    }
+
+    method option-menu {x y} {
+	if { ! [winfo exists $win.m] } {
+	    menu $win.m -tearoff no
+	    $win.m add command -label {Stop sending} -command [mymethod stop-sending]
+	    $win.m add command -label {Clear window} -command [mymethod clear]
+	    $win.m add separator
+	    $win.m add command -label {Send file} -command [mymethod choose file]
+	    $win.m add separator
+	    $win.m add command -label {Font} -command [mymethod choose font]
+	    $win.m add command -label {Background} -command [mymethod choose background]
+	    $win.m add command -label {Sent Color} -command [mymethod choose sentcolor]
+	    $win.m add command -label {Unsent Color} -command [mymethod choose unsentcolor]
+	    $win.m add command -label {Skipped Color} -command [mymethod choose skippedcolor]
+	}
+	tk_popup $win.m $x $y
+    }
 }
 
 #
@@ -653,30 +633,45 @@ proc cwtext-widget {w} {
 package require morse::morse
 package require morse::itu
 
-proc read-text-window-timeout {w} {
-    #$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
-    $w insert end [[get-detime] get]\n
-    after 100 [list read-text-window-timeout $w]
-}
-proc read-text-save-file {w} {
-    set filename [tk_getSaveFile -title {Log to file}]
-    if {$filename ne {}} {
-	write-file $filename [$w get 1.0 end]
+snit::widgetadaptor ro-text {
+    option -detime -default {}
+    
+    
+    method is-busy {} { return 0 }
+    method exposed-options {} { return {-color1 -color2 -background} }
+
+    method timeout {} {
+	$self insert end [$options(-detime) get]\n
+	after 100 [mymethod timeout]
     }
-}
-proc read-text-option-menu {w x y} {
-    if { ! [winfo exists $w.m] } {
-	menu $w.m -tearoff no
-	$w.m add command -label {Save To File} -command [list read-text-save-file $w]
-	
+
+    method save {} {
+	set filename [tk_getSaveFile -title {Log to file}]
+	if {$filename ne {}} {
+	    write-file $filename [$self get 1.0 end]
+	}
     }
-    tk_popup $w.m $x $y
-}
-proc read-text-widget {w} {
-    text $w -width 30 -height 15 -exportselection true
-    bind $w <ButtonPress-3> [list read-text-option-menu $w %X %Y]
-    after 100 [list read-text-window-timeout $w]
-    return $w
+
+    method clear {} {
+	$self delete 1.0 end
+    }
+
+    method option-menu {x y} {
+	if { ! [winfo exists $win.m] } {
+	    menu $win.m -tearoff no
+	    $win.m add command -label {Clear} -command [mymethod clear]
+	    $win.m add separator
+	    $win.m add command -label {Save To File} -command [mymethod save]
+	}
+	tk_popup $win.m $x $y
+    }
+
+    constructor {args} {
+	installhull using text
+	$self configure -width 30 -height 15 -exportselection true {*}$args
+	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
+	after 100 [mymethod timeout]
+    }
 }
 
 #
@@ -744,11 +739,8 @@ proc is-matched {opt list} {
     foreach pat $list { if {[string match $pat $opt]} { return 1 } }
     return 0
 }
-proc is-prefer {opt} { return [is-matched $opt [get-prefer]] }
-proc is-show {opt} { return [is-matched $opt [get-show]] }
 proc is-hide {opt} { return [is-matched $opt [get-hide]] }
 proc is-merge {opt} { return [is-matched $opt [get-merge]] }
-proc is-join {opt} { return [expr {[lsearch [get-join] $opt]+1}] }
 proc is-argvopts {opt} { return [expr {[lsearch [get-argvopts] $opt] >= 0}] }
 
 #
@@ -759,7 +751,8 @@ proc widget-opts {w c opts} {
     foreach opt $opts {
 	opt-define -$c$opt $w $opt
 	set ::value(-$c$opt) [$w cget $opt]
-	set ::defval(-$c$opt) ::value(-$c$opt)
+	set ::defval(-$c$opt) $::value(-$c$opt)
+	#puts "define -$c$opt val $::value(-$c$opt) "
     }
 }
 
@@ -779,19 +772,13 @@ proc load-ui {} {
 	if {[info exists ::value($text)]} continue
 
 	# set up the details display
-	set ::prefer($text) [is-prefer $text]
-	set ::show($text) [is-show $text]
 	set ::hide($text) [is-hide $text]
 	set ::merge($text) [is-merge $text]
-	set ::join($text) [is-join $text]
 	set ::argvopts($text) [is-argvopts $text]
 	set ::defval($text) $value
 	set ::value($text) $value
-	.p.details insert end [expr {$::prefer($text)?{P}:{-}}]
-	.p.details insert end [expr {$::show($text)?{S}:{-}}]
 	.p.details insert end [expr {$::hide($text)?{H}:{-}}]
 	.p.details insert end [expr {$::merge($text)?{M}:{-}}]
-	.p.details insert end [expr {$::join($text)?{J}:{-}}]
 	.p.details insert end [expr {$::argvopts($text)?{A}:{-}}]\t
 	.p.details insert end [format %16s $text]\t
 	.p.details insert end [format {default: %8s} $::defval($text)]\t
@@ -799,7 +786,7 @@ proc load-ui {} {
 	#.p.details window create end -create [list button .p.details.edit -text Edit -command [list option-edit $text ]]
 	.p.details insert end \n
 
-	if {$::hide($text) && ! $::show($text)} continue
+	if {$::hide($text)} continue
 					      
 	lappend opts -value $value -variable ::value($text) -command [list dial-set $text]
 	set w x$text
@@ -822,22 +809,26 @@ proc load-ui {} {
     }
     # memories-widget
     if {[has-ascii]} {
-	.p add [cwtext-widget .p.ascii]
+	.p add [cw-text .p.ascii -ascii [get-ascii]]
 	set ::data(show-ascii) 1
 	# add options for cwtext widget
-	widget-opts .p.ascii [get-ascii] {-sentcolor -unsentcolor -skippedcolor -background -font}
+	widget-opts .p.ascii [get-ascii] [.p.ascii exposed-options]
     }
     if {[has-detime]} {
-	.p add [read-text-widget .p.detime]
+	.p add [ro-text .p.detime -detime [get-detime]]
 	set ::data(show-detime) 1
 	# add options for read-text widget
-	widget-opts .p.detime [get-detime] {-color1 -color2 -background}
+	widget-opts .p.detime [get-detime] [.p.detime exposed-options]
     }
     if {[has-tap]} {
 	.p add [midi-tap .p.tap -tap [get-tap]]
 	set ::data(show-tap) 1
 	widget-opts .p.tap [get-tap] {}
     }
+}
+
+proc save-setup {} {
+    puts [build-command-line]
 }
 
 proc build-command-line {} {
@@ -847,11 +838,14 @@ proc build-command-line {} {
     # prefer specifically named options
     # to the ones that are only inferred from component inspection
     foreach opt [opt-get-opts] {
+	if { ! [info exists ::value($opt)]} continue
 	if {$::value($opt) ne $::defval($opt)} {
 	    lappend argv $opt $::value($opt)
 	}
     }
-    return [join $argv { }]
+    # now find the pertinent -merge -hide etc lists
+    # now find the auxiliary options for the UI components
+    return $argv
 }
 
 # process a list of arguments, always formatted as -option value pairs
@@ -869,20 +863,11 @@ proc main-argv {argv} {
 	    -title { # specify the window title
 		set-title $val
 	    }
-	    -prefer { # list of preferred options which appear in this order
-		lappend-prefer {*}$val
-	    }
 	    -hide { # list of hidden options which should not be exposed
 		lappend-hide {*}$val
 	    }
-	    -show { # list of shown options which should be exposed
-		lappend-show {*}$val
-	    }
 	    -merge { # list of options which should be merged into one option
 		lappend-merge {*}$val
-	    }
-	    -join { # list of option pairs which should be ganged together
-		lappend-join {*}$val
 	    }
 	    -start { # list of sdrtcl::* modules that should be started in this setup
 		lappend-start {*}$val
@@ -895,8 +880,6 @@ proc main-argv {argv} {
 }
 
 proc main {argv} {
-    # initialize
-    set ::data(main) [dict create -server {} options {} -prefer {} -hide {} -show {} -merge {} -join {}]
     # see what jack thinks we're doing
     package require sdrtcl::jack
     set bs [sdrtcl::jack buffer-size]; # samples per buffer
@@ -905,10 +888,9 @@ proc main {argv} {
     # ms-per-buffer = ($bs samples-per-buffer) * ((1000 ms-per-second) / ($sr samples-per-second))
     set mspbs [expr {$bs * 1000.0 / $sr}]
     
-    dict set ::data(main) jack buffer-size $bs
-    dict set ::data(main) jack sample-rate $sr
-    dict set ::data(main) jack ms-per-buffer $mspbs
-    # puts "$mspbs ms per buffer"
+    set-var -buffer-size $bs
+    set-var -sample-rate $sr
+    set-var -ms-per-buffer $mspbs
     
     # style, abolish invisible indicators
     ttk::style configure "." -indicatordiameter 12
@@ -990,17 +972,6 @@ proc main {argv} {
 	}
     }
 
-    # merge options into single controls
-    #if {[has-merge]} { merge-component-options [get-merge] }
-    # join options into ganged controls
-    #if {[has-join]} { join-component-optiosn [get-join] }
-    # sort the preferred options to the top
-    if {[has-prefer]} { prefer-component-options [get-prefer] }
-    # disappear options of no interest
-    #if {[has-hide]} { hide-component-options [get-hide] }
-    # reappear options with declared interest
-    #if {[has-show]} { show-component-options [get-show] }
-    
     # initialize the dial-set timer
     dial-set-init
 	
