@@ -809,7 +809,8 @@ proc load-ui {} {
 	.p.details insert end [expr {[is-argvopts $text]?{A}:{-}}]\t
 	.p.details insert end [format %16s $text]\t
 	.p.details insert end [format {default: %8s} $::defval($text)]\t
-	.p.details insert end [format {value: %8s} $::value($text)]\t
+	.p.details insert end {value: }
+	.p.details window create end -create [list label .p.details.x$text -textvar ::value($text)]
 	#.p.details window create end -create [list button .p.details.edit -text Edit -command [list option-edit $text ]]
 	.p.details insert end \n
 
@@ -977,6 +978,15 @@ proc build-command-line {} {
     return $argv
 }
 
+proc usage-message {} {
+    # puts "[dict keys $::data(main)]"
+    puts "usage: keyer setup ..."
+    puts "setups: [get-setup-names]"
+    foreach s [get-setup-names] {
+	puts "  $s: [dict get [get-setups] info-$s]"
+    }
+    exit 1
+}
 # process a list of arguments, always formatted as -option value pairs
 proc main-argv {argv} {
     # peel of any number of setup names
@@ -1017,19 +1027,16 @@ proc main {argv} {
     
     # make a usage message
     if {$argv eq {} || $argv eq {help}} {
-	puts "[dict keys $::data(main)]"
-	puts "usage: keyer setup ..."
-	puts "setups: [get-setup-names]"
-	foreach s [get-setup-names] {
-	    puts "  $s: [dict get [get-setups] info-$s]"
-	}
-	exit 1
+	usage-message
     }
     
     # process arguments, first pass just to collect everything
     main-argv $argv
     
     # start components and collect their options
+    if { ! [has-start]} {
+	usage-message
+    }
     foreach v [get-start] {
 	# start a component
 	foreach {component name2} [load-component $v] break
@@ -1080,6 +1087,7 @@ proc main {argv} {
     # load the options collected from the command line
     if {[has-argvopts]} {
 	foreach {opt val} [get-argvopts] { 
+	    # puts "setting $opt $val"
 	    if {[catch {dial-set $opt $val} error]} {
 		puts "bad option: $opt $val"
 	    }

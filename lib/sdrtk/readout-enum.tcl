@@ -156,11 +156,10 @@ snit::widget sdrtk::readout-enum {
 	set options(-units) $val
     }
     method TraceWrite {args} { 
-	return
 	if {[catch { $self configure -value [set $options(-variable)] } error]} {
 	    puts "TraceWrite {$args} caught $error"
 	} else {
-	    puts "TraceWrite {$args}"
+	    # puts "TraceWrite {$args}"
 	}
     }
     method TraceSelfWrite {args} {
