@@ -40,6 +40,7 @@
 # [ ] implement dialbook dial labels
 # [ ] implement recursive dialbook, where groups of related, boring options are pushed down into boxes
 # [ ] implement dialbook detents and dial limits so it doesn't just spin.
+# [ ] allow keyer setup1 setup2 ... as syntactic sugar
 #
 
 #
@@ -856,11 +857,47 @@ proc load-ui {} {
 package require getstring
 namespace import getstring::*
 
+proc is-setup {name} {
+    return [dict exists [get-setups] $name]
+}
+proc get-setup-names {} {
+    return [lsearch -inline -glob -all -not [dict keys [get-setups]] info-*]
+}
+proc setup-v0-style {setups} {
+    # v0 had setup names but no setup info-names
+    set info 0
+    set setup 0
+    set keys [dict keys $setups]
+    foreach key $keys {
+	if {[string match $key info-*]} {
+	    incr info
+	} elseif {[dict exists $setups info-$key]} {
+	    incr setup
+	}
+    }
+    return [expr {$info == 0 && $setup == 0}]
+}
+proc setup-upgrade-v0-v1 {setups} {
+    set defs [default-setups]
+    foreach key [dict keys $setups] {
+	if {[dict exists $defs info-$key]} {
+	    set info [dict get $defs info-$key]
+	} else {
+	    set info {}
+	}
+	dict set setups info-$key $info
+    }
+    return $setups
+}
+
 proc save-current-setup {} {
     # prompt for name?
     if {[tk_getString .gs text "Name for setup:"]} {
-	add-setup $text [build-command-line]
-	save-setups
+	if {[tk_getString .gs info "Description:"]} {
+	    add-setup $text [build-command-line]
+	    add-setup info-$text $info
+	    save-setups
+	}
     }
 }
 
@@ -868,17 +905,14 @@ proc save-setups {} {
     set fp [open ~/.config/keyer/keyer.tcl w]
     puts $fp "dict create {*}{"
     dict for {key value} [get-setups] {
-	puts $fp "  $key { $value }"
+	puts $fp "  $key { [string trim $value] }"
     }
     puts $fp "}"
     close $fp
 }
 
-proc init-setups {} {
-    # config file does not exist or error reading it
-    if { ! [file exists ~/.config]} { file mkdir ~/.config }
-    if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
-    set-setups [dict create {*}{
+proc default-setups {} {
+    return [dict create {*}{
 	key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
 	kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
@@ -889,20 +923,40 @@ proc init-setups {} {
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
 	key+kbd { keyer -run {key kbd nod 1ch}}
+	info-key {iambic keyer and a keyed oscillator}
+	info-kbd {keyboard keyer and a keyed oscillator}
+	info-ptt {push-to-talk switch}
+	info-deb {key contact debouncer}
+	info-cas {midi events from keyboard keys}
+	info-tap {midi monitor for timing events}
+	info-out {audio to ascii morse decoder}
+	info-nod {hide esoteric keyer options}
+	info-1ch {merge midi channel and note options}
+	info-key+kbd {run the key and the kdb setups}
     }]
+}
+
+proc init-setups {} {
+    # config file does not exist or error reading it
+    if { ! [file exists ~/.config]} { file mkdir ~/.config }
+    if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
+    set-setups [default-setups]
     save-setups
     if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
 	error "failed to create default configs: $result"
     }
-    return $result
 }
 
 proc load-setups {} {
     if { ! [file exists ~/.config/keyer/keyer.tcl] || 
 	 [catch {source ~/.config/keyer/keyer.tcl} result]} {
-	set result [init-setups]
+	init-setups
+    } elseif {[setup-v0-style $result]} {
+	set-setups [setup-upgrade-v0-v1 $result]
+	save-setups
+    } else {
+	set-setups $result
     }
-    set-setups $result
 }
 
 proc build-command-line {} {
@@ -925,6 +979,12 @@ proc build-command-line {} {
 
 # process a list of arguments, always formatted as -option value pairs
 proc main-argv {argv} {
+    # peel of any number of setup names
+    while {[llength $argv] > 0 && [is-setup [lindex $argv 0]]} {
+	set v [lindex $argv 0]
+	set argv [lrange $argv 1 end]
+	main-argv [lrange [get-setup $v] 1 end]
+    }
     foreach {opt val} $argv {
 	# -server - jack server
 	# -title - window title
@@ -957,7 +1017,12 @@ proc main {argv} {
     
     # make a usage message
     if {$argv eq {} || $argv eq {help}} {
-	puts "usage: keyer ?-run [join [dict keys [get-setups]] {|}] ...?"
+	puts "[dict keys $::data(main)]"
+	puts "usage: keyer setup ..."
+	puts "setups: [get-setup-names]"
+	foreach s [get-setup-names] {
+	    puts "  $s: [dict get [get-setups] info-$s]"
+	}
 	exit 1
     }
     
