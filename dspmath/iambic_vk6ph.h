@@ -31,6 +31,7 @@
     8/3/2018,   Roger Critchlow / AD5DZ/1, I adapted Rick's adaptation to
 		run when clocked at specified microseconds per tick, as
 		necessary when running inside a jack frame processor callback.
+		Rick's code from https://github.com/n1gp/iambic-keyer
 --------------------------------------------------------------------------------
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Library General Public
