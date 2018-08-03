@@ -1,0 +1,36 @@
+* Irritation at the midi code in sdrtcl
+** There's too much boiler plate
+** it's difficult to see how to use it
+** All the buffering of midi packets is ridiculous
+*** The channel and base note is fixed when process runs
+    so pack the notes of interest into words
+    and just do one compare per event
+** Use the packed format in the sequencer buffers, too,
+    unsigned *buffer, frame_delay, packet, use 0 for
+    the nil packet of a pure delay.
+*** All the base midi packets are 3 bytes, only the sysex
+    has more bytes 
+** renumber the midi events more usefully
+    base_note+0 => key
+    base_note+1 => dit/dah
+    base_note+2 => dah/dit
+    base_note+3 => ptt
+*** I'm not sure of this last.
+    Rolling the most interesting event down to 0
+    means we cannot pass through midi events without
+    confusion.
+*** If the midi assignments are global, then we can
+    make every midi node a pass through which allows
+    arbitrary control packets to travel into and back
+    out of the midi chain
+*** And we can use channels to allow for multiple chains
+    using the same global assignments in each channel.
+** Use the system and system exclusive messages
+*** All notes off, for instance, is useful
+*** SysEx is essentially a sequence of three byte packets
+    terminated by the end of sysex status byte.  If it is
+    for you, collect it, else pass it on.
+** For that matter, use the channels as the
+   function encoding, then your packets are
+   essentially one byte,
+   note-on-channel or note-off-channel

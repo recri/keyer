@@ -51,7 +51,7 @@ snit::widget sdrtk::readout-value {
     variable value 0
 
     constructor {args} {
-	install lvalue using ttk::label $win.value -textvar [myvar value] -width 10 -font $options(-font) -anchor e
+	install lvalue using ttk::label $win.value -textvar [myvar value] -width 15 -font $options(-font) -anchor e
 	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
 	grid $win.value $win.units
 	$self configure {*}$args
