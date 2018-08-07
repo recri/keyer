@@ -39,6 +39,12 @@
 ** users, like the midi-tap or the ptt delay, are more interested in
 ** the absolute frame time of the event.  We support both, but the
 ** result of mixing the two in a single queue will be a mess. 
+**
+** Okay, rethink, a midi packet is always a three byte packet, unless
+** it's a SYSEX.  So a midi_buffer_event_t could be duration, packet
+** in two 32 bit unsigned ints, with the packet stored little endian
+** in the second unsigned int.  Then the sysex goes into successive
+** three byte packets which must all be < 128.
 */
 
 typedef struct {
