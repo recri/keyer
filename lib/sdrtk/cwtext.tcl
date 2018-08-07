@@ -72,6 +72,9 @@ snit::widgetadaptor sdrtk::cwtext {
     option -sentcolor -default white -configuremethod Configure
     option -skippedcolor -default white -configuremethod Configure
     option -unsentcolor -default lightgrey -configuremethod Configure
+    option -ascii -default {}
+
+    variable handle {}
     
     # suppress edits in history
     delegate method ins to hull as insert
@@ -88,6 +91,7 @@ snit::widgetadaptor sdrtk::cwtext {
     method insert {index args} {
 	if {[$self compare transmit <= $index]} {
 	    $self ins $index {*}$args
+	    if {$handle eq {}} { $self timeout }
 	} else {
 	    # puts "$self insert $index $args"
 	    # $self ins {*}$args
@@ -106,6 +110,22 @@ snit::widgetadaptor sdrtk::cwtext {
 	$self mark set transmit 1.0
 	$self mark gravity transmit left
 	#puts [$self mark names]
+    }
+
+    method timeout {} {
+	if { [$self compare transmit >= insert] } {
+	    set handle {}
+	} else {
+	    if { ! [$options(-ascii) is-busy] && [$options(-ascii) pending] < 40} {
+		$options(-ascii) puts [string toupper [$self nextchar]]
+	    }
+	    set handle [after 20 [mymethod timeout]]
+	}
+    }
+
+    method stop-sending {} {
+	$self abort
+	$options(-ascii) abort
     }
 
     method {Configure -background} {color} {
@@ -127,6 +147,8 @@ snit::widgetadaptor sdrtk::cwtext {
     
     # get one character at the transmit cursor
     # and move the transmit cursor forward
+    # [$self get transmit insert] returns all the characters 
+    # between the transmit and insert cursors.
     method nextchar {} {
 	set nextchar [$self get transmit insert]
 	if {$nextchar ne {}} {
@@ -135,6 +157,7 @@ snit::widgetadaptor sdrtk::cwtext {
 	    $self tag add sent {transmit - 1 chars} transmit
 	    return $nextchar
 	}
+	return $nextchar
     }
 
     # jump the transmit cursor to the insert cursor

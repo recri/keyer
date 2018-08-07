@@ -596,7 +596,6 @@ snit::widgetadaptor midi-insert {
 package require sdrtk::cwtext
 
 snit::widgetadaptor cw-text {
-    option -ascii -default {}
     
     delegate method * to hull
     delegate option * to hull
@@ -606,26 +605,11 @@ snit::widgetadaptor cw-text {
 	$self configure -width 30 -height 15 -exportselection true {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	bind $win <Escape> [mymethod stop-sending]
-	$self timeout 
     }
 
     method is-busy {} { return 0 }
+
     method exposed-options {} { return {-sentcolor -unsentcolor -skippedcolor -background -font} }
-
-    method timeout {} {
-	if { (! [$options(-ascii) is-busy]) && [$options(-ascii) pending] < 40} {
-	    set text [$self nextchar]
-	    if {$text ne {}} {
-		$options(-ascii) puts [string toupper $text]
-	    }
-	}
-	after 20 [mymethod timeout]
-    }
-
-    method stop-sending {} {
-	$self abort
-	$options(-ascii) abort
-    }
 
     method option-menu {x y} {
 	if { ! [winfo exists $win.m] } {
