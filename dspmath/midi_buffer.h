@@ -258,7 +258,7 @@ static int midi_buffer_write_sysex(midi_buffer_t *bp, unsigned char *p) {
 }
 
 /*
-** routines for implementing pending and avaialble
+** routines for implementing pending and available
 */
 static int midi_buffer_readable(midi_buffer_t *bp) {
   return ring_buffer_items_available_to_read(&bp->ring);
