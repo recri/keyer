@@ -21,6 +21,7 @@
 */
 
 #define FRAMEWORK_USES_JACK 1
+#define FRAMEWORK_USES_INTERP 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "framework.h"

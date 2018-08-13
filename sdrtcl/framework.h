@@ -152,6 +152,7 @@ typedef struct {
   jack_session_event_t *session_event;
   framework_midi_t *midi;
   Tcl_Obj *method_list, *option_list, *port_list;
+  Tcl_Interp *interp;
 } framework_t;
 
 /*
@@ -727,6 +728,9 @@ static void framework_delete(void *arg) {
   framework_delete2(arg, 1);
 }
 
+static void framework_thread_init_callback(void *arg) {
+}
+
 /* report jack status in strings */
 #define stringify(x) #x
 
@@ -906,6 +910,8 @@ static int framework_factory(ClientData clientData, Tcl_Interp *interp, int argc
   if (wants_jack) {
     // set callbacks
     jack_on_shutdown(data->client, framework_shutdown, data);
+    jack_set_thread_init_callback (data->client, framework_thread_init_callback, (void *)data);
+
     if (data->process) jack_set_process_callback(data->client, data->process, data);
     if (data->sample_rate) jack_set_sample_rate_callback(data->client, data->sample_rate, data);
     // if (data->buffer_size) jack_set_buffer_size_callback(data->client, data->buffer_size, data);

@@ -36,12 +36,16 @@
 # [ ] balloon help for options
 # [ ] balloon help for setups
 # [ ] balloon help for components
-# [ ] add empty units box to readout-enum
+# [x] add empty units box to readout-enum
 # [ ] implement dialbook dial labels
 # [ ] implement recursive dialbook, where groups of related, boring options are pushed down into boxes
 # [ ] implement dialbook detents and dial limits so it doesn't just spin.
-# [ ] allow keyer setup1 setup2 ... as syntactic sugar
-#
+# [x] allow keyer setup1 setup2 ... as syntactic sugar
+# [x] end timer loop when cwtext queue empties
+# [ ] end timer loop when dialbook-set queue empties
+# [ ] implement midi -> OSC bridge (easy)
+# [ ] implement OSC -> MIDI bridge (not so easy, alsa sequencer?)
+# 
 
 #
 # use the script location to find the rest of the libraries
@@ -75,7 +79,7 @@ proc write-file {file data} {
 }
 
 # initialize
-set ::data(main) [dict create -server {} -hide {} -merge {}]
+set ::data(main) [dict create -server {} -hide {} -merge {} -argvopts {}]
 
 #
 # miscellaneous accessors
@@ -407,6 +411,34 @@ proc populate-component-options {component name} {
 }
 
 #
+# update the window
+# this doesn't work when -wpm, -window, and -window2 aren't obvious
+#
+proc update-window-title {} {
+    if {0} {
+	if {[info exists ::value(-wpm)] && [info exists ::value(-window2)]} {
+	    if {$::value(-window2) ne {none}} {
+		set title "recri keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
+	    } else {
+		set title "recri keyer $::value(-wpm) wpm $::value(-window)"
+	    }
+	} elseif {[info exists ::value(-freq)] && [info exists ::value(-window2)]} {
+	    if {$::value(-window2) ne {none}} {
+		set title "recri keyer $::value(-freq) Hz $::value(-window)*$::value(-window2)"
+	    } else {
+		set title "recri keyer $::value(-freq) Hz $::value(-window)"
+	    }
+	} else {
+	    set title "recri keyer"
+	}
+    }
+    set title {recri keyer}
+    if {[has-title]} { set title [get-title] }
+    wm title . $title
+    set-title $title
+}
+
+#
 # control window.
 # this one line frame controls which other windows are displayed
 # and acts as a focus target for controlling the keyer while 
@@ -442,14 +474,17 @@ proc keyer-widget-show {w tag} {
 # dial setting, most options are delegated to the dial book
 # one dial for setting everything.
 #
+# should wrap this into a snit type, ideally responisble for
+# constructing the dialbook pages and managing the options
+# list and aliases and so on.
+#
+set handler {}
+
 proc dial-set {opt val} {
     if {[opt-is-defined $opt]} {
 	set ::value($opt) $val
 	foreach {comp opt2} [opt-component-opts $opt] {
 	    dict set ::data(busy) $comp $opt2 $val
-	    #okay, if you coerce -rise and -fall to follow -ramp, then their values will appear
-	    #to be modified and they will get thrown into the saved command line, hmmph.
-	    #if {$opt2 eq {-ramp}} { set ::value(-$comp-rise) $val; set ::value(-$comp-fall) $val }
 	    if { ! [$comp is-busy]} {
 		set opts [dict get $::data(busy) $comp]
 		if {[catch {
@@ -458,8 +493,9 @@ proc dial-set {opt val} {
 		} error]} {
 		    puts "dial-set configure $opts threw $error"
 		}
-	    } else {
+	    } elseif {$::handler eq {}} {
 		# puts "$comp is-busy"
+		set ::handler [after 100 dial-set-timeout]
 	    }
 	}
     } else {
@@ -472,7 +508,7 @@ proc dial-set-timeout {} {
 	if { ! [$comp is-busy]} {
 	    if {[catch {
 		$comp configure {*}$opts
-		set ::data(busy) [dict unset $::data(busy) $comp]
+		dict unset ::data(busy) $comp
 	    } error]} {
 		puts "dial-set configure $opts threw $error"
 	    }
@@ -480,32 +516,18 @@ proc dial-set-timeout {} {
 	    # puts "$comp is-busy"
 	}
     }
-    # hmm, none of this is going to work any more
-    if {[info exists ::value(-wpm)] && [info exists ::value(-window2)]} {
-	if {$::value(-window2) ne {none}} {
-	    set title "recri keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
-	} else {
-	    set title "recri keyer $::value(-wpm) wpm $::value(-window)"
-	}
-    } elseif {[info exists ::value(-freq)] && [info exists ::value(-window2)]} {
-	if {$::value(-window2) ne {none}} {
-	    set title "recri keyer $::value(-freq) Hz $::value(-window)*$::value(-window2)"
-	} else {
-	    set title "recri keyer $::value(-freq) Hz $::value(-window)"
-	}
+    # hmm, none of this is going to work any more, and it should be lower 
+    after idle [list update-window-title]
+    if {[dict size $::data(busy)] > 0} {
+	set ::handler [after 100 dial-set-timeout]
     } else {
-	set title "recri keyer"
+	set ::handler {}
     }
-    if { ! [has-title] || [get-title] ne $title} {
-	wm title . $title
-	set-title $title
-    }
-    after 100 dial-set-timeout
 }
 
 proc dial-set-init {} {
     set ::data(busy) [dict create]
-    dial-set-timeout
+    # dial-set-timeout
 }
 
 #
@@ -514,6 +536,9 @@ proc dial-set-init {} {
 # for whichever keys you choose.
 # take its midi_out to an oscillator for a straight key or
 # to an iambic keyer for a squeeze paddle.
+#
+# would like to get focus from other windows, but cannot take
+# the shift keys away from the text entry windows.
 #
 snit::widgetadaptor midi-insert {
     option -ditkey -default Alt_R -configuremethod Configure 
@@ -590,8 +615,10 @@ snit::widgetadaptor midi-insert {
 }
 
 #
-# cwtext window management
 # cwtext window is a live text entry for sending to the ascii-keyer
+# cw-text simply supplies bindings for a menu and an abort key
+# the escape key binding could move to cwtext itself, or be bound
+# onto . so it works where ever you focused input.
 #
 package require sdrtk::cwtext
 
@@ -647,13 +674,15 @@ snit::widgetadaptor ro-text {
     delegate method ins to hull as insert
     delegate method del to hull as delete
     
+    variable handler {}
+    
     method is-busy {} { return 0 }
     # {-color1 -color2 -background}
     method exposed-options {} { return {} }
 
     method timeout {} {
 	$self insert end [$options(-detime) get]\n
-	after 100 [mymethod timeout]
+	set handler [after 100 [mymethod timeout]]
     }
 
     method save {} {
@@ -681,7 +710,7 @@ snit::widgetadaptor ro-text {
 	installhull using text
 	$self configure -width 30 -height 15 -exportselection true {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
-	after 100 [mymethod timeout]
+	set handler [after 100 [mymethod timeout]]
     }
 }
 
@@ -695,12 +724,18 @@ snit::widgetadaptor midi-tap {
     delegate option * to hull
     
     variable tapframe 0
+    variable handler {}
 
     method exposed-options {} { return {} }
     method is-busy {} { return 0 }
 
     method {Configure -tap} {val} { set options(-tap) $val }
 
+    # can only turn off this timeout loop when the tap is disabled
+    # should figure out how to make the tap stream into a channel
+    # that fires a fileevent when readable, then there would be no
+    # need for this timeout polling
+    
     method timeout {} {
 	#$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
 	if {[$options(-tap) state]} {
@@ -715,7 +750,7 @@ snit::widgetadaptor midi-tap {
 		$self insert end $out\n
 	    }	
 	}
-	after 100 [mymethod timeout]
+	set handler [after 100 [mymethod timeout]]
     }
 
     method save-file {} {
@@ -743,7 +778,7 @@ snit::widgetadaptor midi-tap {
 	$self configure -width 30 -height 15 {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu $win %X %Y]
 	$options(-tap) start
-	after 100 [mymethod timeout]
+	set handler [after 100 [mymethod timeout]]
     }
 }
 
@@ -1083,6 +1118,8 @@ proc main {argv} {
     image create photo icon1 -file [file join $dir qrv96.png]
     image create photo icon2 -file [file join $dir qrv48.png]
     wm iconphoto . -default icon1 icon2
+    # update window title
+    update-window-title
 }
 
 main $argv

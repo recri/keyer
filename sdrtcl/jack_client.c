@@ -23,7 +23,6 @@
 
 typedef struct {
   framework_t fw;
-  jack_session_event_t *session_event;
 } _t;
 
 static int _list_ports(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -93,7 +92,7 @@ static int _frame_time(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
 static int _time(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *dp = (_t *)clientData;
   if (argc != 2) return fw_error_str(interp, "jack-client time");
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_get_time()));
+  Tcl_SetObjResult(interp, Tcl_NewLongObj(jack_get_time()));
   return TCL_OK;
 }
 static int _version(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -144,7 +143,7 @@ static int _frames_to_time(ClientData clientData, Tcl_Interp *interp, int argc, 
   if (argc != 3) return fw_error_str(interp, "jack-client frames-to-time frames");
   jack_nframes_t frames;
   if (Tcl_GetIntFromObj(interp, objv[2], &frames) != TCL_OK) return TCL_ERROR;
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(jack_frames_to_time(dp->fw.client, frames)));
+  Tcl_SetObjResult(interp, Tcl_NewLongObj(jack_frames_to_time(dp->fw.client, frames)));
   return TCL_OK;
 }
 static int _connect(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {

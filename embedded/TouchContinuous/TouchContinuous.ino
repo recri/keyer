@@ -1,3 +1,4 @@
+
 #include <Teensy3Touch.h>
 
 void setupLED() {
@@ -15,10 +16,11 @@ void setLED(uint8_t value) {
 
 // uint8_t pins[] = { 15, 16, 17, 18, 19, 0, 1, 23, 22, 25 };
 // uint8_t pins[] = { 19, 22, 23, 25, 15, 0 };
-uint8_t pins[] = { 19, 22, 25, 15 };
+// uint8_t pins[] = { 19, 22, 25, 15 };
 // uint8_t pins[] = { 0, 1 };
+uint8_t pins[] = { 15, 16 };
 
-#define NPINS sizeof(pins)
+#define NPINS ((int)sizeof(pins))
 
 uint16_t maskpins = 0;
 uint8_t channels[NPINS];
