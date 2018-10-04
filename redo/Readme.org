@@ -1,0 +1,6 @@
+* Redo sdrtcl using:
+** critcl - to embed C code into Tcl
+** interp - to run a Tcl interp in the Jack process thread
+** tcl-thread - to (somehow) adopt the Jack process interp
+   into the tcl thread awareness
+** channels - to tunnel between the foreground and process threads

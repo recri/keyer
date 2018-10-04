@@ -1,0 +1,130 @@
+#!/usr/bin/wish
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2018 by Roger E Critchlow Jr, Charlestown, MA, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+# this is the osc client and server test script
+
+#
+# use the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+package require snit
+package require osc
+package require udp
+
+
+snit::type ::osc::server {
+    option -protocol -default udp
+    option -port -default 9000
+    option -url -default {} -configuremethod Configure
+    option -text -default {}
+    variable sock
+    constructor {args} {
+	$self configure {*}$args
+	if {$options(-protocol) in {udp both}} {
+	    set sock [udp_open $options(-port)]
+	    fconfigure $sock -buffering none -translation binary -blocking 0
+	    fileevent $sock readable [mymethod callback udp $sock]
+	}
+	if {$options(-protocol) in {tcp both}} {
+	    socket -server [mymethod accept] $options(-port)
+	}
+    }
+    method accept {chan addr port} {
+	puts "$addr:$port says [gets $chan]"
+	puts $chan goodbye
+	close $chan
+    }
+    method {callback udp} {sock} {
+	if {[gets $sock packet] < 0} {
+	    $self puts "nothing there"
+	    return
+	}
+	set peer [fconfigure $sock -peer]
+	$self puts "received [string length $packet] chars from peer $peer: '$packet'"
+    }
+    method {Configure -url} {url} {
+	# liblo style urls
+	if {[regexp {^osc\.(udp|tcp)://(.*):(\d+)$} $url all protocol hostname port]} {
+	    $self configure -protocol $protocol -host $hostname -port $port
+	}
+    }
+    method puts {args} {
+	if {$options(-text) ne {}} {
+	    $options(-text) insert end [join $args { }]\n
+	}
+    }
+}
+
+snit::type osc::client {
+    option -protocol -default udp
+    option -host -default localhost
+    option -port -default 9000
+    option -text -default {}
+    variable sock
+    variable chan
+    constructor {args} {
+	$self configure {*}$args
+	if {$options(-protocol) in {udp both}} {
+	    set sock [udp_open]
+	    fconfigure $sock -buffering line -translation binary -remote [list $options(-host) $options(-port)]
+	    $self puts [fconfigure $sock]
+	    puts $sock {hello udp}
+	    flush $sock
+	    $self puts "$options(-host):$options(-port) says [gets $sock]"
+	    close $sock
+	}
+	if {$options(-protocol) in {tcp both}} {
+	    set chan [socket $options(-host) $options(-port)]
+	    puts $chan {hello tcp}
+	    flush $chan
+	    $self puts "$options(-host):$options(-port) says [gets $chan]"
+	    close $chan
+	}
+    }
+}
+
+proc main {argv} {
+    foreach {opt val} $argv {
+	switch -- $opt {
+	    -protocol -
+	    -port -
+	    -host { set options($opt) $val }
+	    -server { set options(-server) $val }
+	    -client { set options(-client) $val }
+	    default { error "unknown option {$opt}" }
+	}
+    }
+    grid [ttk::frame .m] -row 0 -column 0 -columspan 2 -sticky ew
+    grid [ttk::frame .mserver] -row 1 -column 0 -sticky ew
+    grid [ttk::frame .mclient] -row 1 -column 1 -sticky ew
+    grid [text .server -width 30] -row 2 -column 0 -sticky nsew
+    grid [text .client -width 30] -row 2 -column 1 -sticky nsew
+    osc::client client -server $options(-server)
+    osc::server server -client $op
+}
+
+main $argv

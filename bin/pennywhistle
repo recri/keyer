@@ -19,34 +19,6 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
-# this is the mega-keyer script
-# start arbitrary collections of sdrtcl components
-# wire up their options into a dialbook
-# hide, merge, or fuse options
-# save the result as a preset command for later access
-#
-# todo
-# [-] make the -rise-fall option sort after the -rise and -fall that it joins
-# [-] make the -rise-fall option update the displayed -rise and -fall option values too
-# [x] replace -rise-fall with -ramp option in the keyer-tone itself
-# [x] wrap more of this into snit
-# [x] generate the command line for a configured setup, save it, restore it
-# [x] start using tklib
-# [x] prompt for name for saved setup
-# [ ] balloon help for options
-# [ ] balloon help for setups
-# [ ] balloon help for components
-# [x] add empty units box to readout-enum
-# [ ] implement dialbook dial labels
-# [ ] implement recursive dialbook, where groups of related, boring options are pushed down into boxes
-# [ ] implement dialbook detents and dial limits so it doesn't just spin.
-# [x] allow keyer setup1 setup2 ... as syntactic sugar
-# [x] end timer loop when cwtext queue empties
-# [ ] end timer loop when dialbook-set queue empties
-# [ ] implement midi -> OSC bridge (easy)
-# [ ] implement OSC -> MIDI bridge (not so easy, alsa sequencer?)
-# 
-
 #
 # use the script location to find the rest of the libraries
 #
@@ -448,7 +420,7 @@ proc keyer-widget {w} {
     ttk::frame $w
     foreach {tag text} {
 	dial Settings
-	insert Keys
+	insert Control
 	memories Memories
 	ascii Input
 	detime Output
@@ -528,90 +500,6 @@ proc dial-set-timeout {} {
 proc dial-set-init {} {
     set ::data(busy) [dict create]
     # dial-set-timeout
-}
-
-#
-# insert window management
-# a simple frame which, when focused, generates key events
-# for whichever keys you choose.
-# take its midi_out to an oscillator for a straight key or
-# to an iambic keyer for a squeeze paddle.
-#
-# would like to get focus from other windows, but cannot take
-# the shift keys away from the text entry windows.
-#
-snit::widgetadaptor midi-insert {
-    option -ditkey -default Alt_R -configuremethod Configure 
-    option -dahkey -default Control_R -configuremethod Configure 
-    option -key -default none -configuremethod Configure
-    option -insert -default {} -configuremethod Configure
-
-    method delete {args} {}
-    method insert {args} {}
-    delegate method ins to hull as insert
-    delegate method del to hull as delete
-    
-    delegate method * to hull
-    delegate option * to hull
-
-    variable chan
-    variable base
-    
-    method exposed-options {} { return {-ditkey -dahkey -key} }
-    method is-busy {} { return 0 }
-    
-    constructor {args} {
-	installhull using text
-	$self configure -width 30 -height 1 {*}$args
-	$self bind-key $options(-ditkey) dit
-	$self bind-key $options(-dahkey) dah
-	set chan [$options(-insert) cget -chan]
-	set base [$options(-insert) cget -note]
-	$self label
-    }
-
-    method label {} {
-	$self del 1.0 end
-	if {$options(-ditkey) ne {none} && $options(-dahkey) ne {none}} {
-	    $self ins end "click this window then press $options(-ditkey) for dit, $options(-dahkey) for dah"
-	} elseif {$options(-key) ne {none}} {
-	    $self ins end "click this window then press $options(-key) for straight key"
-	} else {
-	    $self ins end "configure a key with -ditkey, -dahkey, or -key"
-	}
-	$self tag add center 1.0 end
-	$self tag configure center -justify center
-    }
-
-    method bind-key {tag element} {
-	if {$tag ne {none}} {
-	    bind $win <KeyPress-$tag> [mymethod insert-key $element down]
-	    bind $win <KeyRelease-$tag> [mymethod insert-key $element up]
-	}
-    }
-    
-    method unbind-key {tag element} {
-	if {$tag ne {none}} {
-	    
-	}
-    }
-
-    variable map -array {dit 0 dah 1 key 0 up 0x80 down 0x90}
-
-    method insert-key {element updown} {
-	$options(-insert) puts [binary format ccc [expr {$map($updown)|($chan-1)}] [expr {$base+$map($element)}] 0]
-    }
-
-    method rebind-key {opt val element} {
-	$self unbind-key $options($opt) $element
-	set options($opt) $val
-	$self bind-key $options($opt) $element
-	$self label
-    }
-    method {Configure -ditkey} {val} { $self rebind-key -ditkey $val dit }
-    method {Configure -dahkey} {val} { $self rebind-key -dahkey $val dah }
-    method {Configure -key} {val} { $self rebind-key -key $val key }
-    method {Configure -insert} {val} { set options(-insert) $val }
 }
 
 #
@@ -715,6 +603,59 @@ snit::widgetadaptor ro-text {
 }
 
 #
+# midi trace
+#
+array set midi {
+    -octaves { 1 2 3 4 5 6 7 }
+    -notes { {C} {C♯} {D} {D♯} {E} {F} {F♯} {G} {G♯} {A} {A♯} {B} }
+    -flats { {C} {D♭ } {D} {E♭} {E} {F} {G♭} {G} {A♭} {A} {B♭} {B} }
+    -scales { 
+	MajorScale 0 
+	NaturalMinor 1 
+	HarmonicMinor 2 
+	AscendingMelodicMinor 3
+	PhrygianDominant 4
+	DoubleHarmonic 5
+	LydianMode 6
+	MixolydianMode 7
+	DorianMode 8
+	PhrygianMode 9
+	LocrianMode 10
+	DescendingMelodicMinor 1
+	MinorScale 1
+	IonianMode 0
+	AeolianMode 1
+    }
+}
+
+proc midi-command-name {x} {
+    set channel [expr {$x&0xF}]
+    set cmd [expr {($x&0x70)>>4}]
+    set names {NoteOff NoteOn AfterTouch ControlChange ProgramChange After-Touch PitchBend} 
+    return "[lindex $names $cmd]$channel"
+}
+proc midi-note-id {note} {
+    return "[midi-note-name $note][midi-note-octave $note]"
+}
+proc midi-note-name {note} {
+    return [lindex $::midi(-notes) [expr {$note%12}]]
+}
+proc midi-flat-name {note} {
+    return [lindex $::midi(-flats) [expr {$note%12}]]
+}
+proc midi-note-octave {note} {
+    return [expr {($note/12)-1}]
+}
+proc scale-type {name} {
+    array set scales $::midi(-scales)
+    return $scales($name)
+}
+proc scale-names {} {
+    set names {}
+    foreach {name value} $::midi(-scales) { lappend names $name }
+    return $names
+}
+#
 # midi tap text widget, receiving midi events for timing check
 #
 snit::widgetadaptor midi-tap {
@@ -744,9 +685,8 @@ snit::widgetadaptor midi-tap {
 		binary scan $midi c* bytes
 		set out [format {%ld %ld} $frame [expr {$frame-$tapframe}]]
 		set tapframe $frame
-		foreach b $bytes {
-		    append out [format { %02x} [expr {$b&0xff}]]
-		}
+		foreach {b n v} $bytes break
+		append out [format { %8s %3s %3d} [midi-command-name $b] [midi-note-name $n] $v]
 		$self insert end $out\n
 	    }	
 	}
@@ -776,9 +716,105 @@ snit::widgetadaptor midi-tap {
     constructor {args} {
 	installhull using text
 	$self configure -width 30 -height 15 {*}$args
-	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
+	bind $win <ButtonPress-3> [mymethod option-menu $win %X %Y]
 	$options(-tap) start
 	set handler [after 100 [mymethod timeout]]
+    }
+}
+
+#
+# insert midi commands into jack
+#
+array set nprn {
+    note	0
+    scale	1
+    threshold	2
+    threshold2	3
+    steps	4
+    nscan	5
+    refchrg	6
+    extchrg	7
+    prescale	8
+    npads	9
+    finger     10
+}
+
+snit::widgetadaptor midi-insert {
+
+    option -insert -default {} -configuremethod Configure
+    option -octave -default 4 -configuremethod Configure
+    option -note -default C -configuremethod Configure
+    option -scale -default MajorScale -configuremethod Configure
+    option -threshold -default 0x70 -configuremethod Configure
+    option -steps -default 8 -configuremethod Configure
+    option -program -default USB+DAC -configuremethod Configure
+
+    variable chan
+    
+    method exposed-options {} { return {-octave -note -scale -threshold -steps} }
+    method is-busy {} { return 0 }
+    
+    variable col 0
+
+    method mymenu {name opt vals} {
+	ttk::menubutton $win.$name -text $name -menu $win.$name.m
+	menu $win.$name.m -tearoff no
+	foreach v $vals { 
+	    $win.$name.m add radiobutton -label $v -value $v -variable [myvar options($opt)] -command [mymethod Configure $opt $v]
+	}
+	return $win.$name
+    }
+    constructor {args} {
+	installhull using ttk::frame
+	$self configure {*}$args
+	set chan [$options(-insert) cget -chan]
+	grid [$self mymenu octave -octave $::midi(-octaves)] -row 0 -column 0
+	grid [$self mymenu note -note $::midi(-notes)] -row 0 -column 1
+	grid [$self mymenu scale -scale [scale-names]] -row 0 -column 2
+	grid [$self mymenu threshold -threshold {0x20 0x40 0x60 0x80 0xA0 0xC0 0xE0}] -row 0 -column 3
+	grid [$self mymenu steps -steps {1 2 4 8 12 16 20 24 28}] -row 0 -column 4
+	grid [$self mymenu program -program {USB DAC USB+DAC}] -row 0 -column 5
+   }
+
+    method {Configure -insert} {val} { 
+	set options(-insert) $val
+    }
+    method {Configure -octave} {val} { 
+	set options(-octave) $val
+	$self send-nprn $::nprn(note) [midi-note $options(-octave) $options(-note)]
+    }
+    method {Configure -note} {val} { 
+	set options(-note) $val
+	$self send-nprn $::nprn(note) [midi-note $options(-octave) $options(-note)]
+    }
+    method {Configure -scale} {val} { 
+	set options(-scale) $val
+	array set scales $::midi(-scales)
+	$self send-nprn $::nprn(scale) $scales($options(-scale))
+    }
+    method {Configure -threshold} {val} { 
+	set options(-threshold) $val
+	$self send-nprn $nprn(threshold) $options(-threshold)
+    }
+    method {Configure -threshold2} {val} { 
+	set options(-threshold2) $val
+	$self send-nprn $nprn(threshold2) $options(-threshold2)
+    }
+    method {Configure -steps} {val} {
+	set options(-steps) $val
+	$self send-nprn $nprn(steps) $options(-steps)
+    }
+    method {Configure -program} {val} {
+	set options(-program) $val
+	$self send-program-change $options(-program)
+    }
+
+    method send-nprn {nprn par} {
+	$self send-control-change 
+    method send-control-change {ctl val} {
+	$options(-insert) puts [binary format ccc [expr {0x|($chan-1)}] $ctl $val]
+    }
+    method send-program-change {val} {
     }
 }
 
@@ -854,19 +890,6 @@ proc load-ui {} {
 	set ::data(show-insert) 1
 	widget-opts .p.insert [get-insert] [.p.insert exposed-options]
     }
-    # memories-widget
-    if {[has-ascii]} {
-	.p add [cw-text .p.ascii -ascii [get-ascii]]
-	set ::data(show-ascii) 1
-	# add options for cwtext widget
-	widget-opts .p.ascii [get-ascii] [.p.ascii exposed-options]
-    }
-    if {[has-detime]} {
-	.p add [ro-text .p.detime -detime [get-detime]]
-	set ::data(show-detime) 1
-	# add options for read-text widget
-	widget-opts .p.detime [get-detime] [.p.detime exposed-options]
-    }
     if {[has-tap]} {
 	.p add [midi-tap .p.tap -tap [get-tap]]
 	set ::data(show-tap) 1
@@ -922,7 +945,7 @@ proc save-current-setup {} {
 }
 
 proc save-setups {} {
-    set fp [open ~/.config/keyer/keyer.tcl w]
+    set fp [open ~/.config/pennywhistle/pennywhistle.tcl w]
     puts $fp "dict create {*}{"
     dict for {key value} [get-setups] {
 	puts $fp "  $key { [string trim $value] }"
@@ -933,43 +956,29 @@ proc save-setups {} {
 
 proc default-setups {} {
     return [dict create {*}{
-	key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
-	kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
-	ptt { keyer -start {keyer-ptt@ptt} }
-	deb { keyer -start {keyer-debounce@deb} }
-	cas { keyer -start {midi-insert@cas} }
-	tap { keyer -start {midi-tap@tap} }
-	out { keyer -start {keyer-detone@detone keyer-detime@out} }
-	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
-	1ch { keyer -merge {*-chan *-note} }
-	key+kbd { keyer -run {key kbd nod 1ch}}
-	info-key {iambic keyer and a keyed oscillator}
-	info-kbd {keyboard keyer and a keyed oscillator}
-	info-ptt {push-to-talk switch}
-	info-deb {key contact debouncer}
-	info-cas {midi events from keyboard keys}
-	info-tap {midi monitor for timing events}
-	info-out {audio to ascii morse decoder}
-	info-nod {hide esoteric keyer options}
-	info-1ch {merge midi channel and note options}
-	info-key+kbd {run the key and the kdb setups}
+	ctl { pennywhistle -start {midi-insert@ctl} }
+	tap { pennywhistle -start {midi-tap@tap} }
+	pennywhistle { pennywhistle -run {tap ctl} }
+	info-ctl {midi controller}
+	info-tap {midi monitor}
+	info-pennywhistle {pennywhistle midi controller and monitor}
     }]
 }
 
 proc init-setups {} {
     # config file does not exist or error reading it
     if { ! [file exists ~/.config]} { file mkdir ~/.config }
-    if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
+    if { ! [file exists ~/.config/pennywhistle]} { file mkdir ~/.config/pennywhistle }
     set-setups [default-setups]
     save-setups
-    if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
+    if {[catch {source ~/.config/pennywhistle/pennywhistle.tcl} result]} {
 	error "failed to create default configs: $result"
     }
 }
 
 proc load-setups {} {
-    if { ! [file exists ~/.config/keyer/keyer.tcl] || 
-	 [catch {source ~/.config/keyer/keyer.tcl} result]} {
+    if { ! [file exists ~/.config/pennywhistle/pennywhistle.tcl] || 
+	 [catch {source ~/.config/pennywhistle/pennywhistle.tcl} result]} {
 	init-setups
     } elseif {[setup-v0-style $result]} {
 	set-setups [setup-upgrade-v0-v1 $result]
@@ -1041,7 +1050,7 @@ proc main {argv} {
     ttk::style configure TCheckbutton -relief raised
     ttk::style configure TRadiobutton -relief raised
     
-    # load or create ~/.config/keyer/keyer.tcl
+    # load or create ~/.config/pennywhistle/pennywhistle.tcl
     load-setups
     
     # make a usage message

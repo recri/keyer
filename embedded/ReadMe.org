@@ -1,0 +1,22 @@
+* MIDI enabled morse code keying
+** These sketches and PCB designs enable a morse code key or paddle
+   that generates MIDI NoteOn/NoteOff events.  Other parts of
+   https://github.com/recri/keyer implement keyers that are triggered
+   by MIDI events and generate sidetones, keying signals, and IQ baseband
+   signals.
+** The sketches all run on various Teensy processors available from
+   https://www.pjrc.com/ and other sources.  They
+** MidiKey - runs on a Teensy 2.0, it takes input through a 1/8" stereo
+   audio jack from a straight key or paddle and generates MIDI NoteOn's
+   when keys or paddles close, and MIDI NoteOff's when they open.  It was
+   built on perfboard with wirewrap connecting header pins.
+** MidiKeyTB - extension to MidiKey which adds a Blackberry Trackball Breakout
+   (https://www.sparkfun.com/products/retired/13169) which can still be found
+   for sale on Ebay even though SparkFun has retired it.
+** MidiKeySR - extension to MidiKey which added Softrock control features,
+   a work still in progress several years later.
+** LufaMidiKey - implemented the MidiKey using the LUFA libraries.
+   This worked as a proof of concept, but hasn't been used in many years.
+** MidiKeyTouch - runs on a Teensy LC or a Teensy 3.0-2, sandwiches the 
+   microprocessor between two PCB's with touch pads, and wraps the entire
+   package in tube of heatshrink.  Currently under development.
