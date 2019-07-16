@@ -811,6 +811,7 @@ snit::widgetadaptor midi-insert {
 
     method send-nprn {nprn par} {
 	$self send-control-change 
+    }
     method send-control-change {ctl val} {
 	$options(-insert) puts [binary format ccc [expr {0x|($chan-1)}] $ctl $val]
     }
