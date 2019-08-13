@@ -149,6 +149,7 @@ proc has-hide {} { return [has-var -hide] }
 # are set as a group
 
 set ::data(defines) [dict create]
+set ::data(desc) [dict create opts {}]
 array set ::value {};		# current option value
 array set ::defval {};		# original option value
 proc opt-is-defined {opt} { return [dict exists $::data(defines) $opt] }
@@ -390,8 +391,28 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	    opt-describe $text $name $opt2 $opt freq $ovalue \
 		[list -text $text -info $info -units Hz -format %.0f -min 10 -max 1000 -step 1]
 	}
+	-log2rxsize {
+	    # ignore
+	    # {-log2rxsize log2size Log2size 12 12} log base 2 of ringbuffer size
+	}
+	-log2txsize {
+	    # ignore
+	    # {-log2txsize log2size Log2size 12 12} log base 2 of ringbuffer size
+	}
+	-n-rx {
+	    # ignore
+	    # {-n-rx nrx Nrx 1 1} number of receivers
+	}
+	-i-rx {
+	    # ignore
+	    # {-i-rx irx Irx 0 0} index of active receiver
+	}
+	-speed {
+	    # ignore
+	    # {-speed speed Speed 48000 48000} sample rate of receivers
+	}
 	default {
-	    puts "$name $opt2 {$opt $oname $oclass $odefault $ovalue} $info"
+	    puts "opt-describe: no clues for {$name $opt2 {$opt $oname $oclass $odefault $ovalue} $info}"
 	}
     }
 }
@@ -934,6 +955,7 @@ proc save-setups {} {
 proc default-setups {} {
     return [dict create {*}{
 	key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
+	key2 { keyer -start {ad5dz@key2 keyer-tone@kyo2} -key2-wpm 18 -key2-note 2 -kyo2-ramp 4.0 -kyo2-note 2 }
 	kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
 	deb { keyer -start {keyer-debounce@deb} }
@@ -944,6 +966,7 @@ proc default-setups {} {
 	1ch { keyer -merge {*-chan *-note} }
 	key+kbd { keyer -run {key kbd nod 1ch}}
 	info-key {iambic keyer and a keyed oscillator}
+	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
 	info-ptt {push-to-talk switch}
 	info-deb {key contact debouncer}

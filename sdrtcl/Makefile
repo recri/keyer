@@ -88,6 +88,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/spectrum_tap.so \
 	$(LIBDIR)/window.so \
 	$(LIBDIR)/window_polyphase.so \
+	$(LIBDIR)/hl_jack.so \
 	$(ALSA) \
 	$(KEYERS) \
 	$(LIBDIR)/usb.so
@@ -237,6 +238,9 @@ $(LIBDIR)/window.so: window.c framework.h ../dspmath/window.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/window_polyphase.so: window_polyphase.c framework.h ../dspmath/polyphase_fft.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/hl_jack.so: hl_jack.c framework.h ../dspmath/dspmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/alsa_device.so: alsa_device.c
