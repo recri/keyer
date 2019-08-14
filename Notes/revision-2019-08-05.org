@@ -1,0 +1,29 @@
+* Revision of 2019-08-05
+  Back to the drawing board
+  Seems that I have a plan that operates in several parts.
+** sdrtcl - a component model
+   This is basically what I have that actually works.
+*** loads with 'package require sdrtcl::component'
+*** instantiates with 'sdrtcl::component name ...'
+*** provides a common set of introspection commands that allow
+**** examination of options
+**** examination of methods
+**** examination of document strings
+*** may instantiate as a jack client, but not necessarily
+*** might instantiate as a pulse client, but not necessarily
+** control - a controller model
+   This is partly what bin/keyer does, until we get to the OSC part.
+*** that launches a set of sdrtcl components
+*** gathers all the component names and component options
+*** currently allows all the component options to be set from tk
+*** but will enable OSC access to everything soon
+** pajaro - a rack organizer
+*** finds all active jack clients
+*** finds all active pulse clients and modules
+*** allows the connections between all clients and modules
+**** to be examined
+**** to be specified
+**** to be switched
+**** to be saved
+**** to be restored
+*** and also allows itself to be reorganized by OSC

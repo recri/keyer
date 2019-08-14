@@ -1,0 +1,29 @@
+The keyer script is used 
+  to start collections of sdrtcl components,
+  to optionally specify the names used for each sdrtcl component,
+  to optionally specify non-default values for the component options,
+  to construct a user interface that controls component option values,
+  to construct user interfaces for direct interaction with components,
+  to optionally merge shared component options under one controller,
+  to optionally hide options to simplify the user interface,
+  to run previously saved keyer setups
+
+sdrtcl components implement radio and dsp components.  The component is named according to its
+function and implementation details.  It is implemented as a Tcl package with Tcl script or a
+loadable shared library.  A component is loaded by 'package require sdrtcl::component'.
+A component is instantiated by 'sdrtcl::component name ?-option value ...?'.
+
+The keyer accepts the global options
+  -server jack-server-name
+  -title window-title-string
+  -merge '-pattern-option1 -pattern-option2 ...'
+  -hide '-pattern-option1 -pattern-option2 ...'
+
+The syntax for starting a single component is:
+  -start component@name ?-name-option value? ?...?
+
+The syntax for starting a collection is:
+  -start 'component1@name1 component2@name2 ...' -name-option value ...
+
+The syntax for running saved setups is:
+  -run 'setup-name1 setup-name2 ...'
