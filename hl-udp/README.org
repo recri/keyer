@@ -1,0 +1,23 @@
+* hl2.tcl - Hermes Lite 2 interface in Tcl
+** Hermes Lite 2 is DDC/DDU radio that connects
+   to a power supply, a gigabit ethernet, and an
+   antenna.
+**
+## overview
+##
+# This is built from examination of the source of quisk-4.1.41.
+# The hermes lite operates via udp packets over its ethernet.
+# Packets received from the hl2 are directed either to endpoint ? 
+# and contain bandscope samples or to endpoint ? and contain
+# control bytes, received iq samples, and microphone samples.
+# Packets sent to the hl2 contain control bytes, transmit iq
+# samples, and speaker audio samples.
+# The microphone and speaker samples are ignored.
+# The control sequences sent and received generally cycle
+# through a set of controls over and over.
+# Sending a control which alters the sample rate of the iq
+# samples received or the number of receivers need special
+# treatment so that samples received are not processed
+# incorrectly.
+# There are special control sequences which specify i2c
+# commands on the radio, these are only sent 

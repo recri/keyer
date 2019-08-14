@@ -1,0 +1,181 @@
+* Metis Discovery
+* Metis Stop and Start
+* Metis UDP Datagram
+** Each Metis UDP datagram consists
+   of an 8 byte header and a 1024 byte payload.
+** The header can be scanned as two big-endian 4 byte integers  
+*** first integer is (0xEFFE0100 | end_point)
+**** end_point == 2 is for PC to Metis transmission
+     of transmit IQ samples and speaker audio samples
+**** end_point == 4 is for Metis to PC transmission
+     of received IQ samples and microphone audio samples
+**** end_point == 6 is for Metis to PC transmission
+     of raw input samples for bandscope
+*** second integer is the sequence_number for the end_point
+    Sequence numbers reset to zero when a Metis Start or Stop
+    is issued.  They should increment by one for each UDP packet
+    sent to the end_point.  The sequence numbers are independent
+    for each end_point.
+** The payloads are always 1024 bytes 
+*** The payload for bandscope data, end_point == 6
+    is 512 short ADC samples, they appear to be little-endian
+*** The payloads containing transmit or receive IQ samples,
+    end_point == 2 or end_point == 4,
+    contain two 512 byte USB frames.
+**** Each USB frame consists
+     of an 8 byte header and a 504 byte payload
+**** The header can be scanned as two big-endian 4 byte integers
+***** The first integer is (0x7f7f7f00 | C0)
+      C0 is the first control byte, its high bits define the
+      contents of the subsequent bits and control bytes.
+***** The second integer is ((C1<<24)|(C2<<16)|(C3<<8)|C4)
+      C1, C2, C3, and C4 are the second through fifth control bytes.
+* Control bytes transmitted
+  According to the protocol document and the
+  protocol coverage document on the Wiki,
+  with notes from inspecting Quisk.
+  More succinctly, we could write these as 19 32bit integers,
+  one for each value of C0&0xFE, and then two extra bits for
+  MOX and bandscope enable.
+  I've written these as 5 byte big-endian integers.
+  Bit fields written as x are don't care for the Hermes Lite.
+** C0------|C1------|C2------|C3------|C4------
+** 0000000M|xxxxxxSS|OOOOOOOx|xxxYLxxx|xxNNNDxx 0 == C0>>1
+*** M => C0&0x01 == MOX, transmit vs receive
+    
+*** S => C1&0x03 == int(log(Speed / 48000)/log(2))
+*** O => C2&0xFE == user open collector output bits
+    These bits select the filter enable relays
+    if the n2adr filter board is connected.
+    Bits referenced to C2, usually shifted right 1
+    0x80 ->  ~3 MHz hpf
+    0x40 -> ~30 MHz lpf
+    0x20 -> ~20 MHz lpf
+    0x10 -> ~15 MHz lpf
+    0x08 ->  ~8 MHz lpf
+    0x04 ->  ~4 MHz lpf
+    0x02 ->  ~2 MHz lpf
+*** Y => C3&0x10 == enable RX ADC AGC
+    this is disable sync freq in Quisk
+    when sync freq is enabled, the fpga twiddles the switcher freq
+    to move harmonics out of amateur bands
+    hardware AGC not in HL2 version >= 40
+    LT2208 Random in original Hermes spec
+*** N => C4&0x38 == (number of receivers) - 1
+    initialized to 0 implying 1
+    Note that this allows 1 to 8 receivers, but there are
+    only tuning commands for the first 7.
+    Turning off IQ bit in Metis start should render 0 receivers.
+*** D => C4&0x04 == duplex (unlock tx nco from rx nco)
+    initialized to 1 implying duplex
+    Duplex must be on or else the first Rx frequency is locked to the Tx frequency
+** 0000001x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 1 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for tx
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0000010x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 2 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for rx1
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0000011x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 3 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for rx2
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0000100x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 4 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for rx3
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0000101x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 5 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for rx4
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0000110x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 6 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for rx5
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0000111x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 7 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for rx6
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0001000x|FFFFFFFF|FFFFFFFF|FFFFFFFF|FFFFFFFF 8 == C0>>1 
+*** F => C1,C2,C3,C4 == NCO frequency for rx7
+    big endian, c1..c4 == 0x006b0000 == 7012352
+** 0001001x|LLLLLLLL|VxxxPOxx|xxxxxxxx|xxxxxxxx 9 == C0>>1
+*** L => C1&0xFF == drive level, 0 .. 255
+*** V => C2&0x80 == VNA mode
+*** P => C2&0x08 == enable power amp
+    not in protocol but present in Quisk
+*** O => C2&0x04 == low power enable
+    not in protocol but present in Quisk
+** 0001010x|xxxxxxxx|xPxxxxxx|xxxxxxxx|xxxLLLLL 10 == C0>>1
+*** P => C2&0x40 == pure signal enable
+    this is in the base hermes protocol, but not in hermes lite coverage, nor in quisk
+*** L => C4&0x7F == 0..32dB LNA
+    LNA varies from -12 to +48
+    This part of the LNA gets (LNA+12) | 0x40
+** 0001011x|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx 11 == C0>>1
+** 0001100x|00000110|10101000|00000000|xxxxxxxx 12 == C0>>1
+   Enable bias change, clear 0x06 from C1 to disable
+   Works in conjunction with 13, 14, and 15.
+*** C1 == 0x06
+*** C2 == 0xA8
+*** C3 == 0x00 bias 1, volatile
+** 0001101x|00000110|10101000|00100000|xxxxxxxx 13 == C0>>1
+   Enable bias change, clear 0x06 from C1 to disable
+   Works in conjunction with 12, 14, and 15.
+*** C1 == 0x06
+*** C2 == 0xA8
+*** C3 == 0x20, bias 1, non-volatile
+** 0001110x|00000110|10101000|00010000|xxxxxxxx 14 == C0>>1
+   Enable bias change, clear 0x06 from C1 to disable
+   Works in conjunction with 12, 13, and 15.
+*** C1 == 0x06
+*** C2 == 0xA8
+*** C3 == 0x10, bias 2, volatile
+** 0001111x|00000110|10101000|00110000|xxxxxxxx 15 == C0>>1
+   Enable bias change, clear 0x06 from C1 to disable
+   Works in conjunction with 12, 13, and 14.
+*** C1 == 0x06
+*** C2 == 0xA8
+*** C3 == 0x30, bias 2, non-volatile
+** 0010000x|HHHHHHHH|xxxxxxLL|xxxxxxxx|xxxxxxxx 16 == C0>>1
+   not in protocol but present in Quisk
+*** H => C1&0xFF == high 8 bits of cw_hang_time == min(1023, max(0, keyupDelay)) >> 2
+*** L => C2&0x03 == low 2 bits of cw_hang_time == min(1023, max(0, keyupDelay)) & 0x03
+** 0010001x|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx 17 == C0>>1
+** 0010010x|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx 18 == C0>>1
+** A1111011|00000110|CCCCCCCC|DDDDDDDD|EEEEEEEE 7b == C0&0x7f
+   I2C payload for AD9866
+*** A => 1 if this payload should be acknowledged
+*** C, D, E contents of payload
+** A1111100|00000110|CCCCCCCC|DDDDDDDD|EEEEEEEE 7c == C0&0x7f
+   I2C payload for Versa Clock
+*** A => 1 if this payload should be acknowledged
+*** C, D, E contents of payload
+** A1111101|00000110|CCCCCCCC|DDDDDDDD|EEEEEEEE 7d == C0&0x7f
+   I2C payload for bias adjust, not sure if it's really I2C
+*** A => 1 if this payload should be acknowledged
+*** C, D, E contents of payload
+* Control bytes received
+** C0------|C1------|C2------|C3------|C4------
+** 00000xKP|xxxxxxxO|xxxxxxxx|xxxxxxxx|HHHHHHHH 0 == C0>>3
+*** K => C0&0x02 == hardware key line (code_version >= 62)
+    but nothing when (code_version < 62)
+*** P => C0&0x01 == hardware ptt line (code_version >= 62)
+    but hardware key line when (code_version < 62)
+*** O => C1&0x01 == ADC overflow
+*** H => C4&0xFF == Hermes software serial number
+** 00001xxx|TTTTTTTT|TTTTTTTT|FFFFFFFF|FFFFFFFF 1 == C0>>3
+*** T => (C1<<8)+C2 == temperature
+*** F => (C3<<8)+C4 == forward power    
+** 00010xxx|RRRRRRRR|RRRRRRRR|CCCCCCCC|CCCCCCCC 2 == C0>>3
+*** F => (C1<<8)+C2 == reverse power
+*** C => (C3<<8)+C4 == power amplifier current    
+** 00011xxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx 3 == C0>>3
+** 00100xxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx 4 == C0>>3
+** 00101xxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx 5 == C0>>3
+** 11111011|00000110|CCCCCCCC|DDDDDDDD|EEEEEEEE fb == C0
+   acknowledge I2C payload for AD9866
+*** A => 1 if this payload should be acknowledged
+*** C, D, E contents of payload
+** 11111100|00000110|CCCCCCCC|DDDDDDDD|EEEEEEEE fc == C0
+   acknowledge I2C payload for Versa Clock
+*** A => 1 if this payload should be acknowledged
+*** C, D, E contents of payload
+** 11111101|00000110|CCCCCCCC|DDDDDDDD|EEEEEEEE fd == C0
+   acknowledge I2C payload for bias adjust, not sure if it's really I2C
+*** A => 1 if this payload should be acknowledged
+*** C, D, E contents of payload
