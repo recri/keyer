@@ -66,26 +66,134 @@ package require snit
 #  Extinction ratio   | Cycle mean   | Cycle RMS
 #  Mean optical power | Cycle area   | Jitter
 #
-# work without jack for the time being so I can work while on the road, so
-# specialize in scripted or filed sources for the moment.
-#
-# but I need to build the Tcl channel which is the read side of a jack ringbuffer,
-# so I can use fileevent to service jack ports as a sink.
-#
-# well, I already have sdrtcl::audio-tap and sdrtcl::midi-tap, so what else do
-# I need?
-#
+# The channel scans arrive in whatever coordinates the sampler
+# provides.  We write them into canvas coordinates tagged by channel,
+# at which point they become lists of floating point pixel coordinates.
+# We know the -offset and -gain applied to the channel, so we can undo
+# it add the new segment of coordinates, and reapply the scale and 
+# offset, or we could tag the new segment
+# can keep the history of 
 
-snit::type channel {
-}
-snit::type tcl-channel {
-}
-snit::type file-channel {
-}
-snit::type jack-channel {
+namespace eval ::sdrtcl { }
+namespace eval ::sdrtcl::scope { }
+
+snit::type ::sdrtcl::scope::channel {
+    option -color -default white
+    option -gain -default 1
+    option -offset -default 0
+    option -source -default {tcl-channel-sine -frequency 600 -sample-rate 12000}
+    
 }
 
-snit::type oscilloscope {
+snit::type ::sdrtcl::scope::tcl-channel {
+    
+}
+
+snit::type ::sdrtcl::scope::tcl-channel-sine {
+    component osc
+
+    option -amplitude -default 1 -readonly true
+    option -receiver -default {}
+    delegate option -frequence to osc as -hertz
+    delegate option -sample-rate to osc as -samples-per-second
+
+    variable data -array {
+	run 0
+	t 0
+    }
+    constructor {args} {
+	install osc using ::sdrtcl::gen:osc
+	$self configurelist $args
+    }
+    method start {} {
+	set data(run) 1
+	set data(t) [clock microseconds]
+	set sps 
+	set n [expr {[$self cget -sample-rate] * 0.05}]
+	$self generate $n
+    }
+}
+
+snit::type ::sdrtcl::scope::file-channel {
+}
+snit::type ::sdrtcl::scope::jack-channel {
+}
+
+snit::type ::sdrtcl::scope::scope {
+}
+
+#
+# signal generators
+#
+# complex oscillator
+# 3 adds 1 multiply and 1 divide per sample
+snit::type ::sdrtcl::gen::osc {
+    option -hertz -default 440 -configuremethod conf
+    option -phase -default 0 -configuremethod conf
+    option -samples-per-second -default 12000 -configuremethod conf
+    option -receiver -default {}
+    variable data -array {
+	xi 1
+	c 0
+	x 0
+	y 0
+	twopi 6.28318530718
+	finish {}
+    }
+    constructor {args} {
+	$self set-hertz $options(-hertz) $options(-samples-per-second)
+	$self set-phase $options(-phase)
+	$self configurelist $args
+    }
+    method conf {opt val} {
+	set options($opt) $val
+	switch -- $opt {
+	    -hertz {
+		$self set-hertz $val $options(-samples-per-second)
+	    }
+	    -samples-per-second {
+		$self set-hertz $options(-hertz) $val
+	    }
+	    -phase {
+		if {$val == 0} {
+		    $self set-zero-phase
+		} else {
+		    $self set-phase $val
+		}
+	    }
+	    -receiver {}
+	    default {
+		error "unknown option $opt"
+	    }
+	}
+    }
+    method finish-positive {x y} { return [list $x $y] }
+    method finish-negative {x y} { return [list $x [expr {-$y}]] }
+    method set-hertz {hertz samples_per_second} {
+	set current_xi $data(xi)
+	set wps [expr {double($hertz) / $samples_per_second}]
+	set rps [expr {$wps * $data(twopi)}]
+	set data(c) [expr {sqrt(1.0/(1.0+square(tan($rps))))}]
+	set data(xi) [expr {sqrt((1.0 - $data(c)) / (1.0 + $data(c)))}]
+	set data(x) [expr {$data(x) * $data(xi) / $current_xi}]
+	set data(finish) [expr {$hertz > 0 ? [mymethod finish-positive] : [mymethod finish-negative]}]
+    }
+    method set-phase {radians} {
+	set data(x) [expr {cos($radians) * $data(xi)}]
+	set data(y) [expr {sin($radians)}]
+    }
+    method set-zero-phase {} {
+	set data(x) $data(xi)
+	set data(y) 0
+    }
+    method process {} {
+	set ox $data(x)
+	set oy $data(y)
+	set t [expr {($ox+$oy) * $data(c)}]
+	set data(x) [expr {$t-$oy}]
+	set data(y) [expr {$t+$ox}]
+	return [{*}$data(finish) [expr {$ox / $data(xi)}] $oy]
+    }
 }
 
 proc main {argv} {
