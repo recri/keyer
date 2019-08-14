@@ -22,11 +22,10 @@ set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info 
 lappend auto_path [file join [file dirname $script] .. lib]
 
 package require Tk
-package require Togl
 package require snit
 
 #
-# multichannel oscilloscope in a togl window
+# multichannel oscilloscope
 #
 # * Tk interface
 # * embeddable in a Tk application
@@ -42,8 +41,8 @@ package require snit
 # ** ALSA, pulse audio, or PortAudio ports
 # * channels can be configured for
 # ** color
-# ** alpha
-# ** textures
+# ** alpha (not yet)
+# ** textures (well, dashes and dots)
 # * channels have independent 
 # ** gain
 # ** offset
@@ -69,8 +68,12 @@ package require snit
 #
 # work without jack for the time being so I can work while on the road, so
 # specialize in scripted or filed sources for the moment.
+#
 # but I need to build the Tcl channel which is the read side of a jack ringbuffer,
 # so I can use fileevent to service jack ports as a sink.
+#
+# well, I already have sdrtcl::audio-tap and sdrtcl::midi-tap, so what else do
+# I need?
 #
 
 snit::type channel {
@@ -83,7 +86,6 @@ snit::type jack-channel {
 }
 
 snit::type oscilloscope {
-	   
 }
 
 proc main {argv} {

@@ -1,0 +1,55 @@
+<!DOCTYPE patchbay>
+<patchbay name="key+kbd+hlj" version="0.5.0">
+ <output-sockets>
+  <socket client="system" type="jack-midi" name="system" exclusive="off">
+   <plug>midi_capture_1</plug>
+  </socket>
+  <socket client="kbd" type="jack-midi" name="kbd" exclusive="off">
+   <plug>midi_out</plug>
+  </socket>
+  <socket client="kbo" type="jack-audio" name="kbo" exclusive="off">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket client="hlj" type="jack-audio" name="hlj" exclusive="off">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket client="key" type="jack-midi" name="key" exclusive="off">
+   <plug>midi_out</plug>
+  </socket>
+  <socket client="kyo" type="jack-audio" name="kyo" exclusive="off">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket client="kbo" type="jack-midi" name="kbo" exclusive="off">
+   <plug>midi_in</plug>
+  </socket>
+  <socket client="key" type="jack-midi" name="key" exclusive="off">
+   <plug>midi_in</plug>
+  </socket>
+  <socket client="kyo" type="jack-midi" name="kyo" exclusive="off">
+   <plug>midi_in</plug>
+  </socket>
+  <socket client="system" type="jack-audio" name="system" exclusive="off">
+   <plug>playback_1</plug>
+   <plug>playback_2</plug>
+  </socket>
+  <socket client="hlj" type="jack-audio" name="hlj" exclusive="off">
+   <plug>in_i</plug>
+   <plug>in_q</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables>
+  <cable input="key" type="jack-midi" output="system"/>
+  <cable input="kyo" type="jack-midi" output="key"/>
+  <cable input="hlj" type="jack-audio" output="kyo"/>
+  <cable input="kbo" type="jack-midi" output="kbd"/>
+  <cable input="hlj" type="jack-audio" output="kbo"/>
+  <cable input="system" type="jack-audio" output="hlj"/>
+ </cables>
+</patchbay>
+

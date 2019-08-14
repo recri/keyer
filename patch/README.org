@@ -1,0 +1,2 @@
+* This directory is used to save patches
+  which are connection patterns saved by Qjackctl's Patchbay.
