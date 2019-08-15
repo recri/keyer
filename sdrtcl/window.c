@@ -53,7 +53,7 @@ static int _get_window(Tcl_Interp *interp, const char *type_name, int *itype) {
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   // check for usage
   int itype = -1, size, itype2 = -1;
-  if (argc != 3 && argc != 4) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s type ?type2 size?", Tcl_GetString(objv[0])));
+  if (argc != 3 && argc != 4) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s type ?type2? size", Tcl_GetString(objv[0])));
   if (_get_window(interp, Tcl_GetString(objv[1]), &itype) != TCL_OK) return TCL_ERROR;
   if (argc == 3) {
     if (Tcl_GetIntFromObj(interp, objv[2], &size) != TCL_OK) return TCL_ERROR;
