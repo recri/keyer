@@ -82,11 +82,91 @@ snit::type ::sdrtcl::scope::channel {
     option -gain -default 1
     option -offset -default 0
     option -source -default {tcl-channel-sine -frequency 600 -sample-rate 12000}
-    
 }
 
-snit::type ::sdrtcl::scope::tcl-channel {
+# units per div go 1, 2, 5, 10, 20, 50, ...
+# so the minor ticks on the graticule should vary
+# to subdivide 1, 2, 5 neatly as the units change
+snit::type ::sdrtcl::scope::timebase {
+    option -time-per-div -default 1
+}
+
+snit::type ::sdrtcl::scope::vertical {
+    option -volt-per-div -default 1
+}
+
+snit::type ::sdrtcl::scope::trigger {
+}
+
+snit::widget ::sdrtcl::scope::scope {
+    component c
+    option -width -default 1200 -configuremethod pass
+    option -height -default 1200 -configuremethod pass
+    option -background -default black -configuremethod pass
+    option -graticule -default 10x10 -type {snit::enum -values {10x10 8x10 10x8 none}}
     
+    constructor {args} {
+	install c using canvas $win.c -borderwidth 0 -highlightthickness 0
+	$self configure \
+	    -width $options(-width) \
+	    -height $options(-height) \
+	    -background $options(-background) \
+	    {*}$args
+	$self graticule
+	pack $c -side top -fill both -expand true
+    }
+    method pass {opt val} {
+	set options($opt) $val
+	$win.c configure $opt $val
+    }
+    # generate graticule lines
+    # axes, major tick marks at 8 or 10 per axis
+    # minor tick marks yet to come, depends on scale
+    proc graticule-lines {ht wd} {
+	puts "graticule-lines $ht $wd"
+	lappend lines [list 0 0.5 1 0.5]
+	set dy 0.01
+	set y0 [expr {0.5-$dy}]
+	set y1 [expr {0.5+$dy}]
+	set dx [expr {1.0/$wd}]
+	for {set x 0} {$x <= 1} {set x [expr {$x+$dx}]} {
+	    lappend lines [list $x $y0 $x $y1]
+	}
+	lappend lines [list 0.5 0 0.5 1]
+	set dx 0.01
+	set x0 [expr {0.5-$dx}]
+	set x1 [expr {0.5+$dx}]
+	set dy [expr {1.0/$ht}]
+	for {set y 0} {$y <= 1} {set y [expr {$y+$dy}]} {
+	    lappend lines [list $x0 $y $x1 $y]
+	}
+	return $lines
+    }
+    # call me when window size changes
+    method graticule {} {
+	catch {$c delete graticule}
+	switch $options(-graticule) {
+	    10x10 - 
+	    8x10 -
+	    10x8 { 
+		foreach coords [graticule-lines {*}[split $options(-graticule) x]] {
+		    $c create line $coords -fill white -tags graticule
+		}
+		$c scale graticule 0 0 $options(-width) $options(-height)
+	    }
+	    none {
+	    }
+	    default {
+		error "unknown -graticule option found: $options(-graticule)"
+	    }
+	}
+    }
+}
+
+#
+# channel details
+#
+snit::type ::sdrtcl::scope::tcl-channel {
 }
 
 snit::type ::sdrtcl::scope::tcl-channel-sine {
@@ -119,9 +199,7 @@ snit::type ::sdrtcl::scope::file-channel {
 snit::type ::sdrtcl::scope::jack-channel {
 }
 
-snit::type ::sdrtcl::scope::scope {
-}
-
+	
 #
 # signal generators
 #
@@ -197,6 +275,7 @@ snit::type ::sdrtcl::gen::osc {
 }
 
 proc main {argv} {
+    pack [sdrtcl::scope::scope .o {*}$argv] -fill both -expand true
 }
 
 main $argv

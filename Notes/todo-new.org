@@ -1,0 +1,55 @@
+* Things To Do - Updated to 2019-08-15
+** Debug sdrtcl::hl-jack
+   Clearly not getting the right samples from audio inspection.
+** bin/key-scope
+   Multi-channel oscilloscope for debugging hl-jack.
+*** channels    
+*** timebase
+*** trigger
+*** super slow motion replay
+*** measurement
+** measure latency in hermes-lite 2 cw processing
+** add IMD tone generator
+** add Spot tone generator
+** add string of dits tuning spot
+** add RTTY test signal RYRY etc.
+** add RTTY modulator, simply frequency shift carrier
+   2295/2125 Hz (US) or 2125/1955 Hz (Europe)
+   50.5 baud, baudot coding
+** add PSK modulator, transitioning between in phase
+   and 180 degrees out of phase at the bit rate with
+   the signal amplitude enveloped down to zero at the
+   transition point.
+   31 baud, varicode coding.
+** Use these as additional examples for using the key-scope
+** Tcl channel using jack ringbuffer.
+*** both sides in Tcl for general through buffering
+*** one side in jack process loop and in tcl for transfers
+    between foreground and jack process thread
+** update MidiKeys
+*** arbitrary paddle and key inputs
+*** secondary pushbutton key inputs
+*** key and ptt outputs
+*** led monitoring of lines
+*** audio input and output
+*** oscilloscope sampling
+*** logic analysis
+** Work on demodulation direct from IQ
+   rather than brick wall filtering by default
+   use the Goertzel filter
+** Keyed oscillator
+   Note that CW keying is ASK (Amplitude Shift Keying
+   and the Amplitude varies between 0 and 1, the
+   keying envelope is actually a filtered version
+   of the square pulses from the keyer.  So make
+   the keyer generate rectangular pulses and then
+   smooth the transitions and feed that to an ASK
+   oscillator.
+** Keyed FSK Oscillator
+   In this case, the mark and space are encoded as
+   +SHIFT/2 and -SHIFT/2 around the center frequency,
+   and we also want to smooth the transition.
+** Keyed BPSK Oscillator
+   added reverse_phase method to dsp/oscillator.h
+   in this case there is an amplitude envelope to
+   keep the clicks away.

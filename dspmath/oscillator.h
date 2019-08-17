@@ -75,6 +75,11 @@ static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_s
   o->finish = (hertz > 0) ? oscillator_finish_positive_frequency : oscillator_finish_negative_frequency;
 }
 
+static void oscillator_reverse_phase(oscillator_t *o) {
+  o->x = -o->x;
+  o->y = -o->y;
+}
+
 static void oscillator_set_phase(oscillator_t *o, float radians) {
   o->x = ocos(radians) * o->xi;
   o->y = osin(radians);
@@ -116,6 +121,10 @@ static void oscillator_set_zero_phase(oscillator_t *o) {
   o->phase = 0;
 }
 
+static void oscillator_reverse_phase(oscillator_t *o) {
+  o->phase += opi;
+}
+
 static float complex oscillator_process(oscillator_t *o) {
   o->phase += o->dphase;
   while (o->phase > otwo_pi) o->phase -= otwo_pi;
@@ -135,6 +144,10 @@ typedef struct {
 static void oscillator_set_hertz(oscillator_t *o, float hertz, int samples_per_second) {
   ofloat dradians = otwo_pi * hertz / samples_per_second;
   o->dphase = ocos(dradians) + I * osin(dradians);
+}
+
+static void oscillator_reverse_phase(oscillator_t *o) {
+  o->phase = -o->phase;
 }
 
 static void oscillator_set_phase(oscillator_t *o, float radians) {
