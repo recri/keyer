@@ -74,6 +74,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/iq_swap.so \
 	$(LIBDIR)/jack_client.so \
 	$(LIBDIR)/jack_ctl.so \
+	$(LIBDIR)/jack_ringbuffer.so \
 	$(LIBDIR)/lo_mixer.so \
 	$(LIBDIR)/meter_tap.so \
 	$(LIBDIR)/midi.so \
@@ -179,6 +180,9 @@ $(LIBDIR)/jack_client.so: jack_client.c framework.h
 
 $(LIBDIR)/jack_ctl.so: jack_ctl.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACKSERVER_LIBS) $(LIBS)
+
+$(LIBDIR)/jack_ringbuffer.so: jack_ringbuffer.c framework.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/lo_mixer.so: lo_mixer.c framework.h ../dspmath/lo_mixer.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)

@@ -18,9 +18,20 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
 
+#
+# use the script location to find the rest of the libraries
+#
 set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
-lappend auto_path [file join [file dirname $script] .. lib]
+set dirname [file dirname $script]
 
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+#
+# require some packages
+#
 package require Tk
 package require snit
 
@@ -39,63 +50,81 @@ package require snit
 # ** jack audio ports
 # ** jack midi ports
 # ** ALSA, pulse audio, or PortAudio ports
-# * channels can be configured for
-# ** color
-# ** alpha (not yet)
-# ** textures (well, dashes and dots)
 # * channels have independent 
 # ** gain
 # ** offset
-# * channels have independent sample format
-# * channel data stored in OpenGL memory
-# * gain, offset, color, alpha, and zoom all handled in OpenGL
-# * the scopes run the same time base which can be zoomed in and out
 #
-# pulling the basic spec from xoscope which looks very thorough but out of date
-# in the sources it can connect to.
-#
-# From Tektronix XYZ of oscilloscopes:
-# Examples of fully automated waveform measurements:
-#  Period             | Duty Cycle + | High
-#  Frequency          | Duty Cycle - | Low
-#  Width +            | Delay        | Minimum
-#  Width -            | Phase        | Maximum
-#  Rise time          | Burst width  | Overshoot +
-#  Fall time          | Peak-to-peak | Overshoot -
-#  Amplitude          | Mean         | RMS
-#  Extinction ratio   | Cycle mean   | Cycle RMS
-#  Mean optical power | Cycle area   | Jitter
-#
-# The channel scans arrive in whatever coordinates the sampler
-# provides.  We write them into canvas coordinates tagged by channel,
-# at which point they become lists of floating point pixel coordinates.
-# We know the -offset and -gain applied to the channel, so we can undo
-# it add the new segment of coordinates, and reapply the scale and 
-# offset, or we could tag the new segment
-# can keep the history of 
 
 namespace eval ::sdrtcl { }
-namespace eval ::sdrtcl::scope { }
+namespace eval ::sdrtcl::scope {
+    proc rgb {r g b} {
+	return [expr {(($r&255)<<16)|(($g&255)<<8)|($b&255)}]
+    }
+    # conservative color palette adapted for color blindness
+    # Bang Wong, Points of view: Color blindness.
+    # Nature Methods: volume 8, page 441 (2011)
+    variable colors
+    array set colors [list \
+			  black [rgb 0 0 0] \
+			  orange [rgb 230 159 0] \
+			  skyblue [rgb 86 180 233] \
+			  bluishgreen [rgb 0 158 115] \
+			  yellow [rgb 240 228 66] \
+			  blue [rgb 0 114 178] \
+			  vermillion [rgb 213 94 0] \
+			  reddishpurple [rgb 204 121 167] \
+			 ]
+    # set of volts per div
+    variable volts_per_div {
+	1mV 2mV 5mV 10mV 20mV 50mV 0.1V 0.2V 0.5V 1V 2V 5V
+    }
+    # set of seconds per div
+    variable seconds_per_div {
+	1ns 2ns 5ns 10ns 20ns 50ns 0.1μs 0.2μs 0.5μs 1μs 2μs 5μs 10μs 20μs 50μs 0.1ms 0.2ms 0.5ms 1ms 2ms 5ms 10ms 20ms 50ms 0.1s 0.2s 0.5s 1s 2s 5s 10s 20s 50s
+    }
+}
 
+#
+# typical volts/div are
+# 5V, 2V, 1V, .5V, .2V, .1V, 50mV, 20mV, 10mV, 5mV, 2mV, 1mV
+# so it's not an indefinite set of choices
+#
 snit::type ::sdrtcl::scope::channel {
+    option -label -default {ch ?}
     option -color -default white
     option -gain -default 1
     option -offset -default 0
-    option -source -default {tcl-channel-sine -frequency 600 -sample-rate 12000}
+    option -source -default tcl-channel-null
+    # what is the type of a channel?  I guess the type of the source is
+    # more important, by the time it's a channel it is a list of {xi yi} which
+    # are times and voltages
 }
 
 # units per div go 1, 2, 5, 10, 20, 50, ...
 # so the minor ticks on the graticule should vary
+# the range of time/div might go from 2ns to 50s,
+# so more choices than volts/div.
 # to subdivide 1, 2, 5 neatly as the units change
+# 1 => 0.00 0.25 0.50 0.75 1.00
+# 2 => 0.00 0.50 1.00 1.50 2.00
+# 5 => 0.00 1.00 2.00 3.00 4.00 5.00
+# so depending on v/div or s/div we get 3 or 4 minor ticks
+# 
 snit::type ::sdrtcl::scope::timebase {
     option -time-per-div -default 1
+    option -offset -default 0
+    option -delay -default 0
 }
 
-snit::type ::sdrtcl::scope::vertical {
-    option -volt-per-div -default 1
-}
-
+# trigger
+# auto, manually triggered, or channel edge at {rise|fall level}
+# basically, always on auto until the selected channel rises or falls through the selected level,
+# and possible to force a trigger.
 snit::type ::sdrtcl::scope::trigger {
+    option -channel -default 1 -type {snit::enum -values {1 2 3 4 5 6 7 8}}
+    option -edge -default rising -type {snit::enum -values {rising falling}}
+    option -level -default 0 -type snit::double
+    option -holdoff -default 0 -type {snit::double -min 0}
 }
 
 snit::widget ::sdrtcl::scope::scope {
@@ -104,7 +133,7 @@ snit::widget ::sdrtcl::scope::scope {
     option -height -default 1200 -configuremethod pass
     option -background -default black -configuremethod pass
     option -graticule -default 10x10 -type {snit::enum -values {10x10 8x10 10x8 none}}
-    
+    option -minor -default 1 -type {snit::enum -values {0 1}}
     constructor {args} {
 	install c using canvas $win.c -borderwidth 0 -highlightthickness 0
 	$self configure \
@@ -114,31 +143,62 @@ snit::widget ::sdrtcl::scope::scope {
 	    {*}$args
 	$self graticule
 	pack $c -side top -fill both -expand true
+	bind $win <Configure> [list {*}[mymethod winconfigure] %w %h]
     }
     method pass {opt val} {
 	set options($opt) $val
 	$win.c configure $opt $val
     }
+    method winconfigure {width height} {
+	# window configuration event
+	# puts "winconfigure $width $height"
+	set options(-width) $width
+	set options(-height) $height
+	$self graticule
+    }
     # generate graticule lines
     # axes, major tick marks at 8 or 10 per axis
     # minor tick marks yet to come, depends on scale
-    proc graticule-lines {ht wd} {
-	puts "graticule-lines $ht $wd"
-	lappend lines [list 0 0.5 1 0.5]
-	set dy 0.01
-	set y0 [expr {0.5-$dy}]
-	set y1 [expr {0.5+$dy}]
-	set dx [expr {1.0/$wd}]
-	for {set x 0} {$x <= 1} {set x [expr {$x+$dx}]} {
-	    lappend lines [list $x $y0 $x $y1]
+    # modern tek scopes put graticule lines around
+    # the frame of the scope, there are dots in the
+    # interior which mark minor ticks along the major
+    # ticks of the other axis, so we get a grid.
+    proc graticule-lines {ht wd {hminor 1} {wminor 1}} {
+	#puts "graticule-lines $ht $wd"
+	set lines {}
+	lappend lines [list 0 0 1 0 1 1 0 1 0 0]; # box
+	set tdq 0.01;				  # edge tick half width
+	set mjq 0.005;				  # major tick half width
+	set mnq 0.001;				  # minor tick half width
+	set mjx [expr {1.0/$wd}]
+	set mjy [expr {1.0/$ht}]
+	set mnx [expr {$mjx/$wminor}]
+	set mny [expr {$mjy/$hminor}]
+	for {set x 0} {$x <= 1} {set x [expr {$x+$mjx}]} {
+	    # vertical minor ticks
+	    for {set y 0} {$y <= 1} {set y [expr {$y+$mny}]} {
+		lappend lines [list $x [expr {$y-$mnq}] $x [expr {$y+$mnq}]]
+		lappend lines [list [expr {$x-$mnq}] $y [expr {$x+$mnq}] $y]
+	    }
+	    # vertical major ticks
+	    #for {set y 0} {$y <= 1} {set y [expr {$y+$mjy}]} {
+	    #lappend lines [list $x [expr {$y-$mjq}] $x [expr {$y+$mjq}]]
+	    #lappend lines [list [expr {$x-$mjq}] $y [expr {$x+$mjq}] $y]
+	    #}
+	    #lappend lines [list $x 0 $x $tdq] [list $x 1 $x [expr {1-$tdq}]]
 	}
-	lappend lines [list 0.5 0 0.5 1]
-	set dx 0.01
-	set x0 [expr {0.5-$dx}]
-	set x1 [expr {0.5+$dx}]
-	set dy [expr {1.0/$ht}]
-	for {set y 0} {$y <= 1} {set y [expr {$y+$dy}]} {
-	    lappend lines [list $x0 $y $x1 $y]
+	for {set y 0} {$y <= 1} {set y [expr {$y+$mjy}]} {
+	    # horizontal minor ticks
+	    for {set x 0} {$x <= 1} {set x [expr {$x+$mnx}]} {
+		lappend lines [list $x [expr {$y-$mnq}] $x [expr {$y+$mnq}]]
+		lappend lines [list [expr {$x-$mnq}] $y [expr {$x+$mnq}] $y]
+	    }
+	    # horizontal major ticks
+	    #for {set x 0} {$x <= 1} {set x [expr {$x+$mjx}]} {
+	    #lappend lines [list $x [expr {$y-$mjq}] $x [expr {$y+$mjq}]]
+	    #lappend lines [list [expr {$x-$mjq}] $y [expr {$x+$mjq}] $y]
+	    #}
+	    #lappend lines [list 0 $y $tdq $y] [list 1 $y [expr {1-$tdq}] $y ]
 	}
 	return $lines
     }
@@ -149,7 +209,18 @@ snit::widget ::sdrtcl::scope::scope {
 	    10x10 - 
 	    8x10 -
 	    10x8 { 
-		foreach coords [graticule-lines {*}[split $options(-graticule) x]] {
+		# major ticks per width and per height
+		foreach {w h} [split $options(-graticule) x] break
+		# minor ticks per major tick
+		if {$options(-minor)} {
+		    set mw 5
+		    set mh 5
+		} else {
+		    set mw 1
+		    set mh 1
+		}
+		# compute graticule coordinates and draw lines
+		foreach coords [graticule-lines $w $h $mw $mh] {
 		    $c create line $coords -fill white -tags graticule
 		}
 		$c scale graticule 0 0 $options(-width) $options(-height)
@@ -205,6 +276,7 @@ snit::type ::sdrtcl::scope::jack-channel {
 #
 # complex oscillator
 # 3 adds 1 multiply and 1 divide per sample
+#
 snit::type ::sdrtcl::gen::osc {
     option -hertz -default 440 -configuremethod conf
     option -phase -default 0 -configuremethod conf
@@ -272,10 +344,30 @@ snit::type ::sdrtcl::gen::osc {
 	set data(y) [expr {$t+$ox}]
 	return [{*}$data(finish) [expr {$ox / $data(xi)}] $oy]
     }
+    method sample {n} {
+	set dt [expr {1e6/$options(-samples-per-second)}]
+	set t [clock microseconds]
+	for {set j 0} {$j < $n} {incr j} {
+	    foreach {i q} [iq process] break
+	    lappend samplei $t $i
+	    lappend sampleq $t $q
+	    set t [expr {$t+$dt}]
+	}
+	return [list $samplei $sampleq]
+    }
 }
 
 proc main {argv} {
     pack [sdrtcl::scope::scope .o {*}$argv] -fill both -expand true
+    # install application icon
+    set dir [file join $::dirname .. icons]
+    image create photo icon1 -file [file join $dir qrv96.png]
+    image create photo icon2 -file [file join $dir qrv48.png]
+    wm iconphoto . -default icon1 icon2
+}
+
+if {[llength [info functions square]] == 0} {
+    proc tcl::mathfunc::square {x} { return [expr {$x*$x}] }
 }
 
 main $argv

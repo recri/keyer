@@ -573,6 +573,7 @@ static int fw_subcommand_is_busy(ClientData clientData, Tcl_Interp *interp, int 
 /*
 ** framework utilities
 */
+#if FRAMEWORK_USES_JACK
 static jack_port_t *framework_port(void *p, int i) {
   return ((framework_t *)p)->port[i];
 }
@@ -636,12 +637,14 @@ static jack_nframes_t sdrkit_time_to_frames(void *arg, jack_time_t time) {
 static jack_time_t sdrkit_get_time() {
   return jack_get_time();
 }
+#endif
 
 /* implement a Tcl subcommand */
 static int framework_command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   return fw_subcommand_dispatch(clientData, interp, argc, objv);
 }
 
+#if FRAMEWORK_USES_JACK
 /*
 ** get the counts for both input queues
 */
@@ -687,14 +690,18 @@ static int framework_midi_event_get(framework_t *fp, jack_nframes_t frame, jack_
   }
   return 0;
 }
+#endif
 
 /* delete a dsp module cleanly */
 static void framework_delete2(void *arg, int outside_shutdown) {
   framework_t *dsp = (framework_t *)arg;
+
   if (outside_shutdown && dsp->client) {
+#if FRAMEWORK_USES_JACK
     if (framework_is_active(dsp))
       jack_deactivate(dsp->client);
     jack_client_close(dsp->client);
+#endif
   }
   if (dsp->cdelete) {
     dsp->cdelete(arg);
