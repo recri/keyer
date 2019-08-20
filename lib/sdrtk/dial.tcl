@@ -63,10 +63,10 @@ snit::widgetadaptor sdrtk::dial {
     option -radius 80;			# radius of the dial in percent of max
     option -fill \#888;			# color of the dial
     option -outline black;		# color of the dial outline
-    option -width 3;			# thickness of the dial outline
+    option -dial-width 3;			# thickness of the dial outline
 
     option -button-radius 10;		# radius of the button in percent of max
-    option -button-fill \#999;		# color of the thumb
+    option -button-fill \#999;		# color of the button
 
     option -thumb-length 75;		# length of thumb in percent of max
     option -thumb-fill black;		# color of the thumb outline
@@ -92,7 +92,8 @@ snit::widgetadaptor sdrtk::dial {
     }
 
     constructor {args} {
-	installhull using canvas -width 350 -height 350 -takefocus 1
+	#  -width 350 -height 350
+	installhull using canvas -takefocus 1
 	set data(2pi) [expr {2*atan2(0,-1)}]
 	set data(phi) [expr {-$data(2pi)/4}]
 	$self Configure -cpr $options(-cpr)
@@ -116,6 +117,7 @@ snit::widgetadaptor sdrtk::dial {
 	# Grab the powermate rotation events
 	# Grab the midikey rotation events
 	if {$options(-self-responder)} {
+	    # respond to the event our self
 	    bind $win <<DialCW>> [mymethod Turn %W 1]
 	    bind $win <<DialCCW>> [mymethod Turn %W -1]
 	    bind $win <<DialPress>> [mymethod Button-press %W]
@@ -197,25 +199,44 @@ snit::widgetadaptor sdrtk::dial {
     }
     
     method Window-configure {w h} {
-	#puts "ui-dial window-configure $w $h"
+	# puts "ui-dial window-configure $w $h"
 	set r  [expr {min($w,$h)/2.0}];				# radius of space available
 	set xc [expr {$w/2.0}];					# center of space available
 	set yc [expr {$h/2.0}];					# center of space available
-	set dr [expr {$r*$options(-radius)/100.0}];		# dial radius
 	
-	set br [expr {$r*$options(-button-radius)/100.0}]
+	# dial radius
+	if {$options(-radius) <= 0} {
+	    set dr 0
+	    set dial [list $xc $yc $xc $yc]
+	} else {
+	    set dr [expr {$r*$options(-radius)/100.0}]
+	    set dial [list [expr {$xc-$dr}] [expr {$yc-$dr}] [expr {$xc+$dr}] [expr {$yc+$dr}]]
+	}
 	
-	set tl [expr {$r*$options(-thumb-length)/100.0}];	# thumb length
-	
-	set gr [expr {$r*$options(-graticule-radius)/100.0}];	# graticule radius
-	set dial [list [expr {$xc-$dr}] [expr {$yc-$dr}] [expr {$xc+$dr}] [expr {$yc+$dr}]]
-	set button [list [expr {$xc-$br}] [expr {$yc-$br}] [expr {$xc+$br}] [expr {$yc+$br}]]
-	set thumb [list $xc $yc [expr {$xc+$tl*cos($data(phi))}] [expr {$yc+$tl*sin($data(phi))}]]
-	
+	# button radius
+	if {$options(-button-radius) <= 0} {
+	    set br 0
+	    set button [list $xc $yc $xc $yc]
+	} else {
+	    set br [expr {$r*$options(-button-radius)/100.0}]
+	    set button [list [expr {$xc-$br}] [expr {$yc-$br}] [expr {$xc+$br}] [expr {$yc+$br}]]
+	}
+	    
+	# thumb length
+	if {$options(-thumb-length) <= 0} {
+	    set tl 0
+	    set thumb [list $xc $yc $xc $yc]
+	} else {
+	    set tl [expr {$r*$options(-thumb-length)/100.0}]
+	    set thumb [list $xc $yc [expr {$xc+$tl*cos($data(phi))}] [expr {$yc+$tl*sin($data(phi))}]]
+	}
+
+	# graticule radius
 	if {$options(-graticule) <= 0} {
 	    set graticule [list $xc $yc $xc $yc]
 	    set mask [list $xc $yc $xc $yc]
 	} else {
+	    set gr [expr {$r*$options(-graticule-radius)/100.0}]
 	    set graticule {}
 	    set p 0
 	    set dp [expr {$data(2pi)/$options(-graticule)}]
@@ -231,7 +252,8 @@ snit::widgetadaptor sdrtk::dial {
 	if {[llength [$hull find withtag thumb]] == 0} {
 	    $hull create line $graticule -tag graticule -fill $options(-graticule-fill) -width $options(-graticule-width)
 	    $hull create oval $mask -tag mask -fill $options(-bg) -outline {} 
-	    $hull create oval $dial -tag dial -fill $options(-fill) -outline $options(-outline) -width $options(-width) 
+	    # puts "draw dial: $dial"
+	    $hull create oval $dial -tag dial -fill $options(-fill) -outline $options(-outline) -width $options(-dial-width) 
 	    $hull create line $thumb -tag thumb -fill $options(-thumb-fill) -width $options(-thumb-width) -capstyle round
 	    $hull create oval $button -tag button -fill $options(-button-fill)
 	    $hull bind dial <ButtonPress-1> [mymethod Thumb-press %W %x %y]
@@ -240,6 +262,7 @@ snit::widgetadaptor sdrtk::dial {
 	    $hull bind dial <B1-Motion> [mymethod Thumb-motion %W %x %y]
 	} else {
 	    $hull coords graticule $graticule
+	    # puts "redraw dial: $dial"
 	    $hull coords dial $dial
 	    $hull coords thumb $thumb
 	    $hull coords button $button
