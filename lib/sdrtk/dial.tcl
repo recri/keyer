@@ -127,6 +127,7 @@ snit::widgetadaptor sdrtk::dial {
 
     method {Configure -cpr} {cpr} {
 	set options(-cpr) $cpr
+	set data(step0) [expr {-$data(2pi)/4}]
 	set data(step) [expr {$data(2pi)/$cpr}]
     }
 
@@ -187,7 +188,7 @@ snit::widgetadaptor sdrtk::dial {
     }
     
     method Position {step} {
-	set data(phi) [expr {$data(step)*$step}]
+	set data(phi) [expr {$data(step0)+$data(step)*$step}]
 	set w [winfo width $win]
 	set h [winfo height $win]
 	set r  [expr {min($w,$h)/2.0}];				# radius of space available
