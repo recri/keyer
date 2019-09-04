@@ -1,0 +1,71 @@
+ITA 2 and US-TTY
+ITA2 and US-TTY Baudot-Murray code (letter set, switched to with 0x1F)
+        _0	_1	_2	_3	_4	_5	_6	_7	_8	_9	_A	_B	_C	_D	_E	_F
+0_	NUL	E	LF	A	SP	S	I	U	CR	D	R	J	N	F	C	K
+	0000    0045	000A	0041	0020	0053	0049	0055	000D	0044	0052	004A	004E	0046	0043	004B
+1_	T	Z	L	W	H	Y	P	Q	O	B	G	FS	M	X	V	LS/DEL
+	0054	005A	004C	0057	0048	0059	0050	0051	004F	0042	0047	000E	004D	0058	0056	000F/007F
+US-TTY Baudot-Murray code (figure set, switched to with 0x1B)
+_0	_1	_2	_3	_4	_5	_6	_7	_8	_9	_A	_B	_C	_D	_E	_F
+0_	NUL	3	LF	−	SP	BEL	8	7	CR	$
+	0000	0033	000A	002D	0020	0007	0038	0037	000D	
+
+0034	'
+0027	,
+002C	!
+0021	:
+003B	(
+0028
+1_	5
+0035	"
+0022	)
+0029	2
+0032	#
+0023	6
+0036	0
+0030	1
+0031	9
+0039	?
+003F	&
+0026	FS
+000E	.
+002E	/
+002F	;
+003B	LS
+000F
+ITA2 Baudot-Murray code (figure set, switched to with 0x1B)
+_0	_1	_2	_3	_4	_5	_6	_7	_8	_9	_A	_B	_C	_D	_E	_F
+0_	NUL
+0000	3
+0033	LF
+000A	−
+002D/2212	SP
+0020	'
+0027	8
+0038	7
+0037	CR
+000D	ENQ
+0005	4
+0034	BEL
+0007	,
+002C	!
+0021	:
+003B	(
+0028
+1_	5
+0035	+
+002B	)
+0029	2
+0032	£
+00A3	6
+0036	0
+0030	1
+0031	9
+0039	?
+003F	&
+0026	FS
+000E	.
+002E	/
+002F	=
+003D	LS
+000F

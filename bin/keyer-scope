@@ -38,56 +38,69 @@ package require sdrtk::dial
 #
 # multichannel oscilloscope
 #
-# working from the panel on page 19 of XYZ of Oscilloscopes
+# this is the hierarchical breakdown of options and methods
+# prefix the component name to the method or option to 
+# create the globally unique identifier for the function.
 #
 # component scope
-# method autoset
-# method default-setup momentary-button
-# method print button
-# method run-stop
-# method single
-# method clear
-# ?-scope-fast-acquisition
-# ?-scope-intensity
+#   method autoset
+#   method default-setup
+#   method run-stop
+#   method single
+#   method clear
 #
-# ?-scope-multi-a (push fine)
-# ?-scope-multi-b (push fine)
-# ?-scope-touch-screen-disable
+#   ?method print button
+#   ?option -fast-acquisition
+#   ?option -intensity
+#
+#   ?option -multi-a (push fine)
+#   ?option -multi-b (push fine)
+#   ?option -touch-screen-disable
 #
 # component horizontal
-# ?-zoom
-# ?-cursors
-# ?-search
-# ?-mark-left
-# ?-mark-right
-# ?-set-clear
+#   option -position (t/div)/100
+#   option -scale t/div
 #
-# option -position (t/div)/100
-# ?-delay t
-# ?-resolution (more samples)
-# option -scale t/div
+#   ?option -zoom
+#   ?option -cursors
+#   ?option -search
+#   ?option -mark-left
+#   ?option -mark-right
+#   ?option -set-clear
+#
+#   ?option -delay t
+#   ?option -resolution (more samples)
 #
 # component trigger
-# ?-edge
-# ?-advanced
-# ? https://www.picotech.com/library/oscilloscopes/advanced-digital-triggers
-# option -source {Ch?} spinner
-# option -slope {Pos Neg} toggle  } simple edge triggering
-# option -level (push for 50%)    }
-# option -mode {None Normal|Repeat Auto Single} radiobutton
-# ?option -coupling
-# option -holdoff
-# method force
+#   option -mode {None Normal|Repeat Auto Single} radiobutton
+#   method force
+#   option -source {Ch?} spinner
+#   option -slope {Pos Neg} toggle  } simple edge triggering
+#   option -level (push for 50%)    }
+#
+#   ?option -edge
+#   ?option -advanced
+#   ? https://www.picotech.com/library/oscilloscopes/advanced-digital-triggers
+#   ?option -coupling
+#   ?option -holdoff
 #
 # component vertical
-# option -ch?-enable
-# option -ch?-position (push offset)
-# option -ch?-scale volts/div
-# ?option -ch?-coupling {ac dc gnd} 
-# ?option -ch?-10x
-# option -ch?-color
-# option -ch?-label
-# option -ch?-source
+#   option -select channel
+#   option -position
+#   option -scale
+#   option -ch?-position
+#   option -ch?-scale
+#
+#   option -ch?-select (this group is the one that the scope side uses, the UI side
+#   ?option -enable channel (do I really need this?  enable it if something is connected)
+#   ?option -source (maybe move to the acquisition pane?)
+#   ?option -ch?-enable
+#   ?option -ch?-source
+#
+#   ?option -ch?-coupling {ac dc gnd} 
+#   ?option -ch?-10x
+#   ?option -ch?-color
+#   ?option -ch?-label
 #
 namespace eval ::sdrtcl { }
 namespace eval ::sdrtcl::scope {}
@@ -227,7 +240,7 @@ snit::widget ::sdrtcl::scope::scope {
     option -width -default 1200 -configuremethod pass
     option -height -default 1200 -configuremethod pass
     option -background -default black -configuremethod pass
-    option -graticule -default 10x10 -type {snit::enum -values {10x10 8x10 10x8 none}}
+    option -graticule -default 10x10 -type {snit::enum -values {10x10 8x10 8x12 10x8 none}}
     option -minor -default 1 -type {snit::enum -values {0 1}}
     #
     delegate option -n-channels to vert
@@ -238,6 +251,7 @@ snit::widget ::sdrtcl::scope::scope {
 	install trgr using sdrtcl::scope::trigger $self.t
 	install vert using sdrtcl::scope::vertical $self.v
 	install horiz using sdrtcl::scope::horizontal $self.h
+	set options(-graticule) [from args -graticule 10x10]
 	$self configure \
 	    -width $options(-width) \
 	    -height $options(-height) \
@@ -309,10 +323,11 @@ snit::widget ::sdrtcl::scope::scope {
 	catch {$c delete graticule}
 	switch $options(-graticule) {
 	    10x10 - 
+	    8x12 -
 	    8x10 -
 	    10x8 { 
 		# major ticks per width and per height
-		foreach {w h} [split $options(-graticule) x] break
+		foreach {h w} [split $options(-graticule) x] break
 		# minor ticks per major tick
 		if {$options(-minor)} {
 		    set mw 5
@@ -321,8 +336,10 @@ snit::widget ::sdrtcl::scope::scope {
 		    set mw 1
 		    set mh 1
 		}
+		# configure default hull width and height
+		$win configure -width [expr {120*$w}] -height [expr {120*$h}]
 		# compute graticule coordinates and draw lines
-		foreach coords [graticule-lines $w $h $mw $mh] {
+		foreach coords [graticule-lines $h $w $mh $mw] {
 		    $c create line $coords -fill white -tags graticule
 		}
 		$c scale graticule 0 0 $options(-width) $options(-height)
@@ -483,11 +500,11 @@ snit::type ::sdrtcl::gen::osc {
 #
 namespace eval ::sdrtcl::tkscope {}
 
-# knob
+# knob which selects from a range of integers
 snit::widgetadaptor sdrtcl::tkscope::knob {
-    option -diameter -default 50 -configuremethod set-option
+    option -diameter -default 50 -configuremethod set-diameter
     option -command {}
-    option -value -default 0 -configuremethod set-option
+    option -value -default 0 -configuremethod set-value
     option -min-value -default -32767
     option -max-value -default 32767
     delegate option * to hull
@@ -499,17 +516,16 @@ snit::widgetadaptor sdrtcl::tkscope::knob {
 	bind $win <<DialCW>> [mymethod turn 1]
 	bind $win <<DialCCW>> [mymethod turn -1]
     }
-    method set-option {opt val} {
+    method set-value {opt val} {
+	puts "knob set-value $opt $val"
 	set options($opt) $val
-	switch -exact -- $opt {
-	    -value {
-		set options($opt) [expr {min($options(-max-value), max($options(-min-value), $val))}]
-		$self position $options(-value)
-	    }
-	    -diameter {
-		$win configure -height $val -width $val
-	    }
-	}
+	set options($opt) [expr {min($options(-max-value), max($options(-min-value), $val))}]
+	$self position $options(-value)
+	#if {$options(-command) ne {}} { {*}$options(-command) $options(-value) }
+    }
+    method set-diameter {opt val} {
+	set options($opt) $val
+	$win configure -height $val -width $val
     }
     method position {p} {
 	$hull Position [expr {min($options(-max-value), max($options(-min-value), $p))}]
@@ -527,6 +543,7 @@ snit::widgetadaptor sdrtcl::tkscope::knob {
     }
 }
 
+# knob which selects from a set of values
 snit::widgetadaptor sdrtcl::tkscope::valueknob {
     option -values -default {} -configuremethod set-option
     option -value -default {} -configuremethod set-option
@@ -562,7 +579,81 @@ snit::widgetadaptor sdrtcl::tkscope::valueknob {
     }
 }
 
-# spin box
+# labelled knob with readout label in tk
+snit::widget sdrtcl::tkscope::knobgroup {
+    hulltype ttk::frame
+    component titlelabel
+    component readoutlabel
+    component knob
+    
+    option -value -default 0 -configuremethod report
+    option -command -default {}
+    option -translate -default {}
+    delegate option -title to titlelabel as -text
+    delegate option * to knob
+
+    variable readout
+    
+    constructor {args} {
+	install titlelabel using ttk::label $win.titlelabel
+	install readoutlabel using ttk::label $win.readoutlabel -textvariable [myvar readout]
+	install knob using ::sdrtcl::tkscope::knob $win.knob -command [list {*}[mymethod report] -value]
+	$self configurelist $args
+	grid $win.titlelabel -row 0 -column 0
+	grid $win.readoutlabel -row 1 -column 0
+	grid $win.knob -row 2 -column 0
+    }
+
+    method report {opt val} {
+	set options($opt) $val
+	if {$options(-command) ne {}} { {*}$options(-command) $val }
+	if {$options(-translate) ne {}} { set val [{*}$options(-translate) $val] }
+	set readout $val
+    }
+}
+
+# labelled valueknob with readout label in tk
+snit::widget sdrtcl::tkscope::valueknobgroup {
+    hulltype ttk::frame
+    component titlelabel
+    component readoutlabel
+    component valueknob
+    
+    option -value -default 0 -configuremethod set-value
+    option -command -default {}
+    option -translate -default {}
+    option -format -default {}
+    delegate option -title to titlelabel as -text
+    delegate option * to valueknob
+
+    variable readout
+    
+    constructor {args} {
+	install titlelabel using ttk::label $win.titlelabel
+	install readoutlabel using ttk::label $win.readoutlabel -textvariable [myvar readout]
+	install valueknob using ::sdrtcl::tkscope::valueknob $win.valueknob -command [list {*}[mymethod report] -value]
+	$self configurelist $args
+	grid $win.titlelabel -row 0 -column 0
+	grid $win.readoutlabel -row 1 -column 0
+	grid $win.valueknob -row 2 -column 0
+    }
+
+    method set-value {opt val} {
+	set options($opt) $val
+	if {$options(-command) ne {}} { {*}$options(-command) $val }
+	if {$options(-translate) ne {}} { set val [{*}$options(-translate) $val] }
+	set readout $val
+	$win.valueknob configure -value $val
+    }
+    method report {opt val} {
+	set options($opt) $val
+	if {$options(-command) ne {}} { {*}$options(-command) $val }
+	if {$options(-translate) ne {}} { set val [{*}$options(-translate) $val] }
+	set readout $val
+    }
+}
+
+# spin box in tk
 snit::widgetadaptor sdrtcl::tkscope::spin {
     option -values -default {} -readonly true
     delegate option * to hull
@@ -574,7 +665,7 @@ snit::widgetadaptor sdrtcl::tkscope::spin {
     }
 }
 
-# option menu
+# option menu in tk
 snit::widgetadaptor sdrtcl::tkscope::optionmenu {
     component menu
     option -value -default {} -configuremethod set-option
@@ -635,8 +726,27 @@ snit::widgetadaptor sdrtcl::tkscope::optionmenu {
     }
 }
 
-# oscilloscope channel picker
-snit::widgetadaptor sdrtcl::tkscope::channel-picker {
+# labelled option menu in tk
+snit::widget sdrtcl::tkscope::optionmenugroup {
+    component label
+    component optionmenu
+    option -command -default {}
+    delegate option -title to label as -text
+    delegate option * to optionmenu
+    constructor {args} {
+	install label as ttk::label $win.label
+	install optionmenu as sdrtcl::tkscope::optionmenu $win.optionmenu -command [list {*}[mymethod report] -value]
+	$self configurelist $args
+	grid $win.label -row 0 -column 0
+	grid $win.optionmenu -row 1 -column 0
+    }
+    method report {opt val} {
+	if {$options(-command) ne {}} { {*}$options(-command) $val }
+    }
+}
+
+# oscilloscope channel menu in tk
+snit::widgetadaptor sdrtcl::tkscope::channelmenu {
     option -n-channels -default 4 -configuremethod set-option
     option -channel -default 1 -configuremethod set-option
     option -command -default {}
@@ -648,7 +758,6 @@ snit::widgetadaptor sdrtcl::tkscope::channel-picker {
 	$self rebuild-values
     }
     method set-option {opt val} {
-	#puts "channel-picker::set-option $opt $val"
 	set options($opt) $val
 	switch -exact -- $opt {
 	    -n-channels { $self rebuild-values }
@@ -659,21 +768,40 @@ snit::widgetadaptor sdrtcl::tkscope::channel-picker {
 	set values {}
 	set colors {}
 	for {set i 1} {$i <= $options(-n-channels)} {incr i} {
-	    #puts "channel-picker::rebuild-values $i ch$i [::sdrtcl::scope::get-channel-color $i]"
 	    lappend values "ch$i"
 	    lappend colors [::sdrtcl::scope::get-channel-color $i]
 	}
-	#puts "channel-picker::rebuild-values $win configure -values {$values} -colors {$colors}"
 	$win configure -values $values -colors $colors -value "ch$options(-channel)"
     }
     method report {chn} {
 	set n [string index $chn end]
 	set options(-channel) $n
-	if {$options(-command) ne {}} {
-	    {*}$options(-command) $n
-	}
+	if {$options(-command) ne {}} { {*}$options(-command) $n }
     }
 }
+
+# oscilloscope labelled channel menu 
+snit::widget sdrtcl::tkscope::channelmenugroup {
+    component label
+    component channelmenu
+
+    option -command -default {}
+    delegate option -title to label as -text
+    delegate option * to channelmenu
+    
+    constructor {args} {
+	install label using ttk::label $win.label -text Channel
+	install channelmenu using sdrtcl::tkscope::channelmenu $win.channelmenu -command [list {*}[mymethod report] -channel]
+	$self configurelist $args
+	grid $win.label -row 0 -column 0
+	grid $win.channelmenu -row 1 -column 0
+    }
+
+    method report {opt val} {
+	if {$options(-command) ne {}} { {*}$options(-command) $val }
+    }
+}
+
 # oscilloscope channel radiobutton group in tk
 snit::widget sdrtcl::tkscope::channel-radio {
     option -command -default {}
@@ -710,85 +838,65 @@ snit::widget sdrtcl::tkscope::channel-radio {
     }
 }
 
-# oscillosdope trigger mode in tk
-snit::widget sdrtcl::tkscope::trigger-mode {
-    option -value -default Auto -type ::sdrtcl::scope::trigger-modes
-    option -values -default {}
+# oscilloscope generic controls
+snit::widgetadaptor sdrtcl::tkscope::generic {
+
     option -command -default {}
+    delegate option -title to hull as -text
+    delegate option -titleanchor to hull as -labelanchor
+
     constructor {args} {
+	installhull [ttk::labelframe $win]
 	$self configurelist $args
-	set row -1
-	foreach m $options(-values) {
-	    set wm [string tolower $m]
-	    grid [ttk::radiobutton $win.$wm -text $m -value $m -variable [myvar options(-value)] \
-		      -command [list {*}[mymethod report] -value]] -row [incr row] -column 0
-	}
     }
     method report {opt val} {
-	if {$options(-command) ne {}} { {*}$options(-command) $opt [$self cget $opt] }
+	if {$options(-command) ne {}} { {*}$options(-command) $opt $val }
     }
-}
-
-
-# oscilloscope generic controls
-snit::widget sdrtcl::tkscope::generic {
-    option -command
 }
 
 # oscilloscope trigger controls in tk
-snit::widget sdrtcl::tkscope::trigger {
-    hulltype ttk::labelframe
-    component modelabel
+snit::widgetadaptor sdrtcl::tkscope::trigger {
+    component l
+    component r
     component mode
-    component levellabel
-    component level
-    component slopelabel
-    component slope
-    component holdofflabel
-    component holdoff
-    component channellabel
     component channel
-    #
-    delegate option -text to hull
-    delegate option -labelanchor to hull
-    #
+    component slope
+    component level
+    component holdoff
+
+    option -command -default {}
+    delegate option -title to hull as -text
+    delegate option -titleanchor to hull as -labelanchor
+
     delegate option -mode to mode as -value
-    delegate option -level to level as -value
     delegate option -channel to channel
     delegate option -n-channels to channel
     delegate option -slope to slope as -value
+    delegate option -level to level as -value
     delegate option -holdoff to holdoff as -value
-    option -command -default {}
     
     constructor {args} {
-	$win configure -text Trigger -labelanchor n
-
-	install modelabel using ttk::label $win.modelabel -text Mode
-	install mode using sdrtcl::tkscope::optionmenu $win.mode -values [::sdrtcl::scope::trigger-modes cget -values] \
-	    -command [list {*}[mymethod report] -mode]
-	install channellabel using ttk::label $win.channellabel -text Channel
-	install channel using sdrtcl::tkscope::channel-picker $win.channel -command [list {*}[mymethod report] -channel]
-	install slopelabel using ttk::label $win.slopelabel -text Slope
-	install slope using sdrtcl::tkscope::optionmenu $win.slope -values [::sdrtcl::scope::trigger-slopes cget -values] \
-	    -command [list {*}[mymethod report] -slope]
-	install levellabel using ttk::label $win.levellabel -text Level
-	install level using sdrtcl::tkscope::knob $win.level -diameter 100 -command [list {*}[mymethod report] -level]
-	install holdofflabel using ttk::label $win.holdofflabel -text Holdoff
-	install holdoff using sdrtcl::tkscope::knob $win.holdoff -diameter 150 -command [list {*}[mymethod report] -holdoff]
-
+	installhull [ttk::labelframe $win]
+	install l using ttk::frame $win.l
+	install r using ttk::frame $win.r
+	install mode using sdrtcl::tkscope::optionmenugroup $win.mode -title Mode \
+	    -values [::sdrtcl::scope::trigger-modes cget -values] -command [list {*}[mymethod report] -mode]
+	install channel using sdrtcl::tkscope::channelmenugroup $win.channel -title Channel -command [list {*}[mymethod report] -channel]
+	install slope using sdrtcl::tkscope::optionmenugroup $win.slope -title Slope \
+	    -values [::sdrtcl::scope::trigger-slopes cget -values] -command [list {*}[mymethod report] -slope]
+	install level using ::sdrtcl::tkscope::knobgroup $win.level -title Level -diameter 100 -command [list {*}[mymethod report] -level]
+	install holdoff using ::sdrtcl::tkscope::knobgroup $win.holdoff -title Holdoff -diameter 150 -command [list {*}[mymethod report] -holdoff] -min-value 0
 
 	$self configurelist $args
 
-	grid $modelabel    -row 0 -column 0
-	grid $mode	   -row 1 -column 0
-	grid $channellabel -row 2 -column 0
-	grid $channel      -row 3 -column 0
-	grid $slopelabel   -row 4 -column 0
-	grid $slope	   -row 5 -column 0
-	grid $levellabel   -row 6 -column 0
-	grid $level	   -row 7 -column 0
-	grid $holdofflabel -row 8 -column 0
-	grid $holdoff	   -row 9 -column 0
+	grid $mode	   -row 0 -column 0 -in $win.l
+	grid $channel      -row 1 -column 0 -in $win.l
+	grid $slope	   -row 2 -column 0 -in $win.l
+	grid $level	   -row 0 -column 0 -in $win.r
+	grid $holdoff	   -row 1 -column 0 -in $win.r
+
+	grid $win.l -row 0 -column 0
+	grid $win.r -row 0 -column 1
     }
     method report {opt val} {
 	if {$options(-command) ne {}} { {*}$options(-command) $opt [$self cget $opt] }
@@ -796,91 +904,83 @@ snit::widget sdrtcl::tkscope::trigger {
 }
 
 # oscilloscope horizontal controls in tk
-snit::widget sdrtcl::tkscope::horizontal {
-    hulltype ttk::labelframe
-    component positionlabel
+snit::widgetadaptor sdrtcl::tkscope::horizontal {
     component position
-    component scalelabel
-    component scalereadout
     component scale
 
-    delegate option -text to hull
-    delegate option -labelanchor to hull
+    option -command -default {}
+    delegate option -title to hull as -text
+    delegate option -titleanchor to hull as -labelanchor
+    #
     delegate option -position to position as -value
     delegate option -scale to scale as -value
-    option -command -default {}
 
     constructor {args} {
-	$win configure -text Horizontal -labelanchor n
-	install positionlabel using ttk::label $win.positionlabel -text Position
-	install position using sdrtcl::tkscope::knob $win.position -diameter 100 -command [list {*}[mymethod report] -position]
-	install scalelabel using ttk::label $win.scalelabel -text Scale
-	install scalereadout using ttk::label $win.scalereadout -textvariable [myvar options(-scale)]
-	install scale using sdrtcl::tkscope::valueknob $win.scale -diameter 150 -values [::sdrtcl::scope::seconds-per-div cget -values] \
-	    -command [list {*}[mymethod report] -scale]
+	installhull [ttk::labelframe $win]
+	puts "horizontal::constructor: installhull $win"
+	install position using sdrtcl::tkscope::knobgroup $win.position -title Position -diameter 100 \
+	    -command [list {*}[mymethod report] -position]
+	install scale using sdrtcl::tkscope::valueknobgroup $win.scale -diameter 150 -title Scale \
+	     -values [::sdrtcl::scope::seconds-per-div cget -values] -command [list {*}[mymethod report] -scale]
 	$self configurelist $args
-	grid $win.positionlabel -row 0 -column 0
-	grid $win.position -row 1 -column 0
-	grid $win.scalelabel -row 2 -column 0
-	grid $win.scalereadout -row 3 -column 0
-	grid $win.scale -row 4 -column 0
-	set options(-scale) [$win cget -scale]
+	grid $win.position -row 0 -column 0
+	grid $win.scale -row 1 -column 0
     }
     method report {opt val} {
-	set options($opt) $val
 	if {$options(-command) ne {}} { {*}$options(-command) $opt $val }
     }
 }
 
-snit::widget sdrtcl::tkscope::vertical {
-    hulltype ttk::labelframe
+# oscilloscope vertical controls in tk
+snit::widgetadaptor sdrtcl::tkscope::vertical {
+    component l
+    component r
     component channel
-    component positionlabel
     component position
-    component scalelabel
-    component scalereadout
     component scale
-    # window dressing
-    delegate option -text to hull
-    delegate option -labelanchor to hull
-    # oscilloscope options
+
     option -command {}
+    delegate option -title to hull as -text
+    delegate option -titleanchor to hull as -labelanchor
+
     delegate option -n-channels to channel
     delegate option -channel to channel as -value
     delegate option -position to position as -value
     delegate option -scale to scale as -value
     constructor {args} {
-	install channel using sdrtcl::tkscope::channel-radio $win.channel -command [list {*}[mymethod report] -channel]
-	install positionlabel using ttk::label $win.positionlabel -text Position
-	install position using sdrtcl::tkscope::knob $win.position -diameter 100 -command [list {*}[mymethod report] -position]
-	install scalelabel using ttk::label $win.scalelabel -text Scale
-	install scalereadout using ttk::label $win.scalereadout -textvariable [myvar options(-scale)]
-	install scale using sdrtcl::tkscope::valueknob $win.scale -diameter 150 -values [::sdrtcl::scope::volts-per-div cget -values] \
-	    -command [list {*}[mymethod report] -scale]
-
-	$win configure -text Vertical -labelanchor n
+	installhull [ttk::labelframe $win]
+	install l using ttk::frame $win.l
+	install r using ttk::frame $win.r
+	install channel using sdrtcl::tkscope::channel-radio $win.channel \
+	    -command [list {*}[mymethod report] -channel]
+	install position using sdrtcl::tkscope::knobgroup $win.position -title Position -diameter 100 \
+	    -command [list {*}[mymethod report] -position]
+	install scale using sdrtcl::tkscope::valueknobgroup $win.scale -diameter 150 -title Scale \
+	     -values [::sdrtcl::scope::volts-per-div cget -values] -command [list {*}[mymethod report] -scale]
 	$self configurelist $args
-	grid $channel -row 0 -column 0 -rowspan 5
-
-	grid $positionlabel -row 0 -column 1
-	grid $position	    -row 1 -column 1
-	grid $scalelabel    -row 2 -column 1
-	grid $scalereadout  -row 3 -column 1
-	grid $scale         -row 4 -column 1
-
-	set options(-scale) [$win cget -scale]
-	puts "vertical::constructor $options(-scale)"
+	grid $win.channel	    -row 0 -column 0 -in $win.l
+	grid $win.position	    -row 0 -column 1 -in $win.r
+	grid $win.scale	            -row 1 -column 1 -in $win.r
+	grid $win.l -row 0 -column 0
+	grid $win.r -row 0 -column 1
     }
     method report {opt val} {
-	set options($opt) $val
 	if {$options(-command) ne {}} { {*}$options(-command) $opt $val }
     }
 }
 
-snit::widget sdrtcl::tkscope::acquisition {
+# oscilloscope acquisition controls in tk
+snit::widgetadaptor sdrtcl::tkscope::acquisition {
     option -command
+    delegate option -title to hull as -text
+    delegate option -titleanchor to hull as -labelanchor
+    constructor {args} {
+	installhull [ttk::labelframe $win]
+	$self configurelist $args
+    }
 }
 
+# oscilloscope controls in tk
 snit::widget sdrtcl::tkscope::scope {
     component generic
     component trigger
@@ -891,6 +991,8 @@ snit::widget sdrtcl::tkscope::scope {
     option -scope -default {}
     option -n-channels -default 4 -type {snit::integer -min 1 -max 8} -configuremethod n-channels
 
+    option -graticule -default {}
+    
     delegate option -trigger-channel to trigger as -channel
     delegate option -trigger-mode to trigger as -mode
     delegate option -trigger-slope to trigger as -slope
@@ -907,17 +1009,25 @@ snit::widget sdrtcl::tkscope::scope {
     
     constructor {args} {
 	install generic using sdrtcl::tkscope::generic $win.generic -command [list {*}[mymethod report] -generic]
-	install trigger using sdrtcl::tkscope::trigger $win.trigger -command [list {*}[mymethod report] -trigger]
-	install horizontal using sdrtcl::tkscope::horizontal $win.horizontal -command [list {*}[mymethod report] -horizontal]
-	install vertical using sdrtcl::tkscope::vertical $win.vertical -command [list {*}[mymethod report] -vertical]
-	install acquisition using sdrtcl::tkscope::acquisition $win.acquisition -command [list {*}[mymethod report] -acquisition]
+	install trigger using sdrtcl::tkscope::trigger $win.trigger -command [list {*}[mymethod report] -trigger] -title Trigger -titleanchor n
+	install horizontal using sdrtcl::tkscope::horizontal $win.horizontal -command [list {*}[mymethod report] -horizontal] -title Horizontal -titleanchor n
+	install vertical using sdrtcl::tkscope::vertical $win.vertical -command [list {*}[mymethod report] -vertical] -title Vertical -titleanchor n
+	install acquisition using sdrtcl::tkscope::acquisition $win.acquisition -command [list {*}[mymethod report] -acquisition] -title Acquisition -titleanchor n
 	$self configurelist $args
 	grid $win.generic -row 0 -column 0 -sticky nsew
 	grid $win.trigger -row 1 -column 0 -sticky nsew
-	grid $win.horizontal -row 2 -column 0 -sticky nsew
-	grid $win.vertical -row 3 -column 0 -sticky nsew
-	grid $win.acquisition -row 4 -column 0 -sticky nsew
-	$self configure -vertical-channel 1 -vertical-scale 0.1V/div -horizontal-scale 0.1ms/div
+	grid $win.horizontal -row 1 -column 1 -sticky nsew
+	grid $win.vertical -row 1 -column 2 -sticky nsew
+	grid $win.acquisition -row 1 -column 3 -sticky nsew
+	$self configurelist {
+	    -trigger-level 0
+	    -trigger-holdoff 0
+	    -vertical-channel 1
+	    -vertical-position 0
+	    -vertical-scale 0.1V/div
+	    -horizontal-position 0
+	    -horizontal-scale 0.1ms/div
+	}
     }
     # delegate option -n-channels to vert and to trgr
     method n-channels {opt val} {
@@ -929,7 +1039,7 @@ snit::widget sdrtcl::tkscope::scope {
     }
 }
 
-
+# 
 proc main {argv} {
     # scope display
     grid [sdrtcl::scope::scope .o {*}$argv] -row 0 -column 0 -sticky nsew
@@ -946,6 +1056,7 @@ proc main {argv} {
     wm title . keyer-scope
 }
 
+# patch
 if {[llength [info functions square]] == 0} {
     proc tcl::mathfunc::square {x} { return [expr {$x*$x}] }
 }
