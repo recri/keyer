@@ -1,7 +1,4 @@
 * Software defined radio using Jack audio connection kit.
-  -----------
-  Fifth redesign in progress, see Notes/revision-2014-01-04.org for the latest plan.
-  -----------
   This is a kit for building software defined radios on linux which uses:
   - Jack :: the jack audio construction kit
   - Tcl :: the tool command language
@@ -20,28 +17,27 @@
   moment it depends on being there and parts of the package won't work
   correctly if installed elsewhere.
 ** Required packages
-   Using your preferred Ubuntu package manager, you want to install
+   Using your preferred Debian/Ubuntu package manager, you want to install
    the following packages:
    | build-essential    |
    | git-core           |
-   | libasound2-dev     |
    | jackd2             |
-   | gladish            |
-   | libfftw3-dev       |
-   | libjack-jackd2-dev |
    | tk8.6-dev          |
    | tcllib             |
    | tklib              |
    | tcl-udp            |
+   | libasound2-dev     |
+   | libfftw3-dev       |
+   | libjack-jackd2-dev |
    | libusb-1.0-0-dev   |
 
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
    listed.
 
-   The "apt-get" command to install these packages is
+   The "apt" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt-get install build-essential git-core libasound2-dev jackd2 gladish libfftw3-dev libjack-jackd2-dev tk8.6-dev tcllib tklib tcl-udp libusb-1.0-0-dev
+   sudo apt install build-essential git-core jackd2tk8.6-dev tcllib tklib tcl-udp libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev
    #+END_EXAMPLE
 
 ** Getting the source
@@ -91,6 +87,9 @@
 ** Installing
    I don't do any install. I usually run the scripts from ~/keyer
    manually prefixing bin/ to get the commands I want to run.
+   The commands in ~/keyer/bin depend on their path name to find
+   the libraries in ~/keyer/lib/..., so if you do install to another
+   directory, then you should make symbolic links to ~/keyer/bin/.
 ** MidiKey hardware interface
   The whole point is to get CW keying information into the computer
   with the lowest latency possible.  To do that you'll need a
