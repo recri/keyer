@@ -104,10 +104,12 @@ proc get-server {} { return [get-var -server] }
 proc set-server {server} { set-var -server $server }
 
 proc has-dial {} { return 1 }
+proc get-dial {} { return {dial} }
 proc has-details {} { return 1 }
+proc get-details {} { return {details} }
 
 proc get-ascii {} { return [get-var -ascii] }
-proc set-ascii {name} { set-var -ascii $name }
+proc set-ascii {name} { lappend-var -ascii $name }
 proc has-ascii {} { return [has-var -ascii] }
 
 proc has-memories {} { return 0 }
@@ -477,8 +479,15 @@ proc keyer-widget {w} {
 	details Details
     } {
 	if {[has-$tag]} {
-	    ttk::checkbutton $w.$tag -text $text -variable ::data(show-$tag) -command [list keyer-widget-show $w $tag]
-	    pack $w.$tag -side left
+	    if {[llength [get-$tag]] == 1} {
+		ttk::checkbutton $w.$tag -text $text -variable ::data(show-$tag) -command [list keyer-widget-show $w $tag]
+		pack $w.$tag -side left
+	    } else {
+		foreach sub [get-$tag] {
+		    ttk::checkbutton $w.$tag$sub -text "$text $sub" -variable ::data(show-$tag$sub) -command [list keyer-widget-show $w $tag$sub]
+		    pack $w.$tag$sub -side left
+		}
+	    }
 	}
     }
     pack [ttk::button $w.save -text {Save} -command [list save-current-setup]] -side left
@@ -877,10 +886,13 @@ proc load-ui {} {
     }
     # memories-widget
     if {[has-ascii]} {
-	.p add [cw-text .p.ascii -ascii [get-ascii]]
-	set ::data(show-ascii) 1
-	# add options for cwtext widget
-	widget-opts .p.ascii [get-ascii] [.p.ascii exposed-options]
+	puts "get-ascii returns [get-ascii]"
+	foreach asc [get-ascii] {
+	    .p add [cw-text .p.ascii$asc -ascii $asc]
+	    set ::data(show-ascii$asc) 1
+	    # add options for cwtext widget
+	    widget-opts .p.ascii$asc $asc [.p.ascii$asc exposed-options]
+	}
     }
     if {[has-detime]} {
 	.p add [ro-text .p.detime -detime [get-detime]]
@@ -957,6 +969,7 @@ proc default-setups {} {
 	key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
 	key2 { keyer -start {ad5dz@key2 keyer-tone@kyo2} -key2-wpm 18 -key2-note 2 -kyo2-ramp 4.0 -kyo2-note 2 }
 	kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
+	kbd2 { keyer -start {ascii@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
 	deb { keyer -start {keyer-debounce@deb} }
 	cas { keyer -start {midi-insert@cas} }
@@ -965,9 +978,11 @@ proc default-setups {} {
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
 	key+kbd { keyer -run {key kbd nod 1ch}}
+	hlj { keyer -start hl-jack@hlj }
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
+	info-kbd2 {second keyboard keyer and a keyed oscillator}
 	info-ptt {push-to-talk switch}
 	info-deb {key contact debouncer}
 	info-cas {midi events from keyboard keys}
@@ -976,6 +991,7 @@ proc default-setups {} {
 	info-nod {hide esoteric keyer options}
 	info-1ch {merge midi channel and note options}
 	info-key+kbd {run the key and the kdb setups}
+	info-hlj { jack interface for hermes lite }
     }]
 }
 
