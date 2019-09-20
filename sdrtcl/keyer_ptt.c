@@ -63,8 +63,8 @@ static void _update(_t *dp) {
     dp->modified = dp->fw.busy = 0;
     /* ptt recomputation */
     int sample_rate = sdrkit_sample_rate(dp);
-    dp->ptt_delay_samples = dp->opts.ptt_delay * sample_rate;
-    dp->ptt_hang_samples = dp->opts.ptt_hang * sample_rate;
+    dp->ptt_delay_samples = dp->opts.ptt_delay * sample_rate / 1000.0;
+    dp->ptt_hang_samples = dp->opts.ptt_hang * sample_rate / 1000.0;
   }
 }
 
@@ -174,8 +174,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   // ptt options
-  { "-delay",   "delay",   "Delay",   "0.0",      fw_option_float, 0, offsetof(_t, opts.ptt_delay), "delay of keyer on behind ptt on in seconds" },
-  { "-hang",    "hang",    "Hang",    "1.0",      fw_option_float, 0, offsetof(_t, opts.ptt_hang),  "hang time of ptt off behind keyer off in seconds" },
+  { "-delay",   "delay",   "Delay",   "0.0",      fw_option_float, 0, offsetof(_t, opts.ptt_delay), "delay of keyer on behind ptt on in milliseconds" },
+  { "-hang",    "hang",    "Hang",    "1.0",      fw_option_float, 0, offsetof(_t, opts.ptt_hang),  "hang time of ptt off behind keyer off in milliseconds" },
   { NULL }
 };
 
