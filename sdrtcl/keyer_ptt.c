@@ -94,11 +94,9 @@ static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, u
 
 static void _delay(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note, jack_nframes_t nframes) {
   unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
-  if (t < nframes) {
-    /* send delayed now */
+  if (t < nframes) {    /* send delayed now */
     _sendmidi(dp, midi_out, t, midi);
-  } else {
-    /* queue delayed now */
+  } else {		/* queue delayed now */
     midi_buffer_write_delay(&dp->midi, t-nframes);
     midi_buffer_queue_command(&dp->midi, 0, midi, 3);
   }
@@ -132,23 +130,24 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	    if (command == MIDI_NOTE_ON) {
 	      if ( ! dp->ptt_on) {
 		dp->ptt_on = 1;
-		_send(dp, midi_out, i, command, dp->opts.note+1);
+		_send(dp, midi_out, i, command, note+1);
 	      }
 	    }
-	    _delay(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note, nframes);
+	    _delay(dp, midi_out, i+dp->ptt_delay_samples, command, note, nframes);
 	  }
 	}
       } else {
 	/* it is a midi buffer event */
 	if (event.size != 0) {
 	  const unsigned char command = event.buffer[0]&0xF0;
+	  const unsigned char note = event.buffer[1];
 	  if (command == MIDI_NOTE_ON) {
 	    dp->key_on = 1;
 	  } else if (command == MIDI_NOTE_OFF) {
 	    dp->key_on = 0;
 	    dp->ptt_hang_count = dp->ptt_hang_samples;
 	  }
-	  _send(dp, midi_out, i, command, dp->opts.note);
+	  _send(dp, midi_out, i, command, note);
 	}
       }
     }

@@ -772,7 +772,7 @@ snit::widgetadaptor midi-tap {
 	    foreach event [$options(-tap) get] {
 		foreach {frame midi} $event break
 		binary scan $midi c* bytes
-		set out [format {%6ld %6ld} $frame [expr {$frame-$tapframe}]]
+		set out [format {%8ld %8ld} $frame [expr {$frame-$tapframe}]]
 		set tapframe $frame
 		foreach b $bytes {
 		    append out [format { %02x} [expr {$b&0xff}]]
