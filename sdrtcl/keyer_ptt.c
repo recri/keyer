@@ -51,7 +51,6 @@ typedef struct {
   int ptt_delay_samples;
   int ptt_hang_samples;
   int ptt_on;
-  int key_on;
   int ptt_hang_count;
   midi_buffer_t midi;
 } _t;
@@ -72,7 +71,6 @@ static void *_init(void *arg) {
   _t *dp = (_t *)arg;
   void *p = midi_buffer_init(&dp->midi); if (p != &dp->midi) return p;
   dp->ptt_on = 0;
-  dp->key_on = 0;
   dp->modified = dp->fw.busy = 1;
   _update(dp);
   return arg;
@@ -130,6 +128,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	    if (command == MIDI_NOTE_ON) {
 	      if ( ! dp->ptt_on) {
 		dp->ptt_on = 1;
+		dp->ptt_hang_count = dp->ptt_delay_samples + dp->ptt_hang_samples;
 		_send(dp, midi_out, i, command, note+1);
 	      }
 	    }
@@ -142,9 +141,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  const unsigned char command = event.buffer[0]&0xF0;
 	  const unsigned char note = event.buffer[1];
 	  if (command == MIDI_NOTE_ON) {
-	    dp->key_on = 1;
+	    dp->ptt_hang_count = dp->ptt_hang_samples;
 	  } else if (command == MIDI_NOTE_OFF) {
-	    dp->key_on = 0;
 	    dp->ptt_hang_count = dp->ptt_hang_samples;
 	  }
 	  _send(dp, midi_out, i, command, note);
@@ -152,7 +150,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
       }
     }
     /* clock the ptt hang time counter */
-    if (dp->key_on == 0 && dp->ptt_on != 0 && --dp->ptt_hang_count <= 0) {
+    if (dp->ptt_on != 0 && --dp->ptt_hang_count <= 0) {
       dp->ptt_on = 0;
       _send(dp, midi_out, i, MIDI_NOTE_OFF, dp->opts.note+1);
     }
