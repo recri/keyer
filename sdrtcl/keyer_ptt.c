@@ -78,13 +78,29 @@ static void *_init(void *arg) {
   return arg;
 }
 
-static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note) {
-  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
+static void _sendmidi(_t *dp, void *midi_out, jack_nframes_t t, unsigned char midi[3]) {
   unsigned char* buffer = jack_midi_event_reserve(midi_out, t, 3);
   if (buffer == NULL) {
     fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
   } else {
     memcpy(buffer, midi, 3);
+  }
+}
+
+static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note) {
+  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
+  _sendmidi(dp, midi_out, t, midi);
+}
+
+static void _delay(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note, jack_nframes_t nframes) {
+  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
+  if (t < nframes) {
+    /* send delayed now */
+    _sendmidi(dp, midi_out, t, midi);
+  } else {
+    /* queue delayed now */
+    midi_buffer_write_delay(&dp->midi, t-nframes);
+    midi_buffer_queue_command(&dp->midi, 0, midi, 3);
   }
 }
 
@@ -118,23 +134,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
 		dp->ptt_on = 1;
 		_send(dp, midi_out, i, command, dp->opts.note+1);
 	      }
-	      dp->key_on = 1;
-	      if (i+dp->ptt_delay_samples < nframes) {
-		_send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
-	      } else {
-		midi_buffer_write_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-		midi_buffer_write_note_on(&dp->midi, 0, channel, note, 0);
-	      }
-	    } else if (command == MIDI_NOTE_OFF) {
-	      if (i+dp->ptt_delay_samples < nframes) {
-		dp->key_on = 0;
-		dp->ptt_hang_count = dp->ptt_hang_samples+dp->ptt_delay_samples;
-		_send(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note);
-	      } else {
-		midi_buffer_write_delay(&dp->midi, i+dp->ptt_delay_samples-nframes);
-		midi_buffer_write_note_off(&dp->midi, 0, channel, note, 0);
-	      }
 	    }
+	    _delay(dp, midi_out, i+dp->ptt_delay_samples, command, dp->opts.note, nframes);
 	  }
 	}
       } else {
