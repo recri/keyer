@@ -90,16 +90,6 @@ static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, u
   _sendmidi(dp, midi_out, t, midi);
 }
 
-static void _delay(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note, jack_nframes_t nframes) {
-  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
-  if (t < nframes) {    /* send delayed now */
-    _sendmidi(dp, midi_out, t, midi);
-  } else {		/* queue delayed now */
-    midi_buffer_write_delay(&dp->midi, t-nframes);
-    midi_buffer_queue_command(&dp->midi, 0, midi, 3);
-  }
-}
-
 /*
 ** jack process callback
 */
@@ -132,7 +122,14 @@ static int _process(jack_nframes_t nframes, void *arg) {
 		_send(dp, midi_out, i, command, note+1);
 	      }
 	    }
-	    _delay(dp, midi_out, i+dp->ptt_delay_samples, command, note, nframes);
+	    jack_nframes_t t = i+dp->ptt_delay_samples;
+	    unsigned char midi[] = { command | (channel-1), note, 0 };
+	    if (t < nframes) {    /* send delayed now */
+	      _sendmidi(dp, midi_out, t, midi);
+	    } else {		/* queue delayed now */
+	      midi_buffer_write_delay(&dp->midi, t-nframes);
+	      midi_buffer_queue_command(&dp->midi, 0, midi, 3);
+	    }
 	  }
 	}
       } else {
@@ -150,7 +147,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
       }
     }
     /* clock the ptt hang time counter */
-    if (dp->ptt_on != 0 && --dp->ptt_hang_count <= 0) {
+    if (dp->ptt_on && --dp->ptt_hang_count <= 0) {
       dp->ptt_on = 0;
       _send(dp, midi_out, i, MIDI_NOTE_OFF, dp->opts.note+1);
     }
