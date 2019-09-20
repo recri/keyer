@@ -123,7 +123,7 @@ proc set-insert {name} { set-var -insert $name }
 proc has-insert {} { return [has-var -insert] }
 
 proc get-tap {} { return [get-var -tap ] }
-proc set-tap {name} { set-var -tap $name }
+proc set-tap {name} { lappend-var -tap $name }
 proc has-tap {} { return [has-var -tap ] }
 
 proc lappend-start {args} { lappend-var -start {*}$args }
@@ -772,7 +772,7 @@ snit::widgetadaptor midi-tap {
 	    foreach event [$options(-tap) get] {
 		foreach {frame midi} $event break
 		binary scan $midi c* bytes
-		set out [format {%ld %ld} $frame [expr {$frame-$tapframe}]]
+		set out [format {%6ld %6ld} $frame [expr {$frame-$tapframe}]]
 		set tapframe $frame
 		foreach b $bytes {
 		    append out [format { %02x} [expr {$b&0xff}]]
@@ -886,7 +886,6 @@ proc load-ui {} {
     }
     # memories-widget
     if {[has-ascii]} {
-	puts "get-ascii returns [get-ascii]"
 	foreach asc [get-ascii] {
 	    .p add [cw-text .p.ascii$asc -ascii $asc]
 	    set ::data(show-ascii$asc) 1
@@ -901,9 +900,11 @@ proc load-ui {} {
 	widget-opts .p.detime [get-detime] [.p.detime exposed-options]
     }
     if {[has-tap]} {
-	.p add [midi-tap .p.tap -tap [get-tap]]
-	set ::data(show-tap) 1
-	widget-opts .p.tap [get-tap] {}
+	foreach tap [get-tap] {
+	    .p add [midi-tap .p.tap$tap -tap $tap]
+	    set ::data(show-tap$tap) 1
+	    widget-opts .p.tap$tap $tap [.p.tap$tap exposed-options]
+	}
     }
 }
 
