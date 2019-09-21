@@ -53,13 +53,28 @@ static unsigned ring_buffer_readable(ring_buffer_t *p) { return ring_buffer_item
 static unsigned ring_buffer_writeable(ring_buffer_t *p) { return ring_buffer_items_available_to_write(p) > 0; }
 static unsigned ring_buffer_index(ring_buffer_t *p, unsigned ptr) { return (ptr&(p->size-1)); }
 
-static int ring_buffer_get(ring_buffer_t *p, unsigned size, unsigned char *bytes) {
+static int ring_buffer_peek(ring_buffer_t *p, unsigned size, unsigned char *bytes) {
   if (ring_buffer_items_available_to_read(p) < size)
     return -1;
   for (int i = 0; i < size; i += 1)
     bytes[i] = p->buff[ring_buffer_index(p, p->rptr+i)];
+  return size;
+}
+
+static unsigned char *ring_buffer_peek_pointer(ring_buffer_t *p, unsigned size) {
+  return ring_buffer_items_available_to_read(p) < size ? NULL : &p->buff[ring_buffer_index(p, p->rptr)];
+}
+
+static int ring_buffer_read_advance(ring_buffer_t *p, unsigned size) {
   p->rptr += size;
   return size;
+}
+
+static int ring_buffer_get(ring_buffer_t *p, unsigned size, unsigned char *bytes) {
+  int n = ring_buffer_peek(p, size, bytes);
+  if (n != size)
+    return n;
+  return ring_buffer_read_advance(p, size);
 }
   
 static int ring_buffer_get_to_ring(ring_buffer_t *src, unsigned size, ring_buffer_t *dst) {

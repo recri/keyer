@@ -78,6 +78,7 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/lo_mixer.so \
 	$(LIBDIR)/meter_tap.so \
 	$(LIBDIR)/midi.so \
+	$(LIBDIR)/midi_delay.so \
 	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/midi_tap.so \
 	$(LIBDIR)/mixer.so \
@@ -191,6 +192,9 @@ $(LIBDIR)/meter_tap.so: meter_tap.c framework.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/midi.so: midi.c framework.h ../dspmath/midi_buffer.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/midi_delay.so: midi_delay.c framework.h ../dspmath/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/midi_insert.so: midi_insert.c framework.h ../dspmath/midi_buffer.h
