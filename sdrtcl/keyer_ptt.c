@@ -139,10 +139,10 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  if (command == MIDI_NOTE_ON) {
 	    if ( ! dp->ptt_on) {
 	      dp->ptt_on = 1;
-	      dp->hang_count = dp->delay_samples + dp->hang_samples;
 	      _send(dp, midi_out, i, command, note+1);
 	    }
 	  }
+	  dp->hang_count = dp->delay_samples + dp->hang_samples;
 	  _write(dp, frame+i+dp->delay_samples, event.buffer);
 	}
       }
@@ -152,7 +152,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
       unsigned char midi[4];
       _read(dp, &mframe, midi);
       _sendmidi(dp, midi_out, i, midi);
-      dp->hang_count = dp->hang_samples;
     }
     /* clock the ptt hang time counter */
     if (dp->ptt_on && --dp->hang_count <= 0) {

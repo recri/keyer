@@ -372,7 +372,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	}
 	-hang {
 	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
+		[list -text $text -info $info -units ms -format %.1f -min -1000 -max 1000 -step 0.1]
 	}
 	-period {
 	    # for the debouncer
