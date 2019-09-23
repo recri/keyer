@@ -135,7 +135,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	const unsigned char channel = (event.buffer[0]&0xF)+1;
 	const unsigned char note = event.buffer[1];
 	if (channel == dp->opts.chan && note == dp->opts.note) {
-	  dp->hang_count = i + dp->delay_samples + dp->hang_samples;
+	  dp->hang_count = dp->delay_samples + dp->hang_samples;
 	  _write(dp, frame+i+dp->delay_samples, event.buffer);
 	}
       }
