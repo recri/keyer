@@ -368,11 +368,11 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	}
 	-delay {
 	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -text $text -info $info -units ms -format %.2f -min 0.0 -max 1000 -step 0.01]
+		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
 	}
 	-hang {
 	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -text $text -info $info -units ms -format %.2f -min -1000 -max 1000 -step 0.01]
+		[list -text $text -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
 	}
 	-period {
 	    # for the debouncer
@@ -975,6 +975,7 @@ proc default-setups {} {
 	deb { keyer -start {keyer-debounce@deb} }
 	cas { keyer -start {midi-insert@cas} }
 	tap { keyer -start {midi-tap@tap} }
+	tap2 { keyer -start {midi-tap@tap2} }
 	out { keyer -start {keyer-detone@detone keyer-detime@out} }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }

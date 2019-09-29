@@ -50,10 +50,11 @@ typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  int delay_samples;
-  int hang_samples;
-  int ptt_on;
-  int hang_count;
+  int delay_samples;		// delay length in samples
+  int hang_samples;		// hang time in samples
+  int key_on;			// key signal high
+  int ptt_on;			// ptt signal high
+  int hang_count;		// count down hang time when ptt_on && ! key_on
   ring_buffer_t rb;
   unsigned char buff[8192];
 } _t;
@@ -132,25 +133,42 @@ static int _process(jack_nframes_t nframes, void *arg) {
     int port;
     while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
       if (event.size == 3 && _writeable(dp)) {
+	const unsigned char command = (event.buffer[0]&0xF0);
 	const unsigned char channel = (event.buffer[0]&0xF)+1;
 	const unsigned char note = event.buffer[1];
-	if (channel == dp->opts.chan && note == dp->opts.note) {
-	  dp->hang_count = dp->delay_samples + dp->hang_samples;
+	if ((command == MIDI_NOTE_ON || command == MIDI_NOTE_OFF) &&
+	    channel == dp->opts.chan && note == dp->opts.note) {
+	  // delay the note
 	  _write(dp, frame+i+dp->delay_samples, event.buffer);
+	  // start the ptt if necessary
+	  // maintain the key state
+	  if (command == MIDI_NOTE_ON) {
+	    dp->key_on = 1;
+	    if ( ! dp->ptt_on) {
+	      dp->ptt_on = 1;
+	      _send(dp, midi_out, i, MIDI_NOTE_ON, dp->opts.note+1);
+	    }
+	  }
 	}
       }
     }
+    // read the delayed note(s) for this frame
+    // only midi on my channel
     while (_readable(dp) && _peek_time(dp) == frame+i) {
       jack_nframes_t mframe;
       unsigned char midi[4];
       _read(dp, &mframe, midi);
+      const unsigned char command = (midi[0]&0xF0);
+      if (command == MIDI_NOTE_ON) {
+	dp->key_on = 1;
+      } else if (command == MIDI_NOTE_OFF) {
+	dp->key_on = 0;		// key state off
+	dp->hang_count = dp->hang_samples;
+      }
       _sendmidi(dp, midi_out, i, midi);
     }
     /* clock the ptt hang time counter */
-    if ( ! dp->ptt_on && dp->hang_count > 0) {
-      dp->ptt_on = 1;
-      _send(dp, midi_out, i, MIDI_NOTE_ON, dp->opts.note+1);
-    } else if (dp->ptt_on && --dp->hang_count <= 0) {
+    if ( ! dp->key_on && dp->ptt_on && --dp->hang_count <= 0) {
       dp->ptt_on = 0;
       _send(dp, midi_out, i, MIDI_NOTE_OFF, dp->opts.note+1);
     }
