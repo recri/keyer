@@ -348,7 +348,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	}
 	-freq {
 	    opt-describe $text $name $opt2 $opt freq $ovalue \
-		[list -text $text -info $info -units Hz -format %.0f -min 500 -max 1500 -step 1]
+		[list -text $text -info $info -units Hz -format %.0f -min 500 -max 6000 -step 1]
 	}
 	-rise - -fall - -ramp {
 	    opt-describe $text $name $opt2 $opt value $ovalue \
