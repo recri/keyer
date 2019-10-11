@@ -1,0 +1,37 @@
+#!/usr/bin/tclsh
+
+# so there are frequencies and sample rates where one period of the wave
+# fits into an integral number of samples, so you could compute one period
+# of the wave form and simply recycle it as the samples go by.
+#
+
+
+if {0} {
+    foreach sr {48000 96000 192000} {
+	foreach hz {200 300 400 500 600 700 800 900 1000} {
+	    # (samples / second) / (cycles / second) => samples / cycle
+	    set wave [expr {double($sr)/double($hz)}]
+	    puts "[format "%6d sr %4d hz $wave" $sr $hz]"
+	}
+    }
+}
+
+proc main {argv} {
+    lassign {48000 400 1000} sr f0 f1
+    switch -glob [llength $argv] {
+	0 {  }
+	1 { lassign $argv sr }
+	2 { lassign $argv sr f0 }
+	3 { lassign $argv sr f0 f1 }
+	* { lassign $argv sr f0 f1 }
+    }
+    puts "frequencies with integral periods at $sr samples/second from $f0 Hz to $f1 Hz"
+    for {set p $sr} {$p > 0} {incr p -1} {
+	set f [expr {$sr/double($p)}]
+	if {$f >= $f0 && $f <= $f1} {
+	    puts "$p samples/period for $f Hz"
+	}
+    }
+}
+
+main $argv
