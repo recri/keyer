@@ -21,3 +21,8 @@
 # incorrectly.
 # There are special control sequences which specify i2c
 # commands on the radio, these are only sent 
+** Command that works:
+   Start jack with qjackctl at 48000 s/s
+   Use patch panel setup from ../patch/hl2.xml
+   cd ~/keyer/hl-udp
+   ../bin/keyer key -kyo-gain -6 & x42-scope & ./hl-test.tcl -jack on -mox 1 -low-pwr 1 -lna-db 14
