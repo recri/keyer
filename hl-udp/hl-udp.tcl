@@ -83,7 +83,8 @@ snit::type sdrtcl::hl-udp {
 	bs-buff {}
 	tx-sequence 0
 	tx-index 0
-	tx-cached { -mox -speed -filters -not-sync -lna-db -n-rx -duplex 
+	tx-cached {
+	    -mox -speed -filters -not-sync -lna-db -n-rx -duplex 
 	    -f-tx -f-rx1 -f-rx2 -f-rx3 -f-rx4 -f-rx5 -f-rx6 -f-rx7
 	    -level -vna -pa -low-pwr -pure-signal
 	}
@@ -158,6 +159,7 @@ snit::type sdrtcl::hl-udp {
     # these sink the sample streams
     # they should accept any number of buffers as arguments
     option -rx -default {};	# output handler: interleaved rx iq and microphone in
+    option -tx -default {};	# input handler: interleaved speaker stereo and tx iq
     option -bs -default {};	# output handler: raw ADC samples for bandscope
 
     variable optiondocs -array {
@@ -204,6 +206,7 @@ snit::type sdrtcl::hl-udp {
 	-rx {The handler for received buffers of IQ samples.}
 	-bs {The handler for received buffers of raw bandscope samples.}
     }
+
     # tx samples are provided by calling 'hl tx send buffer1 buffer2'
     # when there are sufficient samples to provide 504 bytes for each buffer
     # the samples are interleaved stereo audio out and transmit IQ
@@ -421,6 +424,7 @@ snit::type sdrtcl::hl-udp {
     method {rx constructor} {} {
 	# deal with missing -rx and -bs handlers
 	if {$options(-rx) eq {}} { set options(-rx) [mymethod dummy rx] }
+	if {$options(-tx) eq {}} { set options(-tx) [mymethod dummy tx] }
 	if {$options(-bs) eq {}} { set options(-bs) [mymethod dummy bs] }
     }
 
@@ -471,7 +475,10 @@ snit::type sdrtcl::hl-udp {
 		}
 		return
 	    }
-	    if {[binary scan $data IIa512a512 syncep seq f1 f2] != 4} {
+	    # scan the preamble, leave the usb packets in place
+	    # was: binary scan $data IIa512a512 syncep seq f1 f2
+	    # f1 is $data offset 8, f2 is $data offset 520
+	    if {[binary scan $data II syncep seq] != 2} {
 		puts "rx readable: metis scan failed"
 		return
 	    }
@@ -489,8 +496,11 @@ snit::type sdrtcl::hl-udp {
 		    if {$seq == $d(iq-sequence)} {
 			incr d(iq-sequence)
 			set iq {}
-			foreach f [list $f1 $f2] {
-			    if {[binary scan $f IIa504 s123c0 I1234 b] != 3} {
+			# scan at offset from $data
+			# was foreach f [list $f1 $f2]
+			# b is $data offset $x+8 length 
+			foreach x {8 520} {
+			    if {[binary scan $data x${x}II s123c0 I1234] != 2} {
 				puts "rx readable: usb scan failed"
 				return
 			    }
@@ -507,11 +517,15 @@ snit::type sdrtcl::hl-udp {
 				    $self rx update -overflow [expr {($I1234&(1<<24)) != 0}]
 				    $self rx update -serial [expr {$I1234&0xFF}]
 				}
-				8 {
+				8 - 9 - 10 - 11 {
+				    $self rx update -hw-key [expr {($c0&2) != 0}]
+				    $self rx update -hw-ptt [expr {($c0&1) != 0}]
 				    $self rx update -temperature [expr {($I1234>>16)&0xffff}]
 				    $self rx update -fwd-power [expr {$I1234&0xffff}]
 				}
-				16 {
+				16 - 17 - 18 - 19 {
+				    $self rx update -hw-key [expr {($c0&2) != 0}]
+				    $self rx update -hw-ptt [expr {($c0&1) != 0}]
 				    $self rx update -rev-power [expr {($I1234>>16)&0xffff}]
 				    $self rx update -pa-current [expr {$I1234&0xffff}]
 				}
@@ -531,19 +545,24 @@ snit::type sdrtcl::hl-udp {
 				}
 			    }
 			    # send data on
-			    lappend iq $b
+			    lappend iq $data
 			}
 			incr d(rx-calls)
-			set n [expr {[string length [lindex $iq 0]]+[string length [lindex $iq 1]]}]
+			set n 1008
 			incr d(rx-bytes) $n
 			set ns [expr {int($n/($::options(-n-rx)*6+2))}]
 			incr d(rx-samples) $ns
-			set in [{*}$options(-rx) {*}$iq]
-			if {[llength $in] == 2} {
-			    $self tx send {*}$in
-			}
+		        {*}$options(-rx) $data
 		    } else {
 			puts "rx readable: received iq packet $seq at $d(iq-sequence)"
+		    }
+		    while {1} {
+			set in [{*}$options(-tx)]
+			if {[llength $in] == 2} {
+			    $self tx send {*}$in
+			    continue
+			}
+			break
 		    }
 		}
 		4 {
@@ -583,10 +602,10 @@ snit::type sdrtcl::hl-udp {
     ## it will just have to do,
     ## until the real thing comes along
     ##
-    method {dummy rx} {b1 b2} {
+    method {dummy rx} {data} {
 	incr d(dummy-rx-calls)
 	incr d(dummy-rx-bytes)
-	set n [expr {[string length $b1]+[string length $b2]}]
+	set n 1008
 	incr d(dummy-rx-bytes) $n
 	set ns [expr {int($n/($::options(-n-rx)*6+2))}]
 	incr d(dummy-rx-samples) $ns
