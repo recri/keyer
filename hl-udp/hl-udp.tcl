@@ -499,6 +499,8 @@ snit::type sdrtcl::hl-udp {
 				return
 			    }
 			    # scan control bytes into option values
+			    # I suspect that key and ptt may be in more packets
+			    # this switch statement looks suspicious
 			    set c0 [expr {($s123c0&0xFF)}]
 			    switch $c0 {
 				0 - 1 - 2 - 3 {
