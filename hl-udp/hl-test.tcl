@@ -2,13 +2,14 @@
 
 tk scaling [expr {10*[tk scaling]}]
 
-lappend auto_path ../keyer/lib
+lappend auto_path ../lib
 
 source ./hl-udp.tcl
 package require sdrtcl::hl-jack
 
 array set options {
     -speed 48000
+    -lna-db 14
 }
 
 namespace eval ::hl {}
@@ -79,11 +80,11 @@ snit::widget hl::choice {
 	$self configure {*}$args
 	set value [$self get]
 	# puts "$self has value $value"
-	$spn set $value
 	set ::options($options(-hl-opt)) $value
 	install lbl using ttk::label $win.l -text $options(-label) -width 10
 	install spn using spinbox $win.p -values $options(-values) -width $options(-width) \
 	    -textvariable [myvar value] -command [mymethod set]
+	$spn set $value
 	pack $win.l $win.p -side left -padx 16
     }
     method get {} { return [$options(-hl-udp) cget $options(-hl-opt)] }
@@ -118,6 +119,7 @@ proc main {argv} {
 	switch -- $opt {
 	    -jack {
 		set ::options(-rx) {hlj send}
+		set ::options(-tx) {hlj recv}
 	    }
 	    default {
 		set ::options($opt) $val
@@ -128,11 +130,9 @@ proc main {argv} {
     set row -1
 
     sdrtcl::hl-udp hlu {*}[array get ::options]
-    puts "-n-rx = [hlu cget -n-rx]"
     sdrtcl::hl-jack hlj -i-rx 0 -n-rx [hlu cget -n-rx] -speed [hlu cget -speed]
     hlj activate
     hlj start
-
     grid [hl::refresh .id -period 2000 \
 	      -subst [join {
 		  {peer: [hlu cget -peer]}

@@ -45,6 +45,8 @@
 #define KEYED_TONE_RISE	1	/* note is ramping up to full level */
 #define KEYED_TONE_ON	2	/* note is sounding full level */
 #define KEYED_TONE_FALL	3	/* note is ramping down to off */
+#define KEYED_TONE_RISE_THEN_FALL 4 /* note is ramping up, but off received */
+#define KEYED_TONE_FALL_THEN_RISE 5 /* note is ramping down, but on received */
 
 typedef struct {
   int state;			/* state of cwtone */
@@ -71,14 +73,44 @@ static void *keyed_tone_init(keyed_tone_t *p, float gain_dB, float freq, float r
 }
 
 static void keyed_tone_on(keyed_tone_t *p) {
-  p->state = KEYED_TONE_RISE;
-  oscillator_set_zero_phase(&p->tone);
-  ramp_start(&p->rise);
+  switch (p->state) {
+  case KEYED_TONE_OFF:
+    p->state = KEYED_TONE_RISE;
+    oscillator_set_zero_phase(&p->tone);
+    ramp_start(&p->rise);
+    break;			/* start rise */
+  case KEYED_TONE_RISE:
+  case KEYED_TONE_ON:
+    break;			/* ignore repeated on */
+  case KEYED_TONE_FALL:
+    p->state = KEYED_TONE_FALL_THEN_RISE;
+    break;			/* defer rise to end of fall */
+  case KEYED_TONE_RISE_THEN_FALL:
+    p->state = KEYED_TONE_RISE;
+    break;			/* cancel momentary off */
+  case KEYED_TONE_FALL_THEN_RISE:
+    break;			/* ignore repeated on */
+  }
 }
 
 static void keyed_tone_off(keyed_tone_t *p) {
-  p->state = KEYED_TONE_FALL;
-  ramp_start(&p->fall);
+  switch (p->state) {
+  case KEYED_TONE_OFF:
+    break;			/* ignore repeated off */
+  case KEYED_TONE_RISE:
+    p->state = KEYED_TONE_RISE_THEN_FALL;
+    break;			/* defer fall to end of rise */
+  case KEYED_TONE_ON:
+    p->state = KEYED_TONE_FALL;
+    ramp_start(&p->fall);
+    break;
+  case KEYED_TONE_FALL:
+  case KEYED_TONE_RISE_THEN_FALL:
+    break;			/* ignore repeated off */
+  case KEYED_TONE_FALL_THEN_RISE:
+    p->state = KEYED_TONE_FALL;
+    break;			/* cancel momentary on */
+  }
 }
 
 static float _Complex keyed_tone_process(keyed_tone_t *p) {
@@ -88,16 +120,26 @@ static float _Complex keyed_tone_process(keyed_tone_t *p) {
     scale = 0;
     break;
   case KEYED_TONE_RISE:	/* note is ramping up to full level */
+  case KEYED_TONE_RISE_THEN_FALL:
     scale *= ramp_next(&p->rise);
     if (ramp_done(&p->rise))
-      p->state = KEYED_TONE_ON;
+      if (p->state == KEYED_TONE_RISE_THEN_FALL) {
+	p->state = KEYED_TONE_FALL;
+	ramp_start(&p->fall);
+      } else
+	p->state = KEYED_TONE_ON;
     break;
   case KEYED_TONE_ON:	/* note is sounding full level */
     break;
   case KEYED_TONE_FALL:	/* note is ramping down to off */
+  case KEYED_TONE_FALL_THEN_RISE:
     scale *= ramp_next(&p->fall);
     if (ramp_done(&p->fall))
-      p->state = KEYED_TONE_OFF;
+      if (p->state == KEYED_TONE_FALL_THEN_RISE) {
+	p->state = KEYED_TONE_RISE;
+	ramp_start(&p->rise);
+      } else
+	p->state = KEYED_TONE_OFF;
     break;
   }
   return scale * oscillator_process(&p->tone);

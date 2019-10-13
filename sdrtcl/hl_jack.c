@@ -186,28 +186,28 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 static int _send(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 4)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s send buffer1 buffer2", Tcl_GetString(objv[0])));
+  if (argc != 3)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s send data", Tcl_GetString(objv[0])));
   if ( ! data->started)
     return fw_error_obj(interp, Tcl_ObjPrintf("hl-jack %s is not running", Tcl_GetString(objv[0])));
   // input byte arrays
-  int n[2];
-  unsigned char *in[2] = { Tcl_GetByteArrayFromObj(objv[2], &n[0]), Tcl_GetByteArrayFromObj(objv[3], &n[1]) };
-  if (n[0] != 504 || n[1] != 504)
-    return fw_error_obj(interp, Tcl_ObjPrintf("%s: badly formed input buffers", Tcl_GetString(objv[0])));
+  int n;
+  unsigned char *in = Tcl_GetByteArrayFromObj(objv[2], &n);
+  if (n != 1032)
+    return fw_error_obj(interp, Tcl_ObjPrintf("%s: badly sized data buffer", Tcl_GetString(objv[0])));
   // convert and copy inputs into local buffer
-  const int ninput = 504;
+  const int ninput = 504, noffset[2] = {16, 528};
   const int stride = data->opts.n_rx * 6 + 2; /* size of one frame of receiver data */
   const int offset = data->opts.i_rx * 6;     /* offset to IQ for selected receiver */
   for (int i = 0; i < 2; i += 1) {
-    unsigned char *input = in[i];
+    unsigned char *input = in + noffset[i];
     for (int j = offset; j < ninput; j += stride) {
-      short s[2];
+      int s[2];
       float f[2];
-      s[0] = (((signed char *)input)[j+1]<<8 + input[j+2]);
-      s[1] = (((signed char *)input)[j+4]<<8 + input[j+5]);
-      f[0] = s[0] / 32767.0;
-      f[1] = s[1] / 32767.0;
+      s[0] = (input[j+0]<<24) | (input[j+1]<<16) | (input[j+2]<<8);
+      s[1] = (input[j+3]<<24) | (input[j+4]<<16) | (input[j+5]<<8);
+      f[0] = (s[0] >> 8) / (float)0x7ff; // 12 bits, left shifted 8
+      f[1] = (s[1] >> 8) / (float)0x7ff; // 12 bits, left shifted 8
       if (jack_ringbuffer_write_space(data->rxrb) < 2*sizeof(float)) {
 	++data->rx_overrun;
       } else {
@@ -215,6 +215,14 @@ static int _send(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
       }
     }
   }
+  return TCL_OK;
+}
+static int _recv(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  _t *data = (_t *)clientData;
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s recv", Tcl_GetString(objv[0])));
+  if ( ! data->started)
+    return fw_error_obj(interp, Tcl_ObjPrintf("hl-jack %s is not running", Tcl_GetString(objv[0])));
   // copy from tx jack ring buffer into local buffer
   while (jack_ringbuffer_read_space(data->txrb) > 2*sizeof(float) && data->tx_buffer_i < sizeof(data->tx_buffer)) {
     float f[2];
@@ -231,9 +239,9 @@ static int _send(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
     data->tx_buffer[data->tx_buffer_i++] = s[1]>>8;	/* Q sample high byte */
     data->tx_buffer[data->tx_buffer_i++] = s[1];	/* Q sample low byte */
   }
-  // decide what to return
+  // decide what, if anything, to return
   if (data->tx_buffer_i == sizeof(data->tx_buffer)) {
-    // if tx buffer is full, convert to TclListObj of Tcl
+    // if tx buffer is full, convert to TclListObj of Tcl_ByteArrayObj
     data->tx_buffer_i = 0;
     Tcl_Obj *b[2] = { 
 		     Tcl_NewByteArrayObj(data->tx_buffer, 504),
@@ -242,7 +250,7 @@ static int _send(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
     Tcl_SetObjResult(interp, Tcl_NewListObj(2, b));
   }
   return TCL_OK;
-}
+}  
 static int _start(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s start", Tcl_GetString(objv[0])));
@@ -300,7 +308,8 @@ static const fw_option_table_t _options[] = {
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "pending", _pending, "check the ringbuffer fill" },
-  { "send", _send, "send rx buffers, return tx buffers" },
+  { "send", _send, "send rx buffers" },
+  { "recv", _recv, "return tx buffers" },
   { "start", _start, "start transferring samples" },
   { "state", _state, "are we started?" },
   { "stop", _stop, "stop transferring samples" },

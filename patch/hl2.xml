@@ -1,0 +1,54 @@
+<!DOCTYPE patchbay>
+<patchbay version="0.5.0" name="hl2">
+ <output-sockets>
+  <socket exclusive="off" name="hlj" client="hlj" type="jack-audio">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket exclusive="off" name="kyo" client="kyo" type="jack-audio">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket exclusive="off" name="system" client="system" type="jack-midi">
+   <plug>midi_capture_1</plug>
+  </socket>
+  <socket exclusive="off" name="key" client="key" type="jack-midi">
+   <plug>midi_out</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket exclusive="off" name="system" client="system" type="jack-audio">
+   <plug>playback_1</plug>
+   <plug>playback_2</plug>
+  </socket>
+  <socket exclusive="off" name="hlj" client="hlj" type="jack-audio">
+   <plug>in_i</plug>
+   <plug>in_q</plug>
+  </socket>
+  <socket exclusive="off" name="scope12" client="Simple Scope \(4 channel\)" type="jack-audio">
+   <plug>in1</plug>
+   <plug>in2</plug>
+  </socket>
+  <socket exclusive="off" name="scope34" client="Simple Scope \(4 channel\)" type="jack-audio">
+   <plug>in3</plug>
+   <plug>in4</plug>
+  </socket>
+  <socket exclusive="off" name="key" client="key" type="jack-midi">
+   <plug>midi_in</plug>
+  </socket>
+  <socket exclusive="off" name="kyo" client="kyo" type="jack-midi">
+   <plug>midi_in</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables>
+  <cable input="system" output="hlj" type="jack-audio"/>
+  <cable input="scope34" output="hlj" type="jack-audio"/>
+  <cable input="hlj" output="kyo" type="jack-audio"/>
+  <cable input="system" output="kyo" type="jack-audio"/>
+  <cable input="scope12" output="kyo" type="jack-audio"/>
+  <cable input="key" output="system" type="jack-midi"/>
+  <cable input="kyo" output="key" type="jack-midi"/>
+ </cables>
+</patchbay>
+
