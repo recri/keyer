@@ -1,5 +1,5 @@
 <!DOCTYPE patchbay>
-<patchbay name="key" version="0.5.0">
+<patchbay name="key+out" version="0.5.0">
  <output-sockets>
   <socket type="jack-audio" client="kyo" exclusive="off" name="kyo">
    <plug>out_i</plug>
@@ -7,6 +7,9 @@
   </socket>
   <socket type="jack-midi" client="a2j" exclusive="off" name="system">
    <plug>Teensy MIDI \[20\] \(capture\): Teensy MIDI MIDI 1</plug>
+  </socket>
+  <socket type="jack-midi" client="detone" exclusive="off" name="detone">
+   <plug>midi_out</plug>
   </socket>
   <socket type="jack-midi" client="key" exclusive="off" name="key">
    <plug>midi_out</plug>
@@ -20,6 +23,12 @@
   <socket type="jack-midi" client="key" exclusive="off" name="key">
    <plug>midi_in</plug>
   </socket>
+  <socket type="jack-midi" client="out" exclusive="off" name="out">
+   <plug>midi_in</plug>
+  </socket>
+  <socket type="jack-audio" client="detone" exclusive="off" name="detone">
+   <plug>in_i</plug>
+  </socket>
   <socket type="jack-midi" client="kyo" exclusive="off" name="kyo">
    <plug>midi_in</plug>
   </socket>
@@ -27,8 +36,10 @@
  <slots/>
  <cables>
   <cable type="jack-audio" input="system" output="kyo"/>
+  <cable type="jack-audio" input="detone" output="kyo"/>
   <cable type="jack-midi" input="key" output="system"/>
   <cable type="jack-midi" input="kyo" output="key"/>
+  <cable type="jack-midi" input="out" output="detone"/>
  </cables>
 </patchbay>
 

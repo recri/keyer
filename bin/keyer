@@ -385,7 +385,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 		[list -text $text -info $info -format %.0f -min 1 -max 32 -step 1]
 	}
 	-dict {
-	    # for the ascii keyer
+	    # for the ascii keyer or output decoder
 	}
 	-bandwidth {
 	    # for the unkeyer detone module
@@ -412,6 +412,21 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue} {
 	-speed {
 	    # ignore
 	    # {-speed speed Speed 48000 48000} sample rate of receivers
+	}
+	-on - -off {
+	    # on/off thresholds in keyer-detone
+	    opt-describe $text $name $opt2 $opt value $ovalue \
+		[list -text $text -info $info -format %.1f -min 0.0 -max 5.0 -step 0.1]
+	}
+	-timeout {
+	    # hysteresis timeout in keyer-detone
+	    opt-describe $text $name $opt2 $opt value $ovalue \
+		[list -text $text -info $info -units frames -format %.0f -min 0 -max 1000 -step 1]
+	}
+	-estimate {
+	    # estimated dot clock in samples
+	    opt-describe $text $name $opt2 $opt value $ovalue \
+		[list -text $text -info $info -units frames -format %.0f -min 10 -max 1000 -step 1]
 	}
 	default {
 	    puts "opt-describe: no clues for {$name $opt2 {$opt $oname $oclass $odefault $ovalue} $info}"
@@ -694,6 +709,7 @@ package require morse::itu
 
 snit::widgetadaptor ro-text {
     option -detime -default {}
+    option -dict -default {}
     
     method delete {args} { }
     method insert {args} { }
@@ -705,14 +721,33 @@ snit::widgetadaptor ro-text {
     delegate method del to hull as delete
     
     variable handler {}
+    variable code {}
     
     method is-busy {} { return 0 }
     # {-color1 -color2 -background}
     method exposed-options {} { return {} }
 
     method timeout {} {
-	$self insert end [$options(-detime) get]\n
-	set handler [after 100 [mymethod timeout]]
+	#$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
+	# get new text
+	set text [$options(-detime) get]
+	# insert into output display
+	$self ins end $text
+	# append to accumulated code
+	append code $text
+	while {[regexp {^([^ ]*) (.*)$} $code all symbol rest]} {
+	    if {$symbol ne {}} {
+		# each symbol must be terminated by a space
+		# replace symbol and space with translation
+		$self del end-[string length $code]chars-1chars end
+		$self ins end "[morse-to-text $options(-dict) $symbol]$rest"
+	    } else {
+		# an extra space indicates a word space
+		# and it's already there
+	    }
+	    set code $rest
+	}
+	set handler [after 250 [mymethod timeout]]
     }
 
     method save {} {
@@ -723,7 +758,7 @@ snit::widgetadaptor ro-text {
     }
 
     method clear {} {
-	$self delete 1.0 end
+	$self del 1.0 end
     }
 
     method option-menu {x y} {
@@ -741,6 +776,7 @@ snit::widgetadaptor ro-text {
 	$self configure -width 30 -height 15 -exportselection true {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	set handler [after 100 [mymethod timeout]]
+	# $self ins end "This is the ro-text window for keyer-detime\n"
     }
 }
 
@@ -767,7 +803,6 @@ snit::widgetadaptor midi-tap {
     # need for this timeout polling
     
     method timeout {} {
-	#$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
 	if {[$options(-tap) state]} {
 	    foreach event [$options(-tap) get] {
 		foreach {frame midi} $event break
@@ -894,7 +929,7 @@ proc load-ui {} {
 	}
     }
     if {[has-detime]} {
-	.p add [ro-text .p.detime -detime [get-detime]]
+	.p add [ro-text .p.detime -detime [get-detime] -dict [morse-itu-dict]]
 	set ::data(show-detime) 1
 	# add options for read-text widget
 	widget-opts .p.detime [get-detime] [.p.detime exposed-options]

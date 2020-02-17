@@ -17,13 +17,17 @@
 */
 /*
 
-  keyer_decode reads midi note on and note off, infers a dit clock,
-  and produces a string of dits, dahs, and spaces.
+  keyer_detime reads midi note on and note off, infers a dit clock,
+  and produces a string of dits, dahs, and spaces using the inferred
+  dit clock.
     
   It currently gets confused if it starts on something that's all
   dah's and spaces, so I'm cheating and sending the wpm from the
   keyers.  It should wait until it's seen both dits and dahs before
   making its first guesses.
+
+  That is, it should buffer its input until it starts to make sense
+  and then rescan the entire buffer.
 
 */
 
@@ -31,7 +35,6 @@
 #define FRAMEWORK_USES_INTERP 1
 #define FRAMEWORK_OPTIONS_MIDI	1
 #define FRAMEWORK_OPTIONS_KEYER_SPEED_WPM 1
-#define FRAMEWORK_OPTIONS_KEYER_SPEED_WORD 1
 
 #include "framework.h"
 #include "../dspmath/midi.h"
@@ -57,50 +60,50 @@ typedef struct {
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = dp->fw.busy = 0;
-    dp->opts.detime.word = dp->opts.word;
-    dp->opts.detime.wpm = dp->opts.wpm;
+    dp->opts.detime.spd = (unsigned) round((sdrkit_sample_rate(dp) * 60) / (dp->opts.wpm * 50));
     detime_configure(&dp->detime, &dp->opts.detime);
   }
 }
 
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
-  dp->opts.detime.sample_rate = sdrkit_sample_rate(&dp->fw);
-  dp->opts.detime.word = dp->opts.word;
-  dp->opts.detime.wpm = dp->opts.wpm;
+  dp->opts.detime.spd = (unsigned) round((sdrkit_sample_rate(arg) * 60) / (dp->opts.wpm * 50));
   void *p = detime_preconfigure(&dp->detime, &dp->opts.detime); if (p != &dp->detime) return p;
   detime_configure(&dp->detime, &dp->opts.detime);
   ring_buffer_init(&dp->ring, RING_SIZE, dp->buff);
   return arg;
 }
 
-static void _detime(_t *dp, unsigned count, unsigned char *p) {
+static void _detime_out(_t *dp, char out) {
+  if (out != 0) {
+    if (ring_buffer_writeable(&dp->ring)) {
+      ring_buffer_put(&dp->ring, 1, &out);
+    } else {
+      fprintf(stderr, "keyer_detime: buffer overflow writing \"%c\"\n", out);
+    }
+  }
+}
+
+static void _detime_event(_t *dp, unsigned count, unsigned char *p) {
   /* detime note/channel based events */
-  if (dp->fw.verbose > 4)
-    fprintf(stderr, "%d: _detime(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
+  if (dp->fw.verbose > 10)
+    fprintf(stderr, "%d: _detime_event(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
     unsigned char cmd = p[0]&0xF0; 
     unsigned char channel = (p[0]&0xF)+1;
     unsigned char note = p[1];
     if (channel == dp->opts.chan && note == dp->opts.note) {
       char out;
-      if (dp->fw.verbose > 4)
-	fprintf(stderr, "%d: _detime(%x)\n", dp->frame, cmd);
       if (cmd == MIDI_NOTE_OFF)		/* the end of a dit or a dah */
-	out = detime_process(&dp->detime, 0, dp->frame);
+	_detime_out(dp, detime_process(&dp->detime, DETIME_OFF, dp->frame));
       else if (cmd == MIDI_NOTE_ON)	/* the end of an inter-element, inter-letter, or a longer space */
-	out = detime_process(&dp->detime, 1, dp->frame);
-      else
-	return;
-      if (out != 0) {
-	if (ring_buffer_writeable(&dp->ring)) {
-	  ring_buffer_put(&dp->ring, 1, &out);
-	} else {
-	  fprintf(stderr, "keyer_detime: buffer overflow writing \"%c\"\n", out);
-	}
-      }
+	_detime_out(dp, detime_process(&dp->detime, DETIME_ON, dp->frame));
     }
   }
+}
+
+static void _detime_query(_t *dp) {
+  _detime_out(dp, detime_process(&dp->detime, DETIME_QUERY, dp->frame));
 }
 
 /*
@@ -119,7 +122,9 @@ static int _process(jack_nframes_t nframes, void *arg) {
       jack_midi_event_t event;
       int port;
       while (framework_midi_event_get(&dp->fw, i, &event, &port))
-	_detime(dp, event.size, event.buffer);
+	_detime_event(dp, event.size, event.buffer);
+      if ((dp->frame & 63) == 0) 
+	_detime_query(dp);
       /* increment the frame counter */
       dp->frame += 1;
     }
@@ -146,7 +151,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = data->fw.busy = (data->modified || data->opts.word != save.word || data->opts.wpm != save.wpm);
+  data->modified = data->fw.busy = data->modified;
   return TCL_OK;
 }
 

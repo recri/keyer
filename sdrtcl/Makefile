@@ -270,7 +270,7 @@ $(LIBDIR)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_op
 $(LIBDIR)/keyer_debounce.so: keyer_debounce.cc framework.h ../dspmath/midi.h ../dspmath/debouncer.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/ring_buffer.h
+$(LIBDIR)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/ring_buffer.h ../dspmath/detime.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/keyer_detone.so: keyer_detone.c framework.h ../dspmath/midi.h ../dspmath/filter_goertzel.h
@@ -299,7 +299,7 @@ $(LIBDIR)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../dspmath/midi.h ../d
 
 $(LIBDIR)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/keyed_tone.h\
 	 ../dspmath/ramp.h ../dspmath/window.h
-	gcc -fPIC -shared -o $@ $(OSCA_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
+	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/usb.so: usb.c
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(LIBUSB_CFLAGS) $< $(LIBUSB_LIBS) $(LIBS)

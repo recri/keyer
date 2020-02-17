@@ -20,3 +20,11 @@
 ** MidiKeyTouch - runs on a Teensy LC or a Teensy 3.0-2, sandwiches the 
    microprocessor between two PCB's with touch pads, and wraps the entire
    package in tube of heatshrink.  Currently under development.
+** MidiKeys - runs on a Teensy 3.x or 4.x, allows multiple keys.
+   Also supports the "low commitment" midi keyer
+   [[../images/low-commitment2.png]]
+   which can be built with:
+*** a Teensy LC/3.x/4.x from pjrc.com ($11.65 to $22.95)
+*** a 10x17 pt mini solderless breadboard (cost depends on quantity)
+*** a breadboard friendly stereo jack,
+    such as https://www.adafruit.com/product/1699 for $0.95
