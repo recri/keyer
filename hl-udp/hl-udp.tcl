@@ -240,8 +240,12 @@ snit::type sdrtcl::hl-udp {
     method {discovery response} {socket} {
 	set data [read $socket]
 	set peer [fconfigure $socket -peer]
+	#puts "[binary scan $data c* buffer] items scanned"
+	#puts "discovery response [llength $buffer] bytes: [as-hex $buffer]"
+	foreach {effe status metis_mac_address code_version board_id} {0 0 0 0 0} break
 	set n [binary scan $data Scc6cc effe status metis_mac_address code_version board_id]
 	if {$n != 5} { puts "discovery response: $n items scanned in response" }
+
 	if {($effe&0xffff) != 0xeffe} { 
 	    puts "discovery response: sync bytes are [format %04x $effe]?"
 	}

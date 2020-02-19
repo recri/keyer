@@ -706,6 +706,7 @@ snit::widgetadaptor cw-text {
 #
 package require morse::morse
 package require morse::itu
+package require morse::fldigi
 
 snit::widgetadaptor ro-text {
     option -detime -default {}
@@ -929,7 +930,7 @@ proc load-ui {} {
 	}
     }
     if {[has-detime]} {
-	.p add [ro-text .p.detime -detime [get-detime] -dict [morse-itu-dict]]
+	.p add [ro-text .p.detime -detime [get-detime] -dict [morse-fldigi-dict]]
 	set ::data(show-detime) 1
 	# add options for read-text widget
 	widget-opts .p.detime [get-detime] [.p.detime exposed-options]

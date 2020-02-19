@@ -25,12 +25,14 @@
 ** The incoming IQ samples are 24bits in memory, big-endian, but only the lowest
 ** 16bits are significant.  If there is more than one receiver running, then the
 ** receiver samples are interleaved.  There is also a monoaural microphone channel
-** interleaved into the buffer as well, 16bits per sample.  The incoming samples 
-** may arrive at 48, 96, 192, or 384 ksps, which should match the jack sample rate.
+** interleaved into the buffer as well, 16bits per sample, but it has no content,
+** it simply occupies space. The incoming samples may arrive at 48, 96, 192, or 384
+** ksps, which should match the jack sample rate. 
+**
 ** The incoming samples arrive in the component instance as two 504 byte Tcl binary
 ** strings, which are the result of two 512 byte USB frames unpacked from a 1032 byte
 ** UDP packet. 
-
+**
 ** We could pass the entire UDP packet with two USB frame offsets as input to the
 ** component and save any overhead of allocating the substrings.  But we will be
 ** allocating the two USB frames for the output side, so it makes things more 

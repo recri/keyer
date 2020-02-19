@@ -1,54 +1,65 @@
 <!DOCTYPE patchbay>
-<patchbay version="0.5.0" name="hl2">
+<patchbay name="hl2" version="0.5.0">
  <output-sockets>
-  <socket exclusive="off" name="hlj" client="hlj" type="jack-audio">
-   <plug>out_i</plug>
-   <plug>out_q</plug>
+  <socket type="jack-midi" exclusive="off" name="teensy midi" client="a2j">
+   <plug>Teensy MIDI \[20\] \(capture\): Teensy MIDI MIDI 1</plug>
   </socket>
-  <socket exclusive="off" name="kyo" client="kyo" type="jack-audio">
-   <plug>out_i</plug>
-   <plug>out_q</plug>
-  </socket>
-  <socket exclusive="off" name="system" client="system" type="jack-midi">
-   <plug>midi_capture_1</plug>
-  </socket>
-  <socket exclusive="off" name="key" client="key" type="jack-midi">
+  <socket type="jack-midi" exclusive="off" name="key" client="key">
    <plug>midi_out</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="kyo" client="kyo">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="detone" client="detone">
+   <plug>midi_out</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="hlj" client="hlj">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
   </socket>
  </output-sockets>
  <input-sockets>
-  <socket exclusive="off" name="system" client="system" type="jack-audio">
-   <plug>playback_1</plug>
-   <plug>playback_2</plug>
+  <socket type="jack-midi" exclusive="off" name="key" client="key">
+   <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" name="hlj" client="hlj" type="jack-audio">
+  <socket type="jack-midi" exclusive="off" name="kyo" client="kyo">
+   <plug>midi_in</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="detone" client="detone">
+   <plug>in_i</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="decode out" client="out">
+   <plug>midi_in</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="hlj" client="hlj">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket exclusive="off" name="scope12" client="Simple Scope \(4 channel\)" type="jack-audio">
+  <socket type="jack-audio" exclusive="off" name="system" client="system">
+   <plug>playback_1</plug>
+   <plug>playback_2</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="scope12" client="Simple Scope \(4 channel\)">
    <plug>in1</plug>
    <plug>in2</plug>
   </socket>
-  <socket exclusive="off" name="scope34" client="Simple Scope \(4 channel\)" type="jack-audio">
+  <socket type="jack-audio" exclusive="off" name="scope34" client="Simple Scope \(4 channel\)">
    <plug>in3</plug>
    <plug>in4</plug>
-  </socket>
-  <socket exclusive="off" name="key" client="key" type="jack-midi">
-   <plug>midi_in</plug>
-  </socket>
-  <socket exclusive="off" name="kyo" client="kyo" type="jack-midi">
-   <plug>midi_in</plug>
   </socket>
  </input-sockets>
  <slots/>
  <cables>
-  <cable input="system" output="hlj" type="jack-audio"/>
-  <cable input="scope34" output="hlj" type="jack-audio"/>
-  <cable input="hlj" output="kyo" type="jack-audio"/>
-  <cable input="system" output="kyo" type="jack-audio"/>
-  <cable input="scope12" output="kyo" type="jack-audio"/>
-  <cable input="key" output="system" type="jack-midi"/>
-  <cable input="kyo" output="key" type="jack-midi"/>
+  <cable type="jack-audio" output="hlj" input="system"/>
+  <cable type="jack-audio" output="hlj" input="scope34"/>
+  <cable type="jack-audio" output="kyo" input="hlj"/>
+  <cable type="jack-audio" output="kyo" input="system"/>
+  <cable type="jack-audio" output="kyo" input="scope12"/>
+  <cable type="jack-audio" output="kyo" input="detone"/>
+  <cable type="jack-midi" output="key" input="kyo"/>
+  <cable type="jack-midi" output="teensy midi" input="key"/>
+  <cable type="jack-midi" output="detone" input="decode out"/>
  </cables>
 </patchbay>
 

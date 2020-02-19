@@ -167,23 +167,19 @@ namespace eval ::morse::fldigi {
 	# if empty
 	if {$line eq {}} continue
 	# remove internal commas
-	set line [regsub -all {,[ \t]*} $line { }]
-	puts $line
+	set line [regsub -all {,[ \t]+} $line { }]
 	# remove trailing commas
 	set line [regsub {,$} $line {}]
-	puts $line
-	# remove enclosing brackets
-	#set line [regsub {^\{(.*)\}$} $line {\1}]
-	#puts $line
 	# iterate over remaining table
 	foreach {enabled char pro code} {*}$line break
 	# discard disabled entries
 	if {! $enabled} continue
+	# discard lower case
+	if {[string is lower $char]} continue
+	# make the tables
 	dict set dict $char $code
 	dict set prodict $pro $code
     }
-    #puts "dict: $dict"
-    #puts "prodict: $prodict"
 }
 
 proc morse-fldigi-dict {} {
