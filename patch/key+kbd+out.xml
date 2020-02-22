@@ -1,0 +1,57 @@
+<!DOCTYPE patchbay>
+<patchbay version="0.5.0" name="key+kbd+out">
+ <output-sockets>
+  <socket type="jack-midi" exclusive="off" name="system" client="a2j">
+   <plug>Teensy MIDI \[20\] \(capture\): Teensy MIDI MIDI 1</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="key" client="key">
+   <plug>midi_out</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="kbd" client="kbd">
+   <plug>midi_out</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="kyo" client="kyo">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="kbo" client="kbo">
+   <plug>out_i</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="detone" client="detone">
+   <plug>midi_out</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket type="jack-midi" exclusive="off" name="key" client="key">
+   <plug>midi_in</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="kyo" client="kyo">
+   <plug>midi_in</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="kbo" client="kbo">
+   <plug>midi_in</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="detone" client="detone">
+   <plug>in_i</plug>
+  </socket>
+  <socket type="jack-audio" exclusive="off" name="system" client="system">
+   <plug>playback_1</plug>
+   <plug>playback_2</plug>
+  </socket>
+  <socket type="jack-midi" exclusive="off" name="out" client="out">
+   <plug>midi_in</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables>
+  <cable type="jack-audio" output="kyo" input="system"/>
+  <cable type="jack-audio" output="kyo" input="detone"/>
+  <cable type="jack-midi" output="system" input="key"/>
+  <cable type="jack-midi" output="detone" input="out"/>
+  <cable type="jack-midi" output="key" input="kyo"/>
+  <cable type="jack-audio" output="kbo" input="system"/>
+  <cable type="jack-audio" output="kbo" input="detone"/>
+  <cable type="jack-midi" output="kbd" input="kbo"/>
+ </cables>
+</patchbay>
+

@@ -1,0 +1,17 @@
+* [x] The radio don't run without the IQ enable bit in the start command.
+  guess that's part of the design
+* [ ] The Tcl udp doesn't keep up at 4x384
+* [ ] rx reset doesn't clear the queue when Tcl udp falls behind
+* [x] why am I getting spurious -state settings from overflying
+  scale and spinbox in the hl::scale megawidget?
+** Because the name of the widget is scale, which is the name
+   of a sub-widget, and the sub-widget handler catches the mega widget
+   name.
+  
+* [x] why is my relay chattering when I enable MOX?
+  ah, contrary to all the x's in the low bit of every C0 after C0==0,
+  every C0 has a MOX bit in that position.
+* [ ] first smoke on hl_jack:
+   *** stack smashing detected ***: <unknown> terminated
+   Aborted (core dumped)
+   guess I was a little sloppy somewhere
