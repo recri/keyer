@@ -134,6 +134,7 @@ static int usb_get_libusb_device_handle(ClientData clientData, Tcl_Interp *inter
 /*
 ** entry points
 */
+#if 0
 static int usb_set_debug(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   int level;
   if (usb_get_int(clientData, interp, objc, objv, 1, &level) != TCL_OK) {
@@ -141,6 +142,7 @@ static int usb_set_debug(ClientData clientData, Tcl_Interp *interp, int objc, Tc
   }
   libusb_set_debug(NULL, level);
 }
+#endif
 
 static int usb_init(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]) {
   return usb_error(clientData, interp, libusb_init(NULL));
@@ -404,7 +406,12 @@ int MY_INIT(Tcl_Interp *interp) {
   Tcl_Eval(interp, "namespace eval " MY_NAMESPACE " { }");
 #endif
   
+#if 0
+  /*
+usb.c:142:3: warning: ‘libusb_set_debug’ is deprecated: Use libusb_set_option instead [-Wdeprecated-declarations]
+  */
   Tcl_CreateObjCommand(interp, "usb::set_debug", usb_set_debug, NULL, NULL);
+#endif
   Tcl_CreateObjCommand(interp, "usb::init", usb_init, NULL, NULL);
   Tcl_CreateObjCommand(interp, "usb::exit", usb_exit, NULL, NULL);
   Tcl_CreateObjCommand(interp, "usb::get_device_list", usb_get_device_list, NULL, NULL);
