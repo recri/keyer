@@ -89,19 +89,20 @@ extern "C" {
 
   static void _decode(_t *dp, int count, unsigned char *p) {
     if (count == 3) {
-      unsigned char channel = (p[0]&0xF)+1;
-      unsigned char command = p[0]&0xF0;
-      unsigned char note = p[1];
+      const unsigned char channel = (p[0]&0xF)+1;
       if (channel == dp->opts.chan) {
+	const unsigned char note = p[1];
+	const unsigned char command = p[0]&0xF0;
+	const unsigned char velocity = p[2];
 	if (note == dp->opts.note) {
 	  switch (command) {
 	  case MIDI_NOTE_OFF: dp->raw_dit = 0; break;
-	  case MIDI_NOTE_ON:  dp->raw_dit = 1; break;
+	  case MIDI_NOTE_ON:  dp->raw_dit = velocity > 0 ? 1 : 0; break;
 	  }
 	} else if (note == dp->opts.note+1) {
 	  switch (command) {
 	  case MIDI_NOTE_OFF: dp->raw_dah = 0; break;
-	  case MIDI_NOTE_ON:  dp->raw_dah = 1; break;
+	  case MIDI_NOTE_ON:  dp->raw_dah = velocity > 0 ? 1 : 0; break;
 	  }
 	}
       }
@@ -143,8 +144,8 @@ extern "C" {
       /* clock the iambic keyer */
       if (dp->k.clock(dp->raw_dit, dp->raw_dah, 1) != dp->key_out) {
 	dp->key_out ^= 1;
-	unsigned char midi_note_event[] = { (unsigned char)((dp->key_out ? MIDI_NOTE_ON : MIDI_NOTE_OFF) | (dp->opts.chan-1)),
-					    (unsigned char)dp->opts.note, 0 };
+	unsigned char midi_note_event[] = { (unsigned char)(MIDI_NOTE_ON | (dp->opts.chan-1)),
+					    (unsigned char)dp->opts.note, (unsigned char)(dp->key_out ? 1 : 0) };
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
 	if (buffer == NULL) {
 	  fprintf(stderr, "jack won't buffer 3 midi bytes!\n");

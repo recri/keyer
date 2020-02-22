@@ -81,8 +81,8 @@ extern "C" {
     return arg;
   }
 
-  static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note) {
-    unsigned char midi[] = { (unsigned char)(cmd | (dp->opts.chan-1)), (unsigned char)note, 0 };
+  static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note, unsigned char velocity) {
+    unsigned char midi[] = { (unsigned char)(cmd | (dp->opts.chan-1)), (unsigned char)note, velocity };
     unsigned char* buffer = jack_midi_event_reserve(midi_out, t, 3);
     if (buffer == NULL) {
       fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
@@ -117,12 +117,13 @@ extern "C" {
       while (in_event_time == i) {
 	if (in_event.size == 3) {
 	  const unsigned char channel = (in_event.buffer[0]&0xF)+1;
-	  const unsigned char command = in_event.buffer[0]&0xF0;
-	  const unsigned char note = in_event.buffer[1];
 	  if (channel == dp->opts.chan) {
+	    const unsigned char note = in_event.buffer[1];
 	    if (note >= dp->opts.note && note < dp->opts.note+DEBOUNCE_N_NOTES) {
+	      const unsigned char command = in_event.buffer[0]&0xF0;
 	      if (command == MIDI_NOTE_ON) {
-		dp->current[note-dp->opts.note] = 1;
+		const unsigned char velocity = in_event.buffer[2];
+		dp->current[note-dp->opts.note] = velocity > 0 ? 1 : 0;
 	      } else if (command == MIDI_NOTE_OFF) {
 		dp->current[note-dp->opts.note] = 0;
 	      }
@@ -143,7 +144,7 @@ extern "C" {
 	for (int j = 0; j < DEBOUNCE_N_NOTES; j += 1) {
 	  if (debouncer_process(&dp->deb[j], dp->current[j]) != dp->stable[j]) {
 	    dp->stable[j] ^= 1;
-	    _send(dp, midi_out, i, dp->stable[j] ? MIDI_NOTE_ON : MIDI_NOTE_OFF, dp->opts.note+j);
+	    _send(dp, midi_out, i, MIDI_NOTE_ON, dp->opts.note+j, (dp->stable[j] ? 1 : 0));
 	  }
 	}
       }

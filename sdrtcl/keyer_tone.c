@@ -91,8 +91,8 @@ static void _update(void *arg) {
 /*
 ** send midi key event through
 */
-static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note) {
-  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, 0 };
+static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note, unsigned char velocity) {
+  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, velocity };
   unsigned char* buffer = jack_midi_event_reserve(midi_out, t, 3);
   if (buffer == NULL) {
     fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
@@ -126,15 +126,19 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	const char channel = (event.buffer[0]&0xF)+1;
 	const unsigned char command = event.buffer[0]&0xF0;
 	const char note = event.buffer[1];
+	const char velocity = event.buffer[2];
 	if (channel == dp->opts.chan && note == dp->opts.note) {
 	  switch (command) {
+	  case MIDI_NOTE_ON:
+	    if (velocity > 0) {
+	      keyed_tone_on(&dp->tone); 
+	      _send(dp, midi_out, i, command, note, velocity);
+	      break;
+	    }
+	    /* fall through */
 	  case MIDI_NOTE_OFF:
 	    keyed_tone_off(&dp->tone);
-	    _send(dp, midi_out, i, command, note);
-	    break;
-	  case MIDI_NOTE_ON:
-	    keyed_tone_on(&dp->tone); 
-	    _send(dp, midi_out, i, command, note);
+	    _send(dp, midi_out, i, command, note, velocity);
 	    break;
 	  }
 	}

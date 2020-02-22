@@ -9,7 +9,7 @@ package require sdrtcl::hl-jack
 
 array set options {
     -speed 48000
-    -lna-db 14
+    -lna-db 40
 }
 
 namespace eval ::hl {}

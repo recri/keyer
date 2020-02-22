@@ -237,23 +237,40 @@ snit::type sdrtcl::hl-udp {
 	after $options(-discover-timeout) [mymethod discovery timeout $socket]
 	incr d(discover-tries)
     }
+    # added response information
+    # 0x0B	[7:0]	MCP4662 0x06 Config Bits
+    # 0x0C	[7:0]	MCP4662 0x07 Reserved Config Bits
+    # 0x0D	[7:0]	MCP4662 0x08 Fixed IP
+    # 0x0E	[7:0]	MCP4662 0x09 Fixed IP
+    # 0x0F	[7:0]	MCP4662 0x0A Fixed IP
+    # 0x10	[7:0]	MCP4662 0x0B Fixed IP
+    # 0x11	[7:0]	MCP4662 0x0C MAC
+    # 0x12	[7:0]	MCP4662 0x0D MAC
+    # 0x13	[7:0]	Number of Hardware Receivers
+    # 0x14	[7:6]	00 wide band data is 12-bit sign extended two's complement
+    #		01 wide band data is 16-bit two's complement
+    #	        [5:0]	Board ID: 5, 3 or 2 for build
+    # 0x15	[7:0]	Gateware Minor Version/Patch
     method {discovery response} {socket} {
 	set data [read $socket]
 	set peer [fconfigure $socket -peer]
 	#puts "[binary scan $data c* buffer] items scanned"
 	#puts "discovery response [llength $buffer] bytes: [as-hex $buffer]"
 	foreach {effe status metis_mac_address code_version board_id} {0 0 0 0 0} break
-	set n [binary scan $data Scc6cc effe status metis_mac_address code_version board_id]
-	if {$n != 5} { puts "discovery response: $n items scanned in response" }
-
+	foreach {mcp4662_config fixed_ip fixed_mac nrx wb_fmt_build_id gateware_minor} {0 0 0 0 0 0}
+	set n [binary scan $data Scc6ccc2c4c2ccc effe status metis_mac_address code_version board_id mcp4662_config fixed_ip fixed_mac nrx wb_fmt_build_id gateware_minor]
+	if {$n != 11} { puts "discovery response: $n items scanned in response" }
 	if {($effe&0xffff) != 0xeffe} { 
 	    puts "discovery response: sync bytes are [format %04x $effe]?"
 	}
 	# puts "discovery response: {$peer} $status [as-mac $metis_mac_address] $code_version $board_id"
 	set options(-peer) $peer
+	set options(-status) $status
 	set options(-mac-addr) [as-mac $metis_mac_address]
 	set options(-code-version) $code_version
 	set options(-board-id) $board_id
+	set options(-mcp4662) [as-hex $mcp4662_config]
+	set options(-fixed-ip) [as-ipaddr $fixed_ip
 	if {$status == 2} {
 	    set d(discovery) 1
 	    after 1 [mymethod hl begin]

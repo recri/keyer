@@ -89,15 +89,20 @@ static void _detime_event(_t *dp, unsigned count, unsigned char *p) {
   if (dp->fw.verbose > 10)
     fprintf(stderr, "%d: _detime_event(%x, [%x, %x, %x, ...]\n", dp->frame, count, p[0], p[1], p[2]);
   if (count == 3) {
-    unsigned char cmd = p[0]&0xF0; 
-    unsigned char channel = (p[0]&0xF)+1;
-    unsigned char note = p[1];
+    const unsigned char cmd = p[0]&0xF0; 
+    const unsigned char channel = (p[0]&0xF)+1;
+    const unsigned char note = p[1];
+    const unsigned char velocity = p[2];
     if (channel == dp->opts.chan && note == dp->opts.note) {
       char out;
-      if (cmd == MIDI_NOTE_OFF)		/* the end of a dit or a dah */
+      if ( cmd == MIDI_NOTE_OFF) /* the end of a dit or a dah */
 	_detime_out(dp, detime_process(&dp->detime, DETIME_OFF, dp->frame));
-      else if (cmd == MIDI_NOTE_ON)	/* the end of an inter-element, inter-letter, or a longer space */
-	_detime_out(dp, detime_process(&dp->detime, DETIME_ON, dp->frame));
+      else if (cmd == MIDI_NOTE_ON) {
+	if (velocity > 0) /* the end of an inter-element, inter-letter, or a longer space */
+	  _detime_out(dp, detime_process(&dp->detime, DETIME_ON, dp->frame));
+	else		  /* the end of a dit or a dah */
+	  _detime_out(dp, detime_process(&dp->detime, DETIME_OFF, dp->frame));
+      }
     }
   }
 }

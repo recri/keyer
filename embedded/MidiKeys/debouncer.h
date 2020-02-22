@@ -51,8 +51,8 @@ class debouncer {
 
  private:
   byte _value;
-  unsigned long _filter;
-  unsigned long _mask;
+  unsigned long long _filter;
+  unsigned long long _mask;
 };
 
 extern "C" {

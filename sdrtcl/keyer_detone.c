@@ -103,7 +103,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	if (buffer == NULL) {
 	  fprintf(stderr, "%s:%d: jack won't buffer %d midi bytes!\n", __FILE__, __LINE__, 3);
 	} else {
-	  unsigned char note[3] = { cmd | dp->opts.chan-1, dp->opts.note, 0 };
+	  unsigned char note[3] = { MIDI_NOTE_ON | dp->opts.chan-1, dp->opts.note, (cmd == MIDI_NOTE_ON ? 1 : 0) };
 	  // fprintf(stderr, "keyer_detone sending %x %x %x\n", note[0], note[1], note[2]);
 	  memcpy(buffer, note, 3);
 	  dp->on ^= 1;

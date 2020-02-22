@@ -1015,8 +1015,12 @@ proc default-setups {} {
 	out { keyer -start {keyer-detone@detone keyer-detime@out} }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
-	key+kbd { keyer -run {key kbd nod 1ch}}
+	key+kbd { keyer -run {key kbd} -key-wpm 15.0 -key-mode B}
+	key+out { keyer -start {ad5dz@key keyer-tone@kyo keyer-detone@detone keyer-detime@out} -key-wpm 15.0 -key-mode B -detone-freq 700 }
+	key+kbd+out { keyer -start {ad5dz@key keyer-tone@kyo keyer-detone@detone keyer-detime@out ascii@kbd keyer-tone@kbo} -key-wpm 15.0 -key-mode B -detone-freq 700 -kbd-wpm 80.0 -kbo-ramp 6.6 }
+
 	hlj { keyer -start hl-jack@hlj }
+
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
@@ -1028,7 +1032,9 @@ proc default-setups {} {
 	info-out {audio to ascii morse decoder}
 	info-nod {hide esoteric keyer options}
 	info-1ch {merge midi channel and note options}
-	info-key+kbd {run the key and the kdb setups}
+	info-key+kbd {iambic key and keyboard}
+	info-key+out { iambic key and decoder }
+	info-key+kbd+out { iambic key, keyboard, and decoder }
 	info-hlj { jack interface for hermes lite }
     }]
 }

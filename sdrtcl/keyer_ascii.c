@@ -114,7 +114,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   if (data->abort) {
     midi_buffer_init(&data->midi);
     unsigned char *buffer = jack_midi_event_reserve(midi_out, 0, 3);
-    unsigned char note_off[] = { MIDI_NOTE_OFF|(data->opts.chan-1), data->opts.note, 0 };
+    unsigned char note_off[] = { MIDI_NOTE_ON|(data->opts.chan-1), data->opts.note, 0 };
     if (buffer == NULL) {
       fprintf(stderr, "%s:%d: jack won't buffer %d midi bytes!\n", __FILE__, __LINE__, 3);
     } else {
@@ -163,14 +163,14 @@ static int _queue_midi(_t *data, Tcl_UniChar c, char *p, int continues) {
   } else {
     while (*p != 0) {
       if (*p == '.') {
-	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dit, data->opts.chan, data->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dit, data->opts.chan, data->opts.note, 1) < 0) return 0;
       } else if (*p == '-') {
-	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dah, data->opts.chan, data->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dah, data->opts.chan, data->opts.note, 1) < 0) return 0;
       }
       if (p[1] != 0 || continues) {
-	if (midi_buffer_queue_note_off(&data->midi, data->samples_per.ies, data->opts.chan, data->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ies, data->opts.chan, data->opts.note, 0) < 0) return 0;
       } else {
-	if (midi_buffer_queue_note_off(&data->midi, data->samples_per.ils, data->opts.chan, data->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ils, data->opts.chan, data->opts.note, 0) < 0) return 0;
       }
       p += 1;
     }

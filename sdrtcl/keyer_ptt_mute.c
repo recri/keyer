@@ -80,13 +80,14 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	const unsigned char channel = (in_event.buffer[0]&0xF)+1;
 	const unsigned char command = in_event.buffer[0]&0xF0;
 	const unsigned char note = in_event.buffer[1];
+	const unsigned char velocity = in_event.buffer[2];
 	if (channel == dp->opts.chan && note == dp->opts.note+1) { /* ptt convention? */
-	  if (command == MIDI_NOTE_ON) {
+	  if (MIDI_NOTE_ON && velocity > 0) {
 	    dp->mute = 1;
 	    dp->ramp = 1.000;
 	    dp->dramp = -0.001;
 	    dp->transition = 1000;
-	  } else if (command == MIDI_NOTE_OFF) {
+	  } else if (command == MIDI_NOTE_OFF || (command == MIDI_NOTE_ON && velocity == 0)) {
 	    dp->mute = 0;
 	    dp->ramp = 0.000;
 	    dp->dramp = 0.001;
