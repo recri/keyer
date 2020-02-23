@@ -103,6 +103,10 @@ proc has-server {} { return [has-var -server] }
 proc get-server {} { return [get-var -server] }
 proc set-server {server} { set-var -server $server }
 
+proc has-iambic {} { return [has-var -iambic] }
+proc get-iambic {} { return [get-var -iambic] }
+proc set-iambic {val} { set-var -iambic $val }
+
 proc has-dial {} { return 1 }
 proc get-dial {} { return {dial} }
 proc has-details {} { return 1 }
@@ -215,6 +219,15 @@ proc parse-component {name} {
 }
 proc load-component {name} {
     foreach {name1 name2} [parse-component $name] break
+
+    # special case insert selected iambic keyer
+    if {$name1 eq {iambic}} {
+	if {[has-iambic]} {
+	    set name1 [get-iambic]
+	    puts "substituted $name1 for iambic"
+	}
+    }
+
     # search through the sdrtcl component list
     # for components which match name1
     set candidates {}
@@ -1003,10 +1016,10 @@ proc save-setups {} {
 
 proc default-setups {} {
     return [dict create {*}{
-	key { keyer -start {ad5dz@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
-	key2 { keyer -start {ad5dz@key2 keyer-tone@kyo2} -key2-wpm 18 -key2-note 2 -kyo2-ramp 4.0 -kyo2-note 2 }
-	kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
-	kbd2 { keyer -start {ascii@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
+	key { keyer -start {iambic@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
+	key2 { keyer -start {iambic@key2 keyer-tone@kyo2} -key2-wpm 18 -key2-note 2 -kyo2-ramp 4.0 -kyo2-note 2 }
+	kbd { keyer -start {iambic@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
+	kbd2 { keyer -start {iambic@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
 	deb { keyer -start {keyer-debounce@deb} }
 	cas { keyer -start {midi-insert@cas} }
@@ -1016,11 +1029,12 @@ proc default-setups {} {
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
 	key+kbd { keyer -run {key kbd} -key-wpm 15.0 -key-mode B}
-	key+out { keyer -start {ad5dz@key keyer-tone@kyo keyer-detone@detone keyer-detime@out} -key-wpm 15.0 -key-mode B -detone-freq 700 }
-	key+kbd+out { keyer -start {ad5dz@key keyer-tone@kyo keyer-detone@detone keyer-detime@out ascii@kbd keyer-tone@kbo} -key-wpm 15.0 -key-mode B -detone-freq 700 -kbd-wpm 80.0 -kbo-ramp 6.6 }
-
+	key+out { keyer -start {iambic@key keyer-tone@kyo keyer-detone@detone keyer-detime@out}
+	    -key-wpm 15.0 -key-mode B -detone-freq 700 }
+	key+kbd+out { keyer -start {iambic@key keyer-tone@kyo keyer-detone@detone keyer-detime@out ascii@kbd keyer-tone@kbo} 
+	    -key-wpm 15.0 -key-mode B -detone-freq 700 -kbd-wpm 80.0 -kbo-ramp 6.6 }
 	hlj { keyer -start hl-jack@hlj }
-
+	huj { keyer -start hl2-udp-jack@huj }
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
@@ -1029,6 +1043,7 @@ proc default-setups {} {
 	info-deb {key contact debouncer}
 	info-cas {midi events from keyboard keys}
 	info-tap {midi monitor for timing events}
+	info-tap2 {second midi monitor for timing events}
 	info-out {audio to ascii morse decoder}
 	info-nod {hide esoteric keyer options}
 	info-1ch {merge midi channel and note options}
@@ -1036,9 +1051,22 @@ proc default-setups {} {
 	info-key+out { iambic key and decoder }
 	info-key+kbd+out { iambic key, keyboard, and decoder }
 	info-hlj { jack interface for hermes lite }
+	info-huj { new jack interface for hermes lite }
     }]
 }
 
+proc merge-default-setups {} {
+    set s [get-setups]
+    set d [default-setups]
+    set up 0
+    dict for {name value} $d {
+	if { ! [dict exists $s $name] } {
+	    dict set s $name $value
+	    incr up
+	}
+    }
+    return $up
+}
 proc init-setups {} {
     # config file does not exist or error reading it
     if { ! [file exists ~/.config]} { file mkdir ~/.config }
@@ -1056,9 +1084,13 @@ proc load-setups {} {
 	init-setups
     } elseif {[setup-v0-style $result]} {
 	set-setups [setup-upgrade-v0-v1 $result]
+	merge-default-setups
 	save-setups
     } else {
 	set-setups $result
+	if {[merge-default-setups]} {
+	    save-setups
+	}
     }
 }
 
@@ -1091,7 +1123,7 @@ proc usage-message {} {
 }
 # process a list of arguments, always formatted as -option value pairs
 proc main-argv {argv} {
-    # peel of any number of setup names
+    # peel off any number of setup names
     while {[llength $argv] > 0 && [is-setup [lindex $argv 0]]} {
 	set v [lindex $argv 0]
 	set argv [lrange $argv 1 end]
@@ -1104,7 +1136,8 @@ proc main-argv {argv} {
 	# -start - components to start
 	# -hide - option patterns to hide
 	# -merge - option patterns to merge
-	# otherwise - -option value pair to aply
+	# -iambic - module for iambic keyer
+	# otherwise - -option value pair to apply
 	switch -- $opt { 
 	    -server { set-server $val }
 	    -title { set-title $val }
@@ -1112,6 +1145,7 @@ proc main-argv {argv} {
 	    -start { lappend-start {*}$val }
 	    -hide { lappend-hide {*}$val }
 	    -merge { lappend-merge {*}$val }
+	    -iambic { set-iambic $val }
 	    default { lappend-argvopts $opt $val }
 	}
     }
@@ -1135,6 +1169,9 @@ proc main {argv} {
     # process arguments, first pass just to collect everything
     main-argv $argv
     
+    # default value for iambic
+    if { ! [has-iambic] } { set-iambic keyer-iambic-ad5dz }
+
     # start components and collect their options
     if { ! [has-start]} {
 	usage-message
