@@ -123,10 +123,10 @@ static int _process(jack_nframes_t nframes, void *arg) {
     int port;
     while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
       if (event.size == 3) {
-	const char channel = (event.buffer[0]&0xF)+1;
+	const unsigned char channel = (event.buffer[0]&0xF)+1;
 	const unsigned char command = event.buffer[0]&0xF0;
-	const char note = event.buffer[1];
-	const char velocity = event.buffer[2];
+	const unsigned char note = event.buffer[1];
+	const unsigned char velocity = event.buffer[2];
 	if (channel == dp->opts.chan && note == dp->opts.note) {
 	  switch (command) {
 	  case MIDI_NOTE_ON:

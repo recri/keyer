@@ -72,30 +72,20 @@ extern "C" {
 
   static void _decode(_t *dp, int count, unsigned char *p) {
     if (count == 3) {
-      unsigned char channel = (p[0]&0xF)+1;
-      unsigned char command = p[0]&0xF0;
-      unsigned char note = p[1];
-      unsigned char velocity = p[2];
+      const unsigned char channel = (p[0]&0xF)+1;
+      const unsigned char command = p[0]&0xF0;
+      const unsigned char note = p[1];
+      const unsigned char velocity = p[2];
       if (channel == dp->opts.chan) {
 	if (note == dp->opts.note) {
 	  switch (command) {
-	  case MIDI_NOTE_ON: 
-	    if (velocity > 0) {
-	      dp->raw_dit = 1; break;
-	    }
-	    /* fall through */
-	  case MIDI_NOTE_OFF: 
-	    dp->raw_dit = 0; break;
+	  case MIDI_NOTE_ON: dp->raw_dit = velocity > 0 ? 1 : 0; break;
+	  case MIDI_NOTE_OFF: dp->raw_dit = 0; break;
 	  }
 	} else if (note == dp->opts.note+1) {
 	  switch (command) {
-	  case MIDI_NOTE_ON: 
-	    if (velocity > 0) {
-	      dp->raw_dah = 1; break;
-	    }
-	    /* fall through */
-	  case MIDI_NOTE_OFF:
-	    dp->raw_dah = 0; break;
+	  case MIDI_NOTE_ON: dp->raw_dah = velocity > 0 ? 1 : 1; break;
+	  case MIDI_NOTE_OFF: dp->raw_dah = 0; break;
 	  }
 	}
       }
