@@ -20,60 +20,21 @@
 /*
 ** This component interfaces between the HermesLite2 radio and the Jack Audio Kit.
 **
-** This component is built to take incoming IQ samples from the hermes lite 2,
-** inject them into a running jack server, extract the transmit IQ samples
-** from jack, and return them for transmission to the hermes lite.
+** It is called from a Tcl loop that reads udp packets from the HermesLite2,
+** gives the rx iq packets to this component, and takes tx iq packets from
+** this component, and writes the tx packets to the HermesLite2.
 **
-** The component maintains the values of many options which are sent to and 
+** This component takes the incoming IQ samples from the HermesLite2,
+** injects them into a running jack server, extracts the transmit IQ samples
+** from jack, and return them for transmission to the HermesLite2.
+**
+** The component maintains the values of the options which are sent to and 
 ** received from the HermesLite2, the values may also be set or accessed by
 ** the Tcl script running the component.
 **
-** The incoming IQ samples are 24bits in memory, big-endian, but only the lowest
-** 16bits are significant.  If there is more than one receiver running, then the
-** receiver samples are interleaved.  There is also a monoaural microphone channel
-** interleaved into the buffer as well, 16bits per sample, but it has no content,
-** it simply occupies space. The incoming samples may arrive at 48, 96, 192, or 384
-** ksps, which should match the jack sample rate. 
-**
-** The incoming samples arrive in the component instance as a 1032 byte UDP packet
-** Tcl binary string, containing two 504 byte USB frames.
-**
-** We pass the entire UDP packet and use it as the sample buffer while we wait for
-** the Jack process calls to consume the samples.  When the samples are consumed we
-** release the packet.
-**
-** The outgoing IQ samples are 16bits, big-endian, interleaved with a stereo speaker
-** channel, always at 48 ksps.  The outgoing samples are buffered into a 1032 byte
-** UDP packet Tcl binary string.
-**
-** The microphone and speaker channels are ignored by everyone, another hardware
-** implementation used them, but there are no audio codecs on this implementation,
-** so they may be stuffed with zeroes on the source side and simply dropped on the
-** sink side.
-**
-** This component starts up 2, 4, 6, or 8 jack channels which transfer data into jack,
-** 2 for each receiver, and 2 jack channels which transfer data out of jack for the 
-** transmitter.
-**
-** The component is told how many receivers are active.
-**
-** The jack process handler reads interleaved rx samples from a jack ringbuffer into the jack
-** process channels, and reads tx samples from the jack process channels into a second jack
-** ringbuffer.
-**
-** In truth, the only reason to push a rx IQ stream into Jack is to demodulate it one
-** or more times.  And we usually only demodulate one channel at a time, the one we're
-** operating on.  The other streams turn into spectrum displays which can be computed
-** at leisure outside of Jack.  So maybe we do one IQ channel in and one out by notifying
-** the component how many receivers are in the input packet and which receiver we want 
-** to transfer into Jack.
-**
-** If we're running at a speed other than 48 ksps, then the transmit stream needs to be
-** decimated down to 48 ksps on output.  I suspect that dropping samples is more robust
-** than averaging.
-**
-** usage: %s rxiq rx_udp_buffer => {} or {tx_udp_buffer}
-**
+** The two options which must be set at create time are -n-rx and -speed.  Their
+** values are used to patch the component to the correct speed and number of 
+** receivers.  Modifying these values involves shutting down and restarting.
 */
 
 #define FRAMEWORK_USES_JACK 1
@@ -82,8 +43,6 @@
 #include "framework.h"
 
 typedef struct {
-  /* operational options */
-  int i_rx;			/* active receiver index */
   /* discovered options */
   int code_version;		/* gateware version */
   int board_id;			/* board identifier */
@@ -94,20 +53,14 @@ typedef struct {
   int gateware_minor;		/* gateware minor version */
   /* control options, sent in transmitter IQ packet headers */
   int mox;			/* enable transmitter */
-  int speed;			/* Choose rate of RX IQ samples to be 48000, 96000, 192000, or 384000 samples per second. */
+  int speed;			/* Choose rate of RX IQ samples, sample rate is 48000*2^speed. */
   int filters;			/* Bits which enable filters on the N2ADR filter board. */
   int not_sync;			/* Disable power supply sync. */
   int lna_db;			/* Decibels of low noise amplifier on receive, from -12 to 48. */
   int n_rx;			/* Number of receivers to implement, from 1 to 8 permitted. */
   int duplex;			/* Enable the transmitter frequency to vary independently of the receiver frequencies. */
   int f_tx;			/* Transmitter NCO frequency. */
-  int f_rx1;			/* Receiver 1 NCO frequency. */
-  int f_rx2;			/* Receiver 2 NCO frequency. */
-  int f_rx3;			/* Receiver 3 NCO frequency. */
-  int f_rx4;			/* Receiver 4 NCO frequency. */
-  int f_rx5;			/* Receiver 5 NCO frequency. */
-  int f_rx6;			/* Receiver 6 NCO frequency. */
-  int f_rx7;			/* Receiver 7 NCO frequency. */
+  int f_rx[12];			/* Receiver 1..12 NCO frequency. */
   int level;			/* Transmitter power level, from 0 to 255. */
   int pa;			/* Enable power amplifier. */
   int low_pwr;			/* Disable T/R relay in low power operation. */
@@ -116,6 +69,20 @@ typedef struct {
   int vna;			/* Enable vector network analysis mode. Not implemented. */
   int vna_count;		/* Number of frequencies sampled in VNA mode. Not implemented. */
   int vna_started;		/* Start VNA mode. Not implemented. */
+  /* newer options */
+  int vna_fixed_rx_gain;
+  int alex_manual_mode;
+  int tune_request;
+  int i2c_rx_filter;
+  int i2c_tx_filter;
+  int hermes_lite_lna;
+  int cwx;
+  int cw_hang_time;
+  int tx_buffer_latency;
+  int ptt_hang_time;
+  int predistortion_subindex;
+  int predistortion;
+  int reset_hl2_on_disconnect;
   /* feedback options, received in receiver IQ packet headers */
   int hw_dash;			/* The hardware dash key value from the HermesLite. */
   int hw_dot;			/* The hardware dot key value from the HermesLite. */
@@ -175,20 +142,20 @@ typedef struct {
   int i;			/* read/write offset into byte array */
   int limit;			/* sizeof current read/write area */
   int usb;			/* which usb frame being read/written */
-  packet_ring_buffer_t rdy;	/* Tcl_Obj's readied, ie tx empty, rx filled */
-  packet_ring_buffer_t done;	/* Tcl_Obj's finished, ie tx filled, rx emptied */
-  int overrun, underrun;	/* exception counters */
+  packet_ring_buffer_t rdy;	/* Tcl_Obj's ready to process, ie tx empty, rx filled */
+  packet_ring_buffer_t done;	/* Tcl_Obj's finished processing, ie tx filled, rx emptied */
+  unsigned overrun;		/* exception counters */
+  unsigned underrun;
+  unsigned outofseq;
+  unsigned sequence;		/* packet sequence and header index counters */
+  unsigned index;		
 } packet_t;
-  
 
 typedef struct {
   framework_t fw;
   options_t opts;
   // is this tap running
   int started;
-  // exception counters
-  int rx_overrun, rx_underrun;
-  int tx_overrun, tx_underrun;
   // packet management
   packet_t rx, tx;
 } _t;
@@ -198,8 +165,16 @@ static inline void _packet_init(packet_t *pkt) {
   pkt->udp = NULL;
   packet_ring_buffer_init(&pkt->rdy);
   packet_ring_buffer_init(&pkt->done);
+  pkt->overrun = 0;
+  pkt->underrun = 0;
+  pkt->sequence = 0;
+  pkt->index = 0;
 }
-
+static inline void _packet_delete(packet_t *pkt) {
+  while (packet_ring_buffer_can_read(&pkt->rdy) > 0) Tcl_DecrRefCount(packet_ring_buffer_read(&pkt->rdy));
+  while (packet_ring_buffer_can_read(&pkt->done) > 0) Tcl_DecrRefCount(packet_ring_buffer_read(&pkt->done));
+  if (pkt->udp) Tcl_DecrRefCount(pkt->udp);
+}
 static inline void _packet_next(packet_t *pkt) {
   if (pkt->usb == 0) {
     // finished first usb packet, step to next usb packet
@@ -209,13 +184,16 @@ static inline void _packet_next(packet_t *pkt) {
   } else {
     // finished both usb packets, step to next udp packet
     if (pkt->udp != NULL) {
-      if (packet_ring_buffer_can_write(&pkt->done))
+      if (packet_ring_buffer_can_write(&pkt->done)) {
 	packet_ring_buffer_write(&pkt->done, pkt->udp);
-      else {
-	pkt->abort = "packet_next: cannot write done";
+	pkt->udp = NULL;
+      } else {
+	pkt->abort = "packet_next: cannot write to done queue";
+	Tcl_DecrRefCount(pkt->udp);
 	pkt->udp = NULL;
       }
     }
+    // assert(pkt->udp == NULL);
     if (packet_ring_buffer_can_read(&pkt->rdy)) {
       int n;
       pkt->udp = packet_ring_buffer_read(&pkt->rdy);
@@ -224,7 +202,7 @@ static inline void _packet_next(packet_t *pkt) {
       pkt->i = 16;
       pkt->limit = 16 + 504;
     } else {
-      pkt->abort = "packet_next: cannot read ready";
+      pkt->abort = "packet_next: cannot read from ready queue";
       pkt->udp = NULL;
     }
   }
@@ -246,7 +224,8 @@ static void *_init(void *arg) {
 static void _delete(void *arg) {
   _t *data = (_t *)arg;
   data->started = 0;
-  // need to free any remaining byte arrays
+  _packet_delete(&data->rx);
+  _packet_delete(&data->tx);
 }
 
 /*
@@ -353,9 +332,31 @@ static inline void _grabkeyptt(_t *data, unsigned char *c) {
   data->opts.hw_dot =  (c[0] & 2) != 0;
   data->opts.hw_ptt =  (c[0] & 1) != 0;
 }
+static inline void _storeu(unsigned char *p, unsigned f) {
+  // these are in network order, big endian
+  p += 4;
+  *--p = f & 0xff; f >>= 8;
+  *--p = f & 0xff; f >>= 8;
+  *--p = f & 0xff; f >>= 8;
+  *--p = f & 0xff;
+}
+static inline unsigned _loadu(unsigned char *p) {
+  unsigned f = 0;
+  f |= *p++; f <<= 8;
+  f |= *p++; f <<= 8;
+  f |= *p++; f <<= 8;
+  f |= *p++;
+  return f;
+}
 static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
   int n;
   unsigned char *bytes = Tcl_GetByteArrayFromObj(udp, &n);
+  // bytes[0:2] == sync 0xeffe01
+  // bytes[3] == end point == 6 for rx iq data
+  // bytes[4:7] == sequence number
+  unsigned sync = _loadu(bytes+0);
+  unsigned seq = _loadu(bytes+4);
+  fprintf(stderr, "sync %x seq %x\n", sync, seq);
   for (int i = 8; i <= 520; i += 520-8) {
     unsigned char *c = bytes+i+3;
     // assert(c[-1] == 0x7f && c[-2] == 0x7f && c[-3] == 0x7f);
@@ -364,22 +365,31 @@ static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
     //# this switch statement looks suspicious
     switch (c[0]) {
     case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:      
+      data->rx.index = 0;
       _grabkeyptt(data, c);
       data->opts.overflow = (c[1] & 1) != 0;
       data->opts.serial =  c[4];
       break;
     case 8: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
+      data->rx.index = 1;
       _grabkeyptt(data, c);
       data->opts.temperature = (c[1]<<8)|c[2];
       data->opts.fwd_power = (c[3]<<8)|c[4];
       break;
     case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23:
+      data->rx.index = 2;
       _grabkeyptt(data, c);
       data->opts.rev_power = (c[1]<<8)|c[2];
       data->opts.pa_current = (c[3]<<8)|c[4];
-    case 24: break;
-    case 32: break;
-    case 40: break;
+    case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31:
+      data->rx.index = 3;
+      break;
+    case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39:
+      data->rx.index = 4;
+      break;
+    case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
+      data->rx.index = 5;
+      break;
     case 251: case 252: case 253:
       // these are acks to i2c settings
       // need to post the ack to the tx
@@ -399,71 +409,146 @@ static inline void _txiqscan(_t *data, Tcl_Obj *udp) {
   unsigned char *bytes = Tcl_GetByteArrayFromObj(udp, &n);
   for (int i = 8; i <= 520; i += 520-8) {
     unsigned char *c = bytes+i+3;
-#if 0
-      method {tx conf} {opt val} {
-	set options($opt) $val
-	switch -- $opt {
-	    -mox {}
-	    -speed { 
-		set c1234(0) [expr {($c1234(0) & ~(3<<24)) | ([map-speed $val]<<24)}] 
-		incr d(restart-requested)
-	    }
-	    -filters {
-		set c1234(0) [expr {($c1234(0) & ~(127<<17)) | ($val<<17)}]
-	    }
-	    -not-sync {
-		set c1234(0) [expr {($c1234(0) & ~(1<<12)) | ($val<<12)}]
-	    }
-	    -lna-db {
-		set c1234(10) [expr {($c1234(10) & ~0x7F) | 0x40 | ($val+12)}]
-	    }
-	    -n-rx {
-		set c1234(0) [expr {($c1234(0) & ~(7<<3)) | (($val-1)<<3)}]
-		incr d(restart-requested)
-	    }
-	    -duplex {
-		set c1234(0) [expr {($c1234(0) & ~(1<<2)) | ($val<<2)}]
-	    }
-	    -f-tx { set c1234(1) $val }
-	    -f-rx1 { set c1234(2) $val }
-	    -f-rx2 { set c1234(3) $val }
-	    -f-rx3 { set c1234(4) $val }
-	    -f-rx4 { set c1234(5) $val }
-	    -f-rx5 { set c1234(6) $val }
-	    -f-rx6 { set c1234(7) $val }
-	    -f-rx7 { set c1234(8) $val }
-	    -level {
-		# c0 index 9, C1 entire
-		set c1234(9) [expr {($c1234(9) & ~(0xFF<<24)) | ($val<<24)}]
-	    }
-	    -vna {
-		# C0 index 9, C2 & 0x80
-		set c1234(9) [expr {($c1234(9) & ~(1<<23)) | ($val<<23)}]
-	    }
-	    -pa {
-		# C0 index 9, C2 & 0x08
-		set c1234(9) [expr {($c1234(9) & ~(1<<19)) | ($val<<19)}]
-	    }
-	    -low-pwr {
-		# C0 index 9, C2 & 0x04
-		set c1234(9) [expr {($c1234(9) & ~(1<<18)) | ($val<<18)}]
-	    }
-	    -pure-signal {
-		# C0 index 10, C2 & 0x40
-		set c1234(10) [expr {($c1234(10) & ~(1<<22)) | ($val<<22)}]
-	    }
+    // assert(c[-1] == 0x7f && c[-2] == 0x7f && c[-3] == 0x7f);
+    while (1) {
+      unsigned c0 = data->tx.index++;
+      c[0] = (c0 << 1) | data->opts.mox; // set the addr and the mox bit
+      c[1] = c[2] = c[3] = c[4] = 0;	 // clear out any leftover rx bits
+      switch (c0) {
+      case 0x0:
+	// 0x00	[25:24]	Speed (00=48kHz, 01=96kHz, 10=192kHz, 11=384kHz)
+	// -speed { set c1234(0) [expr {($c1234(0) & ~(3<<24)) | ([map-speed $val]<<24)}] } # restart requested
+	c[1] = data->opts.speed & 3;
+	// 0x00	[23:17]	Open Collector Outputs on Penelope or Hermes
+	// -filters { set c1234(0) [expr {($c1234(0) & ~(127<<17)) | ($val<<17)}] }
+	c[2] = (data->opts.filters & 127) << 1;
+	// 0x00	[12]	FPGA-generated power supply switching clock (0=on, 1=off)
+	// 0x00	[10]	VNA fixed RX Gain (0=-6dB, 1=+6dB)
+	// -not-sync { set c1234(0) [expr {($c1234(0) & ~(1<<12)) | ($val<<12)}] }
+	c[3] = ((data->opts.not_sync & 1) << 4) | ((data->opts.vna_fixed_rx_gain & 1) << 2);
+	// 0x00	[6:3]	Number of Receivers (0000=1 to max 1011=12)
+	// 0x00	[2]	Duplex (0=off, 1=on)
+	// -n-rx { set c1234(0) [expr {($c1234(0) & ~(7<<3)) | (($val-1)<<3)}] } # restart requested
+	// -duplex { set c1234(0) [expr {($c1234(0) & ~(1<<2)) | ($val<<2)}] }
+	c[4] = ((data->opts.n_rx & 7) << 3) | ((data->opts.duplex & 1) << 2);
+	break;
+      case 0x01:
+	// 0x01	[31:0]	TX1 NCO Frequency in Hz
+	// -f-tx { set c1234(1) $val }
+	_storeu(c+1, data->opts.f_tx);
+	break;
+      case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: case 0x08: {
+	// 0x02	[31:0]	RX1 NCO Frequency in Hz
+	// -f-rx1 { set c1234(2) $val }
+	// and so on for RX2 .. RX7
+	unsigned rxn = c0-0x01;	// 1 based index of receiver
+	if (data->opts.n_rx < rxn) continue;
+	_storeu(c+1, data->opts.f_rx[rxn-1]);
+	break;
+      }
+      case 0x09:
+	// 0x09	[31:24]	Hermes TX Drive Level (only [31:28] used)
+	// 0x09	[23]	VNA mode (0=off, 1=on)
+	// 0x09	[22]	Alex manual mode (0=off, 1=on) (Not implemented yet)
+	// 0x09	[20]	Tune request
+	// 0x09	[19]	Onboard PA (0=off, 1=on)
+	// 0x09	[18]	Q5 switch external PTT in low power mode
+	// 0x09	[15:8]	I2C RX filter (Not implemented), or VNA count MSB
+	// 0x09	[7:0]	I2C TX filter (Not implemented), or VNA count LSB
+	// -level { set c1234(9) [expr {($c1234(9) & ~(0xFF<<24)) | ($val<<24)}] }
+	// -vna { set c1234(9) [expr {($c1234(9) & ~(1<<23)) | ($val<<23)}] }
+	// -pa { set c1234(9) [expr {($c1234(9) & ~(1<<19)) | ($val<<19)}] }
+	// -low-pwr { set c1234(9) [expr {($c1234(9) & ~(1<<18)) | ($val<<18)}] }
+	c[1] = data->opts.level;
+	c[2] = ((data->opts.vna & 1) << 7) | ((data->opts.alex_manual_mode & 1) << 6) |
+	  ((data->opts.tune_request & 1) << 4) | ((data->opts.pa & 1) << 3) | ((data->opts.low_pwr & 1) << 2);
+	if (data->opts.vna) {
+	  c[3] = (data->opts.vna_count >> 8) & 0xFF;
+	  c[4] = data->opts.vna_count & 0xFF;
+	} else {
+	  c[3] = data->opts.i2c_rx_filter;
+	  c[4] = data->opts.i2c_tx_filter;
 	}
+	break;
+      case 0x0a:
+	// 0x0a	[22]	PureSignal (0=disable, 1=enable)
+	// 0x0a	[6]	See LNA gain section below
+	// 0x0a	[5:0]	LNA[5:0] gain
+	// -pure-signal { set c1234(10) [expr {($c1234(10) & ~(1<<22)) | ($val<<22)}] }
+	// -lna-db { set c1234(10) [expr {($c1234(10) & ~0x7F) | 0x40 | ($val+12)}] }
+	c[2] = ((data->opts.pure_signal & 1) << 6);
+	c[4] = ((data->opts.hermes_lite_lna & 1) << 6) | (data->opts.lna_db+12);
+	break;
+      case 0x0f:
+	// 0x0f	[24]	Enable CWX, I[0] of IQ stream is CWX keydown
+	c[1] = (data->opts.cwx & 1);
+	break;
+      case 0x10:
+	// 0x10	[31:24]	CW Hang Time in ms, bits [9:2]
+	// 0x10	[17:16]	CW Hang Time in ms, bits [1:0]
+	c[1] = (data->opts.cw_hang_time & 0x3FB) >> 2;
+	c[2] = (data->opts.cw_hang_time & 0x3);
+	break;
+      case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: {
+	// 0x12	[31:0]	If present, RX8 NCO Frequency in Hz
+	// and so on for RX9 .. RX12
+	unsigned rxn = c0-0x12+8;	// 1 based index of receiver
+	if (data->opts.n_rx < rxn) continue;
+	_storeu(c+1, data->opts.f_rx[rxn-1]);
+	break;
+      }
+      case 0x17:
+	// 0x17	[4:0]	TX buffer latency in ms, default is 10ms
+	// 0x17	[12:8]	PTT hang time, default is 4ms
+	c[3] = data->opts.ptt_hang_time & 0x1F;
+	c[4] = data->opts.tx_buffer_latency & 0x1F;
+	break;
+      case 0x2b:
+	// 0x2b	[31:24]	Predistortion subindex
+	// 0x2b	[19:16]	Predistortion
+	c[1] = data->opts.predistortion_subindex & 0xFF;
+	c[2] = data->opts.predistortion & 0xF;
+	break;
+      case 0x3a:
+	// 0x3a	[0]	Reset HL2 on disconnect
+	c[4] = data->opts.reset_hl2_on_disconnect & 1;
+	break;
+      case 0x3b:
+	continue;
+	// 0x3b	[31:24]	AD9866 SPI cookie, must be 0x06 to write
+	// 0x3b	[20:16]	AD9866 SPI address
+	// 0x3b	[7:0]	AD9866 SPI data
+	break;
+      case 0x3c:
+	continue;
+	// 0x3c	[31:24]	I2C1 cookie, must be 0x06 to write, 0x07 to read
+	// 0x3c	[23]	I2C1 stop at end (0=continue, 1=stop)
+	// 0x3c	[22:16]	I2C1 target chip address
+	// 0x3c	[15:8]	I2C1 control
+	// 0x3c	[7:0]	I2C1 data (only for write)
+	break;
+      case 0x3d:
+	continue;
+	// 0x3d	[31:24]	I2C2 cookie, must be 0x06 to write, 0x07 to read
+	// 0x3d	[23]	I2C2 stop at end (0=continue, 1=stop)
+	// 0x3d	[22:16]	I2C2 target chip address
+	// 0x3d	[15:8]	I2C2 control
+	// 0x3d	[7:0]	I2C2 data (only for write)
+	break;
+      case 0x3f:
+	continue;
+	// 0x3f	[31:0]	Error for responses
+	break;
+      default:
+	// unassigned addr or out of range
+	if (c0 > 0x3f) data->tx.index = 0;
+	continue;
+      }
+      break;
     }
-
-    # generate the control bytes for header $index
-    method {tx control} {} { 
-	set index $d(tx-index)
-	set d(tx-index) [expr {($d(tx-index)+1)%19}]
-	return [binary format cI [expr {($index<<1)|$options(-mox)}] $c1234($index)]
-    }
-#endif
   }
 }
+
 /*
 ** queue a udp rxiq packet from the HermesLite2 for later processing
 */
@@ -498,6 +583,7 @@ static int _rxiq(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
     // scan options
     _txiqscan(data, udp);
     Tcl_SetObjResult(interp, udp);
+    Tcl_DecrRefCount(udp);
   }
   return TCL_OK;
 }
@@ -545,7 +631,6 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-i-rx",		"int", "Int",    "-1", fw_option_int, 0, offsetof(_t, opts.i_rx), "active receiver index, obsolete?" },
 
   { "-code-version",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.code_version), "gateware version" },
   { "-board-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.board_id), "board identifier." },
@@ -557,29 +642,48 @@ static const fw_option_table_t _options[] = {
 
   { "-mox",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.mox), "enable transmitter." },
 
-  { "-speed",		"int", "Int", "48000", fw_option_int, 0, offsetof(_t, opts.speed), 
-			"Choose rate of RX IQ samples to be 48000, 96000, 192000, or 384000 samples per second." },
+  { "-speed",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.speed), 
+			"Choose rate of RX IQ samples, may be 0, 1, 2, or 3, sample rate is 48000*2^speed." },
   { "-filters",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.filters), "Bits which enable filters on the N2ADR filter board." },
   { "-not-sync",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.not_sync), "Disable power supply sync." },
-  { "-lna-db",		"int", "Int", "20", fw_option_int, 0, offsetof(_t, opts.lna_db), "Decibels of low noise amplifier on receive, from -12 to 48." },
+  { "-lna-db",		"int", "Int", "38", fw_option_int, 0, offsetof(_t, opts.lna_db), "Decibels of low noise amplifier on receive, from -12 to 48." },
   { "-n-rx",		"int", "Int", "1", fw_option_int, 0, offsetof(_t, opts.n_rx), "Number of receivers to implement, from 1 to 8 permitted." },
   { "-duplex",		"int", "Int", "1", fw_option_int, 0, offsetof(_t, opts.duplex), "Enable the transmitter frequency to vary independently of the receiver frequencies." },
   { "-f-tx",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_tx), "Transmitter NCO frequency" },
-  { "-f-rx1",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx1), "Receiver 1 NCO frequency." },
-  { "-f-rx2",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx2), "Receiver 2 NCO frequency." },
-  { "-f-rx3",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx3), "Receiver 3 NCO frequency." },
-  { "-f-rx4",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx4), "Receiver 4 NCO frequency." },
-  { "-f-rx5",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx5), "Receiver 5 NCO frequency." },
-  { "-f-rx6",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx6), "Receiver 6 NCO frequency." },
-  { "-f-rx7",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx7), "Receiver 7 NCO frequency." },
+  { "-f-rx1",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[0]), "Receiver 1 NCO frequency." },
+  { "-f-rx2",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[1]), "Receiver 2 NCO frequency." },
+  { "-f-rx3",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[2]), "Receiver 3 NCO frequency." },
+  { "-f-rx4",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[3]), "Receiver 4 NCO frequency." },
+  { "-f-rx5",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[4]), "Receiver 5 NCO frequency." },
+  { "-f-rx6",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[5]), "Receiver 6 NCO frequency." },
+  { "-f-rx7",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[6]), "Receiver 7 NCO frequency." },
+  { "-f-rx8",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[7]), "Receiver 8 NCO frequency." },
+  { "-f-rx9",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[8]), "Receiver 9 NCO frequency." },
+  { "-f-rx10",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[9]), "Receiver 10 NCO frequency." },
+  { "-f-rx11",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[10]), "Receiver 11 NCO frequency." },
+  { "-f-rx12",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_rx[11]), "Receiver 12 NCO frequency." },
   { "-level",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.level), "Transmitter power level, from 0 to 255." },
   { "-pa",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.pa), "Enable power amplifier." },
   { "-low-pwr",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.low_pwr), "Disable T/R relay in low power operation." },
   { "-pure-signal",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.pure_signal), "Enable Pure Signal operation. Not implemented." },
-  { "-bias-adjust",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.bias_adjust), "Enable bias current adjustment for power amplifier. Not implemented." },
-  { "-vna",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna), "Enable vector network analysis mode. Not implemented." },
-  { "-vna-count",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_count), "Number of frequencies sampled in VNA mode. Not implemented." },
-  { "-vna-started",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_started), "Start VNA mode. Not implemented." },
+  { "-bias-adjust",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.bias_adjust), "Enable bias current adjustment for power amplifier." },
+  { "-vna",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna), "Enable vector network analysis mode." },
+  { "-vna-count",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_count), "Number of frequencies sampled in VNA mode." },
+  { "-vna-started",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_started), "Start VNA mode." },
+
+  { "-vna-fixed-rx-gain","int","Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_fixed_rx_gain), "Specify +/-6dB gain in VNA mode." },
+  { "-alex-manual-mode","int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.alex_manual_mode), "." },
+  { "-tune-request",    "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.tune_request), "." },
+  { "-i2c-rx-filter",   "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.i2c_rx_filter), "." },
+  { "-i2c-tx-filter",   "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.i2c_tx_filter), "." },
+  { "-hermes-lite-lna", "int", "Int", "1", fw_option_int, 0, offsetof(_t, opts.hermes_lite_lna), "." },
+  { "-cwx",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.cwx), "." },
+  { "-cw-hang-time",    "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.cw_hang_time), "." },
+  { "-tx-buffer-latency","int","Int", "10", fw_option_int, 0, offsetof(_t, opts.tx_buffer_latency), "." },
+  { "-ptt-hang-time",   "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.ptt_hang_time), "." },
+  { "-predistortion-subindex","int","Int","0",fw_option_int,0,offsetof(_t, opts.predistortion_subindex), "." },
+  { "-predistortion",   "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.predistortion), "." },
+  { "-reset-hl2-on-disconnect","int","Int","0",fw_option_int,0,offsetof(_t, opts.reset_hl2_on_disconnect), "." },
 
   { "-hw-dash",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dash), "The hardware dash key value from the HermesLite." },
   { "-hw-dot",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dot), "The hardware dot key value from the HermesLite." },
@@ -613,7 +717,7 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process_1x48,		// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "a component for servicing a hermes lite software defined radio"
+  "a component for servicing a HermesLite2f software defined radio"
 };
 
 /*
@@ -624,10 +728,10 @@ static const framework_t _template = {
 ** so there needs to be a different _process callback for each combination
 */
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  fprintf(stderr, "Hl_udp_jack_Init _process %p and outputs %d\n", _template.process, _template.n_outputs);
   return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
 }
 
-int DLLEXPORT Hl2_udp_jack_Init(Tcl_Interp *interp) {
-  fprintf(stderr, "Hl2_udp_jack_Init _process %p and outputs %d\n", _template.process, _template.n_outputs);
-  return framework_init(interp, "sdrtcl::hl2-udp-jack", "1.0.0", "sdrtcl::hl2-udp-jack", _factory);
+int DLLEXPORT Hl_udp_jack_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrtcl::hl-udp-jack", "1.0.0", "sdrtcl::hl-udp-jack", _factory);
 }

@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide sdrtcl::hl2-discovery 0.0.1
+package provide sdrtcl::hl-discover 0.0.1
 
 package require snit
 package require udp
@@ -24,13 +24,13 @@ package require udp
 namespace eval ::sdrtcl {}
 
 #
-# hl2-discovery - hermes-lite udp discovery
+# hl-discover - hermes-lite udp discovery
 # discovers the hermes-lites on the specified network interfaces
 # returns a list of data describing each discovered device
 #
-set sdrtcl::hl2-discovery-finished 0
+set sdrtcl::hl-discover-finished 0
 
-snit::type sdrtcl::hl2-discovery {
+snit::type sdrtcl::hl-discover {
     # local procedures
     # make a string into a list of bytes
     proc bytes-of {str} {
@@ -185,18 +185,18 @@ snit::type sdrtcl::hl2-discovery {
     method {discovery timeout} {socket} {
 	if {$d(discovery)} {
 	    close $socket
-	    set {::sdrtcl::hl2-discovery-finished} 1
+	    set {::sdrtcl::hl-discover-finished} 1
 	} elseif {$d(discover-tries) >= $options(-discover-retries)} {
 	    close $socket
 	    puts "abandoning hl discovery"
-	    set {::sdrtcl::hl2-discovery-finished} 1
+	    set {::sdrtcl::hl-discover-finished} 1
 	} else {
 	    $self discovery send $socket
 	}
     }
     method discover {} {
 	$self discovery start
-	vwait {::sdrtcl::hl2-discovery-finished}
+	vwait {::sdrtcl::hl-discover-finished}
 	return $d(response)
     }
 }

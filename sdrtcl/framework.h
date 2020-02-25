@@ -158,25 +158,25 @@ typedef struct {
 /*
 ** common error/success return with dyanamic or static interp result
 */
-static int fw_result_obj(Tcl_Interp *interp, Tcl_Obj *usage, int ret) {
-  Tcl_SetObjResult(interp, usage);
+static int fw_result_obj(Tcl_Interp *interp, Tcl_Obj *obj, int ret) {
+  Tcl_SetObjResult(interp, obj);
   return ret;
 }
-static int fw_result_str(Tcl_Interp *interp, const char *usage, int ret) {
-  Tcl_SetResult(interp, (char *)usage, TCL_STATIC);
+static int fw_result_str(Tcl_Interp *interp, const char *str, int ret) {
+  Tcl_SetResult(interp, (char *)str, TCL_STATIC);
   return ret;
 }
-static int fw_error_obj(Tcl_Interp *interp, Tcl_Obj *usage) {
-  return fw_result_obj(interp, usage, TCL_ERROR);
+static int fw_error_obj(Tcl_Interp *interp, Tcl_Obj *obj) {
+  return fw_result_obj(interp, obj, TCL_ERROR);
 }
-static int fw_error_str(Tcl_Interp *interp, const char *usage) {
-  return fw_result_str(interp, usage, TCL_ERROR);
+static int fw_error_str(Tcl_Interp *interp, const char *str) {
+  return fw_result_str(interp, str, TCL_ERROR);
 }
-static int fw_success_obj(Tcl_Interp *interp, Tcl_Obj *usage) {
-  return fw_result_obj(interp, usage, TCL_OK);
+static int fw_success_obj(Tcl_Interp *interp, Tcl_Obj *obj) {
+  return fw_result_obj(interp, obj, TCL_OK);
 }
-static int fw_success_str(Tcl_Interp *interp, const char *usage) {
-  return fw_result_str(interp, usage, TCL_OK);
+static int fw_success_str(Tcl_Interp *interp, const char *str) {
+  return fw_result_str(interp, str, TCL_OK);
 }
 
 /*
