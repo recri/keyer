@@ -224,7 +224,7 @@ proc load-component {name} {
     if {$name1 eq {iambic}} {
 	if {[has-iambic]} {
 	    set name1 [get-iambic]
-	    puts "substituted $name1 for iambic"
+	    # puts "substituted $name1 for iambic"
 	}
     }
 
@@ -654,10 +654,13 @@ snit::widgetadaptor midi-insert {
 	}
     }
 
-    variable map -array {dit 0 dah 1 key 0 up 0x80 down 0x90}
+    variable map -array {dit 0 dah 1 key 0 up 0x80 down 0x90 velocity-up 0 velocity-down 1}
 
     method insert-key {element updown} {
-	$options(-insert) puts [binary format ccc [expr {$map($updown)|($chan-1)}] [expr {$base+$map($element)}] 0]
+	set cmd [expr {0x90|($chan-1)}]
+	set note [expr {$base+$map($element)}]
+	set velocity $map(velocity-$updown)
+	$options(-insert) puts [binary format ccc $cmd $note $velocity]
     }
 
     method rebind-key {opt val element} {
