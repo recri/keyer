@@ -223,7 +223,12 @@ static float window_get(const window_type_t type, const int size, int k) {
   case WINDOW_BLACKMAN_HARRIS:  return cosine_series3(size, k, 0.3587500, 0.4882900, 0.1412800, 0.0116800);
   case WINDOW_BLACKMAN_NUTTALL: return cosine_series3(size, k, 0.3635819, 0.4891775, 0.1365995, 0.0106411);
   case WINDOW_NUTTALL:          return cosine_series3(size, k, 0.3557680, 0.4873960, 0.1442320, 0.0126040);
-  case WINDOW_FLAT_TOP:         return cosine_series4(size, k, 1.0000000, 1.9300000, 1.2900000, 0.3880000, 0.032);
+    // matlab version coefficients via https://en.wikipedia.org/wiki/Window_function#Flat_top_window
+    // {\displaystyle a_{0}=0.21557895;\quad a_{1}=0.41663158;\quad a_{2}=0.277263158;\quad a_{3}=0.083578947;\quad a_{4}=0.006947368.}
+    // version of coefficients probably from original source
+    // return cosine_series4(size, k, 1.0000000, 1.9300000, 1.2900000, 0.006947368, 0.032);
+  case WINDOW_FLAT_TOP:
+    return cosine_series4(size, k, 0.21557895, 0.41663158, 0.277263158, 0.083578947, 0.032);
      // also known as the sine window
   case WINDOW_COSINE:           return sin(pi*k / (size-1));
 
