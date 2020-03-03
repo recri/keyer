@@ -60,6 +60,9 @@ snit::type sdrtcl::hl-udp {
 	foreach b $bytes { lappend bin [format %08b [expr {$b&0xff}]] }
 	return $bin
     }
+    proc as-ipaddr {bytes} {
+	return [join [lmap x $bytes {format %d [expr {$x&0xff}]}] .]
+    }
     # map the speed into the 2 bit value sent to the hardware
     proc map-speed {val} {
 	switch $val {
@@ -257,7 +260,7 @@ snit::type sdrtcl::hl-udp {
 	#puts "[binary scan $data c* buffer] items scanned"
 	#puts "discovery response [llength $buffer] bytes: [as-hex $buffer]"
 	foreach {effe status metis_mac_address code_version board_id} {0 0 0 0 0} break
-	foreach {mcp4662_config fixed_ip fixed_mac nrx wb_fmt_build_id gateware_minor} {0 0 0 0 0 0}
+	foreach {mcp4662_config fixed_ip fixed_mac nrx wb_fmt_build_id gateware_minor} {0 0 0 0 0 0} break
 	set n [binary scan $data Scc6ccc2c4c2ccc effe status metis_mac_address code_version board_id mcp4662_config fixed_ip fixed_mac nrx wb_fmt_build_id gateware_minor]
 	if {$n != 11} { puts "discovery response: $n items scanned in response" }
 	if {($effe&0xffff) != 0xeffe} { 
@@ -270,7 +273,7 @@ snit::type sdrtcl::hl-udp {
 	set options(-code-version) $code_version
 	set options(-board-id) $board_id
 	set options(-mcp4662) [as-hex $mcp4662_config]
-	set options(-fixed-ip) [as-ipaddr $fixed_ip
+	set options(-fixed-ip) [as-ipaddr $fixed_ip]
 	if {$status == 2} {
 	    set d(discovery) 1
 	    after 1 [mymethod hl begin]
@@ -445,7 +448,7 @@ snit::type sdrtcl::hl-udp {
     method {rx constructor} {} {
 	# deal with missing -rx and -bs handlers
 	if {$options(-rx) eq {}} { set options(-rx) [mymethod dummy rx] }
-	if {$options(-tx) eq {}} { set options(-tx) [mymethod dummy tx] }
+	#if {$options(-tx) eq {}} { set options(-tx) [mymethod dummy tx] }
 	if {$options(-bs) eq {}} { set options(-bs) [mymethod dummy bs] }
     }
 

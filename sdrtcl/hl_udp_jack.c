@@ -41,6 +41,7 @@
 
 #include "../dspmath/dspmath.h"
 #include "framework.h"
+#include <strings.h>
 
 typedef struct {
   /* discovered options */
@@ -119,7 +120,7 @@ typedef struct {
 /*
 ** ring buffers for shuffling byte arrays between threads
 */
-#define PACKET_RING_SIZE 8	/* must be power of two */
+#define PACKET_RING_SIZE 64	/* must be power of two */
 /* #assert(PACKET_RING_SIZE > 1) */
 /* #assert((PACKET_RING_SIZE & (PACKET_RING_SIZE-1)) == 0) */
 typedef struct {
@@ -141,34 +142,51 @@ typedef struct {
   unsigned char *buff;		/* start of udp packet byte array */
   int i;			/* read/write offset into byte array */
   int limit;			/* sizeof current read/write area */
+  int stride;			/* stride of sample frame in usb packet */
   int usb;			/* which usb frame being read/written */
   packet_ring_buffer_t rdy;	/* Tcl_Obj's ready to process, ie tx empty, rx filled */
   packet_ring_buffer_t done;	/* Tcl_Obj's finished processing, ie tx filled, rx emptied */
   unsigned overrun;		/* exception counters */
   unsigned underrun;
-  unsigned outofseq;
   unsigned sequence;		/* packet sequence and header index counters */
-  unsigned index;		
+  unsigned index;
+  unsigned sample;
 } packet_t;
 
 typedef struct {
-  framework_t fw;
-  options_t opts;
-  // is this tap running
-  int started;
-  // packet management
-  packet_t rx, tx;
+  framework_t fw;		// core framework
+  options_t opts;		// options for this component
+  int speed_bits;
+  int decimate;			// decimation for tx stream
+  int process;			// number of process calls
+  packet_t rx;			// received packets
+  packet_t tx;			// transmit packets
 } _t;
 
-static inline void _packet_init(packet_t *pkt) {
+static inline Tcl_Obj *_packet_new(void) {
+  Tcl_Obj *udp = Tcl_NewByteArrayObj(NULL, 1032);
+  memset(Tcl_GetByteArrayFromObj(udp, NULL), 0, 1032);
+  Tcl_IncrRefCount(udp);
+  return udp;
+}
+
+static inline void _packet_init(packet_t *pkt, int stride) {
   pkt->abort = NULL;
   pkt->udp = NULL;
+  pkt->buff = NULL;
+  pkt->i = 0;
+  pkt->limit = 0;
+  pkt->stride = stride;
+  pkt->usb = 1;
   packet_ring_buffer_init(&pkt->rdy);
+  // fprintf(stderr, "_packet_init: rdy can_write %d, can_read %d\n", packet_ring_buffer_can_write(&pkt->rdy), packet_ring_buffer_can_read(&pkt->rdy));
   packet_ring_buffer_init(&pkt->done);
+  // fprintf(stderr, "_packet_init: done can_write %d, can_read %d\n", packet_ring_buffer_can_write(&pkt->done), packet_ring_buffer_can_read(&pkt->done));
   pkt->overrun = 0;
   pkt->underrun = 0;
   pkt->sequence = 0;
   pkt->index = 0;
+  pkt->sample = 0;
 }
 static inline void _packet_delete(packet_t *pkt) {
   while (packet_ring_buffer_can_read(&pkt->rdy) > 0) Tcl_DecrRefCount(packet_ring_buffer_read(&pkt->rdy));
@@ -189,7 +207,7 @@ static inline void _packet_next(packet_t *pkt) {
 	pkt->udp = NULL;
       } else {
 	pkt->abort = "packet_next: cannot write to done queue";
-	Tcl_DecrRefCount(pkt->udp);
+	// wrong thread for this, so leak memory Tcl_DecrRefCount(pkt->udp);
 	pkt->udp = NULL;
       }
     }
@@ -215,15 +233,28 @@ static void *_configure(_t *data) {
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *p = _configure(data); if (p != data) return p;
-  _packet_init(&data->rx);
-  _packet_init(&data->tx);
-  // should toss a packet into the tx queue
+  int sr = sdrkit_sample_rate(data);
+  if (data->opts.speed != sr)
+    return "jack sample rate does not match Hermes Lite sample rate";
+  switch (sr) {
+  case 48000: data->decimate = 0; data->speed_bits = 0; break;
+  case 96000: data->decimate = 1; data->speed_bits = 1; break;
+  case 192000: data->decimate = 3; data->speed_bits = 2; break;
+  case 384000: data->decimate = 7; data->speed_bits = 3; break;
+  default: return "invalid jack sample rate for Hermes Lite operation";
+  }
+  if (data->opts.n_rx > data->opts.n_hw_rx)
+    return "too many receivers for Hermes Lite";
+  // fprintf(stderr, "_init: speed %d, speed_bits %d, decimate %d, n-rx %d\n", data->opts.speed, data->speed_bits, data->decimate, data->opts.n_rx);
+  _packet_init(&data->rx, data->opts.n_rx*6+2);
+  _packet_init(&data->tx, 8);
+  for (int i = 0; i < 8; i += 1)
+    packet_ring_buffer_write(&data->tx.rdy, _packet_new());
   return arg;
 }
 
 static void _delete(void *arg) {
   _t *data = (_t *)arg;
-  data->started = 0;
   _packet_delete(&data->rx);
   _packet_delete(&data->tx);
 }
@@ -231,95 +262,279 @@ static void _delete(void *arg) {
 /*
 ** handle transmit samples, at higher sample rates decimate to 48k
 */
-static inline void _txiq_x48(_t *data, int i, float *ptri, float *ptrq) {
-  if (data->tx.udp == NULL) {
-    data->tx.overrun += 1;
-  } else {
-    short s[2] = { *ptri * 32767, *ptrq * 32767 };
-    data->tx.buff[data->tx.i++] = 0;	/* Left audio channel high byte */
-    data->tx.buff[data->tx.i++] = 0;	/* Left audio channel low byte */
-    data->tx.buff[data->tx.i++] = 0;	/* Right audio channel high byte */
-    data->tx.buff[data->tx.i++] = 0;	/* Right audio channel low byte */
-    data->tx.buff[data->tx.i++] = s[0]>>8;	/* I sample high byte */
-    data->tx.buff[data->tx.i++] = s[0];	/* I sample low byte */
-    data->tx.buff[data->tx.i++] = s[1]>>8;	/* Q sample high byte */
-    data->tx.buff[data->tx.i++] = s[1];	/* Q sample low byte */
-    if (data->tx.i + 8 > data->tx.limit) {
+static inline void _txiq(_t *data, int i, float *ptri, float *ptrq) {
+  if ((data->decimate & i) == 0) {
+    if (data->tx.udp == NULL) {
       _packet_next(&data->tx);
+      // fprintf(stderr, "_txiq: %d frames\n", (data->tx.limit-data->tx.i) / data->tx.stride);
+    }
+    if (data->tx.udp == NULL) {
+      data->tx.overrun += 1;
+    } else {
+      data->tx.sample += 1;
+      char *const output = data->tx.buff+data->tx.i;
+      const short s[2] = { *ptri * 32767, *ptrq * 32767 };
+      output[0] = 0;		/* Left audio channel high byte */
+      output[1] = 0;		/* Left audio channel low byte */
+      output[2] = 0;		/* Right audio channel high byte */
+      output[3] = 0;		/* Right audio channel low byte */
+      output[4] = s[0]>>8;	/* I sample high byte */
+      output[5] = s[0];		/* I sample low byte */
+      output[6] = s[1]>>8;	/* Q sample high byte */
+      output[7] = s[1];		/* Q sample low byte */
+      data->tx.i += data->tx.stride;
+      if (data->tx.i + data->tx.stride - 1 > data->tx.limit) {
+	_packet_next(&data->tx);
+	// fprintf(stderr, "_txiq: %d frames\n", (data->tx.limit-data->tx.i) / data->tx.stride);
+      }
     }
   }
-}
-static inline void _txiq_x96(_t *data, int i, float *ptri, float *ptrq) {
-  if ((i & 1) == 0) _txiq_x48(data, i, ptri, ptrq);
-}
-static inline void _txiq_x192(_t *data, int i, float *ptri, float *ptrq) {
-  if ((i & 3) == 0) _txiq_x48(data, i, ptri, ptrq);
-}
-static inline void _txiq_x384(_t *data, int i, float *ptri, float *ptrq) {
-  if ((i & 7) == 0) _txiq_x48(data, i, ptri, ptrq);
 }
 
 /*
 ** handle receive samples
+** common begin end wrappers
 */
-static inline  void _rxiq_1x(_t *data, int i, float *ptri, float *ptrq) {
+static inline void _rxiq_start(_t *data) {
+  if (data->rx.udp == NULL) {
+    _packet_next(&data->rx);
+    // fprintf(stderr, "_rxiq_start: %d frames\n", (data->rx.limit-data->rx.i) / data->rx.stride);
+  }
+}
+static inline void _rxiq_finish(_t *data) {
+  int nb = data->opts.n_rx*6+2;
+  data->rx.i += nb;
+  if (data->rx.i + nb - 1 > data->rx.limit) {
+    _packet_next(&data->rx);
+    // fprintf(stderr, "_rxiq_start: %d frames\n", (data->rx.limit-data->rx.i) / data->rx.stride);
+  }
+}
+/*
+** handle first rx stream
+*/
+static inline  void _rxiq_1(_t *data, int i, float *ptri, float *ptrq) {
   // convert and copy input samples into jack buffer
   // const int stride = data->opts.n_rx * 6 + 2; /* size of one frame of receiver data */
-  const char *input = data->rx.buff+data->rx.i;
-  *ptri = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
-  data->rx.i += 8;
-  if (data->rx.i + 8 > data->rx.limit) _packet_next(&data->rx);
+  if (data->rx.udp == NULL) {
+    data->rx.underrun += 1;
+    *ptri = 0.0;
+    *ptrq = 0.0;
+  } else {
+    data->rx.sample += 1;
+    const char *input = data->rx.buff+data->rx.i;
+    *ptri = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
+    *ptrq = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+  }
 }
-
-static inline  void _rxiq_2x(_t *data, int i, float *ptri, float *ptrq, float *ptri1, float *ptrq1) {
-  const char *input = data->rx.buff+data->rx.i;
-  *ptri = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
-  *ptri1 = (((input[6+0]<<24) | (input[6+1]<<16) | (input[6+2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq1 = (((input[6+3]<<24) | (input[6+4]<<16) | (input[6+5]<<8)) >> 8) / (float)0x7ff;
-  data->rx.i += 14;
-  if (data->rx.i + 14 > data->rx.limit) _packet_next(&data->rx);
-}
-
-static inline  void _rxiq_3x(_t *data, int i, float *ptri, float *ptrq, float *ptri1, float *ptrq1, float *ptri2, float *ptrq2) {
-  const char *input = data->rx.buff+data->rx.i;
-  *ptri = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
-  *ptri1 = (((input[6+0]<<24) | (input[6+1]<<16) | (input[6+2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq1 = (((input[6+3]<<24) | (input[6+4]<<16) | (input[6+5]<<8)) >> 8) / (float)0x7ff;
-  *ptri2 = (((input[12+0]<<24) | (input[12+1]<<16) | (input[12+2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq2 = (((input[12+3]<<24) | (input[12+4]<<16) | (input[12+5]<<8)) >> 8) / (float)0x7ff;
-  data->rx.i += 20;
-  if (data->rx.i + 20 > data->rx.limit) _packet_next(&data->rx);
-}
-
-static inline  void _rxiq_4x(_t *data, int i, float *ptri, float *ptrq, float *ptri1, float *ptrq1, float *ptri2, float *ptrq2, float *ptri3, float *ptrq3) {
-  const char *input = data->rx.buff+data->rx.i;
-  *ptri = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
-  *ptri1 = (((input[6+0]<<24) | (input[6+1]<<16) | (input[6+2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq1 = (((input[6+3]<<24) | (input[6+4]<<16) | (input[6+5]<<8)) >> 8) / (float)0x7ff;
-  *ptri2 = (((input[12+0]<<24) | (input[12+1]<<16) | (input[12+2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq2 = (((input[12+3]<<24) | (input[12+4]<<16) | (input[12+5]<<8)) >> 8) / (float)0x7ff;
-  *ptri3 = (((input[18+0]<<24) | (input[18+1]<<16) | (input[18+2]<<8)) >> 8) / (float)0x7ff;
-  *ptrq3 = (((input[18+3]<<24) | (input[18+4]<<16) | (input[18+5]<<8)) >> 8) / (float)0x7ff;
-  data->rx.i += 26;
-  if (data->rx.i + 26 > data->rx.limit) _packet_next(&data->rx);
-}
-
-/* process callback for 1 rx Hz */
-static int _process_1x48(jack_nframes_t nframes, void *arg) {
+/* process callback for 1 rx */
+static int _process_1(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
-  if (data->started) {
-    float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes); /* tx i stream, input from jack, outgoing to radio */
-    float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes); /* tx q stream, input from jack, outgoing to radio */
-    float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes); /* rx i stream, incoming from radio, output to jack */
-    float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes); /* rx q stream, incoming from radio, output to jack */
-    for (int i = 0; i < nframes; i += 1) {
-      _txiq_x48(data, i, in0++, in1++);
-      _rxiq_1x(data, i, out0++, out1++);
-    }
+  data->process += 1;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes); /* tx i stream, input from jack, outgoing to radio */
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes); /* rx i stream, incoming from radio, output to jack */
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  for (int i = 0; i < nframes; i += 1) {
+    _txiq(data, i, in0++, in1++);
+    _rxiq_start(data);
+    _rxiq_1(data, i, out0++, out1++);
+    _rxiq_finish(data);
+  }
+  return 0;
+}
+/*
+** handle second rx stream
+*/
+static inline  void _rxiq_2(_t *data, int i, float *ptri1, float *ptrq1) {
+  if (data->rx.udp == NULL) {
+    data->rx.underrun += 1;
+    *ptri1 = 0.0;
+    *ptrq1 = 0.0;
+  } else {
+    const char *input = data->rx.buff+data->rx.i+6;
+    *ptri1 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
+    *ptrq1 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+  }
+}
+/* process callback for 2 rx */
+static int _process_2(jack_nframes_t nframes, void *arg) {
+  _t *data = (_t *)arg;
+  data->process += 1;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes); /* tx i stream, input from jack, outgoing to radio */
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes); /* rx i stream, incoming from radio, output to jack */
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  float *out2 = jack_port_get_buffer(framework_output(arg,2), nframes);
+  float *out3 = jack_port_get_buffer(framework_output(arg,3), nframes);
+  for (int i = 0; i < nframes; i += 1) {
+    _txiq(data, i, in0++, in1++);
+    _rxiq_start(data);
+    _rxiq_1(data, i, out0++, out1++);
+    _rxiq_2(data, i, out2++, out3++);
+    _rxiq_finish(data);
+  }
+  return 0;
+}
+/*
+** handle third rx stream
+*/
+static inline  void _rxiq_3(_t *data, int i, float *ptri2, float *ptrq2) {
+  if (data->rx.udp == NULL) {
+    data->rx.underrun += 1;
+    *ptri2 = 0.0;
+    *ptrq2 = 0.0;
+  } else {
+    const char *input = data->rx.buff+data->rx.i+12;
+    *ptri2 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
+    *ptrq2 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+  }
+}
+/* process callback for 3 rx */
+static int _process_3(jack_nframes_t nframes, void *arg) {
+  _t *data = (_t *)arg;
+  data->process += 1;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes); /* tx i stream, input from jack, outgoing to radio */
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes); /* rx i stream, incoming from radio, output to jack */
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  float *out2 = jack_port_get_buffer(framework_output(arg,2), nframes);
+  float *out3 = jack_port_get_buffer(framework_output(arg,3), nframes);
+  float *out4 = jack_port_get_buffer(framework_output(arg,4), nframes);
+  float *out5 = jack_port_get_buffer(framework_output(arg,5), nframes);
+  for (int i = 0; i < nframes; i += 1) {
+    _txiq(data, i, in0++, in1++);
+    _rxiq_start(data);
+    _rxiq_1(data, i, out0++, out1++);
+    _rxiq_2(data, i, out2++, out3++);
+    _rxiq_3(data, i, out4++, out5++);
+    _rxiq_finish(data);
+  }
+  return 0;
+}
+/*
+** handle fourth rx stream
+*/
+static inline  void _rxiq_4(_t *data, int i, float *ptri3, float *ptrq3) {
+  if (data->rx.udp == NULL) {
+    data->rx.underrun += 1;
+    *ptri3 = 0.0;
+    *ptrq3 = 0.0;
+  } else {
+    const char *input = data->rx.buff+data->rx.i+18;
+    *ptri3 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
+    *ptrq3 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+  }
+}
+/* process callback for 4 rx */
+static int _process_4(jack_nframes_t nframes, void *arg) {
+  _t *data = (_t *)arg;
+  data->process += 1;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes); /* tx i stream, input from jack, outgoing to radio */
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes); /* rx i stream, incoming from radio, output to jack */
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  float *out2 = jack_port_get_buffer(framework_output(arg,2), nframes);
+  float *out3 = jack_port_get_buffer(framework_output(arg,3), nframes);
+  float *out4 = jack_port_get_buffer(framework_output(arg,4), nframes);
+  float *out5 = jack_port_get_buffer(framework_output(arg,5), nframes);
+  float *out6 = jack_port_get_buffer(framework_output(arg,6), nframes);
+  float *out7 = jack_port_get_buffer(framework_output(arg,7), nframes);
+  for (int i = 0; i < nframes; i += 1) {
+    _txiq(data, i, in0++, in1++);
+    _rxiq_start(data);
+    _rxiq_1(data, i, out0++, out1++);
+    _rxiq_2(data, i, out2++, out3++);
+    _rxiq_3(data, i, out4++, out5++);
+    _rxiq_4(data, i, out6++, out7++);
+    _rxiq_finish(data);
+  }
+  return 0;
+}
+/*
+** handle fifth rx stream
+*/
+static inline  void _rxiq_5(_t *data, int i, float *ptri4, float *ptrq4) {
+  if (data->rx.udp == NULL) {
+    data->rx.underrun += 1;
+    *ptri4 = 0.0;
+    *ptrq4 = 0.0;
+  } else {
+    const char *input = data->rx.buff+data->rx.i+24;
+    *ptri4 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
+    *ptrq4 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+  }
+}
+/* process callback for 5 rx */
+static int _process_5(jack_nframes_t nframes, void *arg) {
+  _t *data = (_t *)arg;
+  data->process += 1;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes); /* tx i stream, input from jack, outgoing to radio */
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes); /* rx i stream, incoming from radio, output to jack */
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  float *out2 = jack_port_get_buffer(framework_output(arg,2), nframes);
+  float *out3 = jack_port_get_buffer(framework_output(arg,3), nframes);
+  float *out4 = jack_port_get_buffer(framework_output(arg,4), nframes);
+  float *out5 = jack_port_get_buffer(framework_output(arg,5), nframes);
+  float *out6 = jack_port_get_buffer(framework_output(arg,6), nframes);
+  float *out7 = jack_port_get_buffer(framework_output(arg,7), nframes);
+  float *out8 = jack_port_get_buffer(framework_output(arg,8), nframes);
+  float *out9 = jack_port_get_buffer(framework_output(arg,9), nframes);
+  for (int i = 0; i < nframes; i += 1) {
+    _txiq(data, i, in0++, in1++);
+    _rxiq_start(data);
+    _rxiq_1(data, i, out0++, out1++);
+    _rxiq_2(data, i, out2++, out3++);
+    _rxiq_3(data, i, out4++, out5++);
+    _rxiq_4(data, i, out6++, out7++);
+    _rxiq_5(data, i, out8++, out9++);
+    _rxiq_finish(data);
+  }
+  return 0;
+}
+/*
+** handle sixth rx stream
+*/
+static inline  void _rxiq_6(_t *data, int i, float *ptri5, float *ptrq5) {
+  if (data->rx.udp == NULL) {
+    data->rx.underrun += 1;
+    *ptri5 = 0.0;
+    *ptrq5 = 0.0;
+  } else {
+    const char *input = data->rx.buff+data->rx.i+30;
+    *ptri5 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
+    *ptrq5 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+  }
+}
+
+/* process callback for 6 rx */
+static int _process_6(jack_nframes_t nframes, void *arg) {
+  _t *data = (_t *)arg;
+  data->process += 1;
+  float *in0 = jack_port_get_buffer(framework_input(arg,0), nframes); /* tx i stream, input from jack, outgoing to radio */
+  float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
+  float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes); /* rx i stream, incoming from radio, output to jack */
+  float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+  float *out2 = jack_port_get_buffer(framework_output(arg,2), nframes);
+  float *out3 = jack_port_get_buffer(framework_output(arg,3), nframes);
+  float *out4 = jack_port_get_buffer(framework_output(arg,4), nframes);
+  float *out5 = jack_port_get_buffer(framework_output(arg,5), nframes);
+  float *out6 = jack_port_get_buffer(framework_output(arg,6), nframes);
+  float *out7 = jack_port_get_buffer(framework_output(arg,7), nframes);
+  float *out8 = jack_port_get_buffer(framework_output(arg,8), nframes);
+  float *out9 = jack_port_get_buffer(framework_output(arg,9), nframes);
+  float *out10 = jack_port_get_buffer(framework_output(arg,10), nframes);
+  float *out11 = jack_port_get_buffer(framework_output(arg,11), nframes);
+  for (int i = 0; i < nframes; i += 1) {
+    _txiq(data, i, in0++, in1++);
+    _rxiq_start(data);
+    _rxiq_1(data, i, out0++, out1++);
+    _rxiq_2(data, i, out2++, out3++);
+    _rxiq_3(data, i, out4++, out5++);
+    _rxiq_4(data, i, out6++, out7++);
+    _rxiq_5(data, i, out8++, out9++);
+    _rxiq_6(data, i, out10++, out11++);
+    _rxiq_finish(data);
   }
   return 0;
 }
@@ -350,19 +565,21 @@ static inline unsigned _loadu(unsigned char *p) {
 }
 static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
   int n;
-  unsigned char *bytes = Tcl_GetByteArrayFromObj(udp, &n);
+  unsigned char * const bytes = Tcl_GetByteArrayFromObj(udp, &n);
   // bytes[0:2] == sync 0xeffe01
   // bytes[3] == end point == 6 for rx iq data
   // bytes[4:7] == sequence number
   unsigned sync = _loadu(bytes+0);
   unsigned seq = _loadu(bytes+4);
-  fprintf(stderr, "sync %x seq %x\n", sync, seq);
-  for (int i = 8; i <= 520; i += 520-8) {
-    unsigned char *c = bytes+i+3;
-    // assert(c[-1] == 0x7f && c[-2] == 0x7f && c[-3] == 0x7f);
+  // fprintf(stderr, "_rxiqscan: sync %x seq %x\n", sync, seq);
+  for (int i = 8; i <= 520; i += 512) {
+    // bytes[8:10] == bytes[520:522] == sync 0x7f 0x7f 0x7f
+    // bytes[11:15] == bytes[523:527] == c[0:4] control/command
     //# scan control bytes into option values
     //# I suspect that key and ptt may be in more packets
     //# this switch statement looks suspicious
+    // fprintf(stderr, "_rxiqscan: usb packet[i=%d]\n", i);
+    unsigned char *c = bytes+i+3;
     switch (c[0]) {
     case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:      
       data->rx.index = 0;
@@ -381,6 +598,7 @@ static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
       _grabkeyptt(data, c);
       data->opts.rev_power = (c[1]<<8)|c[2];
       data->opts.pa_current = (c[3]<<8)|c[4];
+      break;
     case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31:
       data->rx.index = 3;
       break;
@@ -399,6 +617,7 @@ static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
       break;
     }
   }
+  // fprintf(stderr, "rxiqscan: finished\n");
 }
 
 /*
@@ -406,10 +625,17 @@ static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
 */
 static inline void _txiqscan(_t *data, Tcl_Obj *udp) {
   int n;
-  unsigned char *bytes = Tcl_GetByteArrayFromObj(udp, &n);
-  for (int i = 8; i <= 520; i += 520-8) {
-    unsigned char *c = bytes+i+3;
-    // assert(c[-1] == 0x7f && c[-2] == 0x7f && c[-3] == 0x7f);
+  unsigned char *const bytes = Tcl_GetByteArrayFromObj(udp, &n);
+  bytes[0] = 0xEF;
+  bytes[1] = 0xFE;
+  bytes[2] = 0x01;
+  bytes[3] = 0x02;
+  _storeu(bytes+4, data->tx.sequence++);
+  for (int i = 8; i <= 520; i += 512) {
+    unsigned char *c = bytes+i;
+    *c++ = 0x7f;		// usb packet sync bytes
+    *c++ = 0x7f;
+    *c++ = 0x7f;
     while (1) {
       unsigned c0 = data->tx.index++;
       c[0] = (c0 << 1) | data->opts.mox; // set the addr and the mox bit
@@ -418,7 +644,7 @@ static inline void _txiqscan(_t *data, Tcl_Obj *udp) {
       case 0x0:
 	// 0x00	[25:24]	Speed (00=48kHz, 01=96kHz, 10=192kHz, 11=384kHz)
 	// -speed { set c1234(0) [expr {($c1234(0) & ~(3<<24)) | ([map-speed $val]<<24)}] } # restart requested
-	c[1] = data->opts.speed & 3;
+	c[1] = data->speed_bits & 3;
 	// 0x00	[23:17]	Open Collector Outputs on Penelope or Hermes
 	// -filters { set c1234(0) [expr {($c1234(0) & ~(127<<17)) | ($val<<17)}] }
 	c[2] = (data->opts.filters & 127) << 1;
@@ -430,7 +656,7 @@ static inline void _txiqscan(_t *data, Tcl_Obj *udp) {
 	// 0x00	[2]	Duplex (0=off, 1=on)
 	// -n-rx { set c1234(0) [expr {($c1234(0) & ~(7<<3)) | (($val-1)<<3)}] } # restart requested
 	// -duplex { set c1234(0) [expr {($c1234(0) & ~(1<<2)) | ($val<<2)}] }
-	c[4] = ((data->opts.n_rx & 7) << 3) | ((data->opts.duplex & 1) << 2);
+	c[4] = (((data->opts.n_rx-1) & 7) << 3) | ((data->opts.duplex & 1) << 2);
 	break;
       case 0x01:
 	// 0x01	[31:0]	TX1 NCO Frequency in Hz
@@ -442,7 +668,7 @@ static inline void _txiqscan(_t *data, Tcl_Obj *udp) {
 	// -f-rx1 { set c1234(2) $val }
 	// and so on for RX2 .. RX7
 	unsigned rxn = c0-0x01;	// 1 based index of receiver
-	if (data->opts.n_rx < rxn) continue;
+	if (rxn > data->opts.n_rx) continue;
 	_storeu(c+1, data->opts.f_rx[rxn-1]);
 	break;
       }
@@ -493,23 +719,26 @@ static inline void _txiqscan(_t *data, Tcl_Obj *udp) {
 	// 0x12	[31:0]	If present, RX8 NCO Frequency in Hz
 	// and so on for RX9 .. RX12
 	unsigned rxn = c0-0x12+8;	// 1 based index of receiver
-	if (data->opts.n_rx < rxn) continue;
+	if (rxn > data->opts.n_rx) continue;
 	_storeu(c+1, data->opts.f_rx[rxn-1]);
 	break;
       }
       case 0x17:
+	continue;
 	// 0x17	[4:0]	TX buffer latency in ms, default is 10ms
 	// 0x17	[12:8]	PTT hang time, default is 4ms
 	c[3] = data->opts.ptt_hang_time & 0x1F;
 	c[4] = data->opts.tx_buffer_latency & 0x1F;
 	break;
       case 0x2b:
+	continue;
 	// 0x2b	[31:24]	Predistortion subindex
 	// 0x2b	[19:16]	Predistortion
 	c[1] = data->opts.predistortion_subindex & 0xFF;
 	c[2] = data->opts.predistortion & 0xF;
 	break;
       case 0x3a:
+	continue;
 	// 0x3a	[0]	Reset HL2 on disconnect
 	c[4] = data->opts.reset_hl2_on_disconnect & 1;
 	break;
@@ -544,6 +773,7 @@ static inline void _txiqscan(_t *data, Tcl_Obj *udp) {
 	if (c0 > 0x3f) data->tx.index = 0;
 	continue;
       }
+      // fprintf(stderr, "_txiqscan seq %d, c0 0x%02x\n", data->tx.sequence-1, c0);
       break;
     }
   }
@@ -556,69 +786,76 @@ static int _rxiq(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   _t *data = (_t *)clientData;
   if (argc != 3)
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s %s udp_buffer", Tcl_GetString(objv[0]), Tcl_GetString(objv[1])));
-  if ( ! data->started)
-    return fw_error_obj(interp, Tcl_ObjPrintf("hl2-jack %s is not running", Tcl_GetString(objv[0])));
-  else {
-    // udp packet in Tcl_Obj *
-    Tcl_Obj *udp = objv[2];
-    // scan data
-    _rxiqscan(data, udp);
-    // queue for process
-    if (packet_ring_buffer_can_write(&data->rx.rdy)) {
-      packet_ring_buffer_write(&data->rx.rdy, objv[2]);
-      Tcl_IncrRefCount(objv[2]);
-    } else
-      return fw_error_obj(interp, Tcl_ObjPrintf("%s: no room to queue rxiq packet", Tcl_GetString(objv[0])));
-  }
+  // udp packet in Tcl_Obj * byte array
+  Tcl_Obj *udp = objv[2];
+
+  // scan data
+  _rxiqscan(data, udp);
+
+  // queue for process
+  if (packet_ring_buffer_can_write(&data->rx.rdy)) {
+    packet_ring_buffer_write(&data->rx.rdy, objv[2]);
+    Tcl_IncrRefCount(objv[2]);
+    // fprintf(stderr, "_rxiq queued for _process\n");
+  } else 
+    return fw_error_obj(interp, Tcl_ObjPrintf("%s: no room to queue rxiq packet", Tcl_GetString(objv[0])));
+
+  // drain rx.done, fill tx.rdy
+  // fprintf(stderr, "_rxiq: drain rx.done, fill tx.rdy\n");
   while (packet_ring_buffer_can_read(&data->rx.done)) {
     Tcl_Obj *udp = packet_ring_buffer_read(&data->rx.done);
-    fprintf(stderr, "rxiq byte array shared %d, refcnt %d\n", Tcl_IsShared(udp), udp->refCount);
-    if (packet_ring_buffer_can_write(&data->tx.rdy))
+    // fprintf(stderr, "rxiq byte array shared %d, refcnt %d\n", Tcl_IsShared(udp), udp->refCount);
+    if ( ! Tcl_IsShared(udp) && packet_ring_buffer_can_write(&data->tx.rdy)) {
+      Tcl_InvalidateStringRep(udp);
       packet_ring_buffer_write(&data->tx.rdy, udp);
-    else
+    } else
       Tcl_DecrRefCount(udp);
   }
+
+  // return tx.done
+  // fprintf(stderr, "_rxiq: return tx.done\n");
   if (packet_ring_buffer_can_read(&data->tx.done)) {
+    // fprintf(stderr, "_rxiq: read tx.done\n");
     Tcl_Obj *udp = packet_ring_buffer_read(&data->tx.done);
+    // fprintf(stderr, "_rxiq: got %p from tx.done\n", udp);
     // scan options
     _txiqscan(data, udp);
+    // fprintf(stderr, "_rxiq: _txiqscan udp\n");
     Tcl_SetObjResult(interp, udp);
+    // fprintf(stderr, "_rxiq: Tcl_SetObjResult(interp, udp);\n");
     Tcl_DecrRefCount(udp);
+    // fprintf(stderr, "_rxiq: Tcl_DecrRefCount(udp);\n"); 
   }
+
   return TCL_OK;
 }
 
-static int _start(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+
+static int _force(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s start", Tcl_GetString(objv[0])));
-  data->started = 1;
-  return TCL_OK;
+  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s force", Tcl_GetString(objv[0])));
+  Tcl_Obj *udp = _packet_new();
+  _txiqscan(data, udp);
+  return fw_success_obj(interp, udp);
 }
-
-static int _state(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  _t *data = (_t *)clientData;
-  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s state", Tcl_GetString(objv[0])));
-  return fw_success_obj(interp, Tcl_NewIntObj(data->started));
-}
-
-static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  _t *data = (_t *)clientData;
-  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s stop", Tcl_GetString(objv[0])));
-
-  data->started = 0;
-  return TCL_OK;
-}
-
+  
 static int _pending(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  return
-    (argc != 2) ?
-    fw_error_obj(interp, Tcl_ObjPrintf("usage: %s pending", Tcl_GetString(objv[0]))) : 
-    fw_success_obj(interp, Tcl_ObjPrintf("%d %d %d %d",
-					 packet_ring_buffer_can_read(&data->rx.rdy),
-					 packet_ring_buffer_can_read(&data->rx.done),
-					 packet_ring_buffer_can_read(&data->tx.rdy),
-					 packet_ring_buffer_can_read(&data->tx.done)));
+  if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s pending", Tcl_GetString(objv[0])));
+  Tcl_Obj *ret = Tcl_ObjPrintf("%d {%d %d %d %d} {%d %d %d %d %d %d} {%s %s}",
+			       data->process,
+			       packet_ring_buffer_can_read(&data->rx.rdy),
+			       packet_ring_buffer_can_read(&data->rx.done),
+			       packet_ring_buffer_can_read(&data->tx.rdy),
+			       packet_ring_buffer_can_read(&data->tx.done),
+			       data->rx.sample, data->rx.underrun, data->rx.overrun,
+			       data->tx.sample, data->tx.underrun, data->tx.overrun,
+			       data->rx.abort ? data->rx.abort : "", data->tx.abort ? data->tx.abort : ""
+			       );
+  data->rx.underrun = data->rx.overrun = 0;
+  data->tx.underrun = data->tx.overrun = 0;
+  data->rx.abort = data->tx.abort = NULL;
+  return fw_success_obj(interp, ret);
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -631,7 +868,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-
+  /* options set from discover response from radio */
   { "-code-version",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.code_version), "gateware version" },
   { "-board-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.board_id), "board identifier." },
   { "-mcp4662",		"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.mcp4662), "mcp4662 configuration bytes." },
@@ -639,14 +876,23 @@ static const fw_option_table_t _options[] = {
   { "-wb-fmt",		"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.wb_fmt), "format of bandscope samples." },
   { "-build-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.build_id), "board sub-identifier." },
   { "-gateware-minor",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.gateware_minor), "gateware minor version." },
-
+  /* options set from iq packet responses from radio */
+  { "-hw-dash",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dash), "The hardware dash key value from the HermesLite." },
+  { "-hw-dot",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dot), "The hardware dot key value from the HermesLite." },
+  { "-hw-ptt",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_ptt), "The hardware ptt value from the HermesLite." },
+  { "-overflow",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.overflow), "The ADC has clipped values in this frame." },
+  { "-serial",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.serial), "The Hermes software serial number." },
+  { "-temperature",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.temperature), "Raw ADC value for temperature sensor." },
+  { "-fwd-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.fwd_power), "Raw ADC value for forward power sensor." },
+  { "-rev-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.rev_power), "Raw ADC value for reverse power sensor." },
+  { "-pa-current",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.pa_current), "Raw ADC value for power amplifier current sensor." },
+  /* options set by user and relayed to radio in iq packets */
   { "-mox",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.mox), "enable transmitter." },
-
-  { "-speed",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.speed), 
+  { "-speed",		"int", "Int", "48000", fw_option_int, 0, offsetof(_t, opts.speed), 
 			"Choose rate of RX IQ samples, may be 0, 1, 2, or 3, sample rate is 48000*2^speed." },
   { "-filters",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.filters), "Bits which enable filters on the N2ADR filter board." },
   { "-not-sync",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.not_sync), "Disable power supply sync." },
-  { "-lna-db",		"int", "Int", "38", fw_option_int, 0, offsetof(_t, opts.lna_db), "Decibels of low noise amplifier on receive, from -12 to 48." },
+  { "-lna-db",		"int", "Int", "22", fw_option_int, 0, offsetof(_t, opts.lna_db), "Decibels of low noise amplifier on receive, from -12 to 48." },
   { "-n-rx",		"int", "Int", "1", fw_option_int, 0, offsetof(_t, opts.n_rx), "Number of receivers to implement, from 1 to 8 permitted." },
   { "-duplex",		"int", "Int", "1", fw_option_int, 0, offsetof(_t, opts.duplex), "Enable the transmitter frequency to vary independently of the receiver frequencies." },
   { "-f-tx",		"int", "Int", "7012352", fw_option_int, 0, offsetof(_t, opts.f_tx), "Transmitter NCO frequency" },
@@ -670,7 +916,7 @@ static const fw_option_table_t _options[] = {
   { "-vna",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna), "Enable vector network analysis mode." },
   { "-vna-count",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_count), "Number of frequencies sampled in VNA mode." },
   { "-vna-started",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_started), "Start VNA mode." },
-
+  /* option set by user and relayed to radio, later tranches */
   { "-vna-fixed-rx-gain","int","Int", "0", fw_option_int, 0, offsetof(_t, opts.vna_fixed_rx_gain), "Specify +/-6dB gain in VNA mode." },
   { "-alex-manual-mode","int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.alex_manual_mode), "." },
   { "-tune-request",    "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.tune_request), "." },
@@ -685,51 +931,103 @@ static const fw_option_table_t _options[] = {
   { "-predistortion",   "int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.predistortion), "." },
   { "-reset-hl2-on-disconnect","int","Int","0",fw_option_int,0,offsetof(_t, opts.reset_hl2_on_disconnect), "." },
 
-  { "-hw-dash",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dash), "The hardware dash key value from the HermesLite." },
-  { "-hw-dot",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dot), "The hardware dot key value from the HermesLite." },
-  { "-hw-ptt",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_ptt), "The hardware ptt value from the HermesLite." },
-  { "-overflow",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.overflow), "The ADC has clipped values in this frame." },
-  { "-serial",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.serial), "The Hermes software serial number." },
-  { "-temperature",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.temperature), "Raw ADC value for temperature sensor." },
-  { "-fwd-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.fwd_power), "Raw ADC value for forward power sensor." },
-  { "-rev-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.rev_power), "Raw ADC value for reverse power sensor." },
-  { "-pa-current",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.pa_current), "Raw ADC value for power amplifier current sensor." },
-
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "pending", _pending, "check the ringbuffer fills" },
+  { "pending", _pending, "check the ringbuffer fills, etc." },
   { "rxiq", _rxiq, "rx iq buffers to jack exchanged for tx iq buffers from jack" },
-  { "start", _start, "start transferring samples" },
-  { "state", _state, "are we started?" },
-  { "stop", _stop, "stop transferring samples" },
+  { "force", _force, "format packet of zero samples for transmission" },
   { NULL }
 };
 
-static const framework_t _template = {
+static const framework_t _templates[] = {
+ {
   _options,			// option table
   _subcommands,			// subcommand table
   _init,			// initialization function
   _command,			// command function
   _delete,			// delete function
   NULL,				// sample rate function
-  _process_1x48,		// process callback
+  _process_1,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "a component for servicing a HermesLite2f software defined radio"
+  "a component for servicing a HermesLite2 software defined radio"
+ },{
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  _delete,			// delete function
+  NULL,				// sample rate function
+  _process_2,			// process callback
+  2, 4, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  "a component for servicing a HermesLite2 software defined radio"
+ },{
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  _delete,			// delete function
+  NULL,				// sample rate function
+  _process_3,			// process callback
+  2, 6, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  "a component for servicing a HermesLite2 software defined radio"
+ },{
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  _delete,			// delete function
+  NULL,				// sample rate function
+  _process_4,			// process callback
+  2, 8, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  "a component for servicing a HermesLite2 software defined radio"
+#if 0
+ },{
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  _delete,			// delete function
+  NULL,				// sample rate function
+  _process_5,			// process callback
+  2, 10, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  "a component for servicing a HermesLite2 software defined radio"
+ },{
+  _options,			// option table
+  _subcommands,			// subcommand table
+  _init,			// initialization function
+  _command,			// command function
+  _delete,			// delete function
+  NULL,				// sample rate function
+  _process_6,			// process callback
+  2, 12, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  "a component for servicing a HermesLite2 software defined radio"
+#endif
+ }
 };
 
 /*
-** This _factory should accept options for -speed and for -n-rx
-** because -n-rx changes the number of outputs in the template
-** and -n-rx and -speed changes the layout of received samples
-** and -speed changes the decimation required for transmit samples
-** so there needs to be a different _process callback for each combination
+** This _factory accepts for -n-rx because -n-rx changes the number
+** of outputs in the template and the _process callback.
 */
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  fprintf(stderr, "Hl_udp_jack_Init _process %p and outputs %d\n", _template.process, _template.n_outputs);
-  return framework_factory(clientData, interp, argc, objv, &_template, sizeof(_t));
+  int n_rx = 1;
+  int n_hw_rx = 4;
+  for (int i = 2; i < argc; i += 2) {
+    char *opt = Tcl_GetStringFromObj(objv[i], NULL);
+    if (strcmp(opt, "-n-rx") == 0) {
+      if (Tcl_GetIntFromObj(interp, objv[i+1], &n_rx) != TCL_OK)
+	return fw_error_obj(interp, Tcl_ObjPrintf("invalid -n-rx value '%s'", Tcl_GetStringFromObj(objv[i+1], NULL)));
+    } else if (strcmp(opt, "-n-hw-rx") == 0) {
+      if (Tcl_GetIntFromObj(interp, objv[i+1], &n_hw_rx) != TCL_OK)
+	return fw_error_obj(interp, Tcl_ObjPrintf("invalid -n-hw-rx value '%s'", Tcl_GetStringFromObj(objv[i+1], NULL)));
+    }
+  }
+  if (n_rx < 1 || n_rx > n_hw_rx)
+    return fw_error_obj(interp, Tcl_ObjPrintf("invalid -n-rx value '%d', must be from 1 to %d", n_rx, n_hw_rx));
+  return framework_factory(clientData, interp, argc, objv, &_templates[n_rx-1], sizeof(_t));
 }
 
 int DLLEXPORT Hl_udp_jack_Init(Tcl_Interp *interp) {

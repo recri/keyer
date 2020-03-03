@@ -33,7 +33,7 @@ extern "C" {
 
   typedef struct {
 #include "framework_options_vars.h"
-    char kmode;
+    char mode;
   } options_t;
 
   typedef struct {
@@ -57,7 +57,7 @@ extern "C" {
       dp->k.set_cw_keyer_weight(dp->opts.ratio);
       dp->k.set_cw_keyer_spacing(dp->opts.alsp != 0);
       dp->k.set_cw_keys_reversed(dp->opts.swap != 0);
-      dp->k.set_cw_keyer_mode(dp->opts.kmode);
+      dp->k.set_cw_keyer_mode(dp->opts.mode);
     }
   }
 
@@ -148,13 +148,13 @@ extern "C" {
       return TCL_ERROR;
     }
     dp->modified = dp->modified || dp->opts.wpm != save.wpm || dp->opts.swap != save.swap || 
-      dp->opts.kmode != save.kmode || dp->opts.alsp != save.alsp || dp->opts.ratio != save.ratio ;
+      dp->opts.mode != save.mode || dp->opts.alsp != save.alsp || dp->opts.ratio != save.ratio ;
     return TCL_OK;
   }
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
- { "-kmode", "kmode", "Kmode", "B", fw_option_char, fw_flag_none, offsetof(_t, opts.kmode), "keyer mode: S, A, or B" },
+ { "-mode", "mode", "Mode", "B", fw_option_char, fw_flag_none, offsetof(_t, opts.mode), "keyer mode: S, A, or B" },
  { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
 };
 

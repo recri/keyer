@@ -750,6 +750,7 @@ snit::widgetadaptor ro-text {
 	set text [$options(-detime) get]
 	# insert into output display
 	$self ins end $text
+	$self see end
 	# append to accumulated code
 	append code $text
 	while {[regexp {^([^ ]*) (.*)$} $code all symbol rest]} {
@@ -1019,8 +1020,8 @@ proc save-setups {} {
 
 proc default-setups {} {
     return [dict create {*}{
-	key { keyer -start {iambic@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 }
-	key2 { keyer -start {iambic@key2 keyer-tone@kyo2} -key2-wpm 18 -key2-note 2 -kyo2-ramp 4.0 -kyo2-note 2 }
+	key { keyer -start {iambic@key keyer-tone@kyo} -key-wpm 18 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
+	key2 { keyer -start {iambic@key2 keyer-tone@kyo2} -key2-wpm 18 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
 	kbd { keyer -start {iambic@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
 	kbd2 { keyer -start {iambic@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
@@ -1028,14 +1029,12 @@ proc default-setups {} {
 	cas { keyer -start {midi-insert@cas} }
 	tap { keyer -start {midi-tap@tap} }
 	tap2 { keyer -start {midi-tap@tap2} }
-	out { keyer -start {keyer-detone@detone keyer-detime@out} }
+	out { keyer -start {keyer-detone@detone keyer-detime@out} -detone-freq 700 -out-wpm 18 }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
-	key+kbd { keyer -run {key kbd} -key-wpm 15.0 -key-mode B}
-	key+out { keyer -start {iambic@key keyer-tone@kyo keyer-detone@detone keyer-detime@out}
-	    -key-wpm 15.0 -key-mode B -detone-freq 700 }
-	key+kbd+out { keyer -start {iambic@key keyer-tone@kyo keyer-detone@detone keyer-detime@out ascii@kbd keyer-tone@kbo} 
-	    -key-wpm 15.0 -key-mode B -detone-freq 700 -kbd-wpm 80.0 -kbo-ramp 6.6 }
+	key+kbd { keyer -run {key kbd}}
+	key+out { keyer -run {key out}}
+	key+kbd+out { keyer -run {key kbd out} }
 	hlj { keyer -start hl-jack@hlj }
 	huj { keyer -start hl2-udp-jack@huj }
 	info-key {iambic keyer and a keyed oscillator}
