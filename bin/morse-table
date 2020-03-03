@@ -1,0 +1,66 @@
+#!/usr/bin/tclsh8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2020 by Roger E Critchlow Jr, Charlestown, MA, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+# this is a table generator for morse code
+#
+# use the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+package require morse::fldigi
+
+set flcode [morse-fldigi-dict]
+set flpros [morse-fldigi-pro-dict]
+
+set table [dict create]
+
+dict for {char code} $flcode {
+    # compute the clock length
+    # write a the binary code, where 1 = tone on and 0 = tone off, most significant bit first
+    # write a clock string, where '.' = tone on and ' ' = tone off, read left to right
+    # sort by clock length, then binary code/lexicographic string sort
+    regsub -all {.} $code {& } newcode
+    regsub -all -- {-} $newcode {...} newcode
+    set newcode [string trim $newcode]
+    set clocks [string length $newcode]
+    regsub -all {\.} $newcode 1 binary
+    regsub -all { } $binary 0 binary
+    set b 0
+    foreach d [split $binary {}] {
+	set b [expr {($b<<1)+$d}]
+    }
+    # puts "| $char | $code | $newcode | $clocks | $binary | $b |"
+    dict set table $b char $char
+    dict set table $b code $code
+    dict set table $b newcode $newcode
+    dict set table $b clocks $clocks
+    dict set table $b binary $binary
+    dict set table $b bbinary $b
+}
+foreach key [lsort -integer [dict keys $table]] {
+    puts "| [dict get $table $key char] | [dict get $table $key newcode] | [dict get $table $key clocks] |"
+}
+
