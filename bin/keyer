@@ -166,9 +166,9 @@ proc opt-component-opts {opt} { return [dict get $::data(defines) $opt] }
 proc opt-primary {opt} { return [lindex [opt-components-opts $opt] 0] }
 proc opt-get-opts {} { return [dict keys $::data(defines)] }
 
-proc opt-describe {text comp opt2 opt type value opts} { 
+proc opt-describe {text comp opt2 opt type value info args} { 
     set dict [dict create]
-    foreach var {comp opt2 opt type value opts} {
+    foreach var {comp opt2 opt type value info args} {
 	dict set dict $var [set $var]
     }
     dict set ::data(desc) $text $dict
@@ -331,77 +331,77 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	    # the {value} is the class of readout component that handles this option
 	    # the list is additional options for the readout
 	    # midi channel could as well be an {enum} with 16 values.
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.0f -min 1 -max 16 -step 1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.0f -min 1 -max 16 -step 1
 	}
 	-note {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.0f -min 0 -max 127 -step 1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.0f -min 0 -max 127 -step 1
 	}
 	-wpm {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5
 	}
 	-swap - -mdit - -mdah - -mide - -alsp - -awsp {
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-mode {
-	    opt-describe $text $name $opt2 $opt enum $ovalue [list -info $info -values {A B}]
+	    opt-describe $text $name $opt2 $opt enum $ovalue $info -values {A B}
 	}
 	-word {
-	    opt-describe $text $name $opt2 $opt enum $ovalue [list -info $info -units dits -values {50 60}]
+	    opt-describe $text $name $opt2 $opt enum $ovalue $info -values {50 60} -units dits
 	}
 	-dit - -dah - -ies - -ils - -iws { 
 	    set min [expr {0.5*$ovalue}]
 	    set max [expr {1.5*$ovalue}]
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.1f -units dits -min $min -max $max -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.1f -units dits -min $min -max $max -step 0.1
 	}
 	-weight - -ratio {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.1f -units % -min 0.0 -max 100.0 -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.1f -units % -min 0.0 -max 100.0 -step 0.1
 	}
 	-comp {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.1f -units ms -min -15.0 -max 15.0 -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.1f -units ms -min -15.0 -max 15.0 -step 0.1
 	}
 	-freq {
-	    opt-describe $text $name $opt2 $opt freq $ovalue \
-		[list -info $info -units Hz -format %.0f -min 500 -max 6000 -step 1]
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
+		-format %.0f -min 500 -max 6000 -step 1 -units Hz
 	}
 	-rise - -fall - -ramp {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -units ms -format %.1f -min 0.0 -max 15.0 -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms
 	}
 	-window {
-	    opt-describe $text $name $opt2 $opt enum $ovalue \
-		[list -info $info -values [lrange [get-window-types] 1 end]]
+	    opt-describe $text $name $opt2 $opt enum $ovalue $info \
+		-values [lrange [get-window-types] 1 end]
 	}
 	-window2 {
-	    opt-describe $text $name $opt2 $opt enum $ovalue \
-		[list -info $info -values [get-window-types]]
+	    opt-describe $text $name $opt2 $opt enum $ovalue $info \
+		-values [get-window-types]
 	}
 	-gain {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -units dB -format %.1f -min -50 -max 0 -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-units dB -format %.1f -min -50 -max 0 -step 0.1
 	}
 	-delay {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-units ms -format %.1f -min 0.0 -max 1000 -step 0.1
 	}
 	-hang {
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -units ms -format %.1f -min 0.0 -max 1000 -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-units ms -format %.1f -min 0.0 -max 1000 -step 0.1
 	}
 	-period {
 	    # for the debouncer
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -units ms -format %.3f -min 0.0 -max 1.000 -step 0.001]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-units ms -format %.3f -min 0.0 -max 1.000 -step 0.001
 	}
 	-steps {
 	    # for the debouncer
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.0f -min 1 -max 32 -step 1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.0f -min 1 -max 32 -step 1
 	}
 	-dict {
 	    # for the ascii keyer or output decoder
@@ -409,23 +409,23 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-bandwidth {
 	    # for the unkeyer detone module
 	    # bandwidth BWHertz 100.0 100.0 bandwidth of output signal in Hz
-	    opt-describe $text $name $opt2 $opt freq $ovalue \
-		[list -info $info -units Hz -format %.0f -min 10 -max 1000 -step 1]
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
+		-units Hz -format %.0f -min 10 -max 1000 -step 1
 	}
 	-on - -off {
 	    # on/off thresholds in keyer-detone
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -format %.1f -min 0.0 -max 5.0 -step 0.1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-format %.1f -min 0.0 -max 5.0 -step 0.1
 	}
 	-timeout {
 	    # hysteresis timeout in keyer-detone
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -units frames -format %.0f -min 0 -max 1000 -step 1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-units frames -format %.0f -min 0 -max 1000 -step 1
 	}
 	-estimate {
 	    # estimated dot clock in samples in keyer-detime
-	    opt-describe $text $name $opt2 $opt value $ovalue \
-		[list -info $info -units frames -format %.0f -min 10 -max 1000 -step 1]
+	    opt-describe $text $name $opt2 $opt value $ovalue $info \
+		-units frames -format %.0f -min 10 -max 1000 -step 1
 	}
 	-log2rxsize {
 	    # ignore
@@ -490,51 +490,51 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-pa-current { #Raw ADC value for power amplifier current sensor.
 	}
 	-mox { #enable transmitter.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-filters { #Bits which enable filters on the N2ADR filter board.
 	}
 	-not-sync { #Disable power supply sync.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-lna-db { # Decibels of low noise amplifier on receive, from -12 to 48.
-	    opt-describe $text $name $opt2 $opt freq $ovalue \
-		[list -info $info -format %.0f -min -12 -max 48 -step 1]
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
+		-format %.0f -min -12 -max 48 -step 1 -units dB
 	}
 	-duplex { # Enable the transmitter frequency to vary independently of the receiver frequencies.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-f-tx - -f-rx1 - -f-rx2 - -f-rx3 - -f-rx4 - -f-rx5 - -f-rx6 - -f-rx7 - -f-rx8 - -f-rx9 - -f-rx10 - -f-rx11 - -f-rx12 { 
 	    # Transmitter NCO frequency
 	    # Receiver NCO frequency.
-	    opt-describe $text $name $opt2 $opt freq $ovalue \
-		[list -info $info -units Hz -format %.0f -min 1 -max 29999999 -step 1]
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
+		-units Hz -format %.0f -min 1 -max 29999999 -step 1
 	}
 	-level { # Transmitter power level, from 0 to 255.
-	    opt-describe $text $name $opt2 $opt freq $ovalue \
-		[list -info $info -format %.0f -min 0 -max 255 -step 1]
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
+		-format %.0f -min 0 -max 255 -step 1
 	}
 	-pa { # Enable power amplifier.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-low-pwr { # Disable T/R relay in low power operation.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-pure-signal { # Enable Pure Signal operation. Not implemented.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-bias-adjust { # Enable bias current adjustment for power amplifier.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-vna { # Enable vector network analysis mode.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-vna-count { # Number of frequencies sampled in VNA mode.
 	}
 	-vna-started { # Start VNA mode.
 	}
 	-vna-fixed-rx-gain { # Specify +/-6dB gain in VNA mode.
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-alex-manual-mode { # .
 	}
@@ -547,7 +547,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-hermes-lite-lna { # .
 	}
 	-cwx { # .
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-cw-hang-time { # .
 	}
@@ -560,7 +560,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-predistortion { # .
 	}
 	-reset-hl2-on-disconnect { # 
-	    opt-describe $text $name $opt2 $opt bool $ovalue [list -info $info]
+	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	default {
 	    puts "opt-describe: no clues for {$name $opt2 {$opt $oname $oclass $odefault $ovalue} $info}"
@@ -1030,7 +1030,7 @@ proc load-ui {} {
     array set compid {}
     foreach text [opts-with-descriptions] {
 	set desc [opt-description $text]
-	foreach var {comp opt2 opt type value opts} {
+	foreach var [dict keys $desc] {
 	    set $var [dict get $desc $var]
 	}
 	# puts "$text c=$comp o2=$opt2 o=$opt t=$type v=$value etc={$opts}"
@@ -1059,13 +1059,13 @@ proc load-ui {} {
 
 	if {[is-hide $text]} continue
 					      
-	lappend opts -value $value -variable ::value($text) -command [list dial-set $text]
+	lappend args -value $value -variable ::value($text) -command [list dial-set $text]
 	set w x$text
 	switch $type {
-	    bool { sdrtk::readout-bool .p.dial.$w -text $text {*}$opts }
-	    enum { sdrtk::readout-enum .p.dial.$w -text $text {*}$opts }
-	    freq { sdrtk::readout-freq .p.dial.$w -text $text {*}$opts }
-	    value { sdrtk::readout-value .p.dial.$w -text $text {*}$opts }
+	    bool { sdrtk::readout-bool .p.dial.$w -text $text -info $info {*}$args }
+	    enum { sdrtk::readout-enum .p.dial.$w -text $text -info $info {*}$args }
+	    freq { sdrtk::readout-freq .p.dial.$w -text $text -info $info {*}$args }
+	    value { sdrtk::readout-value .p.dial.$w -text $text -info $info {*}$args }
 	    default { error "unanticipated type \"$type\"" }
 	}
 	.p.dial add .p.dial.$w -text [.p.dial.$w cget -text]
