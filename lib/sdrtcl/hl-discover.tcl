@@ -169,7 +169,7 @@ snit::type sdrtcl::hl-discover {
 			  -mac-addr [as-mac $metis_mac_address] \
 			  -code-version $code_version \
 			  -board-id $board_id \
-			  -mcp4662 [join [as-hex $mcp4662_config] ,] \
+			  -mcp4662 [join [as-hex $mcp4662_config] :] \
 			  -fixed-ip [as-ip-addr $fixed_ip] \
 			  -fixed-mac [as-mac $fixed_mac] \
 			  -n-hw-rx $n_hw_rx \

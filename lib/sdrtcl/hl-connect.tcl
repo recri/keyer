@@ -100,9 +100,10 @@ snit::type sdrtcl::hl-connect {
     option -speed -default 48000 -configuremethod hl-conf
     option -n-rx -default 1 -configuremethod hl-conf
 
-    # the rest of the methods are delegated to the iqhandler component
+    # the rest of the options are delegated to the iqhandler component
     delegate option * to iqhandler
-    
+    delegate method activate to iqhandler
+
     variable optiondocs -array {
 	-peer {The IP address and port of the connected board.}
 	-mac-addr {The MAC address of the connected board.}
@@ -121,25 +122,36 @@ snit::type sdrtcl::hl-connect {
     method hl-begin {} {
 	puts "hl-begin"
 	set d(stopped) 1
+	if {$options(-peer) != {}} {
+	    $self hl-connect
+	} else {
+	    set d(socket) {}
+	    $self rx-reset
+	    $self hl-restart
+	}
+    }
+
+    method hl-connect {} {
 	set d(socket) [udp_open]
-	fconfigure $d(socket) -translation binary -blocking 0 -buffering none -remote $options(-peer)
+	regsub {:} $options(-peer) { } peer
+	fconfigure $d(socket) -translation binary -blocking 0 -buffering none -remote $peer
 	fileevent $d(socket) readable [mymethod rx-recv-first]
-	$self rx-reset
-	$self hl-restart
     }
 
     method hl-start {} {
 	puts "hl-start"
 	set d(stopped) 0
 	# start the hardware
-	puts -nonewline $d(socket) [binary format Ia60 [expr {0xeffe0401 | ($options(-bandscope)<<1)}] {}]
-	# puts "hl-start: enabled hardware"
+	if {$d(socket) ne {}} {
+	    puts -nonewline $d(socket) [binary format Ia60 [expr {0xeffe0401 | ($options(-bandscope)<<1)}] {}]
+	    # puts "hl-start: enabled hardware"
+	}
 	# instantiate the iqhandler
 	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -speed $options(-speed) -n-rx $options(-n-rx) {*}$options(-args)
 	# puts "hl-start speed [$self.iqhandler cget -speed] [expr {[$self.iqhandler cget -speed]&3}]"
 	# puts "hl-start iq config:\n [join [$self.iqhandler configure] \n]"
 	# start the iqhandler
-	$self.iqhandler activate
+	# $self.iqhandler activate
 	# puts "hl-start: installed iqhandler"
     }
     
@@ -153,7 +165,9 @@ snit::type sdrtcl::hl-connect {
 	    # puts "crash iq config:\n [join [$self.iqhandler configure] \n]"
 	}
 	# tell hl2 hardware to stop
-	puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
+	if {$d(socket) ne {}} {
+	    puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
+	}
 	# save iqhandler state
 	if {[info procs $self.iqhandler] ne {}} {
 	    set options(-args) [concat {*}[lmap x [$self.iqhandler configure] { if {[llength $x] != 5} continue; list [lindex $x 0] [lindex $x 4] }]]
@@ -236,14 +250,16 @@ snit::type sdrtcl::hl-connect {
     method rx-reset {} {
 	puts "rx-reset"
 	set spurs 0
-	foreach i {1 2} {
+	if {$d(socket) ne {}} {
+	    foreach i {1 2} {
+		while {[read $d(socket)] ne {}} {
+		    incr spurs
+		}
+		after 1
+	    }
 	    while {[read $d(socket)] ne {}} {
 		incr spurs
 	    }
-	    after 1
-	}
-	while {[read $d(socket)] ne {}} {
-	    incr spurs
 	}
 	if {$spurs > 0} { puts "rx-reset: $spurs spurious buffers" }
     }
@@ -324,18 +340,22 @@ snit::type sdrtcl::hl-connect {
     method stats-tx {} { return [concat {*}[lmap x {calls} {list tx-$x $d(tx-$x)}]] }
     method stats-bs {} { return [concat {*}[lmap x {calls} {list bs-$x $d(bs-$x)}]] }
     
+    method info-option {opt} {
+	if {[info exists optiondocs($opt)]} {
+	    return $optiondocs($opt)
+	}
+	return [$self.iqhandler info option $opt]
+    }
+
     #
     # main constructor
     #
     constructor {args} {
-	puts {constructor {args}}
+	puts "constructor {$args}"
 	# pick off the -n-rx and the -speed options
 	set options(-speed) [from args -speed 48000]
 	set options(-n-rx) [from args -n-rx 1]
 	set options(-peer) [from args -peer {}]
-	if {{:} in $options(-peer)} {
-	    regsub {:} $options(-peer) { } options(-peer)
-	}
 	set options(-args) $args
 	# $self configurelist $args
 	$self tx-constructor

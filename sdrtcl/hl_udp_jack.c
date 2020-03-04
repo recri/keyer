@@ -47,7 +47,10 @@ typedef struct {
   /* discovered options */
   int code_version;		/* gateware version */
   int board_id;			/* board identifier */
-  int mcp4662;			/* mcp4662 configuration bytes */
+  Tcl_Obj *mac_addr;		/* radio MAC address */
+  Tcl_Obj *mcp4662;		/* mcp4662 configuration bytes */
+  Tcl_Obj *fixed_ip;		/* firmware assigned ip */
+  Tcl_Obj *fixed_mac;		/* firmware assigned mac */
   int n_hw_rx;			/* number of hardware receivers */
   int wb_fmt;			/* format of bandscope samples */
   int build_id;			/* board sub-identifier */
@@ -871,8 +874,12 @@ static const fw_option_table_t _options[] = {
   /* options set from discover response from radio */
   { "-code-version",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.code_version), "gateware version" },
   { "-board-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.board_id), "board identifier." },
-  { "-mcp4662",		"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.mcp4662), "mcp4662 configuration bytes." },
-  { "-n-hw-rx",		"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.n_hw_rx), "number of hardware receivers." },
+  { "-mac-addr",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.mac_addr), "radio mac address." },
+  { "-mcp4662",		"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.mcp4662), "mcp4662 configuration bytes." },
+  { "-fixed-ip",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.fixed_ip), "firmware assigned ip address." },
+  { "-fixed-mac",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.fixed_mac), "firmware assigned mac address bytes." },
+
+  { "-n-hw-rx",		"int", "Int", "4", fw_option_int, 0, offsetof(_t, opts.n_hw_rx), "number of hardware receivers." },
   { "-wb-fmt",		"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.wb_fmt), "format of bandscope samples." },
   { "-build-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.build_id), "board sub-identifier." },
   { "-gateware-minor",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.gateware_minor), "gateware minor version." },

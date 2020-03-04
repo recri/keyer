@@ -31,11 +31,36 @@ lappend auto_path [file join $dirname .. lib]
 
 package require sdrtcl::hl-connect
 
+#
+# set up to take the result of hl-discover as option arguments
+# discard some, modify the values of others
+array set censor {
+    -status {}
+}
+array set edit {
+}
+#
+# set up default options
 array set options {
+    -speed 48000
+    -n-rx 1
+    -pa 0
 }
 
-sdrtcl::hl-connect cx {*}[array get options] {*}$argv
-#cx configure -speed 48000 -n-rx 1
+foreach {opt val} $argv {
+    if {[info exists censor($opt)]} {
+	continue
+    } elseif {[info exists edit($opt)]} {
+	eval $edit($opt)
+	set options($opt) $val
+    } else {
+	set options($opt) $val
+    }
+}
+
+sdrtcl::hl-connect cx {*}[array get options]
+
+# okay, a poor mans repl at the output
 while { ! [eof stdin]} {
     if {[gets stdin line] < 0} break
     eval $line
