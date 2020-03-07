@@ -1,0 +1,16 @@
+* Reworking the dialbook to make it work better.
+** Add readonly and volatile flags for items which can be viewed
+   and must be polled frequently.
+** Customize dialbook display so that the same dial positions persist in meaning
+** Expanded Details listing using the ttk::treeview to hierarchically organize options
+** Reorganize the hl-udp-jack component so it can be queried for options.
+* The sdrtcl/snit split in info methods must be unified
+** rename the sdrtcl methods
+  { "info-command", fw_subcommand_info_command,"get the doc string for a command" },
+  { "info-option",  fw_subcommand_info_option, "get the doc string for a command option" },
+  { "info-options", fw_subcommand_info_options,"get a list of options for a command" },
+  { "info-method",  fw_subcommand_info_method, "get the doc string for a command method" },
+  { "info-methods", fw_subcommand_info_methods,"get a list of methods for a command" },
+  { "info-type",    fw_subcommand_info_type,   "get the type of a command" },
+  { "info-ports",   fw_subcommand_info_ports,  "get a list of ports for a command" },
+** implement the same methods in snit

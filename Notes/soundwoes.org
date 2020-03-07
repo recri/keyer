@@ -1,0 +1,28 @@
+* Trying to get sound working with sdr 2020-03-04
+** Setting up jackd to run at 96000Hz results in jackd running at 48000Hz
+*** Maybe it works for dummy driver?  I think it did, for all sample rates.
+*** Doesn't even generate an error or warning message, just sets the sample rate.
+** SparkSDR makes no sound.
+** LinHPSDR makes no sound.
+** Quisk doesn't switch to headphones when pulse does,
+   even when using pulse default output device.
+* Suppose we tune multiple receivers to the same band
+** Not to the precise same VFO frequency,
+   but to slightly different frequencies
+   such that the FFT's can be frequency shifted
+   and added with just a permutation.
+* Do we get an advantage from this tuning diversity?
+  Or has all possible advantage been taken from the
+  incoming samples by any one of the tunings?
+* Take 1, 2, 3, 4, 1+2, 1+3, 1+4, 2+3, 2+4, 3+4, 1+2+3, 1+2+4, 1+3+4, 2+3+4, 1+2+3+4
+  where the + indicates combination in the overlap-save filter frequency representation
+** So take the fft of 1, 2, 3, 4;
+** form the combinations of 1, 2, 3, 4 two ways, three ways, and four ways
+** to obtain 4+6+4+1 = 15 different overlap-save filter frequency representations
+** inverse fft to get 15 different time domain sample streams
+** run ft8 decoder over the 15 sample streams and see how many signals can be extracted
+   from each stream
+** and see if there is any perceptible advantage to combining tunings.
+*** so all streams are using the same antenna, RF stage, and ADC stage
+*** they only differ in the frequency used to heterodyne them down to base band
+** maybe we don't even need to convert back to sample stream to decode
