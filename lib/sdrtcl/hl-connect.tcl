@@ -80,17 +80,17 @@ snit::type sdrtcl::hl-connect {
 
     # these are discovered during connection to the hl
     # most are probably being passed in directly
-    option -peer -default {} -readonly true
-    option -code-version -default -1 -type snit::integer -readonly true
-    option -board-id -default -1 -type snit::integer -readonly true
-    option -mac-addr -default {} -readonly true
-    option -mcp4662 -default {} -readonly true
-    option -fixed-ip -default {} -readonly true
-    option -fixed-mac -default {} -readonly true
-    option -n-hw-rx -default -1 -readonly true
-    option -wb-fmt -default -1 -readonly true
-    option -build-id -default -1 -readonly true
-    option -gateware-minor -default -1 -readonly true
+    option -peer -default {} -configuremethod Configure
+    option -code-version -default -1 -type snit::integer -configuremethod Configure
+    option -board-id -default -1 -type snit::integer -configuremethod Configure
+    option -mac-addr -default {} -configuremethod Configure
+    option -mcp4662 -default {} -configuremethod Configure
+    option -fixed-ip -default {} -configuremethod Configure
+    option -fixed-mac -default {} -configuremethod Configure
+    option -n-hw-rx -default -1 -configuremethod Configure
+    option -wb-fmt -default -1 -configuremethod Configure
+    option -build-id -default -1 -configuremethod Configure
+    option -gateware-minor -default -1 -configuremethod Configure
 
     # this one enters into the start command
     option -bandscope -default 0 -type {snit::integer -min 0 -max 1} -configuremethod hl-conf
@@ -118,36 +118,32 @@ snit::type sdrtcl::hl-connect {
 
     ##
     ## hl - hermes lite / metis start stop socket handlers
+    ## so we want to start the main component before we start the socket handlers
     ##
     method hl-begin {} {
 	puts "hl-begin"
 	set d(stopped) 1
-	if {$options(-peer) != {}} {
-	    $self hl-connect
-	} else {
-	    set d(socket) {}
-	    $self rx-reset
-	    $self hl-restart
+	if {$d(socket) ne {}} {
+	    puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
+	    close $d(socket)
 	}
-    }
-
-    method hl-connect {} {
 	set d(socket) [udp_open]
 	regsub {:} $options(-peer) { } peer
+	puts "$options(-peer) translated to $peer"
 	fconfigure $d(socket) -translation binary -blocking 0 -buffering none -remote $peer
 	fileevent $d(socket) readable [mymethod rx-recv-first]
+	$self rx-reset
+	$self hl-restart
     }
 
     method hl-start {} {
 	puts "hl-start"
 	set d(stopped) 0
 	# start the hardware
-	if {$d(socket) ne {}} {
-	    puts -nonewline $d(socket) [binary format Ia60 [expr {0xeffe0401 | ($options(-bandscope)<<1)}] {}]
-	    # puts "hl-start: enabled hardware"
-	}
+	puts -nonewline $d(socket) [binary format Ia60 [expr {0xeffe0401 | ($options(-bandscope)<<1)}] {}]
+	# puts "hl-start: enabled hardware"
 	# instantiate the iqhandler
-	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -speed $options(-speed) -n-rx $options(-n-rx) {*}$options(-args)
+	# install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -speed $options(-speed) -n-rx $options(-n-rx) {*}$options(-args)
 	# puts "hl-start speed [$self.iqhandler cget -speed] [expr {[$self.iqhandler cget -speed]&3}]"
 	# puts "hl-start iq config:\n [join [$self.iqhandler configure] \n]"
 	# start the iqhandler
@@ -165,17 +161,17 @@ snit::type sdrtcl::hl-connect {
 	    # puts "crash iq config:\n [join [$self.iqhandler configure] \n]"
 	}
 	# tell hl2 hardware to stop
-	if {$d(socket) ne {}} {
-	    puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
-	}
+	puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
 	# save iqhandler state
-	if {[info procs $self.iqhandler] ne {}} {
-	    set options(-args) [concat {*}[lmap x [$self.iqhandler configure] { if {[llength $x] != 5} continue; list [lindex $x 0] [lindex $x 4] }]]
-	    # stop iqhandler
-	    $self.iqhandler deactivate
-	    # delete iqhandler
-	    rename $self.iqhandler {}
-	}
+	set options(-args) [concat {*}[lmap x [$self.iqhandler configure] { if {[llength $x] != 5} continue; list [lindex $x 0] [lindex $x 4] }]]
+	# stop iqhandler
+	$self.iqhandler deactivate
+	# delete iqhandler
+	rename $self.iqhandler {}
+	# reinstall a new iqhandler
+	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler {*}$options(-args)
+	# start it running
+	$self.iqhandler activate
 	set d(stopped) 1
     }    
     method hl-restart {} {
@@ -199,6 +195,14 @@ snit::type sdrtcl::hl-connect {
 	}
 	## this should ideally happen after the change in speed or n-rx has been communicated.
 	set d(restart-requested) 1
+    }
+    
+    method Configure {opt val} {
+	set options($opt) $val
+	catch {$self.iqhandler configure $opt $val}
+	if {$opt eq {-peer}} {
+	    $self hl-begin
+	}
     }
     
     proc pkt-format {hex} {
@@ -336,9 +340,9 @@ snit::type sdrtcl::hl-connect {
 	}
     }
     
-    method stats-rx {} { return [concat {*}[lmap x {calls} {list rx-$x $d(rx-$x)}]] }
-    method stats-tx {} { return [concat {*}[lmap x {calls} {list tx-$x $d(tx-$x)}]] }
-    method stats-bs {} { return [concat {*}[lmap x {calls} {list bs-$x $d(bs-$x)}]] }
+    method stats-rx {} { return [concat {*}[lmap x {calls frames} {list rx-$x $d(rx-$x)}]] }
+    method stats-tx {} { return [concat {*}[lmap x {calls frames} {list tx-$x $d(tx-$x)}]] }
+    method stats-bs {} { return [concat {*}[lmap x {calls frames} {list bs-$x $d(bs-$x)}]] }
     
     method info-option {opt} {
 	if {[info exists optiondocs($opt)]} {
@@ -347,21 +351,18 @@ snit::type sdrtcl::hl-connect {
 	return [$self.iqhandler info option $opt]
     }
 
+    method is-busy {} { return 0 }
+
     #
     # main constructor
     #
     constructor {args} {
 	puts "constructor {$args}"
-	# pick off the -n-rx and the -speed options
-	set options(-speed) [from args -speed 48000]
-	set options(-n-rx) [from args -n-rx 1]
-	set options(-peer) [from args -peer {}]
-	set options(-args) $args
-	# $self configurelist $args
+	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler
+	$self configurelist $args
 	$self tx-constructor
 	$self rx-constructor
 	$self stats-reset
-	$self hl-begin
     }
 }
 

@@ -40,6 +40,8 @@ snit::widget sdrtk::readout-enum {
     option -variable -default {} -configuremethod Configure
     option -info -default {} -configuremethod Configure
     option -units -default {} -configuremethod Configure
+    option -ronly -default 0 -configuremethod Configure
+    option -volatile -default 0 -configuremethod Configure
     option -command {}
     option -menu-value {}
 
@@ -149,12 +151,10 @@ snit::widget sdrtk::readout-enum {
 	    # $self TraceWrite
 	}
     }
-    method {Configure -info} {val} {
-	set options(-info) $val
-    }
-    method {Configure -units} {val} {
-	set options(-units) $val
-    }
+    method {Configure -units} {val} { set options(-units) $val }
+    method {Configure -info} {val} { set options(-info) $val }
+    method {Configure -ronly} {val} { set options(-ronly) $val }
+    method {Configure -volatile} {val} { set options(-volatile) $val }
     method TraceWrite {args} { 
 	if {[catch { $self configure -value [set $options(-variable)] } error]} {
 	    puts "TraceWrite {$args} caught $error"

@@ -255,6 +255,7 @@ snit::widget sdrtk::dialbook {
     # Returns the list of windows managed by the notebook.
     method tabs {} {
 	set tabs {}
+	puts "dialbook tabs $data(tabs)"
 	foreach tab $data(tabs) { lappend tabs [$tab get-window] }
 	return $tabs
     }

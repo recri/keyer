@@ -25,7 +25,18 @@
 # hide, merge, or fuse options
 # save the result as a preset command for later access
 #
-# todo
+# current todo
+# [ ] create treeview to organize options, etc.
+# [ ] all-options subtree with all options present
+# [ ] dial-faves subtree with dial favorites
+# [ ] types subtree specifying options on values for shared types
+# [ ] out-connections subtree listing components and their sinks
+# [ ] in-connections subtree listing components and their sources
+# [ ] auto connection hints
+# [ ] jackd start hints
+
+#
+# old todo list
 # [-] make the -rise-fall option sort after the -rise and -fall that it joins
 # [-] make the -rise-fall option update the displayed -rise and -fall option values too
 # [x] replace -rise-fall with -ramp option in the keyer-tone itself
@@ -79,7 +90,7 @@ proc write-file {file data} {
 }
 
 # initialize
-set ::data(main) [dict create -server {} -hide {} -merge {} -argvopts {}]
+set ::data(main) [dict create -server {} -hide {} -merge {} -argvopts {} -ronly {} -volatile {}]
 
 #
 # miscellaneous accessors
@@ -150,6 +161,14 @@ proc has-merge {} { return [has-var -merge] }
 proc get-hide {} { return [get-var -hide] }
 proc lappend-hide {args} { lappend-var -hide {*}$args }
 proc has-hide {} { return [has-var -hide] }
+
+proc get-ronly {} { return [get-var -ronly] }
+proc lappend-ronly {args} { lappend-var -ronly {*}$args }
+proc has-ronly {} { return [has-var -ronly] }
+
+proc get-volatile {} { return [get-var -volatile] }
+proc lappend-volatile {args} { lappend-var -volatile {*}$args }
+proc has-volatile {} { return [has-var -volatile] }
 
 # options are created in component specific versions -$comp$opt
 # or as merged versions where all identically spelled options
@@ -270,6 +289,7 @@ package require sdrtk::readout-bool
 package require sdrtk::readout-enum
 package require sdrtk::readout-freq
 package require sdrtk::readout-value
+package require sdrtk::readout-text
 
 proc get-window-types {} {
     package require sdrtcl::window
@@ -322,6 +342,8 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
     # look for further guidance
     switch -glob -- $opt2 {
 	-server - -client - -verbose {
+	    lappend-ronly $text
+	    opt-describe $text $name $opt2 $opt text $ovalue $info
 	    # these are fixed, as in not modifiable
 	    # well, verbose could be, but no one wants
 	    # to see this running -verbose
@@ -331,21 +353,20 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	    # the {value} is the class of readout component that handles this option
 	    # the list is additional options for the readout
 	    # midi channel could as well be an {enum} with 16 values.
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.0f -min 1 -max 16 -step 1
+	    opt-describe $text $name $opt2 $opt enum $ovalue $info -values {1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16}
 	}
 	-note {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.0f -min 0 -max 127 -step 1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.0f -min 0 -max 127 -step 1
 	}
 	-wpm {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -units wpm -min 5.0 -max 200.0 -step 0.5
 	}
 	-swap - -mdit - -mdah - -mide - -alsp - -awsp {
 	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-mode {
+	    # name overload
+	    # -mode is going to turn up in more than one component
 	    opt-describe $text $name $opt2 $opt enum $ovalue $info -values {A B}
 	}
 	-word {
@@ -354,54 +375,44 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-dit - -dah - -ies - -ils - -iws { 
 	    set min [expr {0.5*$ovalue}]
 	    set max [expr {1.5*$ovalue}]
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.1f -units dits -min $min -max $max -step 0.1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min $min -max $max -step 0.1 -units dits
 	}
 	-weight - -ratio {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.1f -units % -min 0.0 -max 100.0 -step 0.1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min 0.0 -max 100.0 -step 0.1 -units %
 	}
 	-comp {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.1f -units ms -min -15.0 -max 15.0 -step 0.1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms
 	}
 	-freq {
-	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
-		-format %.0f -min 500 -max 6000 -step 1 -units Hz
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info -format %.0f -min 500 -max 6000 -step 1 -units Hz
 	}
 	-rise - -fall - -ramp {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms
 	}
 	-window {
-	    opt-describe $text $name $opt2 $opt enum $ovalue $info \
-		-values [lrange [get-window-types] 1 end]
+	    # first window in convolution cannot be {none}
+	    opt-describe $text $name $opt2 $opt enum $ovalue $info -values [lrange [get-window-types] 1 end]
 	}
 	-window2 {
-	    opt-describe $text $name $opt2 $opt enum $ovalue $info \
-		-values [get-window-types]
+	    # second window can be {none}
+	    opt-describe $text $name $opt2 $opt enum $ovalue $info -values [get-window-types]
 	}
 	-gain {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-units dB -format %.1f -min -50 -max 0 -step 0.1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min -50 -max 0 -step 0.1 -units dB
 	}
 	-delay {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-units ms -format %.1f -min 0.0 -max 1000 -step 0.1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms
 	}
 	-hang {
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-units ms -format %.1f -min 0.0 -max 1000 -step 0.1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms
 	}
 	-period {
 	    # for the debouncer
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-units ms -format %.3f -min 0.0 -max 1.000 -step 0.001
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.3f -min 0.0 -max 1.000 -step 0.001 -units ms
 	}
 	-steps {
 	    # for the debouncer
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.0f -min 1 -max 32 -step 1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.0f -min 1 -max 32 -step 1 -units steps
 	}
 	-dict {
 	    # for the ascii keyer or output decoder
@@ -409,23 +420,19 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-bandwidth {
 	    # for the unkeyer detone module
 	    # bandwidth BWHertz 100.0 100.0 bandwidth of output signal in Hz
-	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
-		-units Hz -format %.0f -min 10 -max 1000 -step 1
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info -format %.0f -min 10 -max 1000 -step 1 -units Hz
 	}
 	-on - -off {
 	    # on/off thresholds in keyer-detone
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-format %.1f -min 0.0 -max 5.0 -step 0.1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.1f -min 0.0 -max 5.0 -step 0.1
 	}
 	-timeout {
 	    # hysteresis timeout in keyer-detone
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-units frames -format %.0f -min 0 -max 1000 -step 1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.0f -min 0 -max 1000 -step 1 -units frames
 	}
 	-estimate {
 	    # estimated dot clock in samples in keyer-detime
-	    opt-describe $text $name $opt2 $opt value $ovalue $info \
-		-units frames -format %.0f -min 10 -max 1000 -step 1
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.0f -min 10 -max 1000 -step 1 -units frames
 	}
 	-log2rxsize {
 	    # ignore
@@ -438,6 +445,8 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-n-rx {
 	    # ignore
 	    # {-n-rx nrx Nrx 1 1} number of receivers
+	    lappend-ronly $text
+	    opt-describe $text $name $opt2 $opt text $ovalue $info
 	}
 	-i-rx {
 	    # ignore
@@ -446,121 +455,136 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	-speed {
 	    # ignore
 	    # {-speed speed Speed 48000 48000} sample rate of receivers
+	    lappend-ronly $text
+	    opt-describe $text $name $opt2 $opt text $ovalue $info
 	}
 	-peer { # The IP address and port of the connected board.
+	    lappend-ronly $text
+	    opt-describe $text $name $opt2 $opt text $ovalue $info
 	}
-	-code-version { # The Hermes code version reported by the connected board.
-	}
-	-board-id { # The board identifier reported by the connected board
-	}
-	-mac-addr { # The MAC address of the connected board.
-	}
-	-mcp4662 { # mcp4662 configuration bytes.
-	}
-	-fixed-ip { # firmware assigned ip address.
-	}
-	-fixed-mac { # firmware assigned mac address bytes.
-	}
-	-n-hw-rx { # number of hardware receivers.
-	}    
-	-wb-fmt { # format of bandscope samples.
-	}
-	-build-id { #board sub-identifier.
-	}
-	-gateware-minor { #gateware minor version.
+	-code-version -
+	-board-id -
+	-mac-addr -
+	-mcp4662 -
+	-fixed-ip -
+	-fixed-mac -
+	-n-hw-rx -
+	-wb-fmt - 
+	-build-id -
+	-gateware-minor -
+	-serial {
+	    # The Hermes code version reported by the connected board.
+	    # The board identifier reported by the connected board
+	    # The MAC address of the connected board.
+	    # mcp4662 configuration bytes.
+	    # firmware assigned ip address.
+	    # firmware assigned mac address bytes.
+	    # number of hardware receivers.
+	    # format of bandscope samples.
+	    # board sub-identifier.
+	    # gateware minor version.
+	    # The Hermes software serial number.
+	    lappend-ronly $text
+	    opt-describe $text $name $opt2 $opt text $ovalue $info
 	}
 	-bandscope { #Enable the bandscope samples.
 	}
-	-hw-dash { #The hardware dash key value from the HermesLite.
-	}
-	-hw-dot { #The hardware dot key value from the HermesLite.
-	}
-	-hw-ptt { #The hardware ptt value from the HermesLite.
-	}
-	-overflow { #The ADC has clipped values in this frame.
-	}
-	-serial { #The Hermes software serial number.
-	}
-	-temperature { #Raw ADC value for temperature sensor.
-	}
-	-fwd-power { #Raw ADC value for forward power sensor.
-	}
-	-rev-power { #Raw ADC value for reverse power sensor.
-	}
+	-hw-dash -
+	-hw-dot -
+	-hw-ptt -
+	-overload -
+	-recovery -
+	-tx-iq-fifo -
+	-temperature -
+	-fwd-power -
+	-rev-power -
 	-pa-current { #Raw ADC value for power amplifier current sensor.
+	    # The hardware dash key value from the HermesLite.
+	    # The hardware dot key value from the HermesLite.
+	    # The hardware ptt value from the HermesLite.
+	    # The ADC has clipped values in this frame.
+	    # The gateware is in under/overflow reovery
+	    # The transmit iq sample fifo fill state
+	    # Raw ADC value for temperature sensor.
+	    # Raw ADC value for forward power sensor.
+	    # Raw ADC value for reverse power sensor.
+	    lappend-ronly $text
+	    lappend-volatile $text
+	    opt-describe $text $name $opt2 $opt text $ovalue $info
 	}
-	-mox { #enable transmitter.
+	-mox { 
+	    # enable transmitter.
+	    # this deserves its own type, it's not a simple boolean
 	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-filters { #Bits which enable filters on the N2ADR filter board.
-	}
-	-not-sync { #Disable power supply sync.
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.0f -min 0 -max 255 -step 1
 	}
 	-lna-db { # Decibels of low noise amplifier on receive, from -12 to 48.
-	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
-		-format %.0f -min -12 -max 48 -step 1 -units dB
-	}
-	-duplex { # Enable the transmitter frequency to vary independently of the receiver frequencies.
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
+	    opt-describe $text $name $opt2 $opt value $ovalue $info -format %.0f -min -12 -max 48 -step 1 -units dB
 	}
 	-f-tx - -f-rx1 - -f-rx2 - -f-rx3 - -f-rx4 - -f-rx5 - -f-rx6 - -f-rx7 - -f-rx8 - -f-rx9 - -f-rx10 - -f-rx11 - -f-rx12 { 
 	    # Transmitter NCO frequency
 	    # Receiver NCO frequency.
-	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
-		-units Hz -format %.0f -min 1 -max 29999999 -step 1
+	    if {[regexp {^-f-rx(\d+)$} $opt2 all irx]} {
+		puts "processing receiver $irx"
+		# if {$irx > $::value(-hl-n-rx)} { lappend-hide $opt2 }
+	    }
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info -units Hz -format %.0f -min 1 -max 29999999 -step 1
 	}
 	-level { # Transmitter power level, from 0 to 255.
-	    opt-describe $text $name $opt2 $opt freq $ovalue $info \
-		-format %.0f -min 0 -max 255 -step 1
+	    opt-describe $text $name $opt2 $opt freq $ovalue $info -format %.0f -min 0 -max 255 -step 1
 	}
-	-pa { # Enable power amplifier.
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
-	}
-	-low-pwr { # Disable T/R relay in low power operation.
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
-	}
-	-pure-signal { # Enable Pure Signal operation. Not implemented.
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
-	}
-	-bias-adjust { # Enable bias current adjustment for power amplifier.
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
-	}
-	-vna { # Enable vector network analysis mode.
+	-not-sync -
+	-duplex -
+	-pa - 
+	-low-pwr - 
+	-pure-signal - 
+	-bias-adjust - 
+	-vna - 
+	-vna-started -
+	-vna-fixed-rx-gain -
+	-alex-manual-mode -
+	-tune-request -
+	-hermes-lite-lna -
+	-cwx -
+	-reset-hl2-on-disconnect { 
+	    # Disable power supply sync.
+	    # Enable the transmitter frequency to vary independently of the receiver frequencies.
+	    # Enable power amplifier.
+	    # Disable T/R relay in low power operation.
+	    # Enable Pure Signal operation. Not implemented.
+	    # Enable bias current adjustment for power amplifier.
+	    # Enable vector network analysis mode.
+	    # Start VNA mode.
+	    # Alex manual mode (not implemented 3/4/2020)
+	    # use hermes lit lna settings (vs hermes classic settings)
+	    # Enable CWX, I[0] of IQ stream is CWX keydown
+	    # reset hl2 on disconnect
 	    opt-describe $text $name $opt2 $opt bool $ovalue $info
 	}
 	-vna-count { # Number of frequencies sampled in VNA mode.
 	}
-	-vna-started { # Start VNA mode.
+	-i2c-rx-filter - 
+	-i2c-tx-filter { 
+	    # i2c rx filter, 8 bits, (not implemented 3/4/2020)
+	    # i2c tx filter, 8 bits, (not implemented 3/4/2020)
 	}
-	-vna-fixed-rx-gain { # Specify +/-6dB gain in VNA mode.
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
+	-cw-hang-time { 
+	    # CW Hang Time in ms, bits [9:2]
+	    # CW Hang Time in ms, bits [1:0]
 	}
-	-alex-manual-mode { # .
+	-tx-buffer-latency {
+	    # TX buffer latency in ms, default is 10ms, 0 .. 31
 	}
-	-tune-request { # .
+	-ptt-hang-time {
+	    # PTT hang time, default is 4ms, 0 .. 31
 	}
-	-i2c-rx-filter { # .
+	-predistortion-subindex {
+	    # Predistortion subindex, 8 bits
 	}
-	-i2c-tx-filter { # .
-	}
-	-hermes-lite-lna { # .
-	}
-	-cwx { # .
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
-	}
-	-cw-hang-time { # .
-	}
-	-tx-buffer-latency { # .
-	}
-	-ptt-hang-time { # .
-	}
-	-predistortion-subindex { # .
-	}
-	-predistortion { # .
-	}
-	-reset-hl2-on-disconnect { # 
-	    opt-describe $text $name $opt2 $opt bool $ovalue $info
+	-predistortion {
+	    # Predistortion, 4 bits
 	}
 	default {
 	    puts "opt-describe: no clues for {$name $opt2 {$opt $oname $oclass $odefault $ovalue} $info}"
@@ -664,6 +688,8 @@ set handler {}
 
 proc dial-set {opt val} {
     if {[opt-is-defined $opt]} {
+	if {$::value($opt) eq $val} return
+	# puts "dial-set $opt $val when $::value($opt)"
 	set ::value($opt) $val
 	foreach {comp opt2} [opt-component-opts $opt] {
 	    dict set ::data(busy) $comp $opt2 $val
@@ -673,7 +699,7 @@ proc dial-set {opt val} {
 		    $comp configure {*}$opts
 		    dict unset ::data(busy) $comp
 		} error]} {
-		    puts "dial-set configure $opts threw $error"
+		    puts "dial-set {$comp configure $opts} threw {$error}"
 		}
 	    } elseif {$::handler eq {}} {
 		# puts "$comp is-busy"
@@ -692,7 +718,7 @@ proc dial-set-timeout {} {
 		$comp configure {*}$opts
 		dict unset ::data(busy) $comp
 	    } error]} {
-		puts "dial-set configure $opts threw $error"
+		puts "dial-set {$comp configure $opts} threw {$error}"
 	    }
 	} else {
 	    # puts "$comp is-busy"
@@ -767,8 +793,8 @@ snit::widgetadaptor midi-insert {
 
     method bind-key {tag element} {
 	if {$tag ne {none}} {
-	    bind $win <KeyPress-$tag> [mymethod insert-key $element down]
-	    bind $win <KeyRelease-$tag> [mymethod insert-key $element up]
+	    bind . <KeyPress-$tag> [mymethod insert-key $element down]
+	    bind . <KeyRelease-$tag> [mymethod insert-key $element up]
 	}
     }
     
@@ -997,11 +1023,12 @@ proc is-matched {opt list} {
     foreach pat $list { if {[string match $pat $opt]} { return 1 } }
     return 0
 }
+
 proc is-hide {opt} { return [is-matched $opt [get-hide]] }
 proc is-merge {opt} { return [is-matched $opt [get-merge]] }
 proc is-argvopts {opt} { return [expr {[lsearch [get-argvopts] $opt] >= 0}] }
-proc is-ronly {opt} { return 0 }
-proc is-volatile {opt} { return 0 }
+proc is-ronly {opt} { return [expr {$opt in [get-ronly]}] }
+proc is-volatile {opt} { return [expr {$opt in [get-volatile]}] }
 
 #
 # load the entire ui for the program
@@ -1014,18 +1041,32 @@ proc widget-opts {w c opts} {
     }
 }
 
+proc treeview-select {w} { 
+    #puts "treeview-select $w [$w focus] [$w set [$w focus]]"
+    #puts "tabs [.p.dial tabs]"
+    set tab [$w focus]
+    if {".p.dial.x$tab" in [.p.dial tabs]} {
+	.p.dial select .p.dial.x$tab
+    }
+}
+proc treeview-open {w} { puts "treeview-open $w [$w focus] [$w set [$w focus]]" }
+proc treeview-close {w} { puts "treeview-close $w [$w focus] [$w set [$w focus]]" }
+
 proc load-ui {} {
     pack [keyer-widget .k] -side top -fill x -expand true
     pack [ttk::panedwindow .p] -side top -fill both -expand true
     .p add [::sdrtk::dialbook .p.dial]
-    ttk::treeview .p.details -columns {hide merge argv ronly volatile default current}
+    ttk::treeview .p.details -columns {hide merge argv ronly volatile default current} -display {current}
+    bind .p.details <<TreeviewSelect>> [list treeview-select %W]
+    bind .p.details <<TreeviewOpen>> [list treeview-open %W]
+    bind .p.details <<TreeviewClose>> [list treeview-close %W]
     foreach {c t} {hide H merge M argv A ronly R volatile V} {
 	.p.details column $c -width 20 -anchor c -stretch false
 	.p.details heading $c -text $t
     }
     .p.details column default -width 100 -anchor e 
     .p.details heading default -text Default
-    .p.details column current -width 100 -anchor e
+    .p.details column current -width 100 -anchor w
     .p.details heading current -text Current
     array set compid {}
     foreach text [opts-with-descriptions] {
@@ -1055,7 +1096,7 @@ proc load-ui {} {
 			$::defval($text) \
 			$::value($text) ]
 
-	.p.details insert $comp end -text $text -values $values
+	.p.details insert $comp end -id $text -text $text -values $values
 
 	if {[is-hide $text]} continue
 					      
@@ -1066,6 +1107,7 @@ proc load-ui {} {
 	    enum { sdrtk::readout-enum .p.dial.$w -text $text -info $info {*}$args }
 	    freq { sdrtk::readout-freq .p.dial.$w -text $text -info $info {*}$args }
 	    value { sdrtk::readout-value .p.dial.$w -text $text -info $info {*}$args }
+	    text { sdrtk::readout-text .p.dial.$w -text $text -info $info {*}$args }
 	    default { error "unanticipated type \"$type\"" }
 	}
 	.p.dial add .p.dial.$w -text [.p.dial.$w cget -text]
@@ -1103,6 +1145,9 @@ proc load-ui {} {
     }
 }
 
+#
+# setups bind an implementaion to a instance and supply some option values
+#
 package require getstring
 namespace import getstring::*
 
@@ -1161,13 +1206,23 @@ proc save-setups {} {
 }
 
 proc default-setups {} {
-    return [dict create {*}{
+    # connection hints
+    #  -connect system-midi>key>kyo>system-audio
+    #  -connect system-midi>key2>kyo2>system-audio
+    #  -connect kbd>kbo>system-audio
+    #  -connect kbd2>kbo2>system-audio
+    #  -connect >ptt>
+    #  -connect >deb>
+    #  -connect cas>key*
+    #  -connect (kyo|kbo)*>detone>out (or receiver stream?)
+    #
+    return [dict create {*}{ 
 	key { keyer -start {iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
 	key2 { keyer -start {iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
 	kbd { keyer -start {iambic@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
 	kbd2 { keyer -start {iambic@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
-	deb { keyer -start {keyer-debounce@deb} }
+	deb { keyer -start {keyer-debounce@deb}}
 	cas { keyer -start {midi-insert@cas} }
 	tap { keyer -start {midi-tap@tap} }
 	tap2 { keyer -start {midi-tap@tap2} }

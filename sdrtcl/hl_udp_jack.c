@@ -91,7 +91,9 @@ typedef struct {
   int hw_dash;			/* The hardware dash key value from the HermesLite. */
   int hw_dot;			/* The hardware dot key value from the HermesLite. */
   int hw_ptt;			/* The hardware ptt value from the HermesLite. */
-  int overflow;			/* The ADC has clipped values in this frame. */
+  int overload;			/* The ADC has clipped values in this frame. */
+  int recovery;			/* Under/overflow Recovery (use tx_iq_fifo to distinguish over/under */
+  int tx_iq_fifo;		/* TX IQ FIFO Count MSBs */
   int serial;			/* The Hermes software serial number. */
   int temperature;		/* Raw ADC value for temperature sensor. */
   int fwd_power;		/* Raw ADC value for forward power sensor. */
@@ -587,7 +589,9 @@ static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
     case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:      
       data->rx.index = 0;
       _grabkeyptt(data, c);
-      data->opts.overflow = (c[1] & 1) != 0;
+      data->opts.overload = (c[1] & 1) != 0;
+      data->opts.recovery = c[2] & 0x80;
+      data->opts.tx_iq_fifo = c[2] & 0x7f;
       data->opts.serial =  c[4];
       break;
     case 8: case 9: case 10: case 11: case 12: case 13: case 14: case 15:
@@ -887,7 +891,9 @@ static const fw_option_table_t _options[] = {
   { "-hw-dash",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dash), "The hardware dash key value from the HermesLite." },
   { "-hw-dot",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dot), "The hardware dot key value from the HermesLite." },
   { "-hw-ptt",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_ptt), "The hardware ptt value from the HermesLite." },
-  { "-overflow",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.overflow), "The ADC has clipped values in this frame." },
+  { "-overload",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.overload), "The ADC has clipped values in this frame." },
+  { "-recovery",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.recovery), "Buffer under/overlow recovery active." },
+  { "-tx-iq-fifo",	"int", "int", "0", fw_option_int, 0, offsetof(_t, opts.tx_iq_fifo), "TX IQ FIFO Count MSBs." },
   { "-serial",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.serial), "The Hermes software serial number." },
   { "-temperature",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.temperature), "Raw ADC value for temperature sensor." },
   { "-fwd-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.fwd_power), "Raw ADC value for forward power sensor." },

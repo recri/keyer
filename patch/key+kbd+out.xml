@@ -1,49 +1,53 @@
 <!DOCTYPE patchbay>
 <patchbay name="key+kbd+out" version="0.5.0">
  <output-sockets>
-  <socket exclusive="off" name="midi" client="system" type="jack-midi">
+  <socket exclusive="off" name="midi" type="jack-midi" client="system">
    <plug>midi_capture_1</plug>
   </socket>
-  <socket exclusive="off" name="key" client="key" type="jack-midi">
+  <socket exclusive="off" name="cas" type="jack-midi" client="cas">
    <plug>midi_out</plug>
   </socket>
-  <socket exclusive="off" name="kbd" client="kbd" type="jack-midi">
+  <socket exclusive="off" name="key" type="jack-midi" client="key">
    <plug>midi_out</plug>
   </socket>
-  <socket exclusive="off" name="kyo" client="kyo" type="jack-audio">
+  <socket exclusive="off" name="kbd" type="jack-midi" client="kbd">
+   <plug>midi_out</plug>
+  </socket>
+  <socket exclusive="off" name="kyo" type="jack-audio" client="kyo">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
-  <socket exclusive="off" name="kbo" client="kbo" type="jack-audio">
+  <socket exclusive="off" name="kbo" type="jack-audio" client="kbo">
    <plug>out_i</plug>
   </socket>
-  <socket exclusive="off" name="detone" client="detone" type="jack-midi">
+  <socket exclusive="off" name="detone" type="jack-midi" client="detone">
    <plug>midi_out</plug>
   </socket>
  </output-sockets>
  <input-sockets>
-  <socket exclusive="off" name="key" client="key" type="jack-midi">
+  <socket exclusive="off" name="key" type="jack-midi" client="key">
    <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" name="kyo" client="kyo" type="jack-midi">
+  <socket exclusive="off" name="kyo" type="jack-midi" client="kyo">
    <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" name="kbo" client="kbo" type="jack-midi">
+  <socket exclusive="off" name="kbo" type="jack-midi" client="kbo">
    <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" name="detone" client="detone" type="jack-audio">
+  <socket exclusive="off" name="detone" type="jack-audio" client="detone">
    <plug>in_i</plug>
   </socket>
-  <socket exclusive="off" name="system" client="system" type="jack-audio">
+  <socket exclusive="off" name="system" type="jack-audio" client="system">
    <plug>playback_1</plug>
    <plug>playback_2</plug>
   </socket>
-  <socket exclusive="off" name="out" client="out" type="jack-midi">
+  <socket exclusive="off" name="out" type="jack-midi" client="out">
    <plug>midi_in</plug>
   </socket>
  </input-sockets>
  <slots/>
  <cables>
+  <cable output="midi" input="key" type="jack-midi"/>
   <cable output="key" input="kyo" type="jack-midi"/>
   <cable output="kbd" input="kbo" type="jack-midi"/>
   <cable output="kyo" input="system" type="jack-audio"/>
@@ -51,7 +55,7 @@
   <cable output="kbo" input="system" type="jack-audio"/>
   <cable output="kbo" input="detone" type="jack-audio"/>
   <cable output="detone" input="out" type="jack-midi"/>
-  <cable output="midi" input="key" type="jack-midi"/>
+  <cable output="cas" input="key" type="jack-midi"/>
  </cables>
 </patchbay>
 

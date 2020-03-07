@@ -44,8 +44,9 @@ snit::widget sdrtk::readout-value {
     option -min -default {} -configuremethod Configure
     option -max -default {} -configuremethod Configure
     option -info -default {} -configuremethod Configure
+    option -ronly -default 0 -configuremethod Configure
+    option -volatile -default 0 -configuremethod Configure
     option -command {}
-
     delegate option -text to hull
 
     variable value 0
@@ -91,10 +92,6 @@ snit::widget sdrtk::readout-value {
 	}
     }
 
-    method {Configure -units} {val} {
-	set options(-units) $val
-    }
-    
     method {Configure -step} {val} {
 	set options(-step) $val
 	$self configure -value [expr {int($options(-value)/$val)*$val}]
@@ -124,8 +121,9 @@ snit::widget sdrtk::readout-value {
 	set options(-max) $val
 	$self Configure -value $options(-value)
     }
-    method {Configure -info} {val} {
-	set options(-info) $val
-    }
+    method {Configure -units} {val} { set options(-units) $val }
+    method {Configure -info} {val} { set options(-info) $val }
+    method {Configure -ronly} {val} { set options(-ronly) $val }
+    method {Configure -volatile} {val} { set options(-volatile) $val }
     method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
 }
