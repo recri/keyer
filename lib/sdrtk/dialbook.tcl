@@ -93,6 +93,7 @@ snit::widget sdrtk::dialbook {
     component tab
     component dial
     component grid
+    component tree
     option -class undefined
     option {-cursor cursor Cursor} {}
     option {-style style Style} {}
@@ -117,20 +118,36 @@ snit::widget sdrtk::dialbook {
 	menu false
 	counter 0
 	button {}
+	use-grid 0
+	use-tree 1
     }
 
     constructor {args} {
 	install tab using ttk::frame $win.tab
 	install dial using sdrtk::dial $win.dial
-	install grid using ttk::frame $win.grid
-	
+	if {$data(use-grid)} {
+	    install grid using ttk::frame $win.grid
+	}
+	if {$data(use-tree)} {
+	    install tree using ttk::treeview $win.tree -columns {current comp type window} -display {current} -height 5
+	    bind $win.tree <<TreeviewSelect>> [mymethod tree-select $win.tree]
+	    $win.tree column current -width 150
+	    $win.tree column #0 -width 150
+	}
 	$self configure {*}$args
 	pack $win.tab -side top -fill x -expand true
 	# grid $win.tab -row 0 -column 0 -columnspan 2 -sticky ew
-	pack $win.grid -side left -fill both -expand true
-	#grid $win.grid -row 1 -column 0 -sticky nsew
-	pack $win.dial -side right
-	#grid $win.dial -row 1 -column 1 -sticky nsew
+	if {$data(use-grid)} {
+	    pack $win.grid -side left -fill both -expand true
+	    #grid $win.grid -row 1 -column 0 -sticky nsew
+	    pack $win.dial -side right
+	    #grid $win.dial -row 1 -column 1 -sticky nsew
+	} else {
+	    pack $win.dial -side top -fill x -expand true
+	    if {$data(use-tree)} {
+		pack $win.tree -side top -fill both -expand true
+	    }
+	}
 	bind $win.dial <<DialCW>> [mymethod Adjust 1]
 	bind $win.dial <<DialCCW>> [mymethod Adjust -1]
 	bind $win.dial <<DialPress>> [mymethod Press]
@@ -156,7 +173,7 @@ snit::widget sdrtk::dialbook {
     # See TAB OPTIONS for the list of available options.
     # If window is currently managed by the notebook but hidden,
     # it is restored to its previous position.
-    method add {window args} {
+    method add {window comp xtype args} {
 	set tab [$self FindWindow $window]
 	if {$tab ne {}} {
 	    # remember hidden window
@@ -164,10 +181,36 @@ snit::widget sdrtk::dialbook {
 	    return
 	}
 	lappend data(tabs) [$self NewTab $window {*}$args]
+	set tab [$self FindWindow $window]
 	$self UpdateLists
-	$self LayoutGrid
+	if {$data(use-grid)} {
+	    $self LayoutGrid
+	}
+	if {$data(use-tree)} {
+	    set text [$tab cget -text]
+	    set value [$window cget -value]
+	    set var [$window cget -variable]
+	    # inserting components into the tree
+	    if {$comp ne {} && $comp ni [$tree children {}]} {
+		$tree insert {} end -id $comp -text -$comp
+	    }
+	    $tree insert $comp end -id $text -text $text -values [list $value $comp $xtype $window]
+	    trace add variable $var write [mymethod tree-value]
+	    # puts "dialbook add $window $comp $xtype $args as $text"
+	}
     }
 
+    # when an option in the treeview is selected, copy the selection to the dialbook
+    method tree-select {w} {
+	set w [$tree set [$w focus] window]
+	if {$w ne {}} { $self select $w }
+    }
+    
+    # when the value of a treeview option is updated, copy the updated value into the treeview
+    method tree-value {name1 name2 op} {
+	$tree set $name2 current $::value($name2)
+    }
+    
     # Removes the tab specified by tabid, unmaps and unmanages the associated window.
     method forget {tabid} {
 	puts "$self forget $tabid"
@@ -255,7 +298,7 @@ snit::widget sdrtk::dialbook {
     # Returns the list of windows managed by the notebook.
     method tabs {} {
 	set tabs {}
-	puts "dialbook tabs $data(tabs)"
+	# puts "dialbook tabs $data(tabs)"
 	foreach tab $data(tabs) { lappend tabs [$tab get-window] }
 	return $tabs
     }

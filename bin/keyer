@@ -343,6 +343,7 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
     switch -glob -- $opt2 {
 	-server - -client - -verbose {
 	    lappend-ronly $text
+	    lappend-hide $text
 	    opt-describe $text $name $opt2 $opt text $ovalue $info
 	    # these are fixed, as in not modifiable
 	    # well, verbose could be, but no one wants
@@ -527,8 +528,9 @@ proc populate-option {name opt2 opt oname oclass odefault ovalue info} {
 	    # Transmitter NCO frequency
 	    # Receiver NCO frequency.
 	    if {[regexp {^-f-rx(\d+)$} $opt2 all irx]} {
-		puts "processing receiver $irx"
-		# if {$irx > $::value(-hl-n-rx)} { lappend-hide $opt2 }
+		if {$irx > 6} { lappend-hide $opt2 }
+		#puts "processing $opt2 with -n-hw-rx $::value(-n-hw-rx)"
+		#if {$irx > $::value(-hl-n-rx)} { lappend-hide $opt2 }
 	    }
 	    opt-describe $text $name $opt2 $opt freq $ovalue $info -units Hz -format %.0f -min 1 -max 29999999 -step 1
 	}
@@ -748,14 +750,81 @@ proc dial-set-init {} {
 # would like to get focus from other windows, but cannot take
 # the shift keys away from the text entry windows.
 #
+##
+#
+# rewrite this as a simple wrapper around sdrtcl::midi-insert
+# which simply grabs control, alt, and/or shift events and
+# translates them into midi events for the keyer.
+# let it take the focus for exactly the specified shift keys
+# for the entire app.
+# let it put the shift key specification into the dial book options
+#
+package require sdrtcl::midi-insert
+package provide sdrtcl::midi-insert-key
+snit::type sdrtcl::midi-insert-key {
+    option -key-dit -default none -configuremethod ConfigureKey
+    option -key-dah -default none -configuremethod ConfigureKey
+    option -key-key -default none -configuremethod ConfigureKey
+    option -key-ptt -default none -configuremethod ConfigureKey
+    option -key-4 -default none -configuremethod ConfigureKey
+    option -key-5 -default none -configuremethod ConfigureKey
+    component insert
+    delegate option * to insert
+    delegate method * to insert
+    
+    method wrapped-options {} { return {-chan -note -server -verbose} }
+    method exposed-options {} { return {-chan -note -dit -dah -key -ptt -key4 -key5} }
+    method is-busy {} { return 0 }
+    method {ConfigureKey} {opt val} { $self rebind-key $opt $val [string range $opt 1 end] }
+
+    method bind-key {tag element} {
+	if {$tag ne {none}} {
+	    puts "<KeyPress-$tag> is [bind . <KeyPress-$tag>]"
+	    puts "<KeyRelease-$tag> is [bind . <KeyRelease-$tag>]"
+	    bind . <KeyPress-$tag> [mymethod insert-key $element down]
+	    bind . <KeyRelease-$tag> [mymethod insert-key $element up]
+	}
+    }
+    
+    method unbind-key {tag element} {
+	if {$tag ne {none}} {
+	    bind . <KeyPress-$tag> {}
+	    bind . <KeyRelease-$tag> {}
+	}
+    }
+
+    variable map -array {dit 0 dah 1 key 2 ptt 3 key4 4 key5 5 up 0x80 down 0x90 velocity-up 0 velocity-down 1}
+
+    method insert-key {element updown} {
+	set cmd [expr {$:map(down)($chan-1)}]
+	set note [expr {$base+$map($element)}]
+	set velocity $map(velocity-$updown)
+	$options(-insert) puts [binary format ccc $cmd $note $velocity]
+    }
+
+    method rebind-key {opt val element} {
+	$self unbind-key $options($opt) $element
+	set options($opt) $val
+	$self bind-key $options($opt) $element
+	$self label
+    }
+
+    constructor {args} {
+	install insert using sdrtcl::midi-insert $self.insert
+	$self configurelist $args
+    }
+    
+}
 snit::widgetadaptor midi-insert {
     option -ditkey -default Alt_R -configuremethod Configure 
     option -dahkey -default Control_R -configuremethod Configure 
     option -key -default none -configuremethod Configure
+    option -ptt -default none -configuremethod Configure
     option -insert -default {} -configuremethod Configure
 
     method delete {args} {}
     method insert {args} {}
+
     delegate method ins to hull as insert
     delegate method del to hull as delete
     
@@ -1041,33 +1110,35 @@ proc widget-opts {w c opts} {
     }
 }
 
-proc treeview-select {w} { 
-    #puts "treeview-select $w [$w focus] [$w set [$w focus]]"
-    #puts "tabs [.p.dial tabs]"
-    set tab [$w focus]
-    if {".p.dial.x$tab" in [.p.dial tabs]} {
-	.p.dial select .p.dial.x$tab
+if {0} {
+    proc treeview-select {w} { 
+	#puts "treeview-select $w [$w focus] [$w set [$w focus]]"
+	#puts "tabs [.p.dial tabs]"
+	set tab [$w focus]
+	if {".p.dial.x$tab" in [.p.dial tabs]} {
+	    .p.dial select .p.dial.x$tab
+	}
     }
+    proc treeview-open {w} { puts "treeview-open $w [$w focus] [$w set [$w focus]]" }
+    proc treeview-close {w} { puts "treeview-close $w [$w focus] [$w set [$w focus]]" }
 }
-proc treeview-open {w} { puts "treeview-open $w [$w focus] [$w set [$w focus]]" }
-proc treeview-close {w} { puts "treeview-close $w [$w focus] [$w set [$w focus]]" }
 
 proc load-ui {} {
     pack [keyer-widget .k] -side top -fill x -expand true
     pack [ttk::panedwindow .p] -side top -fill both -expand true
     .p add [::sdrtk::dialbook .p.dial]
-    ttk::treeview .p.details -columns {hide merge argv ronly volatile default current} -display {current}
-    bind .p.details <<TreeviewSelect>> [list treeview-select %W]
-    bind .p.details <<TreeviewOpen>> [list treeview-open %W]
-    bind .p.details <<TreeviewClose>> [list treeview-close %W]
-    foreach {c t} {hide H merge M argv A ronly R volatile V} {
-	.p.details column $c -width 20 -anchor c -stretch false
-	.p.details heading $c -text $t
-    }
-    .p.details column default -width 100 -anchor e 
-    .p.details heading default -text Default
-    .p.details column current -width 100 -anchor w
-    .p.details heading current -text Current
+    #ttk::treeview .p.details -columns {hide merge argv ronly volatile default current} -display {current}
+    #bind .p.details <<TreeviewSelect>> [list treeview-select %W]
+    #bind .p.details <<TreeviewOpen>> [list treeview-open %W]
+    #bind .p.details <<TreeviewClose>> [list treeview-close %W]
+    #foreach {c t} {hide H merge M argv A ronly R volatile V} {
+    #.p.details column $c -width 20 -anchor c -stretch false
+    #.p.details heading $c -text $t
+    #}
+    #.p.details column default -width 100 -anchor e 
+    #.p.details heading default -text Default
+    #.p.details column current -width 100 -anchor w
+    #.p.details heading current -text Current
     array set compid {}
     foreach text [opts-with-descriptions] {
 	set desc [opt-description $text]
@@ -1075,31 +1146,31 @@ proc load-ui {} {
 	    set $var [dict get $desc $var]
 	}
 	# puts "$text c=$comp o2=$opt2 o=$opt t=$type v=$value etc={$opts}"
-	if {$comp ne {} && $comp ni [.p.details children {}]} {
-	    .p.details insert {} end -id $comp -text -$comp
-	}
+	#if {$comp ne {} && $comp ni [.p.details children {}]} {
+	#    .p.details insert {} end -id $comp -text -$comp
+	#}
 	# if already processed, skip
 	if {[info exists ::value($text)]} {
 	    puts "::value($text) already processed"
 	    continue
 	}
-
+	
 	# set up the details display
 	set ::defval($text) [set ::value($text) $value]
-
-	set values [list \
-			[is-hide $text] \
-			[is-merge $text] \
-			[is-argvopts $text] \
-			[is-ronly $text] \
-			[is-volatile $text] \
-			$::defval($text) \
-			$::value($text) ]
-
-	.p.details insert $comp end -id $text -text $text -values $values
-
+	
+	#set values [list \
+	#		[is-hide $text] \
+	#		[is-merge $text] \
+	#		[is-argvopts $text] \
+	#		[is-ronly $text] \
+	#		[is-volatile $text] \
+	#		$::defval($text) \
+	#		$::value($text) ]
+	
+	#.p.details insert $comp end -id $text -text $text -values $values
+	
 	if {[is-hide $text]} continue
-					      
+	
 	lappend args -value $value -variable ::value($text) -command [list dial-set $text]
 	set w x$text
 	switch $type {
@@ -1110,11 +1181,11 @@ proc load-ui {} {
 	    text { sdrtk::readout-text .p.dial.$w -text $text -info $info {*}$args }
 	    default { error "unanticipated type \"$type\"" }
 	}
-	.p.dial add .p.dial.$w -text [.p.dial.$w cget -text]
+	.p.dial add .p.dial.$w $comp $type -text [.p.dial.$w cget -text]
     }
     if {[.p.dial select] eq {}} { .p.dial select 0 }
     set ::data(show-dial) 1
-
+    
     # puts "current dialbook selection {[.p.dial select]} of {[.p.dial tabs]}"
     if {[has-insert]} { 
 	.p add [midi-insert .p.insert -insert [get-insert]]
@@ -1368,7 +1439,7 @@ proc main {argv} {
     
     # default value for iambic
     if { ! [has-iambic] } { set-iambic keyer-iambic-ad5dz }
-
+    
     # start components and collect their options
     if { ! [has-start]} {
 	usage-message
@@ -1425,7 +1496,14 @@ proc main {argv} {
 	foreach {opt val} [get-argvopts] { 
 	    # puts "setting $opt $val"
 	    if {[catch {dial-set $opt $val} error]} {
-		puts "bad option: $opt $val"
+		# if the $opt is -$comp for one of the setup components,
+		# then apply it to each opt value pair in $val to get
+		# -$comp$opt $value
+		foreach {option value} $val {
+		    if {[catch {dial-set $opt$option $value} error2]} {
+			puts "bad option: $opt $val"
+		    }
+		}
 	    }
 	}
     }

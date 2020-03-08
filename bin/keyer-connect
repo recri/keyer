@@ -1,0 +1,34 @@
+#!/bin/sh
+# system:capture_1
+# system:capture_2
+# system:playback_1
+# system:playback_2
+# system:midi_capture_1
+# system:midi_playback_1
+# key:midi_in
+# key:midi_out
+# kyo:out_i
+# kyo:out_q
+# kyo:midi_in
+# kyo:midi_out
+# detone:in_i
+# detone:midi_out
+# out:midi_in
+# cas:midi_out
+# midi key in to keyer to audio out
+jack_connect system:midi_capture_1 key:midi_in
+jack_connect key:midi_out kyo:midi_in
+jack_connect kyo:out_i system:playback_1
+jack_connect kyo:out_i system:playback_2
+# cas key to keyer ...
+jack_connect cas:midi_out key:midi_in
+# keyer audio to decoder
+jack_connect kyo:out_i detone:in_i
+jack_connect detone:midi_out out:midi_in
+# 
+#    system:capture* |
+#
+#                           kbd | kbdo |
+#    system:midi_capture* | key | keyo | system:playback*
+#    cas                  |  "     "   | detone | out
+#                                      | 
