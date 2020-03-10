@@ -63,7 +63,7 @@ snit::widgetadaptor sdrtk::dial {
     option -radius 80;			# radius of the dial in percent of max
     option -fill \#888;			# color of the dial
     option -outline black;		# color of the dial outline
-    option -dial-width 3;			# thickness of the dial outline
+    option -dial-width 3;		# thickness of the dial outline
 
     option -button-radius 10;		# radius of the button in percent of max
     option -button-fill \#999;		# color of the button
@@ -78,7 +78,12 @@ snit::widgetadaptor sdrtk::dial {
     option -graticule-fill black;	# 
 
     option -self-responder false
-    option -cpr -default 1000 -configuremethod Configure; # counts per revolution
+    option -cpr -default 1000 -configuremethod Configure;	# counts per revolution
+
+    option -phi -default 0 -configuremethod Configure;		# the angle of the thumb
+    option -detents -default 0 -configuremethod Configure;	# 0 detents means the knob freely turns, 
+					# 1 detents means the knob does nothing, the value has another source
+					# detents > 0 mean the knob takes n positions, phi = [0:n-1]*2*pi/n
 
     option -command {};			# script called to report rotation 
     
@@ -86,16 +91,14 @@ snit::widgetadaptor sdrtk::dial {
     delegate method * to hull
 
     variable data -array {
-	partial-turn 0
 	phi 0
-	phi-resid 0
     }
 
     constructor {args} {
 	#  -width 350 -height 350
 	installhull using canvas -takefocus 1
 	set data(2pi) [expr {2*atan2(0,-1)}]
-	set data(phi) [expr {-$data(2pi)/4}]
+	set options(-phi) [expr {-$data(2pi)/4}]
 	$self Configure -cpr $options(-cpr)
 	$self configure {*}$args
 	if {$options(-bg) eq {}} { set options(-bg) [$hull cget -background] }
@@ -130,7 +133,12 @@ snit::widgetadaptor sdrtk::dial {
 	set data(step0) [expr {-$data(2pi)/4}]
 	set data(step) [expr {$data(2pi)/$cpr}]
     }
-
+    method {Configure -phi} {phi} {
+	set options(-phi) $phi
+    }
+    method {Configure -detents} {detents} {
+	set options(-detents) $detents
+    }
     method Mouse-wheel {w delta} {
 	if {$delta > 0} {
 	    if {$delta >= 120} { set delta [expr {$delta/120}] }
@@ -188,14 +196,14 @@ snit::widgetadaptor sdrtk::dial {
     }
     
     method Position {step} {
-	set data(phi) [expr {$data(step0)+$data(step)*$step}]
+	set options(-phi) [expr {$data(step0)+$data(step)*$step}]
 	set w [winfo width $win]
 	set h [winfo height $win]
 	set r  [expr {min($w,$h)/2.0}];				# radius of space available
 	set tl [expr {$r*$options(-thumb-length)/100.0}];	# thumb length
 	set xc [expr {$w/2.0}];					# center of space available
 	set yc [expr {$h/2.0}];					# center of space available
-	set thumb [list $xc $yc [expr {$xc+$tl*cos($data(phi))}] [expr {$yc+$tl*sin($data(phi))}]]
+	set thumb [list $xc $yc [expr {$xc+$tl*cos($options(-phi))}] [expr {$yc+$tl*sin($options(-phi))}]]
 	$hull coords thumb $thumb
     }
     
@@ -229,7 +237,7 @@ snit::widgetadaptor sdrtk::dial {
 	    set thumb [list $xc $yc $xc $yc]
 	} else {
 	    set tl [expr {$r*$options(-thumb-length)/100.0}]
-	    set thumb [list $xc $yc [expr {$xc+$tl*cos($data(phi))}] [expr {$yc+$tl*sin($data(phi))}]]
+	    set thumb [list $xc $yc [expr {$xc+$tl*cos($options(-phi))}] [expr {$yc+$tl*sin($options(-phi))}]]
 	}
 
 	# graticule radius

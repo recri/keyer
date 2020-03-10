@@ -1,6 +1,7 @@
 /* -*- mode: c++; tab-width: 8 -*- */
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+  Copyright (C) 2020 by Roger E Critchlow Jr, Charlestown, MA, USA.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -237,22 +238,41 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "sample-rate",_sample_rate, "get the jack server sample rate" },
-  { "buffer-size",_buffer_size, "get the jack server buffer size" },
-  { "cpu-load", _cpu_load,      "get the jack server cpu load percent" },
-  { "is-realtime",_is_realtime, "get the jack server realtime status" },
+  { "sample-rate",_sample_rate, "get the jack server sample rate" },			// x
+  { "buffer-size",_buffer_size, "get the jack server buffer size" },			// x
+  { "cpu-load", _cpu_load,      "get the jack server cpu load percent" },		// x
+  { "is-realtime",_is_realtime, "get the jack server realtime status" },		// x
   { "frame-time", _frame_time,  "get the jack server approximate frame time" },
   { "time", _time,	        "get the jack server time in microseconds?" },
-  { "version", _version,        "get the jack server version" },
-  { "version-string", _version_string, "get the jack server version string" },
-  { "client-name-size", _client_name_size, "get the jack server client name size" },
-  { "port-name-size", _port_name_size, "get the jack server port name size" },
-  { "port-type-size", _port_type_size, "get the jack server port type size" },
-  { "time-to-frames", _time_to_frames, "ask the jack server to convert time to frames" },
-  { "frames-to-time", _frames_to_time, "ask the jack server to convert frames to time" },
-  { "list-ports", _list_ports,  "get a list of the ports open on the jack server" },
-  { "connect", _connect,        "connect ports on the jack server" },
-  { "disconnect", _disconnect,  "disconnect ports on the jack server" },
+  { "version", _version,        "get the jack server version" },			// x
+  { "version-string", _version_string, "get the jack server version string" },		// x
+  { "client-name-size", _client_name_size, "get the jack server client name size" },	// x
+  { "port-name-size", _port_name_size, "get the jack server port name size" },		// x
+  { "port-type-size", _port_type_size, "get the jack server port type size" },		// x
+  { "time-to-frames", _time_to_frames, "ask the jack server to convert time to frames" }, // x
+  { "frames-to-time", _frames_to_time, "ask the jack server to convert frames to time" }, // x
+  { "list-ports", _list_ports,  "get a list of the ports open on the jack server" },	// x
+  { "connect", _connect,        "connect ports on the jack server" },			// x
+  { "disconnect", _disconnect,  "disconnect ports on the jack server" },		// x
+  // jack_get_client_name
+  // jack_get_uuid_for_client_name
+  // jack_get_client_name_by_uuid
+  // jack_get_client_pid
+  // jack_client_thread_id
+  // jack_port_uuid
+  // jack_port_name
+  // jack_port_short_name
+  // jack_port_flags
+  // jack_port_type
+  // jack_port_type_id
+  // jack_port_connected
+  // jack_port_connected_to
+  // jack_port_get_connections
+  // jack_port_get_all_connections
+  // jack_port_set_alias
+  // jack_port_unset_alias
+  // jack_port_get_aliases
+  // jack_get_ports
 #if 0
   { "session-register", _session_register, "register for jack session management" },
   { "session-poll", _session_poll, "poll for receipt of a jack_session_event" },

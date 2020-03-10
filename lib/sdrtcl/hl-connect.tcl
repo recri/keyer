@@ -131,7 +131,8 @@ snit::type sdrtcl::hl-connect {
 	regsub {:} $options(-peer) { } peer
 	puts "$options(-peer) translated to $peer, socket $d(socket)"
 	fconfigure $d(socket) -translation binary -blocking 0 -buffering none -remote $peer
-	fileevent $d(socket) readable [mymethod rx-recv-first]
+	fileevent $d(socket) readable [mymethod rx-recv-discard]
+	puts "hl-begin: set buffer handler rx-recv-discard"
 	$self rx-reset
 	$self hl-restart
     }
@@ -148,8 +149,11 @@ snit::type sdrtcl::hl-connect {
 	# puts "hl-start speed [$self.iqhandler cget -speed] [expr {[$self.iqhandler cget -speed]&3}]"
 	# puts "hl-start iq config:\n [join [$self.iqhandler configure] \n]"
 	# start the iqhandler
-	# $self.iqhandler activate
-	# puts "hl-start: installed iqhandler"
+	$self.iqhandler activate
+	puts "hl-start: activated iqhandler"
+	# enable live buffer handler
+	fileevent $d(socket) readable [mymethod rx-recv-first]
+	puts "hl-start: set buffer handler rx-recv-first"
     }
     
     method hl-stop {} {
@@ -165,7 +169,7 @@ snit::type sdrtcl::hl-connect {
 	puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
 	puts "hl-stop: disabled hardware"
 	# save iqhandler state
-	set options(-args) [concat {*}[lmap x [$self.iqhandler configure] { if {[llength $x] != 5} continue; list [lindex $x 0] [lindex $x 4] }]]
+	set options(-args) [$self hl-filter-options [$self.iqhandler configure]]
 	puts "hl-stop: saved options $options(-args)"
 	# stop iqhandler
 	$self.iqhandler deactivate
@@ -174,11 +178,8 @@ snit::type sdrtcl::hl-connect {
 	rename $self.iqhandler {}
 	puts "hl-stop: delete iqhandler"
 	# reinstall a new iqhandler
-	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler {*}$options(-args)
+	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client [namespace tail $self] {*}$options(-args)
 	puts "hl-stop: recreate iqhandler"
-	# start it running
-	$self.iqhandler activate
-	puts "hl-stop: activate iqhandler"
 	set d(stopped) 1
     }    
     method hl-restart {} {
@@ -203,6 +204,23 @@ snit::type sdrtcl::hl-connect {
 	set d(restart-requested) 1
     }
     
+    method hl-filter-options {config} {
+	set f {}
+	foreach x $config {
+	    # an alias, not a real configuration option
+	    if {[llength $x] != 5} continue
+	    # split the parts of the configuration out
+	    foreach {opt name xclass dvalue cvalue} $x break
+	    # default value need not be kept
+	    if {$dvalue == $cvalue} continue
+	    # readonly options from radio can be skipped
+	    if {$opt in {-hw-dash -hw-dot -hw-ptt -overload -recovery -tx-iq-fifo -serial -temperature -fwd-power -rev-power -pa-current}} continue
+	    # noise options from discovery can be skipped
+	    if {$opt in {}} continue
+	    lappend f $opt $cvalue
+	}
+	return $f
+    }
     method Configure {opt val} {
 	set options($opt) $val
 	catch {$self.iqhandler configure $opt $val}
@@ -264,6 +282,13 @@ snit::type sdrtcl::hl-connect {
 	}
 	if {$spurs > 0} { puts "rx-reset: $spurs spurious buffers" }
     }
+    method rx-recv-discard {} {
+	while {1} {
+	    set data [read $d(socket)]
+	    if {[string length $data] == 0} return
+	}
+    }
+    
     method rx-recv-first {} {
 	fileevent $d(socket) readable [mymethod rx-recv]
 	set d(time-start) [clock microseconds]
@@ -305,8 +330,7 @@ snit::type sdrtcl::hl-connect {
 			    $self hl-stop
 			    error $error $einfo
 			}
-			if {($d(rx-calls) % 1024) == 0} { 
-			    puts "[clock milliseconds] [$self.iqhandler pending]" }
+			# puts stderr "[expr {[clock microseconds]-$d(time-start)}] [$self.iqhandler pending]"
 		    }
 		    4 { # bandscope samples
 			incr d(bs-calls)
@@ -359,7 +383,7 @@ snit::type sdrtcl::hl-connect {
     #
     constructor {args} {
 	puts "constructor {$args}"
-	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler
+	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client hl
 	$self configurelist $args
 	$self stats-reset
     }

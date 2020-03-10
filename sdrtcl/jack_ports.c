@@ -3,7 +3,7 @@
 ** functions for making a patch panel display
 ** connect to a jack server and register these, and other, callbacks
 ** to be notified of client, port, and connection life cycle events.
-** but can't see the activate/deactivate state.
+** but can't see the activate/deactivate state because only the activated appear.
 */
 typedef void (*JackClientRegistrationCallback)(const char* name, int register, void *arg);
 int jack_set_client_registration_callback (jack_client_t *,

@@ -133,7 +133,7 @@ typedef struct {
   unsigned short rdptr, wrptr;
 } packet_ring_buffer_t;
 static inline void packet_ring_buffer_init(packet_ring_buffer_t *rb) { rb->rdptr = rb->wrptr = 0; }
-static inline int packet_ring_buffer_can_read(packet_ring_buffer_t *rb) { return rb->wrptr - rb->rdptr; }
+static inline int packet_ring_buffer_can_read(packet_ring_buffer_t *rb) { return (rb->wrptr - rb->rdptr)&(PACKET_RING_SIZE-1); }
 static inline Tcl_Obj *packet_ring_buffer_read(packet_ring_buffer_t *rb) { return rb->ring[rb->rdptr++&(PACKET_RING_SIZE-1)]; }
 static inline int packet_ring_buffer_can_write(packet_ring_buffer_t *rb) { return PACKET_RING_SIZE-packet_ring_buffer_can_read(rb); }
 static inline void packet_ring_buffer_write(packet_ring_buffer_t *rb, Tcl_Obj *obj) { rb->ring[rb->wrptr++&(PACKET_RING_SIZE-1)] = obj; }
@@ -156,6 +156,8 @@ typedef struct {
   unsigned sequence;		/* packet sequence and header index counters */
   unsigned index;
   unsigned sample;
+  unsigned total_overrun;
+  unsigned total_underrun;
 } packet_t;
 
 typedef struct {
@@ -192,6 +194,8 @@ static inline void _packet_init(packet_t *pkt, int stride) {
   pkt->sequence = 0;
   pkt->index = 0;
   pkt->sample = 0;
+  pkt->total_overrun = 0;
+  pkt->total_underrun = 0;
 }
 static inline void _packet_delete(packet_t *pkt) {
   while (packet_ring_buffer_can_read(&pkt->rdy) > 0) Tcl_DecrRefCount(packet_ring_buffer_read(&pkt->rdy));
@@ -218,9 +222,8 @@ static inline void _packet_next(packet_t *pkt) {
     }
     // assert(pkt->udp == NULL);
     if (packet_ring_buffer_can_read(&pkt->rdy)) {
-      int n;
       pkt->udp = packet_ring_buffer_read(&pkt->rdy);
-      pkt->buff = Tcl_GetByteArrayFromObj(pkt->udp, &n);
+      pkt->buff = Tcl_GetByteArrayFromObj(pkt->udp, NULL);
       pkt->usb = 0;
       pkt->i = 16;
       pkt->limit = 16 + 504;
@@ -849,16 +852,25 @@ static int _force(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* 
 static int _pending(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s pending", Tcl_GetString(objv[0])));
-  Tcl_Obj *ret = Tcl_ObjPrintf("%d {%d %d %d %d} {%d %d %d %d %d %d} {%s %s}",
+  Tcl_Obj *ret = Tcl_ObjPrintf("%d {%d %d {%s}} {%d %d {%s}}",
 			       data->process,
 			       packet_ring_buffer_can_read(&data->rx.rdy),
 			       packet_ring_buffer_can_read(&data->rx.done),
+			       // packet_ring_buffer_can_write(&data->rx.rdy),
+			       // packet_ring_buffer_can_write(&data->rx.done),
+			       // data->rx.sample, data->rx.underrun, data->rx.overrun,
+			       data->rx.abort ? data->rx.abort : "", 
 			       packet_ring_buffer_can_read(&data->tx.rdy),
 			       packet_ring_buffer_can_read(&data->tx.done),
-			       data->rx.sample, data->rx.underrun, data->rx.overrun,
-			       data->tx.sample, data->tx.underrun, data->tx.overrun,
-			       data->rx.abort ? data->rx.abort : "", data->tx.abort ? data->tx.abort : ""
+			       // packet_ring_buffer_can_write(&data->tx.rdy),
+			       // packet_ring_buffer_can_write(&data->tx.done),
+			       // data->tx.sample, data->tx.underrun, data->tx.overrun,
+			       data->tx.abort ? data->tx.abort : ""
 			       );
+  data->rx.total_underrun += data->rx.underrun;
+  data->rx.total_overrun += data->rx.overrun;
+  data->tx.total_underrun += data->tx.underrun;
+  data->tx.total_overrun += data->tx.overrun;
   data->rx.underrun = data->rx.overrun = 0;
   data->tx.underrun = data->tx.overrun = 0;
   data->rx.abort = data->tx.abort = NULL;
@@ -876,17 +888,16 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   /* options set from discover response from radio */
-  { "-code-version",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.code_version), "gateware version" },
+  { "-gateware-version","int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.code_version), "gateware version" },
+  { "-gateware-minor",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.gateware_minor), "gateware minor version." },
   { "-board-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.board_id), "board identifier." },
+  { "-build-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.build_id), "board sub-identifier." },
+  { "-n-hw-rx",		"int", "Int", "4", fw_option_int, 0, offsetof(_t, opts.n_hw_rx), "number of hardware receivers." },
+  { "-wb-fmt",		"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.wb_fmt), "format of bandscope samples." },
   { "-mac-addr",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.mac_addr), "radio mac address." },
   { "-mcp4662",		"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.mcp4662), "mcp4662 configuration bytes." },
   { "-fixed-ip",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.fixed_ip), "firmware assigned ip address." },
   { "-fixed-mac",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.fixed_mac), "firmware assigned mac address bytes." },
-
-  { "-n-hw-rx",		"int", "Int", "4", fw_option_int, 0, offsetof(_t, opts.n_hw_rx), "number of hardware receivers." },
-  { "-wb-fmt",		"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.wb_fmt), "format of bandscope samples." },
-  { "-build-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.build_id), "board sub-identifier." },
-  { "-gateware-minor",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.gateware_minor), "gateware minor version." },
   /* options set from iq packet responses from radio */
   { "-hw-dash",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dash), "The hardware dash key value from the HermesLite." },
   { "-hw-dot",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dot), "The hardware dot key value from the HermesLite." },
