@@ -195,12 +195,8 @@ snit::widget sdrtk::dialbook {
 		$tree insert {} end -id $comp -text -$comp
 	    }
 	    $tree insert $comp end -id $text -text $text -values [list $value $comp $xtype $window]
-	    # hmm, this could be a problem, no, it add's a new trace on top of the
-	    # trace set in the readout, and both will fire as long as neither throws an error
-	    # trace add variable $var write [mymethod tree-value]
-	    # puts "dialbook add $window: trace info [trace info variable $var]"
-	    # puts "dialbook add $window $comp $xtype {$args} as $text"
-	    # puts "dialbook $window configure is [$window configure]"
+	    # this assumes that the tree element will be focused when the trace fires
+	    trace add variable $var write [mymethod tree-update-current]
 	}
     }
 
@@ -211,8 +207,9 @@ snit::widget sdrtk::dialbook {
     }
     
     # when the value of a treeview option is updated, copy the updated value into the treeview
-    method tree-value {name1 name2 op} {
-	#$tree set $name2 current [set ${name1}($name2)]
+    method tree-update-current {name1 name2 op} {
+	$tree selection set $name2
+	$tree set $name2 current [set ${name1}($name2)]
     }
     
     # Removes the tab specified by tabid, unmaps and unmanages the associated window.

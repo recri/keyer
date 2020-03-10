@@ -36,7 +36,7 @@ snit::widget sdrtk::readout-value {
     option -value -default 0 -configuremethod Configure
     option -units -default {} -configuremethod Configure
     option -font -default {Helvetica 20} -configuremethod Configure
-    option -format -default %f -configuremethod Redisplay
+    option -format -default %.0f -configuremethod Redisplay
     option -scale -default 1 -configuremethod Redisplay
     option -offset -default 0 -configuremethod Redisplay
     option -step -default 1 -configuremethod Configure
@@ -83,11 +83,11 @@ snit::widget sdrtk::readout-value {
     }
     
     method {Configure -value} {val} {
-	set val [$self bound $val]
+	set val [format $options(-format) [$self bound $val]]
 	if {$options(-value) != $val} {
 	    set options(-value) $val
 	    if {$options(-variable) ne {}} { set $options(-variable) $val }
-	    if {$options(-command) ne {}} { {*}$options(-command) [format $options(-format) $val] }
+	    if {$options(-command) ne {}} { {*}$options(-command) $val }
 	    $self Display
 	}
     }

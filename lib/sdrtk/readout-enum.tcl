@@ -35,6 +35,7 @@ snit::widget sdrtk::readout-enum {
 
     option -value -default 0 -configuremethod Configure
     option -values -default {0 1 2 3} -configuremethod Configure
+    option -format %s
     option -step -default 0.1
     option -font -default {Helvetica 20} -configuremethod Configure
     option -variable -default {} -configuremethod Configure
@@ -118,11 +119,10 @@ snit::widget sdrtk::readout-enum {
     }
 
     method {Configure -value} {val} {
+	set val [format $options(-format) $val]
 	if {$options(-value) ne $val} {
 	    set options(-value) $val
- 	    #if {$options(-variable) ne {} && [set $options(-variable)] ne $val} {
-		set $options(-variable) $val
-	    #}
+	    set $options(-variable) $val
 	    if {$options(-menu-value) eq {} || $options(-menu-value) ne $val} {
 		set options(-menu-value) $val
 	    }
