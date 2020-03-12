@@ -27,156 +27,88 @@ package provide sdrtk::readout-enum 1.0
 
 package require Tk
 package require snit
+package require sdrtk::readout-core
 
-snit::widget sdrtk::readout-enum {
-    hulltype ttk::labelframe
-    component lvalue
-    component lunits
+snit::widgetadaptor sdrtk::readout-enum {
+    option -values -default {} -configuremethod Configure
 
-    option -value -default 0 -configuremethod Configure
-    option -values -default {0 1 2 3} -configuremethod Configure
-    option -format %s
-    option -step -default 0.1
-    option -font -default {Helvetica 20} -configuremethod Configure
-    option -variable -default {} -configuremethod Configure
-    option -info -default {} -configuremethod Configure
-    option -units -default {} -configuremethod Configure
-    option -ronly -default 0 -configuremethod Configure
-    option -volatile -default 0 -configuremethod Configure
-    option -command {}
-    option -menu-value {}
+    delegate option * to hull
+    delegate method * to hull
 
-    delegate option -text to hull
-
-    variable value 0
-    variable pointer 0
-
+    variable saved
+    
     constructor {args} {
-	install lvalue using ttk::label $win.value -textvar [myvar value] -width 15 -font $options(-font) -anchor e
-	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
-	grid $win.value $win.units
-	$self configure {*}$args
-	trace add variable [myvar options(-value)] write [mymethod TraceSelfWrite]
-	trace add variable [myvar options(-menu-value)] write [mymethod TraceMenuWrite]
+	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
+	$self configurelist $args
     }
     
     method adjust {step} {
+	set v [$self cget -value]
+	set i [lsearch -exact $options(-values) $v]
+	if {$i < 0} { error "readout-enum value $v is not in values $options(-values)" }
 	set n [llength $options(-values)]
-	set pointer [expr {fmod($pointer+$step*$options(-step)+$n, $n)}]
-	$self configure -value [lindex $options(-values) [expr {int($pointer)}]]
+	set p [expr {min($n-1,max(0,$i+$step))}]
+	$self configure -value [lindex $options(-values) $p]
+    }
+
+    method mapped {} {
+	# puts "readout-enum mapped"
+	$hull mapped
+	set n [llength $options(-values)]
+	set i [lsearch $options(-values) [$self cget -value]]
+	[$self cget -dialbook] configure -detents $n -detent-min 0 -detent-max [expr {$n-1}] -graticule $n -phi [expr {$i*2*3.1416/$n}]
+    }
+
+    method unmapped {} {
+	$hull unmapped
     }
 
     method menu-entry {m text} {
-	if {[llength $options(-values)] == 2 && [lsearch $options(-values) {0}] >= 0  && [lsearch $options(-values) {1}] >= 0} {
-	    # simple checkbutton
-	    return [list checkbutton -label $text -variable [myvar options(-menu-value)]]
+	if { ! [winfo exists $m]} {
+	    menu $m -tearoff no -font {Helvetica 12 bold}
 	} else {
-	    # cascade to radiobuttons
-	    if { ! [winfo exists $m]} {
-		menu $m -tearoff no -font {Helvetica 12 bold}
-	    } else {
-		$m delete 0 end
-	    }
-	    foreach v $options(-values) {
-		$m add radiobutton -label $v -value $v -variable [myvar options(-menu-value)]
-	    }
-	    return [list cascade -label $text -menu $m]
+	    $m delete 0 end
 	}
+	foreach v $options(-values) {
+	    $m add radiobutton -label $v -value $v -variable [$self widget-value-var]
+	}
+	return [list cascade -label $text -menu $m]
     }
+
     method button-entry {m text} {
-	if {[llength $options(-values)] == 2 && {0} in $options(-values) && {1} in $options(-values)} {
-	    # simple checkbutton
-	    return [ttk::checkbutton $m -text $text -variable [myvar options(-menu-value)]]
+	ttk::menubutton $m -text $text
+	if { ! [winfo exists $m.m]} {
+	    menu $m.m -tearoff no -font {Helvetica 12 bold}
 	} else {
-	    # cascade to radiobuttons
-	    ttk::menubutton $m -text $text
-	    if { ! [winfo exists $m.m]} {
-		menu $m.m -tearoff no -font {Helvetica 12 bold}
-	    } else {
-		$m.m delete 0 end
-	    }
-	    $m configure -menu $m.m
-	    set i 0
-	    foreach v $options(-values) {
-		$m.m add radiobutton -label $v -value $v -variable [myvar options(-menu-value)] -columnbreak [expr {($i%10)==0}]
-		incr i
-	    }
-	    return $m
+	    $m.m delete 0 end
 	}
+	$m configure -menu $m.m
+	set i 0
+	foreach v $options(-values) {
+	    $m.m add radiobutton -label $v -value $v -variable [$self widget-value-var] -columnbreak [expr {($i%10)==0}]
+	    incr i
+	}
+	return $m
     }
 
-    method Display {} {
-	set value $options(-value)
+    method value-to-integer {val} {
+	set i [lsearch -exact $options(-values) $val]
+	if {$i < 0} { error "invalid value $val in readout-enum value-to-integer" }
+	return i
     }
 
-    method Redisplay {opt val} {
-	set options($opt) $val
-	$self Display
+    method integer-to-value {i} {
+	if {$i < 0 || $i >= [llength $options(-values)]} { error "invalid value $i in readout-enum integer-to-value" }
+	return [lindex $options(-values) $i]
     }
-
-    method {Configure -values} {val} {
-	set options(-values) $val
-    }
-
-    method {Configure -value} {val} {
-	set val [format $options(-format) $val]
-	if {$options(-value) ne $val} {
-	    set options(-value) $val
-	    set $options(-variable) $val
-	    if {$options(-menu-value) eq {} || $options(-menu-value) ne $val} {
-		set options(-menu-value) $val
-	    }
-	    if {$options(-command) ne {}} { {*}$options(-command) $val }
-	    $self Display
-	}
-    }
-
-    method {Configure -step} {val} {
-	set options(-step) $val
-	$self configure -value [expr {int($options(-value)/$val)*$val}]
-    }
-
-    method {Configure -font} {val} {
-	set options(-font) $val
-	$lvalue configure -font $val
-    }
-
-    method {Configure -variable} {val} {
-	if {$options(-variable) ne {}} {
-	    trace remove variable $options(-variable) write [mymethod TraceWrite]
-	}
-	set options(-variable) $val
-	if {$options(-variable) ne {}} {
-	    trace add variable $options(-variable) write [mymethod TraceWrite]
-	    # $self TraceWrite
-	}
-    }
-    method {Configure -units} {val} { set options(-units) $val }
-    method {Configure -info} {val} { set options(-info) $val }
-    method {Configure -ronly} {val} { set options(-ronly) $val }
-    method {Configure -volatile} {val} { set options(-volatile) $val }
-    method TraceWrite {args} { 
-	if {[catch { $self configure -value [set $options(-variable)] } error]} {
-	    puts "TraceWrite {$args} caught $error"
-	} else {
-	    # puts "TraceWrite {$args}"
-	}
-    }
-    method TraceSelfWrite {args} {
-	return
-	if {[catch { $self configure -value [set $options(-variable)] } error]} {
-	    puts "TraceWrite {$args} caught $error"
-	} else {
-	    puts "TraceWrite {$args}"
-	}
-    }
-    method TraceMenuWrite {args} { 
-	if {$options(-menu-value) ne $options(-value)} {
-	    if {[catch { $self configure -value $options(-menu-value) }  error]} {
-		puts "TraceMenuWrite {$args} caught $error"
-	    } else {
-		# puts "TraceMenuWrite {$args}"
-	    }
-	}
+    
+    method {Configure -values} {values} {
+	if {[llength $values] == 0} { error "readout-enum: -values has no members" }
+	set options(-values) $values
+	set args {}
+	$self configure -integer-min 0 \
+	    -integer-max [expr {[llength $values]-1}] \
+	    -integer-to-value [mymethod integer-to-value] \
+	    -value-to-integer [mymethod value-to-integer]
     }
 }

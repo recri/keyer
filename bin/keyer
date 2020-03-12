@@ -120,80 +120,42 @@ proc add-setup {name val} {
 }
 proc get-setup {name} { return [dict get [get-setups] $name] }
 
-proc has-server {} { return [has-var -server] }
-proc get-server {} { return [get-var -server] }
-proc set-server {server} { set-var -server $server }
+foreach x {-server -iambic -ascii -detime -tap -title -start -argvopts -merge -hide -ronly -conly -volatile -grid -tree} {
+    proc get$x {} "return \[get-var $x]"
+    proc set$x {args} "lappend-var $x {*}\$args"
+    proc lappend$x {args} "lappend-var $x {*}\$args"
+    proc has$x {} "return \[has-var $x]"
+}
 
-proc has-iambic {} { return [has-var -iambic] }
-proc get-iambic {} { return [get-var -iambic] }
-proc set-iambic {val} { set-var -iambic $val }
+#
+# manage option preferences
+# some of these should match patterns in the lists
+#
+proc the-match {opt list} {
+    foreach pat $list { if {[string match $pat $opt]} { return $pat } }
+    return {}
+}
+proc is-matched {opt list} { return [expr {[the-match $opt $list] ne {}}] }
 
-proc has-dial {} { return 1 }
-proc get-dial {} { return {dial} }
 
-proc get-ascii {} { return [get-var -ascii] }
-proc set-ascii {name} { lappend-var -ascii $name }
-proc has-ascii {} { return [has-var -ascii] }
+proc the-hide {opt} { return [the-match $opt [get-hide]] }
+proc the-merge {opt} { return [the-match $opt [get-merge]] }
 
-proc has-memories {} { return 0 }
-
-proc get-detime {} { return [get-var -detime] }
-proc set-detime {name} { set-var -detime $name }
-proc has-detime {} { return [has-var -detime] }
-
-proc get-tap {} { return [get-var -tap ] }
-proc set-tap {name} { lappend-var -tap $name }
-proc has-tap {} { return [has-var -tap ] }
-
-proc lappend-start {args} { lappend-var -start {*}$args }
-proc get-start {} { return [get-var -start] }
-proc has-start {} { return [has-var -start ] }
-
-proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
-proc has-argvopts {} { return [has-var -argvopts] }
-proc get-argvopts {} { return [get-var -argvopts] }
-
-proc get-title {} { return [get-var -title] }
-proc set-title {title} { set-var -title $title }
-proc has-title {} { return [has-var -title] }
-
-# the following could all be patterns
-# merge options, lists of patterns
-proc get-merge {} { return [get-var -merge] }
-proc lappend-merge {args} { lappend-var -merge {*}$args }
-proc has-merge {} { return [has-var -merge] }
-
-# hide options, lists of patterns
-proc get-hide {} { return [get-var -hide] }
-proc lappend-hide {args} { lappend-var -hide {*}$args }
-proc has-hide {} { return [has-var -hide] }
-
-# read only options, lits of options
-proc get-ronly {} { return [get-var -ronly] }
-proc lappend-ronly {args} { lappend-var -ronly {*}$args }
-proc has-ronly {} { return [has-var -ronly] }
-
-# create only options, lists of options
-proc get-conly {} { return [get-var -conly] }
-proc lappend-conly {args} { lappend-var -conly {*}$args }
-proc has-conly {} { return [has-var -conly] }
-
-# options with volatile values, lists of options
-proc get-volatile {} { return [get-var -volatile] }
-proc lappend-volatile {args} { lappend-var -volatile {*}$args }
-proc has-volatile {} { return [has-var -volatile] }
+foreach x {-hide -merge} {
+    proc is$x {o} "return \[is-matched \$o \[get$x]]"
+}
+foreach x {-argvopts -ronly -conly -volatile} {
+    proc is$x {o} "return \[expr {\$o in \[get$x]}]"
+}
 
 # options are created in component specific versions -$comp$opt
 # or as merged versions where all identically spelled options
 # are set as a group
 
-set ::data(all-options) [dict create];	# qualified option names, possibly qualified with {} rather than -$comp
-array set ::value {};		# updated when option is configured
+set ::data(all-options) [dict create];	# qualified option names
+array set ::value {};			# updated whenever option is configured
 
-proc opt-is-defined {opt} { 
-    # puts "opt-is-defined $opt"
-    return [dict exists $::data(all-options) $opt]
-}
+proc opt-is-defined {opt} { return [dict exists $::data(all-options) $opt] }
 
 proc opt-get-val {opt key} { return [dict get $::data(all-options) $opt $key] }
 proc opt-set-val {opt key val} { dict set ::data(all-options) $opt $key $val }
@@ -298,15 +260,12 @@ proc load-component {name} {
     foreach {name1 name2} [parse-component $name] break
 
     # special case insert selected iambic keyer
-    if {$name1 eq {iambic}} {
-	if {[has-iambic]} {
-	    set name1 [get-iambic]
-	    # puts "substituted $name1 for iambic"
-	}
-    }
+    # should just make the iambic keyer a selected option in the keyer
+    if {$name1 eq {iambic} && [has-iambic]} { set name1 [get-iambic] }
 
     # search through the sdrtcl component list
     # for components which match name1
+    # going to make sdrtk and sdrtcltk component lists, too
     set candidates {}
     foreach c $::packages {
 	if {[string equal $name1 $c]} {
@@ -343,8 +302,9 @@ package require sdrtk::readout-freq
 package require sdrtk::readout-value
 package require sdrtk::readout-text
 
+# these are filter/fft windowing functions
+package require sdrtcl::window
 proc get-window-types {} {
-    package require sdrtcl::window
     catch { sdrtcl::window foo 512 } error
     regexp {^unknown window type, should be one of (.*)$} $error all error
     regsub -all {, (or )?} $error { } error
@@ -356,259 +316,119 @@ proc get-window-types {} {
     return $error
 }
 
+# these are morse code dictionaries
+package require morse::dicts
+proc get-morse-dicts {} {
+    return [concat {builtin} [morse-dicts]]
+}
+
+# add any special sauce appropriate to a particular option
 proc populate-option {name opt option} {
     # puts "populate-option $name $opt $option"
     # look for further guidance
     switch -glob -- $opt {
-	-server - -client {
-	    opt-describe $option text ronly 1 hide 1 conly 1
-	}
-	-verbose {
-	    opt-describe $option value ronly 1 hide 1 conly 1 -format %.0f -min 0 -max 10
-	}
-	-chan {
-	    opt-describe $option enum -format %.0f -values {1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16}
-	}
-	-note {
-	    opt-describe $option value -format %.0f -min 0 -max 127 -step 1
-	}
-	-wpm {
-	    opt-describe $option value -format %.1f -units wpm -min 5.0 -max 300.0 -step 0.5
-	}
-	-swap - -mdit - -mdah - -mide - -alsp - -awsp {
-	    opt-describe $option bool
-	}
-	-mode {
-	    # -mode is going to turn up in more than one component
-	    opt-describe $option enum -values {A B}
-	}
-	-word {
-	    opt-describe $option enum -values {50 60} -units dits
-	}
+	-server - -client { opt-describe $option text ronly 1 hide 1 conly 1 }
+	-verbose { opt-describe $option value ronly 1 hide 1 conly 1 -format %.0f -min 0 -max 10 }
+	-chan { opt-describe $option enum -format %.0f -values {1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16} }
+	-note { opt-describe $option value -format %.0f -min 0 -max 127 -step 1 }
+	-wpm { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 300.0 -step 0.5 }
+	-swap - -mdit - -mdah - -mide - -alsp - -awsp { opt-describe $option bool }
+	-mode { opt-describe $option enum -values {A B} }
+	-word { opt-describe $option enum -values {50 60} -units dits }
 	-dit - -dah - -ies - -ils - -iws { 
 	    set cvalue [dict get $option cvalue]
 	    set min [expr {0.5*$cvalue}]
 	    set max [expr {1.5*$cvalue}]
 	    opt-describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
 	}
-	-weight - -ratio {
-	    opt-describe $option value -format %.1f -min 0.0 -max 100.0 -step 0.1 -units %
-	}
-	-comp {
-	    opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms
-	}
-	-freq {
-	    opt-describe $option freq -format %.0f -min 500 -max 6000 -step 1 -units Hz
-	}
-	-rise - -fall - -ramp {
-	    opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms
-	}
-	-window {
-	    # first window in convolution cannot be {none}
-	    opt-describe $option enum -values [lrange [get-window-types] 1 end]
-	}
-	-window2 {
-	    # second window can be {none}
-	    opt-describe $option enum -values [get-window-types]
-	}
-	-gain {
-	    opt-describe $option value -format %.1f -min -50 -max 0 -step 0.1 -units dB
-	}
-	-delay {
-	    opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms
-	}
-	-hang {
-	    opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms
-	}
-	-period {
-	    # for the debouncer
-	    opt-describe $option value -format %.3f -min 0.0 -max 1.000 -step 0.001 -units ms
-	}
-	-steps {
-	    # for the debouncer
-	    opt-describe $option value -format %.0f -min 1 -max 32 -step 1 -units steps
-	}
+	-weight - -ratio { opt-describe $option value -format %.1f -min 0.0 -max 100.0 -step 0.1 -units % }
+	-comp { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms }
+	-freq { opt-describe $option freq -format %.0f -min 500 -max 6000 -step 1 -units Hz }
+	-rise - -fall - -ramp { opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms }
+	-window { opt-describe $option enum -values [lrange [get-window-types] 1 end] }
+	-window2 { opt-describe $option enum -values [get-window-types] }
+	-gain { opt-describe $option value -format %.1f -min -50 -max 0 -step 0.1 -units dB }
+	-delay { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms }
+	-hang { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms }
+	-period { opt-describe $option value -format %.3f -min 0.0 -max 1.000 -step 0.001 -units ms }
+	-steps { opt-describe $option value -format %.0f -min 1 -max 32 -step 1 -units steps }
 	-key-dit - -key-dah - -key-key - -key-ptt - -key-4 - -key-5 {
-	    # for the cas keyboard key into midi note translator, which shift key
 	    opt-describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R}
 	}
-	-key-window {
-	    # for the case keyboard key into midi note translator, which window
-	    opt-describe $option enum -values {none . .p.dial}
-	}
-	-dict {
-	    # for the ascii keyer or output decoder
-	}
-	-bandwidth {
-	    # for the unkeyer detone module
-	    # bandwidth BWHertz 100.0 100.0 bandwidth of output signal in Hz
-	    opt-describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz
-	}
-	-on - -off {
-	    # on/off thresholds in keyer-detone
-	    opt-describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1
-	}
-	-timeout {
-	    # hysteresis timeout in keyer-detone
-	    opt-describe $option value -format %.0f -min 0 -max 1000 -step 1 -units frames
-	}
-	-estimate {
-	    # estimated dot clock in samples in keyer-detime
-	    opt-describe $option value -format %.0f -min 10 -max 1000 -step 1 -units frames
-	}
-	-n-rx - 
-	-speed - 
-	-peer -
-	-gateware-version -
-	-code-version -
-	-board-id -
-	-mac-addr -
-	-mcp4662 -
-	-fixed-ip -
-	-fixed-mac -
-	-n-hw-rx -
-	-wb-fmt - 
-	-build-id -
-	-gateware-minor -
-	-serial {
+	-key-window { opt-describe $option enum -values {none . .dial} }
+	-dict { opt-describe $option enum -values [get-morse-dicts] }
+	-bandwidth { opt-describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz }
+	-on - -off { opt-describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 }
+	-timeout { opt-describe $option value -format %.0f -min 0 -max 1000 -step 1 -units frames }
+	-estimate { opt-describe $option value -format %.0f -min 10 -max 1000 -step 1 -units frames }
+	-n-rx - -speed - -peer - -gateware-version - -code-version - -board-id - -mac-addr - -mcp4662 -
+	-fixed-ip - -fixed-mac - -n-hw-rx - -wb-fmt - -build-id - -gateware-minor - -serial {
 	    opt-describe $option text ronly 1
 	}
-	-bandscope { #Enable the bandscope samples.
-	    opt-describe $option bool
-	}
-	-hw-dash -
-	-hw-dot -
-	-hw-ptt -
-	-overload -
-	-recovery -
-	-tx-iq-fifo -
-	-temperature -
-	-fwd-power -
-	-rev-power -
-	-pa-current {
+	-bandscope { opt-describe $option bool }
+	-hw-dash - -hw-dot - -hw-ptt - -overload - -recovery - -tx-iq-fifo - -temperature - -fwd-power -
+	-rev-power - -pa-current {
 	    opt-describe $option text ronly 1 volatile 1
 	}
-	-mox { 
-	    # enable transmitter.
-	    # this deserves its own type, it's not a simple boolean
-	    opt-describe $option bool
-	}
-	-filters { #Bits which enable filters on the N2ADR filter board.
-	    opt-describe $option value -format %.0f -min 0 -max 255 -step 1
-	}
-	-lna-db { # Decibels of low noise amplifier on receive, from -12 to 48.
-	    opt-describe $option value -format %.0f -min -12 -max 48 -step 1 -units dB
-	}
+	-mox { opt-describe $option bool }
+	-filters { opt-describe $option value -format %.0f -min 0 -max 255 -step 1 }
+	-lna-db { opt-describe $option value -format %.0f -min -12 -max 48 -step 1 -units dB }
 	-f-tx - -f-rx1 - -f-rx2 - -f-rx3 - -f-rx4 - -f-rx5 - -f-rx6 - -f-rx7 - -f-rx8 - -f-rx9 - -f-rx10 - -f-rx11 - -f-rx12 { 
 	    # Transmitter NCO frequency
 	    # Receiver NCO frequency.
 	    set hide 0
-	    if {[regexp {^-f-rx(\d+)$} $opt2 all irx]} {
-		if {$irx > 6} { set hide 1 }
-	    }
+	    if {[regexp {^-f-rx(\d+)$} $opt all irx]} { if {$irx > 6} { set hide 1 } }
 	    opt-describe $option freq hide $hide -units Hz -format %.0f -min 1 -max 29999999 -step 1
 	}
-	-level { # Transmitter power level, from 0 to 255.
-	    opt-describe $option freq -format %.0f -min 0 -max 255 -step 1
-	}
-	-not-sync -
-	-duplex -
-	-pa - 
-	-low-pwr - 
-	-pure-signal - 
-	-bias-adjust - 
-	-vna - 
-	-vna-started -
-	-vna-fixed-rx-gain -
-	-alex-manual-mode -
-	-tune-request -
-	-hermes-lite-lna -
-	-cwx -
-	-reset-hl2-on-disconnect { 
-	    # Disable power supply sync.
-	    # Enable the transmitter frequency to vary independently of the receiver frequencies.
-	    # Enable power amplifier.
-	    # Disable T/R relay in low power operation.
-	    # Enable Pure Signal operation. Not implemented.
-	    # Enable bias current adjustment for power amplifier.
-	    # Enable vector network analysis mode.
-	    # Start VNA mode.
-	    # Alex manual mode (not implemented 3/4/2020)
-	    # use hermes lit lna settings (vs hermes classic settings)
-	    # Enable CWX, I[0] of IQ stream is CWX keydown
-	    # reset hl2 on disconnect
+	-level { opt-describe $option freq -format %.0f -min 0 -max 255 -step 1 }
+	-not-sync - -duplex - -pa - -low-pwr - -pure-signal - -bias-adjust - -vna - -vna-started - -vna-fixed-rx-gain -
+	-alex-manual-mode - -tune-request - -hermes-lite-lna - -cwx - -reset-hl2-on-disconnect { 
 	    opt-describe $option bool
 	}
-	-vna-count { # Number of frequencies sampled in VNA mode.
+	-vna-count {
 	}
-	-i2c-rx-filter - 
-	-i2c-tx-filter { 
-	    # i2c rx filter, 8 bits, (not implemented 3/4/2020)
-	    # i2c tx filter, 8 bits, (not implemented 3/4/2020)
-	    opt-describe $option value -format %.0f -min 0 -max 255
-	}
-	-cw-hang-time { 
-	    # CW Hang Time in ms, bits [9:2]
-	    # CW Hang Time in ms, bits [1:0]
-	    opt-describe $option value dvalue 10 -format %.0f -units ms -min 0 -max 1023
-	}
-	-tx-buffer-latency {
-	    # TX buffer latency in ms, default is 10ms, 0 .. 31
-	    opt-describe $option value dvalue 10 -format %.0f -units ms -min 0 -max 31
-	}
-	-ptt-hang-time {
-	    # PTT hang time, default is 4ms, 0 .. 31
-	    opt-describe $option value dvalue 4 -format %.0f -units ms -min 0 -max 31
-	}
-	-predistortion-subindex {
-	    # Predistortion subindex, 8 bits
-	    opt-describe $option value -format %.0f -min 0 -max 255
-	}
-	-predistortion {
-	    # Predistortion, 4 bits
-	    opt-describe $option value -format %.0f -min 0 -max 15
-	}
-	default {
-	    puts "populate-option $name $opt: no clues"
-	}
+	-i2c-rx-filter - -i2c-tx-filter { opt-describe $option value -format %.0f -min 0 -max 255 }
+	-cw-hang-time { opt-describe $option value dvalue 10 -format %.0f -units ms -min 0 -max 1023 }
+	-tx-buffer-latency { opt-describe $option value dvalue 10 -format %.0f -units ms -min 0 -max 31 }
+	-ptt-hang-time { opt-describe $option value dvalue 4 -format %.0f -units ms -min 0 -max 31 }
+	-predistortion-subindex { opt-describe $option value -format %.0f -min 0 -max 255 }
+	-predistortion { opt-describe $option value -format %.0f -min 0 -max 15 }
+	default { puts "populate-option $name $opt: no clues" }
     }
 }
 
-proc populate-component-options {component name} {
+# go through the components and build the database of options
+proc populate-component-options {component name {window {}}} {
     # $component is the component $factory
     # $name is the component instance
     # puts "populate-component-options $component $name"
-    foreach opt [$name info options] {
+    if {$window ne {}} {
+	set call $window
+	set options [$window exposed-options]
+    } else {
+	set call $name
+	set options [$name info options]
+    }
+    foreach opt $options {
 	# $opt is the option name used in direct configure and cget commands to $comp
 	if {[opt-is-defined -$name$opt]} { error "populate-component-options: $name $opt ... is a duplicate" }
-	foreach {copt cname cclass cdefault cvalue} [$name configure $opt] break
+	foreach {copt cname cclass cdefault cvalue} [$call configure $opt] break
 	# $copt should be $opt
-	if {$opt ne $copt} { error "populate-component-options: $name configure $opt returned a different option name $copt" }
+	if {$opt ne $copt} { error "populate-component-options: $call configure $opt returned a different option name $copt" }
 	# $cname is the option name in the option database (not used here)
 	# $cclass is the option class name in the option database (not used here)
 	# $cdefault is the default value
 	# $cvalue is the current value
-	if {[catch {$name info option $opt} info]} { set info [$name info-option $opt] }
+	if {[catch {$call info option $opt} info]} { set info [$call info-option $opt] }
 	# $info is the tool tip for the option
 	set option [dict create \
-			text -$name$opt component $component name $name opt $opt cname $cname cclass $cclass cdefault $cdefault cvalue $cvalue info $info \
-			type none merge [the-merge $opt] hide [the-hide $opt] ronly [is-ronly $opt] conly [is-conly $opt] volatile [is-volatile $opt] \
-			isargv [is-argvopts $opt]]
+			text -$name$opt component $component name $name opt $opt window $window cname $cname cclass $cclass \
+			cdefault $cdefault cvalue $cvalue info $info type none merge [the-merge $opt] hide [the-hide $opt] \
+			ronly [is-ronly $opt] conly [is-conly $opt] volatile [is-volatile $opt] isargv [is-argvopts $opt]]
 	# $option is the option dict for -$name$opt
 	populate-option $name $opt $option
     }
 }
-
-proc widget-opts {w c opts} {
-    # widget $w associated with component $c has options $opts
-    foreach opt $opts {
-	opt-define -$c$opt $c $opt $w
-	set value [$w cget $opt]
-	opt-set-default -$c$opt $value
-	opt-set-value -$c$opt $value
-    }
-}
-
 
 #
 # update the window
@@ -639,45 +459,14 @@ proc update-window-title {} {
 }
 
 #
-# control window.
-# this one line frame controls which other windows are displayed
-# and acts as a focus target for controlling the keyer while 
-# minimized.
-#
-proc keyer-widget {w} {
-    ttk::frame $w
-    foreach {tag text} {
-	dial Settings
-	memories Memories
-	ascii Input
-	detime Output
-	tap Events
-    } {
-	if {[has-$tag]} {
-	    if {[llength [get-$tag]] == 1} {
-		ttk::checkbutton $w.$tag -text $text -variable ::data(show-$tag) -command [list keyer-widget-show $w $tag]
-		pack $w.$tag -side left
-	    } else {
-		foreach sub [get-$tag] {
-		    ttk::checkbutton $w.$tag$sub -text "$text $sub" -variable ::data(show-$tag$sub) -command [list keyer-widget-show $w $tag$sub]
-		    pack $w.$tag$sub -side left
-		}
-	    }
-	}
-    }
-    pack [ttk::button $w.save -text {Save} -command [list save-current-setup]] -side left
-    return $w
-}
-proc keyer-widget-show {w tag} {
-    if {$::data(show-$tag)} {
-	.p add .p.$tag
-    } else {
-	.p forget .p.$tag
-    }
-}
-#
 # dial setting, most options are delegated to the dialbook
 # one dial for setting everything.
+#
+# there's a trickiness, the sdrtcl widgets that implement jack
+# dsp can be too busy to process options, so we may need to
+# wait until the previous setting has completed.  This is all
+# to avoiding expensive computations in the inner dsp loop, and
+# getting.
 #
 # should wrap this into a snit type, ideally responisble for
 # constructing the dialbook pages and managing the options
@@ -741,6 +530,10 @@ proc dial-set-init {} {
 }
 
 #
+# these widgets, and others to come, get defined in setups
+# which can draw from sdrtk:: or sdrtcltk::, so these sources
+# move into ../lib/sdrtk or ../lib/sdrtcltk.
+#
 # cwtext window is a live text entry for sending to the ascii-keyer
 # cw-text simply supplies bindings for a menu and an abort key
 # the escape key binding could move to cwtext itself, or be bound
@@ -763,6 +556,12 @@ snit::widgetadaptor cw-text {
     method is-busy {} { return 0 }
 
     method exposed-options {} { return {-sentcolor -unsentcolor -skippedcolor -background -font} }
+
+    method {info-option -sentcolor} {} { return {set the color of the sent text} }
+    method {info-option -unsentcolor} {} { return {set the color of the yet to be sent text} }
+    method {info-option -skippedcolor} {} { return {set the color of the unsent text which will not be sent} }
+    method {info-option -background} {} { return {set the background color of the text} }
+    method {info-option -font} {} { return {choose the font of the text} }
 
     method option-menu {x y} {
 	if { ! [winfo exists $win.m] } {
@@ -787,11 +586,11 @@ snit::widgetadaptor cw-text {
 #
 package require morse::morse
 package require morse::itu
-package require morse::fldigi
+package require morse::dicts
 
 snit::widgetadaptor ro-text {
     option -detime -default {}
-    option -dict -default {}
+    option -dict -default fldigi
     
     method delete {args} { }
     method insert {args} { }
@@ -823,7 +622,7 @@ snit::widgetadaptor ro-text {
 		# each symbol must be terminated by a space
 		# replace symbol and space with translation
 		$self del end-[string length $code]chars-1chars end
-		$self ins end "[morse-to-text $options(-dict) $symbol]$rest"
+		$self ins end "[morse-to-text [$options(-dict)] $symbol]$rest"
 	    } else {
 		# an extra space indicates a word space
 		# and it's already there
@@ -931,31 +730,56 @@ snit::widgetadaptor midi-tap {
 }
 
 #
-# manage option preferences
-# some of these should match patterns in the lists
-#
-proc the-match {opt list} {
-    foreach pat $list { if {[string match $pat $opt]} { return $pat } }
-    return {}
-}
-proc is-matched {opt list} { return [expr {[the-match $opt $list] ne {}}] }
-
-proc is-hide {opt} { return [is-matched $opt [get-hide]] }
-proc the-hide {opt} { return [the-match $opt [get-hide]] }
-proc is-merge {opt} { return [is-matched $opt [get-merge]] }
-proc the-merge {opt} { return [the-match $opt [get-merge]] }
-proc is-argvopts {opt} { return [expr {$opt in [get-argvopts]}] }
-proc is-ronly {opt} { return [expr {$opt in [get-ronly]}] }
-proc is-conly {opt} { return [expr {$opt in [get-conly]}] }
-proc is-volatile {opt} { return [expr {$opt in [get-volatile]}] }
-
-#
 # load the entire ui for the program
 #
 proc load-ui {} {
-    pack [keyer-widget .k] -side top -fill x -expand true
-    pack [ttk::panedwindow .p] -side top -fill both -expand true
-    .p add [::sdrtk::dialbook .p.dial]
+
+    # all of this should be replaced by explicitly
+    # naming sdrtk:: or sdrtcltk:: components in setups
+    # they each go into a toplevel window, and toplevels
+    # may be combined edge-to-edge or tab-merge-tearoff
+    # by drag and drop.
+    
+    # memories-widget
+    # if {[has-memories]} { ... }
+    if {[has-ascii]} {
+	set i 0
+	foreach asc [get-ascii] {
+	    toplevel .ascii$i
+	    wm title .ascii$i keyer/keybd/$i
+	    pack [cw-text .ascii$i.$asc -ascii $asc] -fill both -expand true
+	    populate-component-options cw-text $asc .ascii$i.$asc
+	    incr i
+	}
+    }
+    if {[has-detime]} {
+	set i 0
+	foreach det [get-detime] {
+	    toplevel .detime$i
+	    wm title .detime$i keyer/decode/$i
+	    pack [ro-text .detime$i.$det -detime $det -dict fldigi] -fill both -expand true
+	    populate-component-options ro-text $det .detime$i.$det
+	    incr i
+	}
+    }
+    if {[has-tap]} {
+	set i 0
+	foreach tap [get-tap] {
+	    toplevel .tap$i
+	    wm title .tap$i keyer/midi-tap/$i
+	    pack [midi-tap .tap$i.$tap -tap $tap] -fill both -expand true
+	    populate-component-options midi-tap $tap .tap$i.$tap
+	    incr i
+	}
+    }
+    
+    set args {}
+    if {[has-grid]} { lappend args -grid [get-grid] }
+    if {[has-tree]} { lappend args -tree [get-tree] }
+    #.p add [::sdrtk::dialbook .p.dial {*}$args]
+    toplevel .dial
+    wm title .dial keyer/dialbook
+    pack [::sdrtk::dialbook .dial.book {*}$args]
     array set compid {}
     foreach text [opts-with-descriptions] {
 	set desc [opt-description $text]
@@ -973,45 +797,23 @@ proc load-ui {} {
 	# set up the details display
 	set ::value($text) $cvalue
 	
-	# if {[is-hide $text]} continue
+	if {[is-hide $text]} continue
 	
 	lappend readout -value $cvalue -variable ::value($text) -command [list dial-set $text]
-	set w .p.dial.x$text
+	set w .dial.book.x$text
 	switch $type {
-	    bool { sdrtk::readout-bool $w -text $text -info $info {*}$readout }
-	    enum { sdrtk::readout-enum $w -text $text -info $info {*}$readout }
-	    freq { sdrtk::readout-freq $w -text $text -info $info {*}$readout }
-	    value { sdrtk::readout-value $w -text $text -info $info {*}$readout }
-	    text { sdrtk::readout-text $w -text $text -info $info {*}$readout }
+	    bool { sdrtk::readout-bool $w -dialbook .dial.book -text $text -info $info {*}$readout }
+	    enum { sdrtk::readout-enum $w -dialbook .dial.book -text $text -info $info {*}$readout }
+	    freq { sdrtk::readout-freq $w -dialbook .dial.book -text $text -info $info {*}$readout }
+	    value { sdrtk::readout-value $w -dialbook .dial.book -text $text -info $info {*}$readout }
+	    text { sdrtk::readout-text $w -dialbook .dial.book -text $text -info $info {*}$readout }
+	    core { sdrtk::readout-core $w -dialbook .dial.book -text $text -info $info {*}$readout }
 	    default { error "unanticipated type \"$type\"" }
 	}
-	.p.dial add $w $name $type -text [$w cget -text]
+	.dial.book add $w $name $type -text [$w cget -text]
     }
-    if {[.p.dial select] eq {}} { .p.dial select 0 }
-    set ::data(show-dial) 1
+    if {[.dial.book select] eq {}} { .dial.book select 0 }
     
-    # memories-widget
-    if {[has-ascii]} {
-	foreach asc [get-ascii] {
-	    .p add [cw-text .p.ascii$asc -ascii $asc]
-	    set ::data(show-ascii$asc) 1
-	    # add options for cwtext widget
-	    widget-opts .p.ascii$asc $asc [.p.ascii$asc exposed-options]
-	}
-    }
-    if {[has-detime]} {
-	.p add [ro-text .p.detime -detime [get-detime] -dict [morse-fldigi-dict]]
-	set ::data(show-detime) 1
-	# add options for read-text widget
-	widget-opts .p.detime [get-detime] [.p.detime exposed-options]
-    }
-    if {[has-tap]} {
-	foreach tap [get-tap] {
-	    .p add [midi-tap .p.tap$tap -tap $tap]
-	    set ::data(show-tap$tap) 1
-	    widget-opts .p.tap$tap $tap [.p.tap$tap exposed-options]
-	}
-    }
 }
 
 #
@@ -1054,7 +856,6 @@ proc setup-upgrade-v0-v1 {setups} {
     }
     return $setups
 }
-
 proc save-current-setup {} {
     # prompt for name?
     if {[tk_getString .gs text "Name for setup:"]} {
@@ -1065,7 +866,6 @@ proc save-current-setup {} {
 	}
     }
 }
-
 proc save-setups {} {
     set fp [open ~/.config/keyer/keyer.tcl w]
     puts $fp "dict create {*}{"
@@ -1075,7 +875,6 @@ proc save-setups {} {
     puts $fp "}"
     close $fp
 }
-
 proc default-setups {} {
     # connection hints
     #  -connect system-midi>key>kyo>system-audio
@@ -1122,7 +921,6 @@ proc default-setups {} {
 	info-hl { hermes lite udp jack connection }
     }]
 }
-
 proc merge-default-setups {} {
     set s [get-setups]
     set d [default-setups]
@@ -1135,7 +933,6 @@ proc merge-default-setups {} {
     }
     return $up
 }
-
 proc init-setups {} {
     # config file does not exist or error reading it
     if { ! [file exists ~/.config]} { file mkdir ~/.config }
@@ -1146,7 +943,6 @@ proc init-setups {} {
 	error "failed to create default configs: $result"
     }
 }
-
 proc load-setups {} {
     if { ! [file exists ~/.config/keyer/keyer.tcl] || 
 	 [catch {source ~/.config/keyer/keyer.tcl} result]} {
@@ -1162,7 +958,6 @@ proc load-setups {} {
 	}
     }
 }
-
 proc build-command-line {} {
     set argv [file tail $::script]
     if {[get-server] ne {}} { lappend argv -server [get-server] }
@@ -1180,7 +975,6 @@ proc build-command-line {} {
     if {[has-hide]} { lappend argv -hide [lsort -unique [get-hide]] }
     return $argv
 }
-
 proc usage-message {} {
     # puts "[dict keys $::data(main)]"
     puts "usage: keyer setup ..."
@@ -1191,7 +985,9 @@ proc usage-message {} {
     exit 1
 }
 
+#
 # process a list of arguments, always formatted as -option value pairs
+#
 proc main-argv {argv} {
     # peel off any number of setup names
     while {[llength $argv] > 0 && [is-setup [lindex $argv 0]]} {
@@ -1207,7 +1003,9 @@ proc main-argv {argv} {
 	# -hide - option patterns to hide
 	# -merge - option patterns to merge
 	# -iambic - module for iambic keyer
-	# otherwise - -option value pair to apply
+	# -grid - use dialbook grid setup
+	# -tree - use dialbook tree setup
+	# otherwise - -option value pair to apply to parts
 	switch -- $opt { 
 	    -server { set-server $val }
 	    -title { set-title $val }
@@ -1216,6 +1014,8 @@ proc main-argv {argv} {
 	    -hide { lappend-hide {*}$val }
 	    -merge { lappend-merge {*}$val }
 	    -iambic { set-iambic $val }
+	    -grid { set-grid $val }
+	    -tree { set-tree $val }
 	    default { lappend-argvopts $opt $val }
 	}
     }

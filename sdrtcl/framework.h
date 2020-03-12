@@ -156,6 +156,13 @@ typedef struct {
 } framework_t;
 
 /*
+** call tcl to evaluate a Tcl_Obj as an expression.
+*/
+static int fw_eval(Tcl_Interp *interp, Tcl_Obj *obj) {
+  return Tcl_EvalObjEx(interp, obj, TCL_EVAL_DIRECT);
+}
+
+/*
 ** common error/success return with dyanamic or static interp result
 */
 static int fw_result_obj(Tcl_Interp *interp, Tcl_Obj *obj, int ret) {
@@ -527,9 +534,9 @@ static int fw_subcommand_info_option(ClientData clientData, Tcl_Interp *interp, 
 }
 static const fw_subcommand_table_t fw_info_subcommands[] = {
   { "command", fw_subcommand_info_command,"get the doc string for a command" },
-  { "option",  fw_subcommand_info_option, "get the doc string for a command option" },
+  { "option",  fw_subcommand_info_option, "get the doc string for a command option" }, /* not snit compatible */
   { "options", fw_subcommand_info_options,"get a list of options for a command" },
-  { "method",  fw_subcommand_info_method, "get the doc string for a command method" },
+  { "method",  fw_subcommand_info_method, "get the doc string for a command method" }, /* not snit compatible */
   { "methods", fw_subcommand_info_methods,"get a list of methods for a command" },
   { "type",    fw_subcommand_info_type,   "get the type of a command" },
 #if FRAMEWORK_USES_JACK
@@ -703,16 +710,10 @@ static void framework_delete2(void *arg, int outside_shutdown) {
     jack_client_close(dsp->client);
 #endif
   }
-  if (dsp->cdelete) {
-    dsp->cdelete(arg);
-  }
-  if (dsp->port) {
-    Tcl_Free((char *)(void *)dsp->port);
-  }
-  if (dsp->midi) {
-    Tcl_Free((char *)(void *)dsp->midi);
-  }
-
+  /* someone needs to Tcl_DecrRefCount any refcounted option values */
+  if (dsp->cdelete) dsp->cdelete(arg);
+  if (dsp->port) Tcl_Free((char *)(void *)dsp->port);
+  if (dsp->midi) Tcl_Free((char *)(void *)dsp->midi);
   if (dsp->class_name != NULL) Tcl_DecrRefCount(dsp->class_name);
   if (dsp->command_name != NULL) Tcl_DecrRefCount(dsp->command_name);
   if (dsp->server_name != NULL) Tcl_DecrRefCount(dsp->server_name);

@@ -65,7 +65,7 @@ snit::widgetadaptor sdrtk::dialbook-tab {
 	# the hull is the label displayed for tab selection
 	installhull using ttk::label
 	set data(window) $window
-	$self configure {*}$args
+	$self configurelist $args
 	# puts "dialbook create tab window {$window} text {[$self cget -text]} self {$self}"
 	# create button here
 	# create menu here
@@ -74,14 +74,14 @@ snit::widgetadaptor sdrtk::dialbook-tab {
     destructor {
     }
 
-    method menu-entry {w text} { 
-	return [$data(window) menu-entry $w $text]
-    }
-    method button-entry {w text} { 
-	if { ! [winfo exists $w] } {
-	    $data(window) button-entry $w $text
-	}
-	return $w
+    method mapped {} { $data(window) mapped }
+    method unmapped {} { $data(window) unmapped }
+    method menu-entry {w text} { return [$data(window) menu-entry $w $text] }
+    method button-entry {w text} {
+	if { ! [winfo exists $w] } { 
+	    $data(window) button-entry $w $text 
+	} 
+	return $w 
     }
 
     method get-text {} { return [$hull cget -text] }
@@ -111,6 +111,12 @@ snit::widget sdrtk::dialbook {
     # (not including internal padding). Otherwise, the maximum width of all panes is used.
     option {-width width Width} {}
     
+    option {-grid grid Grid} 0
+    option {-tree tree Tree} 0
+    
+    delegate option * to dial
+    delegate method * to dial
+
     variable data -array {
 	tabs {}
 	current {}
@@ -118,36 +124,14 @@ snit::widget sdrtk::dialbook {
 	menu false
 	counter 0
 	button {}
-	use-grid 0
-	use-tree 1
     }
 
     constructor {args} {
+	# puts "sdrtk::dialbook constructor {$args}"
+	$self configurelist $args
 	install tab using ttk::frame $win.tab
 	install dial using sdrtk::dial $win.dial
-	if {$data(use-grid)} {
-	    install grid using ttk::frame $win.grid
-	}
-	if {$data(use-tree)} {
-	    install tree using ttk::treeview $win.tree -columns {current comp type window} -display {current} -height 5
-	    bind $win.tree <<TreeviewSelect>> [mymethod tree-select $win.tree]
-	    $win.tree column current -width 150
-	    $win.tree column #0 -width 150
-	}
-	$self configure {*}$args
-	pack $win.tab -side top -fill x -expand true
-	# grid $win.tab -row 0 -column 0 -columnspan 2 -sticky ew
-	if {$data(use-grid)} {
-	    pack $win.grid -side left -fill both -expand true
-	    #grid $win.grid -row 1 -column 0 -sticky nsew
-	    pack $win.dial -side right
-	    #grid $win.dial -row 1 -column 1 -sticky nsew
-	} else {
-	    pack $win.dial -side top -fill x -expand true
-	    if {$data(use-tree)} {
-		pack $win.tree -side top -fill both -expand true
-	    }
-	}
+
 	bind $win.dial <<DialCW>> [mymethod Adjust 1]
 	bind $win.dial <<DialCCW>> [mymethod Adjust -1]
 	bind $win.dial <<DialPress>> [mymethod Press]
@@ -158,6 +142,21 @@ snit::widget sdrtk::dialbook {
 	#bind $win <FocusOut> [list puts "FocusOut $win"]
 	#bind $win <ButtonPress-1> +[list focus $win.dial]
 	bind $win.dial <ButtonPress-1> +[list focus $win.dial]
+
+	if {$options(-grid)} { install grid using ttk::frame $win.grid }
+	if {$options(-tree)} { install tree using ttk::treeview $win.tree -columns {current comp type window} -display {current} }
+	$self configure {*}$args
+	pack $win.tab -side top -fill x -expand true
+	pack $win.dial -side top -fill x -expand true
+	if {$options(-grid)} {
+	    pack $win.grid -side right -fill both -expand true
+	}
+	if {$options(-tree)} {
+	    bind $win.tree <<TreeviewSelect>> [mymethod tree-select $win.tree]
+	    $win.tree column current -width 150
+	    $win.tree column #0 -width 150
+	    pack $win.tree -side bottom -fill both -expand true
+	}
     }
 
     #
@@ -183,10 +182,10 @@ snit::widget sdrtk::dialbook {
 	lappend data(tabs) [$self NewTab $window {*}$args]
 	set tab [$self FindWindow $window]
 	$self UpdateLists
-	if {$data(use-grid)} {
+	if {$options(-grid)} {
 	    $self LayoutGrid
 	}
-	if {$data(use-tree)} {
+	if {$options(-tree)} {
 	    set text [$tab cget -text]
 	    set value [$window cget -value]
 	    set var [$window cget -variable]
@@ -208,8 +207,10 @@ snit::widget sdrtk::dialbook {
     
     # when the value of a treeview option is updated, copy the updated value into the treeview
     method tree-update-current {name1 name2 op} {
+	set save [$tree selection]
 	$tree selection set $name2
 	$tree set $name2 current [set ${name1}($name2)]
+	$tree selection set $save
     }
     
     # Removes the tab specified by tabid, unmaps and unmanages the associated window.
@@ -418,9 +419,11 @@ snit::widget sdrtk::dialbook {
     method IsDisplayedTab {atab} { return $tab eq $data(displayed) }
     method DisplayTab {atab} {
 	if {$data(displayed) ne {} && [info commands $data(displayed)] ne {}} {
+	    $data(displayed) unmapped
 	    grid forget [$data(displayed) get-window]
 	}
 	set data(displayed) $atab
+	$data(displayed) mapped
 	grid [$atab get-window] -in $win.tab -sticky ew -row 0 -column 0
 	grid columnconfigure $win.tab 0 -minsize $data(wd)
 	grid rowconfigure $win.tab 0 -minsize $data(ht)

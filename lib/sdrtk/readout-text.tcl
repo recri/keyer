@@ -27,78 +27,14 @@ package provide sdrtk::readout-text 1.0
 
 package require Tk
 package require snit
+package require sdrtk::readout-enum 1.0
 
-snit::widget sdrtk::readout-text {
-    hulltype ttk::labelframe
-    component lvalue
-    component lunits
-
-    option -value -default {} -configuremethod Configure
-    option -units -default {} -configuremethod Configure
-    option -font -default {Helvetica 20} -configuremethod Configure
-    option -format -default %s -configuremethod Redisplay
-    option -variable -default {} -configuremethod Configure
-    option -info -default {} -configuremethod Configure
-    option -ronly -default 0 -configuremethod Configure
-    option -volatile -default 0 -configuremethod Configure
-    option -command {}
-    delegate option -text to hull
-
-    variable value 0
-
+snit::widgetadaptor sdrtk::readout-text {
+    delegate option * to hull
+    delegate method * to hull
     constructor {args} {
-	install lvalue using ttk::label $win.value -textvar [myvar value] -width 15 -font $options(-font) -anchor e
-	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
-	grid $win.value $win.units
-	$self configure {*}$args
+	installhull using sdrtk::readout-enum -dialbook [from args -dialbook {}]
+	set value [from args -value]
+	$self configure {*}$args -value $value -values [list $value]
     }
-    
-    method adjust {step} {
-	# puts "$self adjust $step: $options(-value) +  $step * $options(-step)"
-	set newvalue [$self bound [expr {$options(-value)+$step*$options(-step)}]]
-	$self configure -value $newvalue
-    }
-
-    method menu-entry {w text} { return {} }
-    method button-entry {w text} { return {} }
-    
-    method Display {} {
-	set value [format $options(-format) $options(-value)]
-    }
-
-    method Redisplay {opt val} {
-	set options($opt) $val
-	$self Display
-    }
-
-    method {Configure -value} {val} {
-	if {$options(-value) != $val} {
-	    set options(-value) $val
-	    if {$options(-variable) ne {}} { set $options(-variable) $val }
-	    if {$options(-command) ne {}} { {*}$options(-command) [format $options(-format) $val] }
-	    $self Display
-	}
-    }
-
-    method {Configure -font} {val} {
-	set options(-font) $val
-	$lvalue configure -font $val
-	$lunits configure -font $val
-    }
-
-    method {Configure -variable} {val} {
-	if {$options(-variable) ne {}} {
-	    trace remove variable $options(-variable) write [mymethod TraceWrite]
-	}
-	set options(-variable) $val
-	if {$options(-variable) ne {}} {
-	    trace add variable $options(-variable) write [mymethod TraceWrite]
-	    $self TraceWrite
-	}
-    }
-    method {Configure -units} {val} { set options(-units) $val }
-    method {Configure -info} {val} { set options(-info) $val }
-    method {Configure -ronly} {val} { set options(-ronly) $val }
-    method {Configure -volatile} {val} { set options(-volatile) $val }
-    method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
 }

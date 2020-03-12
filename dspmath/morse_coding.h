@@ -19,7 +19,17 @@
 /*
 ** translate queued characters into morse code key transitions
 */
-#if 1				/* new version */
+#if 1 				/* still newer version */
+/* string representation of the ITU morse dictionary, the " needed an extra \ escape */		
+static const char morse_coding_dict_string[] = 
+  "! -.-.-- {\"} .-..-. {$} ...-..- & .-... ' .----. ( -.--. ) -.--.- + .-.-. , --..-- - -....- . .-.-.- / -..-. "
+  "0 ----- 1 .---- 2 ..--- 3 ...-- 4 ....- 5 ..... 6 -.... 7 --... 8 ---.. 9 ----. "
+  ": ---... {;} -.-.-. = -...- ? ..--.. @ .--.-. "
+  "A .- B -... C -.-. D -.. E . F ..-. G --. H .... I .. J .--- K -.- L .-.. M -- "
+  "N -. O --- P .--. Q --.- R .-. S ... T - U ..- V ...- W .-- X -..- Y -.-- Z --.. "
+  "_ ..--.-";
+#endif
+#if 0				/* new version */
 static char *morse_coding_table[][2] = {
   "!", "...-.",
   "\"",  ".-..-.",
@@ -196,7 +206,8 @@ static char *morse_coding_table[128] = {
   /* 127 DEL */ "........"
 };
 
-static char *morse_coding(Tcl_UniChar char) {
-  return morse_coding_table[ascii & 127]; }
+static char *morse_coding(Tcl_UniChar ascii) {
+  return morse_coding_table[ascii & 127];
+}
 #endif
 #endif

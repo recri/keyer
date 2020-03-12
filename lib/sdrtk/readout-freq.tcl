@@ -34,7 +34,7 @@ snit::widgetadaptor sdrtk::readout-freq {
     delegate method * to hull
 
     constructor {args} {
-	installhull using sdrtk::readout-value
+	installhull using sdrtk::readout-value -dialbook [from args -dialbook {}]
 	$self configure -units MHz {*}$args
     }
     
@@ -42,11 +42,11 @@ snit::widgetadaptor sdrtk::readout-freq {
 	set options(-units) $val
 	$hull configure -units $val
 	switch $val {
-	    Hz { $hull configure -scale 1 }
-	    kHz { $hull configure -scale 1e-3 }
-	    MHz { $hull configure -scale 1e-6 }
-	    GHz { $hull configure -scale 1e-9 }
-	    THz { $hull configure -scale 1e-12 }
+	    Hz { $hull configure -step 1 }
+	    kHz { $hull configure -step 1e-3 }
+	    MHz { $hull configure -step 1e-6 }
+	    GHz { $hull configure -step 1e-9 }
+	    THz { $hull configure -step 1e-12 }
 	    default { error "unanticipated unit \"$val\"" }
 	}
     }

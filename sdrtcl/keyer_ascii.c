@@ -16,7 +16,6 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 */
 /*
-
   Based on jack-1.9.8/example-clients/midiseq.c and
   dttsp-cgran-r624/src/keyboard-keyer.c
 
@@ -52,7 +51,7 @@
 
 typedef struct {
   #include "framework_options_vars.h"
-  Tcl_Obj *dict;
+  Tcl_Obj *dict;		/* name of proc that evaluates to the code dictionary */
 } options_t;
 
 typedef struct {
@@ -62,6 +61,7 @@ typedef struct {
   int modified;
   options_t opts;
   int abort;
+  Tcl_Obj *dict;		/* actual dict,  */
   Tcl_UniChar prosign[16], n_prosign, n_slash;
   midi_buffer_t midi;
 } _t;
@@ -75,6 +75,12 @@ static void _update(_t *data) {
   }
 }
 
+static void _builtin_dict(void *arg) {
+  _t *data = (_t *)arg;
+  if (data->dict != NULL) Tcl_DecrRefCount(data->dict);
+  data->dict = Tcl_NewStringObj(morse_coding_dict_string, -1);
+  Tcl_IncrRefCount(data->dict);
+}
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   data->n_prosign = 0;
@@ -84,16 +90,13 @@ static void *_init(void *arg) {
   morse_timing(&data->samples_per, sdrkit_sample_rate(data), data->opts.word, data->opts.wpm,
 	       data->opts.dit, data->opts.dah, data->opts.ies, data->opts.ils, data->opts.iws,
 	       data->opts.weight, data->opts.ratio, data->opts.comp);
-  if (data->opts.dict == NULL) {
-    data->opts.dict = Tcl_NewDictObj();
-    Tcl_IncrRefCount(data->opts.dict);
-    for (int i = 0; i < sizeof(morse_coding_table)/sizeof(morse_coding_table[0]); i += 1) {
-      Tcl_UniChar ch;
-      Tcl_UtfToUniChar(morse_coding_table[i][0], &ch);
-      Tcl_DictObjPut(NULL, data->opts.dict, Tcl_NewUnicodeObj(&ch, 1), Tcl_NewStringObj(morse_coding_table[i][1], -1));
-    }
-  }
+  if (data->dict == NULL) _builtin_dict(data);
   return arg;
+}
+
+static void _delete(void *arg) {
+  _t *data = (_t *)arg;
+  if (data->dict != NULL) Tcl_DecrRefCount(data->dict);
 }
 
 /*
@@ -180,7 +183,7 @@ static int _queue_midi(_t *data, Tcl_UniChar c, char *p, int continues) {
 
 static char *morse_unicoding(_t *data, Tcl_UniChar c) {
   Tcl_Obj *value;
-  if (Tcl_DictObjGet(NULL, data->opts.dict, Tcl_NewUnicodeObj(&c, 1), &value) == TCL_OK && value != NULL)
+  if (Tcl_DictObjGet(NULL, data->dict, Tcl_NewUnicodeObj(&c, 1), &value) == TCL_OK && value != NULL)
     return Tcl_GetString(value);
   return NULL;
 }
@@ -264,10 +267,27 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     return TCL_ERROR;
   }
 
-  if ( data->opts.wpm != save.wpm ||
-       data->opts.weight != save.weight || data->opts.ratio != save.ratio || data->opts.comp != save.comp ||
-       data->opts.dit != save.dit || data->opts.dah != save.dah || data->opts.word != save.word ||
-       data->opts.ies != save.ies || data->opts.ils != save.ils || data->opts.iws != save.iws ) {
+  /* translate dict expression into actual morse code dictionary */
+  if (data->opts.dict != save.dict) {
+    if (strcmp(Tcl_GetString(data->opts.dict), "builtin") == 0) {
+      _builtin_dict(data);
+    } else {
+      if (fw_eval(interp, data->opts.dict) != TCL_OK) {
+	Tcl_DecrRefCount(data->opts.dict);
+	data->opts = save;
+	return TCL_ERROR;
+      }
+      if (data->dict != NULL) Tcl_DecrRefCount(data->dict);
+      data->dict = Tcl_GetObjResult(interp);
+      Tcl_ResetResult(interp);
+      Tcl_IncrRefCount(data->dict);
+    }
+  }
+  if ( data->opts.wpm != save.wpm || data->opts.weight != save.weight || 
+       data->opts.ratio != save.ratio || data->opts.comp != save.comp ||
+       data->opts.dit != save.dit || data->opts.dah != save.dah || 
+       data->opts.word != save.word || data->opts.ies != save.ies || 
+       data->opts.ils != save.ils || data->opts.iws != save.iws) {
     morse_timing(&data->pre_samples_per, sdrkit_sample_rate(data), data->opts.word, data->opts.wpm, 
 		 data->opts.dit, data->opts.dah, data->opts.ies, data->opts.ils, data->opts.iws,
 		 data->opts.weight, data->opts.ratio, data->opts.comp);
@@ -278,7 +298,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-dict",	"dict",     "Morse",  NULL,	  fw_option_dict, 0,  offsetof(_t, opts.dict),	 "morse code dictionary" },
+  { "-dict",	"morse",     "Morse",  "builtin", fw_option_obj, 0,  offsetof(_t, opts.dict),	 "morse code dictionary expression" },
   { NULL }
 };
 
@@ -296,7 +316,7 @@ static const framework_t _template = {
   _subcommands,			// subcommand table
   _init,			// initialization function
   _command,			// command function
-  NULL,				// delete function
+  _delete,			// delete function
   NULL,				// sample rate function
   _process,			// process callback
   0, 0, 0, 1, 1,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers

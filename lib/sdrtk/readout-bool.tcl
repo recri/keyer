@@ -32,7 +32,16 @@ snit::widgetadaptor sdrtk::readout-bool {
     delegate method * to hull
 
     constructor {args} {
-	installhull using sdrtk::readout-enum
-	$self configure -values {0 1} {*}$args
+	installhull using sdrtk::readout-enum -dialbook [from args -dialbook {}]
+	$self configure {*}$args -values {0 1}
     }
+
+    method menu-entry {m text} {
+	return [list checkbutton -label $text -variable [$self widget-value-var]]
+    }
+
+    method button-entry {m text} {
+	return [ttk::checkbutton $m -text $text -variable [$self widget-value-var]]
+    }
+
 }

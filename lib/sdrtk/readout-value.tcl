@@ -27,103 +27,37 @@ package provide sdrtk::readout-value 1.0
 
 package require Tk
 package require snit
+package require sdrtk::readout-core
 
-snit::widget sdrtk::readout-value {
-    hulltype ttk::labelframe
-    component lvalue
-    component lunits
-
-    option -value -default 0 -configuremethod Configure
-    option -units -default {} -configuremethod Configure
-    option -font -default {Helvetica 20} -configuremethod Configure
-    option -format -default %.0f -configuremethod Redisplay
-    option -scale -default 1 -configuremethod Redisplay
-    option -offset -default 0 -configuremethod Redisplay
+snit::widgetadaptor sdrtk::readout-value {
+    option -min -default 0 -configuremethod Configure
+    option -max -default 0 -configuremethod Configure
     option -step -default 1 -configuremethod Configure
-    option -variable -default {} -configuremethod Configure
-    option -min -default {} -configuremethod Configure
-    option -max -default {} -configuremethod Configure
-    option -info -default {} -configuremethod Configure
-    option -ronly -default 0 -configuremethod Configure
-    option -volatile -default 0 -configuremethod Configure
-    option -command {}
-    delegate option -text to hull
-
-    variable value 0
+    
+    delegate option * to hull
+    delegate method * to hull
 
     constructor {args} {
-	install lvalue using ttk::label $win.value -textvar [myvar value] -width 15 -font $options(-font) -anchor e
-	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
-	grid $win.value $win.units
-	$self configure {*}$args
+	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
+	$self configure \
+	    -value-to-integer [mymethod value-to-integer] \
+	    -integer-to-value [mymethod integer-to-value] \
+	    {*}$args
     }
     
-    method adjust {step} {
-	# puts "$self adjust $step: $options(-value) +  $step * $options(-step)"
-	set newvalue [$self bound [expr {$options(-value)+$step*$options(-step)}]]
-	$self configure -value $newvalue
+    method value-to-integer {value} {
+	return [expr {int(($value-$options(-min))/$options(-step))}]
     }
 
-    method menu-entry {w text} { return {} }
-    method button-entry {w text} { return {} }
-    
-    method Display {} {
-	set value [format $options(-format) [expr {double($options(-value))*$options(-scale)+$options(-offset)}]]
+    method integer-to-value {integer} {
+	return [expr {$options(-min)+$integer*$options(-step)}]
     }
 
-    method Redisplay {opt val} {
+    method Configure {opt val} {
 	set options($opt) $val
-	$self Display
+	$hull configure \
+	    -integer-min [$self value-to-integer $options(-min)] \
+	    -integer-max [$self value-to-integer $options(-max)]
     }
-
-    method bound {val} {
-	if {$options(-min) ne {}} { set val [expr {max($val,$options(-min))}] } 
-	if {$options(-max) ne {}} { set val [expr {min($val,$options(-max))}] }
-	return $val
-    }
-    
-    method {Configure -value} {val} {
-	set val [format $options(-format) [$self bound $val]]
-	if {$options(-value) != $val} {
-	    set options(-value) $val
-	    if {$options(-variable) ne {}} { set $options(-variable) $val }
-	    if {$options(-command) ne {}} { {*}$options(-command) $val }
-	    $self Display
-	}
-    }
-
-    method {Configure -step} {val} {
-	set options(-step) $val
-	$self configure -value [expr {int($options(-value)/$val)*$val}]
-    }
-
-    method {Configure -font} {val} {
-	set options(-font) $val
-	$lvalue configure -font $val
-	$lunits configure -font $val
-    }
-
-    method {Configure -variable} {val} {
-	if {$options(-variable) ne {}} {
-	    trace remove variable $options(-variable) write [mymethod TraceWrite]
-	}
-	set options(-variable) $val
-	if {$options(-variable) ne {}} {
-	    trace add variable $options(-variable) write [mymethod TraceWrite]
-	    $self TraceWrite
-	}
-    }
-    method {Configure -min} {val} {
-	set options(-min) $val
-	$self Configure -value $options(-value)
-    }
-    method {Configure -max} {val} {
-	set options(-max) $val
-	$self Configure -value $options(-value)
-    }
-    method {Configure -units} {val} { set options(-units) $val }
-    method {Configure -info} {val} { set options(-info) $val }
-    method {Configure -ronly} {val} { set options(-ronly) $val }
-    method {Configure -volatile} {val} { set options(-volatile) $val }
-    method TraceWrite {args} { catch { $self configure -value [set $options(-variable)] } }
+	    
 }

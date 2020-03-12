@@ -77,6 +77,8 @@ namespace eval ::morse::cyrillic {
 	#puts "table {$letter} {$roman} {$code} {$chars}"
 	dict set dict $letter $chars
 	dict set dict \#transliterate\# $letter $roman
+    }
+}
 
 proc morse-cyrillic-dict {} {
     return $::morse::cyrillic::dict
