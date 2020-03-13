@@ -72,6 +72,7 @@ snit::widgetadaptor sdrtk::cwtext {
     option -sentcolor -default white -configuremethod Configure
     option -skippedcolor -default white -configuremethod Configure
     option -unsentcolor -default lightgrey -configuremethod Configure
+    option -font -default TkFixedFont -configuremethod Configure
     option -ascii -default {}
 
     variable handle {}
@@ -144,7 +145,10 @@ snit::widgetadaptor sdrtk::cwtext {
 	set options(-unsentcolor) $color
 	$hull configure -foreground $color
     }
-    
+    method {Configure -font} {font} {
+	set options(-font) $font
+	$hull configure -font $font
+    }
     # get one character at the transmit cursor
     # and move the transmit cursor forward
     # [$self get transmit insert] returns all the characters 

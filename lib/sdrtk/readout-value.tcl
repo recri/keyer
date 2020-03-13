@@ -37,27 +37,54 @@ snit::widgetadaptor sdrtk::readout-value {
     delegate option * to hull
     delegate method * to hull
 
+    variable graticule 20
+    variable stepsperdiv 1
+    variable twopi [expr {2*atan2(0,-1)}]
+    
     constructor {args} {
 	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
 	$self configure \
+	    {*}$args \
 	    -value-to-integer [mymethod value-to-integer] \
 	    -integer-to-value [mymethod integer-to-value] \
-	    {*}$args
+	    -integer-to-phi [mymethod integer-to-phi] \
+	    -phi-to-integer [mymethod phi-to-integer]
     }
     
-    method value-to-integer {value} {
-	return [expr {int(($value-$options(-min))/$options(-step))}]
+    method mapped {} {
+	$hull mapped
+	[$self cget -dialbook] configure -graticule $graticule
     }
 
-    method integer-to-value {integer} {
-	return [expr {$options(-min)+$integer*$options(-step)}]
+    method unmapped {} {
+	$hull unmapped
     }
+    
+    method value-to-integer {value} { return [expr {int(($value-$options(-min))/$options(-step))}] }
+    method integer-to-value {integer} { return [expr {$options(-min)+$integer*$options(-step)}] }
+    method integer-to-phi {i} { return [expr {$i*$twopi/($stepsperdiv*$graticule)}] }
+    method phi-to-integer {phi} { return [expr {int(round($stepsperdiv*$graticule*$phi/$twopi))}] }
 
     method Configure {opt val} {
 	set options($opt) $val
-	$hull configure \
-	    -integer-min [$self value-to-integer $options(-min)] \
-	    -integer-max [$self value-to-integer $options(-max)]
+	set imin [$self value-to-integer $options(-min)]
+	set imax [$self value-to-integer $options(-max)]
+	set pmin [$self integer-to-phi $imin]
+	set pmax [$self integer-to-phi $imax]
+	set n [expr {$imax-$imin+1}]
+	if {$n <= 20} {
+	    set graticule 20; set stepsperdiv 1
+	} elseif {$n <= 40} {
+	    set graticule 20; set stepsperdiv 2
+	} elseif {$n <= 80} {
+	    set graticule 20; set stepsperdiv 4
+	} elseif {$n <= 100} {
+	    set graticule 20; set stepsperdiv 5
+	} else {
+	    set graticule 20; set stepsperdiv 10
+	}
+	# puts "[$hull cget -text]  $n values"
+	$self configure -integer-min $imin -integer-max $imax -phi-min $pmin -phi-max $pmax
     }
 	    
 }

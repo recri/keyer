@@ -33,8 +33,15 @@ snit::widgetadaptor sdrtk::readout-text {
     delegate option * to hull
     delegate method * to hull
     constructor {args} {
-	installhull using sdrtk::readout-enum -dialbook [from args -dialbook {}]
 	set value [from args -value]
-	$self configure {*}$args -value $value -values [list $value]
+	installhull using sdrtk::readout-enum {*}$args -value $value -values [list $value]
+    }
+
+    method menu-entry {m text} {
+	return [list command -label $text -state disabled]
+    }
+
+    method button-entry {m text} {
+	return [ttk::label $m -text $text]
     }
 }

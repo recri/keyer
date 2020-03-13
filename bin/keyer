@@ -331,7 +331,7 @@ proc populate-option {name opt option} {
 	-verbose { opt-describe $option value ronly 1 hide 1 conly 1 -format %.0f -min 0 -max 10 }
 	-chan { opt-describe $option enum -format %.0f -values {1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16} }
 	-note { opt-describe $option value -format %.0f -min 0 -max 127 -step 1 }
-	-wpm { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 300.0 -step 0.5 }
+	-wpm { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 }
 	-swap - -mdit - -mdah - -mide - -alsp - -awsp { opt-describe $option bool }
 	-mode { opt-describe $option enum -values {A B} }
 	-word { opt-describe $option enum -values {50 60} -units dits }
@@ -340,6 +340,7 @@ proc populate-option {name opt option} {
 	    set min [expr {0.5*$cvalue}]
 	    set max [expr {1.5*$cvalue}]
 	    opt-describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
+	    #puts "opt-describe $name $opt -value $cvalue -min $min -max $max -step 0.1 -units dits"
 	}
 	-weight - -ratio { opt-describe $option value -format %.1f -min 0.0 -max 100.0 -step 0.1 -units % }
 	-comp { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms }
@@ -393,6 +394,13 @@ proc populate-option {name opt option} {
 	-ptt-hang-time { opt-describe $option value dvalue 4 -format %.0f -units ms -min 0 -max 31 }
 	-predistortion-subindex { opt-describe $option value -format %.0f -min 0 -max 255 }
 	-predistortion { opt-describe $option value -format %.0f -min 0 -max 15 }
+	-sentcolor - -unsentcolor - -skippedcolor - -background {
+	    # ignore these and -font for the moment, the foreground widget doesn't wrap things yet
+	    #opt-describe $option enum -values {white black gray lightgrey red orange yellow green blue indigo violet}
+	}
+	-font {
+	    #opt-describe $option enum -values {TkFixedFont {helvetica 10} {helvetica 12} {helvetica 14}}
+	}
 	default { puts "populate-option $name $opt: no clues" }
     }
 }

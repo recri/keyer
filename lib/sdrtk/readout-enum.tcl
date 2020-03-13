@@ -35,28 +35,25 @@ snit::widgetadaptor sdrtk::readout-enum {
     delegate option * to hull
     delegate method * to hull
 
-    variable saved
+    variable n 0
+    variable twopi [expr {2*atan2(0,-1)}]
+    variable graticule 20
+    variable stepsperdiv 1
     
     constructor {args} {
 	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
-	$self configurelist $args
+	$self configure \
+	    {*}$args \
+	    -integer-to-value [mymethod integer-to-value] \
+	    -value-to-integer [mymethod value-to-integer] \
+	    -integer-to-phi [mymethod integer-to-phi] \
+	    -phi-to-integer [mymethod phi-to-integer]
+	set n [llength $options(-values)]
     }
     
-    method adjust {step} {
-	set v [$self cget -value]
-	set i [lsearch -exact $options(-values) $v]
-	if {$i < 0} { error "readout-enum value $v is not in values $options(-values)" }
-	set n [llength $options(-values)]
-	set p [expr {min($n-1,max(0,$i+$step))}]
-	$self configure -value [lindex $options(-values) $p]
-    }
-
     method mapped {} {
-	# puts "readout-enum mapped"
 	$hull mapped
-	set n [llength $options(-values)]
-	set i [lsearch $options(-values) [$self cget -value]]
-	[$self cget -dialbook] configure -detents $n -detent-min 0 -detent-max [expr {$n-1}] -graticule $n -phi [expr {$i*2*3.1416/$n}]
+	[$self cget -dialbook] configure -graticule $graticule
     }
 
     method unmapped {} {
@@ -94,21 +91,39 @@ snit::widgetadaptor sdrtk::readout-enum {
     method value-to-integer {val} {
 	set i [lsearch -exact $options(-values) $val]
 	if {$i < 0} { error "invalid value $val in readout-enum value-to-integer" }
-	return i
+	return $i
     }
 
     method integer-to-value {i} {
+	set i [expr {int(round($i))}]
 	if {$i < 0 || $i >= [llength $options(-values)]} { error "invalid value $i in readout-enum integer-to-value" }
 	return [lindex $options(-values) $i]
     }
     
+    method integer-to-phi {i} { return [expr {$i*$twopi/($stepsperdiv*$graticule)}] }
+
+    method phi-to-integer {phi} { return [expr {$stepsperdiv*$graticule*$phi/$twopi}] }
+
     method {Configure -values} {values} {
 	if {[llength $values] == 0} { error "readout-enum: -values has no members" }
 	set options(-values) $values
-	set args {}
-	$self configure -integer-min 0 \
-	    -integer-max [expr {[llength $values]-1}] \
-	    -integer-to-value [mymethod integer-to-value] \
-	    -value-to-integer [mymethod value-to-integer]
+	set n [llength $values]
+	set imin 0
+	set imax [expr {$n-1}]
+	set pmin [$self integer-to-phi $imin]
+	set pmax [$self integer-to-phi $imax]
+	if {$n <= 20} {
+	    set graticule 20; set stepsperdiv 1
+	} elseif {$n <= 40} {
+	    set graticule 20; set stepsperdiv 2
+	} elseif {$n <= 80} {
+	    set graticule 20; set stepsperdiv 4
+	} elseif {$n <= 100} {
+	    set graticule 20; set stepsperdiv 5
+	} else {
+	    set graticule 20; set stepsperdiv 10
+	}
+	# puts "[$hull cget -text]: $n values "
+	$self configure -integer-min $imin -integer-max $imax -phi-min $pmin -phi-max $pmax
     }
 }

@@ -63,14 +63,14 @@ snit::widget sdrtk::readout-core {
 
     option -widget-value -default {}
 
-    proc identity {x} { return $x }
-    
     option -value-to-integer -default {}
     option -integer-to-value -default {}
     option -integer-to-phi -default {}
     option -phi-to-integer -default {}
-    option -integer-min -default 0
-    option -integer-max -default 0
+    option -integer-min -default 0 -configuremethod Configure
+    option -integer-max -default 0 -configuremethod Configure
+    option -phi-min -default 0 -configuremethod Configure
+    option -phi-max -default 0 -configuremethod Configure
     
     option -font -default {Courier 20 bold} -configuremethod Configure
     option -format -default %s -configuremethod Configure
@@ -81,10 +81,16 @@ snit::widget sdrtk::readout-core {
     
     delegate option -text to hull
 
-    variable value {}
+    proc identity {x} { return $x }
+    
+    variable twopi [expr {2*atan2(0,-1)}]
+    variable saved
+    variable steps 0
+    variable graticule 20
+    variable ismapped 0
 
     constructor {args} {
-	puts "readout-core constructor $args"
+	#puts "readout-core constructor $args"
 	foreach opt {-value-to-integer -integer-to-value -integer-to-phi -phi-to-integer} { set options($opt) [myproc identity] }
 	$self configurelist $args
 	install lvalue using ttk::label $win.value -textvar [myvar options(-value)] -width 15 -font $options(-font) -anchor e
@@ -93,46 +99,72 @@ snit::widget sdrtk::readout-core {
 	trace add variable options(-widget-value) write [mymethod TraceWriteWidgetValue]
     }
     
-    method adjust {step} {
-	# convert step
-	set di [{*}$options(-phi-to-integer) $step]
-	# convert value
-	set ci [{*}$options(-value-to-integer) $options(-value)]
-	# compute new value as integer
-	set newi [expr {min($options(-integer-max), max($options(-integer-min), $ci+$di))}]
-	set newv [{*}$options(-integer-to-value) $newi]
-	if {$newv ne $options(-value)} { $self configure -value $newv }
+    # translate step
+    method adjust {step cpr} {
+	incr steps $step
+	# rotate to positive radians
+	set phi [expr {[$options(-dialbook) cget -phi]+$twopi*$steps/$cpr}]
+	# enforce bounds, translate to value
+	# puts "[$hull cget -text] $options(-integer-min) $options(-integer-max)"
+	if {$phi < $options(-phi-min)} {
+	    set v [{*}$options(-integer-to-value) $options(-integer-min)]
+	    set enforce 1
+	} elseif {$phi > $options(-phi-max)} {
+	    set v [{*}$options(-integer-to-value) $options(-integer-max)]
+	    set enforce 1
+	} else {
+	    set v [{*}$options(-integer-to-value) [{*}$options(-phi-to-integer) $phi]]
+	    set enforce 0
+	}
+	# apply the format
+	set v [format $options(-format) $v]
+	# and alter the value if necessary
+	if {$v ne $options(-value) || $enforce} { 
+	    $self configure -value $v 
+	}
     }
+
     method value {} { return $options(-value) }
     method value-var {} { return [myvar option(-value)] }
     method widget-value-var {} { return [myvar option(-widget-value)] }
     method menu-entry {w text} { return {} }
     method button-entry {w text} { return {} }
 
-    variable saved
     method mapped {} {
-	set saved {}
-	foreach o {-detents -detent-min -detent-max -graticule -phi} {
-	    lappend saved $o [$options(-dialbook) cget $o]
-	}
+	# puts "readout-core mapped [$hull cget -text]"
+	set ismapped 1
+	set saved [list -graticule [$options(-dialbook) cget -graticule] -phi [$options(-dialbook) cget -phi]]
+	$options(-dialbook) configure -graticule $graticule
+	$self Position
     }
     method unmapped {} {
+	#puts "readout-core unmapped [$hull cget -text]"
+	set ismapped 0
 	$options(-dialbook) configure {*}$saved
     }
-
+    method is-mapped {} { return $ismapped }
+    method Position {} {
+	if { ! $ismapped } return
+	set i [{*}$options(-value-to-integer) $options(-value)]
+	if {[string is integer $i]} {
+	    set p [{*}$options(-integer-to-phi) $i]
+	    # puts "setting dialbook phi to {$p} computed from {$i}, computed from {$options(-value)}, for [$hull cget -text]"
+	    $options(-dialbook) configure -phi $p
+	    # puts "configured -phi $p, [$options(-dialbook) cget -phi]"
+	    set steps 0
+	} else {
+	    after 1 [mymethod Position]
+	}
+    }
+	
     method {Configure -value} {val} {
 	set val [format $options(-format) $val]
 	if {$options(-value) != $val} {
 	    set options(-value) $val
 	    if {$options(-variable) ne {}} { set $options(-variable) $val }
 	    if {$options(-command) ne {}} { {*}$options(-command) $val }
-	    set i [{*}$options(-value-to-integer) $val]
-	    if {[regexp {^\d+$} $i]} {
-		set p [{*}$options(-integer-to-phi) $i]
-		puts "setting dialbook phi to {$p} computed from {$i} and from $val"
-		{*}$options(-dialbook) configure -phi $p
-	    }
 	}
+	$self Position
     }
     method {Configure -widget-value} {val} { set options(-widget-value) $val }
     method {Configure -format} {val} {
@@ -154,6 +186,11 @@ snit::widget sdrtk::readout-core {
 	    $self TraceWriteVariable
 	}
     }
+    method {Configure -integer-min} {val} { set options(-integer-min) $val }
+    method {Configure -integer-max} {val} { set options(-integer-max) $val }
+    method {Configure -phi-min} {val} { set options(-phi-min) $val }
+    method {Configure -phi-max} {val} { set options(-phi-max) $val }
+ 
     method TraceWriteVariable {args} { catch { $self configure -value [set $options(-variable)] } }
     method TraceWriteWidgetValue {args} { catch { $self configure -value $options(-widget-value) } }
 }

@@ -309,14 +309,15 @@ snit::widget sdrtk::dialbook {
     ##
     ##
     method Adjust {step} {
-	#puts "$self Adjust $step for $data(current) menu $data(menu)"
+	# puts "$self Adjust $step for $data(current) menu $data(menu)"
+	# the units of $step are counts, where [$dial cget -cpr] are the counts per revolution
 	$dial Rotate $step
 	if {$data(menu)} {
 	    
 	} else {
 	    if {$data(current) ne {}} {
 		# puts "$self Adjust $step [$data(current) get-window] adjust $step"
-		[$data(current) get-window] adjust $step 
+		[$data(current) get-window] adjust $step [$dial cget -cpr]
 	    }
 	}
     }
@@ -416,17 +417,18 @@ snit::widget sdrtk::dialbook {
 	return {}
     }
 
-    method IsDisplayedTab {atab} { return $tab eq $data(displayed) }
+    method IsDisplayedTab {atab} { return $atab eq $data(displayed) }
     method DisplayTab {atab} {
+	if {$atab eq $data(displayed)} return
 	if {$data(displayed) ne {} && [info commands $data(displayed)] ne {}} {
 	    $data(displayed) unmapped
 	    grid forget [$data(displayed) get-window]
 	}
 	set data(displayed) $atab
-	$data(displayed) mapped
 	grid [$atab get-window] -in $win.tab -sticky ew -row 0 -column 0
 	grid columnconfigure $win.tab 0 -minsize $data(wd)
 	grid rowconfigure $win.tab 0 -minsize $data(ht)
+	$data(displayed) mapped
     }
 
     method SubwindowMapped {w} {

@@ -81,39 +81,25 @@ snit::widgetadaptor sdrtk::dial {
 
     option -cpr -default 1000 -configuremethod Configure;		# counts per revolution
 
-    option -phi -default 0 -configuremethod Pconfig;			# the angle of the thumb
-    option -detents -default 0 -configuremethod Gconfig;		# 0 detents means the knob freely turns, 
-    option -detent-min -default 0 -configuremethod Gconfig;		# minimum detent (inclusive)
-    option -detent-max -default 1 -configuremethod Gconfig;		# maximum detent (inclusive)
-					# -detents 1 -detent-min 0 -detent-max 0 means the knob does nothing, the value has another source
-					# detents > 0 mean the knob takes n positions, phi = [0:n-1]*2*pi/n
+    option -phi -default 0 -configuremethod Pconfig;			# the angle of the thumb, from top dead center increasing clockwise
 
     option -command {};			# script called to report rotation 
     
     delegate option * to hull
     delegate method * to hull
 
-    variable data -array {
-	r 0
-	w 0
-	h 0
-	xc 0
-	yc 0
-	tl 0
-    }
+    variable data -array [list r 0 w 0 h 0 xc 0 yc 0 tl 0 \
+			      pi/2 [expr {atan2(1,0)}] 2pi [expr {2*atan2(0,-1)}] ]
 
-    proc xphi {phi} {
-	# coordinates, blech, y increases down, x increases to the right
-	# so the standard phi 0 is east and increasing clockwise
-	# assuming we want phi 0 north and increasing clockwise
-	# we should simply subtract pi/2 from phi
-	return [expr {$phi-$data(pi/2)}]
-    }
+    # coordinates, blech, y increases down, x increases to the right
+    # so the standard phi 0 is east and increasing clockwise
+    # assuming we want phi 0 north and increasing clockwise
+    # we should simply subtract pi/2 from phi
+    proc xphi {phi} { return [expr {$phi-1.5707963267948966}] }
+    proc ixphi {phi} { return [expr {$phi+1.5707963267948966}] }
     constructor {args} {
 	#  -width 350 -height 350
 	installhull using canvas -takefocus 1
-	set data(pi/2) [expr {atan2(1,0)}]
-	set data(2pi) [expr {2*atan2(0,-1)}]
 	set options(-phi) 0
 	$self Configure -cpr $options(-cpr)
 	$self configure {*}$args
@@ -145,7 +131,7 @@ snit::widgetadaptor sdrtk::dial {
 
     method {Configure -cpr} {cpr} {
 	set options(-cpr) $cpr
-	set data(step0) [expr {-$data(pi/2)}]
+	set data(step0) [xphi 0]
 	set data(step) [expr {$data(2pi)/$cpr}]
     }
 
@@ -160,6 +146,7 @@ snit::widgetadaptor sdrtk::dial {
     }
     
     method Mouse-wheel {w delta} {
+	puts "Mouse-wheel $w $delta"
 	if {$delta > 0} {
 	    if {$delta >= 120} { set delta [expr {$delta/120}] }
 	    while {[incr delta -1] >= 0} { event generate $w <<DialCW>> }
@@ -177,14 +164,14 @@ snit::widgetadaptor sdrtk::dial {
 
     method Thumb-press {w x y} {
 	#puts "Thumb-press $w $x $y"
-	set data(phi-press) [expr {atan2($y-$data(yc),$x-$data(xc))+$data(pi/2)}]
+	set data(phi-press) [ixphi [expr {atan2($y-$data(yc),$x-$data(xc))}]]
 	set data(turn-resid) 0
     }
 
     method Thumb-motion {w x y} {
 	#puts "Thumb-motion $w $x $y"
 	set phi0 $data(phi-press)
-	set data(phi-press) [expr {atan2($y-$data(yc),$x-$data(xc))+$data(pi/2)}]
+	set data(phi-press) [ixphi [expr {atan2($y-$data(yc),$x-$data(xc))}]]
 	set data(turn-resid) [expr {($data(phi-press)-$phi0)/$data(step)+$data(turn-resid)}]
 	if {$data(turn-resid) > $options(-cpr)/2} { set data(turn-resid) [expr {$data(turn-resid)-$options(-cpr)}] }
 	if {$data(turn-resid) < -$options(-cpr)/2} { set data(turn-resid) [expr {$data(turn-resid)+$options(-cpr)}] }
@@ -225,14 +212,12 @@ snit::widgetadaptor sdrtk::dial {
     
     method Window-configure {w h} {
 	# take reconfigured window size and recompute everything
-	puts "dial window-configure $w $h"
 	array set data [list w $w h $h r [expr {min($w,$h)/2.0}] yc [expr {$h/2.0}] xc [expr {$w/2.0}]]
 	$self Graphics-configure
     }
 
     method Graphics-configure {} {
 	# redraw everything given window coordinates
-	puts "dial graphics-configure"
 	set r $data(r)
 	set xc $data(xc)
 	set yc $data(yc)
@@ -254,6 +239,17 @@ snit::widgetadaptor sdrtk::dial {
 	    set button [list [expr {$xc-$br}] [expr {$yc-$br}] [expr {$xc+$br}] [expr {$yc+$br}]]
 	}
 	    
+	# thumb length
+	if {$options(-thumb-length) <= 0} {
+	    set tl 0
+	    set thumb [list $xc $yc $xc $yc]
+	} else {
+	    set tl [expr {$r*$options(-thumb-length)/100.0}]
+	    set phi [xphi $options(-phi)]
+	    set thumb [list $xc $yc [expr {$xc+$tl*cos($phi)}] [expr {$yc+$tl*sin($phi)}]]
+	}
+	set data(tl) $tl
+
 	# graticule radius
 	if {$options(-graticule) <= 0} {
 	    set graticule [list $xc $yc $xc $yc]
@@ -264,7 +260,7 @@ snit::widgetadaptor sdrtk::dial {
 	    set p 0
 	    set dp [expr {$data(2pi)/$options(-graticule)}]
 	    for {set i 0} {$i < $options(-graticule)} {incr i} {
-		set phi [expr {$p-$data(pi/2)}]
+		set phi [xphi $p]
 		set x [expr {$xc+$gr*cos($phi)}]
 		set y [expr {$yc+$gr*sin($phi)}]
 		lappend graticule $xc $yc $x $y
@@ -273,12 +269,13 @@ snit::widgetadaptor sdrtk::dial {
 	    set ir [expr {($dr+$gr)/2.0}]
 	    set mask [list [expr {$xc-$ir}] [expr {$yc-$ir}] [expr {$xc+$ir}] [expr {$yc+$ir}]]
 	}
-	if {[llength [$hull find withtag dial]] == 0} {
+	if {[llength [$hull find withtag thumb]] == 0} {
 	    $hull create line $graticule -tag graticule -fill $options(-graticule-fill) -width $options(-graticule-width)
 	    $hull create oval $mask -tag mask -fill $options(-bg) -outline {} 
 	    # puts "draw dial: $dial"
 	    $hull create oval $dial -tag dial -fill $options(-fill) -outline $options(-outline) -width $options(-dial-width) 
 	    $hull create oval $button -tag button -fill $options(-button-fill)
+	    $hull create line $thumb -tag thumb -fill $options(-thumb-fill) -width $options(-thumb-width) -capstyle round
 	    $hull bind dial <ButtonPress-1> [mymethod Thumb-press %W %x %y]
 	    $hull bind button <ButtonPress-1> [list event generate %W <<DialPress>>]
 	    $hull bind button <ButtonRelease-1> [list event generate %W <<DialRelease>>]
@@ -289,28 +286,16 @@ snit::widgetadaptor sdrtk::dial {
 	    $hull coords dial $dial
 	    $hull coords button $button
 	    $hull coords mask $mask
+	    $self Pointer-configure
 	}
-	$self Pointer-configure
     }
     method Pointer-configure {} {
-	# thumb length
-	puts "dial pointer-configure"
-	set r $data(r)
-	set xc $data(xc)
-	set yc $data(yc)
-	if {$options(-thumb-length) <= 0} {
-	    set tl 0
-	    set thumb [list $xc $yc $xc $yc]
-	} else {
-	    set tl [expr {$r*$options(-thumb-length)/100.0}]
-	    set phi [expr {$options(-phi)-$data(pi/2)}]
-	    set thumb [list $xc $yc [expr {$xc+$tl*cos($phi)}] [expr {$yc+$tl*sin($phi)}]]
+	if {$data(tl) != 0} {
+	    set x $data(xc)
+	    set y $data(yc)
+	    set t $data(tl)
+	    set p [xphi $options(-phi)]
+	    $hull coords thumb [list $x $y [expr {$x+$t*cos($p)}] [expr {$y+$t*sin($p)}]]
 	}
-	if {[llength [$hull find withtag thumb]] == 0} {
-	    $hull create line $thumb -tag thumb -fill $options(-thumb-fill) -width $options(-thumb-width) -capstyle round
-	} else {
-	    $hull coords thumb $thumb
-	}
-	set data(tl) $tl
     }
 }    

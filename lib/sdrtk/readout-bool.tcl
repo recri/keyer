@@ -32,8 +32,7 @@ snit::widgetadaptor sdrtk::readout-bool {
     delegate method * to hull
 
     constructor {args} {
-	installhull using sdrtk::readout-enum -dialbook [from args -dialbook {}]
-	$self configure {*}$args -values {0 1}
+	installhull using sdrtk::readout-enum {*}$args -values {0 1}
     }
 
     method menu-entry {m text} {
