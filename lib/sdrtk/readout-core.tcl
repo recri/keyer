@@ -56,17 +56,22 @@ snit::widget sdrtk::readout-core {
     component lvalue
     component lunits
 
+    option -verbose -default 0
+    option -testing -default 0
+
     option -value -default 0 -configuremethod Configure
     option -units -default {}
     option -variable -default {} -configuremethod Configure
     option -info -default {}
+    option -graticule -default 20
+    option -steps-per-div -default 5
 
     option -widget-value -default {}
 
     option -value-to-integer -default {}
     option -integer-to-value -default {}
-    option -integer-to-phi -default {}
-    option -phi-to-integer -default {}
+    #option -integer-to-phi -default {}
+    #option -phi-to-integer -default {}
     option -integer-min -default 0 -configuremethod Configure
     option -integer-max -default 0 -configuremethod Configure
     option -phi-min -default 0 -configuremethod Configure
@@ -84,14 +89,14 @@ snit::widget sdrtk::readout-core {
     proc identity {x} { return $x }
     
     variable twopi [expr {2*atan2(0,-1)}]
-    variable saved
+    variable saved {}
     variable steps 0
-    variable graticule 20
     variable ismapped 0
 
     constructor {args} {
 	#puts "readout-core constructor $args"
-	foreach opt {-value-to-integer -integer-to-value -integer-to-phi -phi-to-integer} { set options($opt) [myproc identity] }
+	#  -integer-to-phi -phi-to-integer
+	foreach opt {-value-to-integer -integer-to-value} { set options($opt) [myproc identity] }
 	$self configurelist $args
 	install lvalue using ttk::label $win.value -textvar [myvar options(-value)] -width 15 -font $options(-font) -anchor e
 	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
@@ -99,11 +104,12 @@ snit::widget sdrtk::readout-core {
 	trace add variable options(-widget-value) write [mymethod TraceWriteWidgetValue]
     }
     
-    # translate step
-    method adjust {step cpr} {
+    # translate step, we accumulate steps since last explicit set of -phi
+    # so we know where the pointer is pointing
+    method adjust {step} {
 	incr steps $step
 	# rotate to positive radians
-	set phi [expr {[$options(-dialbook) cget -phi]+$twopi*$steps/$cpr}]
+	set phi [expr {[$options(-dialbook) cget -phi]+$twopi*$steps/[$options(-dialbook) cget -cpr]}]
 	# enforce bounds, translate to value
 	# puts "[$hull cget -text] $options(-integer-min) $options(-integer-max)"
 	if {$phi < $options(-phi-min)} {
@@ -113,7 +119,7 @@ snit::widget sdrtk::readout-core {
 	    set v [{*}$options(-integer-to-value) $options(-integer-max)]
 	    set enforce 1
 	} else {
-	    set v [{*}$options(-integer-to-value) [{*}$options(-phi-to-integer) $phi]]
+	    set v [{*}$options(-integer-to-value) [$self phi-to-integer $phi]]
 	    set enforce 0
 	}
 	# apply the format
@@ -130,11 +136,14 @@ snit::widget sdrtk::readout-core {
     method menu-entry {w text} { return {} }
     method button-entry {w text} { return {} }
 
+    method integer-to-phi {i} { return [expr {$i*$twopi/($options(-steps-per-div)*$options(-graticule))}] }
+    method phi-to-integer {phi} { return [expr {$options(-steps-per-div)*$options(-graticule)*$phi/$twopi}] }
+
     method mapped {} {
 	# puts "readout-core mapped [$hull cget -text]"
 	set ismapped 1
 	set saved [list -graticule [$options(-dialbook) cget -graticule] -phi [$options(-dialbook) cget -phi]]
-	$options(-dialbook) configure -graticule $graticule
+	$options(-dialbook) configure -graticule $options(-graticule)
 	$self Position
     }
     method unmapped {} {
@@ -147,7 +156,7 @@ snit::widget sdrtk::readout-core {
 	if { ! $ismapped } return
 	set i [{*}$options(-value-to-integer) $options(-value)]
 	if {[string is integer $i]} {
-	    set p [{*}$options(-integer-to-phi) $i]
+	    set p [$self integer-to-phi $i]
 	    # puts "setting dialbook phi to {$p} computed from {$i}, computed from {$options(-value)}, for [$hull cget -text]"
 	    $options(-dialbook) configure -phi $p
 	    # puts "configured -phi $p, [$options(-dialbook) cget -phi]"

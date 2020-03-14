@@ -327,50 +327,44 @@ proc populate-option {name opt option} {
     # puts "populate-option $name $opt $option"
     # look for further guidance
     switch -glob -- $opt {
-	-server - -client { opt-describe $option text ronly 1 hide 1 conly 1 }
-	-verbose { opt-describe $option value ronly 1 hide 1 conly 1 -format %.0f -min 0 -max 10 }
-	-chan { opt-describe $option enum -format %.0f -values {1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16} }
-	-note { opt-describe $option value -format %.0f -min 0 -max 127 -step 1 }
-	-wpm { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 }
+	-server - -client { opt-describe $option text ronly 1 hide 1 conly 1 -graticule 1 }
+	-verbose { opt-describe $option value ronly 1 hide 1 conly 1 -format %.0f -min 0 -max 10 -graticule 12 -steps-per-div 1 }
+	-chan { opt-describe $option value -format %.0f -min 1 -max 16 -graticule 12 -steps-per-div 1 }
+	-note { opt-describe $option value -format %.0f -min 0 -max 127 -graticule 12 -steps-per-div 1 }
+	-wpm { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 -graticule 20 -steps-per-div 10 }
 	-swap - -mdit - -mdah - -mide - -alsp - -awsp { opt-describe $option bool }
 	-mode { opt-describe $option enum -values {A B} }
 	-word { opt-describe $option enum -values {50 60} -units dits }
 	-dit - -dah - -ies - -ils - -iws { 
-	    set cvalue [dict get $option cvalue]
-	    set min [expr {0.5*$cvalue}]
-	    set max [expr {1.5*$cvalue}]
+	    set cdefault [dict get $option cdefault]
+	    set min [expr {$cdefault-0.5}]
+	    set max [expr {$cdefault+0.5}]
 	    opt-describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
 	    #puts "opt-describe $name $opt -value $cvalue -min $min -max $max -step 0.1 -units dits"
 	}
-	-weight - -ratio { opt-describe $option value -format %.1f -min 0.0 -max 100.0 -step 0.1 -units % }
-	-comp { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms }
-	-freq { opt-describe $option freq -format %.0f -min 500 -max 6000 -step 1 -units Hz }
-	-rise - -fall - -ramp { opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms }
+	-weight - -ratio { opt-describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
+	-comp { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	-freq { opt-describe $option value -format %.0f -min 500 -max 6000 -step 1 -units Hz -graticule 20 -steps-per-div 100}
+	-rise - -fall - -ramp { opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	-window { opt-describe $option enum -values [lrange [get-window-types] 1 end] }
 	-window2 { opt-describe $option enum -values [get-window-types] }
-	-gain { opt-describe $option value -format %.1f -min -50 -max 0 -step 0.1 -units dB }
-	-delay { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms }
-	-hang { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms }
-	-period { opt-describe $option value -format %.3f -min 0.0 -max 1.000 -step 0.001 -units ms }
-	-steps { opt-describe $option value -format %.0f -min 1 -max 32 -step 1 -units steps }
-	-key-dit - -key-dah - -key-key - -key-ptt - -key-4 - -key-5 {
-	    opt-describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R}
-	}
+	-gain { opt-describe $option value -format %.1f -min -50 -max 3 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
+	-delay { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	-hang { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
+	-period { opt-describe $option value -format %.3f -min 0.0 -max 1.000 -step 0.001 -units ms -graticule 20 -steps-per-div 50}
+	-steps { opt-describe $option value -format %.0f -min 1 -max 32 -step 1 -units steps -graticule 20 -steps-per-div 1}
+	-key-dit - -key-dah - -key-key - -key-ptt - -key-4 - -key-5 { opt-describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
 	-key-window { opt-describe $option enum -values {none . .dial} }
 	-dict { opt-describe $option enum -values [get-morse-dicts] }
-	-bandwidth { opt-describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz }
-	-on - -off { opt-describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 }
-	-timeout { opt-describe $option value -format %.0f -min 0 -max 1000 -step 1 -units frames }
+	-bandwidth { opt-describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
+	-on - -off { opt-describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 -graticule 20 -steps-per-div 5}
+	-timeout { opt-describe $option value -format %.0f -min 0 -max 1000 -step 1 -units frames -graticule 20 -steps-per-div 50}
 	-estimate { opt-describe $option value -format %.0f -min 10 -max 1000 -step 1 -units frames }
 	-n-rx - -speed - -peer - -gateware-version - -code-version - -board-id - -mac-addr - -mcp4662 -
-	-fixed-ip - -fixed-mac - -n-hw-rx - -wb-fmt - -build-id - -gateware-minor - -serial {
-	    opt-describe $option text ronly 1
-	}
+	-fixed-ip - -fixed-mac - -n-hw-rx - -wb-fmt - -build-id - -gateware-minor - -serial { opt-describe $option text ronly 1 }
 	-bandscope { opt-describe $option bool }
 	-hw-dash - -hw-dot - -hw-ptt - -overload - -recovery - -tx-iq-fifo - -temperature - -fwd-power -
-	-rev-power - -pa-current {
-	    opt-describe $option text ronly 1 volatile 1
-	}
+	-rev-power - -pa-current { opt-describe $option text ronly 1 volatile 1 }
 	-mox { opt-describe $option bool }
 	-filters { opt-describe $option value -format %.0f -min 0 -max 255 -step 1 }
 	-lna-db { opt-describe $option value -format %.0f -min -12 -max 48 -step 1 -units dB }
@@ -383,9 +377,7 @@ proc populate-option {name opt option} {
 	}
 	-level { opt-describe $option freq -format %.0f -min 0 -max 255 -step 1 }
 	-not-sync - -duplex - -pa - -low-pwr - -pure-signal - -bias-adjust - -vna - -vna-started - -vna-fixed-rx-gain -
-	-alex-manual-mode - -tune-request - -hermes-lite-lna - -cwx - -reset-hl2-on-disconnect { 
-	    opt-describe $option bool
-	}
+	-alex-manual-mode - -tune-request - -hermes-lite-lna - -cwx - -reset-hl2-on-disconnect { opt-describe $option bool }
 	-vna-count {
 	}
 	-i2c-rx-filter - -i2c-tx-filter { opt-describe $option value -format %.0f -min 0 -max 255 }

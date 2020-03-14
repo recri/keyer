@@ -317,7 +317,7 @@ snit::widget sdrtk::dialbook {
 	} else {
 	    if {$data(current) ne {}} {
 		# puts "$self Adjust $step [$data(current) get-window] adjust $step"
-		[$data(current) get-window] adjust $step [$dial cget -cpr]
+		[$data(current) get-window] adjust $step
 	    }
 	}
     }

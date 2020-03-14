@@ -37,33 +37,49 @@ snit::widgetadaptor sdrtk::readout-value {
     delegate option * to hull
     delegate method * to hull
 
-    variable graticule 20
-    variable stepsperdiv 1
     variable twopi [expr {2*atan2(0,-1)}]
-    
+    variable tested 0
+   
     constructor {args} {
 	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
 	$self configure \
 	    {*}$args \
 	    -value-to-integer [mymethod value-to-integer] \
-	    -integer-to-value [mymethod integer-to-value] \
-	    -integer-to-phi [mymethod integer-to-phi] \
-	    -phi-to-integer [mymethod phi-to-integer]
+	    -integer-to-value [mymethod integer-to-value]
     }
     
     method mapped {} {
 	$hull mapped
-	[$self cget -dialbook] configure -graticule $graticule
+	if {[$self cget -testing] && ! $tested} {
+	    set tested 1
+	    $self test
+	}
     }
 
     method unmapped {} {
 	$hull unmapped
     }
     
-    method value-to-integer {value} { return [expr {int(($value-$options(-min))/$options(-step))}] }
-    method integer-to-value {integer} { return [expr {$options(-min)+$integer*$options(-step)}] }
-    method integer-to-phi {i} { return [expr {$i*$twopi/($stepsperdiv*$graticule)}] }
-    method phi-to-integer {phi} { return [expr {int(round($stepsperdiv*$graticule*$phi/$twopi))}] }
+    method value-to-integer {value} { return [expr {int(round(($value)/$options(-step)))}] }
+    method integer-to-value {integer} { return [expr {$integer*$options(-step)}] }
+
+    method test {} {
+	puts "[$hull cget -text] test:"
+	for {set v $options(-min)} {$v <= $options(-max)} {set v [expr {$v+$options(-step)}]} {
+	    set v [format [$self cget -format] $v]
+	    if {$v < $options(-min) || $options(-max) < $v} { puts "fail $v is not in the range" }
+	    set i [$self value-to-integer $v]
+	    if {$i < [$self cget -integer-min] || [$self cget -integer-max] < $i} { puts "fail int($v) = $i is not in the range" }
+	    set p [$self integer-to-phi $i]
+	    if {$p < [$self cget -phi-min] || [$self cget -phi-max] < $p} { puts "fail phi(int($v)) = $p is not in the range" }
+	    set i2 [$self phi-to-integer $p]
+	    if {$i2 != $i} { puts "fail int(phi($v)) = $i2 is not equal to int($v) = $i" }
+	    if {$i2 < [$self cget -integer-min] || [$self cget -integer-max] < $i2} { puts "fail int(phi(int($v))) = $i2 is not in the range" }
+	    set v2 [format [$self cget -format] [$self integer-to-value $i2]]
+	    if {$v2 < $options(-min) || $options(-max) < $v2} { puts "fail int(phi(int($v))) = $v2 is not in the range" }
+	    if {$v2 != $v} { puts "fail v = $v != int(phi(int($v))) = $v2" }
+	}
+    }
 
     method Configure {opt val} {
 	set options($opt) $val
@@ -71,19 +87,6 @@ snit::widgetadaptor sdrtk::readout-value {
 	set imax [$self value-to-integer $options(-max)]
 	set pmin [$self integer-to-phi $imin]
 	set pmax [$self integer-to-phi $imax]
-	set n [expr {$imax-$imin+1}]
-	if {$n <= 20} {
-	    set graticule 20; set stepsperdiv 1
-	} elseif {$n <= 40} {
-	    set graticule 20; set stepsperdiv 2
-	} elseif {$n <= 80} {
-	    set graticule 20; set stepsperdiv 4
-	} elseif {$n <= 100} {
-	    set graticule 20; set stepsperdiv 5
-	} else {
-	    set graticule 20; set stepsperdiv 10
-	}
-	# puts "[$hull cget -text]  $n values"
 	$self configure -integer-min $imin -integer-max $imax -phi-min $pmin -phi-max $pmax
     }
 	    

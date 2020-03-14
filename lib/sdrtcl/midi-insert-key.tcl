@@ -51,9 +51,6 @@ snit::type sdrtcl::midi-insert-key {
     option -key-5 -default none -configuremethod ConfigureKey
     option -key-window -default . -configuremethod Configure
 
-    option -chan -default 1 -configuremethod Configure
-    option -note -default 0 -configuremethod Configure
-
     component insert
     delegate option * to insert
     delegate method * to insert
@@ -69,7 +66,7 @@ snit::type sdrtcl::midi-insert-key {
 
     method exposed-options {} { return {-chan -note -key-dit -key-dah -key-key -key-ptt -key-4 -key-5 -key-window} }
     method is-busy {} { return 0 }
-    method ConfigureKey {opt val} { $self rebind-key $opt $val [string range $opt 1 end] }
+    method ConfigureKey {opt val} { $self rebind-key $opt $val }
 
     method info-option {opt} {
 	if {[info exists optinfo($opt)]} { return $optinfo($opt) }
@@ -90,20 +87,12 @@ snit::type sdrtcl::midi-insert-key {
 	set options(-key-window) $val
 	$self bind-all
     }
-    method {Configure -chan} {val} { $self passthrough -chan $val }
-    method {Configure -note} {val} { $self passthrough -note $val }
-    method passthrough {opt val} {
-	set options($opt) $val
-	$insert configure $opt $val
-    }
-    
+
     method bind-all {} { $self act-on-all bind-key }
     method unbind-all {} { $self act-on-all unbind-key }
     method act-on-all {action} {
 	foreach key {-key-dit -key-dah -key-key -key-ptt -key-4 -key-5} {
-	    if {$options($key) ne {none}} {
-		$self $action $options($key) [string range $opt 1 end]
-	    }
+	    $self $action $options($key) [string range $key 1 end]
 	}
     }
 
@@ -126,13 +115,14 @@ snit::type sdrtcl::midi-insert-key {
     method insert-key {message} { $insert puts $message }
     
     method insert-key-message {element updown} {
-	set cmd [expr {$map(down)|($options(-chan)-1)}]
-	set note [expr {$options(-note)+$map($element)}]
+	set cmd [expr {$map(down)|([$self cget -chan]-1)}]
+	set note [expr {[$self cget -note]+$map($element)}]
 	set velocity $map(velocity-$updown)
 	return [binary format ccc $cmd $note $velocity]
     }
 
-    method rebind-key {opt val element} {
+    method rebind-key {opt val} {
+	set element [string range $opt 1 end]
 	$self unbind-key $options($opt) $element
 	set options($opt) $val
 	$self bind-key $options($opt) $element

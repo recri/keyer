@@ -35,29 +35,41 @@ snit::widgetadaptor sdrtk::readout-enum {
     delegate option * to hull
     delegate method * to hull
 
-    variable n 0
     variable twopi [expr {2*atan2(0,-1)}]
-    variable graticule 20
-    variable stepsperdiv 1
-    
+    variable tested 0
+
     constructor {args} {
 	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
-	$self configure \
-	    {*}$args \
-	    -integer-to-value [mymethod integer-to-value] \
-	    -value-to-integer [mymethod value-to-integer] \
-	    -integer-to-phi [mymethod integer-to-phi] \
-	    -phi-to-integer [mymethod phi-to-integer]
+	$self configure -steps-per-div 1 -integer-to-value [mymethod integer-to-value] -value-to-integer [mymethod value-to-integer] {*}$args
 	set n [llength $options(-values)]
     }
     
     method mapped {} {
 	$hull mapped
-	[$self cget -dialbook] configure -graticule $graticule
+	if {[$self cget -testing] && ! $tested} {
+	    set tested 1
+	    $self test
+	}
     }
 
     method unmapped {} {
 	$hull unmapped
+    }
+
+    method test {} {
+	puts "[$hull cget -text] test:"
+	foreach v $options(-values) {
+	    if {[lsearch $options(-values) $v] < 0} { puts "fail $v is not in {$options(-values)}" }
+	    set i [$self value-to-integer $v]
+	    if {$i < [$self cget -integer-min] || [$self cget -integer-max] < $i} { puts "fail int($v) = $i is not in the range" }
+	    set p [$self integer-to-phi $i]
+	    if {$p < [$self cget -phi-min] || [$self cget -phi-max] < $p} { puts "fail phi(int($v)) = $p is not in the range" }
+	    set i2 [expr {int(round([$self phi-to-integer $p]))}]
+	    if {$i2 != $i} { puts "fail int(phi(int($v))) = $i2 is not equal to int($v) = $i" }
+	    if {$i2 < [$self cget -integer-min] || [$self cget -integer-max] < $i2} { puts "fail int(phi(int($v))) = $i2 is not in the range" }
+	    set v2 [$self integer-to-value $i2]
+	    if {$v2 ne $v} { puts "fail val(int(phi(int($v)))) = $v2 is not equal to $v" }
+	}
     }
 
     method menu-entry {m text} {
@@ -100,30 +112,13 @@ snit::widgetadaptor sdrtk::readout-enum {
 	return [lindex $options(-values) $i]
     }
     
-    method integer-to-phi {i} { return [expr {$i*$twopi/($stepsperdiv*$graticule)}] }
-
-    method phi-to-integer {phi} { return [expr {$stepsperdiv*$graticule*$phi/$twopi}] }
-
     method {Configure -values} {values} {
 	if {[llength $values] == 0} { error "readout-enum: -values has no members" }
 	set options(-values) $values
-	set n [llength $values]
 	set imin 0
-	set imax [expr {$n-1}]
+	set imax [expr {[llength $values]-1}]
 	set pmin [$self integer-to-phi $imin]
 	set pmax [$self integer-to-phi $imax]
-	if {$n <= 20} {
-	    set graticule 20; set stepsperdiv 1
-	} elseif {$n <= 40} {
-	    set graticule 20; set stepsperdiv 2
-	} elseif {$n <= 80} {
-	    set graticule 20; set stepsperdiv 4
-	} elseif {$n <= 100} {
-	    set graticule 20; set stepsperdiv 5
-	} else {
-	    set graticule 20; set stepsperdiv 10
-	}
-	# puts "[$hull cget -text]: $n values "
 	$self configure -integer-min $imin -integer-max $imax -phi-min $pmin -phi-max $pmax
     }
 }
