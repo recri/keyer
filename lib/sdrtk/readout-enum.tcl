@@ -35,41 +35,29 @@ snit::widgetadaptor sdrtk::readout-enum {
     delegate option * to hull
     delegate method * to hull
 
-    variable twopi [expr {2*atan2(0,-1)}]
-    variable tested 0
-
     constructor {args} {
 	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
 	$self configure -steps-per-div 1 -integer-to-value [mymethod integer-to-value] -value-to-integer [mymethod value-to-integer] {*}$args
-	set n [llength $options(-values)]
     }
     
-    method mapped {} {
-	$hull mapped
-	if {[$self cget -testing] && ! $tested} {
-	    set tested 1
-	    $self test
-	}
+    method value-to-integer {val} {
+	set i [lsearch -exact $options(-values) $val]
+	if {$i < 0} { error "invalid value $val in readout-enum value-to-integer" }
+	return $i
     }
 
-    method unmapped {} {
-	$hull unmapped
+    method integer-to-value {i} {
+	set i [expr {int(round($i))}]
+	if {$i < 0 || $i >= [llength $options(-values)]} { error "invalid value $i in readout-enum integer-to-value" }
+	return [lindex $options(-values) $i]
     }
-
-    method test {} {
-	puts "[$hull cget -text] test:"
-	foreach v $options(-values) {
-	    if {[lsearch $options(-values) $v] < 0} { puts "fail $v is not in {$options(-values)}" }
-	    set i [$self value-to-integer $v]
-	    if {$i < [$self cget -integer-min] || [$self cget -integer-max] < $i} { puts "fail int($v) = $i is not in the range" }
-	    set p [$self integer-to-phi $i]
-	    if {$p < [$self cget -phi-min] || [$self cget -phi-max] < $p} { puts "fail phi(int($v)) = $p is not in the range" }
-	    set i2 [expr {int(round([$self phi-to-integer $p]))}]
-	    if {$i2 != $i} { puts "fail int(phi(int($v))) = $i2 is not equal to int($v) = $i" }
-	    if {$i2 < [$self cget -integer-min] || [$self cget -integer-max] < $i2} { puts "fail int(phi(int($v))) = $i2 is not in the range" }
-	    set v2 [$self integer-to-value $i2]
-	    if {$v2 ne $v} { puts "fail val(int(phi(int($v)))) = $v2 is not equal to $v" }
-	}
+    
+    method {Configure -values} {values} {
+	if {[llength $values] == 0} { error "readout-enum: -values has no members" }
+	set options(-values) $values
+	set imin 0
+	set imax [expr {[llength $values]-1}]
+	$self configure -integer-min $imin -integer-max $imax
     }
 
     method menu-entry {m text} {
@@ -100,25 +88,23 @@ snit::widgetadaptor sdrtk::readout-enum {
 	return $m
     }
 
-    method value-to-integer {val} {
-	set i [lsearch -exact $options(-values) $val]
-	if {$i < 0} { error "invalid value $val in readout-enum value-to-integer" }
-	return $i
+    method test {} {
+	puts "[$hull cget -text] test:"
+	foreach {v o} {imin -integer-min imax -integer-max pmin -phi-min pmax -phi-max} {
+	    set $v [$self cget $o]
+	}
+	foreach v $options(-values) {
+	    if {[lsearch $options(-values) $v] < 0} { puts "fail $v is not in {$options(-values)}" }
+	    set i [$self value-to-integer $v]
+	    if {$i < $imin || $imax < $i} { puts "fail int($v) = $i is not in the range $imin .. $imax" }
+	    set p [$self integer-to-phi $i]
+	    if {$p < $pmin || $pmax < $p} { puts "fail phi(int($v)) = $p is not in the range $pmin .. $pmax" }
+	    set i2 [expr {int(round([$self phi-to-integer $p]))}]
+	    if {$i2 != $i} { puts "fail int(phi(int($v))) = $i2 is not equal to int($v) = $i" }
+	    if {$i2 < $imin || $imax < $i2} { puts "fail int(phi(int($v))) = $i2 is not in the range $imin $imax" }
+	    set v2 [$self integer-to-value $i2]
+	    if {$v2 ne $v} { puts "fail val(int(phi(int($v)))) = $v2 is not equal to $v" }
+	}
     }
 
-    method integer-to-value {i} {
-	set i [expr {int(round($i))}]
-	if {$i < 0 || $i >= [llength $options(-values)]} { error "invalid value $i in readout-enum integer-to-value" }
-	return [lindex $options(-values) $i]
-    }
-    
-    method {Configure -values} {values} {
-	if {[llength $values] == 0} { error "readout-enum: -values has no members" }
-	set options(-values) $values
-	set imin 0
-	set imax [expr {[llength $values]-1}]
-	set pmin [$self integer-to-phi $imin]
-	set pmax [$self integer-to-phi $imax]
-	$self configure -integer-min $imin -integer-max $imax -phi-min $pmin -phi-max $pmax
-    }
 }

@@ -80,9 +80,22 @@ set dirname [file dirname $script]
 lappend auto_path [file join $dirname .. lib]
 
 #
-# find the list of sdrtcl::*
+# find the list of sdrtcl::* and sdrtcltk::* packages
 #
-set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}} | sed -e s/sdrtcl:://g]
+proc read-file {file} { set fp [open $file r]; set data [read $fp]; close $fp; return $data }
+set packages {}
+foreach lib {sdrtcl sdrtcltk} {
+    set pkgIndex [file join $dirname .. lib $lib pkgIndex.tcl]
+    set pfp [open $pkgIndex r]
+    foreach line [split [string trim [read-file $pkgIndex]] \n] {
+	if {[regexp "${lib}::" $line]} {
+	    lappend packages [lindex $line 2]
+	}
+    }
+}
+#puts $packages
+#exit 0
+#set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}} | sed -e s/sdrtcl:://g]
 
 #
 # utilities
@@ -120,7 +133,8 @@ proc add-setup {name val} {
 }
 proc get-setup {name} { return [dict get [get-setups] $name] }
 
-foreach x {-server -iambic -ascii -detime -tap -title -start -argvopts -merge -hide -ronly -conly -volatile -grid -tree} {
+# -tap
+foreach x {-server -iambic -ascii -detime -title -start -argvopts -merge -hide -ronly -conly -volatile -grid -tree} {
     proc get$x {} "return \[get-var $x]"
     proc set$x {args} "lappend-var $x {*}\$args"
     proc lappend$x {args} "lappend-var $x {*}\$args"
@@ -209,84 +223,66 @@ proc opt-describe {dict type args} {
 proc opts-with-descriptions {} { return [dict keys $::data(all-options)] }
 proc opt-description {opt} { return [dict get $::data(all-options) $opt] }
 
-proc component-is-defined {comp} { return [dict exists $::data(components) $comp] }
-proc component-define {comp} { dict set ::data(components) $comp {}}
-proc components {} { return [dict keys $::data(components)] }
+#proc composite-is-defined {comp} { return [dict exists $::data(composites) $comp] }
+proc composite-define {name factory window composite} { dict set ::data(composites) $name [dict create name $name factory $factory window $window composite $composite]}
+#proc composites {} { return [dict keys $::data(composites)] }
 
-proc find-components {opt1 opt2} {
-    puts "find-components $opt1 $opt2"
-    array set found {}
-    foreach {comp opt} [opt-component-opts $opt1] {
-	set found($comp) 1
-    }
-    foreach {comp opt}  [opt-component-opts $opt2] {
-	incr found($comp)
-    }
-    set result {}
-    foreach comp [array names found] {
-	if {$found($comp) == 2} {
-	    lappend result $comp
-	}
-    }
-    return $result
-}
-
-# load an sdrtcl component
-# name is name1 or a name1@name2
-# name1 specifies the sdrtcl component
-# and name2 specifies the jack client name to use for it
-# name2 defaults to name1
-# name1 can be any string which uniquely identifies an sdrtcl component
-# ambiguous ones throw an error with the list that matched
-# 
-proc sdrtcl-instance {component name2} {
-    if {[has-server] && [get-server] ne {}} {
-	$component $name2 -server [get-server]
+proc composite-parse {composite} {
+    # first part identifies the sdrtcl component
+    # second part is the jack client name
+    if {[llength [split $composite @]] == 2} {
+	return [concat $composite [split $composite @]]
     } else {
-	$component $name2
+	return [list $composite $composite $composite]
     }
 }
 
-proc parse-component {name} {
-    # name1 identifies the sdrtcl component
-    # name2 is the jack client name
-    if {[llength [split $name @]] == 2} {
-	return [split $name @]
-    } else {
-	return [list $name $name]
-    }
-}
-proc load-component {name} {
-    foreach {name1 name2} [parse-component $name] break
+proc composite-load {composite} {
+    foreach {composite factory name} [composite-parse $composite] break
 
     # special case insert selected iambic keyer
     # should just make the iambic keyer a selected option in the keyer
-    if {$name1 eq {iambic} && [has-iambic]} { set name1 [get-iambic] }
+    if {$factory eq {iambic} && [has-iambic]} { set name [get-iambic] }
 
-    # search through the sdrtcl component list
-    # for components which match name1
+    # search through the sdrtcl/sdrtk/sdrtcltk component list
+    # for components which match $factory
     # going to make sdrtk and sdrtcltk component lists, too
-    set candidates {}
-    foreach c $::packages {
-	if {[string equal $name1 $c]} {
-	    set candidates [list $c]
-	    break
-	} elseif {[string match *$name1* $c]} {
-	    lappend candidates $c
-	}
-    }
-    if {[llength $candidates] == 0} { error "no match for component '$name'" }
-    if {[llength $candidates] > 1} { error "too many matches for component '$name', '[join $candidates {, }]'" }
+    set candidates [lsearch -all -inline $::packages *$factory*]
+    puts "$factory matches $candidates"
+    if {[llength $candidates] == 0} { error "no match for component '$composite'" }
+    if {[llength $candidates] > 1} { error "too many matches for component '$composite', '[join $candidates {, }]'" }
     # we found one candidate
-    set component [lindex $candidates 0]
+    set factory [lindex $candidates 0]
     # load the implementation
-    package require sdrtcl::$component
+    package require $factory
     # instantiate component
-    sdrtcl-instance sdrtcl::$component $name2
-    # activate component
-    $name2 activate
+    # and activate if necessary
+    set args {}
+    if {[has-server] && [get-server] ne {}} {
+	lappend args -server [get-server]
+    }
+    switch -glob $factory {
+	sdrtcl::* { 
+	    set window {}
+	    $factory $name {*}$args
+	    $name activate
+	}
+	sdrtk::* { 
+	    set window .$name
+	    toplevel $window
+	    pack [$factory $window.$name {*}$args] -side top -expand true -fill both
+	}
+	sdrtcltk::* {
+	    set window .$name
+	    toplevel $window
+	    pack [$factory $window.$name {*}$args] -side top -expand true -fill both
+	    puts "$window.$name activate"
+	    $window.$name activate
+	}
+	default { error "$factory did not match switch" }
+    }
     # remember this
-    return [list $component $name2]
+    return [list $name $factory $window.$name $composite]
 }
 
 # user interface components
@@ -398,10 +394,10 @@ proc populate-option {name opt option} {
 }
 
 # go through the components and build the database of options
-proc populate-component-options {component name {window {}}} {
+proc composite-populate-options {name factory window composite} {
     # $component is the component $factory
     # $name is the component instance
-    # puts "populate-component-options $component $name"
+    # puts "composite-populate-options $name $factory $window $composite"
     if {$window ne {}} {
 	set call $window
 	set options [$window exposed-options]
@@ -411,10 +407,10 @@ proc populate-component-options {component name {window {}}} {
     }
     foreach opt $options {
 	# $opt is the option name used in direct configure and cget commands to $comp
-	if {[opt-is-defined -$name$opt]} { error "populate-component-options: $name $opt ... is a duplicate" }
+	if {[opt-is-defined -$name$opt]} { error "composite-populate-options: $name $opt ... is a duplicate" }
 	foreach {copt cname cclass cdefault cvalue} [$call configure $opt] break
 	# $copt should be $opt
-	if {$opt ne $copt} { error "populate-component-options: $call configure $opt returned a different option name $copt" }
+	if {$opt ne $copt} { error "composite-populate-options: $call configure $opt returned a different option name $copt" }
 	# $cname is the option name in the option database (not used here)
 	# $cclass is the option class name in the option database (not used here)
 	# $cdefault is the default value
@@ -422,9 +418,10 @@ proc populate-component-options {component name {window {}}} {
 	if {[catch {$call info option $opt} info]} { set info [$call info-option $opt] }
 	# $info is the tool tip for the option
 	set option [dict create \
-			text -$name$opt component $component name $name opt $opt window $window cname $cname cclass $cclass \
+			text -$name$opt factory $factory name $name opt $opt window $window cname $cname cclass $cclass \
 			cdefault $cdefault cvalue $cvalue info $info type none merge [the-merge $opt] hide [the-hide $opt] \
-			ronly [is-ronly $opt] conly [is-conly $opt] volatile [is-volatile $opt] isargv [is-argvopts $opt]]
+			ronly [is-ronly $opt] conly [is-conly $opt] volatile [is-volatile $opt] isargv [is-argvopts $opt] \
+			composite $composite]
 	# $option is the option dict for -$name$opt
 	populate-option $name $opt $option
     }
@@ -663,73 +660,6 @@ snit::widgetadaptor ro-text {
 }
 
 #
-# midi tap text widget, receiving midi events for timing check
-#
-snit::widgetadaptor midi-tap {
-    option -tap -default {} -configuremethod Configure 
-
-    delegate method * to hull
-    delegate option * to hull
-    
-    variable tapframe 0
-    variable handler {}
-
-    method exposed-options {} { return {} }
-    method is-busy {} { return 0 }
-
-    method {Configure -tap} {val} { set options(-tap) $val }
-
-    # can only turn off this timeout loop when the tap is disabled
-    # should figure out how to make the tap stream into a channel
-    # that fires a fileevent when readable, then there would be no
-    # need for this timeout polling
-    
-    method timeout {} {
-	if {[$options(-tap) state]} {
-	    foreach event [$options(-tap) get] {
-		foreach {frame midi} $event break
-		binary scan $midi c* bytes
-		set out [format {%8lu %8lu} $frame [expr {$frame-$tapframe}]]
-		set tapframe $frame
-		foreach b $bytes {
-		    append out [format { %02x} [expr {$b&0xff}]]
-		}
-		$self insert end $out\n
-	    }	
-	}
-	set handler [after 100 [mymethod timeout]]
-    }
-
-    method save-file {} {
-	set filename [tk_getSaveFile -title {Midi log to file}]
-	if {$filename ne {}} {
-	    write-file $filename [$self get 1.0 end]
-	}
-    }
-
-    method option-menu {x y} {
-	if { ! [winfo exists $win.m] } {
-	    menu $win.m -tearoff no
-	    $win.m add command -label {Clear} -command [mymethod delete 1.0 end]
-	    $win.m add separator
-	    $win.m add command -label {Save To File} -command [mymethod save-file]
-	    $win.m add separator
-	    $win.m add command -label {Start} -command [list $options(-tap) start]
-	    $win.m add command -label {Stop} -command [list $options(-tap) stop]
-	}
-	tk_popup $win.m $x $y
-    }
-    
-    constructor {args} {
-	installhull using text
-	$self configure -width 30 -height 15 {*}$args
-	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
-	$options(-tap) start
-	set handler [after 100 [mymethod timeout]]
-    }
-}
-
-#
 # load the entire ui for the program
 #
 proc load-ui {} {
@@ -745,33 +675,38 @@ proc load-ui {} {
     if {[has-ascii]} {
 	set i 0
 	foreach asc [get-ascii] {
+	    puts "toplevel .ascii$i"
 	    toplevel .ascii$i
 	    wm title .ascii$i keyer/keybd/$i
 	    pack [cw-text .ascii$i.$asc -ascii $asc] -fill both -expand true
-	    populate-component-options cw-text $asc .ascii$i.$asc
+	    composite-populate-options $asc cw-text .ascii$i.$asc {}
 	    incr i
 	}
     }
     if {[has-detime]} {
 	set i 0
 	foreach det [get-detime] {
+	    puts "toplevel .detime$i"
 	    toplevel .detime$i
 	    wm title .detime$i keyer/decode/$i
 	    pack [ro-text .detime$i.$det -detime $det -dict fldigi] -fill both -expand true
-	    populate-component-options ro-text $det .detime$i.$det
+	    composite-populate-options $det ro-text .detime$i.$det {}
 	    incr i
 	}
     }
-    if {[has-tap]} {
-	set i 0
-	foreach tap [get-tap] {
-	    toplevel .tap$i
-	    wm title .tap$i keyer/midi-tap/$i
-	    pack [midi-tap .tap$i.$tap -tap $tap] -fill both -expand true
-	    populate-component-options midi-tap $tap .tap$i.$tap
-	    incr i
-	}
-    }
+#
+#    if {[has-tap]} {
+#	package require sdrtcltk::midi-tap-view
+#	set i 0
+#	foreach tap [get-tap] {
+#	    puts "toplevel .tap$i"
+#	    toplevel .tap$i
+#	    wm title .tap$i keyer/midi-tap/$i
+#	    pack [sdrtcltk::midi-tap-view .tap$i.$tap -tap $tap] -fill both -expand true
+#	    composite-populate-options midi-tap-view $tap .tap$i.$tap
+#	    incr i
+#	}
+#    }
     
     set args {}
     if {[has-grid]} { lappend args -grid [get-grid] }
@@ -810,10 +745,10 @@ proc load-ui {} {
 	    core { sdrtk::readout-core $w -dialbook .dial.book -text $text -info $info {*}$readout }
 	    default { error "unanticipated type \"$type\"" }
 	}
+	#if {$text in {-key-wpm -key-weight}} { $w test }
 	.dial.book add $w $name $type -text [$w cget -text]
     }
     if {[.dial.book select] eq {}} { .dial.book select 0 }
-    
 }
 
 #
@@ -894,8 +829,8 @@ proc default-setups {} {
 	ptt { keyer -start {keyer-ptt@ptt} }
 	deb { keyer -start {keyer-debounce@deb}}
 	cas { keyer -start {midi-insert-key@cas} -cas-key-dit Alt_R -cas-key-dah Control_R}
-	tap { keyer -start {midi-tap@tap} }
-	tap2 { keyer -start {midi-tap@tap2} }
+	tap { keyer -start {midi-tap-view@tap} }
+	tap2 { keyer -start {midi-tap-view@tap2} }
 	out { keyer -start {keyer-detone@detone keyer-detime@out} -detone-freq 700 -out-wpm 16 }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
@@ -938,10 +873,10 @@ proc init-setups {} {
     if { ! [file exists ~/.config]} { file mkdir ~/.config }
     if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
     set-setups [default-setups]
-    save-setups
-    if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
-	error "failed to create default configs: $result"
-    }
+    # save-setups
+    #if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
+    #	error "failed to create default configs: $result"
+    #}
 }
 proc load-setups {} {
     if { ! [file exists ~/.config/keyer/keyer.tcl] || 
@@ -1052,17 +987,17 @@ proc main {argv} {
     if { ! [has-start]} { usage-message }
 
     foreach v [get-start] {
-	# start a component
-	foreach {component name2} [load-component $v] break
-	component-define $name2
+	# start one component of the program
+	foreach {name factory window composite} [composite-load $v] break
+	composite-define $name $factory $window $composite
 	# remember if this is special
-	switch -glob $component {
-	    keyer-ascii { set-ascii $name2 }
-	    keyer-detime { set-detime $name2 }
-	    midi-tap { set-tap $name2 }
+	# *::midi-tap-view { set-tap $name }
+	switch -glob $factory {
+	    *::keyer-ascii { set-ascii $name }
+	    *::keyer-detime { set-detime $name }
 	}
 	# load its options
-	populate-component-options $component $name2
+	composite-populate-options $name $factory $window $composite
     }
     
     # process command line options for additional option definitions

@@ -56,26 +56,22 @@ snit::widget sdrtk::readout-core {
     component lvalue
     component lunits
 
-    option -verbose -default 0
-    option -testing -default 0
-
     option -value -default 0 -configuremethod Configure
     option -units -default {}
+    option -graticule -default 20 -configuremethod Recompute
+    option -steps-per-div -default 5 -configuremethod Recompute
     option -variable -default {} -configuremethod Configure
     option -info -default {}
-    option -graticule -default 20
-    option -steps-per-div -default 5
 
     option -widget-value -default {}
 
     option -value-to-integer -default {}
     option -integer-to-value -default {}
-    #option -integer-to-phi -default {}
-    #option -phi-to-integer -default {}
-    option -integer-min -default 0 -configuremethod Configure
-    option -integer-max -default 0 -configuremethod Configure
-    option -phi-min -default 0 -configuremethod Configure
-    option -phi-max -default 0 -configuremethod Configure
+
+    option -integer-min -default 0 -configuremethod Recompute
+    option -integer-max -default 0 -configuremethod Recompute
+    option -phi-min -default 0 -readonly 1
+    option -phi-max -default 0 -readonly 1
     
     option -font -default {Courier 20 bold} -configuremethod Configure
     option -format -default %s -configuremethod Configure
@@ -124,17 +120,20 @@ snit::widget sdrtk::readout-core {
 	}
 	# apply the format
 	set v [format $options(-format) $v]
+	# take a quick roundtrip 
 	# and alter the value if necessary
-	if {$v ne $options(-value) || $enforce} { 
-	    $self configure -value $v 
+	if {[$self valid-value $v] && ($v ne $options(-value) || $enforce)} { 
+	    $self configure -value $v
 	}
     }
 
-    method value {} { return $options(-value) }
-    method value-var {} { return [myvar option(-value)] }
+    method valid-value {val} {
+	return [expr {$val eq [format $options(-format) [{*}$options(-integer-to-value) [{*}$options(-value-to-integer) $val]]]}]
+    }
+
+    # method value {} { return $options(-value) }
+    # method value-var {} { return [myvar option(-value)] }
     method widget-value-var {} { return [myvar option(-widget-value)] }
-    method menu-entry {w text} { return {} }
-    method button-entry {w text} { return {} }
 
     method integer-to-phi {i} { return [expr {$i*$twopi/($options(-steps-per-div)*$options(-graticule))}] }
     method phi-to-integer {phi} { return [expr {$options(-steps-per-div)*$options(-graticule)*$phi/$twopi}] }
@@ -151,7 +150,6 @@ snit::widget sdrtk::readout-core {
 	set ismapped 0
 	$options(-dialbook) configure {*}$saved
     }
-    method is-mapped {} { return $ismapped }
     method Position {} {
 	if { ! $ismapped } return
 	set i [{*}$options(-value-to-integer) $options(-value)]
@@ -195,11 +193,16 @@ snit::widget sdrtk::readout-core {
 	    $self TraceWriteVariable
 	}
     }
-    method {Configure -integer-min} {val} { set options(-integer-min) $val }
-    method {Configure -integer-max} {val} { set options(-integer-max) $val }
-    method {Configure -phi-min} {val} { set options(-phi-min) $val }
-    method {Configure -phi-max} {val} { set options(-phi-max) $val }
+    method {Recompute} {opt val} { 
+	set options($opt) $val
+	set options(-phi-min) [$self integer-to-phi $options(-integer-min)]
+	set options(-phi-max) [$self integer-to-phi $options(-integer-max)]
+    }
  
     method TraceWriteVariable {args} { catch { $self configure -value [set $options(-variable)] } }
     method TraceWriteWidgetValue {args} { catch { $self configure -value $options(-widget-value) } }
+
+    method menu-entry {w text} { return {} }
+    method button-entry {w text} { return {} }
+
 }

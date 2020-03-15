@@ -37,57 +37,38 @@ snit::widgetadaptor sdrtk::readout-value {
     delegate option * to hull
     delegate method * to hull
 
-    variable twopi [expr {2*atan2(0,-1)}]
-    variable tested 0
-   
     constructor {args} {
 	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
-	$self configure \
-	    {*}$args \
-	    -value-to-integer [mymethod value-to-integer] \
-	    -integer-to-value [mymethod integer-to-value]
-    }
-    
-    method mapped {} {
-	$hull mapped
-	if {[$self cget -testing] && ! $tested} {
-	    set tested 1
-	    $self test
-	}
-    }
-
-    method unmapped {} {
-	$hull unmapped
+	$self configure -value-to-integer [mymethod value-to-integer] -integer-to-value [mymethod integer-to-value] {*}$args
     }
     
     method value-to-integer {value} { return [expr {int(round(($value)/$options(-step)))}] }
     method integer-to-value {integer} { return [expr {$integer*$options(-step)}] }
 
+    method Configure {opt val} {
+	set options($opt) $val
+	$self configure -integer-min [$self value-to-integer $options(-min)] -integer-max [$self value-to-integer $options(-max)]
+    }
+	    
     method test {} {
 	puts "[$hull cget -text] test:"
-	for {set v $options(-min)} {$v <= $options(-max)} {set v [expr {$v+$options(-step)}]} {
+	foreach {v o} {min -min max -max imin -integer-min imax -integer-max pmin -phi-min pmax -phi-max step -step} {
+	    set $v [$self cget $o]
+	}
+	for {set v $min} {$v <= $max} {set v [expr {$v+$step}]} {
 	    set v [format [$self cget -format] $v]
-	    if {$v < $options(-min) || $options(-max) < $v} { puts "fail $v is not in the range" }
-	    set i [$self value-to-integer $v]
-	    if {$i < [$self cget -integer-min] || [$self cget -integer-max] < $i} { puts "fail int($v) = $i is not in the range" }
+	    if {$v < $min || $max < $v} { puts "fail $v is not in the range $min .. $max" }
+	    set i [format %.0f [$self value-to-integer $v]]
+	    if {$i < $imin || $imax < $i} { puts "fail int($v) = $i is not in the range $imin .. $imax" }
 	    set p [$self integer-to-phi $i]
-	    if {$p < [$self cget -phi-min] || [$self cget -phi-max] < $p} { puts "fail phi(int($v)) = $p is not in the range" }
-	    set i2 [$self phi-to-integer $p]
+	    if {$p < $pmin || $pmax < $p} { puts "fail phi(int($v)) = $p is not in the range $pmin .. $pmax" }
+	    set i2 [format %.0f [$self phi-to-integer $p]]
 	    if {$i2 != $i} { puts "fail int(phi($v)) = $i2 is not equal to int($v) = $i" }
-	    if {$i2 < [$self cget -integer-min] || [$self cget -integer-max] < $i2} { puts "fail int(phi(int($v))) = $i2 is not in the range" }
+	    if {$i2 < $imin || $imax < $i2} { puts "fail int(phi(int($v))) = $i2 is not in the range $imin .. $imax" }
 	    set v2 [format [$self cget -format] [$self integer-to-value $i2]]
-	    if {$v2 < $options(-min) || $options(-max) < $v2} { puts "fail int(phi(int($v))) = $v2 is not in the range" }
+	    if {$v2 < $min || $max < $v2} { puts "fail int(phi(int($v))) = $v2 is not in the range $min .. $max" }
 	    if {$v2 != $v} { puts "fail v = $v != int(phi(int($v))) = $v2" }
 	}
     }
 
-    method Configure {opt val} {
-	set options($opt) $val
-	set imin [$self value-to-integer $options(-min)]
-	set imax [$self value-to-integer $options(-max)]
-	set pmin [$self integer-to-phi $imin]
-	set pmax [$self integer-to-phi $imax]
-	$self configure -integer-min $imin -integer-max $imax -phi-min $pmin -phi-max $pmax
-    }
-	    
 }
