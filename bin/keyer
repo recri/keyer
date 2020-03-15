@@ -149,18 +149,10 @@ proc opt-get-default {opt} { return [opt-get $opt cdefault] }
 proc opt-set-value {opt val} { return [opt-set $opt cvalue $val] }
 
 proc opt-component-opts {opt} {
-    #set old [dict get $::data(defines) $opt]
-    #set new [list [dict get $::data(all-options) $opt comp] [dict get $::data(all-options) $opt opt2]]
-    #if {$old ne $new} { error "opt-component-opts $opt: old ne new, ie {$old} ne {$new}" }
     set d [dict get $::data(all-options) $opt]
     set w [dict get $d window]
-    set n [dict get $d name]
-    set o [dict get $d opt]
-    if {$w ne {}} { 
-	return [list $w $o] 
-    } else {
-	return [list $n $o]
-    }
+    if {$w ne {}} { return [list $w [dict get $d opt]] }
+    return [list [dict get $d name] [dict get $d opt]]
 }
 
 proc opt-get-opts {} {
