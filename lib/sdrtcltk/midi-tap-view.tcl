@@ -22,6 +22,8 @@ package require Tk
 package require snit
 package require sdrtcl::midi-tap
 
+namespace eval ::sdrtcltk {}
+
 #
 # midi tap text widget, receiving midi events for timing check
 #
@@ -42,7 +44,7 @@ snit::widgetadaptor sdrtcltk::midi-tap-view {
 
     constructor {args} {
 	installhull using text
-	puts "self $self, namespace tail [namespace tail $self], winfo name [winfo name [namespace tail $self]]"
+	# puts "self $self, namespace tail [namespace tail $self], winfo name [winfo name [namespace tail $self]]"
 	install tap using sdrtcl::midi-tap $self.tap -client [winfo name [namespace tail $self]]
 	$self configure -width 30 -height 15 {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
@@ -60,6 +62,9 @@ snit::widgetadaptor sdrtcltk::midi-tap-view {
 	    return $info
 	}
 	switch -- $opt {
+	    -background { return {color of window background} }
+	    -foreground { return {color for text display} }
+	    -font { return {font for text display} }
 	    default { puts "no info-option for $opt" }
 	}
     }

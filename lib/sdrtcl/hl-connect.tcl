@@ -121,7 +121,7 @@ snit::type sdrtcl::hl-connect {
     ## so we want to start the main component before we start the socket handlers
     ##
     method hl-begin {} {
-	puts "hl-begin"
+	# puts "hl-begin"
 	set d(stopped) 1
 	if {$d(socket) ne {}} {
 	    puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
@@ -129,10 +129,10 @@ snit::type sdrtcl::hl-connect {
 	}
 	set d(socket) [udp_open]
 	regsub {:} $options(-peer) { } peer
-	puts "$options(-peer) translated to $peer, socket $d(socket)"
+	# puts "$options(-peer) translated to $peer, socket $d(socket)"
 	fconfigure $d(socket) -translation binary -blocking 0 -buffering none -remote $peer
 	fileevent $d(socket) readable [mymethod rx-recv-discard]
-	puts "hl-begin: set buffer handler rx-recv-discard"
+	# puts "hl-begin: set buffer handler rx-recv-discard"
 	$self rx-reset
 	$self hl-restart
     }
@@ -150,10 +150,10 @@ snit::type sdrtcl::hl-connect {
 	# puts "hl-start iq config:\n [join [$self.iqhandler configure] \n]"
 	# start the iqhandler
 	$self.iqhandler activate
-	puts "hl-start: activated iqhandler"
+	# puts "hl-start: activated iqhandler"
 	# enable live buffer handler
 	fileevent $d(socket) readable [mymethod rx-recv-first]
-	puts "hl-start: set buffer handler rx-recv-first"
+	# puts "hl-start: set buffer handler rx-recv-first"
     }
     
     method hl-stop {} {
@@ -162,28 +162,28 @@ snit::type sdrtcl::hl-connect {
 	if {[info exists d(time-start)]} {
 	    set d(pending) [$self pending]
 	    set elapsed_us [expr {$d(time-stop)-$d(time-start)}]
-	    puts "rx rate [expr {double($d(rx-frames))/$elapsed_us*1e6}], tx rate [expr {double($d(tx-frames))/$elapsed_us*1e6}]"
+	    # puts "rx rate [expr {double($d(rx-frames))/$elapsed_us*1e6}], tx rate [expr {double($d(tx-frames))/$elapsed_us*1e6}]"
 	    # puts "crash iq config:\n [join [$self.iqhandler configure] \n]"
 	}
 	# tell hl2 hardware to stop
 	puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
-	puts "hl-stop: disabled hardware"
+	# puts "hl-stop: disabled hardware"
 	# save iqhandler state
 	set options(-args) [$self hl-filter-options [$self.iqhandler configure]]
 	puts "hl-stop: saved options $options(-args)"
 	# stop iqhandler
 	$self.iqhandler deactivate
-	puts "hl-stop: deactivate iqhandler"
+	# puts "hl-stop: deactivate iqhandler"
 	# delete iqhandler
 	rename $self.iqhandler {}
-	puts "hl-stop: delete iqhandler"
+	# puts "hl-stop: delete iqhandler"
 	# reinstall a new iqhandler
 	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client [namespace tail $self] {*}$options(-args)
-	puts "hl-stop: recreate iqhandler"
+	# puts "hl-stop: recreate iqhandler"
 	set d(stopped) 1
     }    
     method hl-restart {} {
-	puts "hl-restart"
+	# puts "hl-restart"
 	$self hl-stop
 	$self rx-reset
 	$self stats-reset
@@ -193,7 +193,7 @@ snit::type sdrtcl::hl-connect {
     # these configuration options require a restart
     # could worry about whether they change or not
     method hl-conf {opt val} {
-	puts "hl-conf $opt $val"
+	# puts "hl-conf $opt $val"
 	set options($opt) $val
 	switch -exact -- $opt {
 	    -n-rx {
@@ -224,9 +224,7 @@ snit::type sdrtcl::hl-connect {
     method Configure {opt val} {
 	set options($opt) $val
 	catch {$self.iqhandler configure $opt $val}
-	if {$opt eq {-peer}} {
-	    $self hl-begin
-	}
+	if {$opt eq {-peer}} { $self hl-begin }
     }
     
     proc pkt-format {hex} {
@@ -254,7 +252,7 @@ snit::type sdrtcl::hl-connect {
 	    puts -nonewline $d(socket) $data
 	}
 	if {$d(restart-requested)} {
-	    puts "tx-send restart-requested"
+	    # puts "tx-send restart-requested"
 	    set d(restart-requested) 0
 	    #$self hl-stop
 	    after 1 [mymethod hl-restart]
@@ -267,7 +265,7 @@ snit::type sdrtcl::hl-connect {
     ## rx - receiver
     ##
     method rx-reset {} {
-	puts "rx-reset"
+	# puts "rx-reset"
 	set spurs 0
 	if {$d(socket) ne {}} {
 	    foreach i {1 2} {
@@ -359,7 +357,7 @@ snit::type sdrtcl::hl-connect {
     ## statistics on buffers sent and received
     ##
     method stats-reset {} {
-	puts "stats-reset"
+	# puts "stats-reset"
 	array set d {
 	    rx-calls 0 tx-calls 0 bs-calls 0 rx-frames 0 tx-frames 0 bs-frames 0
 	}
@@ -382,7 +380,7 @@ snit::type sdrtcl::hl-connect {
     # main constructor
     #
     constructor {args} {
-	puts "constructor {$args}"
+	# puts "constructor {$args}"
 	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client hl
 	$self configurelist $args
 	$self stats-reset

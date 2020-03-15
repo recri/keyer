@@ -25,48 +25,6 @@
 # hide, merge, or fuse options
 # save the result as a preset command for later access
 #
-# current todo
-# [x] create treeview to organize options, etc.
-# [x] all-options subtree with all options present
-# [ ] merge all options and details into one dict.
-# [ ] dial-faves subtree with dial favorites
-# [ ] types subtree specifying options on values for shared types
-# [ ] out-connections subtree listing components and their sinks
-# [ ] in-connections subtree listing components and their sources
-# [ ] auto connection hints
-# [ ] jackd start hints
-# [ ] start jackd if necessary, retain connecton to server messages
-# [ ] perform connections if necessary
-# [ ] readout-values should limit dial movement to range of choices
-# [ ] readout-* should have consistent locations
-# [ ] make the window'ed components into sdrtk::packages
-# [ ] implement the snit info vs sdrtcl info fix
-# [ ] make a readout-vfo which tunes nicely
-# [ ] bring up the overlap-save passband filter
-# [ ] bring up the polyphase spectrum/waterfall (which should run as a separate process?)
-# 
-#
-# old todo list
-# [-] make the -rise-fall option sort after the -rise and -fall that it joins
-# [-] make the -rise-fall option update the displayed -rise and -fall option values too
-# [x] replace -rise-fall with -ramp option in the keyer-tone itself
-# [x] wrap more of this into snit
-# [x] generate the command line for a configured setup, save it, restore it
-# [x] start using tklib
-# [x] prompt for name for saved setup
-# [ ] balloon help for options
-# [ ] balloon help for setups
-# [ ] balloon help for components
-# [x] add empty units box to readout-enum
-# [ ] implement dialbook dial labels
-# [ ] implement recursive dialbook, where groups of related, boring options are pushed down into boxes
-# [ ] implement dialbook detents and dial limits so it doesn't just spin.
-# [x] allow keyer setup1 setup2 ... as syntactic sugar
-# [x] end timer loop when cwtext queue empties
-# [ ] end timer loop when dialbook-set queue empties
-# [ ] implement midi -> OSC bridge (easy)
-# [ ] implement OSC -> MIDI bridge (not so easy, alsa sequencer?)
-# 
 
 #
 # use the script location to find the rest of the libraries
@@ -78,24 +36,6 @@ set dirname [file dirname $script]
 # append the ../lib directory to the Tcl search path
 #
 lappend auto_path [file join $dirname .. lib]
-
-#
-# find the list of sdrtcl::* and sdrtcltk::* packages
-#
-proc read-file {file} { set fp [open $file r]; set data [read $fp]; close $fp; return $data }
-set packages {}
-foreach lib {sdrtcl sdrtcltk} {
-    set pkgIndex [file join $dirname .. lib $lib pkgIndex.tcl]
-    set pfp [open $pkgIndex r]
-    foreach line [split [string trim [read-file $pkgIndex]] \n] {
-	if {[regexp "${lib}::" $line]} {
-	    lappend packages [lindex $line 2]
-	}
-    }
-}
-#puts $packages
-#exit 0
-#set packages [exec grep sdrtcl:: [file join $dirname .. lib sdrtcl pkgIndex.tcl] | awk {{print $3}} | sed -e s/sdrtcl:://g]
 
 #
 # utilities
@@ -112,17 +52,33 @@ proc write-file {file data} {
     close $fp
 }
 
+#
+# find the list of sdrtcl::* and sdrtcltk::* packages
+#
+set packages {}
+foreach lib {sdrtcl sdrtk sdrtcltk} {
+    set pkgIndex [file join $dirname .. lib $lib pkgIndex.tcl]
+    set pfp [open $pkgIndex r]
+    foreach line [split [string trim [read-file $pkgIndex]] \n] {
+	if {[regexp "${lib}::" $line]} {
+	    lappend packages [lindex $line 2]
+	}
+    }
+}
+
 # initialize
 set ::data(main) [dict create -server {} -hide {} -merge {} -argvopts {} -ronly {} -conly {} -volatile {}]
 
 #
 # miscellaneous accessors
+# global names stored in dict as dict set ::data(main) $name $val
 #
 proc get-var {var} { return [dict get $::data(main) $var] }
-proc set-var {var val} { return [dict set ::data(main) $var $val] }
 proc has-var {var} { return [dict exists $::data(main) $var] }
+proc set-var {var val} { return [dict set ::data(main) $var $val] }
 proc lappend-var {var args} { dict lappend ::data(main) $var {*}$args }
 
+# setups are macros defining component instances
 proc has-setups {} { return [has-var -setups] }
 proc get-setups {} { return [get-var -setups] }
 proc set-setups {val} { set-var -setups $val }
@@ -133,17 +89,22 @@ proc add-setup {name val} {
 }
 proc get-setup {name} { return [dict get [get-setups] $name] }
 
-# -tap
-foreach x {-server -iambic -ascii -detime -title -start -argvopts -merge -hide -ronly -conly -volatile -grid -tree} {
+# these are options and groups of options collected from argv
+foreach x {-server -iambic -title -grid -tree} {
     proc get$x {} "return \[get-var $x]"
-    proc set$x {args} "lappend-var $x {*}\$args"
+    proc set$x {args} "set-var $x {*}\$args"
+    proc has$x {} "return \[has-var $x]"
+}
+foreach x {-ascii -start -argvopts -merge -hide -ronly -conly -volatile} {
+    proc get$x {} "return \[get-var $x]"
     proc lappend$x {args} "lappend-var $x {*}\$args"
     proc has$x {} "return \[has-var $x]"
 }
 
 #
 # manage option preferences
-# some of these should match patterns in the lists
+# some of these match patterns in the lists
+# some just match instances in the lists
 #
 proc the-match {opt list} {
     foreach pat $list { if {[string match $pat $opt]} { return $pat } }
@@ -162,7 +123,7 @@ foreach x {-argvopts -ronly -conly -volatile} {
     proc is$x {o} "return \[expr {\$o in \[get$x]}]"
 }
 
-# options are created in component specific versions -$comp$opt
+# options are created in component specific versions -$name$opt
 # or as merged versions where all identically spelled options
 # are set as a group
 
@@ -170,33 +131,36 @@ set ::data(all-options) [dict create];	# qualified option names
 array set ::value {};			# updated whenever option is configured
 
 proc opt-is-defined {opt} { return [dict exists $::data(all-options) $opt] }
-
-proc opt-get-val {opt key} { return [dict get $::data(all-options) $opt $key] }
-proc opt-set-val {opt key val} { dict set ::data(all-options) $opt $key $val }
-proc opt-is-ronly {opt} { return [opt-get-val $opt ronly] }
-proc opt-is-conly {opt} { return [opt-get-val $opt conly] }
-proc opt-get-value {opt} { return [opt-get-val $opt cvalue] }
-proc opt-get-default {opt} { return [opt-get-val $opt cdefault] }
-proc opt-set-value {opt val} { return [opt-set-val $opt cvalue $val] }
-proc opt-set-default {opt val} { return [opt-set-val $opt cdefault $val] }
-
-proc opt-create {text name opt {window {}}} {
-    return [dict create text $text name $name opt $opt window $window factory {} hide {} merge {} ronly 0 conly 0 volatile 0 described 0]
-}
-
+proc opt-get {opt key} { return [dict get $::data(all-options) $opt $key] }
+proc opt-set {opt key val} { dict set ::data(all-options) $opt $key $val }
 proc opt-define {text name opt {window {}}} {
     #puts "opt-define {$text} {$name} {$opt}"
-    if {[dict exists $::data(all-options) $text]} { error "opt-define $text $name $opt: duplicate definition" }
+    if {[opt-is-defined $text]} { error "opt-define $text $name $opt: duplicate definition" }
     if {$text ne "-$name$opt"} { error "opt-define $text $name $opt - unexpected pattern" }
-    dict set ::data(all-options) $text [opt-create $text $name $opt $window]
+    dict set ::data(all-options) $text \
+	[dict create text $text name $name opt $opt window $window factory {} hide {} merge {} ronly 0 conly 0 volatile 0 described 0]
     return [dict get $::data(all-options) $text]
 }
+
+proc opt-is-ronly {opt} { return [opt-get $opt ronly] }
+proc opt-is-conly {opt} { return [opt-get $opt conly] }
+proc opt-get-value {opt} { return [opt-get $opt cvalue] }
+proc opt-get-default {opt} { return [opt-get $opt cdefault] }
+proc opt-set-value {opt val} { return [opt-set $opt cvalue $val] }
 
 proc opt-component-opts {opt} {
     #set old [dict get $::data(defines) $opt]
     #set new [list [dict get $::data(all-options) $opt comp] [dict get $::data(all-options) $opt opt2]]
     #if {$old ne $new} { error "opt-component-opts $opt: old ne new, ie {$old} ne {$new}" }
-    return [list [dict get $::data(all-options) $opt name] [dict get $::data(all-options) $opt opt]]
+    set d [dict get $::data(all-options) $opt]
+    set w [dict get $d window]
+    set n [dict get $d name]
+    set o [dict get $d opt]
+    if {$w ne {}} { 
+	return [list $w $o] 
+    } else {
+	return [list $n $o]
+    }
 }
 
 proc opt-get-opts {} {
@@ -238,19 +202,25 @@ proc composite-parse {composite} {
 }
 
 proc composite-load {composite} {
+    # parse the composite into parts
     foreach {composite factory name} [composite-parse $composite] break
+    # puts "composite-load $composite $factory $name"
 
     # special case insert selected iambic keyer
     # should just make the iambic keyer a selected option in the keyer
-    if {$factory eq {iambic} && [has-iambic]} { set name [get-iambic] }
+    if {$factory eq {iambic} && [has-iambic]} { set factory [get-iambic] }
 
     # search through the sdrtcl/sdrtk/sdrtcltk component list
     # for components which match $factory
-    # going to make sdrtk and sdrtcltk component lists, too
-    set candidates [lsearch -all -inline $::packages *$factory*]
-    puts "$factory matches $candidates"
+    # exact match to tail of name first, then with glob on tail
+    set candidates [lsearch -all -inline $::packages *$factory]
+    if {[llength $candidates] == 0} {
+	set candidates [lsearch -all -inline $::packages *$factory*]
+    }
     if {[llength $candidates] == 0} { error "no match for component '$composite'" }
-    if {[llength $candidates] > 1} { error "too many matches for component '$composite', '[join $candidates {, }]'" }
+    if {[llength $candidates] > 1} { 
+	error "too many matches for component '$composite', '[join $candidates {, }]'"
+    }
     # we found one candidate
     set factory [lindex $candidates 0]
     # load the implementation
@@ -258,7 +228,8 @@ proc composite-load {composite} {
     # instantiate component
     # and activate if necessary
     set args {}
-    if {[has-server] && [get-server] ne {}} {
+    if {[get-server] ne {}} {
+	# puts "[get-server] is {[get-server]}"
 	lappend args -server [get-server]
     }
     switch -glob $factory {
@@ -268,21 +239,23 @@ proc composite-load {composite} {
 	    $name activate
 	}
 	sdrtk::* { 
-	    set window .$name
-	    toplevel $window
-	    pack [$factory $window.$name {*}$args] -side top -expand true -fill both
+	    toplevel .$name
+	    wm title .$name "keyer/$name"
+	    set window .$name.$name
+	    # no  {*}$args because it's only sdrtcl -server
+	    pack [$factory $window] -side top -expand true -fill both
 	}
 	sdrtcltk::* {
-	    set window .$name
-	    toplevel $window
-	    pack [$factory $window.$name {*}$args] -side top -expand true -fill both
-	    puts "$window.$name activate"
-	    $window.$name activate
+	    toplevel .$name
+	    wm title .$name "keyer/$name"
+	    set window .$name.$name
+	    pack [$factory $window {*}$args] -side top -expand true -fill both
+	    $window activate
 	}
 	default { error "$factory did not match switch" }
     }
     # remember this
-    return [list $name $factory $window.$name $composite]
+    return [list $name $factory $window $composite]
 }
 
 # user interface components
@@ -382,7 +355,7 @@ proc populate-option {name opt option} {
 	-ptt-hang-time { opt-describe $option value dvalue 4 -format %.0f -units ms -min 0 -max 31 }
 	-predistortion-subindex { opt-describe $option value -format %.0f -min 0 -max 255 }
 	-predistortion { opt-describe $option value -format %.0f -min 0 -max 15 }
-	-sentcolor - -unsentcolor - -skippedcolor - -background {
+	-sentcolor - -unsentcolor - -skippedcolor - -background - -foreground {
 	    # ignore these and -font for the moment, the foreground widget doesn't wrap things yet
 	    #opt-describe $option enum -values {white black gray lightgrey red orange yellow green blue indigo violet}
 	}
@@ -579,87 +552,6 @@ snit::widgetadaptor cw-text {
 }
 
 #
-# read only text widget, receiving decoded morse
-#
-package require morse::morse
-package require morse::itu
-package require morse::dicts
-
-snit::widgetadaptor ro-text {
-    option -detime -default {}
-    option -dict -default fldigi
-    
-    method delete {args} { }
-    method insert {args} { }
-    
-    delegate method * to hull
-    delegate option * to hull
-    
-    delegate method ins to hull as insert
-    delegate method del to hull as delete
-    
-    variable handler {}
-    variable code {}
-    
-    method is-busy {} { return 0 }
-    # {-color1 -color2 -background}
-    method exposed-options {} { return {} }
-
-    method timeout {} {
-	#$w insert end [morse-to-text [morse-itu-dict] [[get-detime] get]]
-	# get new text
-	set text [$options(-detime) get]
-	# insert into output display
-	$self ins end $text
-	$self see end
-	# append to accumulated code
-	append code $text
-	while {[regexp {^([^ ]*) (.*)$} $code all symbol rest]} {
-	    if {$symbol ne {}} {
-		# each symbol must be terminated by a space
-		# replace symbol and space with translation
-		$self del end-[string length $code]chars-1chars end
-		$self ins end "[morse-to-text [$options(-dict)] $symbol]$rest"
-	    } else {
-		# an extra space indicates a word space
-		# and it's already there
-	    }
-	    set code $rest
-	}
-	set handler [after 250 [mymethod timeout]]
-    }
-
-    method save {} {
-	set filename [tk_getSaveFile -title {Log to file}]
-	if {$filename ne {}} {
-	    write-file $filename [$self get 1.0 end]
-	}
-    }
-
-    method clear {} {
-	$self del 1.0 end
-    }
-
-    method option-menu {x y} {
-	if { ! [winfo exists $win.m] } {
-	    menu $win.m -tearoff no
-	    $win.m add command -label {Clear} -command [mymethod clear]
-	    $win.m add separator
-	    $win.m add command -label {Save To File} -command [mymethod save]
-	}
-	tk_popup $win.m $x $y
-    }
-
-    constructor {args} {
-	installhull using text
-	$self configure -width 30 -height 15 -exportselection true {*}$args
-	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
-	set handler [after 100 [mymethod timeout]]
-	# $self ins end "This is the ro-text window for keyer-detime\n"
-    }
-}
-
-#
 # load the entire ui for the program
 #
 proc load-ui {} {
@@ -683,30 +575,17 @@ proc load-ui {} {
 	    incr i
 	}
     }
-    if {[has-detime]} {
-	set i 0
-	foreach det [get-detime] {
-	    puts "toplevel .detime$i"
-	    toplevel .detime$i
-	    wm title .detime$i keyer/decode/$i
-	    pack [ro-text .detime$i.$det -detime $det -dict fldigi] -fill both -expand true
-	    composite-populate-options $det ro-text .detime$i.$det {}
-	    incr i
-	}
-    }
-#
-#    if {[has-tap]} {
-#	package require sdrtcltk::midi-tap-view
-#	set i 0
-#	foreach tap [get-tap] {
-#	    puts "toplevel .tap$i"
-#	    toplevel .tap$i
-#	    wm title .tap$i keyer/midi-tap/$i
-#	    pack [sdrtcltk::midi-tap-view .tap$i.$tap -tap $tap] -fill both -expand true
-#	    composite-populate-options midi-tap-view $tap .tap$i.$tap
-#	    incr i
-#	}
-#    }
+    #if {[has-detime]} {
+    #	set i 0
+    #	foreach det [get-detime] {
+    #	    puts "toplevel .detime$i"
+    # 	    toplevel .detime$i
+    #	    wm title .detime$i keyer/decode/$i
+    #	    pack [ro-text .detime$i.$det -detime $det -dict fldigi] -fill both -expand true
+    #	    composite-populate-options $det ro-text .detime$i.$det {}
+    #	    incr i
+    #	}
+    #}
     
     set args {}
     if {[has-grid]} { lappend args -grid [get-grid] }
@@ -831,13 +710,13 @@ proc default-setups {} {
 	cas { keyer -start {midi-insert-key@cas} -cas-key-dit Alt_R -cas-key-dah Control_R}
 	tap { keyer -start {midi-tap-view@tap} }
 	tap2 { keyer -start {midi-tap-view@tap2} }
-	out { keyer -start {keyer-detone@detone keyer-detime@out} -detone-freq 700 -out-wpm 16 }
+	out { keyer -start cw-decode-view@out -out-freq 700 -out-wpm 16 }
+	hl { keyer -start hl-connect@hl -hl-client hl }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
 	key+kbd { keyer -run {key kbd}}
 	key+out { keyer -run {key out}}
 	key+kbd+out { keyer -run {key kbd out} }
-	hl { keyer -start hl-connect@hl -hl-client hl }
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
@@ -848,12 +727,12 @@ proc default-setups {} {
 	info-tap {midi monitor for timing events}
 	info-tap2 {second midi monitor for timing events}
 	info-out {audio to ascii morse decoder}
+	info-hl { hermes lite udp jack connection }
 	info-nod {hide esoteric keyer options}
 	info-1ch {merge midi channel and note options}
 	info-key+kbd {iambic key and keyboard}
 	info-key+out { iambic key and decoder }
 	info-key+kbd+out { iambic key, keyboard, and decoder }
-	info-hl { hermes lite udp jack connection }
     }]
 }
 proc merge-default-setups {} {
@@ -969,32 +848,39 @@ proc main {argv} {
     ttk::style configure TCheckbutton -relief raised
     ttk::style configure TRadiobutton -relief raised
     
+    # default server
+    # set-server {}
+    # puts "keyer main get-server [get-server]"
+    
     # load or create ~/.config/keyer/keyer.tcl
     load-setups
     
     # make a usage message
-    if {$argv eq {} || $argv eq {help}} {
-	usage-message
-    }
+    if {$argv eq {} || $argv eq {help}} { usage-message }
     
     # process arguments, first pass just to collect everything
+    # puts "keyer main-argv $argv"
     main-argv $argv
     
     # default value for iambic
     if { ! [has-iambic] } { set-iambic keyer-iambic-ad5dz }
+    # puts "has-iambic [has-iambic] get-iambic [get-iambic]"
     
     # start components and collect their options
     if { ! [has-start]} { usage-message }
 
     foreach v [get-start] {
+	# puts "keyer main composite $v"
 	# start one component of the program
 	foreach {name factory window composite} [composite-load $v] break
+	# puts "composite-load name $name factory $factory window $window composite $composite"
 	composite-define $name $factory $window $composite
+	# puts "composite-define name $name factory $factory window $window composite $composite"
 	# remember if this is special
 	# *::midi-tap-view { set-tap $name }
+	# *::keyer-detime { set-detime $name }
 	switch -glob $factory {
 	    *::keyer-ascii { set-ascii $name }
-	    *::keyer-detime { set-detime $name }
 	}
 	# load its options
 	composite-populate-options $name $factory $window $composite
@@ -1042,3 +928,46 @@ proc main {argv} {
 }
 
 main $argv
+
+# current todo
+# [x] create treeview to organize options, etc.
+# [x] all-options subtree with all options present
+# [x] merge all options and details into one dict.
+# [ ] dial-faves subtree with dial favorites
+# [ ] types subtree specifying options on values for shared types
+# [ ] out-connections subtree listing components and their sinks
+# [ ] in-connections subtree listing components and their sources
+# [ ] auto connection hints
+# [ ] jackd start hints
+# [ ] start jackd if necessary, retain connecton to server messages
+# [ ] perform connections if necessary
+# [x] readout-values should limit dial movement to range of choices
+# [x] readout-* should have consistent locations
+# [ ] make the window'ed components into sdrtk::packages
+# [ ] implement the snit info vs sdrtcl info fix
+# [ ] make a readout-vfo which tunes nicely
+# [ ] bring up the overlap-save passband filter
+# [ ] bring up the polyphase spectrum/waterfall (which should run as a separate process?)
+# 
+#
+# old todo list
+# [-] make the -rise-fall option sort after the -rise and -fall that it joins
+# [-] make the -rise-fall option update the displayed -rise and -fall option values too
+# [x] replace -rise-fall with -ramp option in the keyer-tone itself
+# [x] wrap more of this into snit
+# [x] generate the command line for a configured setup, save it, restore it
+# [x] start using tklib
+# [x] prompt for name for saved setup
+# [ ] balloon help for options
+# [ ] balloon help for setups
+# [ ] balloon help for components
+# [x] add empty units box to readout-enum
+# [ ] implement dialbook dial labels
+# [ ] implement recursive dialbook, where groups of related, boring options are pushed down into boxes
+# [ ] implement dialbook detents and dial limits so it doesn't just spin.
+# [x] allow keyer setup1 setup2 ... as syntactic sugar
+# [x] end timer loop when cwtext queue empties
+# [ ] end timer loop when dialbook-set queue empties
+# [ ] implement midi -> OSC bridge (easy)
+# [ ] implement OSC -> MIDI bridge (not so easy, alsa sequencer?)
+# 
