@@ -87,6 +87,7 @@ snit::widgetadaptor sdrtcltk::cw-decode-view {
     # {-color1 -color2 -background}
  
     method exposed-options {} { return {-verbose -server -client -chan -note -freq -bandwidth -on -off -timeout -wpm -dict -font -foreground -background} }
+
     method info-option {opt} {
 	if { ! [catch {$detone info option $opt} info]} { return $info }
 	if { ! [catch {$detime info option $opt} info]} { return $info }

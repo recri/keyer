@@ -117,8 +117,8 @@ snit::widgetadaptor sdrtk::cwtext {
 	if { [$self compare transmit >= insert] } {
 	    set handle {}
 	} else {
-	    if { ! [$options(-ascii) is-busy] && [$options(-ascii) pending] < 40} {
-		$options(-ascii) puts [string toupper [$self nextchar]]
+	    if { ! [{*}$options(-ascii) is-busy] && [{*}$options(-ascii) pending] < 40} {
+		{*}$options(-ascii) puts [string toupper [$self nextchar]]
 	    }
 	    set handle [after 20 [mymethod timeout]]
 	}
@@ -126,7 +126,7 @@ snit::widgetadaptor sdrtk::cwtext {
 
     method stop-sending {} {
 	$self abort
-	$options(-ascii) abort
+	{*}$options(-ascii) abort
     }
 
     method {Configure -background} {color} {

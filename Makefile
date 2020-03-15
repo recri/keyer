@@ -2,7 +2,7 @@ VSN_FFTW3=3.2.2
 VSN_JACK=1.9.7
 VSN_TCL=8.6
 VSN_TK=8.6
-CURSUBDIRS=sdrtcl bin lib/morse lib/sdrkit lib/sdrtk lib/sdrutil
+CURSUBDIRS=sdrtcl bin lib/morse lib/sdrkit lib/sdrtk lib/sdrutil lib/sdrtcl lib/sdrtcltk
 OLDSUBDIRS=
 SUBDIRS=$(CURSUBDIRS) $(OLDSUBDIRS)
 

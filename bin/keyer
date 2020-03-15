@@ -95,7 +95,7 @@ foreach x {-server -iambic -title -grid -tree} {
     proc set$x {args} "set-var $x {*}\$args"
     proc has$x {} "return \[has-var $x]"
 }
-foreach x {-ascii -start -argvopts -merge -hide -ronly -conly -volatile} {
+foreach x {-start -argvopts -merge -hide -ronly -conly -volatile} {
     proc get$x {} "return \[get-var $x]"
     proc lappend$x {args} "lappend-var $x {*}\$args"
     proc has$x {} "return \[has-var $x]"
@@ -492,93 +492,9 @@ proc dial-set-init {} {
 }
 
 #
-# these widgets, and others to come, get defined in setups
-# which can draw from sdrtk:: or sdrtcltk::, so these sources
-# move into ../lib/sdrtk or ../lib/sdrtcltk.
-#
-# cwtext window is a live text entry for sending to the ascii-keyer
-# cw-text simply supplies bindings for a menu and an abort key
-# the escape key binding could move to cwtext itself, or be bound
-# onto . so it works where ever you focused input.
-#
-package require sdrtk::cwtext
-
-snit::widgetadaptor cw-text {
-    
-    delegate method * to hull
-    delegate option * to hull
-    
-    constructor {args} {
-	installhull using sdrtk::cwtext
-	$self configure -width 30 -height 15 -exportselection true {*}$args
-	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
-	bind $win <Escape> [mymethod stop-sending]
-    }
-
-    method is-busy {} { return 0 }
-
-    method exposed-options {} { return {-sentcolor -unsentcolor -skippedcolor -background -font} }
-
-    method {info-option -sentcolor} {} { return {set the color of the sent text} }
-    method {info-option -unsentcolor} {} { return {set the color of the yet to be sent text} }
-    method {info-option -skippedcolor} {} { return {set the color of the unsent text which will not be sent} }
-    method {info-option -background} {} { return {set the background color of the text} }
-    method {info-option -font} {} { return {choose the font of the text} }
-
-    method option-menu {x y} {
-	if { ! [winfo exists $win.m] } {
-	    menu $win.m -tearoff no
-	    $win.m add command -label {Stop sending} -command [mymethod stop-sending]
-	    $win.m add command -label {Clear window} -command [mymethod clear]
-	    $win.m add separator
-	    $win.m add command -label {Send file} -command [mymethod choose file]
-	    $win.m add separator
-	    $win.m add command -label {Font} -command [mymethod choose font]
-	    $win.m add command -label {Background} -command [mymethod choose background]
-	    $win.m add command -label {Sent Color} -command [mymethod choose sentcolor]
-	    $win.m add command -label {Unsent Color} -command [mymethod choose unsentcolor]
-	    $win.m add command -label {Skipped Color} -command [mymethod choose skippedcolor]
-	}
-	tk_popup $win.m $x $y
-    }
-}
-
-#
-# load the entire ui for the program
+# load the main ui for the program
 #
 proc load-ui {} {
-
-    # all of this should be replaced by explicitly
-    # naming sdrtk:: or sdrtcltk:: components in setups
-    # they each go into a toplevel window, and toplevels
-    # may be combined edge-to-edge or tab-merge-tearoff
-    # by drag and drop.
-    
-    # memories-widget
-    # if {[has-memories]} { ... }
-    if {[has-ascii]} {
-	set i 0
-	foreach asc [get-ascii] {
-	    puts "toplevel .ascii$i"
-	    toplevel .ascii$i
-	    wm title .ascii$i keyer/keybd/$i
-	    pack [cw-text .ascii$i.$asc -ascii $asc] -fill both -expand true
-	    composite-populate-options $asc cw-text .ascii$i.$asc {}
-	    incr i
-	}
-    }
-    #if {[has-detime]} {
-    #	set i 0
-    #	foreach det [get-detime] {
-    #	    puts "toplevel .detime$i"
-    # 	    toplevel .detime$i
-    #	    wm title .detime$i keyer/decode/$i
-    #	    pack [ro-text .detime$i.$det -detime $det -dict fldigi] -fill both -expand true
-    #	    composite-populate-options $det ro-text .detime$i.$det {}
-    #	    incr i
-    #	}
-    #}
-    
     set args {}
     if {[has-grid]} { lappend args -grid [get-grid] }
     if {[has-tree]} { lappend args -tree [get-tree] }
@@ -695,15 +611,15 @@ proc default-setups {} {
     return [dict create {*}{ 
 	key { keyer -start {iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
 	key2 { keyer -start {iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
-	kbd { keyer -start {ascii@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
-	kbd2 { keyer -start {ascii@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
+	kbd { keyer -start {cw-encode-input@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
+	kbd2 { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
 	deb { keyer -start {keyer-debounce@deb}}
 	cas { keyer -start {midi-insert-key@cas} -cas-key-dit Alt_R -cas-key-dah Control_R}
 	tap { keyer -start {midi-tap-view@tap} }
 	tap2 { keyer -start {midi-tap-view@tap2} }
-	out { keyer -start cw-decode-view@out -out-freq 700 -out-wpm 16 }
-	hl { keyer -start hl-connect@hl -hl-client hl }
+	out { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
+	hl { keyer -start {hl-connect@hl} -hl-client hl }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
 	key+kbd { keyer -run {key kbd}}
@@ -713,7 +629,7 @@ proc default-setups {} {
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
 	info-kbd2 {second keyboard keyer and a keyed oscillator}
-	info-ptt {push-to-talk switch}
+	info-ptt {push-to-talk switch with tx delay}
 	info-deb {key contact debouncer}
 	info-cas {midi events from keyboard keys}
 	info-tap {midi monitor for timing events}
@@ -865,15 +781,8 @@ proc main {argv} {
 	# puts "keyer main composite $v"
 	# start one component of the program
 	foreach {name factory window composite} [composite-load $v] break
-	# puts "composite-load name $name factory $factory window $window composite $composite"
+	# complete its definition
 	composite-define $name $factory $window $composite
-	# puts "composite-define name $name factory $factory window $window composite $composite"
-	# remember if this is special
-	# *::midi-tap-view { set-tap $name }
-	# *::keyer-detime { set-detime $name }
-	switch -glob $factory {
-	    *::keyer-ascii { set-ascii $name }
-	}
 	# load its options
 	composite-populate-options $name $factory $window $composite
     }
