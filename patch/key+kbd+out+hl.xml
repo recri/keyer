@@ -1,0 +1,71 @@
+<!DOCTYPE patchbay>
+<patchbay name="key+kbd+out+hl" version="0.5.0">
+ <output-sockets>
+  <socket name="midi" type="jack-midi" client="system" exclusive="off">
+   <plug>midi_capture_1</plug>
+  </socket>
+  <socket name="cas" type="jack-midi" client="cas" exclusive="off">
+   <plug>midi_out</plug>
+  </socket>
+  <socket name="key" type="jack-midi" client="key" exclusive="off">
+   <plug>midi_out</plug>
+  </socket>
+  <socket name="kbd" type="jack-midi" client="kbd" exclusive="off">
+   <plug>midi_out</plug>
+  </socket>
+  <socket name="kyo" type="jack-audio" client="kyo" exclusive="off">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket name="kbo" type="jack-audio" client="kbo" exclusive="off">
+   <plug>out_i</plug>
+  </socket>
+  <socket name="hl" type="jack-audio" client="hl" exclusive="off">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket name="outo" type="jack-midi" client="outo" exclusive="off">
+   <plug>midi_out</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket name="key" type="jack-midi" client="key" exclusive="off">
+   <plug>midi_in</plug>
+  </socket>
+  <socket name="kyo" type="jack-midi" client="kyo" exclusive="off">
+   <plug>midi_in</plug>
+  </socket>
+  <socket name="kbo" type="jack-midi" client="kbo" exclusive="off">
+   <plug>midi_in</plug>
+  </socket>
+  <socket name="outo" type="jack-audio" client="outo" exclusive="off">
+   <plug>in_i</plug>
+  </socket>
+  <socket name="system" type="jack-audio" client="system" exclusive="off">
+   <plug>playback_1</plug>
+   <plug>playback_2</plug>
+  </socket>
+  <socket name="outi" type="jack-midi" client="outi" exclusive="off">
+   <plug>midi_in</plug>
+  </socket>
+  <socket name="spec" type="jack-audio" client="spec" exclusive="off">
+   <plug>in_i</plug>
+   <plug>in_q</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables>
+  <cable output="midi" input="key" type="jack-midi"/>
+  <cable output="cas" input="key" type="jack-midi"/>
+  <cable output="key" input="kyo" type="jack-midi"/>
+  <cable output="kbd" input="kbo" type="jack-midi"/>
+  <cable output="kyo" input="system" type="jack-audio"/>
+  <cable output="kyo" input="outo" type="jack-audio"/>
+  <cable output="kbo" input="system" type="jack-audio"/>
+  <cable output="kbo" input="outo" type="jack-audio"/>
+  <cable output="hl" input="spec" type="jack-audio"/>
+  <cable output="hl" input="system" type="jack-audio"/>
+  <cable output="outo" input="outi" type="jack-midi"/>
+ </cables>
+</patchbay>
+
