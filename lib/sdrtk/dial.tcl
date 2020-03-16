@@ -98,7 +98,8 @@ snit::widgetadaptor sdrtk::dial {
     proc xphi {phi} { return [expr {$phi-1.5707963267948966}] }
     proc ixphi {phi} { return [expr {$phi+1.5707963267948966}] }
     constructor {args} {
-	#  -width 350 -height 350
+	# default -width 350 -height 350
+	# with  -width 300 -height 300  things are snug
 	installhull using canvas -takefocus 1
 	set options(-phi) 0
 	$self Configure -cpr $options(-cpr)

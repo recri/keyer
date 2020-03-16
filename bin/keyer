@@ -523,9 +523,9 @@ proc load-ui {} {
     if {[has-grid]} { lappend args -grid [get-grid] }
     if {[has-tree]} { lappend args -tree [get-tree] }
     #.p add [::sdrtk::dialbook .p.dial {*}$args]
-    toplevel .dial
-    wm title .dial keyer/dialbook
-    pack [::sdrtk::dialbook .dial.book {*}$args]
+    #toplevel .dial
+    wm title . keyer/dial
+    pack [::sdrtk::dialbook .dial {*}$args]
     array set compid {}
     foreach text [opts-with-descriptions] {
 	set desc [opt-description $text]
@@ -546,20 +546,20 @@ proc load-ui {} {
 	if {[is-hide $text]} continue
 	
 	lappend readout -value $cvalue -variable ::value($text) -command [list dial-set $text]
-	set w .dial.book.x$text
+	set w .dial.x$text
 	switch $type {
-	    bool { sdrtk::readout-bool $w -dialbook .dial.book -text $text -info $info {*}$readout }
-	    enum { sdrtk::readout-enum $w -dialbook .dial.book -text $text -info $info {*}$readout }
-	    freq { sdrtk::readout-freq $w -dialbook .dial.book -text $text -info $info {*}$readout }
-	    value { sdrtk::readout-value $w -dialbook .dial.book -text $text -info $info {*}$readout }
-	    text { sdrtk::readout-text $w -dialbook .dial.book -text $text -info $info {*}$readout }
-	    core { sdrtk::readout-core $w -dialbook .dial.book -text $text -info $info {*}$readout }
+	    bool { sdrtk::readout-bool $w -dialbook .dial -text $text -info $info {*}$readout }
+	    enum { sdrtk::readout-enum $w -dialbook .dial -text $text -info $info {*}$readout }
+	    freq { sdrtk::readout-freq $w -dialbook .dial -text $text -info $info {*}$readout }
+	    value { sdrtk::readout-value $w -dialbook .dial -text $text -info $info {*}$readout }
+	    text { sdrtk::readout-text $w -dialbook .dial -text $text -info $info {*}$readout }
+	    core { sdrtk::readout-core $w -dialbook .dial -text $text -info $info {*}$readout }
 	    default { error "unanticipated type \"$type\"" }
 	}
 	#if {$text in {-key-wpm -key-weight}} { $w test }
-	.dial.book add $w $name $type -text [$w cget -text]
+	.dial add $w $name $type -text [$w cget -text]
     }
-    if {[.dial.book select] eq {}} { .dial.book select 0 }
+    if {[.dial select] eq {}} { .dial select 0 }
 }
 
 #
@@ -638,8 +638,8 @@ proc default-setups {} {
 	kbd { keyer -start {cw-encode-input@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
 	kbd2 { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
-	deb { keyer -start {keyer-debounce@deb}}
-	cas { keyer -start {midi-insert-key@cas} -cas-key-dit Alt_R -cas-key-dah Control_R}
+	deb { keyer -start {keyer-debounce@deb} }
+	cas { keyer -start {midi-insert-key@cas} -cas-key-dit Alt_R -cas-key-dah Control_R }
 	tap { keyer -start {midi-tap-view@tap} }
 	tap2 { keyer -start {midi-tap-view@tap2} }
 	out { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
@@ -647,9 +647,6 @@ proc default-setups {} {
 	spec { keyer -start {spectrum-waterfall-view@spec} }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
-	key+kbd { keyer -run {key kbd}}
-	key+out { keyer -run {key out}}
-	key+kbd+out { keyer -run {key kbd out} }
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
@@ -664,9 +661,6 @@ proc default-setups {} {
 	info-spec { spectrum and waterfall display }
 	info-nod {hide esoteric keyer options}
 	info-1ch {merge midi channel and note options}
-	info-key+kbd {iambic key and keyboard}
-	info-key+out { iambic key and decoder }
-	info-key+kbd+out { iambic key, keyboard, and decoder }
     }]
 }
 proc merge-default-setups {} {
