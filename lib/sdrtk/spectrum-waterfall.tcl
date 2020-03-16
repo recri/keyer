@@ -36,11 +36,12 @@ snit::widgetadaptor sdrtk::spectrum-waterfall {
     # options to spectrum
     delegate option -smooth to spectrum
     delegate option -multi to spectrum
-    option -center-freq -default 0 -configuremethod Retune
     delegate option -filter-low to spectrum
     delegate option -filter-high to spectrum
     delegate option -band-low to spectrum
     delegate option -band-high to spectrum
+
+    option -center-freq -default 0 -configuremethod Retune
     option -tuned-freq -default 0 -configuremethod Retune
 
     # options to both

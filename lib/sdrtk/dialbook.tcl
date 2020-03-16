@@ -132,30 +132,33 @@ snit::widget sdrtk::dialbook {
 	install tab using ttk::frame $win.tab
 	install dial using sdrtk::dial $win.dial
 
-	bind $win.dial <<DialCW>> [mymethod Adjust 1]
-	bind $win.dial <<DialCCW>> [mymethod Adjust -1]
-	bind $win.dial <<DialPress>> [mymethod Press]
+	bind $dial <<DialCW>> [mymethod Adjust 1]
+	bind $dial <<DialCCW>> [mymethod Adjust -1]
+	bind $dial <<DialPress>> [mymethod Press]
 	#? bind $win <Enter> [list focus $win.dial]
-	#bind $win.dial <FocusIn> [list puts "FocusIn $win.dial"]
-	#bind $win.dial <FocusOut> [list puts "FocusOut $win.dial"]
+	#bind $dial <FocusIn> [list puts "FocusIn $win.dial"]
+	#bind $dial <FocusOut> [list puts "FocusOut $win.dial"]
 	#bind $win <FocusIn> [list puts "FocusIn $win"]
 	#bind $win <FocusOut> [list puts "FocusOut $win"]
 	#bind $win <ButtonPress-1> +[list focus $win.dial]
-	bind $win.dial <ButtonPress-1> +[list focus $win.dial]
+	bind $dial <ButtonPress-1> +[list focus $win.dial]
 
 	if {$options(-grid)} { install grid using ttk::frame $win.grid }
 	if {$options(-tree)} { install tree using ttk::treeview $win.tree -columns {current comp type window} -display {current} }
 	$self configure {*}$args
-	pack $win.tab -side top -fill x -expand true
-	pack $win.dial -side top -fill x -expand true
+	pack $tab -side top -fill x -expand true
+	pack $dial -side top -fill x -expand true
 	if {$options(-grid)} {
-	    pack $win.grid -side right -fill both -expand true
+	    pack $grid -side right -fill both -expand true
 	}
 	if {$options(-tree)} {
-	    bind $win.tree <<TreeviewSelect>> [mymethod tree-select $win.tree]
-	    $win.tree column current -width 150
-	    $win.tree column #0 -width 150
-	    pack $win.tree -side bottom -fill both -expand true
+	    bind $tree <<TreeviewSelect>> [mymethod TreeSelect $tree]
+	    bind $tree <Return> [mymethod TreeReturn $tree]
+	    $tree column current -width 150
+	    $tree column #0 -width 150
+	    pack $tree -side bottom -fill both -expand true
+	    #puts "$win.tree and $tree are the same"
+	    #puts "bind $tree <KeyPress-Return> -> [bind $tree <KeyPress-Return>]"
 	}
     }
 
@@ -186,6 +189,7 @@ snit::widget sdrtk::dialbook {
 	    $self LayoutGrid
 	}
 	if {$options(-tree)} {
+	    # should be $self LayoutTree, but too much information to transfer
 	    set text [$tab cget -text]
 	    set value [$window cget -value]
 	    set var [$window cget -variable]
@@ -194,23 +198,31 @@ snit::widget sdrtk::dialbook {
 		$tree insert {} end -id $comp -text -$comp
 	    }
 	    $tree insert $comp end -id $text -text $text -values [list $value $comp $xtype $window]
-	    # this assumes that the tree element will be focused when the trace fires
-	    trace add variable $var write [mymethod tree-update-current]
+	    trace add variable $var write [mymethod TreeUpdateCurrent]
 	}
     }
 
     # when an option in the treeview is selected, copy the selection to the dialbook
-    method tree-select {w} {
-	set w [$tree set [$w focus] window]
-	if {$w ne {}} { $self select $w }
+    method TreeSelect {w} {
+	if {[$w focus] eq {}} return
+	set window [$tree set [$w focus] window]
+	if {$window eq {}} return
+	set tab [$self FindWindow $window]
+	if {$tab eq {}} return
+	# puts "TreeSelect $w, window $window, tab $tab, current $data(current)"
+	if {$tab ne $data(current)} { $self select $window }
     }
     
     # when the value of a treeview option is updated, copy the updated value into the treeview
-    method tree-update-current {name1 name2 op} {
+    method TreeUpdateCurrent {name1 name2 op} {
 	set save [$tree selection]
 	$tree selection set $name2
 	$tree set $name2 current [set ${name1}($name2)]
 	$tree selection set $save
+    }
+    # when Return is typed in a treeview, open up an item details view
+    method TreeReturn {w} {
+	puts "TreeReturn $w, focus [$w focus], [$w set [$w focus]]"
     }
     
     # Removes the tab specified by tabid, unmaps and unmanages the associated window.
@@ -323,8 +335,8 @@ snit::widget sdrtk::dialbook {
     }
 
     method Press {} {
+	puts "$self Press"
 	if {0} {
-	# puts "$self Press"
 	if {$data(menu)} {
 	    # select currently addressed tab
 	    # end menu
@@ -467,10 +479,16 @@ snit::widget sdrtk::dialbook {
     method EnterTab {atab} {
 	#puts "EnterTab $atab"
 	$self DisplayTab $atab
+	if {$options(-tree)} {
+	    $tree selection set [$atab cget -text]
+	    $tree see [$atab cget -text]
+	    #puts "EnterTab $atab [$atab info options] [$atab cget -text]"
+	}
     }
     method LeaveTab {atab} {
 	#puts "LeaveTab $atab"
 	$self UpdateCurrent
+	# if tree, deselect entry
     }
 
     method UpdateLists {} {

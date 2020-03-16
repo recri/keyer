@@ -354,6 +354,30 @@ proc populate-option {name opt option} {
 	-font {
 	    #opt-describe $option enum -values {TkFixedFont {helvetica 10} {helvetica 12} {helvetica 14}}
 	}
+	-size {}
+	-planbits {}
+	-direction {}
+	-polyphase {}
+	-result {}
+	-min-f {}
+	-max-f {}
+	-center-freq {}
+	-tuned-freq {}
+	-sample-rate {}
+	-min {}
+	-max {}
+	-zoom {}
+	-pan {}
+	-command {}
+	-pal {}
+	-atten {}
+	-automatic {}
+	-smooth {}
+	-multi {}
+	-filter-low {}
+	-filter-high {}
+	-band-low {}
+	-band-high {}
 	default { puts "populate-option $name $opt: no clues" }
     }
 }
@@ -620,6 +644,7 @@ proc default-setups {} {
 	tap2 { keyer -start {midi-tap-view@tap2} }
 	out { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
 	hl { keyer -start {hl-connect@hl} -hl-client hl }
+	spec { keyer -start {spectrum-waterfall-view@spec} }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
 	key+kbd { keyer -run {key kbd}}
@@ -636,6 +661,7 @@ proc default-setups {} {
 	info-tap2 {second midi monitor for timing events}
 	info-out {audio to ascii morse decoder}
 	info-hl { hermes lite udp jack connection }
+	info-spec { spectrum and waterfall display }
 	info-nod {hide esoteric keyer options}
 	info-1ch {merge midi channel and note options}
 	info-key+kbd {iambic key and keyboard}
