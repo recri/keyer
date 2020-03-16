@@ -1,0 +1,58 @@
+#!/usr/bin/wish
+
+#
+# make toplevel windows, detect when they are dropped
+# 1) adjacent, then join along common edge as sash pane
+# 2) occluding, then join as notebook tabs
+# take notebook tabs and tear them off into toplevels
+# take paned windows and tear them off into toplevels
+#
+
+set data [dict create]
+
+proc left {w} { return [dict get $::data $w x] }
+proc right {w} { return [expr {[dict get $::data $w x]+[dict get $::data $w width]}] }
+proc top {w} { return [dict get $::data $w y] }
+proc bottom {w} { return [expr {[dict get $::data $w y]+[dict get $::data $w height]}] }
+proc close-enough {c1 c2} { return [expr {abs($c1-$c2)<5}] }
+
+proc configure-binding {w x y width height} {
+    if { ! [dict exists $::data $w]} return
+    #puts "configure-binding $w $x $y $width $height"
+    foreach v {x y width height} { dict set ::data $w $v [set $v] }
+    if {[dict exists $::data $w timer]} { after cancel [dict get $::data $w timer] }
+    dict set ::data $w timer [after 5 [list check-drop $w]]
+}
+proc check-drop {w} {
+    # check $w against all others
+    dict unset ::data $w timer
+    dict for {k v} $::data {
+	# $w is $k
+	if {$k eq $w} continue
+	if {[close-enough [top $w] [top $k]]} {
+	    if {[close-enough [right $w] [left $k]]} {
+		puts "$w is to the left of $k, top edges aligned"
+	    } elseif {[close-enough [left $w] [right $k]]} {
+		puts "$w is to the right of $k, top edges aligned"
+	    } elseif {[close-enough [left $w] [left $k]]} {
+		puts "$w is on top of $k, top left corners aligned"
+	    } elseif {[close-enough [right $w] [right $k]]} {
+		puts "$w is on top of $k, top right corners aligned"
+	    }
+	} elseif {[close-enough [left $w] [left $k]]} {
+	    if {[close-enough [bottom $w] [top $k]]} {
+		puts "$w is above $k, left edges aligned"
+	    } elseif {[close-enough [top $w] [bottom $k]]} {
+		puts "$w is below $k, left edges aligned"
+	    }
+	}
+    }
+}
+
+foreach x $argv {
+    dict set ::data .$x [dict create]
+    toplevel .$x
+    pack [canvas .$x.$x]
+    bind .$x <Configure> [list configure-binding %W %x %y %w %h]
+}
+
