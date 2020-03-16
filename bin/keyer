@@ -622,6 +622,13 @@ proc save-setups {} {
     close $fp
 }
 proc default-setups {} {
+    # rewrite so 
+    #   dict get $defaults $key def -> returns the setup definition
+    #   dict get $defaults $key info -> returns the setup info
+    #   dict get $defaults $key connect -> returns the setup connection hints
+    # at which point the key+out composite setups get to add connection hints
+    # for hooking up the parts
+    #
     # connection hints
     #  -connect system-midi>key>kyo>system-audio
     #  -connect system-midi>key2>kyo2>system-audio
