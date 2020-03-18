@@ -22,26 +22,24 @@
 # a value formatted as a text string
 # and a unit string displayed in an adjacent label
 #
-
+# hah, so you need to update the -values option value 
+# when you change the -value option value
+#
 package provide sdrtk::readout-text 1.0
 
 package require Tk
 package require snit
-package require sdrtk::readout-enum 1.0
+package require sdrtk::readout-core
 
 snit::widgetadaptor sdrtk::readout-text {
     delegate option * to hull
     delegate method * to hull
     constructor {args} {
-	set value [from args -value]
-	installhull using sdrtk::readout-enum {*}$args -value $value -values [list $value]
+	installhull using sdrtk::readout-core -dialbook [from args -dialbook {}]
+	$self configure -steps-per-div 1 -integer-to-value [mymethod integer-to-value] -value-to-integer [mymethod value-to-integer] {*}$args
     }
-
-    method menu-entry {m text} {
-	return [list command -label $text -state disabled]
-    }
-
-    method button-entry {m text} {
-	return [ttk::label $m -text $text]
-    }
+    method value-to-integer {val} { return 0 }
+    method integer-to-value {i} { return [$hull cget -value] }
+    method menu-entry {m text} { return [list command -label $text -state disabled] }
+    method button-entry {m text} { return [ttk::label $m -text $text] }
 }

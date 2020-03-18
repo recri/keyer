@@ -167,6 +167,7 @@ snit::widgetadaptor sdrtk::waterfall {
     method update {xy} {
 	# compute the scan line of pixels
 	# this needs to scale x to window width
+	# puts "waterfall update $xy"
 	lassign [$self scan $xy] freq scan
 	set x0 [lindex $freq 0]
 

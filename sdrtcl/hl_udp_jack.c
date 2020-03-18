@@ -95,10 +95,10 @@ typedef struct {
   int recovery;			/* Under/overflow Recovery (use tx_iq_fifo to distinguish over/under */
   int tx_iq_fifo;		/* TX IQ FIFO Count MSBs */
   int serial;			/* The Hermes software serial number. */
-  int temperature;		/* Raw ADC value for temperature sensor. */
-  int fwd_power;		/* Raw ADC value for forward power sensor. */
-  int rev_power;		/* Raw ADC value for reverse power sensor. */
-  int pa_current;		/* Raw ADC value for power amplifier current sensor. */
+  int temperature;		/* Raw ADC value for temperature sensor, should be averaged. */
+  int fwd_power;		/* Raw ADC value for forward power sensor, should be averaged. */
+  int rev_power;		/* Raw ADC value for reverse power sensor, should be averaged. */
+  int pa_current;		/* Raw ADC value for power amplifier current sensor, should be averaged. */
 } options_t;
 
 /*
@@ -899,17 +899,17 @@ static const fw_option_table_t _options[] = {
   { "-fixed-ip",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.fixed_ip), "firmware assigned ip address." },
   { "-fixed-mac",	"str", "Str", "",   fw_option_obj, 0, offsetof(_t, opts.fixed_mac), "firmware assigned mac address bytes." },
   /* options set from iq packet responses from radio */
-  { "-hw-dash",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dash), "The hardware dash key value from the HermesLite." },
-  { "-hw-dot",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dot), "The hardware dot key value from the HermesLite." },
-  { "-hw-ptt",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_ptt), "The hardware ptt value from the HermesLite." },
-  { "-overload",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.overload), "The ADC has clipped values in this frame." },
-  { "-recovery",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.recovery), "Buffer under/overlow recovery active." },
-  { "-tx-iq-fifo",	"int", "int", "0", fw_option_int, 0, offsetof(_t, opts.tx_iq_fifo), "TX IQ FIFO Count MSBs." },
+  { "-hw-dash",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dash), "The hardware dash key value from the HermesLite." },
+  { "-hw-dot",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_dot), "The hardware dot key value from the HermesLite." },
+  { "-hw-ptt",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.hw_ptt), "The hardware ptt value from the HermesLite." },
+  { "-raw-overload",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.overload), "The ADC has clipped values in this frame." },
+  { "-raw-recovery",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.recovery), "Buffer under/overlow recovery active." },
+  { "-raw-tx-iq-fifo",	"int", "int", "0", fw_option_int, 0, offsetof(_t, opts.tx_iq_fifo), "TX IQ FIFO Count MSBs." },
   { "-serial",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.serial), "The Hermes software serial number." },
-  { "-temperature",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.temperature), "Raw ADC value for temperature sensor." },
-  { "-fwd-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.fwd_power), "Raw ADC value for forward power sensor." },
-  { "-rev-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.rev_power), "Raw ADC value for reverse power sensor." },
-  { "-pa-current",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.pa_current), "Raw ADC value for power amplifier current sensor." },
+  { "-raw-temperature",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.temperature), "Raw ADC value for temperature sensor." },
+  { "-raw-fwd-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.fwd_power), "Raw ADC value for forward power sensor." },
+  { "-raw-rev-power",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.rev_power), "Raw ADC value for reverse power sensor." },
+  { "-raw-pa-current",	"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.pa_current), "Raw ADC value for power amplifier current sensor." },
   /* options set by user and relayed to radio in iq packets */
   { "-mox",		"int", "Int", "0", fw_option_int, 0, offsetof(_t, opts.mox), "enable transmitter." },
   { "-speed",		"int", "Int", "48000", fw_option_int, 0, offsetof(_t, opts.speed), 

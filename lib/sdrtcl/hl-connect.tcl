@@ -71,7 +71,6 @@ snit::type sdrtcl::hl-connect {
 	socket {}
 	stopped 1
 	restart-requested 0
-	rx-frames-per-call 126
     }
 
     #
@@ -92,6 +91,9 @@ snit::type sdrtcl::hl-connect {
     option -build-id -default -1 -configuremethod Configure
     option -gateware-minor -default -1 -configuremethod Configure
 
+    # -discover allows one to pass the entire output from hl-discover as a quoted string
+    option -discover -default {} -configuremethod Discover
+    
     # this one enters into the start command
     option -bandscope -default 0 -type {snit::integer -min 0 -max 1} -configuremethod hl-conf
 
@@ -100,11 +102,42 @@ snit::type sdrtcl::hl-connect {
     option -speed -default 48000 -configuremethod hl-conf
     option -n-rx -default 1 -configuremethod hl-conf
 
-    # the rest of the options are delegated to the iqhandler component
+    # these are just raw values copied from the hardware interface
+    option -overload -default 0 -readonly 1;		# rx index 0
+    option -recovery -default 0 -readonly 1;		# rx index 0
+    option -tx-iq-fifo -default 0 -readonly 1;		# rx index 0
+
+    # the raw values need to be averaged over multiple readings
+    # and translated into sensible units
+    # the averaged values are available via these options
+    option -avg-temperature -default 0 -readonly 1;	# rx index 1
+    option -avg-fwd-power -default 0 -readonly 1;	# rx index 1
+    option -avg-rev-power -default 0 -readonly 1;	# rx index 2
+    option -avg-pa-current -default 0 -readonly 1;	# rx index 2
+    # the converted average values are available via these options
+    option -temperature -default 0 -readonly 1
+    option -fwd-power -default 0 -readonly 1
+    option -rev-power -default 0 -readonly 1
+    option -pa-current -default 0 -readonly 1 
+
+    # pure performance statistics, 
+    # updated at each received packet
+    # reset when the connection is restarted
+    option -rx-calls -default 0 -readonly 1
+    option -tx-calls -default 0 -readonly 1
+    option -bs-calls -default 0 -readonly 1
+    option -rx-dropped -default 0 -readonly 1
+    option -rx-outofseq -default 0 -readonly 1
+    option -rx-frames-per-call -default 126 -readonly 1
+    option -tx-frames-per-call -default 126 -readonly 1
+    option -bs-frames-per-call -default 512 -readonly 1
+
+    # the rest of the options are delegated to the iqhandler component directly
     delegate option * to iqhandler
     delegate method activate to iqhandler
 
     variable optiondocs -array {
+	-discover {One of the results of hl-discover describing available hardware.}
 	-peer {The IP address and port of the connected board.}
 	-mac-addr {The MAC address of the connected board.}
 	-code-version {The Hermes code version reported by the connected board.}
@@ -114,6 +147,36 @@ snit::type sdrtcl::hl-connect {
 	
 	-speed {Choose speed of IQ samples to be 48000, 96000, 192000, or 384000 samples per second.}
 	-n-rx {Number of receivers to implement, from 1 to 8 permitted, current HermesLite can do 1 to 4.}
+
+	-avg-temperature {Running average of temperature ADC readings.}
+	-avg-fwd-power {Running average of forward power ADC readings.}
+	-avg-rev-power {Running average of reverse power ADC readings.}
+	-avg-pa-current {Running average of PA current ADC readings.}
+
+	-temperature {Temperature (degrees Celsius)}
+	-fwd-power {Forward power (Watts)}
+	-rev-power {Reverse power (Watts)}
+	-pa-current {PA current (mA)}
+
+	-rx-calls {Number of IQ packets received from HL2.}
+	-tx-calls {Number of IQ packets sent to HL2.}
+	-bs-calls {Number of bandscope packets received from HL2.}
+	-rx-dropped {Number of received packets dropped.}
+	-rx-outofseq {Number of out of sequence packets received.}
+	-rx-frames-per-call {Number of RX IQ samples received per rx-call}
+	-tx-frames-per-call {Number of TX IQ samples sent per tx-call}
+	-bs-frames-per-call {Number of bandscope samples per bs-call}
+
+	-overload {The ADC has clipped values in this frame.}
+	-recovery {Buffer under/overlow recovery active.}
+	-tx-iq-fifo {TX IQ FIFO Count MSBs.}
+    }
+
+    method info-option {opt} {
+	if {[info exists optiondocs($opt)]} {
+	    return $optiondocs($opt)
+	}
+	return [$self.iqhandler info option $opt]
     }
 
     ##
@@ -162,7 +225,8 @@ snit::type sdrtcl::hl-connect {
 	if {[info exists d(time-start)]} {
 	    set d(pending) [$self pending]
 	    set elapsed_us [expr {$d(time-stop)-$d(time-start)}]
-	    # puts "rx rate [expr {double($d(rx-frames))/$elapsed_us*1e6}], tx rate [expr {double($d(tx-frames))/$elapsed_us*1e6}]"
+	    puts "rx rate [expr {double($options(-rx-frames-per-call)*$options(-rx-calls))/$elapsed_us*1e6}]"
+	    puts "tx rate [expr {double($options(-tx-frames-per-call)*$options(-tx-calls))/$elapsed_us*1e6}]"
 	    # puts "crash iq config:\n [join [$self.iqhandler configure] \n]"
 	}
 	# tell hl2 hardware to stop
@@ -186,7 +250,6 @@ snit::type sdrtcl::hl-connect {
 	# puts "hl-restart"
 	$self hl-stop
 	$self rx-reset
-	$self stats-reset
 	$self hl-start
     }
     
@@ -196,9 +259,7 @@ snit::type sdrtcl::hl-connect {
 	# puts "hl-conf $opt $val"
 	set options($opt) $val
 	switch -exact -- $opt {
-	    -n-rx {
-		set d(rx-frames-per-call) [expr {2*int((8*63)/(6*$val+2))}]
-	    }
+	    -n-rx { set options(-rx-frames-per-call) [expr {2*int((8*63)/(6*$val+2))}] }
 	}
 	## this should ideally happen after the change in speed or n-rx has been communicated.
 	set d(restart-requested) 1
@@ -221,13 +282,22 @@ snit::type sdrtcl::hl-connect {
 	}
 	return $f
     }
+    method {Discover -discover} {val} {
+	set status [from val -status]
+	if {$status != 2} { error "-discover specifies a busy hermes lite" }
+	$self configurelist $val
+    }
     method Configure {opt val} {
 	set options($opt) $val
 	catch {$self.iqhandler configure $opt $val}
-	if {$opt eq {-peer}} { $self hl-begin }
+	if {$opt eq {-peer}} { after 1 [mymethod hl-begin] }
     }
     
     proc pkt-format {hex} {
+	# the packet headers are formatted as 3 bytes sync, 5 bytes payload
+	# both at the UDP packet and the USB packet layers.
+	# the first byte of UDP payload is the endpoint, the next four are sequence number
+	# the first byte of USB payload is (index << n) | bits, the next four depend on index
 	set hex [lmap x $hex {format %02x [expr {$x&0xFF}]}]
 	return "[join [lrange $hex 0 2] {}] [lindex $hex 3] [join [lrange $hex 4 end] {}]"
     }
@@ -247,8 +317,7 @@ snit::type sdrtcl::hl-connect {
 	    #binary scan $data IIx3B40x504x3B40x504 syncep seq c1 c2
 	    #puts "tx-send [format %x %d $syncep $seq] [tx-cformat $c1] [tx-cformat $c2]"
 	    #pkt-report tx-send $data
-	    incr d(tx-calls)
-	    incr d(tx-frames) 126
+	    incr options(-tx-calls)
 	    puts -nonewline $d(socket) $data
 	}
 	if {$d(restart-requested)} {
@@ -301,17 +370,17 @@ snit::type sdrtcl::hl-connect {
 	    if {$n eq 0} { 
 		return 0
 	    } elseif {$d(stopped)} {
-		incr d(rx-dropped)
+		incr options(-rx-dropped)
 		puts "rx-recv: drop packet size $n because stopped"
 	    } elseif {$n != 1032} {
-		incr d(rx-dropped)
+		incr options(-rx-dropped)
 		puts "rx-recv: unknown size, [as-hex $data]"
-	    } elseif {[binary scan $data II syncep seq] != 2} {
+	    } elseif {[binary scan $data IIIx508Ix508 syncep seq usb1 usb2] != 4} {
 		# scanned the preamble
-		incr d(rx-dropped)
+		incr options(-rx-dropped)
 		puts "rx-recv: metis scan failed, [as-hex $data]"
 	    } elseif {($syncep&0xFFFFFF00) != 0xeffe0100} {
-		incr d(rx-dropped)
+		incr options(-rx-dropped)
 		puts "rx-recv: metis sync bytes wrong: [format 0x08x $syncep], [as-hex $data]"
 	    } else {
 		#pkt-report rx-recv $data
@@ -319,10 +388,11 @@ snit::type sdrtcl::hl-connect {
 		switch $ep {
 		    6 { # iq data
 			if {[catch {
-			    incr d(rx-calls)
-			    incr d(rx-frames) $d(rx-frames-per-call)
-			    # puts "rx-recv iq $seq [$self.iqhandler pending] $d(rx-calls) $d(rx-frames) $d(tx-calls) $d(tx-frames) $d(bs-calls) $d(bs-frames)"
+			    incr options(-rx-calls)
+			    # puts "rx-recv iq $seq [$self.iqhandler pending] $options(-rx-calls) $options(-tx-calls) $options(-bs-calls)"
 			    $self tx-send [$self.iqhandler rxiq $data]
+			    $self rx-postprocess-[expr {($usb1>>3)&0x1F}]
+			    $self rx-postprocess-[expr {($usb2>>3)&0x1f}]
 			} error]} {
 			    set einfo $::errorInfo
 			    $self hl-stop
@@ -331,8 +401,8 @@ snit::type sdrtcl::hl-connect {
 			# puts stderr "[expr {[clock microseconds]-$d(time-start)}] [$self.iqhandler pending]"
 		    }
 		    4 { # bandscope samples
-			incr d(bs-calls)
-			# puts "rx-recv bs [$self.iqhandler pending] $d(rx-calls) $d(tx-calls) $d(bs-calls)"
+			incr options(-bs-calls)
+			# puts "rx-recv bs [$self.iqhandler pending] $options(-rx-calls) $options(-tx-calls) $options(-bs-calls)"
 			{*}$options(-bs) $data		    
 		    }
 		    default {
@@ -343,6 +413,62 @@ snit::type sdrtcl::hl-connect {
 	}
 	return [$self rx-recv]
     }	
+    #
+    # post process values received in rx packets
+    # some things just get copied down to here so we can set variable traces on the options array
+    # raw ADC readings get a decayed averge computed and an approximation to the real value computed
+
+    # this 'power' formula is a polynomial fit to quisk's calibration table
+    proc power {x} { return [expr {1.132e-02 + $x * (2.025e-05 + $x * 4.298e-07)}] }
+    proc swr {fwd rev} {
+	# Which voltage is forward and reverse depends on the polarity of the current sense transformer
+	if {$fwd < $rev} { return [swr $rev $fwd] }
+	set power [format %3.1f [expr {max(0, $fwd - $rev)}]]
+	if {$fwd >= 0.05} {
+	    set gamma [expr {sqrt($rev / $fwd)}]
+	    if {$gamma < 0.98} {
+		set swr [expr {(1.0 + $gamma) / (1.0 - $gamma)}]
+	    } else {
+		set swr 99.0
+	    }
+	    if {$swr < 9.95} {
+		set swr [format "%4.2f" $swr]
+	    } else {
+		set swr [format "%4.0f" $swr]
+	    }
+	} else {
+	    set swr "---"
+	}
+	return [list $power $swr]
+    }
+
+    method rx-postprocess-0 {} {
+	set options(-overload) [$iqhandler cget -raw-overload]
+	set options(-recovery) [$iqhandler cget -raw-recovery]
+	set options(-tx-iq-fifo) [$iqhandler cget -raw-tx-iq-fifo]
+    }
+    # temp = (3.26 * (AIN[4] / 4096.0) - 0.5) / 0.01
+    # current = (((3.26 * (AIN[2] / 4096.0)) / 50.0) / 0.04 * 1000 * 1270 / 1000)
+    # power = 1.132e-02 + x * (2.025e-05 + x * 4.298e-07)
+    method rx-postprocess-1 {} {
+	set options(-avg-temperature) [expr {($options(-avg-temperature)+[$iqhandler cget -raw-temperature])>>1}]
+	set options(-avg-fwd-power) [expr {($options(-avg-fwd-power)+[$iqhandler cget -raw-fwd-power])>>1}]
+	set options(-temperature) [expr {(3.26 * ($options(-avg-temperature)/4096.0) - 0.5)/0.01}]
+	set options(-fwd-power) [power $options(-avg-fwd-power)]
+    }
+    method rx-postprocess-2 {} {
+	set options(-avg-rev-power) [expr {($options(-avg-rev-power)+[$iqhandler cget -raw-rev-power])>>1}]
+	set options(-avg-pa-current) [expr {($options(-avg-pa-current)+[$iqhandler cget -raw-pa-current])>>1}]
+	set options(-rev-power) [power $options(-avg-rev-power)]
+	set options(-pa-current) [expr {(((3.26 * ($options(-avg-pa-current)/4096.0))/50.0)/0.04)/(1000.0/1270.0)}]
+	lassign [swr $options(-fwd-power) $options(-rev-power)] options(-power) options(-swr)
+    }
+    method rx-postprocess-3 {} {
+    }
+    method rx-postprocess-4 {} {
+    }
+    method rx-postprocess-5 {} {
+    }
     ##
     ##
     ##
@@ -353,26 +479,6 @@ snit::type sdrtcl::hl-connect {
 	    return {}
 	}
     }
-    ##
-    ## statistics on buffers sent and received
-    ##
-    method stats-reset {} {
-	# puts "stats-reset"
-	array set d {
-	    rx-calls 0 tx-calls 0 bs-calls 0 rx-frames 0 tx-frames 0 bs-frames 0
-	}
-    }
-    
-    method stats-rx {} { return [concat {*}[lmap x {calls frames} {list rx-$x $d(rx-$x)}]] }
-    method stats-tx {} { return [concat {*}[lmap x {calls frames} {list tx-$x $d(tx-$x)}]] }
-    method stats-bs {} { return [concat {*}[lmap x {calls frames} {list bs-$x $d(bs-$x)}]] }
-    
-    method info-option {opt} {
-	if {[info exists optiondocs($opt)]} {
-	    return $optiondocs($opt)
-	}
-	return [$self.iqhandler info option $opt]
-    }
 
     method is-busy {} { return 0 }
 
@@ -380,10 +486,10 @@ snit::type sdrtcl::hl-connect {
     # main constructor
     #
     constructor {args} {
-	# puts "constructor {$args}"
+	puts "constructor {$args}"
 	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client hl
 	$self configurelist $args
-	$self stats-reset
+	array set options {-rx-calls 0 -tx-calls 0 -bs-calls 0 -rx-dropped 0 -rx-outofseq 0}
     }
 }
 

@@ -31,6 +31,8 @@
 # to select the option, Enter to pick the option, Up and Down to select
 # the option value, possibly with Ctrl Meta Super Shift prefixes to accelerate.
 
+# Left and Right to traverse the tabs
+
 #
 package provide sdrtk::dialbook 1.0
 
