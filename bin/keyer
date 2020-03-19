@@ -1017,15 +1017,21 @@ main $argv
 # [ ] in-connections subtree listing components and their sources
 # [ ] auto connection hints
 # [ ] jackd start hints
-# [ ] start jackd if necessary, retain connecton to server messages
+# [ ] start jackd if necessary, retain connection to server messages
 # [ ] perform connections if necessary
 # [x] readout-values should limit dial movement to range of choices
 # [x] readout-* should have consistent locations
-# [ ] make the window'ed components into sdrtk::packages
+# [x] make the window'ed components into sdrtk::packages
+# [x] make mixed windowed dsp components into sdrtcltk::packages
 # [ ] implement the snit info vs sdrtcl info fix
 # [ ] make a readout-vfo which tunes nicely
-# [ ] bring up the overlap-save passband filter
-# [ ] bring up the polyphase spectrum/waterfall (which should run as a separate process?)
+# [x] bring up the overlap-save passband filter
+# [x] bring up the polyphase spectrum/waterfall (which should run as a separate process?)
+# [ ] run the polyphase spectrum/waterfall as a separate process
+# [ ] aggressive UI debouncing on all tunable components
+# [ ] rewire the spectrum waterfall to the tuner.
+# [ ] rewrite the tuner/radio component that switches bandpass filter and spectrum display
+#	of bandpass envelope, and the modem bank
 # 
 #
 # old todo list
