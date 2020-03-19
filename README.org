@@ -5,17 +5,17 @@
   - Tk :: the UI toolkit based on tcl
 * Prerequisites
   I've written these instructions as I use them on a laptop running
-  Ubuntu 18.04.  Most of it is generic enough to work on other current
+  Ubuntu 19.10.  Most of it is generic enough to work on other current
   Linux systems with minor translations of package management tools and
   package names. It's also generic enough to port to MacOS or Windows.
   But I don't run other Linux systems, MacOS, or Windows so asking me
   to help you make it work may be a lost cause.
 
   I will be assuming that you have installed the keyer sources in your
-  home directory, which I abbreviate as "~".  So I will refer to the
-  keyer source directory as "~/keyer" in all that follows.   At the
-  moment it depends on being there and parts of the package won't work
-  correctly if installed elsewhere.
+  home directory, abbreviated as "~".  So I will refer to the keyer source
+  directory as "~/keyer" in all that follows.   At the moment it depends
+  on being there and parts of the package won't work correctly if installed
+  elsewhere.
 ** Required packages
    Using your preferred Debian/Ubuntu package manager, you want to install
    the following packages:
@@ -37,7 +37,7 @@
 
    The "apt" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt install build-essential git-core jackd2tk8.6-dev tcllib tklib tcl-udp libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev
+   sudo apt install build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev
    #+END_EXAMPLE
 
 ** Getting the source

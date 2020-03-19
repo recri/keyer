@@ -52,22 +52,8 @@ proc write-file {file data} {
     close $fp
 }
 
-#
-# find the list of sdrtcl::*, sdrtk::*, and sdrtcltk::* packages
-#
-set packages {}
-foreach lib {sdrtcl sdrtk sdrtcltk} {
-    set pkgIndex [file join $dirname .. lib $lib pkgIndex.tcl]
-    set pfp [open $pkgIndex r]
-    foreach line [split [string trim [read-file $pkgIndex]] \n] {
-	if {[regexp "${lib}::" $line]} {
-	    lappend packages [lindex $line 2]
-	}
-    }
-}
-
-# initialize
-set ::data(main) [dict create -server {} -favor {} -hide {} -merge {} -argvopts {}]
+# initialize data variables
+set ::data(main) [dict create -server {} -favor {} -hide {} -merge {} -argvopts {} -volatile {} -packages {}]
 
 #
 # miscellaneous accessors
@@ -124,6 +110,22 @@ proc lappend-hide {args} { lappend-var -hide {*}$args }
 proc set-volatile {val} { set-var -volatile $val }
 proc get-volatile {} { return [get-var -volatile] }
 proc lappend-volatile {args} { lappend-var -volatile {*}$args }
+proc set-packages {val} { set-var -packages $val }
+proc get-packages {} { return [get-var -packages] }
+proc lappend-packages {args} { lappend-var -packages {*}$args }
+
+#
+# find the list of sdrtcl::*, sdrtk::*, and sdrtcltk::* packages
+#
+foreach lib {sdrtcl sdrtk sdrtcltk} {
+    set pkgIndex [file join $::dirname .. lib $lib pkgIndex.tcl]
+    set pfp [open $pkgIndex r]
+    foreach line [split [string trim [read-file $pkgIndex]] \n] {
+	if {[regexp "${lib}::" $line]} {
+	    lappend-packages [lindex $line 2]
+	}
+    }
+}
 
 #
 # manage option preferences
@@ -221,9 +223,9 @@ proc composite-load {composite} {
     # search through the sdrtcl/sdrtk/sdrtcltk component list
     # for components which match $factory
     # exact match to tail of name first, then with glob on tail
-    set candidates [lsearch -all -inline $::packages *$factory]
+    set candidates [lsearch -all -inline [get-packages] *$factory]
     if {[llength $candidates] == 0} {
-	set candidates [lsearch -all -inline $::packages *$factory*]
+	set candidates [lsearch -all -inline [get-packages] *$factory*]
     }
     if {[llength $candidates] == 0} { error "no match for component '$composite'" }
     if {[llength $candidates] > 1} { 
@@ -273,11 +275,6 @@ proc composite-load {composite} {
 package require snit
 namespace eval ::sdrtk {}
 package require sdrtk::dialbook
-package require sdrtk::readout-bool
-package require sdrtk::readout-enum
-package require sdrtk::readout-freq
-package require sdrtk::readout-value
-package require sdrtk::readout-text
 
 # these are filter/fft windowing functions
 package require sdrtcl::window
@@ -303,70 +300,116 @@ proc get-morse-dicts {} {
 proc populate-option {name opt option} {
     # puts "populate-option $name $opt $option"
     # look for further guidance
-    switch -glob -- $opt {
-	-server - -client { opt-describe $option text ronly 1 hide 1 conly 1 -graticule 1 }
-	-verbose { opt-describe $option value ronly 1 hide 1 conly 1 -format %.0f -min 0 -max 10 -graticule 12 -steps-per-div 1 }
-	-chan { opt-describe $option value -format %.0f -min 1 -max 16 -graticule 12 -steps-per-div 1 }
-	-note { opt-describe $option value -format %.0f -min 0 -max 127 -graticule 12 -steps-per-div 1 }
-	-wpm { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 -graticule 20 -steps-per-div 10 }
-	-swap - -mdit - -mdah - -mide - -alsp - -awsp { opt-describe $option bool }
-	-mode { opt-describe $option enum -values {A B} }
-	-word { opt-describe $option enum -values {50 60} -units dits }
-	-dit - -dah - -ies - -ils - -iws { 
+    
+    switch -glob -- [list [dict get $option factory] $opt] {
+	{* -server} - 
+	{* -client} { opt-describe $option text ronly 1 hide 1 conly 1 -graticule 1 }
+	{* -verbose} { opt-describe $option ivalue ronly 1 hide 1 conly 1 -min 0 -max 10 -graticule 12 -steps-per-div 1 }
+	{* -chan} { opt-describe $option ivalue -min 1 -max 16 -graticule 12 -steps-per-div 1 }
+	{* -note} { opt-describe $option ivalue -min 0 -max 127 -graticule 12 -steps-per-div 1 }
+	{* -wpm} { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 -graticule 20 -steps-per-div 10 }
+	{* -swap} - 
+	{* -mdit} - 
+	{* -mdah} - 
+	{* -mide} - 
+	{* -alsp} - 
+	{* -awsp} { opt-describe $option bool }
+	{* -mode} { opt-describe $option enum -values {A B} }
+	{* -word} { opt-describe $option enum -values {50 60} -units dits }
+	{*keyer* -dit} - 
+	{*keyer* -dah} - 
+	{* -ies} - 
+	{* -ils} - 
+	{* -iws} { 
 	    set cdefault [dict get $option cdefault]
 	    set min [expr {$cdefault-0.5}]
 	    set max [expr {$cdefault+0.5}]
 	    opt-describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
 	    #puts "opt-describe $name $opt -value $cvalue -min $min -max $max -step 0.1 -units dits"
 	}
-	-weight - -ratio { opt-describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
-	-comp { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	-freq { opt-describe $option value -format %.0f -min 500 -max 6000 -step 1 -units Hz -graticule 20 -steps-per-div 100}
-	-rise - -fall - -ramp { opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	-window { opt-describe $option enum -values [lrange [get-window-types] 1 end] }
-	-window2 { opt-describe $option enum -values [get-window-types] }
-	-gain { opt-describe $option value -format %.1f -min -50 -max 3 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
-	-delay { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	-hang { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
-	-period { opt-describe $option value -format %.3f -min 0.0 -max 1.000 -step 0.001 -units ms -graticule 20 -steps-per-div 50}
-	-steps { opt-describe $option value -format %.0f -min 1 -max 32 -step 1 -units steps -graticule 20 -steps-per-div 1}
-	-key-dit - -key-dah - -key-key - -key-ptt - -key-4 - -key-5 { opt-describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
-	-key-window { opt-describe $option enum -values {none . .dial} }
-	-dict { opt-describe $option enum -values [get-morse-dicts] }
-	-bandwidth { opt-describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
-	-on - -off { opt-describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 -graticule 20 -steps-per-div 5}
-	-timeout { opt-describe $option value -format %.0f -min 0 -max 1000 -step 1 -units frames -graticule 20 -steps-per-div 50}
-	-estimate { opt-describe $option value -format %.0f -min 10 -max 1000 -step 1 -units frames }
-	-discover { opt-describe $option text hide 1 }
-	-n-rx - -speed - -peer - -gateware-version - -code-version - -board-id - -mac-addr - -mcp4662 -
-	-fixed-ip - -fixed-mac - -n-hw-rx - -wb-fmt - -build-id - -gateware-minor - -serial { opt-describe $option text }
-	-bandscope { opt-describe $option bool }
-	-hw-dash - -raw-hw-dash -
-	-hw-dot - -raw-hw-dot -
-	-hw-ptt - -raw-hw-ptt -
-	-overload - -raw-overload -
-	-recovery - -raw-recovery -
-	-tx-iq-fifo - -raw-tx-iq-fifo -
-	-temperature - -raw-temperature - -avg-temperature - 
-	-fwd-power - -raw-fwd-power - -avg-fwd-power -
-	-rev-power - -raw-rev-power - -avg-rev-power -
-	-pa-current - -raw-pa-current - -avg-pa-current { 
+	{* -weight} - 
+	{* -ratio} { opt-describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
+	{* -comp} { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	{* -freq} { opt-describe $option ivalue -min 500 -max 6000 -units Hz -graticule 20 -steps-per-div 100}
+	{* -rise} - 
+	{* -fall} - 
+	{* -ramp} { opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	{* -window} { opt-describe $option enum -values [lrange [get-window-types] 1 end] }
+	{* -window2} { opt-describe $option enum -values [get-window-types] }
+	{* -gain} { opt-describe $option value -format %.1f -min -50 -max 3 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
+	{* -delay} { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	{* -hang} { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
+	{*spectrum* -period} {  opt-describe $option ivalue -min 1 -max 500 -units ms -graticule 20 -steps-per-div 25 }
+	{*debounce* -period} { opt-describe $option value -format %.3f -min 0.1 -max 50 -step 0.1 -units ms -graticule 20 -steps-per-div 25 }
+	{*debounce* -steps} { opt-describe $option ivalue -min 1 -max 32 -units steps -graticule 20 -steps-per-div 1}
+	{*insert* -dit} - 
+	{*insert* -dah} - 
+	{* -skey} - 
+	{*insert* -ptt} - 
+	{* -key-4} - 
+	{* -key-5} { opt-describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
+	{*insert* -window} { opt-describe $option enum -values {none . .dial} }
+	{* -dict} { opt-describe $option enum -values [get-morse-dicts] }
+	{* -bandwidth} { opt-describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
+	{* -on} - 
+	{* -off} { opt-describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 -graticule 20 -steps-per-div 5}
+	{* -timeout} { opt-describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
+	{* -estimate} { opt-describe $option ivalue -min 10 -max 1000 -units frames }
+	{* -discover} { opt-describe $option text hide 1 }
+	{* -n-rx} -
+	{* -speed} -
+	{* -peer} -
+	{* -gateware-version} -
+	{* -code-version} -
+	{* -board-id} -
+	{* -mac-addr} -
+	{* -mcp4662} -
+	{* -fixed-ip} - 
+	{* -fixed-mac} -
+	{* -n-hw-rx} -
+	{* -wb-fmt} -
+	{* -build-id} -
+	{* -gateware-minor} -
+	{* -serial} { opt-describe $option text }
+	{* -bandscope} { opt-describe $option bool }
+	{* -hw-dash} -
+	{* -raw-hw-dash} -
+	{* -hw-dot} -
+	{* -raw-hw-dot} -
+	{* -hw-ptt} - 
+	{* -raw-hw-ptt} -
+	{* -overload} - 
+	{* -raw-overload} -
+	{* -recovery} - 
+	{* -raw-recovery} -
+	{* -tx-iq-fifo} - 
+	{* -raw-tx-iq-fifo} -
+	{* -temperature} - 
+	{* -raw-temperature} - 
+	{* -avg-temperature} - 
+	{* -fwd-power} - 
+	{* -raw-fwd-power} -
+	{* -avg-fwd-power} -
+	{* -rev-power} - 
+	{* -raw-rev-power} -
+	{* -avg-rev-power} -
+	{* -pa-current} -
+	{* -raw-pa-current} -
+	{* -avg-pa-current} { 
 	    opt-describe $option text ronly 1 volatile 1
 	}
-	-rx-calls -
-	-tx-calls -
-	-bs-calls -
-	-rx-frames -
-	-tx-frames -
-	-bs-frames -
-	-rx-dropped -
-	-rx-outofseq {
+	{* -rx-calls} -
+	{* -tx-calls} -
+	{* -bs-calls} -
+	{* -rx-dropped} -
+	{* -rx-outofseq} {
 	    opt-describe $option text ronly 1 volatile 1
 	}
-	-mox { opt-describe $option bool }
-	-filters { opt-describe $option value -format %.0f -min 0 -max 255 -step 1 }
-	-lna-db { opt-describe $option value -format %.0f -min -12 -max 48 -step 1 -units dB }
-	-f-tx - -f-rx1 - -f-rx2 - -f-rx3 - -f-rx4 - -f-rx5 - -f-rx6 - -f-rx7 - -f-rx8 - -f-rx9 - -f-rx10 - -f-rx11 - -f-rx12 { 
+	{* -mox} { opt-describe $option bool }
+	{* -filters} { opt-describe $option ivalue -min 0 -max 255 }
+	{* -lna-db} { opt-describe $option ivalue -min -12 -max 48 -units dB }
+	{* -f-tx} - 
+	{* -f-rx*} { 
 	    # Transmitter NCO frequency
 	    # Receiver NCO frequency.
 	    set hide 0
@@ -374,51 +417,95 @@ proc populate-option {name opt option} {
 	    opt-describe $option freq hide $hide -units Hz -format %.0f -min 1 -max 29999999 -step 1 -graticule 20 -steps-per-div 500
 	    
 	}
-	-level { opt-describe $option freq -format %.0f -min 0 -max 255 -step 1 }
-	-not-sync - -duplex - -pa - -low-pwr - -pure-signal - -bias-adjust - -vna - -vna-started - -vna-fixed-rx-gain -
-	-alex-manual-mode - -tune-request - -hermes-lite-lna - -cwx - -reset-hl2-on-disconnect { opt-describe $option bool }
-	-vna-count {
+	{* -level} { opt-describe $option freq -format %.0f -min 0 -max 255 -step 1 }
+	{* -not-sync} -
+	{* -duplex} -
+	{* -pa} -
+	{* -low-pwr} -
+	{* -pure-signal} -
+	{* -bias-adjust} -
+	{* -vna} -
+	{* -vna-started} -
+	{* -vna-fixed-rx-gain} -
+	{* -alex-manual-mode} - 
+	{* -tune-request} -
+	{* -hermes-lite-lna} -
+	{* -cwx} -
+	{* -reset-hl2-on-disconnect} { opt-describe $option bool }
+	{* -vna-count} {
 	}
-	-i2c-rx-filter - -i2c-tx-filter { opt-describe $option value -format %.0f -min 0 -max 255 }
-	-cw-hang-time { opt-describe $option value dvalue 10 -format %.0f -units ms -min 0 -max 1023 }
-	-tx-buffer-latency { opt-describe $option value dvalue 10 -format %.0f -units ms -min 0 -max 31 }
-	-ptt-hang-time { opt-describe $option value dvalue 4 -format %.0f -units ms -min 0 -max 31 }
-	-predistortion-subindex { opt-describe $option value -format %.0f -min 0 -max 255 }
-	-predistortion { opt-describe $option value -format %.0f -min 0 -max 15 }
-	-sentcolor - -unsentcolor - -skippedcolor - -background - -foreground {
+	{* -i2c-rx-filter} -
+	{* -i2c-tx-filter} { opt-describe $option ivalue -min 0 -max 255 }
+	{* -cw-hang-time} { opt-describe $option ivalue dvalue 10 -min 0 -max 1023 -units ms }
+	{* -tx-buffer-latency} { opt-describe $option ivalue dvalue 10 -min 0 -max 31 -units ms }
+	{* -ptt-hang-time} { opt-describe $option ivalue dvalue 4 -min 0 -max 31 -units ms }
+	{* -predistortion-subindex} { opt-describe $option ivalue -min 0 -max 255 }
+	{* -predistortion} { opt-describe $option ivalue -min 0 -max 15 }
+	{* -sentcolor} -
+	{* -unsentcolor} -
+	{* -skippedcolor} -
+	{* -background} -
+	{* -foreground} {
 	    # ignore these and -font for the moment, the foreground widget doesn't wrap things yet
 	    #opt-describe $option enum -values {white black gray lightgrey red orange yellow green blue indigo violet}
 	}
-	-font {
+	{* -font} {
 	    #opt-describe $option enum -values {TkFixedFont {helvetica 10} {helvetica 12} {helvetica 14}}
 	}
-	-size {}
-	-planbits {}
-	-direction {}
-	-polyphase {}
-	-result {}
-	-min-f {}
-	-max-f {}
-	-center-freq {}
-	-tuned-freq {}
-	-sample-rate {}
-	-min {}
-	-max {}
-	-zoom {}
-	-pan {}
-	-command {}
-	-pal {}
-	-atten {}
-	-automatic {}
-	-smooth {}
-	-multi {}
-	-filter-low {}
-	-filter-high {}
-	-band-low {}
-	-band-high {}
-	-rx-frames-per-call { opt-describe $option text ronly 1 volatile 1 }
-	-tx-frames-per-call - -bs-frames-per-call { opt-describe $option text ronly 1 }
+	{* -size} { opt-describe $option enum -values {8 16 32 64 128 256 512 1024 2048 4096 8192 16384} }
+	{* -planbits} { opt-describe $option ivalue -min 0 -max 127}
+	{* -direction} {opt-describe $option enum -values {-1 1} }
+	{* -polyphase} { opt-describe $option ivalue -min 1 -max 32 }
+	{* -result} { opt-describe $option enum -values {coeff mag2 mag dB short char}}
+	{* -min-f} {}
+	{* -max-f} {}
+	{* -center-freq} {}
+	{* -tuned-freq} {}
+	{* -sample-rate} { opt-describe $option enum -values {48000} }
+	{*spectrum* -min} -
+	{*spectrum* -max} { opt-describe $option ivalue -min -200 -max 30 -step 10 -units dB }
+	{* -zoom} { opt-describe $option enum -values {0.5 1 2 4 8 16 32 64} }
+	{* -pan} { opt-describe $option ivalue -min 200000 -max 200000 } 
+	{* -command} {}
+	{* -pal} { opt-describe $option enum -values {0 1 2 3 4 5} }
+	{* -atten} {}
+	{* -automatic} {}
+	{* -smooth} { opt-describe $option bool }
+	{* -multi} { opt-describe $option ivalue -min 1 -max 64 }
+	{* -filter-low} -
+	{* -filter-high} { opt-describe $option value -min -8000 -max 8000 }
+	{* -band-low} -
+	{* -band-high} { opt-describe $option value -min 100 -max 29999999 }
+	{* -rx-frames-per-call} { opt-describe $option text ronly 1 volatile 1 }
+	{* -tx-frames-per-call} - 
+	{* -bs-frames-per-call} { opt-describe $option text ronly 1 }
+	{* -length} { opt-describe $option enum -values {64 128 256 512 1024} }
+	{* -low} - 
+	{* -high} { opt-describe $option value -min -8000 -max 8000 }
+	{*radio* -mode} { opt-descrbe $option enum -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL} }
+	{*radio* -mute} { opt-describe $option bool }
+	{*radio* -spot} { opt-describe $option bool }
+	{*agc* -mode} { opt-describe $option enum -values {off long slow medium fast} }
+	{*agc* -target} { opt-describe $option value info {target level, linear gain} -min 0.1 -max 10 }
+	{*agc* -attack} { opt-describe $option ivalue info {attack time} -min 1 -max 4 -units ms }
+	{*agc* -decay} { opt-describe $option ivalue info {decay time} -min 100 -max 2000 -units ms }
+	{*agc* -slope} { opt-describe $option value info {slope, as in y = slope * x + intercept} -min 0.5 -max 2 }
+	{*agc* -hang} { opt-describe $option ivalue info {hang time} -min 50 -max 1000 -units ms }
+	{*agc* -fasthang} { opt-describe $option ivalue info {fast hang time} -min 50 -max 200 -units ms }
+	{*agc* -max} { opt-describe $option value info {max level} -min 1 -max 1e5 }
+	{*agc* -min} { opt-describe $option value info {min level} -min 1e-5 -max 1 }
+	{*agc* -threshold} { opt-describe $option value info {threshold level} -min 0.25 -max 4 }
+	{*iq* -swap} { opt-describe $option bool }
+	{*iq* -delay} { opt-describe $option enum info {delay I by one sample, no delay, or delay Q by one sample} -values {-1 0 1} }
+	{*iq-correct* -rate} { opt-describe $option value info {the learning rate for the adaptive filter} -min -1e6 -max 1e6 }
+	{*leveler* -mode} { opt-describe $option enum -values {off leveler} }
+	{*iambic* -keyer} { opt-describe $option enum -values {none ad5dz dttsp k1el nd7pa vk6ph} }
+	{*meter* -reduce} { opt-describe $option enum -values {abs-real abs-imag max-abs mag2} }
+	{*meter* -style} { opt-describe $option enum -values {s-meter} }
 	default { puts "populate-option $name $opt: no clues" }
+	other {
+snit::enum	sdrtype::spec-size	-values {width/8 width/4 width/2 width width*2 width*4 width*8}
+	}
     }
 }
 
@@ -596,6 +683,7 @@ proc load-ui {} {
 	if {[opt-is-volatile $text]} { lappend-volatile $text $name $opt }
 
 	set w .dial.x$text
+	package require sdrtk::readout-$type
 	sdrtk::readout-$type $w -dialbook .dial \
 	    -text $text -info $info {*}$readout \
 	    -value $cvalue -variable ::value($text) -command [list dial-set $text]
@@ -698,12 +786,14 @@ proc default-setups {} {
 	kbd2 { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
 	ptt { keyer -start {keyer-ptt@ptt} }
 	deb { keyer -start {keyer-debounce@deb} }
-	cas { keyer -start {midi-insert-key@cas} -cas-key-dit Alt_R -cas-key-dah Control_R }
+	cas { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
 	tap { keyer -start {midi-tap-view@tap} }
 	tap2 { keyer -start {midi-tap-view@tap2} }
 	out { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
 	hl { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
 	spec { keyer -start {spectrum-waterfall-view@spec}}
+	spec2 { keyer -start {spectrum-waterfall-view@spec2}}
+	filt { keyer -start {filter-overlap-save@filt} -filt-low 350 -filt-high 1050 }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
 	info-key {iambic keyer and a keyed oscillator}
