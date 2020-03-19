@@ -157,13 +157,15 @@ snit::widgetadaptor sdrtcltk::spectrum-waterfall-view {
 	    $self BlankUpdate "received $n spectrum values instead of $options(-size)"
 	    return
 	}
+	if {[llength $data(frequencies)] != [llength $dB]} {
+	    puts "[llength $data(frequencies)] frequencies and [llength $dB] magnitudes, before dB rearrange"
+	}
 	set dB [concat [lrange $dB [expr {$n/2}] end] [lrange $dB 0 [expr {($n/2)-1}]]]
+	if {[llength $data(frequencies)] != [llength $dB]} {
+	    puts "[llength $data(frequencies)] frequencies and [llength $dB] magnitudes, after dB rearrange"
+	}
 	foreach x $data(frequencies) y $dB {
-	    if {$y < $options(-min) || $y > $options(-max)} {
-		$self BlankUpdate "received out of bounds dB value: $y"
-		return
-	    }
-	    lappend xy $x $y
+	    lappend xy $x [expr {min($options(-max),max($options(-min),$y))}]
 	}
 	#puts "$xy"
 	$hull update $xy

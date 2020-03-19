@@ -320,6 +320,7 @@ static inline void _rxiq_finish(_t *data) {
 /*
 ** handle first rx stream
 */
+#define SAMPLE_NORMALIZE (1.0f / 0x100000) // divide by 2^21
 static inline  void _rxiq_1(_t *data, int i, float *ptri, float *ptrq) {
   // convert and copy input samples into jack buffer
   // const int stride = data->opts.n_rx * 6 + 2; /* size of one frame of receiver data */
@@ -330,8 +331,8 @@ static inline  void _rxiq_1(_t *data, int i, float *ptri, float *ptrq) {
   } else {
     data->rx.sample += 1;
     const char *input = data->rx.buff+data->rx.i;
-    *ptri = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-    *ptrq = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+    *ptri = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8))) * SAMPLE_NORMALIZE;
+    *ptrq = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8))) * SAMPLE_NORMALIZE;
   }
 }
 /* process callback for 1 rx */
@@ -345,7 +346,7 @@ static int _process_1(jack_nframes_t nframes, void *arg) {
   for (int i = 0; i < nframes; i += 1) {
     _txiq(data, i, in0++, in1++);
     _rxiq_start(data);
-    _rxiq_1(data, i, out0++, out1++);
+    _rxiq_1(data, i, out1++, out0++); // note out1 and out0 reversed to fix IQ order
     _rxiq_finish(data);
   }
   return 0;
@@ -360,8 +361,8 @@ static inline  void _rxiq_2(_t *data, int i, float *ptri1, float *ptrq1) {
     *ptrq1 = 0.0;
   } else {
     const char *input = data->rx.buff+data->rx.i+6;
-    *ptri1 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-    *ptrq1 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+    *ptri1 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8))) * SAMPLE_NORMALIZE;
+    *ptrq1 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8))) * SAMPLE_NORMALIZE;
   }
 }
 /* process callback for 2 rx */
@@ -377,8 +378,8 @@ static int _process_2(jack_nframes_t nframes, void *arg) {
   for (int i = 0; i < nframes; i += 1) {
     _txiq(data, i, in0++, in1++);
     _rxiq_start(data);
-    _rxiq_1(data, i, out0++, out1++);
-    _rxiq_2(data, i, out2++, out3++);
+    _rxiq_1(data, i, out1++, out0++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_2(data, i, out3++, out2++); // note out1 and out0 reversed to fix IQ order
     _rxiq_finish(data);
   }
   return 0;
@@ -393,8 +394,8 @@ static inline  void _rxiq_3(_t *data, int i, float *ptri2, float *ptrq2) {
     *ptrq2 = 0.0;
   } else {
     const char *input = data->rx.buff+data->rx.i+12;
-    *ptri2 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-    *ptrq2 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+    *ptri2 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8))) * SAMPLE_NORMALIZE;
+    *ptrq2 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8))) * SAMPLE_NORMALIZE;
   }
 }
 /* process callback for 3 rx */
@@ -412,9 +413,9 @@ static int _process_3(jack_nframes_t nframes, void *arg) {
   for (int i = 0; i < nframes; i += 1) {
     _txiq(data, i, in0++, in1++);
     _rxiq_start(data);
-    _rxiq_1(data, i, out0++, out1++);
-    _rxiq_2(data, i, out2++, out3++);
-    _rxiq_3(data, i, out4++, out5++);
+    _rxiq_1(data, i, out1++, out0++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_2(data, i, out3++, out2++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_3(data, i, out5++, out4++); // note out1 and out0 reversed to fix IQ order
     _rxiq_finish(data);
   }
   return 0;
@@ -429,8 +430,8 @@ static inline  void _rxiq_4(_t *data, int i, float *ptri3, float *ptrq3) {
     *ptrq3 = 0.0;
   } else {
     const char *input = data->rx.buff+data->rx.i+18;
-    *ptri3 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-    *ptrq3 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+    *ptri3 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8))) * SAMPLE_NORMALIZE;
+    *ptrq3 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8))) * SAMPLE_NORMALIZE;
   }
 }
 /* process callback for 4 rx */
@@ -450,10 +451,10 @@ static int _process_4(jack_nframes_t nframes, void *arg) {
   for (int i = 0; i < nframes; i += 1) {
     _txiq(data, i, in0++, in1++);
     _rxiq_start(data);
-    _rxiq_1(data, i, out0++, out1++);
-    _rxiq_2(data, i, out2++, out3++);
-    _rxiq_3(data, i, out4++, out5++);
-    _rxiq_4(data, i, out6++, out7++);
+    _rxiq_1(data, i, out1++, out0++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_2(data, i, out3++, out2++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_3(data, i, out5++, out4++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_4(data, i, out7++, out6++); // note out1 and out0 reversed to fix IQ order
     _rxiq_finish(data);
   }
   return 0;
@@ -468,8 +469,8 @@ static inline  void _rxiq_5(_t *data, int i, float *ptri4, float *ptrq4) {
     *ptrq4 = 0.0;
   } else {
     const char *input = data->rx.buff+data->rx.i+24;
-    *ptri4 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-    *ptrq4 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+    *ptri4 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8))) * SAMPLE_NORMALIZE;
+    *ptrq4 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8))) * SAMPLE_NORMALIZE;
   }
 }
 /* process callback for 5 rx */
@@ -491,11 +492,11 @@ static int _process_5(jack_nframes_t nframes, void *arg) {
   for (int i = 0; i < nframes; i += 1) {
     _txiq(data, i, in0++, in1++);
     _rxiq_start(data);
-    _rxiq_1(data, i, out0++, out1++);
-    _rxiq_2(data, i, out2++, out3++);
-    _rxiq_3(data, i, out4++, out5++);
-    _rxiq_4(data, i, out6++, out7++);
-    _rxiq_5(data, i, out8++, out9++);
+    _rxiq_1(data, i, out1++, out0++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_2(data, i, out3++, out2++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_3(data, i, out5++, out4++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_4(data, i, out7++, out6++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_5(data, i, out9++, out8++); // note out1 and out0 reversed to fix IQ order
     _rxiq_finish(data);
   }
   return 0;
@@ -510,8 +511,8 @@ static inline  void _rxiq_6(_t *data, int i, float *ptri5, float *ptrq5) {
     *ptrq5 = 0.0;
   } else {
     const char *input = data->rx.buff+data->rx.i+30;
-    *ptri5 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8)) >> 8) / (float)0x7ff;
-    *ptrq5 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8)) >> 8) / (float)0x7ff;
+    *ptri5 = (((input[0]<<24) | (input[1]<<16) | (input[2]<<8))) * SAMPLE_NORMALIZE;
+    *ptrq5 = (((input[3]<<24) | (input[4]<<16) | (input[5]<<8))) * SAMPLE_NORMALIZE;
   }
 }
 
@@ -536,12 +537,12 @@ static int _process_6(jack_nframes_t nframes, void *arg) {
   for (int i = 0; i < nframes; i += 1) {
     _txiq(data, i, in0++, in1++);
     _rxiq_start(data);
-    _rxiq_1(data, i, out0++, out1++);
-    _rxiq_2(data, i, out2++, out3++);
-    _rxiq_3(data, i, out4++, out5++);
-    _rxiq_4(data, i, out6++, out7++);
-    _rxiq_5(data, i, out8++, out9++);
-    _rxiq_6(data, i, out10++, out11++);
+    _rxiq_1(data, i, out1++, out0++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_2(data, i, out3++, out2++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_3(data, i, out5++, out4++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_4(data, i, out7++, out6++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_5(data, i, out9++, out8++); // note out1 and out0 reversed to fix IQ order
+    _rxiq_6(data, i, out11++, out10++); // note out1 and out0 reversed to fix IQ order
     _rxiq_finish(data);
   }
   return 0;

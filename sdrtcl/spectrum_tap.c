@@ -262,7 +262,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   // reduce the results
   // should probably reorder the coefficients here, too
   Tcl_Obj *result = NULL;
-  float norm2 = 1.0f/opts->size;
+  float norm2 = 1.0f/opts->size * powf(2.0f,-31);
   float norm = sqrtf(norm2);
   float lognorm2 = log10f(norm2);
   switch (prec->result_type) {
