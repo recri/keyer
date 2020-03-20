@@ -119,6 +119,8 @@ snit::type sdrtcl::hl-connect {
     option -fwd-power -default 0 -readonly 1
     option -rev-power -default 0 -readonly 1
     option -pa-current -default 0 -readonly 1 
+    option -swr -default 100 -readonly 1
+    option -power -default 0 -readonly 1
 
     # pure performance statistics, 
     # updated at each received packet
@@ -170,6 +172,9 @@ snit::type sdrtcl::hl-connect {
 	-overload {The ADC has clipped values in this frame.}
 	-recovery {Buffer under/overlow recovery active.}
 	-tx-iq-fifo {TX IQ FIFO Count MSBs.}
+	
+	-swr {Standing wave ratio}
+	-power {Power output}
     }
 
     method info-option {opt} {

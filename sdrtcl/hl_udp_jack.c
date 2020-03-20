@@ -594,7 +594,7 @@ static inline void _rxiqscan(_t *data, Tcl_Obj *udp) {
       data->rx.index = 0;
       _grabkeyptt(data, c);
       data->opts.overload = (c[1] & 1) != 0;
-      data->opts.recovery = c[2] & 0x80;
+      data->opts.recovery = (c[2] & 0x80) != 0;
       data->opts.tx_iq_fifo = c[2] & 0x7f;
       data->opts.serial =  c[4];
       break;

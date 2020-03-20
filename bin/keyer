@@ -330,7 +330,7 @@ proc populate-option {name opt option} {
 	{* -weight} - 
 	{* -ratio} { opt-describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
 	{* -comp} { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	{* -freq} { opt-describe $option ivalue -min 500 -max 6000 -units Hz -graticule 20 -steps-per-div 100}
+	{* -freq} { opt-describe $option ivalue -min -1000 -max 1000 -units Hz -graticule 20 -steps-per-div 100}
 	{* -rise} - 
 	{* -fall} - 
 	{* -ramp} { opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
@@ -791,11 +791,13 @@ proc default-setups {} {
 	tap2 { keyer -start {midi-tap-view@tap2} }
 	out { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
 	hl { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
+	hlt { keyer -start {hl-test@hlt} -kyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
 	spec { keyer -start {spectrum-waterfall-view@spec}}
 	spec2 { keyer -start {spectrum-waterfall-view@spec2}}
-	filt { keyer -start {filter-overlap-save@filt} -filt-low 350 -filt-high 1050 }
+	filt { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
+	test { keyer key kbd out hl hlt filt spec -tree 1 } 
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}

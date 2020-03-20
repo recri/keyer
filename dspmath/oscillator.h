@@ -166,16 +166,17 @@ static float complex oscillator_process(oscillator_t *o) {
 
 /*
 ** code common to all implementations.
+** the frequency as originally implemented appears to be negated, so added two negations here
 */
 
 static void *oscillator_init(oscillator_t *o, float hertz, float radians, int samples_per_second) {
-  oscillator_set_hertz(o, hertz, samples_per_second);
+  oscillator_set_hertz(o, -hertz, samples_per_second);
   oscillator_set_phase(o, radians);
   return o;
 }
 
 static void oscillator_update(oscillator_t *o, float hertz, int samples_per_second) {
-  oscillator_set_hertz(o, hertz, samples_per_second);
+  oscillator_set_hertz(o, -hertz, samples_per_second);
 }
 
 static void oscillator_reset(oscillator_t *o) {

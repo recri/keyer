@@ -154,7 +154,9 @@ snit::type sdrtcl::hl-discover {
 	    # puts "discovery response: 0 length packet received"
 	    return
 	}
-	set n [binary scan $data Scc6ccc2c4c2ccc effe status metis_mac_address code_version board_id mcp4662_config fixed_ip fixed_mac n_hw_rx wb_fmt_build_id gateware_minor]
+	set n [binary scan $data Scc6ccc2c4c2ccc effe status metis_mac_address \
+		   gateware_version board_id mcp4662_config fixed_ip fixed_mac n_hw_rx \
+		   wb_fmt_build_id gateware_minor]
 	if {$n != 11} {
 	    puts "discovery response: $n items scanned in response"
 	    return
@@ -167,7 +169,7 @@ snit::type sdrtcl::hl-discover {
 			  -peer [join $peer :] \
 			  -status $status \
 			  -mac-addr [as-mac $metis_mac_address] \
-			  -code-version $code_version \
+			  -gateware-version $gateware_version \
 			  -board-id $board_id \
 			  -mcp4662 [join [as-hex $mcp4662_config] :] \
 			  -fixed-ip [as-ip-addr $fixed_ip] \
