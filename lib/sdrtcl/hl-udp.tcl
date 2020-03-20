@@ -152,7 +152,9 @@ snit::type sdrtcl::hl-udp {
     # these are found in receive packets
     option -hw-key -default 0 -type {snit::integer -min 0 -max 1} -readonly true
     option -hw-ptt -default 0 -type {snit::integer -min 0 -max 1} -readonly true
-    option -overflow -default 0 -type {snit::integer -min 0 -max 1} -readonly true
+    option -overload -default 0 -type {snit::integer -min 0 -max 1} -readonly true
+    option -recovery -default 0 -type {snit::integer -min 0 -max 1} -readonly true
+    option -tx-iq-fifo -default 0 -type {snit::integer -min 0 -max 127} -readonly true
     option -serial -default 0 -type {snit::integer -min 0 -max 32767} -readonly true
     option -temperature -default 0 -type {snit::integer -min 0 -max 32767} -readonly true
     option -fwd-power -default 0 -type {snit::integer -min 0 -max 32767} -readonly true
@@ -200,7 +202,9 @@ snit::type sdrtcl::hl-udp {
 	-vna-started {Start VNA mode. Not implemented.}
 	-hw-key {The hardware key value from the HermesLite key/ptt jack.}
 	-hw-ptt {The hardware ptt value from the HermesLite key/ptt jack.}
-	-overflow {The ADC has clipped values in this frame.}
+	-overload {The ADC has clipped values in this frame.}
+	-recovery {The tx-iq-fifo has overflowed, recovery in progress.}
+	-tx-iq-fifo {The high bits of the transmit sample queue count.}
 	-serial {The Hermes software serial number}
 	-temperature {Raw ADC value for temperature sensor.}
 	-fwd-power {Raw ADC value for forward power sensor.}
@@ -540,7 +544,9 @@ snit::type sdrtcl::hl-udp {
 				0 - 1 - 2 - 3 {
 				    $self rx update -hw-key [expr {($c0&2) != 0}]
 				    $self rx update -hw-ptt [expr {($c0&1) != 0}]
-				    $self rx update -overflow [expr {($I1234&(1<<24)) != 0}]
+				    $self rx update -overload [expr {($I1234&(1<<24)) != 0}]
+				    $self rx update -recovery [expr {($I1234&(0x80<<15)) != 0}]
+				    $self rx update -tx-iq-fifo [expr {($I1234>>16)&0x7f}]
 				    $self rx update -serial [expr {$I1234&0xFF}]
 				}
 				8 - 9 - 10 - 11 {

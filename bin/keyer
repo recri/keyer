@@ -797,7 +797,7 @@ proc default-setups {} {
 	filt { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
-	test { keyer key kbd out hl hlt filt spec -tree 1 } 
+	test { keyer key hl hlt filt spec -tree 1 } 
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}

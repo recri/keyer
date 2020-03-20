@@ -1,15 +1,36 @@
 #!/usr/bin/wish
 
+# this is the original test for cw latency
+# run with:
+#   <jack running at 48000 samples/second>
+#   <qjackctl using the hl-old-test patch>
+#   bin/keyer key -key-wpm 30 -kyo-gain -9 &
+#   x42-scope &
+# and
+#   bin/hl-old-test
+#
+# it will come up with the -mox enabled so be sure to have a dummy load connected
+# the scope will show the keyed oscillator and the received signal.
+#
+# this is running much better than the new test as of 2020-03-20, but it also shows
+# some glitches now and then.
+#
 tk scaling [expr {10*[tk scaling]}]
 
-lappend auto_path ../lib
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+lappend auto_path [file join $dirname .. lib]
 
-source ./hl-udp.tcl
+package require sdrtcl::hl-udp
 package require sdrtcl::hl-jack
 
 array set options {
     -speed 48000
     -lna-db 40
+    -jack on
+    -mox 1
+    -low-pwr 1
+    -lna-db 14
 }
 
 namespace eval ::hl {}
