@@ -24,15 +24,6 @@ lappend auto_path [file join $dirname .. lib]
 package require sdrtcl::hl-udp
 package require sdrtcl::hl-jack
 
-array set options {
-    -speed 48000
-    -lna-db 40
-    -jack on
-    -mox 1
-    -low-pwr 1
-    -lna-db 14
-}
-
 namespace eval ::hl {}
 
 # a manually refreshed information string
@@ -163,15 +154,31 @@ proc main {argv} {
 		  {serial: [hlu cget -serial]}
 	      } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
 
-    grid [hl::refresh .rxstats -period 250 -subst {[hlu stats rx]}] -row [incr row] -column 0 -columnspan 10 -sticky ew
-    grid [hl::refresh .txstats -period 250 -subst {[hlu stats tx]}] -row [incr row] -column 0 -columnspan 10 -sticky ew
-    grid [hl::refresh .bsstats -period 250 -subst {[hlu stats bs]}] -row [incr row] -column 0 -columnspan 10 -sticky ew
+    grid [hl::refresh .stats -period 250 \
+	      -subst [join {
+		  {[hlu stats rx]}
+		  {[hlu stats tx]}
+		  {[hlu stats bs]}
+	      } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
+
+    grid [hl::refresh .overload -period 250 \
+	  -subst [join {
+	      {overload [hlu cget -overload]}
+	      {recovery [hlu cget -recovery]}
+	      {tx-iq-fifo [hlu cget -tx-iq-fifo]}
+	  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
+
+    grid [hl::refresh .pending -period 250 \
+	  -subst [join {
+	      {pending output [hlj pending output]}
+	      {pending input [hlj pending input]}
+	  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
 
     grid [hl::slider .lna -label {Rx LNA dB} -from -12 -to 48 -increment 1 -integer true \
 	      -hl-udp hlu -hl-opt -lna-db] -row [incr row] -column 0 -sticky ew
     grid [hl::slider .lev -label {Tx Level} -from 0 -to 255 -increment 1 -integer 1 \
 	      -hl-udp hlu -hl-opt -level] -row [incr row] -column 0 -sticky ew
-
+    
     grid [hl::check .mx -label {MOX} -hl-udp hlu -hl-opt -mox] -row [incr row] -column 0 -sticky ew
     grid [hl::check .bs -label {Bandscope} -hl-udp hlu -hl-opt -bandscope] -row [incr row] -column 0 -sticky ew
     grid [hl::check .low -label {Low Power T/R} -hl-udp hlu -hl-opt -low-pwr] -row [incr row] -column 0 -sticky ew
@@ -203,4 +210,15 @@ proc main {argv} {
     }
 }
 
-main $argv
+set defargv {
+    -speed 48000
+    -lna-db 40
+    -jack on
+    -mox 1
+    -low-pwr 1
+    -lna-db 14
+}
+array set options {
+}
+
+main [concat $defargv $argv]

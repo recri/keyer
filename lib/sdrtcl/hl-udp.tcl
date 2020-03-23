@@ -81,7 +81,7 @@ snit::type sdrtcl::hl-udp {
 	socket {}
 	stopped 1
 
-	iq-sequence 0
+	rx-sequence 0
 	bs-sequence 0
 	bs-buff {}
 	tx-sequence 0
@@ -423,10 +423,6 @@ snit::type sdrtcl::hl-udp {
 
     method {tx send} {b1 b2 {force 0}} {
 	incr d(tx-calls)
-	set n [expr {[string length $b1]+[string length $b2]}]
-	incr d(tx-bytes) $n
-	set ns [expr {int($n/8)}]; # L,R,I,Q * 2 bytes each
-	incr d(tx-samples) $ns
 	if {$d(stopped) && ! $force} return
 	if {$d(restart-requested)} {
 	    set d(restart-requested) 0
@@ -481,7 +477,7 @@ snit::type sdrtcl::hl-udp {
     }
 			 
     method {rx reset} {} {
-	set d(iq-sequence) 0
+	set d(rx-sequence) 0
 	set d(bs-sequence) 0
 	set d(bs-buff) {}
 	foreach i {1 2} {
@@ -517,77 +513,79 @@ snit::type sdrtcl::hl-udp {
 	    set ep [expr {$syncep&0xFF}]
 	    switch $ep {
 		6 { # iq data
-		    if {$seq > $d(iq-sequence)} {
-			puts "rx readable: received iq packet $seq at $d(iq-sequence), jumping ahead"
-			set d(iq-sequence) $seq
+		    # there are a lot of duped sequence numbers at startup
+		    # if {$seq < 10} { puts "rx readable: received iq packet $seq" }
+		    if {$seq > $d(rx-sequence)} {
+			puts "rx readable: received iq packet $seq at $d(rx-sequence), jumping ahead to $seq"
+			set d(rx-sequence) $seq
 		    }
-		    if {$seq == $d(iq-sequence)} {
-			incr d(iq-sequence)
-			set iq {}
-			# scan at offset from $data
-			# was foreach f [list $f1 $f2]
-			# b is $data offset $x+8 length 
-			foreach x {8 520} {
-			    if {[binary scan $data x${x}II s123c0 I1234] != 2} {
-				puts "rx readable: usb scan failed"
-				return
-			    }
-			    if {($s123c0&0xFFFFFF00)  != 0x7f7f7f00} {
-				puts "rx readable: usb sync bytes wrong: [format 0x%08x $s123c0]"
-				return
-			    }
-			    # scan control bytes into option values
-			    # I suspect that key and ptt may be in more packets
-			    # this switch statement looks suspicious
-			    set c0 [expr {($s123c0&0xFF)}]
-			    switch $c0 {
-				0 - 1 - 2 - 3 {
-				    $self rx update -hw-key [expr {($c0&2) != 0}]
-				    $self rx update -hw-ptt [expr {($c0&1) != 0}]
-				    $self rx update -overload [expr {($I1234&(1<<24)) != 0}]
-				    $self rx update -recovery [expr {($I1234&(0x80<<15)) != 0}]
-				    $self rx update -tx-iq-fifo [expr {($I1234>>16)&0x7f}]
-				    $self rx update -serial [expr {$I1234&0xFF}]
-				}
-				8 - 9 - 10 - 11 {
-				    $self rx update -hw-key [expr {($c0&2) != 0}]
-				    $self rx update -hw-ptt [expr {($c0&1) != 0}]
-				    $self rx update -temperature [expr {($I1234>>16)&0xffff}]
-				    $self rx update -fwd-power [expr {$I1234&0xffff}]
-				}
-				16 - 17 - 18 - 19 {
-				    $self rx update -hw-key [expr {($c0&2) != 0}]
-				    $self rx update -hw-ptt [expr {($c0&1) != 0}]
-				    $self rx update -rev-power [expr {($I1234>>16)&0xffff}]
-				    $self rx update -pa-current [expr {$I1234&0xffff}]
-				}
-				24 {
-				}
-				32 {
-				}
-				40 {
-				}
-				251 - 252 - 253 {
-				    # these are acks to i2c settings
-				    # need to post the ack to the tx
-				    # control queue
-				}
-				default {
-				    error "rx"
-				}
-			    }
-			    # send data on
-			    lappend iq $data
+		    if {$seq < $d(rx-sequence)} {
+			# puts "rx readable: received iq packet $seq at $d(rx-sequence), skipping"
+			continue
+		    }
+		    incr d(rx-sequence)
+		    set iq {}
+		    # scan at offset from $data
+		    # was foreach f [list $f1 $f2]
+		    # b is $data offset $x+8 length 
+		    foreach x {8 520} {
+			if {[binary scan $data x${x}II s123c0 I1234] != 2} {
+			    puts "rx readable: usb scan failed"
+			    return
 			}
-			incr d(rx-calls)
-			set n 1008
-			incr d(rx-bytes) $n
-			set ns [expr {int($n/($::options(-n-rx)*6+2))}]
-			incr d(rx-samples) $ns
-		        {*}$options(-rx) $data
-		    } else {
-			puts "rx readable: received iq packet $seq at $d(iq-sequence)"
+			if {($s123c0&0xFFFFFF00)  != 0x7f7f7f00} {
+			    puts "rx readable: usb sync bytes wrong: [format 0x%08x $s123c0]"
+			    return
+			}
+			# scan control bytes into option values
+			# I suspect that key and ptt may be in more packets
+			# this switch statement looks suspicious
+			set c0 [expr {($s123c0&0xFF)}]
+			switch $c0 {
+			    0 - 1 - 2 - 3 {
+				$self rx update -hw-key [expr {($c0&2) != 0}]
+				$self rx update -hw-ptt [expr {($c0&1) != 0}]
+				$self rx update -overload [expr {(($I1234>>24)&1) != 0}]
+				$self rx update -recovery [expr {(($I1234>>16)&0x80) != 0}]
+				$self rx update -tx-iq-fifo [expr {($I1234>>16)&0x7f}]
+				$self rx update -serial [expr {$I1234&0xFF}]
+			    }
+			    8 - 9 - 10 - 11 {
+				$self rx update -hw-key [expr {($c0&2) != 0}]
+				$self rx update -hw-ptt [expr {($c0&1) != 0}]
+				$self rx update -temperature [expr {($I1234>>16)&0xffff}]
+				$self rx update -fwd-power [expr {$I1234&0xffff}]
+			    }
+			    16 - 17 - 18 - 19 {
+				$self rx update -hw-key [expr {($c0&2) != 0}]
+				$self rx update -hw-ptt [expr {($c0&1) != 0}]
+				$self rx update -rev-power [expr {($I1234>>16)&0xffff}]
+				$self rx update -pa-current [expr {$I1234&0xffff}]
+			    }
+			    24 {
+			    }
+			    32 {
+			    }
+			    40 {
+			    }
+			    251 - 252 - 253 {
+				# these are acks to i2c settings
+				# need to post the ack to the tx
+				# control queue
+			    }
+			    default {
+				error "rx"
+			    }
+			}
+			# send data on
+			lappend iq $data
 		    }
+		    incr d(rx-calls)
+		    #set n 1008
+		    #incr d(rx-bytes) $n
+		    #set ns [expr {int($n/($::options(-n-rx)*6+2))}]
+		    #incr d(rx-samples) $ns
+		    {*}$options(-rx) $data
 		    while {1} {
 			set in [{*}$options(-tx)]
 			if {[llength $in] == 2} {
@@ -628,7 +626,7 @@ snit::type sdrtcl::hl-udp {
 	    }
 	}
     }
-
+    
     ##
     ## dummy rx IQ and bandscope handlers
     ## it will just have to do,
@@ -663,14 +661,14 @@ snit::type sdrtcl::hl-udp {
     ##
     method {stats reset} {} {
 	array set d {
-	    rx-calls 0 rx-bytes 0 rx-samples 0
-	    tx-calls 0 tx-bytes 0 tx-samples 0
-	    bs-calls 0 bs-bytes 0 bs-samples 0
+	    rx-calls 0
+	    tx-calls 0
+	    bs-calls 0
 	}
     }
-    method {stats rx} {} { return [concat {*}[lmap x {calls bytes samples} {list rx-$x $d(rx-$x)}]] }
-    method {stats tx} {} { return [concat {*}[lmap x {calls bytes samples} {list tx-$x $d(tx-$x)}]] }
-    method {stats bs} {} { return [concat {*}[lmap x {calls bytes samples} {list bs-$x $d(bs-$x)}]] }
+    method {stats rx} {} { return [concat rx-calls $d(rx-calls) rx-sequence $d(rx-sequence)] }
+    method {stats tx} {} { return [concat tx-calls $d(tx-calls) tx-sequence $d(tx-sequence)] }
+    method {stats bs} {} { return [concat bs-calls $d(bs-calls) bs-sequence $d(bs-sequence)] }
     #
     # main constructor
     #
@@ -682,5 +680,5 @@ snit::type sdrtcl::hl-udp {
 	$self discovery start
     }
 }
-    
-    
+
+

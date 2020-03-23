@@ -18,6 +18,7 @@
 # 
 package provide sdrtcl::hl-connect 0.0.1
 
+package require Thread
 package require snit
 package require udp
 package require sdrtcl::hl-discover
@@ -40,9 +41,10 @@ namespace eval ::sdrtcl {}
 # sends tx-iq packets to hl2
 # delegates control information to the handlers
 #
-snit::type sdrtcl::hl-connect {
+snit::type sdrtcl::hl-connect-thread {
     component iqhandler;	# the rx and tx iq stream(s) handler
     component bshandler;	# the bandscope stream handler
+    component discover;		# the discovery phase, optional
     
     # local procedures
     # map a list of byte values as hex
@@ -71,6 +73,8 @@ snit::type sdrtcl::hl-connect {
 	socket {}
 	stopped 1
 	restart-requested 0
+	pending {}
+	last-pending {}
     }
 
     #
@@ -92,6 +96,7 @@ snit::type sdrtcl::hl-connect {
     option -gateware-minor -default -1 -configuremethod Configure
 
     # -discover allows one to pass the entire output from hl-discover as a quoted string
+    # bad, end runs around option value management in dial-set
     option -discover -default {} -configuremethod Discover
     
     # this one enters into the start command
@@ -181,7 +186,7 @@ snit::type sdrtcl::hl-connect {
 	if {[info exists optiondocs($opt)]} {
 	    return $optiondocs($opt)
 	}
-	return [$self.iqhandler info option $opt]
+	return [$iqhandler info option $opt]
     }
 
     ##
@@ -213,11 +218,11 @@ snit::type sdrtcl::hl-connect {
 	set d(time-kick) [clock microseconds]
 	puts "hl-start: enabled hardware"
 	# instantiate the iqhandler
-	# install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -speed $options(-speed) -n-rx $options(-n-rx) {*}$options(-args)
-	# puts "hl-start speed [$self.iqhandler cget -speed] [expr {[$self.iqhandler cget -speed]&3}]"
-	# puts "hl-start iq config:\n [join [$self.iqhandler configure] \n]"
+	# install iqhandler using sdrtcl::hl-udp-jack $iqhandler -speed $options(-speed) -n-rx $options(-n-rx) {*}$options(-args)
+	# puts "hl-start speed [$iqhandler cget -speed] [expr {[$iqhandler cget -speed]&3}]"
+	# puts "hl-start iq config:\n [join [$iqhandler configure] \n]"
 	# start the iqhandler
-	$self.iqhandler activate
+	$iqhandler activate
 	# puts "hl-start: activated iqhandler"
 	# enable live buffer handler
 	fileevent $d(socket) readable [mymethod rx-recv-first]
@@ -232,22 +237,22 @@ snit::type sdrtcl::hl-connect {
 	    set elapsed_us [expr {$d(time-stop)-$d(time-start)}]
 	    puts "rx rate [expr {double($options(-rx-frames-per-call)*$options(-rx-calls))/$elapsed_us*1e6}]"
 	    puts "tx rate [expr {double($options(-tx-frames-per-call)*$options(-tx-calls))/$elapsed_us*1e6}]"
-	    # puts "crash iq config:\n [join [$self.iqhandler configure] \n]"
+	    # puts "crash iq config:\n [join [$iqhandler configure] \n]"
 	}
 	# tell hl2 hardware to stop
 	puts -nonewline $d(socket) [binary format Ia60 0xeffe0400 {}]
 	# puts "hl-stop: disabled hardware"
 	# save iqhandler state
-	set options(-args) [$self hl-filter-options [$self.iqhandler configure]]
+	set options(-args) [$self hl-filter-options [$iqhandler configure]]
 	puts "hl-stop: saved options $options(-args)"
 	# stop iqhandler
-	$self.iqhandler deactivate
+	$iqhandler deactivate
 	# puts "hl-stop: deactivate iqhandler"
 	# delete iqhandler
 	rename $self.iqhandler {}
 	# puts "hl-stop: delete iqhandler"
 	# reinstall a new iqhandler
-	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client [namespace tail $self] {*}$options(-args)
+	install iqhandler using sdrtcl::hl-udp-jack $iqhandler -client [namespace tail $self] {*}$options(-args)
 	# puts "hl-stop: recreate iqhandler"
 	set d(stopped) 1
     }    
@@ -288,13 +293,19 @@ snit::type sdrtcl::hl-connect {
 	return $f
     }
     method {Discover -discover} {val} {
+	puts "hl-connect configure -discover {$val}"
+	if {$val eq {discover}} {
+	    install discover using sdrtcl::hl-discover $self.discover
+	    set val [lindex [$discover discover] 0]
+	    puts "hl-discover returned $val"
+	}
 	set status [from val -status]
-	if {$status != 2} { error "-discover specifies a busy hermes lite" }
-	$self configurelist $val
+	if {$status != 2} { error "-discover specifies a hermes lite with -status $status" }
+	after 250 [mymethod configurelist $val]
     }
     method Configure {opt val} {
 	set options($opt) $val
-	catch {$self.iqhandler configure $opt $val}
+	catch {$iqhandler configure $opt $val}
 	if {$opt eq {-peer}} { after 1 [mymethod hl-begin] }
     }
     
@@ -392,10 +403,17 @@ snit::type sdrtcl::hl-connect {
 		set ep [expr {$syncep&0xFF}]
 		switch $ep {
 		    6 { # iq data
+			# if {$seq < 10} { puts "rx-recv $seq" }
 			if {[catch {
 			    incr options(-rx-calls)
-			    # puts "rx-recv iq $seq [$self.iqhandler pending] $options(-rx-calls) $options(-tx-calls) $options(-bs-calls)"
-			    $self tx-send [$self.iqhandler rxiq $data]
+			    set pending [$iqhandler pending]
+			    if {[lindex [lindex $pending 1] 2] ne {} || 
+				[lindex [lindex $pending 2] 2] ne {} ||
+				($seq % 1000) == 0} { 
+				puts "rx-recv $seq $pending"
+			    }
+			    $self tx-send [$iqhandler rxiq $data]
+			    # these might be deferred to after idle
 			    $self rx-postprocess-[expr {($usb1>>3)&0x1F}]
 			    $self rx-postprocess-[expr {($usb2>>3)&0x1f}]
 			} error]} {
@@ -403,11 +421,11 @@ snit::type sdrtcl::hl-connect {
 			    $self hl-stop
 			    error $error $einfo
 			}
-			# puts stderr "[expr {[clock microseconds]-$d(time-start)}] [$self.iqhandler pending]"
+			# puts stderr "[expr {[clock microseconds]-$d(time-start)}] [$iqhandler pending]"
 		    }
 		    4 { # bandscope samples
 			incr options(-bs-calls)
-			# puts "rx-recv bs [$self.iqhandler pending] $options(-rx-calls) $options(-tx-calls) $options(-bs-calls)"
+			# puts "rx-recv bs [$iqhandler pending] $options(-rx-calls) $options(-tx-calls) $options(-bs-calls)"
 			{*}$options(-bs) $data		    
 		    }
 		    default {
@@ -416,12 +434,11 @@ snit::type sdrtcl::hl-connect {
 		}
 	    }
 	}
-	return [$self rx-recv]
     }	
-    #
+
     # post process values received in rx packets
     # some things just get copied down to here so we can set variable traces on the options array
-    # raw ADC readings get a decayed averge computed and an approximation to the real value computed
+    # raw ADC readings get a decayed average computed and an approximation to the real value computed
 
     # this 'power' formula is a polynomial fit to quisk's calibration table
     proc power {x} { return [expr {1.132e-02 + $x * (2.025e-05 + $x * 4.298e-07)}] }
@@ -478,11 +495,8 @@ snit::type sdrtcl::hl-connect {
     ##
     ##
     method pending {} {
-	if {[info procs $self.iqhandler] ne {}} {
-	    return [$self.iqhandler pending]
-	} else {
-	    return {}
-	}
+	catch {$iqhandler pending} result
+	return $result
     }
 
     method is-busy {} { return 0 }
@@ -497,5 +511,46 @@ snit::type sdrtcl::hl-connect {
 	array set options {-rx-calls 0 -tx-calls 0 -bs-calls 0 -rx-dropped 0 -rx-outofseq 0}
     }
 }
+
+#
+# hl-connect shell that proxies to the code above running in its own thread
+#
+snit::type sdrtcl::hl-connect {
+    variable id
+    variable name ::hlt
+    variable result
+    pragma -hasinfo false
+    constructor {args} {
+	set id [thread::create -joinable -preserved]
+	thread::send $id [list lappend auto_path ~/keyer/lib]
+	thread::send $id [list package require sdrtcl::hl-connect]
+	thread::send $id [list sdrtcl::hl-connect-thread $name {*}$args]
+    }
+    destructor {
+	catch {$self send $name hl-stop}
+	while {[thread::release $id] > 0} {}
+	thread::join $id
+    }
+    method configure {args} {
+	if {$args eq {}} {
+	    return [thread::send $id [list $name configure]]
+	}
+	if {[llength $args] == 1} {
+	    return [thread::send $id [list $name configure [lindex $args 0]]]
+	}
+	return [thread::send $id [list $name configurelist $args]]
+    }
+    method configurelist {list} { return [thread::send $id [list $name configurelist $list]] }
+    method cget {opt} {           return [thread::send $id [list $name cget $opt]] }
+    method cset {opt val} {       return [thread::send $id [list $name cset $opt $val]] }
+    method info {args} {          return [thread::send $id [list $name info {*}$args]] }
+    method info-option {opt} {    return [thread::send $id [list $name info-option $opt]] }
+    method activate {} {          return [thread::send $id [list $name activate]] }
+    method deactivate {} {        return [thread::send $id [list $name deactivate]] }
+    method is-active {} {         return [thread::send $id [list $name is-active]] }
+    method is-busy {} {           return [thread::send $id [list $name is-busy]] }
+    method pending {} {           return {} }
+}
+
 
 

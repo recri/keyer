@@ -58,7 +58,9 @@ foreach {opt val} $argv {
     }
 }
 
-sdrtcl::hl-connect cx {*}[array get options]
+sdrtcl::hl-connect cx
+cx activate
+cx configure {*}[array get options]
 
 # okay, a poor mans repl at the output
 while { ! [eof stdin]} {

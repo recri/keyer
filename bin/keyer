@@ -37,21 +37,6 @@ set dirname [file dirname $script]
 #
 lappend auto_path [file join $dirname .. lib]
 
-#
-# utilities
-#
-proc read-file {file} {
-    set fp [open $file r]
-    set data [read $fp]
-    close $fp
-    return $data
-}
-proc write-file {file data} {
-    set fp [open $file w]
-    puts -nonewline $fp $data
-    close $fp
-}
-
 # initialize data variables
 set ::data(main) [dict create -server {} -favor {} -hide {} -merge {} -argvopts {} -volatile {} -packages {}]
 
@@ -113,6 +98,21 @@ proc lappend-volatile {args} { lappend-var -volatile {*}$args }
 proc set-packages {val} { set-var -packages $val }
 proc get-packages {} { return [get-var -packages] }
 proc lappend-packages {args} { lappend-var -packages {*}$args }
+
+#
+# utilities
+#
+proc read-file {file} {
+    set fp [open $file r]
+    set data [read $fp]
+    close $fp
+    return $data
+}
+proc write-file {file data} {
+    set fp [open $file w]
+    puts -nonewline $fp $data
+    close $fp
+}
 
 #
 # find the list of sdrtcl::*, sdrtk::*, and sdrtcltk::* packages
@@ -524,7 +524,9 @@ proc composite-populate-options {name factory window composite} {
     foreach opt $options {
 	# $opt is the option name used in direct configure and cget commands to $comp
 	if {[opt-is-defined -$name$opt]} { error "composite-populate-options: $name $opt ... is a duplicate" }
-	foreach {copt cname cclass cdefault cvalue} [$call configure $opt] break
+	set result [$call configure $opt]
+	# puts "$call configure $opt -> $result"
+	foreach {copt cname cclass cdefault cvalue} $result break
 	# $copt should be $opt
 	if {$opt ne $copt} { error "composite-populate-options: $call configure $opt returned a different option name $copt" }
 	# $cname is the option name in the option database (not used here)
@@ -779,6 +781,7 @@ proc default-setups {} {
     #  -connect cas>key*
     #  -connect (kyo|kbo)*>detone>out (or receiver stream?)
     #
+
     return [dict create {*}{ 
 	key { keyer -start {iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
 	key2 { keyer -start {iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
@@ -797,7 +800,7 @@ proc default-setups {} {
 	filt { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
 	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
 	1ch { keyer -merge {*-chan *-note} }
-	test { keyer key hl hlt filt spec -tree 1 } 
+	test { keyer key hl hlt spec filt -tree 1 } 
 	info-key {iambic keyer and a keyed oscillator}
 	info-key2 {second iambic keyer and keyed oscillator}
 	info-kbd {keyboard keyer and a keyed oscillator}
@@ -809,7 +812,11 @@ proc default-setups {} {
 	info-tap2 {second midi monitor for timing events}
 	info-out {audio to ascii morse decoder}
 	info-hl { hermes lite udp jack connection }
+	info-hlt { hermes lite test dashboard }
 	info-spec { spectrum and waterfall display }
+	info-spec2 { spectrum and waterfall display }
+	info-filt { overlap save bandpass filter }
+	info-test { hermes lite test app }
 	info-nod {hide esoteric keyer options}
 	info-1ch {merge midi channel and note options}
     }]
@@ -1034,7 +1041,8 @@ main $argv
 # [ ] rewire the spectrum waterfall to the tuner.
 # [ ] rewrite the tuner/radio component that switches bandpass filter and spectrum display
 #	of bandpass envelope, and the modem bank
-# 
+# [ ] can start qjackctl from the command line with a specified patch
+#     qjackctl --start -active-patchbay=[path] --server-name=[label] --preset=[label]
 #
 # old todo list
 # [-] make the -rise-fall option sort after the -rise and -fall that it joins

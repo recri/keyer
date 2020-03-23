@@ -256,8 +256,10 @@ static void *_init(void *arg) {
   // fprintf(stderr, "_init: speed %d, speed_bits %d, decimate %d, n-rx %d\n", data->opts.speed, data->speed_bits, data->decimate, data->opts.n_rx);
   _packet_init(&data->rx, data->opts.n_rx*6+2);
   _packet_init(&data->tx, 8);
-  for (int i = 0; i < 8; i += 1)
+  for (int i = 0; i < 3; i += 1) {
+    // packet_ring_buffer_write(&data->rx.rdy, _packet_new());
     packet_ring_buffer_write(&data->tx.rdy, _packet_new());
+  }
   return arg;
 }
 
@@ -822,6 +824,10 @@ static int _rxiq(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
     } else
       Tcl_DecrRefCount(udp);
   }
+
+  // if the tx buffer is near starvation, give it some more
+  while (packet_ring_buffer_can_read(&data->tx.rdy) < 9)
+    packet_ring_buffer_write(&data->tx.rdy, _packet_new());
 
   // return tx.done
   // fprintf(stderr, "_rxiq: return tx.done\n");

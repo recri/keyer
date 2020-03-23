@@ -1,3 +1,44 @@
+* The MidiKey projects
+  The whole point is to get CW keying information into the computer
+  with the lowest latency possible.  To do that you'll need a
+  MIDI-USB-Keyer dongle to hookup your straight key or paddle.
+
+  I started with a paddle interface built on a breadboard from a
+  Teensy 2.0 (from http://www.pjrc.com/teensy/), a stereo audio jack,
+  and three jumper wires.
+| Teensy B0     | -> | stereo jack dit    |
+| Teensy B1     | -> | stereo jack dah    |
+| Teensy GND    | -> | stereo jack common |
+| Iambic paddle | -> | stereo jack        |
+| Teensy USB    | -> | computer           |
+
+  [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3]].
+
+  The Teensyduino application to translate paddle transitions into
+  MIDI events is in MidiKey/MidiKey.ino.  The instructions for building
+  it are in the source code.
+
+  I've packaged the keyer dongle into an Altoids Smalls tin, shown
+  [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][in the tin]], and [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]]. The perf board is supported on 5/8"
+  standoffs   of the bottom of the tin.  The Teensy is mounted on
+  upside down header pins, short end through the perf board long end
+  through the Teensy mounting holes. The Teensy and stereo jack are
+  super glued onto the perf board.  The stereo jack lugs are soldered
+  to a set of five header pins.  The rest of the connections are
+  wire-wrapped between long legs of header pins.
+
+  The set of 11 pins at the left edge of the [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]] image is a
+  Sparkfun Blackberry trackball breakout which is unsupported in the
+  software at the moment.  You can see the trackball erupting through
+  [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][the tin]].
+  
+  In retrospect, I'd switch to using input pins closer to the stereo
+  jack end of the Teensy.
+
+  Glen Overby provoked this project on the dttsp list at yahoo back in
+  November 2011.  He has built another MIDI key interface which is
+  described [[http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html][here]]. It should work with this software if the MIDI note
+  is set properly.
 * MIDI enabled morse code keying
 ** These sketches and PCB designs enable a morse code key or paddle
    that generates MIDI NoteOn/NoteOff events.  Other parts of

@@ -1,0 +1,8 @@
+# source this from ~/keyer to set up 
+lappend auto_path lib
+package require sdrtcl::audio-tap
+package require sdrtcl::spectrum-tap
+sdrtcl::audio-tap atap
+sdrtcl::spectrum-tap stap
+atap activate
+stap activate

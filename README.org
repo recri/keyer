@@ -1,8 +1,48 @@
 * Software defined radio using Jack audio connection kit.
-  This is a kit for building software defined radios on linux which uses:
-  - Jack :: the jack audio construction kit
-  - Tcl :: the tool command language
-  - Tk :: the UI toolkit based on tcl
+  *Keyer* is a kit for building software defined radios.
+** Tools ::  It's built around a core set of tools.
+*** Jack :: the jack audio construction kit
+   Jack is used as a low-latency sample and event bus.
+   IQ and audio samples are routed as Jack audio, and
+   events are routed as MIDI.  The components of *keyer*
+   which do signal processing are implemented as Jack
+   plugins which run inside Jack's realtime thread.
+*** Tcl :: the tool command language
+   Tcl is a scripting language with simple syntax, reference
+   counted memory management, a simple threading model, and
+   lots of libraries.  It is the principal language used in
+   *keyer*, used to glue components together, relay buffers
+   from place to place, and generally smooth rough edges.
+*** Tk :: the UI toolkit based on tcl
+   The Tk toolkit was created to produce a single line
+   hello world program for X windows.  It is used to produce
+   the user interface components of *keyer*.
+*** Snit :: a pure Tcl object and widget system
+   Snit types and widgets are used to extend Tcl and Tk with
+   suitable components.  This provides a Tk widget like wrapper
+   for code so that the Tk abstraction of object with options and
+   methods can be used more generally.
+*** C/C++ :: are used as the base implementation languages
+    Tcl and Tk are written in C, Jack has a C and a C++ implementation,
+    *keyer* uses C and C++ to implement Tcl plugins, Jack plugins, and
+    DSP computations.
+** Internally developed novelties
+*** Dialbook :: a snit widget to implement a one knob radio
+   I find complicated user interfaces tedious to use but even more
+   tedious to build.  The dialbook hides the user interface behind
+   one knob, turn the knob to alter the currently displayed option,
+   push the knob to enter option selection mode, turn the knob to
+   scroll through the available options, push the knob to go back
+   to option select an option for alteration.
+*** Dspmath :: a library of efficient digital signal processing code
+   Running in a real time thread requires code with minimal overhead.
+   The modules in the dspmath library are written to compile to inlined
+   code as much as possible.  You #include a module to use it, define and
+   and init as many instances of the module data structure as are required.
+   to be used.
+*** Sdrtcl :: a framework for DSP in Jack as loadable Tcl packages
+    The basic Tcl loadable Jack processing DSP modules are built using
+    a common framework.
 * Prerequisites
   I've written these instructions as I use them on a laptop running
   Ubuntu 19.10.  Most of it is generic enough to work on other current
@@ -83,7 +123,8 @@
    #+BEGIN_EXAMPLE
    cd ~/keyer && make all-clean
    #+END_EXAMPLE
-   should remove all built files.
+   should remove all built files.  This is often necessary because I've
+   failed to identify all dependencies to keep the Makefile's readable.
 ** Installing
    I don't do any install. I usually run the scripts from ~/keyer
    manually prefixing bin/ to get the commands I want to run.
@@ -91,48 +132,67 @@
    the libraries in ~/keyer/lib/..., so if you do install to another
    directory, then you should make symbolic links to ~/keyer/bin/.
 ** MidiKey hardware interface
-  The whole point is to get CW keying information into the computer
-  with the lowest latency possible.  To do that you'll need a
-  MIDI-USB-Keyer dongle to hookup your straight key or paddle.
-
-  I started with a paddle interface built on a breadboard from a
-  Teensy 2.0 (from http://www.pjrc.com/teensy/), a stereo audio jack,
-  and three jumper wires.
-| Teensy B0     | -> | stereo jack dit    |
-| Teensy B1     | -> | stereo jack dah    |
-| Teensy GND    | -> | stereo jack common |
-| Iambic paddle | -> | stereo jack        |
-| Teensy USB    | -> | computer           |
-
-  [[https://github.com/recri/keyer/blob/master/images/keyer-1.jpg][Blurry image1]], [[https://github.com/recri/keyer/blob/master/images/keyer-2.jpg][Blurry image2]], [[https://github.com/recri/keyer/blob/master/images/keyer-3.jpg][Blurry image3]].
-
-  The Teensyduino application to translate paddle transitions into
-  MIDI events is in MidiKey/MidiKey.ino.  The instructions for building
-  it are in the source code.
-
-  I've packaged the keyer dongle into an Altoids Smalls tin, shown
-  [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][in the tin]], and [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]]. The perf board is supported on 5/8"
-  standoffs   of the bottom of the tin.  The Teensy is mounted on
-  upside down header pins, short end through the perf board long end
-  through the Teensy mounting holes. The Teensy and stereo jack are
-  super glued onto the perf board.  The stereo jack lugs are soldered
-  to a set of five header pins.  The rest of the connections are
-  wire-wrapped between long legs of header pins.
-
-  The set of 11 pins at the left edge of the [[https://github.com/recri/keyer/blob/master/images/keyer-7.jpg][exposed]] image is a
-  Sparkfun Blackberry trackball breakout which is unsupported in the
-  software at the moment.  You can see the trackball erupting through
-  [[https://github.com/recri/keyer/blob/master/images/keyer-8.jpg][the tin]].
-  
-  In retrospect, I'd switch to using input pins closer to the stereo
-  jack end of the Teensy.
-
-  Glen Overby provoked this project on the dttsp list at yahoo back in
-  November 2011.  He has built another MIDI key interface which is
-  described [[http://reality.sgiweb.org/overby/ham/Equipment/Key-Adapter/index.html][here]]. It should work with this software if the MIDI note
-  is set properly.
+   The MidiKey software for the Teensy 2, LC, 3.x, and 4.x processors
+   makes your straight key or paddle into a MIDI device, which allows
+   the keying events to be processed with the lowest latency possible.
 * Usage
-  The usages are in flux.
+  Using *keyer* requires using Jack, so the first step is to get Jack started.
+  There are many ways to get Jack started, and doing it from the command line
+  is probably the right way to go in the long run, but for now I suggest the
+  application qjackctl.
+** Starting jack, first time
+   Launch qjackctl,
+   open the *Setup...* dialog,
+   navigate to the Settings panel,
+   default should be the Preset Name,
+   navigate to the Parameters sub-panel,
+   select alsa as the Driver,
+   check the Realtime box,
+   choose the (default) audio Interface,
+   choose 48000 as the Sample Rate,
+   and select the raw MIDI Driver.
+   Save the Preset, Cancel the dialog, and press the Start button.
+   If the status display shows Started and 48000 Hz, then you're done.
+*** Cannot get realtime
+    Just go back to the *Setup...* dialog and uncheck Realtime.  You may be able
+    to fix this by fiddling with /etc/security/limits.d/audio.conf and by adding
+    yourself to the audio group in /etc/groups.
+*** Other messages ending with failure
+    Go back to the *Setup...* dialog and try some different audio Interfaces.
+** Starting jack, with a patchpanel
+   Qjackctl has two panels that deal with the connections between jack ports and clients.
+   The *Connect...* panel shows the current clients and connections in Jack.  These
+   are segregated into separate panels for Audio, MIDI, and Alsa, each listing the
+   clients with output ports on the left and with input ports on the right.
+   The *Patchbay...* panel shows lists of potential clients and connections in Jack.
+   These are all combined in a single panel.  If a patchbay is activated, then if the
+   clients named in the patchbay appear in Jack, then the specified connections between
+   the clients will be made.
+*** Use the *Patchbay...* to specify connections that you always want to work.    
+    If you click the *Load...* button and navigate to ~/keyer/patch you'll find a collection
+    of patchbay presets that I have saved. Load the one named key+kbd+out.xml and activate it.
+** Starting jack, subsequent times
+   Once you've set up a qjackctl default preset that works, you can start jack by:
+#+BEGIN_EXAMPLE
+$ qjackctl --start &
+#+END_EXAMPLE
+   If you've saved a named qjackctl preset named [label] that works, you can start jack with:
+#+BEGIN_EXAMPLE
+$ qjackctl --start --preset=[label] &
+#+END_EXAMPLE
+   Once you've found a patchpanel preset that works and saved it to [path], you can start jack
+   with that patchpanel active with:
+#+BEGIN_EXAMPLE
+$ qjackctl --start --active-patchbay=[path] &
+#+END_EXAMPLE
+** Starting a basic *keyer* app
+  Assuming you've cloned https://github.com/recri/keyer into ~/keyer,
+  installed the prerequisites,
+  run make to build the keyer binaries,
+  and started Jack with the key+kbd+out patchpanel activated), then you can run:
+#+BEGIN_EXAMPLE
+$ ~/keyer/bin/keyer cas key kbd out -tree 1
+#+END_EXAMPLE
 ** MidiKey - Teesyduino application
    The necessary steps should be listed in the comment at the head of
    MidiKey/MidiKey.ino.
@@ -166,6 +226,11 @@
   described as an algebra on infinite streams of samples.  It also
   provided an example of how not to make adjustments to DSP components
   on the fly.
+
+  More recently I've been learning a lot by reading
+  [[https://james.ahlstrom.name/quisk/][Quisk]] by James Ahlstrom, N2ADR,
+  [[https://github.com/g0orx/wdsp][wdsp]] by Warren Pratt, NR0V,
+  and [[https://github.com/g0orx/linhpsdr][linhpsdr]] by John Melton, G0ORX/N6LYT.
 * Licensing
   Copyright (C) 2011-2014 by Roger E Critchlow Jr, Santa Fe, NM, USA.
   Copyright (C) 2018 by Roger E Critchlow Jr, Charlestown, MA, USA.

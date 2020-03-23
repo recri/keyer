@@ -135,12 +135,13 @@ snit::widget sdrtk::hl-test {
 		      {code-version: [hl cget -code-version]}
 		      {serial: [hl cget -serial]}
 		  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
-	grid [hlt::refresh $win.stats -period 250 \
+	grid [hlt::refresh $win.stats -period 100 \
 		  -subst [join {
 		      {rx-calls: [format %9d [hl cget -rx-calls]]}
 		      {tx-calls: [format %9d [hl cget -tx-calls]]}
 		      {bs-calls: [format %9d [hl cget -bs-calls]]}
 		  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
+	grid [hlt::refresh $win.pending -period 100 -subst {pending [format %s [hl pending]]}] -row [incr row] -column 0 -columnspan 10 -sticky ew
 	grid [hlt::refresh $win.mon -period 100 \
 		  -subst [join {
 		      {Temp: [format %4.1f [hl cget -temperature]]}
