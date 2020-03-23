@@ -27,7 +27,7 @@
 # would like to get focus from other windows, but cannot take
 # the shift keys away from the text entry windows.
 #
-##
+#
 #
 # rewrite this as a simple wrapper around sdrtcl::midi-insert
 # which simply grabs control, alt, and/or shift events and
@@ -36,35 +36,38 @@
 # for the entire app.
 # let it put the shift key specification into the dial book options
 #
+#
 package provide sdrtcl::midi-insert-key 0.0.1
 
+# this package is exceptional, all other Tk enabled packages create windows,
+# this one doesn't, it places bindings on other windows
 package require Tk
 package require snit
 package require sdrtcl::midi-insert
 
 snit::type sdrtcl::midi-insert-key {
-    option -key-dit -default none -configuremethod ConfigureKey
-    option -key-dah -default none -configuremethod ConfigureKey
-    option -key-key -default none -configuremethod ConfigureKey
-    option -key-ptt -default none -configuremethod ConfigureKey
+    option -dit -default none -configuremethod ConfigureKey
+    option -dah -default none -configuremethod ConfigureKey
+    option -key -default none -configuremethod ConfigureKey
+    option -ptt -default none -configuremethod ConfigureKey
     option -key-4 -default none -configuremethod ConfigureKey
     option -key-5 -default none -configuremethod ConfigureKey
-    option -key-window -default . -configuremethod Configure
+    option -window -default . -configuremethod Configure
 
     component insert
     delegate option * to insert
     delegate method * to insert
     variable optinfo -array {
-	-key-dit {}
-	-key-dah {}
-	-key-key {}
-	-key-ptt {}
+	-dit {}
+	-dah {}
+	-key {}
+	-ptt {}
 	-key-4 {}
 	-key-5 {}
-	-key-window {}
+	-window {}
     }
 
-    method exposed-options {} { return {-chan -note -key-dit -key-dah -key-key -key-ptt -key-4 -key-5 -key-window} }
+    method exposed-options {} { return {-chan -note -dit -dah -key -ptt -key-4 -key-5 -window} }
     method is-busy {} { return 0 }
     method ConfigureKey {opt val} { $self rebind-key $opt $val }
 
@@ -73,44 +76,44 @@ snit::type sdrtcl::midi-insert-key {
 	return [$insert info option $opt]
     }
     
-    method {Configure -key-window} {val} {
+    method {Configure -window} {val} {
 	# nothing to do
-	if {$val eq $options(-key-window)} return
+	if {$val eq $options(-window)} return
 	# remove bindings
 	if {$val eq {}} {
 	    $self unbind-all
-	    set options(-key-window) $val
+	    set options(-window) $val
 	    return
 	}
 	# new -key-window is not {} and not equal to current window
 	$self unbind-all
-	set options(-key-window) $val
+	set options(-window) $val
 	$self bind-all
     }
 
     method bind-all {} { $self act-on-all bind-key }
     method unbind-all {} { $self act-on-all unbind-key }
     method act-on-all {action} {
-	foreach key {-key-dit -key-dah -key-key -key-ptt -key-4 -key-5} {
+	foreach key {-dit -dah -key -ptt -key-4 -key-5} {
 	    $self $action $options($key) [string range $key 1 end]
 	}
     }
 
     method bind-key {tag element} {
 	if {$tag ne {none}} {
-	    bind $options(-key-window) <KeyPress-$tag> [mymethod insert-key [$self insert-key-message $element down]]
-	    bind $options(-key-window) <KeyRelease-$tag> [mymethod insert-key [$self insert-key-message $element up]]
+	    bind $options(-window) <KeyPress-$tag> [mymethod insert-key [$self insert-key-message $element down]]
+	    bind $options(-window) <KeyRelease-$tag> [mymethod insert-key [$self insert-key-message $element up]]
 	}
     }
     
     method unbind-key {tag element} {
 	if {$tag ne {none}} {
-	    bind $options(-key-window) <KeyPress-$tag> {}
-	    bind $options(-key-window) <KeyRelease-$tag> {}
+	    bind $options(-window) <KeyPress-$tag> {}
+	    bind $options(-window) <KeyRelease-$tag> {}
 	}
     }
 
-    variable map -array {key-dit 0 key-dah 1 key-key 2 key-ptt 3 key-4 4 key-5 5 up 0x80 down 0x90 velocity-up 0 velocity-down 1}
+    variable map -array {dit 0 dah 1 key 2 ptt 3 key-4 4 key-5 5 up 0x80 down 0x90 velocity-up 0 velocity-down 1}
 
     method insert-key {message} { $insert puts $message }
     

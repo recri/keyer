@@ -233,7 +233,7 @@ proc composite-load {composite} {
     }
     # we found one candidate
     set factory [lindex $candidates 0]
-    # load the implementation
+    # require the implementation, only loads once
     package require $factory
     # instantiate component
     # and activate if necessary
