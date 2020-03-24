@@ -256,7 +256,7 @@ proc composite-load {composite} {
 	    pack [$factory $window] -side top -expand true -fill both
 	}
 	sdrtcltk::* {
-	    toplevel .$name
+	    toplevel .$name -class "keyer/$name"
 	    wm title .$name "keyer/$name"
 	    set window .$name.$name
 	    pack [$factory $window {*}$args] -side top -expand true -fill both
