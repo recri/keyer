@@ -249,7 +249,7 @@ proc composite-load {composite} {
 	    $name activate
 	}
 	sdrtk::* { 
-	    toplevel .$name
+	    toplevel .$name -class "keyer/$name"
 	    wm title .$name "keyer/$name"
 	    set window .$name.$name
 	    # no  {*}$args because it's only sdrtcl -server
