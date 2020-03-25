@@ -89,8 +89,9 @@ proc get-iambic-keyers {} {
 # option manager
 #
 package require snit
+namespace eval ::keyer {}
 
-snit::type sdrtcl::keyer-options {
+snit::type keyer::options {
     variable options -array {}
 
     variable data -array {
@@ -141,6 +142,9 @@ snit::type sdrtcl::keyer-options {
 	return [list [dict get $d name] [dict get $d opt]]
     }
 
+    method add-merge {args} { lappend data(merge) {*}$args }
+    method add-hide {args} { lappend data(hide) {*}$args }
+    method add-volatile {args} { lappend data(volatile) {*}$args }
 
     method describe {dict otype args} { 
 	set opt [dict get $dict text]
@@ -613,7 +617,7 @@ snit::type sdrtcl::keyer-options {
 }
 
 # initialize 
-sdrtcl::keyer-options ::koptions -dirname $::dirname
+keyer::options ::koptions
 
 # initialize data variables
 set ::data(main) [dict create -server {} -favor {} -hide {} -merge {} -argvopts {} -volatile {}]
@@ -773,6 +777,12 @@ proc process-volatile {} {
 #
 package require getstring
 namespace import getstring::*
+
+snit::type keyer::setups {
+}
+
+snit::type keyer::main {
+}
 
 proc get-setups {} { return [get-var -setups] }
 proc set-setups {val} { set-var -setups $val }
@@ -1111,6 +1121,8 @@ main $argv
 # [ ] fix the volatile polling
 # [ ] wrap the setups in a snit::type
 # [ ] wrap the loose options in a snit::type
+# [ ] implement option -merge
+# [ ] implement option -chain
 # [x] create treeview to organize options, etc.
 # [x] all-options subtree with all options present
 # [x] merge all options and details into one dict.
