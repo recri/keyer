@@ -160,6 +160,7 @@ proc opt-is-described {opt} { return [expr {[opt-is-defined $opt] && [opt-get $o
 proc opt-get {opt key} { return [dict get $::data(all-options) $opt $key] }
 proc opt-set {opt key val} { dict set ::data(all-options) $opt $key $val }
 proc opt-get-dict {opt} { return [dict get $::data(all-options) $opt] }
+proc opt-set-dict {opt dict} { dict set ::data(all-options) $opt $dict }
 
 proc opt-is-ronly {opt} { return [opt-get $opt ronly] }
 proc opt-is-conly {opt} { return [opt-get $opt conly] }
@@ -578,7 +579,8 @@ proc update-window-title {} {
 
 #
 # dial setting, most options are delegated to the dialbook
-# one dial for setting everything.
+# one dial for setting everything.  So this is where the
+# dialbook delegates everything to be set.
 #
 # there's a trickiness, the sdrtcl widgets that implement jack
 # dsp can be too busy to process options, so we may need to
@@ -586,10 +588,30 @@ proc update-window-title {} {
 # to avoiding expensive computations in the inner dsp loop, and
 # getting.
 #
+# then also we should be debouncing a lot of option setting to
+# avoid overwhelming thins.
+#
 # should wrap this into a snit type, ideally responisble for
 # constructing the dialbook pages and managing the options
 # list and aliases and so on.
+# 
+# opt-is-defined referenced elsewhere
+# opt-is-ronly only referenced here
+# opt-get-value only referenced here
+# opt-set-value only referenced here
+# set ::value(...) referenced elsewhere
+# opt-component-opts only referenced here
 #
+# okay, this should be the snit type for the top level component
+# and all the composite named options are actually options for
+# this component which it resolves into calls to subname suboption
+# it also handles:
+# 1) backpressure in the form of subname is-busy
+# 2) value debouncing
+# 3) option merging and chaining
+#
+# it also handles the options dictionary, options definitions, and options descriptions
+# 
 set handler {}
 
 proc dial-set {opt val} {
