@@ -1108,6 +1108,9 @@ proc main {argv} {
 main $argv
 
 # current todo
+# [ ] fix the volatile polling
+# [ ] wrap the setups in a snit::type
+# [ ] wrap the loose options in a snit::type
 # [x] create treeview to organize options, etc.
 # [x] all-options subtree with all options present
 # [x] merge all options and details into one dict.
