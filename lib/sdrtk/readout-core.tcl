@@ -199,7 +199,11 @@ snit::widget sdrtk::readout-core {
 	set options(-phi-max) [$self integer-to-phi $options(-integer-max)]
     }
  
-    method TraceWriteVariable {args} { catch { $self configure -value [set $options(-variable)] } }
+    method TraceWriteVariable {args} { 
+	if { ! [catch {set $options(-variable)} value]} {
+	    $self configure -value $value
+	}
+    }
     method TraceWriteWidgetValue {args} { catch { $self configure -value $options(-widget-value) } }
 
     method menu-entry {w text} { return {} }

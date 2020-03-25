@@ -37,8 +37,586 @@ set dirname [file dirname $script]
 #
 lappend auto_path [file join $dirname .. lib]
 
+package require snit
+namespace eval ::sdrtk {}
+package require sdrtk::dialbook
+
+#
+# utilities
+#
+proc read-file {file} {
+    set fp [open $file r]
+    set data [read $fp]
+    close $fp
+    return $data
+}
+proc write-file {file data} {
+    set fp [open $file w]
+    puts -nonewline $fp $data
+    close $fp
+}
+
+#
+# value enumerations for a few options
+#
+
+# these are filter/fft windowing functions
+package require sdrtcl::window
+proc get-window-types {} {
+    catch { sdrtcl::window foo 512 } error
+    regexp {^unknown window type, should be one of (.*)$} $error all error
+    regsub -all {, (or )?} $error { } error
+    set error [lsort $error]
+    set i [lsearch $error {none}]
+    if {$i >= 0} {
+	set error [concat none [lreplace $error $i $i]]
+    }
+    return $error
+}
+
+# these are morse code dictionaries
+package require morse::dicts
+proc get-morse-dicts {} { 
+    return [concat {builtin} [morse-dicts]]
+}
+
+# these are the iambic keyers
+proc get-iambic-keyers {} { 
+    return [lmap x [lsearch -glob -all -inline [::koptions packages] *keyer-iambic-*] {lindex [split $x -] end}]
+}
+
+#
+# option manager
+#
+package require snit
+
+snit::type sdrtcl::keyer-options {
+    variable options -array {}
+
+    variable data -array {
+	opts {}
+	volatile {}
+	handler {}
+	busy {}
+	comps {}
+	pkgs {}
+    }
+
+    constructor {args} {
+	# $self configurelist $args
+
+	set data(opts) [dict create]
+	set data(busy) [dict create]
+	set data(comps) [dict create]
+	set data(pkgs) [dict create]
+
+	$self find-packages
+    }
+
+    # the part dealing with options
+
+    method get-opts {} { return [dict keys $data(opts)] }
+
+    method is-option {opt} { return [dict exists $data(opts) $opt] }
+    method exists {opt key} { return [dict exists $data(opts) $opt $key] }
+    method get {opt key} { return [dict get $data(opts) $opt $key] }
+    method set {opt key val} { dict set data(opts) $opt $key $val }
+
+    method is-described {opt} { return [$self exists $opt described] }
+    method is-processed {opt} { return [$self exists $opt processed] }
+    method is-ronly {opt} { return [$self get $opt ronly] }
+    method is-conly {opt} { return [$self get $opt conly] }
+    method is-favor {opt} { return [$self get $opt favor] }
+    method is-hide {opt} { return [$self get $opt hide] }
+    method is-volatile {opt} { return [$self get $opt volatile] }
+
+    method get-default {opt} { return [$self get $opt cdefault] }
+    method get-value {opt} { return [$self get $opt cvalue] }
+    method set-value {opt val} { return [$self set $opt cvalue $val] }
+
+    method component-opts {opt} {
+	set d [dict get $data(opts) $opt]
+	set w [dict get $d window]
+	if {$w ne {}} { return [list $w [dict get $d opt]] }
+	return [list [dict get $d name] [dict get $d opt]]
+    }
+
+
+    method describe {dict otype args} { 
+	set opt [dict get $dict text]
+	set options($opt) [dict get $dict cvalue]
+	puts "keyer-options describe options($opt) is $options($opt)"
+	dict set dict type $otype
+	dict set dict described 1
+	dict set dict readout {}
+	foreach {key val} $args {
+	    if {[string index $key 0] eq {-}} {
+		dict lappend dict readout $key $val
+	    } else {
+		dict set dict $key $val
+	    }
+	}
+	dict set data(opts) $opt $dict
+    }
+
+    #
+    # dial setting, most options are delegated to the dialbook
+    # one dial for setting everything.  So this is where the
+    # dialbook delegates everything to be set.
+    #
+    # there's a trickiness, the sdrtcl widgets that implement jack
+    # dsp can be too busy to process options, so we may need to
+    # wait until the previous setting has completed.  This is all
+    # to avoiding expensive computations in the inner dsp loop, and
+    # getting.
+    #
+    # then also we should be debouncing a lot of option setting to
+    # avoid overwhelming thins.
+    #
+    # should wrap this into a snit type, ideally responisble for
+    # constructing the dialbook pages and managing the options
+    # list and aliases and so on.
+    # 
+    # okay, this should be the snit type for the top level component
+    # and all the composite named options are actually options for
+    # this component which it resolves into calls to subname suboption
+    # it also handles:
+    # 1) backpressure in the form of subname is-busy
+    # 2) value debouncing
+    # 3) option merging and chaining
+    #
+    # it also handles the options dictionary, options definitions, and options descriptions
+    # 
+    method configure {args} {
+	set n [llength $args]
+	switch $n {
+	    0 {
+		# full configure dump
+		return [lmap o [$self get-opts] {$self configure $o}]
+	    }
+	    1 {
+		# one option configure dump
+		set o [lindex $args 0]
+		return [list $o [$self get $o cname] [$self get $o cclass] [$self get $o dvalue] $options($o)]
+	    }
+	}
+	if {($n&1) != 0} {
+	    error "configure requires an even number of arguments"
+	}
+	foreach {opt val} $args {	
+	    if { ! [$self is-option $opt]} {
+		error "$opt is not defined in keyer-options::configure"
+	    }
+	    if {[$self is-ronly $opt]} continue
+	    if {[$self get-value $opt] eq $val} continue
+	    $self set-value $opt $val
+	    catch {set options($opt) $val} result
+	    foreach {comp opt2} [$self component-opts $opt] {
+		# puts "keyer-options::configure $comp $opt2"
+		dict set data(busy) $comp $opt2 $val
+		# puts "keyer-options::configure try: $comp is-busy"
+		if { ! [$comp is-busy]} {
+		    set opts [dict get $data(busy) $comp]
+		    if {[catch {
+			# puts "keyer-options::configure try: $comp configure $opts"
+			$comp configure {*}$opts
+			dict unset data(busy) $comp
+		    } error]} {
+			puts "configure {$comp configure $opts} threw {$error}"
+		    }
+		} elseif {$data(handler) eq {}} {
+		    # puts "$comp is-busy"
+		    set data(handler) [after 100 [mymethod configure-timeout]]
+		}
+	    }
+	}
+    }
+	
+    method configure-timeout {} {
+	dict for {comp opts} $data(busy) {
+	    if { ! [$comp is-busy]} {
+		if {[catch {
+		    $comp configure {*}$opts
+		    dict unset data(busy) $comp
+		} error]} {
+		    puts "keyer-options::configure-timeout {$comp configure $opts} threw {$error}"
+		}
+	    } else {
+		# puts "$comp is-busy"
+	    }
+	}
+	if {[dict size $data(busy)] > 0} {
+	    set data(handler) [after 100 [mymethod configure-timeout]]
+	} else {
+	    set data(handler) {}
+	}
+    }
+    
+    method cget {opt} {
+	if {[$self is-option $opt]} {
+	    if {[$self is-volatile $opt]} {
+		foreach {name opt2} [$self component-opts $opt] break
+		set options($opt) [$name cget $opt2]
+	    }
+	    return $options($opt)
+	}
+	error "keyer-options::cget $opt is not defined"
+    }
+    
+    method cvar {opt} {
+	if {[$self is-option $opt]} { return [myvar options($opt)] }
+	error "keyer-options::cvar $opt is not defined"
+    }
+
+    method populate-option {name opt option} {
+	# look for further guidance
+	
+	switch -glob -- [list [dict get $option factory] $opt] {
+	    {* -server} - 
+	    {* -client} { $self describe $option text ronly 1 hide 1 conly 1 -graticule 1 }
+	    {* -verbose} { $self describe $option ivalue ronly 1 hide 1 conly 1 -min 0 -max 10 -graticule 12 -steps-per-div 1 }
+	    {* -chan} { $self describe $option ivalue -min 1 -max 16 -graticule 12 -steps-per-div 1 }
+	    {* -note} { $self describe $option ivalue -min 0 -max 127 -graticule 12 -steps-per-div 1 }
+	    {* -wpm} { $self describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 -graticule 20 -steps-per-div 10 }
+	    {* -swap} - 
+	    {* -mdit} - 
+	    {* -mdah} - 
+	    {* -mide} - 
+	    {* -alsp} - 
+	    {* -awsp} { $self describe $option bool }
+	    {* -mode} { $self describe $option enum -values {A B} }
+	    {* -word} { $self describe $option enum -values {50 60} -units dits }
+	    {*keyer* -dit} - 
+	    {*keyer* -dah} - 
+	    {* -ies} - 
+	    {* -ils} - 
+	    {* -iws} { 
+		set cdefault [dict get $option cdefault]
+		set min [expr {$cdefault-0.5}]
+		set max [expr {$cdefault+0.5}]
+		$self describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
+		#puts "$self describe $name $opt -value $cvalue -min $min -max $max -step 0.1 -units dits"
+	    }
+	    {* -weight} - 
+	    {* -ratio} { $self describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
+	    {* -comp} { $self describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {* -freq} { $self describe $option ivalue -min -1000 -max 1000 -units Hz -graticule 20 -steps-per-div 100}
+	    {* -rise} - 
+	    {* -fall} - 
+	    {* -ramp} { $self describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {* -window} { $self describe $option enum -values [lrange [get-window-types] 1 end] }
+	    {* -window2} { $self describe $option enum -values [get-window-types] }
+	    {* -gain} { $self describe $option value -format %.1f -min -50 -max 3 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
+	    {* -delay} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {* -hang} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
+	    {*spectrum* -period} {  $self describe $option ivalue -min 1 -max 500 -units ms -graticule 20 -steps-per-div 25 }
+	    {*debounce* -period} { $self describe $option value -format %.3f -min 0.1 -max 50 -step 0.1 -units ms -graticule 20 -steps-per-div 25 }
+	    {*debounce* -steps} { $self describe $option ivalue -min 1 -max 32 -units steps -graticule 20 -steps-per-div 1}
+	    {*insert* -dit} - 
+	    {*insert* -dah} - 
+	    {* -key} - 
+	    {*insert* -ptt} - 
+	    {* -key-4} - 
+	    {* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
+	    {*insert* -window} { $self describe $option enum -values {none . .dial} }
+	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
+	    {* -bandwidth} { $self describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
+	    {* -on} - 
+	    {* -off} { $self describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 -graticule 20 -steps-per-div 5}
+	    {* -timeout} { $self describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
+	    {* -estimate} { $self describe $option ivalue -min 10 -max 1000 -units frames }
+	    {* -discover} { $self describe $option text hide 1 }
+	    {* -n-rx} -
+	    {* -speed} -
+	    {* -peer} -
+	    {* -gateware-version} -
+	    {* -code-version} -
+	    {* -board-id} -
+	    {* -mac-addr} -
+	    {* -mcp4662} -
+	    {* -fixed-ip} - 
+	    {* -fixed-mac} -
+	    {* -n-hw-rx} -
+	    {* -wb-fmt} -
+	    {* -build-id} -
+	    {* -gateware-minor} -
+	    {* -serial} { $self describe $option text }
+	    {* -bandscope} { $self describe $option bool }
+	    {* -hw-dash} -
+	    {* -raw-hw-dash} -
+	    {* -hw-dot} -
+	    {* -raw-hw-dot} -
+	    {* -hw-ptt} - 
+	    {* -raw-hw-ptt} -
+	    {* -overload} - 
+	    {* -raw-overload} -
+	    {* -recovery} - 
+	    {* -raw-recovery} -
+	    {* -tx-iq-fifo} - 
+	    {* -raw-tx-iq-fifo} -
+	    {* -temperature} - 
+	    {* -raw-temperature} - 
+	    {* -avg-temperature} - 
+	    {* -fwd-power} - 
+	    {* -raw-fwd-power} -
+	    {* -avg-fwd-power} -
+	    {* -rev-power} - 
+	    {* -raw-rev-power} -
+	    {* -avg-rev-power} -
+	    {* -pa-current} -
+	    {* -raw-pa-current} -
+	    {* -avg-pa-current} { 
+		$self describe $option text ronly 1 volatile 1
+	    }
+	    {* -rx-calls} -
+	    {* -tx-calls} -
+	    {* -bs-calls} -
+	    {* -rx-dropped} -
+	    {* -rx-outofseq} {
+		$self describe $option text ronly 1 volatile 1
+	    }
+	    {* -mox} { $self describe $option bool }
+	    {* -filters} { $self describe $option ivalue -min 0 -max 255 }
+	    {* -lna-db} { $self describe $option ivalue -min -12 -max 48 -units dB }
+	    {* -f-tx} - 
+	    {* -f-rx*} { 
+		# Transmitter NCO frequency
+		# Receiver NCO frequency.
+		set hide 0
+		if {[regexp {^-f-rx(\d+)$} $opt all irx]} { if {$irx > 6} { set hide 1 } }
+		$self describe $option freq hide $hide -units Hz -format %.0f -min 1 -max 29999999 -step 1 -graticule 20 -steps-per-div 500
+		
+	    }
+	    {* -level} { $self describe $option freq -format %.0f -min 0 -max 255 -step 1 }
+	    {* -not-sync} -
+	    {* -duplex} -
+	    {* -pa} -
+	    {* -low-pwr} -
+	    {* -pure-signal} -
+	    {* -bias-adjust} -
+	    {* -vna} -
+	    {* -vna-started} -
+	    {* -vna-fixed-rx-gain} -
+	    {* -alex-manual-mode} - 
+	    {* -tune-request} -
+	    {* -hermes-lite-lna} -
+	    {* -cwx} -
+	    {* -reset-hl2-on-disconnect} { $self describe $option bool }
+	    {* -vna-count} {
+	    }
+	    {* -i2c-rx-filter} -
+	    {* -i2c-tx-filter} { $self describe $option ivalue -min 0 -max 255 }
+	    {* -cw-hang-time} { $self describe $option ivalue dvalue 10 -min 0 -max 1023 -units ms }
+	    {* -tx-buffer-latency} { $self describe $option ivalue dvalue 10 -min 0 -max 31 -units ms }
+	    {* -ptt-hang-time} { $self describe $option ivalue dvalue 4 -min 0 -max 31 -units ms }
+	    {* -predistortion-subindex} { $self describe $option ivalue -min 0 -max 255 }
+	    {* -predistortion} { $self describe $option ivalue -min 0 -max 15 }
+	    {* -sentcolor} -
+	    {* -unsentcolor} -
+	    {* -skippedcolor} -
+	    {* -background} -
+	    {* -foreground} {
+		# ignore these and -font for the moment, the foreground widget doesn't wrap things yet
+		#$self describe $option enum -values {white black gray lightgrey red orange yellow green blue indigo violet}
+	    }
+	    {* -font} {
+		#$self describe $option enum -values {TkFixedFont {helvetica 10} {helvetica 12} {helvetica 14}}
+	    }
+	    {* -size} { $self describe $option enum -values {8 16 32 64 128 256 512 1024 2048 4096 8192 16384} }
+	    {* -planbits} { $self describe $option ivalue -min 0 -max 127}
+	    {* -direction} {$self describe $option enum -values {-1 1} }
+	    {* -polyphase} { $self describe $option ivalue -min 1 -max 32 }
+	    {* -result} { $self describe $option enum -values {coeff mag2 mag dB short char}}
+	    {* -min-f} {}
+	    {* -max-f} {}
+	    {* -center-freq} {}
+	    {* -tuned-freq} {}
+	    {* -sample-rate} { $self describe $option enum -values {48000} }
+	    {*spectrum* -min} -
+	    {*spectrum* -max} { $self describe $option ivalue -min -200 -max 30 -step 10 -units dB }
+	    {* -zoom} { $self describe $option enum -values {0.5 1 2 4 8 16 32 64} }
+	    {* -pan} { $self describe $option ivalue -min 200000 -max 200000 } 
+	    {* -command} {}
+	    {* -pal} { $self describe $option enum -values {0 1 2 3 4 5} }
+	    {* -atten} {}
+	    {* -automatic} {}
+	    {* -smooth} { $self describe $option bool }
+	    {* -multi} { $self describe $option ivalue -min 1 -max 64 }
+	    {* -filter-low} -
+	    {* -filter-high} { $self describe $option value -min -8000 -max 8000 }
+	    {* -band-low} -
+	    {* -band-high} { $self describe $option value -min 100 -max 29999999 }
+	    {* -rx-frames-per-call} { $self describe $option text ronly 1 volatile 1 }
+	    {* -tx-frames-per-call} - 
+	    {* -bs-frames-per-call} { $self describe $option text ronly 1 }
+	    {* -length} { $self describe $option enum -values {64 128 256 512 1024} }
+	    {* -low} - 
+	    {* -high} { $self describe $option value -min -8000 -max 8000 }
+	    {*radio* -mode} { $self describe $option enum -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL} }
+	    {*radio* -mute} { $self describe $option bool }
+	    {*radio* -spot} { $self describe $option bool }
+	    {*agc* -mode} { $self describe $option enum -values {off long slow medium fast} }
+	    {*agc* -target} { $self describe $option value info {target level, linear gain} -min 0.1 -max 10 }
+	    {*agc* -attack} { $self describe $option ivalue info {attack time} -min 1 -max 4 -units ms }
+	    {*agc* -decay} { $self describe $option ivalue info {decay time} -min 100 -max 2000 -units ms }
+	    {*agc* -slope} { $self describe $option value info {slope, as in y = slope * x + intercept} -min 0.5 -max 2 }
+	    {*agc* -hang} { $self describe $option ivalue info {hang time} -min 50 -max 1000 -units ms }
+	    {*agc* -fasthang} { $self describe $option ivalue info {fast hang time} -min 50 -max 200 -units ms }
+	    {*agc* -max} { $self describe $option value info {max level} -min 1 -max 1e5 }
+	    {*agc* -min} { $self describe $option value info {min level} -min 1e-5 -max 1 }
+	    {*agc* -threshold} { $self describe $option value info {threshold level} -min 0.25 -max 4 }
+	    {*iq* -swap} { $self describe $option bool }
+	    {*iq* -delay} { $self describe $option enum info {delay I by one sample, no delay, or delay Q by one sample} -values {-1 0 1} }
+	    {*iq-correct* -rate} { $self describe $option value info {the learning rate for the adaptive filter} -min -1e6 -max 1e6 }
+	    {*leveler* -mode} { $self describe $option enum -values {off leveler} }
+	    {*iambic* -keyer} { $self describe $option enum -values [get-iambic-keyers] }
+	    {*meter* -reduce} { $self describe $option enum -values {abs-real abs-imag max-abs mag2} }
+	    {*meter* -style} { $self describe $option enum -values {s-meter} }
+	    default { puts "populate $name $opt: no clues" }
+	    other {
+		snit::enum	sdrtype::spec-size	-values {width/8 width/4 width/2 width width*2 width*4 width*8}
+	    }
+	}
+    }
+
+    #
+    # the part dealing with components
+    #
+    method is-component {name} { return [dict exists $data(comps) $name] }
+
+    method find-packages {} {
+	# get the directory name of the script
+	set dirname [file dirname [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]]
+
+	# find the list of sdrtcl::*, sdrtk::*, and sdrtcltk::* packages
+	foreach lib {sdrtcl sdrtk sdrtcltk} {
+	    set pkgIndex [file join $dirname .. lib $lib pkgIndex.tcl]
+	    set pfp [open $pkgIndex r]
+	    foreach line [split [string trim [read-file $pkgIndex]] \n] {
+		if {[regexp "${lib}::" $line]} {
+		    dict set data(pkgs) [lindex $line 2] {}
+		}
+	    }
+	}
+    }
+
+    method packages {} { return [dict keys $data(pkgs)] }
+    
+    method parse {composite} {
+	# first part identifies the sdrtcl component
+	# second part is the jack client name
+	if {[llength [split $composite @]] == 2} {
+	    return [concat $composite [split $composite @]]
+	} else {
+	    return [list $composite $composite $composite]
+	}
+    }
+    
+    method find-factory {composite factory} {
+	# search through the sdrtcl/sdrtk/sdrtcltk component list
+	# for components which match $factory
+	# exact match to tail of name first, then with glob on tail
+	set candidates [lsearch -all -inline [$self packages] *$factory]
+	if {[llength $candidates] == 0} {
+	    set candidates [lsearch -all -inline [$self packages] *$factory*]
+	}
+	if {[llength $candidates] == 0} { error "no match for component '$composite'" }
+	if {[llength $candidates] > 1} { 
+	    error "too many matches for component '$composite', '[join $candidates {, }]'"
+	}
+	# we found one candidate
+	set factory [lindex $candidates 0]
+	return $factory
+    }
+    
+    method load {composite} {
+	# parse the composite into parts
+	foreach {composite factory name} [$self parse $composite] break
+	set factory [$self find-factory $composite $factory]
+	# require the implementation, only loads once
+	package require $factory
+	# instantiate component
+	# and activate if necessary
+	set args {}
+	switch -glob $factory {
+	    sdrtcl::* { 
+		if {[get-server] ne {}} { lappend args -server [get-server] }
+		set window {}
+		$factory ::$name {*}$args
+		$name activate
+	    }
+	    sdrtk::* { 
+		toplevel .$name -class "keyer/$name"
+		wm title .$name "keyer/$name"
+		set window .$name.$name
+		# no  {*}$args because it's only sdrtcl -server
+		pack [$factory $window] -side top -expand true -fill both
+	    }
+	    sdrtcltk::* {
+		if {[get-server] ne {}} { lappend args -server [get-server] }
+		toplevel .$name -class "keyer/$name"
+		wm title .$name "keyer/$name"
+		set window .$name.$name
+		pack [$factory $window {*}$args] -side top -expand true -fill both
+		$window activate
+	    }
+	    default { error "$factory did not match switch" }
+	}
+	return [list $name $factory $window $composite]
+    }
+    
+    method define {name factory window composite} {
+	dict set kcomps $name [dict create name $name factory $factory window $window composite $composite]
+	#dict lappend kpkgs $factory $name
+    }
+    
+    method process {composite} {
+	foreach {name factory window composite} [$self load $composite] break
+	$self define $name $factory $window $composite
+	$self populate $name $factory $window $composite
+    }
+    
+    method populate {name factory window composite} {
+	if {$window ne {}} {
+	    set call $window
+	    set opts [$window exposed-options]
+	} else {
+	    set call $name
+	    set opts [$name info options]
+	}
+	dict set components $name call $call
+	foreach opt $opts {
+	    # $opt is the option name used in direct configure and cget commands to $comp
+	    if {[$self is-option -$name$opt]} { error "keyer-components::populate: $name $opt ... is a duplicate" }
+	    set result [$call configure $opt]
+	    foreach {copt cname cclass cdefault cvalue} $result break
+	    # $copt should be $opt
+	    if {$opt ne $copt} { error "keyer-components::populate: $call configure $opt returned a different option name $copt" }
+	    # $cname is the option name in the option database (not used here)
+	    # $cclass is the option class name in the option database (not used here)
+	    # $cdefault is the default value
+	    # $cvalue is the current value
+	    if {[catch {$call info option $opt} info]} { set info [$call info-option $opt] }
+	    # $info is the tool tip for the option
+	    set merge [the-merge $opt]; # the merge pattern that matched this opt
+	    set hide [expr {[is-hide $opt] || [is-hide -$name$opt]}];    # the opt matched a hide pattern
+	    set favor [is-favor $opt];  # the opt is in the favorite list
+	    set argvopts [is-argvopts $opt]; # the opt was in the argv
+	    set option [dict create \
+			    text -$name$opt factory $factory name $name opt $opt window $window cname $cname cclass $cclass \
+			    cdefault $cdefault cvalue $cvalue info $info type none merge $merge hide $hide favor $favor \
+			    ronly 0 conly 0 volatile 0 isargv $argvopts composite $composite]
+	    # $option is the option dict for -$name$opt
+	    $self populate-option $name $opt $option
+	}
+    }
+}
+
+# initialize 
+sdrtcl::keyer-options ::koptions -dirname $::dirname
+
 # initialize data variables
-set ::data(main) [dict create -server {} -favor {} -hide {} -merge {} -argvopts {} -volatile {} -packages {}]
+set ::data(main) [dict create -server {} -favor {} -hide {} -merge {} -argvopts {} -volatile {}]
 
 #
 # miscellaneous accessors
@@ -49,24 +627,10 @@ proc has-var {var} { return [dict exists $::data(main) $var] }
 proc set-var {var val} { return [dict set ::data(main) $var $val] }
 proc lappend-var {var args} { dict lappend ::data(main) $var {*}$args }
 
-# setups are macros defining component instances
-proc has-setups {} { return [has-var -setups] }
-proc get-setups {} { return [get-var -setups] }
-proc set-setups {val} { set-var -setups $val }
-proc add-setup {name val} {
-    set old [get-setups]
-    dict set old $name $val
-    set-setups $old
-}
-proc get-setup {name} { return [dict get [get-setups] $name] }
-
 # these are options and groups of options collected from argv
 proc get-server {} { return [get-var -server] }
 proc has-server {} { return [has-var -server] }
 proc set-server {val} { set-var -server $val }
-proc get-iambic {} { return [get-var -iambic] }
-proc has-iambic {} { return [has-var -iambic] }
-proc set-iambic {val} { set-var -iambic $val }
 proc get-title {} { return [get-var -title] }
 proc has-title {} { return [has-var -title] }
 proc set-title {val} { set-var -title $val }
@@ -100,34 +664,6 @@ proc get-packages {} { return [get-var -packages] }
 proc lappend-packages {args} { lappend-var -packages {*}$args }
 
 #
-# utilities
-#
-proc read-file {file} {
-    set fp [open $file r]
-    set data [read $fp]
-    close $fp
-    return $data
-}
-proc write-file {file data} {
-    set fp [open $file w]
-    puts -nonewline $fp $data
-    close $fp
-}
-
-#
-# find the list of sdrtcl::*, sdrtk::*, and sdrtcltk::* packages
-#
-foreach lib {sdrtcl sdrtk sdrtcltk} {
-    set pkgIndex [file join $::dirname .. lib $lib pkgIndex.tcl]
-    set pfp [open $pkgIndex r]
-    foreach line [split [string trim [read-file $pkgIndex]] \n] {
-	if {[regexp "${lib}::" $line]} {
-	    lappend-packages [lindex $line 2]
-	}
-    }
-}
-
-#
 # manage option preferences
 # some of these match patterns in the lists
 # some just match instances in the lists
@@ -147,411 +683,16 @@ proc is-merge {o} { return [is-matched $o [get-merge]] }
 proc the-argvopts {o} { return [the-match $o [get-argvopts]] }
 proc is-argvopts {o} { return [is-matched $o [get-argvopts]] }
 
-
-# options are created in component specific versions -$name$opt
-# or as merged versions where all identically spelled options
-# are set as a group
-
-set ::data(all-options) [dict create];	# qualified option names
-array set ::value {};			# updated whenever option is configured
-
-proc opt-is-defined {opt} { return [dict exists $::data(all-options) $opt] }
-proc opt-is-described {opt} { return [expr {[opt-is-defined $opt] && [opt-get $opt described]}] }
-proc opt-get {opt key} { return [dict get $::data(all-options) $opt $key] }
-proc opt-set {opt key val} { dict set ::data(all-options) $opt $key $val }
-proc opt-get-dict {opt} { return [dict get $::data(all-options) $opt] }
-proc opt-set-dict {opt dict} { dict set ::data(all-options) $opt $dict }
-
-proc opt-is-ronly {opt} { return [opt-get $opt ronly] }
-proc opt-is-conly {opt} { return [opt-get $opt conly] }
-proc opt-is-favor {opt} { return [opt-get $opt favor] }
-proc opt-is-hide {opt} { return [opt-get $opt hide] }
-proc opt-is-volatile {opt} { return [opt-get $opt volatile] }
-
-proc opt-get-value {opt} { return [opt-get $opt cvalue] }
-proc opt-get-default {opt} { return [opt-get $opt cdefault] }
-proc opt-set-value {opt val} { return [opt-set $opt cvalue $val] }
-
-proc opt-component-opts {opt} {
-    set d [dict get $::data(all-options) $opt]
-    set w [dict get $d window]
-    if {$w ne {}} { return [list $w [dict get $d opt]] }
-    return [list [dict get $d name] [dict get $d opt]]
-}
-
-proc opt-get-opts {} { return [dict keys $::data(all-options)] }
-
-proc opt-describe {dict type args} { 
-    dict set dict type $type
-    dict set dict described 1
-    dict set dict readout {}
-    foreach {key val} $args {
-	if {[string index $key 0] eq {-}} {
-	    dict lappend dict readout $key $val
-	} else {
-	    dict set dict $key $val
-	}
-    }
-    dict set ::data(all-options) [dict get $dict text] $dict
-}
-
-proc opts-with-descriptions {} { return [dict keys $::data(all-options)] }
-proc opt-description {opt} { return [dict get $::data(all-options) $opt] }
-
-#proc composite-is-defined {comp} { return [dict exists $::data(composites) $comp] }
-proc composite-define {name factory window composite} { dict set ::data(composites) $name [dict create name $name factory $factory window $window composite $composite]}
-#proc composites {} { return [dict keys $::data(composites)] }
-
-proc composite-parse {composite} {
-    # first part identifies the sdrtcl component
-    # second part is the jack client name
-    if {[llength [split $composite @]] == 2} {
-	return [concat $composite [split $composite @]]
-    } else {
-	return [list $composite $composite $composite]
-    }
-}
-
-proc composite-load {composite} {
-    # parse the composite into parts
-    foreach {composite factory name} [composite-parse $composite] break
-    # puts "composite-load $composite $factory $name"
-
-    # special case insert selected iambic keyer
-    # should just make the iambic keyer a selected option in the keyer
-    if {$factory eq {iambic} && [has-iambic]} { set factory [get-iambic] }
-
-    # search through the sdrtcl/sdrtk/sdrtcltk component list
-    # for components which match $factory
-    # exact match to tail of name first, then with glob on tail
-    set candidates [lsearch -all -inline [get-packages] *$factory]
-    if {[llength $candidates] == 0} {
-	set candidates [lsearch -all -inline [get-packages] *$factory*]
-    }
-    if {[llength $candidates] == 0} { error "no match for component '$composite'" }
-    if {[llength $candidates] > 1} { 
-	error "too many matches for component '$composite', '[join $candidates {, }]'"
-    }
-    # we found one candidate
-    set factory [lindex $candidates 0]
-    # require the implementation, only loads once
-    package require $factory
-    # instantiate component
-    # and activate if necessary
-    set args {}
-    if {[get-server] ne {}} {
-	# puts "[get-server] is {[get-server]}"
-	lappend args -server [get-server]
-    }
-    switch -glob $factory {
-	sdrtcl::* { 
-	    set window {}
-	    $factory $name {*}$args
-	    $name activate
-	}
-	sdrtk::* { 
-	    toplevel .$name -class "keyer/$name"
-	    wm title .$name "keyer/$name"
-	    set window .$name.$name
-	    # no  {*}$args because it's only sdrtcl -server
-	    pack [$factory $window] -side top -expand true -fill both
-	}
-	sdrtcltk::* {
-	    toplevel .$name -class "keyer/$name"
-	    wm title .$name "keyer/$name"
-	    set window .$name.$name
-	    pack [$factory $window {*}$args] -side top -expand true -fill both
-	    $window activate
-	}
-	default { error "$factory did not match switch" }
-    }
-    # remember this
-    return [list $name $factory $window $composite]
-}
-
 # user interface components
 # primary user interface component is the dialbook
 # which isn't finished.
 
-package require snit
-namespace eval ::sdrtk {}
-package require sdrtk::dialbook
-
-# these are filter/fft windowing functions
-package require sdrtcl::window
-proc get-window-types {} {
-    catch { sdrtcl::window foo 512 } error
-    regexp {^unknown window type, should be one of (.*)$} $error all error
-    regsub -all {, (or )?} $error { } error
-    set error [lsort $error]
-    set i [lsearch $error {none}]
-    if {$i >= 0} {
-	set error [concat none [lreplace $error $i $i]]
-    }
-    return $error
-}
-
-# these are morse code dictionaries
-package require morse::dicts
-proc get-morse-dicts {} {
-    return [concat {builtin} [morse-dicts]]
-}
-
-# add any special sauce appropriate to a particular option
-proc populate-option {name opt option} {
-    # puts "populate-option $name $opt $option"
-    # look for further guidance
-    
-    switch -glob -- [list [dict get $option factory] $opt] {
-	{* -server} - 
-	{* -client} { opt-describe $option text ronly 1 hide 1 conly 1 -graticule 1 }
-	{* -verbose} { opt-describe $option ivalue ronly 1 hide 1 conly 1 -min 0 -max 10 -graticule 12 -steps-per-div 1 }
-	{* -chan} { opt-describe $option ivalue -min 1 -max 16 -graticule 12 -steps-per-div 1 }
-	{* -note} { opt-describe $option ivalue -min 0 -max 127 -graticule 12 -steps-per-div 1 }
-	{* -wpm} { opt-describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 -graticule 20 -steps-per-div 10 }
-	{* -swap} - 
-	{* -mdit} - 
-	{* -mdah} - 
-	{* -mide} - 
-	{* -alsp} - 
-	{* -awsp} { opt-describe $option bool }
-	{* -mode} { opt-describe $option enum -values {A B} }
-	{* -word} { opt-describe $option enum -values {50 60} -units dits }
-	{*keyer* -dit} - 
-	{*keyer* -dah} - 
-	{* -ies} - 
-	{* -ils} - 
-	{* -iws} { 
-	    set cdefault [dict get $option cdefault]
-	    set min [expr {$cdefault-0.5}]
-	    set max [expr {$cdefault+0.5}]
-	    opt-describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
-	    #puts "opt-describe $name $opt -value $cvalue -min $min -max $max -step 0.1 -units dits"
-	}
-	{* -weight} - 
-	{* -ratio} { opt-describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
-	{* -comp} { opt-describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	{* -freq} { opt-describe $option ivalue -min -1000 -max 1000 -units Hz -graticule 20 -steps-per-div 100}
-	{* -rise} - 
-	{* -fall} - 
-	{* -ramp} { opt-describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	{* -window} { opt-describe $option enum -values [lrange [get-window-types] 1 end] }
-	{* -window2} { opt-describe $option enum -values [get-window-types] }
-	{* -gain} { opt-describe $option value -format %.1f -min -50 -max 3 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
-	{* -delay} { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	{* -hang} { opt-describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
-	{*spectrum* -period} {  opt-describe $option ivalue -min 1 -max 500 -units ms -graticule 20 -steps-per-div 25 }
-	{*debounce* -period} { opt-describe $option value -format %.3f -min 0.1 -max 50 -step 0.1 -units ms -graticule 20 -steps-per-div 25 }
-	{*debounce* -steps} { opt-describe $option ivalue -min 1 -max 32 -units steps -graticule 20 -steps-per-div 1}
-	{*insert* -dit} - 
-	{*insert* -dah} - 
-	{* -skey} - 
-	{*insert* -ptt} - 
-	{* -key-4} - 
-	{* -key-5} { opt-describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
-	{*insert* -window} { opt-describe $option enum -values {none . .dial} }
-	{* -dict} { opt-describe $option enum -values [get-morse-dicts] }
-	{* -bandwidth} { opt-describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
-	{* -on} - 
-	{* -off} { opt-describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 -graticule 20 -steps-per-div 5}
-	{* -timeout} { opt-describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
-	{* -estimate} { opt-describe $option ivalue -min 10 -max 1000 -units frames }
-	{* -discover} { opt-describe $option text hide 1 }
-	{* -n-rx} -
-	{* -speed} -
-	{* -peer} -
-	{* -gateware-version} -
-	{* -code-version} -
-	{* -board-id} -
-	{* -mac-addr} -
-	{* -mcp4662} -
-	{* -fixed-ip} - 
-	{* -fixed-mac} -
-	{* -n-hw-rx} -
-	{* -wb-fmt} -
-	{* -build-id} -
-	{* -gateware-minor} -
-	{* -serial} { opt-describe $option text }
-	{* -bandscope} { opt-describe $option bool }
-	{* -hw-dash} -
-	{* -raw-hw-dash} -
-	{* -hw-dot} -
-	{* -raw-hw-dot} -
-	{* -hw-ptt} - 
-	{* -raw-hw-ptt} -
-	{* -overload} - 
-	{* -raw-overload} -
-	{* -recovery} - 
-	{* -raw-recovery} -
-	{* -tx-iq-fifo} - 
-	{* -raw-tx-iq-fifo} -
-	{* -temperature} - 
-	{* -raw-temperature} - 
-	{* -avg-temperature} - 
-	{* -fwd-power} - 
-	{* -raw-fwd-power} -
-	{* -avg-fwd-power} -
-	{* -rev-power} - 
-	{* -raw-rev-power} -
-	{* -avg-rev-power} -
-	{* -pa-current} -
-	{* -raw-pa-current} -
-	{* -avg-pa-current} { 
-	    opt-describe $option text ronly 1 volatile 1
-	}
-	{* -rx-calls} -
-	{* -tx-calls} -
-	{* -bs-calls} -
-	{* -rx-dropped} -
-	{* -rx-outofseq} {
-	    opt-describe $option text ronly 1 volatile 1
-	}
-	{* -mox} { opt-describe $option bool }
-	{* -filters} { opt-describe $option ivalue -min 0 -max 255 }
-	{* -lna-db} { opt-describe $option ivalue -min -12 -max 48 -units dB }
-	{* -f-tx} - 
-	{* -f-rx*} { 
-	    # Transmitter NCO frequency
-	    # Receiver NCO frequency.
-	    set hide 0
-	    if {[regexp {^-f-rx(\d+)$} $opt all irx]} { if {$irx > 6} { set hide 1 } }
-	    opt-describe $option freq hide $hide -units Hz -format %.0f -min 1 -max 29999999 -step 1 -graticule 20 -steps-per-div 500
-	    
-	}
-	{* -level} { opt-describe $option freq -format %.0f -min 0 -max 255 -step 1 }
-	{* -not-sync} -
-	{* -duplex} -
-	{* -pa} -
-	{* -low-pwr} -
-	{* -pure-signal} -
-	{* -bias-adjust} -
-	{* -vna} -
-	{* -vna-started} -
-	{* -vna-fixed-rx-gain} -
-	{* -alex-manual-mode} - 
-	{* -tune-request} -
-	{* -hermes-lite-lna} -
-	{* -cwx} -
-	{* -reset-hl2-on-disconnect} { opt-describe $option bool }
-	{* -vna-count} {
-	}
-	{* -i2c-rx-filter} -
-	{* -i2c-tx-filter} { opt-describe $option ivalue -min 0 -max 255 }
-	{* -cw-hang-time} { opt-describe $option ivalue dvalue 10 -min 0 -max 1023 -units ms }
-	{* -tx-buffer-latency} { opt-describe $option ivalue dvalue 10 -min 0 -max 31 -units ms }
-	{* -ptt-hang-time} { opt-describe $option ivalue dvalue 4 -min 0 -max 31 -units ms }
-	{* -predistortion-subindex} { opt-describe $option ivalue -min 0 -max 255 }
-	{* -predistortion} { opt-describe $option ivalue -min 0 -max 15 }
-	{* -sentcolor} -
-	{* -unsentcolor} -
-	{* -skippedcolor} -
-	{* -background} -
-	{* -foreground} {
-	    # ignore these and -font for the moment, the foreground widget doesn't wrap things yet
-	    #opt-describe $option enum -values {white black gray lightgrey red orange yellow green blue indigo violet}
-	}
-	{* -font} {
-	    #opt-describe $option enum -values {TkFixedFont {helvetica 10} {helvetica 12} {helvetica 14}}
-	}
-	{* -size} { opt-describe $option enum -values {8 16 32 64 128 256 512 1024 2048 4096 8192 16384} }
-	{* -planbits} { opt-describe $option ivalue -min 0 -max 127}
-	{* -direction} {opt-describe $option enum -values {-1 1} }
-	{* -polyphase} { opt-describe $option ivalue -min 1 -max 32 }
-	{* -result} { opt-describe $option enum -values {coeff mag2 mag dB short char}}
-	{* -min-f} {}
-	{* -max-f} {}
-	{* -center-freq} {}
-	{* -tuned-freq} {}
-	{* -sample-rate} { opt-describe $option enum -values {48000} }
-	{*spectrum* -min} -
-	{*spectrum* -max} { opt-describe $option ivalue -min -200 -max 30 -step 10 -units dB }
-	{* -zoom} { opt-describe $option enum -values {0.5 1 2 4 8 16 32 64} }
-	{* -pan} { opt-describe $option ivalue -min 200000 -max 200000 } 
-	{* -command} {}
-	{* -pal} { opt-describe $option enum -values {0 1 2 3 4 5} }
-	{* -atten} {}
-	{* -automatic} {}
-	{* -smooth} { opt-describe $option bool }
-	{* -multi} { opt-describe $option ivalue -min 1 -max 64 }
-	{* -filter-low} -
-	{* -filter-high} { opt-describe $option value -min -8000 -max 8000 }
-	{* -band-low} -
-	{* -band-high} { opt-describe $option value -min 100 -max 29999999 }
-	{* -rx-frames-per-call} { opt-describe $option text ronly 1 volatile 1 }
-	{* -tx-frames-per-call} - 
-	{* -bs-frames-per-call} { opt-describe $option text ronly 1 }
-	{* -length} { opt-describe $option enum -values {64 128 256 512 1024} }
-	{* -low} - 
-	{* -high} { opt-describe $option value -min -8000 -max 8000 }
-	{*radio* -mode} { opt-descrbe $option enum -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL} }
-	{*radio* -mute} { opt-describe $option bool }
-	{*radio* -spot} { opt-describe $option bool }
-	{*agc* -mode} { opt-describe $option enum -values {off long slow medium fast} }
-	{*agc* -target} { opt-describe $option value info {target level, linear gain} -min 0.1 -max 10 }
-	{*agc* -attack} { opt-describe $option ivalue info {attack time} -min 1 -max 4 -units ms }
-	{*agc* -decay} { opt-describe $option ivalue info {decay time} -min 100 -max 2000 -units ms }
-	{*agc* -slope} { opt-describe $option value info {slope, as in y = slope * x + intercept} -min 0.5 -max 2 }
-	{*agc* -hang} { opt-describe $option ivalue info {hang time} -min 50 -max 1000 -units ms }
-	{*agc* -fasthang} { opt-describe $option ivalue info {fast hang time} -min 50 -max 200 -units ms }
-	{*agc* -max} { opt-describe $option value info {max level} -min 1 -max 1e5 }
-	{*agc* -min} { opt-describe $option value info {min level} -min 1e-5 -max 1 }
-	{*agc* -threshold} { opt-describe $option value info {threshold level} -min 0.25 -max 4 }
-	{*iq* -swap} { opt-describe $option bool }
-	{*iq* -delay} { opt-describe $option enum info {delay I by one sample, no delay, or delay Q by one sample} -values {-1 0 1} }
-	{*iq-correct* -rate} { opt-describe $option value info {the learning rate for the adaptive filter} -min -1e6 -max 1e6 }
-	{*leveler* -mode} { opt-describe $option enum -values {off leveler} }
-	{*iambic* -keyer} { opt-describe $option enum -values {none ad5dz dttsp k1el nd7pa vk6ph} }
-	{*meter* -reduce} { opt-describe $option enum -values {abs-real abs-imag max-abs mag2} }
-	{*meter* -style} { opt-describe $option enum -values {s-meter} }
-	default { puts "populate-option $name $opt: no clues" }
-	other {
-snit::enum	sdrtype::spec-size	-values {width/8 width/4 width/2 width width*2 width*4 width*8}
-	}
-    }
-}
-
-# go through the components and build the database of options
-proc composite-populate-options {name factory window composite} {
-    # $component is the component $factory
-    # $name is the component instance
-    # puts "composite-populate-options $name $factory $window $composite"
-    if {$window ne {}} {
-	set call $window
-	set options [$window exposed-options]
-    } else {
-	set call $name
-	set options [$name info options]
-    }
-    foreach opt $options {
-	# $opt is the option name used in direct configure and cget commands to $comp
-	if {[opt-is-defined -$name$opt]} { error "composite-populate-options: $name $opt ... is a duplicate" }
-	set result [$call configure $opt]
-	# puts "$call configure $opt -> $result"
-	foreach {copt cname cclass cdefault cvalue} $result break
-	# $copt should be $opt
-	if {$opt ne $copt} { error "composite-populate-options: $call configure $opt returned a different option name $copt" }
-	# $cname is the option name in the option database (not used here)
-	# $cclass is the option class name in the option database (not used here)
-	# $cdefault is the default value
-	# $cvalue is the current value
-	if {[catch {$call info option $opt} info]} { set info [$call info-option $opt] }
-	# $info is the tool tip for the option
-	set merge [the-merge $opt]; # the merge pattern that matched this opt
-	set hide [expr {[is-hide $opt] || [is-hide -$name$opt]}];    # the opt matched a hide pattern
-	set favor [is-favor $opt];  # the opt is in the favorite list
-	set argvopts [is-argvopts $opt]; # the opt was in the argv
-	set option [dict create \
-			text -$name$opt factory $factory name $name opt $opt window $window cname $cname cclass $cclass \
-			cdefault $cdefault cvalue $cvalue info $info type none merge $merge hide $hide favor $favor \
-			ronly 0 conly 0 volatile 0 isargv $argvopts composite $composite]
-	# $option is the option dict for -$name$opt
-	populate-option $name $opt $option
-    }
-}
-
 #
 # update the window
 # this doesn't work when -wpm, -window, and -window2 aren't obvious
+# extracted from keyer-options::configure-timeout when merged into koptions
+# hmm, none of this is going to work any more, and it should be lower 
+# after idle [list update-window-title]
 #
 proc update-window-title {} {
     if {0} {
@@ -578,98 +719,6 @@ proc update-window-title {} {
 }
 
 #
-# dial setting, most options are delegated to the dialbook
-# one dial for setting everything.  So this is where the
-# dialbook delegates everything to be set.
-#
-# there's a trickiness, the sdrtcl widgets that implement jack
-# dsp can be too busy to process options, so we may need to
-# wait until the previous setting has completed.  This is all
-# to avoiding expensive computations in the inner dsp loop, and
-# getting.
-#
-# then also we should be debouncing a lot of option setting to
-# avoid overwhelming thins.
-#
-# should wrap this into a snit type, ideally responisble for
-# constructing the dialbook pages and managing the options
-# list and aliases and so on.
-# 
-# opt-is-defined referenced elsewhere
-# opt-is-ronly only referenced here
-# opt-get-value only referenced here
-# opt-set-value only referenced here
-# set ::value(...) referenced elsewhere
-# opt-component-opts only referenced here
-#
-# okay, this should be the snit type for the top level component
-# and all the composite named options are actually options for
-# this component which it resolves into calls to subname suboption
-# it also handles:
-# 1) backpressure in the form of subname is-busy
-# 2) value debouncing
-# 3) option merging and chaining
-#
-# it also handles the options dictionary, options definitions, and options descriptions
-# 
-set handler {}
-
-proc dial-set {opt val} {
-    # puts "dial-set $opt $val defined [opt-is-defined $opt], ronly [opt-is-ronly $opt], value eq val [expr {[opt-get-value $opt] eq $val}]"
-    if {[opt-is-defined $opt]} {
-	if {[opt-is-ronly $opt]} return
-	if {[opt-get-value $opt] eq $val} return
-	opt-set-value $opt $val
-	set ::value($opt) $val
-	# puts "set ::value($opt) $val"
-	foreach {comp opt2} [opt-component-opts $opt] {
-	    dict set ::data(busy) $comp $opt2 $val
-	    if { ! [$comp is-busy]} {
-		set opts [dict get $::data(busy) $comp]
-		if {[catch {
-		    $comp configure {*}$opts
-		    dict unset ::data(busy) $comp
-		} error]} {
-		    puts "dial-set {$comp configure $opts} threw {$error}"
-		}
-	    } elseif {$::handler eq {}} {
-		# puts "$comp is-busy"
-		set ::handler [after 100 dial-set-timeout]
-	    }
-	}
-    } else {
-	error "$opt is not defined in dial-set"
-    }
-}
-
-proc dial-set-timeout {} {
-    dict for {comp opts} $::data(busy) {
-	if { ! [$comp is-busy]} {
-	    if {[catch {
-		$comp configure {*}$opts
-		dict unset ::data(busy) $comp
-	    } error]} {
-		puts "dial-set {$comp configure $opts} threw {$error}"
-	    }
-	} else {
-	    # puts "$comp is-busy"
-	}
-    }
-    # hmm, none of this is going to work any more, and it should be lower 
-    after idle [list update-window-title]
-    if {[dict size $::data(busy)] > 0} {
-	set ::handler [after 100 dial-set-timeout]
-    } else {
-	set ::handler {}
-    }
-}
-
-proc dial-set-init {} {
-    set ::data(busy) [dict create]
-    # dial-set-timeout
-}
-
-#
 # load the main ui for the program
 #
 proc load-ui {} {
@@ -681,38 +730,28 @@ proc load-ui {} {
     wm title . keyer/dial
     pack [::sdrtk::dialbook .dial {*}$args]
     array set compid {}
-    foreach text [opts-with-descriptions] {
-	set desc [opt-description $text]
-	set cvalue [dict get $desc cvalue]
-	set type [dict get $desc type]
-	set name [dict get $desc name]
-	set opt [dict get $desc opt]
-	set info [dict get $desc info]
-	set readout [dict get $desc readout]
-	
-	# foreach var [dict keys $desc] { set $var [dict get $desc $var] }
-	# puts "load-ui $text value $cvalue type $type name $name readout $readout"
+    foreach text [::koptions get-opts] {
+	set cvalue [::koptions cget $text]
+	set type [::koptions get $text type]
+	set name [::koptions get $text name]
+	set opt [::koptions get $text opt]
+	set info [::koptions get $text info]
+	set readout [::koptions get $text readout]
+	set var [::koptions cvar $text]
 	
 	# if already processed, error
-	if {[info exists ::value($text)]} { error "::value($text) already processed" }
+	if {[::koptions is-processed $text]} { error "$text already processed" }
+	::koptions set $text processed 1
 	
-	# if no value in definitions, error
-	if { ! [info exists cvalue]} { error "no cvalue extracted from option $text" }
-
-	# set up the details display
-	set ::value($text) $cvalue
+	if {[::koptions is-hide $text]} continue
 	
-	if {[opt-is-hide $text]} continue
-	
-	if {[opt-is-volatile $text]} { lappend-volatile $text $name $opt }
-
 	set w .dial.x$text
 	package require sdrtk::readout-$type
 	sdrtk::readout-$type $w -dialbook .dial \
 	    -text $text -info $info {*}$readout \
-	    -value $cvalue -variable ::value($text) -command [list dial-set $text]
+	    -value $cvalue -variable $var -command [list ::koptions configure $text]
 	#if {$text in {-key-wpm -key-weight}} { $w test }
-	.dial add $w $name $type -text [$w cget -text]
+	.dial add $w $name $type -text $text
     }
     if {[.dial select] eq {}} { .dial select 0 }
     after 25 process-volatile
@@ -727,19 +766,25 @@ proc process-volatile {} {
 }
 
 #
+# setups are macros defining component instances
 # setups bind an implementaion to a instance and supply some option values
-# saving all setups in a file makes it hard to change the prebuilt setups
+# saving all setups in one file makes it hard to change the prebuilt setups
 # should only save those which are different from the prebuilt defaults
 #
 package require getstring
 namespace import getstring::*
 
-proc is-setup {name} {
-    return [dict exists [get-setups] $name]
+proc get-setups {} { return [get-var -setups] }
+proc set-setups {val} { set-var -setups $val }
+proc add-setup {name val} {
+    set old [get-setups]
+    dict set old $name $val
+    set-setups $old
 }
-proc get-setup-names {} {
-    return [lsearch -inline -glob -all -not [dict keys [get-setups]] info-*]
-}
+proc get-setup {name} { return [dict get [get-setups] $name start] }
+
+proc is-setup {name} { return [dict exists [get-setups] $name] }
+proc get-setup-names {} { return [dict keys [get-setups]] }
 proc setup-v0-style {setups} {
     # v0 had setup names but no setup info-names
     set info 0
@@ -786,12 +831,6 @@ proc save-setups {} {
     close $fp
 }
 proc default-setups {} {
-    # rewrite so 
-    #   dict get $defaults $key def -> returns the setup definition
-    #   dict get $defaults $key info -> returns the setup info
-    #   dict get $defaults $key connect -> returns the setup connection hints
-    # at which point the key+out composite setups get to add connection hints
-    # for hooking up the parts
     #
     # connection hints
     #  -connect system-midi>key>kyo>system-audio
@@ -803,44 +842,88 @@ proc default-setups {} {
     #  -connect cas>key*
     #  -connect (kyo|kbo)*>detone>out (or receiver stream?)
     #
-
+    
     return [dict create {*}{ 
-	key { keyer -start {iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
-	key2 { keyer -start {iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
-	kbd { keyer -start {cw-encode-input@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
-	kbd2 { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
-	ptt { keyer -start {keyer-ptt@ptt} }
-	deb { keyer -start {keyer-debounce@deb} }
-	cas { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
-	tap { keyer -start {midi-tap-view@tap} }
-	tap2 { keyer -start {midi-tap-view@tap2} }
-	out { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
-	hl { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
-	hlt { keyer -start {hl-test@hlt} -kyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
-	spec { keyer -start {spectrum-waterfall-view@spec}}
-	spec2 { keyer -start {spectrum-waterfall-view@spec2}}
-	filt { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
-	nod { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
-	1ch { keyer -merge {*-chan *-note} }
-	test { keyer key hl hlt spec filt -tree 1 } 
-	info-key {iambic keyer and a keyed oscillator}
-	info-key2 {second iambic keyer and keyed oscillator}
-	info-kbd {keyboard keyer and a keyed oscillator}
-	info-kbd2 {second keyboard keyer and a keyed oscillator}
-	info-ptt {push-to-talk switch with tx delay}
-	info-deb {key contact debouncer}
-	info-cas {midi events from keyboard keys}
-	info-tap {midi monitor for timing events}
-	info-tap2 {second midi monitor for timing events}
-	info-out {audio to ascii morse decoder}
-	info-hl { hermes lite udp jack connection }
-	info-hlt { hermes lite test dashboard }
-	info-spec { spectrum and waterfall display }
-	info-spec2 { spectrum and waterfall display }
-	info-filt { overlap save bandpass filter }
-	info-test { hermes lite test app }
-	info-nod {hide esoteric keyer options}
-	info-1ch {merge midi channel and note options}
+	key {
+	    start { keyer -start {keyer-iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
+	    info { iambic keyer and a keyed oscillator }
+	    connect { key:midi_out kyo:midi_in }
+	    ports { key:midi_in kyo:midi_out kyo:out_i kyo:out_q }
+	}
+	key2 { 
+	    start {keyer -start {keyer-iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
+	    info { second iambic keyer and keyed oscillator }
+	    connect { key2:midi_out kyo2:midi_in }
+	    ports { key2:midi_in kyo2:midi_out kyo2:out_i kyo2:out_q }
+	}
+	kbd {
+	    start { keyer -start {cw-encode-input@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
+	    info {keyboard keyer and a keyed oscillator}
+	    connect { kbd:midi_out kyo:midi_in }
+	    ports { kyo:midi_out kyo:out_i kyo:out_q }
+	}
+	kbd2 {
+	    start { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
+	    info {second keyboard keyer and a keyed oscillator}
+	    connect { kbd2:midi_out kyo2:midi_in }
+	    ports { kyo2:midi_out kyo2:out_i kyo2:out_q }
+	}
+	ptt {
+	    start { keyer -start {keyer-ptt@ptt} }
+	    info {push-to-talk switch with tx delay}
+	}
+	deb {
+	    start { keyer -start {keyer-debounce@deb} }
+	    info {key contact debouncer}
+	}
+	cas {
+	    start { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
+	    info {midi events from keyboard keys}
+	}
+	tap {
+	    start { keyer -start {midi-tap-view@tap} }
+	    info {midi monitor for timing events}
+	}
+	tap2 {
+	    start { keyer -start {midi-tap-view@tap2} }
+	    info {second midi monitor for timing events}
+	}
+	out {
+	    start { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
+	    info {audio to ascii morse decoder}
+	}
+	hl {
+	    start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
+	    info { hermes lite udp jack connection }
+	}
+	hlt {
+	    start { keyer -start {hl-test@hlt} -kyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
+	    info { hermes lite test dashboard }
+	}
+	spec {
+	    start { keyer -start {spectrum-waterfall-view@spec}}
+	    info { spectrum and waterfall display }
+	}
+	spec2 {
+	    start { keyer -start {spectrum-waterfall-view@spec2}}
+	    info { spectrum and waterfall display }
+	}
+	filt {
+	    start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
+	    info { overlap save bandpass filter }
+	}
+	test {
+	    start { keyer key hl hlt spec filt -tree 1 } 
+	    info { hermes lite test app }
+	}
+	nod {
+	    start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
+	    info {hide esoteric keyer options}
+	}
+	1ch {
+	    start { keyer -merge {*-chan *-note} }
+	    info {merge midi channel and note options}
+	}
     }]
 }
 
@@ -894,7 +977,7 @@ proc build-command-line {} {
     lappend argv -start [get-start]
     # prefer specifically named options
     # to the ones that are only inferred from component inspection
-    foreach opt [opt-get-opts] {
+    foreach opt [::koptions get-opts] {
 	if { ! [info exists ::value($opt)]} continue
 	if {$::value($opt) ne $::defval($opt)} {
 	    lappend argv $opt $::value($opt)
@@ -907,11 +990,10 @@ proc build-command-line {} {
 }
 
 proc usage-message {} {
-    # puts "[dict keys $::data(main)]"
     puts "usage: keyer setup ..."
     puts "setups: [get-setup-names]"
     foreach s [get-setup-names] {
-	puts "  $s: [dict get [get-setups] info-$s]"
+	puts "  $s: [dict get [get-setups] $s info]"
     }
     exit 1
 }
@@ -934,7 +1016,6 @@ proc main-argv {argv} {
 	# -favor - option patterns to favor
 	# -hide - option patterns to hide
 	# -merge - option patterns to merge
-	# -iambic module- module for iambic keyer
 	# -grid 1 - use dialbook grid setup
 	# -tree 1 - use dialbook tree setup
 	# otherwise - -option value pair to apply to parts
@@ -946,7 +1027,6 @@ proc main-argv {argv} {
 	    -favor { lappend-favor {*}$val }
 	    -hide { lappend-hide {*}$val }
 	    -merge { lappend-merge {*}$val }
-	    -iambic { set-iambic $val }
 	    -grid { set-grid $val }
 	    -tree { set-tree $val }
 	    default { lappend-argvopts $opt $val }
@@ -968,10 +1048,6 @@ proc main {argv} {
     ttk::style configure TCheckbutton -relief raised
     ttk::style configure TRadiobutton -relief raised
     
-    # default server
-    # set-server {}
-    # puts "keyer main get-server [get-server]"
-    
     # load or create ~/.config/keyer/keyer.tcl
     load-setups
     
@@ -979,30 +1055,20 @@ proc main {argv} {
     if {$argv eq {} || $argv eq {help}} { usage-message }
     
     # process arguments, first pass just to collect everything
-    # puts "keyer main-argv $argv"
     main-argv $argv
     
-    # default value for iambic
-    if { ! [has-iambic] } { set-iambic keyer-iambic-ad5dz }
-    # puts "has-iambic [has-iambic] get-iambic [get-iambic]"
-    
     # start components and collect their options
+    puts "main: has-start [has-start]"
     if { ! [has-start]} { usage-message }
-
-    foreach v [get-start] {
-	foreach {name factory window composite} [composite-load $v] break
-	composite-define $name $factory $window $composite
-	composite-populate-options $name $factory $window $composite
-    }
+    
+    foreach composite [get-start] { ::koptions process $composite }
     
     # process command line options for additional option definitions
     foreach {opt val} [get-argvopts] {
-	if {[opt-is-defined $opt]} continue; # already defined
+	if {[::koptions is-option $opt]} continue; # already defined
 	#error "undefined option: $opt $val"
+	# something missing here? - FIX.ME?
     }
-    
-    # initialize the dial-set timer
-    dial-set-init
     
     # build the ui with the extracted options
     load-ui
@@ -1010,16 +1076,19 @@ proc main {argv} {
     # load the options collected from the command line
     if {[has-argvopts]} {
 	foreach {opt val} [get-argvopts] { 
-	    # puts "dial-set $opt $val"
-	    if {[catch {dial-set $opt $val} error]} {
-		puts "dial-set threw $error"
+	    if {[catch {::koptions configure $opt $val} error]} {
+		puts "koptions configure threw $error"
 		# if the $opt is -$comp for one of the setup components,
 		# then apply it to each opt value pair in $val to get
 		# -$comp$opt $value
-		foreach {option value} $val {
-		    if {[catch {dial-set $opt$option $value} error2]} {
-			puts "bad option: $opt $val"
+		if {[llength $val] > 1 && ([llength $val]&1) == 0} {
+		    foreach {option value} $val {
+			if {[catch {::koptions configure $opt$option $value} error2]} {
+			    puts "bad option: $opt $val"
+			}
 		    }
+		} else {
+		    puts "bad option: $opt $val"
 		}
 	    }
 	}
@@ -1032,7 +1101,7 @@ proc main {argv} {
     wm iconphoto . -default icon1 icon2
     # update window title
     update-window-title
-
+    
     manage-connections
 }
 
