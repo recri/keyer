@@ -69,7 +69,7 @@ snit::widgetadaptor sdrtk::readout-enum {
 	set n [llength $v]
 	foreach x {12 20 24 36} {
 	    if {$n <= $x} {
-		$self configure -graticule-used $n -graticule $x
+		$self configure -graticule-used $n -graticule $x -steps-per-div 1
 		return
 	    }
 	}

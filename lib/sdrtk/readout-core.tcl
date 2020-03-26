@@ -61,6 +61,7 @@ snit::widget sdrtk::readout-core {
     option -graticule -default 20 -configuremethod Recompute
     option -graticule-used -default 0 -configuremethod Recompute
     option -steps-per-div -default 5 -configuremethod Recompute
+    option -cpr -default 1000 -configuremethod Recompute
     option -variable -default {} -configuremethod Configure
     option -info -default {}
 
@@ -146,9 +147,14 @@ snit::widget sdrtk::readout-core {
 	set saved [list \
 		       -graticule [$options(-dialbook) cget -graticule] \
 		       -graticule-used [$options(-dialbook) cget -graticule-used] \
+		       -cpr [$options(-dialbook) cget -cpr] \
 		       -phi [$options(-dialbook) cget -phi] \
-		      ]
-	$options(-dialbook) configure -graticule $options(-graticule) -graticule-used $options(-graticule-used)
+	      ]
+	set cpr [expr {$options(-graticule)*$options(-steps-per-div)*2}]
+	$options(-dialbook) configure \
+	    -graticule $options(-graticule) \
+	    -graticule-used $options(-graticule-used) \
+	    -cpr $cpr
 	$self Position
     }
     method unmapped {} {

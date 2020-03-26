@@ -32,7 +32,7 @@ snit::widgetadaptor sdrtk::readout-bool {
     delegate method * to hull
 
     constructor {args} {
-	installhull using sdrtk::readout-enum {*}$args -values {0 1} -graticule 12 -graticule-used 2 -steps-per-div 1
+	installhull using sdrtk::readout-enum {*}$args -values {0 1}
     }
 
     method menu-entry {m text} {

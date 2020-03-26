@@ -320,8 +320,8 @@ snit::type keyer::options {
 	    {* -mide} - 
 	    {* -alsp} - 
 	    {* -awsp} { $self describe $option bool }
-	    {* -mode} { $self describe $option enum -values {A B} -graticule 12 -graticule-used 2}
-	    {* -word} { $self describe $option enum -values {50 60} -units dits -graticule 12 -graticule-used 2}
+	    {* -mode} { $self describe $option enum -values {A B}}
+	    {* -word} { $self describe $option enum -values {50 60} -units dits}
 	    {*keyer* -dit} - 
 	    {*keyer* -dah} - 
 	    {* -ies} - 
@@ -353,8 +353,8 @@ snit::type keyer::options {
 	    {* -key} - 
 	    {*insert* -ptt} - 
 	    {* -key-4} - 
-	    {* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R}  -graticule 12 -graticule-used 7 }
-	    {*insert* -window} { $self describe $option enum -values {none . .dial} -graticule 12 -graticule-used 3}
+	    {* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
+	    {*insert* -window} { $self describe $option enum -values {none . .dial}}
 	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
 	    {* -bandwidth} { $self describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
 	    {* -on} - 
@@ -458,22 +458,22 @@ snit::type keyer::options {
 	    {* -font} {
 		#$self describe $option enum -values {TkFixedFont {helvetica 10} {helvetica 12} {helvetica 14}}
 	    }
-	    {* -size} { $self describe $option enum -values {8 16 32 64 128 256 512 1024 2048 4096 8192 16384} -graticule 12}
+	    {* -size} { $self describe $option enum -values {8 16 32 64 128 256 512 1024 2048 4096 8192 16384}}
 	    {* -planbits} { $self describe $option ivalue -min 0 -max 127}
-	    {* -direction} {$self describe $option enum -values {-1 1} -graticule 12 -graticule-used 2}
+	    {* -direction} {$self describe $option enum -values {-1 1}}
 	    {* -polyphase} { $self describe $option ivalue -min 1 -max 32 }
-	    {* -result} { $self describe $option enum -values {coeff mag2 mag dB short char} -graticule 12 -graticule-used 6}
+	    {* -result} { $self describe $option enum -values {coeff mag2 mag dB short char}}
 	    {* -min-f} {}
 	    {* -max-f} {}
 	    {* -center-freq} {}
 	    {* -tuned-freq} {}
-	    {* -sample-rate} { $self describe $option enum -values {48000} -graticule 12 -graticule-used 1 }
+	    {* -sample-rate} { $self describe $option enum -values {48000} }
 	    {*spectrum* -min} -
 	    {*spectrum* -max} { $self describe $option ivalue -min -200 -max 30 -step 10 -units dB }
-	    {* -zoom} { $self describe $option enum -values {0.5 1 2 4 8 16 32 64} -graticule 12 -graticule-used 8 }
+	    {* -zoom} { $self describe $option enum -values {0.5 1 2 4 8 16 32 64} }
 	    {* -pan} { $self describe $option ivalue -min 200000 -max 200000 } 
 	    {* -command} {}
-	    {* -pal} { $self describe $option enum -values {0 1 2 3 4 5} -graticule 12 -graticule-used 6 }
+	    {* -pal} { $self describe $option enum -values {0 1 2 3 4 5} }
 	    {* -atten} {}
 	    {* -automatic} {}
 	    {* -smooth} { $self describe $option bool }
