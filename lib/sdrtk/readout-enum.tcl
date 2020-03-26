@@ -58,6 +58,22 @@ snit::widgetadaptor sdrtk::readout-enum {
 	set imin 0
 	set imax [expr {[llength $values]-1}]
 	$self configure -integer-min $imin -integer-max $imax
+	after idle [mymethod CheckGraticule]
+    }
+
+    method CheckGraticule {} {
+	set v [$self cget -values]
+	set g [$self cget -graticule]
+	set u [$self cget -graticule-used]
+	if {$u == 0} { set u $g }
+	set n [llength $v]
+	foreach x {12 20 24 36} {
+	    if {$n <= $x} {
+		$self configure -graticule-used $n -graticule $x
+		return
+	    }
+	}
+	puts "readout-enum $self configure -values #$n > $u/$g"
     }
 
     method menu-entry {m text} {

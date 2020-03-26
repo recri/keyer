@@ -99,6 +99,7 @@ snit::widget sdrtk::readout-core {
 	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
 	grid $win.value $win.units
 	trace add variable options(-widget-value) write [mymethod TraceWriteWidgetValue]
+	# $hull configure -labelanchor sw
     }
     
     # translate step, we accumulate steps since last explicit set of -phi
