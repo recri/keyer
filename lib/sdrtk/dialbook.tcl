@@ -187,9 +187,7 @@ snit::widget sdrtk::dialbook {
 	lappend data(tabs) [$self NewTab $window {*}$args]
 	set tab [$self FindWindow $window]
 	$self UpdateLists
-	if {$options(-grid)} {
-	    $self LayoutGrid
-	}
+	if {$options(-grid)} { $self LayoutGrid }
 	if {$options(-tree)} {
 	    # should be $self LayoutTree, but too much information to transfer
 	    set text [$tab cget -text]
@@ -219,7 +217,8 @@ snit::widget sdrtk::dialbook {
     method TreeUpdateCurrent {name1 name2 op} {
 	set save [$tree selection]
 	$tree selection set $name2
-	$tree set $name2 current [set ${name1}($name2)]
+	upvar ${name1}($name2) value
+	$tree set $name2 current $value
 	$tree selection set $save
     }
     # when Return is typed in a treeview, open up an item details view

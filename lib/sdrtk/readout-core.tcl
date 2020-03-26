@@ -190,7 +190,7 @@ snit::widget sdrtk::readout-core {
 	set options(-variable) $val
 	if {$options(-variable) ne {}} {
 	    trace add variable $options(-variable) write [mymethod TraceWriteVariable]
-	    $self TraceWriteVariable
+	    set $options(-variable) [set $options(-variable)]
 	}
     }
     method {Recompute} {opt val} { 
@@ -199,12 +199,14 @@ snit::widget sdrtk::readout-core {
 	set options(-phi-max) [$self integer-to-phi $options(-integer-max)]
     }
  
-    method TraceWriteVariable {args} { 
-	if { ! [catch {set $options(-variable)} value]} {
-	    $self configure -value $value
-	}
+    method TraceWriteVariable {name1 name2 op} { 
+	upvar ${name1}($name2) value
+	$self configure -value $value
     }
-    method TraceWriteWidgetValue {args} { catch { $self configure -value $options(-widget-value) } }
+    method TraceWriteWidgetValue {name1 name2 op} { 
+	upvar ${name1}($name2) value
+	$self configure -value $value
+    }
 
     method menu-entry {w text} { return {} }
     method button-entry {w text} { return {} }

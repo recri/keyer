@@ -409,7 +409,7 @@ snit::type sdrtcl::hl-connect-thread {
 			    set pending [$iqhandler pending]
 			    if {[lindex [lindex $pending 1] 2] ne {} || 
 				[lindex [lindex $pending 2] 2] ne {} ||
-				($seq % 1000) == 0} { 
+				($seq % 5000) == 0} { 
 				puts "rx-recv $seq $pending"
 			    }
 			    $self tx-send [$iqhandler rxiq $data]

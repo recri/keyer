@@ -98,11 +98,12 @@ snit::type keyer::options {
 	pkgs {}
 	comps {}
 	opts {}
-	volatile {}
 	handler {}
 	busy {}
+	favor {}
 	merge {}
 	hide {}
+	volatile {}
     }
 
     constructor {args} {
@@ -150,6 +151,10 @@ snit::type keyer::options {
 	return [list [dict get $d name] [dict get $d opt]]
     }
 
+    method add-favor {args} { lappend data(favor) {*}$args }
+    method has-favor {} { return [expr {$data(favor) ne {}}] }
+    method get-favor {} { return $data(favor) }
+
     method add-merge {args} { lappend data(merge) {*}$args }
     method has-merge {} { return [expr {$data(merge) ne {}}] }
     method get-merge {} { return $data(merge) }
@@ -162,13 +167,12 @@ snit::type keyer::options {
     method has-volatile {} { return [expr {$data(volatile) ne {}}] }
     method get-volatile {} { return $data(volatile) }
     method process-volatile {} {
-	foreach {text name opt} [$self get-volatile] {
-	    set val [$name cget $opt]
-	    if {$val ne $options($text)} { set options($text) $val }
+	foreach {opt call opt2 var} [$self get-volatile] {
+	    set val [$call cget $opt2]
+	    if {$val ne [set $var]} { set $var $val }
 	}
 	after 25 [mymethod process-volatile]
     }
-
 
     method describe {dict otype args} { 
 	set opt [dict get $dict text]
@@ -185,7 +189,7 @@ snit::type keyer::options {
 	    }
 	}
 	dict set data(opts) $opt $dict
-	if {[$self is-volatile $opt]} { $self add-volatile $opt }
+	if {[$self is-volatile $opt]} { $self add-volatile $opt [dict get $dict call] [dict get $dict opt] [myvar options($opt)] }
     }
 
     #
@@ -239,7 +243,9 @@ snit::type keyer::options {
 	    if {[$self is-ronly $opt]} continue
 	    if {[$self get-value $opt] eq $val} continue
 	    $self set-value $opt $val
-	    catch {set options($opt) $val} result
+	    if {[catch {set options($opt) $val} result]} {
+		puts "keyer::options configure $opt $val: {set options($opt) $val} threw $result"
+	    }
 	    foreach {comp opt2} [$self component-opts $opt] {
 		# puts "keyer-options::configure $comp $opt2"
 		dict set data(busy) $comp $opt2 $val
@@ -633,9 +639,10 @@ snit::type keyer::options {
 	    set favor [is-favor $opt];  # the opt is in the favorite list
 	    set argvopts [is-argvopts $opt]; # the opt was in the argv
 	    set option [dict create \
-			    text -$name$opt factory $factory name $name opt $opt window $window cname $cname cclass $cclass \
-			    cdefault $cdefault cvalue $cvalue info $info type none merge $merge hide $hide favor $favor \
-			    ronly 0 conly 0 volatile 0 isargv $argvopts composite $composite]
+			    text -$name$opt factory $factory name $name opt $opt window $window call $call \
+			    cname $cname cclass $cclass cdefault $cdefault cvalue $cvalue info $info type none \
+			    merge $merge hide $hide favor $favor ronly 0 conly 0 volatile 0 isargv $argvopts \
+			    composite $composite]
 	    # $option is the option dict for -$name$opt
 	    $self populate-option $name $opt $option
 	}
@@ -695,8 +702,8 @@ proc is-argvopts {o} { return [is-matched $o [get-argvopts]] }
 proc get-favor {} { return [::koptions get-favor] }
 proc has-favor {} { return [::koptions has-favor] }
 proc lappend-favor {args} { ::koptions add-favor {*}$args }
-proc the-favor {o} { return [the-match $o [get-favor]] }
-proc is-favor {o} { return [is-matched $o [get-favor]] }
+proc the-favor {o} { return [the-match $o [::koptions get-favor]] }
+proc is-favor {o} { return [is-matched $o [::koptions get-favor]] }
 
 proc has-merge {} { return [::koptions has-merge] }
 proc lappend-merge {args} { ::koptions add-merge {*}$args }
