@@ -86,7 +86,7 @@ proc get-iambic-keyers {} {
 }
 
 #
-# option manager
+# component/option manager
 #
 package require snit
 namespace eval ::keyer {}
@@ -95,12 +95,14 @@ snit::type keyer::options {
     variable options -array {}
 
     variable data -array {
+	pkgs {}
+	comps {}
 	opts {}
 	volatile {}
 	handler {}
 	busy {}
-	comps {}
-	pkgs {}
+	merge {}
+	hide {}
     }
 
     constructor {args} {
@@ -143,13 +145,21 @@ snit::type keyer::options {
     }
 
     method add-merge {args} { lappend data(merge) {*}$args }
+    method has-merge {} { return [expr {$data(merge) ne {}}] }
+    method get-merge {} { return $data(merge) }
+
     method add-hide {args} { lappend data(hide) {*}$args }
+    method has-hide {} { return [expr {$data(hide) ne {}}] }
+    method get-hide {} { return $data(hide) }
+
     method add-volatile {args} { lappend data(volatile) {*}$args }
+    method has-volatile {} { return [expr {$data(volatile) ne {}}] }
+    method get-volatile {} { return $data(volatile) }
 
     method describe {dict otype args} { 
 	set opt [dict get $dict text]
 	set options($opt) [dict get $dict cvalue]
-	puts "keyer-options describe options($opt) is $options($opt)"
+	# puts "keyer-options describe options($opt) is $options($opt)"
 	dict set dict type $otype
 	dict set dict described 1
 	dict set dict readout {}
@@ -620,7 +630,7 @@ snit::type keyer::options {
 keyer::options ::koptions
 
 # initialize data variables
-set ::data(main) [dict create -server {} -favor {} -hide {} -merge {} -argvopts {} -volatile {}]
+set ::data(main) [dict create -server {} -favor {} -argvopts {}]
 
 #
 # miscellaneous accessors
@@ -651,21 +661,18 @@ proc lappend-start {args} { lappend-var -start {*}$args }
 proc get-argvopts {} { return [get-var -argvopts] }
 proc has-argvopts {} { return [has-var -argvopts] }
 proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
-proc get-merge {} { return [get-var -merge] }
-proc has-merge {} { return [has-var -merge] }
-proc lappend-merge {args} { lappend-var -merge {*}$args }
 proc get-favor {} { return [get-var -favor] }
 proc has-favor {} { return [has-var -favor] }
 proc lappend-favor {args} { lappend-var -favor {*}$args }
-proc get-hide {} { return [get-var -hide] }
-proc has-hide {} { return [has-var -hide] }
-proc lappend-hide {args} { lappend-var -hide {*}$args }
-proc set-volatile {val} { set-var -volatile $val }
-proc get-volatile {} { return [get-var -volatile] }
-proc lappend-volatile {args} { lappend-var -volatile {*}$args }
-proc set-packages {val} { set-var -packages $val }
-proc get-packages {} { return [get-var -packages] }
-proc lappend-packages {args} { lappend-var -packages {*}$args }
+
+proc get-merge {} { return [::koptions get-merge] }
+proc has-merge {} { return [::koptions has-merge] }
+proc lappend-merge {args} { ::koptions add-merge {*}$args }
+proc get-hide {} { return [::koptions get-hide] }
+proc has-hide {} { return [::koptions has-hide] }
+proc lappend-hide {args} { ::koptions add-hide {*}$args }
+proc get-volatile {} { return [::koptions get-volatile] }
+proc lappend-volatile {args} { ::koptions add-volatile {*}$args }
 
 #
 # manage option preferences
@@ -770,240 +777,219 @@ proc process-volatile {} {
 }
 
 #
-# setups are macros defining component instances
-# setups bind an implementaion to a instance and supply some option values
+# setups are macros defining component instances with additional information
+# setups bind an implementation to a instance and supply some option values
 # saving all setups in one file makes it hard to change the prebuilt setups
 # should only save those which are different from the prebuilt defaults
+# and should save setup name to ~/.config/keyer/setups/name.tcl
 #
+
 package require getstring
 namespace import getstring::*
 
 snit::type keyer::setups {
+
+    variable setups [dict create]
+    
+    constructor {args} {
+	$self load-setups
+    }
+
+    method add-setup {name val} { dict set setups $name $val }
+    method is-setup {name} { return [dict exists $setups $name] }
+
+    method get-names {} { return [dict keys $setups] }
+    method get-start {name} { return [dict get $setups $name start] }
+    method get-info {name} { return [dict get $setups $name info] }
+    method get-ports {name} { return [dict get $setups $name ports] }
+    method get-connect {name} { return [dict get $setups $name connect] }
+
+    method build-command-line {} {
+	set argv [file tail $::script]
+	if {[get-server] ne {}} { lappend argv -server [get-server] }
+	lappend argv -start [get-start]
+	# prefer specifically named options
+	# to the ones that are only inferred from component inspection
+	foreach opt [::koptions get-opts] {
+	    if {[::koptions not-default $opt]} {
+		lappend argv $opt $::value($opt)
+	    }
+	}
+	# now find the pertinent -merge -hide etc lists
+	if {[::koptions has-merge]} { lappend argv -merge [lsort -unique [::koptions get-merge]] }
+	if {[::koptions has-hide]} { lappend argv -hide [lsort -unique [::kopitons get-hide]] }
+	return $argv
+    }
+
+    method save-current-setup {} {
+	# prompt for name
+	if {[tk_getString .gs text "Name for setup:"] && [tk_getString .gs info "Description:"]} {
+	    $self add-setup $text [dict create start [$self build-command-line] info $info]
+	    $self save-setups
+	}
+    }
+
+    method save-setups {} {
+	# only save setups that do not match default setups
+	set defs [$self default-setups]
+	set fp [open ~/.config/keyer/setups.tcl w]
+	puts $fp "dict create {*}{"
+	dict for {key value} $setups {
+	    if {[dict exists $defs $key] && $value eq [dict get $defs $key]} continue
+	    puts $fp "  $key { [string trim $value] }"
+	}
+	puts $fp "}"
+	close $fp
+    }
+    
+    method merge-default-setups {} {
+	set up 0
+	dict for {key value} [$self default-setups] {
+	    if { ! [dict exists $setups $key] } {
+		dict set setups $key $value
+		incr up
+	    }
+	}
+	return $up
+    }
+    
+    method init-setups {} {
+	# config file does not exist or error reading it
+	if { ! [file exists ~/.config]} { file mkdir ~/.config }
+	if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
+	set setups [$self default-setups]
+	$self save-setups
+	if {[catch {source ~/.config/keyer/setups.tcl} result]} {
+	    error "failed to create default configs: $result"
+	}
+    }
+    
+    method load-setups {} {
+	if { ! [file exists ~/.config/keyer/setups.tcl] || 
+	     [catch {source ~/.config/keyer/setups.tcl} result]} {
+	    $self init-setups
+	} else {
+	    set setups $result
+	    if {[$self merge-default-setups]} {
+		$self save-setups
+	    }
+	}
+    }
+    
+    method default-setups {} {
+	#
+	# connection hints
+	#  -connect system-midi>key>kyo>system-audio
+	#  -connect system-midi>key2>kyo2>system-audio
+	#  -connect kbd>kbo>system-audio
+	#  -connect kbd2>kbo2>system-audio
+	#  -connect >ptt>
+	#  -connect >deb>
+	#  -connect cas>key*
+	#  -connect (kyo|kbo)*>detone>out (or receiver stream?)
+	#
+	
+	return [dict create {*}{ 
+	    key {
+		start { keyer -start {keyer-iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
+		info { iambic keyer and a keyed oscillator }
+		connect { key:midi_out kyo:midi_in }
+		ports { key:midi_in kyo:midi_out kyo:out_i kyo:out_q }
+	    }
+	    key2 { 
+		start {keyer -start {keyer-iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
+		info { second iambic keyer and keyed oscillator }
+		connect { key2:midi_out kyo2:midi_in }
+		ports { key2:midi_in kyo2:midi_out kyo2:out_i kyo2:out_q }
+	    }
+	    kbd {
+		start { keyer -start {cw-encode-input@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
+		info {keyboard keyer and a keyed oscillator}
+		connect { kbd:midi_out kyo:midi_in }
+		ports { kyo:midi_out kyo:out_i kyo:out_q }
+	    }
+	    kbd2 {
+		start { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
+		info {second keyboard keyer and a keyed oscillator}
+		connect { kbd2:midi_out kyo2:midi_in }
+		ports { kyo2:midi_out kyo2:out_i kyo2:out_q }
+	    }
+	    ptt {
+		start { keyer -start {keyer-ptt@ptt} }
+		info {push-to-talk switch with tx delay}
+	    }
+	    deb {
+		start { keyer -start {keyer-debounce@deb} }
+		info {key contact debouncer}
+	    }
+	    cas {
+		start { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
+		info {midi events from keyboard keys}
+	    }
+	    tap {
+		start { keyer -start {midi-tap-view@tap} }
+		info {midi monitor for timing events}
+	    }
+	    tap2 {
+		start { keyer -start {midi-tap-view@tap2} }
+		info {second midi monitor for timing events}
+	    }
+	    out {
+		start { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
+		info {audio to ascii morse decoder}
+	    }
+	    hl {
+		start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
+		info { hermes lite udp jack connection }
+	    }
+	    hlt {
+		start { keyer -start {hl-test@hlt} -kyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
+		info { hermes lite test dashboard }
+	    }
+	    spec {
+		start { keyer -start {spectrum-waterfall-view@spec}}
+		info { spectrum and waterfall display }
+	    }
+	    spec2 {
+		start { keyer -start {spectrum-waterfall-view@spec2}}
+		info { spectrum and waterfall display }
+	    }
+	    filt {
+		start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
+		info { overlap save bandpass filter }
+	    }
+	    test {
+		start { keyer key hl hlt spec filt -tree 1 } 
+		info { hermes lite test app }
+	    }
+	    nod {
+		start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
+		info {hide esoteric keyer options}
+	    }
+	    1ch {
+		start { keyer -merge {*-chan *-note} }
+		info {merge midi channel and note options}
+	    }
+	}]
+    }
 }
 
 snit::type keyer::main {
 }
 
-proc get-setups {} { return [get-var -setups] }
-proc set-setups {val} { set-var -setups $val }
-proc add-setup {name val} {
-    set old [get-setups]
-    dict set old $name $val
-    set-setups $old
-}
-proc get-setup {name} { return [dict get [get-setups] $name start] }
-
-proc is-setup {name} { return [dict exists [get-setups] $name] }
-proc get-setup-names {} { return [dict keys [get-setups]] }
-proc setup-v0-style {setups} {
-    # v0 had setup names but no setup info-names
-    set info 0
-    set setup 0
-    set keys [dict keys $setups]
-    foreach key $keys {
-	if {[string match $key info-*]} {
-	    incr info
-	} elseif {[dict exists $setups info-$key]} {
-	    incr setup
-	}
-    }
-    return [expr {$info == 0 && $setup == 0}]
-}
-proc setup-upgrade-v0-v1 {setups} {
-    set defs [default-setups]
-    foreach key [dict keys $setups] {
-	if {[dict exists $defs info-$key]} {
-	    set info [dict get $defs info-$key]
-	} else {
-	    set info {}
-	}
-	dict set setups info-$key $info
-    }
-    return $setups
-}
-proc save-current-setup {} {
-    # prompt for name?
-    if {[tk_getString .gs text "Name for setup:"]} {
-	if {[tk_getString .gs info "Description:"]} {
-	    add-setup $text [build-command-line]
-	    add-setup info-$text $info
-	    save-setups
-	}
-    }
-}
-proc save-setups {} {
-    set fp [open ~/.config/keyer/keyer.tcl w]
-    puts $fp "dict create {*}{"
-    dict for {key value} [get-setups] {
-	puts $fp "  $key { [string trim $value] }"
-    }
-    puts $fp "}"
-    close $fp
-}
-proc default-setups {} {
-    #
-    # connection hints
-    #  -connect system-midi>key>kyo>system-audio
-    #  -connect system-midi>key2>kyo2>system-audio
-    #  -connect kbd>kbo>system-audio
-    #  -connect kbd2>kbo2>system-audio
-    #  -connect >ptt>
-    #  -connect >deb>
-    #  -connect cas>key*
-    #  -connect (kyo|kbo)*>detone>out (or receiver stream?)
-    #
-    
-    return [dict create {*}{ 
-	key {
-	    start { keyer -start {keyer-iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
-	    info { iambic keyer and a keyed oscillator }
-	    connect { key:midi_out kyo:midi_in }
-	    ports { key:midi_in kyo:midi_out kyo:out_i kyo:out_q }
-	}
-	key2 { 
-	    start {keyer -start {keyer-iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
-	    info { second iambic keyer and keyed oscillator }
-	    connect { key2:midi_out kyo2:midi_in }
-	    ports { key2:midi_in kyo2:midi_out kyo2:out_i kyo2:out_q }
-	}
-	kbd {
-	    start { keyer -start {cw-encode-input@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
-	    info {keyboard keyer and a keyed oscillator}
-	    connect { kbd:midi_out kyo:midi_in }
-	    ports { kyo:midi_out kyo:out_i kyo:out_q }
-	}
-	kbd2 {
-	    start { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
-	    info {second keyboard keyer and a keyed oscillator}
-	    connect { kbd2:midi_out kyo2:midi_in }
-	    ports { kyo2:midi_out kyo2:out_i kyo2:out_q }
-	}
-	ptt {
-	    start { keyer -start {keyer-ptt@ptt} }
-	    info {push-to-talk switch with tx delay}
-	}
-	deb {
-	    start { keyer -start {keyer-debounce@deb} }
-	    info {key contact debouncer}
-	}
-	cas {
-	    start { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
-	    info {midi events from keyboard keys}
-	}
-	tap {
-	    start { keyer -start {midi-tap-view@tap} }
-	    info {midi monitor for timing events}
-	}
-	tap2 {
-	    start { keyer -start {midi-tap-view@tap2} }
-	    info {second midi monitor for timing events}
-	}
-	out {
-	    start { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
-	    info {audio to ascii morse decoder}
-	}
-	hl {
-	    start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
-	    info { hermes lite udp jack connection }
-	}
-	hlt {
-	    start { keyer -start {hl-test@hlt} -kyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
-	    info { hermes lite test dashboard }
-	}
-	spec {
-	    start { keyer -start {spectrum-waterfall-view@spec}}
-	    info { spectrum and waterfall display }
-	}
-	spec2 {
-	    start { keyer -start {spectrum-waterfall-view@spec2}}
-	    info { spectrum and waterfall display }
-	}
-	filt {
-	    start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
-	    info { overlap save bandpass filter }
-	}
-	test {
-	    start { keyer key hl hlt spec filt -tree 1 } 
-	    info { hermes lite test app }
-	}
-	nod {
-	    start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
-	    info {hide esoteric keyer options}
-	}
-	1ch {
-	    start { keyer -merge {*-chan *-note} }
-	    info {merge midi channel and note options}
-	}
-    }]
-}
-
-proc merge-default-setups {} {
-    set s [get-setups]
-    set d [default-setups]
-    set up 0
-    dict for {name value} $d {
-	if { ! [dict exists $s $name] } {
-	    dict set s $name $value
-	    incr up
-	}
-    }
-    return $up
-}
-
-proc init-setups {} {
-    # config file does not exist or error reading it
-    if { ! [file exists ~/.config]} { file mkdir ~/.config }
-    if { ! [file exists ~/.config/keyer]} { file mkdir ~/.config/keyer }
-    set-setups [default-setups]
-    # turn off saving for the moment
-    # save-setups
-    #if {[catch {source ~/.config/keyer/keyer.tcl} result]} {
-    #	error "failed to create default configs: $result"
-    #}
-}
-
-proc load-setups {} {
-    if { ! [file exists ~/.config/keyer/keyer.tcl] || 
-	 [catch {source ~/.config/keyer/keyer.tcl} result]} {
-	init-setups
-    } elseif {[setup-v0-style $result]} {
-	set-setups [setup-upgrade-v0-v1 $result]
-	merge-default-setups
-	save-setups
-    } else {
-	set-setups $result
-	if {[merge-default-setups]} {
-	    save-setups
-	}
-    }
-}
+proc is-setup {name} { return [::setups is-setup $name] }
+proc get-setup-names {} { return [::setups get-names] }
+proc get-setup-info {name} { return [::setups get-info $name] }
+proc get-setup-start {name} { return [::setups get-start $name] }
 
 #
 #
 #
-proc build-command-line {} {
-    set argv [file tail $::script]
-    if {[get-server] ne {}} { lappend argv -server [get-server] }
-    lappend argv -start [get-start]
-    # prefer specifically named options
-    # to the ones that are only inferred from component inspection
-    foreach opt [::koptions get-opts] {
-	if { ! [info exists ::value($opt)]} continue
-	if {$::value($opt) ne $::defval($opt)} {
-	    lappend argv $opt $::value($opt)
-	}
-    }
-    # now find the pertinent -merge -hide etc lists
-    if {[has-merge]} { lappend argv -merge [lsort -unique [get-merge]] }
-    if {[has-hide]} { lappend argv -hide [lsort -unique [get-hide]] }
-    return $argv
-}
-
 proc usage-message {} {
     puts "usage: keyer setup ..."
     puts "setups: [get-setup-names]"
     foreach s [get-setup-names] {
-	puts "  $s: [dict get [get-setups] $s info]"
+	puts "  $s: [get-setup-info $s]"
     }
     exit 1
 }
@@ -1016,7 +1002,7 @@ proc main-argv {argv} {
     while {[llength $argv] > 0 && [is-setup [lindex $argv 0]]} {
 	set v [lindex $argv 0]
 	set argv [lrange $argv 1 end]
-	main-argv [lrange [get-setup $v] 1 end]
+	main-argv [lrange [get-setup-start $v] 1 end]
     }
     foreach {opt val} $argv {
 	# -server - jack server
@@ -1032,7 +1018,7 @@ proc main-argv {argv} {
 	switch -- $opt { 
 	    -server { set-server $val }
 	    -title { set-title $val }
-	    -run { foreach v $val { main-argv [lrange [get-setup $v] 1 end] } }
+	    -run { foreach v $val { main-argv [lrange [get-setup-start $v] 1 end] } }
 	    -start { lappend-start {*}$val }
 	    -favor { lappend-favor {*}$val }
 	    -hide { lappend-hide {*}$val }
@@ -1059,7 +1045,7 @@ proc main {argv} {
     ttk::style configure TRadiobutton -relief raised
     
     # load or create ~/.config/keyer/keyer.tcl
-    load-setups
+    ::keyer::setups ::setups
     
     # make a usage message
     if {$argv eq {} || $argv eq {help}} { usage-message }
@@ -1068,7 +1054,7 @@ proc main {argv} {
     main-argv $argv
     
     # start components and collect their options
-    puts "main: has-start [has-start]"
+    # puts "main: has-start [has-start]"
     if { ! [has-start]} { usage-message }
     
     foreach composite [get-start] { ::koptions process $composite }
