@@ -114,6 +114,7 @@ snit::type keyer::options {
 	set data(pkgs) [dict create]
 
 	$self find-packages
+	$self process-volatile
     }
 
     # the part dealing with options
@@ -136,6 +137,11 @@ snit::type keyer::options {
     method get-default {opt} { return [$self get $opt cdefault] }
     method get-value {opt} { return [$self get $opt cvalue] }
     method set-value {opt val} { return [$self set $opt cvalue $val] }
+    method is-default {opt} {
+	if {[$self is-readonly $opt]} { return 1 }
+	if {[$self get-default $opt] eq $options($opt)} { return 1 }
+	return 0
+    }
 
     method component-opts {opt} {
 	set d [dict get $data(opts) $opt]
@@ -155,6 +161,14 @@ snit::type keyer::options {
     method add-volatile {args} { lappend data(volatile) {*}$args }
     method has-volatile {} { return [expr {$data(volatile) ne {}}] }
     method get-volatile {} { return $data(volatile) }
+    method process-volatile {} {
+	foreach {text name opt} [$self get-volatile] {
+	    set val [$name cget $opt]
+	    if {$val ne $options($text)} { set options($text) $val }
+	}
+	after 25 [mymethod process-volatile]
+    }
+
 
     method describe {dict otype args} { 
 	set opt [dict get $dict text]
@@ -171,6 +185,7 @@ snit::type keyer::options {
 	    }
 	}
 	dict set data(opts) $opt $dict
+	if {[$self is-volatile $opt]} { $self add-volatile $opt }
     }
 
     #
@@ -270,7 +285,8 @@ snit::type keyer::options {
 	if {[$self is-option $opt]} {
 	    if {[$self is-volatile $opt]} {
 		foreach {name opt2} [$self component-opts $opt] break
-		set options($opt) [$name cget $opt2]
+		set val [$name cget $opt2]
+		if {$val ne $options($opt)} { set options($opt) $val } 
 	    }
 	    return $options($opt)
 	}
@@ -641,43 +657,9 @@ proc has-var {var} { return [dict exists $::data(main) $var] }
 proc set-var {var val} { return [dict set ::data(main) $var $val] }
 proc lappend-var {var args} { dict lappend ::data(main) $var {*}$args }
 
-# these are options and groups of options collected from argv
-proc get-server {} { return [get-var -server] }
-proc has-server {} { return [has-var -server] }
-proc set-server {val} { set-var -server $val }
-proc get-title {} { return [get-var -title] }
-proc has-title {} { return [has-var -title] }
-proc set-title {val} { set-var -title $val }
-proc get-grid {} { return [get-var -grid] }
-proc has-grid {} { return [has-var -grid] }
-proc set-grid {val} { set-var -grid $val }
-proc get-tree {} { return [get-var -tree] }
-proc has-tree {} { return [has-var -tree] }
-proc set-tree {val} { set-var -tree $val }
-
-proc get-start {} { return [get-var -start] }
-proc has-start {} { return [has-var -start] }
-proc lappend-start {args} { lappend-var -start {*}$args }
-proc get-argvopts {} { return [get-var -argvopts] }
-proc has-argvopts {} { return [has-var -argvopts] }
-proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
-proc get-favor {} { return [get-var -favor] }
-proc has-favor {} { return [has-var -favor] }
-proc lappend-favor {args} { lappend-var -favor {*}$args }
-
-proc get-merge {} { return [::koptions get-merge] }
-proc has-merge {} { return [::koptions has-merge] }
-proc lappend-merge {args} { ::koptions add-merge {*}$args }
-proc get-hide {} { return [::koptions get-hide] }
-proc has-hide {} { return [::koptions has-hide] }
-proc lappend-hide {args} { ::koptions add-hide {*}$args }
-proc get-volatile {} { return [::koptions get-volatile] }
-proc lappend-volatile {args} { ::koptions add-volatile {*}$args }
-
 #
 # manage option preferences
-# some of these match patterns in the lists
-# some just match instances in the lists
+# match patterns in lists
 #
 proc the-match {opt list} {
     foreach pat $list { if {[string match $pat $opt]} { return $pat } }
@@ -685,14 +667,45 @@ proc the-match {opt list} {
 }
 proc is-matched {opt list} { return [expr {[the-match $opt $list] ne {}}] }
 
+# these are options and groups of options collected from argv
+proc get-server {} { return [get-var -server] }
+proc has-server {} { return [has-var -server] }
+proc set-server {val} { set-var -server $val }
+
+proc get-title {} { return [get-var -title] }
+proc has-title {} { return [has-var -title] }
+proc set-title {val} { set-var -title $val }
+
+proc get-grid {} { return [get-var -grid] }
+proc has-grid {} { return [has-var -grid] }
+proc set-grid {val} { set-var -grid $val }
+
+proc get-tree {} { return [get-var -tree] }
+proc has-tree {} { return [has-var -tree] }
+proc set-tree {val} { set-var -tree $val }
+
+proc get-start {} { return [get-var -start] }
+proc has-start {} { return [has-var -start] }
+proc lappend-start {args} { lappend-var -start {*}$args }
+
+proc get-argvopts {} { return [get-var -argvopts] }
+proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
+proc is-argvopts {o} { return [is-matched $o [get-argvopts]] }
+
+proc get-favor {} { return [::koptions get-favor] }
+proc has-favor {} { return [::koptions has-favor] }
+proc lappend-favor {args} { ::koptions add-favor {*}$args }
 proc the-favor {o} { return [the-match $o [get-favor]] }
 proc is-favor {o} { return [is-matched $o [get-favor]] }
-proc the-hide {o} { return [the-match $o [get-hide]] }
-proc is-hide {o} { return [is-matched $o [get-hide]] }
-proc the-merge {o} { return [the-match $o [get-merge]] }
-proc is-merge {o} { return [is-matched $o [get-merge]] }
-proc the-argvopts {o} { return [the-match $o [get-argvopts]] }
-proc is-argvopts {o} { return [is-matched $o [get-argvopts]] }
+
+proc has-merge {} { return [::koptions has-merge] }
+proc lappend-merge {args} { ::koptions add-merge {*}$args }
+proc the-merge {o} { return [the-match $o [::koptions get-merge]] }
+
+proc get-hide {} { return [::koptions get-hide] }
+proc has-hide {} { return [::koptions has-hide] }
+proc lappend-hide {args} { ::koptions add-hide {*}$args }
+proc is-hide {o} { return [is-matched $o [::koptions get-hide]] }
 
 # user interface components
 # primary user interface component is the dialbook
@@ -754,7 +767,7 @@ proc load-ui {} {
 	if {[::koptions is-processed $text]} { error "$text already processed" }
 	::koptions set $text processed 1
 	
-	if {[::koptions is-hide $text]} continue
+	if {[is-hide $text]} continue
 	
 	set w .dial.x$text
 	package require sdrtk::readout-$type
@@ -765,15 +778,6 @@ proc load-ui {} {
 	.dial add $w $name $type -text $text
     }
     if {[.dial select] eq {}} { .dial select 0 }
-    after 25 process-volatile
-}
-
-proc process-volatile {} {
-    foreach {text name opt} [get-volatile] {
-	set val [$name cget $opt]
-	if {$val ne $::value($text)} { set ::value($text) $val }
-    }
-    after 25 process-volatile
 }
 
 #
@@ -811,13 +815,13 @@ snit::type keyer::setups {
 	# prefer specifically named options
 	# to the ones that are only inferred from component inspection
 	foreach opt [::koptions get-opts] {
-	    if {[::koptions not-default $opt]} {
+	    if { ! [::koptions is-default $opt]} {
 		lappend argv $opt $::value($opt)
 	    }
 	}
 	# now find the pertinent -merge -hide etc lists
-	if {[::koptions has-merge]} { lappend argv -merge [lsort -unique [::koptions get-merge]] }
-	if {[::koptions has-hide]} { lappend argv -hide [lsort -unique [::kopitons get-hide]] }
+	if {[has-merge]} { lappend argv -merge [lsort -unique [get-merge]] }
+	if {[has-hide]} { lappend argv -hide [lsort -unique [get-hide]] }
 	return $argv
     }
 
@@ -973,14 +977,14 @@ snit::type keyer::setups {
 	}]
     }
 }
-
-snit::type keyer::main {
-}
-
 proc is-setup {name} { return [::setups is-setup $name] }
 proc get-setup-names {} { return [::setups get-names] }
 proc get-setup-info {name} { return [::setups get-info $name] }
 proc get-setup-start {name} { return [::setups get-start $name] }
+
+
+snit::type keyer::main {
+}
 
 #
 #
@@ -1070,22 +1074,20 @@ proc main {argv} {
     load-ui
     
     # load the options collected from the command line
-    if {[has-argvopts]} {
-	foreach {opt val} [get-argvopts] { 
-	    if {[catch {::koptions configure $opt $val} error]} {
-		puts "koptions configure threw $error"
-		# if the $opt is -$comp for one of the setup components,
-		# then apply it to each opt value pair in $val to get
-		# -$comp$opt $value
-		if {[llength $val] > 1 && ([llength $val]&1) == 0} {
-		    foreach {option value} $val {
-			if {[catch {::koptions configure $opt$option $value} error2]} {
-			    puts "bad option: $opt $val"
-			}
+    foreach {opt val} [get-argvopts] { 
+	if {[catch {::koptions configure $opt $val} error]} {
+	    puts "koptions configure threw $error"
+	    # if the $opt is -$comp for one of the setup components,
+	    # then apply it to each opt value pair in $val to get
+	    # -$comp$opt $value
+	    if {[llength $val] > 1 && ([llength $val]&1) == 0} {
+		foreach {option value} $val {
+		    if {[catch {::koptions configure $opt$option $value} error2]} {
+			puts "bad option: $opt $val"
 		    }
-		} else {
-		    puts "bad option: $opt $val"
 		}
+	    } else {
+		puts "bad option: $opt $val"
 	    }
 	}
     }
