@@ -82,7 +82,7 @@ proc get-morse-dicts {} {
 
 # these are the iambic keyers
 proc get-iambic-keyers {} { 
-    return [lmap x [lsearch -glob -all -inline [::koptions packages] *keyer-iambic-*] {lindex [split $x -] end}]
+    return [lmap x [lsearch -glob -all -inline [::options packages] *keyer-iambic-*] {lindex [split $x -] end}]
 }
 
 #
@@ -100,9 +100,9 @@ snit::type keyer::options {
 	opts {}
 	handler {}
 	busy {}
-	favor {}
-	merge {}
-	hide {}
+	-favor {}
+	-merge {}
+	-hide {}
 	volatile {}
     }
 
@@ -119,6 +119,25 @@ snit::type keyer::options {
     }
 
     # the part dealing with options
+
+    # describe an option in detail, and define it
+    method describe {dict otype args} { 
+	set opt [dict get $dict text]
+	set options($opt) [dict get $dict cvalue]
+	# puts "keyer-options describe options($opt) is $options($opt)"
+	dict set dict type $otype
+	dict set dict described 1
+	dict set dict readout {}
+	foreach {key val} $args {
+	    if {[string index $key 0] eq {-}} {
+		dict lappend dict readout $key $val
+	    } else {
+		dict set dict $key $val
+	    }
+	}
+	dict set data(opts) $opt $dict
+	if {[$self is-volatile $opt]} { $self add-volatile $opt [dict get $dict call] [dict get $dict opt] [myvar options($opt)] }
+    }
 
     method get-opts {} { return [dict keys $data(opts)] }
 
@@ -151,18 +170,26 @@ snit::type keyer::options {
 	return [list [dict get $d name] [dict get $d opt]]
     }
 
-    method add-favor {args} { lappend data(favor) {*}$args }
-    method has-favor {} { return [expr {$data(favor) ne {}}] }
-    method get-favor {} { return $data(favor) }
+    # these apply to lists of options or option patterns
+    # which are specified on the command line or in setups
+    # which become option properties when the option matches
+    # the list of patterns
+    method lappend {opt args} { lappend data($opt) {*}$args }
+    
+    #method add-favor {args} { lappend data(favor) {*}$args }
+    method has-favor {} { return [expr {$data(-favor) ne {}}] }
+    method get-favor {} { return $data(-favor) }
 
-    method add-merge {args} { lappend data(merge) {*}$args }
-    method has-merge {} { return [expr {$data(merge) ne {}}] }
-    method get-merge {} { return $data(merge) }
+    #method add-merge {args} { lappend data(merge) {*}$args }
+    method has-merge {} { return [expr {$data(-merge) ne {}}] }
+    method get-merge {} { return $data(-merge) }
 
-    method add-hide {args} { lappend data(hide) {*}$args }
-    method has-hide {} { return [expr {$data(hide) ne {}}] }
-    method get-hide {} { return $data(hide) }
+    #method add-hide {args} { lappend data(hide) {*}$args }
+    method has-hide {} { return [expr {$data(-hide) ne {}}] }
+    method get-hide {} { return $data(-hide) }
 
+    # this is a list of options which are volatile and must
+    # be refreshed from the component where they live
     method add-volatile {args} { lappend data(volatile) {*}$args }
     method has-volatile {} { return [expr {$data(volatile) ne {}}] }
     method get-volatile {} { return $data(volatile) }
@@ -172,24 +199,6 @@ snit::type keyer::options {
 	    if {$val ne [set $var]} { set $var $val }
 	}
 	after 25 [mymethod process-volatile]
-    }
-
-    method describe {dict otype args} { 
-	set opt [dict get $dict text]
-	set options($opt) [dict get $dict cvalue]
-	# puts "keyer-options describe options($opt) is $options($opt)"
-	dict set dict type $otype
-	dict set dict described 1
-	dict set dict readout {}
-	foreach {key val} $args {
-	    if {[string index $key 0] eq {-}} {
-		dict lappend dict readout $key $val
-	    } else {
-		dict set dict $key $val
-	    }
-	}
-	dict set data(opts) $opt $dict
-	if {[$self is-volatile $opt]} { $self add-volatile $opt [dict get $dict call] [dict get $dict opt] [myvar options($opt)] }
     }
 
     #
@@ -237,32 +246,36 @@ snit::type keyer::options {
 	    error "configure requires an even number of arguments"
 	}
 	foreach {opt val} $args {	
-	    if { ! [$self is-option $opt]} {
-		error "$opt is not defined in keyer-options::configure"
-	    }
-	    if {[$self is-ronly $opt]} continue
-	    if {[$self get-value $opt] eq $val} continue
-	    $self set-value $opt $val
-	    if {[catch {set options($opt) $val} result]} {
-		puts "keyer::options configure $opt $val: {set options($opt) $val} threw $result"
-	    }
-	    foreach {comp opt2} [$self component-opts $opt] {
-		# puts "keyer-options::configure $comp $opt2"
-		dict set data(busy) $comp $opt2 $val
-		# puts "keyer-options::configure try: $comp is-busy"
-		if { ! [$comp is-busy]} {
-		    set opts [dict get $data(busy) $comp]
-		    if {[catch {
-			# puts "keyer-options::configure try: $comp configure $opts"
-			$comp configure {*}$opts
-			dict unset data(busy) $comp
-		    } error]} {
-			puts "configure {$comp configure $opts} threw {$error}"
-		    }
-		} elseif {$data(handler) eq {}} {
-		    # puts "$comp is-busy"
-		    set data(handler) [after 100 [mymethod configure-timeout]]
+	    $self cset $opt $val
+	}
+    }
+
+    method cset {opt val} {
+	if { ! [$self is-option $opt]} {
+	    error "$opt is not defined in keyer-options::configure"
+	}
+	if {[$self is-ronly $opt]} return
+	if {[$self get-value $opt] eq $val} return
+	$self set-value $opt $val
+	if {[catch {set options($opt) $val} result]} {
+	    puts "keyer::options configure $opt $val: {set options($opt) $val} threw $result"
+	}
+	foreach {comp opt2} [$self component-opts $opt] {
+	    # puts "keyer-options::configure $comp $opt2"
+	    dict set data(busy) $comp $opt2 $val
+	    # puts "keyer-options::configure try: $comp is-busy"
+	    if { ! [$comp is-busy]} {
+		set opts [dict get $data(busy) $comp]
+		if {[catch {
+		    # puts "keyer-options::configure try: $comp configure $opts"
+		    $comp configure {*}$opts
+		    dict unset data(busy) $comp
+		} error]} {
+		    puts "configure {$comp configure $opts} threw {$error}"
 		}
+	    } elseif {$data(handler) eq {}} {
+		# puts "$comp is-busy"
+		set data(handler) [after 100 [mymethod configure-timeout]]
 	    }
 	}
     }
@@ -366,7 +379,6 @@ snit::type keyer::options {
 	    {* -speed} -
 	    {* -peer} -
 	    {* -gateware-version} -
-	    {* -code-version} -
 	    {* -board-id} -
 	    {* -mac-addr} -
 	    {* -mcp4662} -
@@ -401,7 +413,9 @@ snit::type keyer::options {
 	    {* -avg-rev-power} -
 	    {* -pa-current} -
 	    {* -raw-pa-current} -
-	    {* -avg-pa-current} { 
+	    {* -avg-pa-current} -
+	    {* -swr} -
+	    {* -power} { 
 		$self describe $option text ronly 1 volatile 1
 	    }
 	    {* -rx-calls} -
@@ -479,9 +493,9 @@ snit::type keyer::options {
 	    {* -smooth} { $self describe $option bool }
 	    {* -multi} { $self describe $option ivalue -min 1 -max 64 }
 	    {* -filter-low} -
-	    {* -filter-high} { $self describe $option value -min -8000 -max 8000 }
+	    {* -filter-high} { $self describe $option value -min -8000 -max 8000 -units Hz}
 	    {* -band-low} -
-	    {* -band-high} { $self describe $option value -min 100 -max 29999999 }
+	    {* -band-high} { $self describe $option value -min 100 -max 37999999 -units Hz }
 	    {* -rx-frames-per-call} { $self describe $option text ronly 1 volatile 1 }
 	    {* -tx-frames-per-call} - 
 	    {* -bs-frames-per-call} { $self describe $option text ronly 1 }
@@ -576,7 +590,7 @@ snit::type keyer::options {
 	set args {}
 	switch -glob $factory {
 	    sdrtcl::* { 
-		if {[get-server] ne {}} { lappend args -server [get-server] }
+		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
 		set window {}
 		$factory ::$name {*}$args
 		$name activate
@@ -589,7 +603,7 @@ snit::type keyer::options {
 		pack [$factory $window] -side top -expand true -fill both
 	    }
 	    sdrtcltk::* {
-		if {[get-server] ne {}} { lappend args -server [get-server] }
+		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
 		toplevel .$name -class "keyer/$name"
 		wm title .$name "keyer/$name"
 		set window .$name.$name
@@ -649,17 +663,9 @@ snit::type keyer::options {
     }
 }
 
-# initialize data variables
-set ::data(main) [dict create -server {} -favor {} -argvopts {}]
-
-#
-# miscellaneous accessors
-# global names stored in dict as dict set ::data(main) $name $val
-#
-proc get-var {var} { return [dict get $::data(main) $var] }
-proc has-var {var} { return [dict exists $::data(main) $var] }
-proc set-var {var val} { return [dict set ::data(main) $var $val] }
-proc lappend-var {var args} { dict lappend ::data(main) $var {*}$args }
+proc dial-cset {opt val} { ::options configure $opt $val }
+proc dial-cget {opt} { return [::options cget $opt] }
+proc dial-cvar {opt} { return [::options cvar $opt] }
 
 #
 # manage option preferences
@@ -671,118 +677,20 @@ proc the-match {opt list} {
 }
 proc is-matched {opt list} { return [expr {[the-match $opt $list] ne {}}] }
 
-# these are options and groups of options collected from argv
-proc get-server {} { return [get-var -server] }
-proc has-server {} { return [has-var -server] }
-proc set-server {val} { set-var -server $val }
+proc get-favor {} { return [::options get-favor] }
+proc has-favor {} { return [::options has-favor] }
+proc lappend-favor {args} { ::options add-favor {*}$args }
+proc the-favor {o} { return [the-match $o [::options get-favor]] }
+proc is-favor {o} { return [is-matched $o [::options get-favor]] }
 
-proc get-title {} { return [get-var -title] }
-proc has-title {} { return [has-var -title] }
-proc set-title {val} { set-var -title $val }
+proc has-merge {} { return [::options has-merge] }
+proc lappend-merge {args} { ::options add-merge {*}$args }
+proc the-merge {o} { return [the-match $o [::options get-merge]] }
 
-proc get-grid {} { return [get-var -grid] }
-proc has-grid {} { return [has-var -grid] }
-proc set-grid {val} { set-var -grid $val }
-
-proc get-tree {} { return [get-var -tree] }
-proc has-tree {} { return [has-var -tree] }
-proc set-tree {val} { set-var -tree $val }
-
-proc get-start {} { return [get-var -start] }
-proc has-start {} { return [has-var -start] }
-proc lappend-start {args} { lappend-var -start {*}$args }
-
-proc get-argvopts {} { return [get-var -argvopts] }
-proc lappend-argvopts {args} { lappend-var -argvopts {*}$args }
-proc is-argvopts {o} { return [is-matched $o [get-argvopts]] }
-
-proc get-favor {} { return [::koptions get-favor] }
-proc has-favor {} { return [::koptions has-favor] }
-proc lappend-favor {args} { ::koptions add-favor {*}$args }
-proc the-favor {o} { return [the-match $o [::koptions get-favor]] }
-proc is-favor {o} { return [is-matched $o [::koptions get-favor]] }
-
-proc has-merge {} { return [::koptions has-merge] }
-proc lappend-merge {args} { ::koptions add-merge {*}$args }
-proc the-merge {o} { return [the-match $o [::koptions get-merge]] }
-
-proc get-hide {} { return [::koptions get-hide] }
-proc has-hide {} { return [::koptions has-hide] }
-proc lappend-hide {args} { ::koptions add-hide {*}$args }
-proc is-hide {o} { return [is-matched $o [::koptions get-hide]] }
-
-# user interface components
-# primary user interface component is the dialbook
-# which isn't finished.
-
-#
-# update the window
-# this doesn't work when -wpm, -window, and -window2 aren't obvious
-# extracted from keyer-options::configure-timeout when merged into koptions
-# hmm, none of this is going to work any more, and it should be lower 
-# after idle [list update-window-title]
-#
-proc update-window-title {} {
-    if {0} {
-	if {[info exists ::value(-wpm)] && [info exists ::value(-window2)]} {
-	    if {$::value(-window2) ne {none}} {
-		set title "recri keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
-	    } else {
-		set title "recri keyer $::value(-wpm) wpm $::value(-window)"
-	    }
-	} elseif {[info exists ::value(-freq)] && [info exists ::value(-window2)]} {
-	    if {$::value(-window2) ne {none}} {
-		set title "recri keyer $::value(-freq) Hz $::value(-window)*$::value(-window2)"
-	    } else {
-		set title "recri keyer $::value(-freq) Hz $::value(-window)"
-	    }
-	} else {
-	    set title "recri keyer"
-	}
-    }
-    set title {recri keyer}
-    if {[has-title]} { set title [get-title] }
-    wm title . $title
-    set-title $title
-}
-
-#
-# load the main ui for the program
-#
-proc load-ui {} {
-    set args {}
-    if {[has-grid]} { lappend args -grid [get-grid] }
-    if {[has-tree]} { lappend args -tree [get-tree] }
-    #.p add [::sdrtk::dialbook .p.dial {*}$args]
-    #toplevel .dial
-    wm title . keyer/dial
-    pack [::sdrtk::dialbook .dial {*}$args]
-    array set compid {}
-    foreach text [::koptions get-opts] {
-	set cvalue [::koptions cget $text]
-	set type [::koptions get $text type]
-	set name [::koptions get $text name]
-	set opt [::koptions get $text opt]
-	set info [::koptions get $text info]
-	set readout [::koptions get $text readout]
-	set var [::koptions cvar $text]
-	
-	# if already processed, error
-	if {[::koptions is-processed $text]} { error "$text already processed" }
-	::koptions set $text processed 1
-	
-	if {[is-hide $text]} continue
-	
-	set w .dial.x$text
-	package require sdrtk::readout-$type
-	sdrtk::readout-$type $w -dialbook .dial \
-	    -text $text -info $info {*}$readout \
-	    -value $cvalue -variable $var -command [list ::koptions configure $text]
-	#if {$text in {-key-wpm -key-weight}} { $w test }
-	.dial add $w $name $type -text $text
-    }
-    if {[.dial select] eq {}} { .dial select 0 }
-}
+proc get-hide {} { return [::options get-hide] }
+proc has-hide {} { return [::options has-hide] }
+proc lappend-hide {args} { ::options add-hide {*}$args }
+proc is-hide {o} { return [is-matched $o [::options get-hide]] }
 
 #
 # setups are macros defining component instances with additional information
@@ -818,8 +726,8 @@ snit::type keyer::setups {
 	lappend argv -start [get-start]
 	# prefer specifically named options
 	# to the ones that are only inferred from component inspection
-	foreach opt [::koptions get-opts] {
-	    if { ! [::koptions is-default $opt]} {
+	foreach opt [::options get-opts] {
+	    if { ! [::options is-default $opt]} {
 		lappend argv $opt $::value($opt)
 	    }
 	}
@@ -967,7 +875,7 @@ snit::type keyer::setups {
 		info { overlap save bandpass filter }
 	    }
 	    test {
-		start { keyer key hl hlt spec filt -tree 1 } 
+		start { keyer key kbd out hl spec filt hlt -tree 1 } 
 		info { hermes lite test app }
 	    }
 	    nod {
@@ -981,13 +889,115 @@ snit::type keyer::setups {
 	}]
     }
 }
+
 proc is-setup {name} { return [::setups is-setup $name] }
 proc get-setup-names {} { return [::setups get-names] }
 proc get-setup-info {name} { return [::setups get-info $name] }
 proc get-setup-start {name} { return [::setups get-start $name] }
 
+#
+# miscellaneous argv options
+#
+snit::type keyer::argv {
+    variable data -array { opts {} }
+    constructor {args} { set data(opts) [dict create] }
+    method exists {name} { return [dict exists $data(opts) $name] }
+    method lappend {name args} { dict lappend data(opts) $name {*}$args }
+    method set {name val} { dict set data(opts) $name $val }
+    method get {name} { return [dict get $data(opts) $name] }
+    method names {} { return [dict keys $data(opts)] }
+}
 
-snit::type keyer::main {
+# these are options and groups of options collected from argv
+
+proc get-server {} { return [::argv get -server] }
+proc has-server {} { return [::argv exists -server] }
+
+proc get-title {} { return [::argv get -title] }
+proc has-title {} { return [::argv exists -title] }
+
+proc get-grid {} { return [::argv get -grid] }
+proc has-grid {} { return [::argv exists -grid] }
+
+proc get-tree {} { return [::argv get -tree] }
+proc has-tree {} { return [::argv exists -tree] }
+
+proc get-start {} { return [::argv get -start] }
+proc has-start {} { return [::argv exists -start] }
+
+proc get-argvopts {} { return [::argv get -argvopts] }
+proc is-argvopts {o} { return [is-matched $o [get-argvopts]] }
+
+# user interface components
+# primary user interface component is the dialbook
+# which isn't finished.
+
+#
+# update the window
+# this doesn't work when -wpm, -window, and -window2 aren't obvious
+# extracted from keyer-options::configure-timeout when merged into koptions
+# hmm, none of this is going to work any more, and it should be lower 
+# after idle [list update-window-title]
+#
+proc update-window-title {} {
+    if {0} {
+	if {[info exists ::value(-wpm)] && [info exists ::value(-window2)]} {
+	    if {$::value(-window2) ne {none}} {
+		set title "recri keyer $::value(-wpm) wpm $::value(-window)*$::value(-window2)"
+	    } else {
+		set title "recri keyer $::value(-wpm) wpm $::value(-window)"
+	    }
+	} elseif {[info exists ::value(-freq)] && [info exists ::value(-window2)]} {
+	    if {$::value(-window2) ne {none}} {
+		set title "recri keyer $::value(-freq) Hz $::value(-window)*$::value(-window2)"
+	    } else {
+		set title "recri keyer $::value(-freq) Hz $::value(-window)"
+	    }
+	} else {
+	    set title "recri keyer"
+	}
+    }
+    set title {recri keyer}
+    if {[has-title]} { set title [get-title] }
+    wm title . $title
+}
+
+#
+# load the main ui for the program
+#
+proc load-ui {} {
+    set args {}
+    if {[has-grid]} { lappend args -grid [get-grid] }
+    if {[has-tree]} { lappend args -tree [get-tree] }
+    #.p add [::sdrtk::dialbook .p.dial {*}$args]
+    #toplevel .dial
+    wm title . keyer/dial
+    pack [::sdrtk::dialbook .dial {*}$args]
+    array set compid {}
+    foreach text [::options get-opts] {
+	set cvalue [::options cget $text]
+	set type [::options get $text type]
+	set name [::options get $text name]
+	set opt [::options get $text opt]
+	set info [::options get $text info]
+	set readout [::options get $text readout]
+	set var [::options cvar $text]
+	
+	# if already processed, error
+	if {[::options is-processed $text]} { error "$text already processed" }
+	::options set $text processed 1
+	
+	if {[is-hide $text]} continue
+	
+	set w .dial.x$text
+	package require sdrtk::readout-$type
+	sdrtk::readout-$type $w -dialbook .dial \
+	    -text $text -info $info {*}$readout \
+	    -value $cvalue -variable $var -command [list ::options configure $text]
+	#if {$text in {-key-wpm -key-weight}} { $w test }
+	.dial add $w $name $type -text $text
+    }
+    if {[.dial select] eq {}} { .dial select 0 }
 }
 
 #
@@ -1016,24 +1026,24 @@ proc main-argv {argv} {
 	# -server - jack server
 	# -title - window title
 	# -run - saved setups to run
-	# -start - components to start
-	# -favor - option patterns to favor
-	# -hide - option patterns to hide
-	# -merge - option patterns to merge
+	# -start components - components to start
+	# -favor patterns - option patterns to favor
+	# -hide patterns - option patterns to hide
+	# -merge patterns - option patterns to merge
 	# -grid 1 - use dialbook grid setup
 	# -tree 1 - use dialbook tree setup
 	# otherwise - -option value pair to apply to parts
 	switch -- $opt { 
-	    -server { set-server $val }
-	    -title { set-title $val }
 	    -run { foreach v $val { main-argv [lrange [get-setup-start $v] 1 end] } }
-	    -start { lappend-start {*}$val }
-	    -favor { lappend-favor {*}$val }
-	    -hide { lappend-hide {*}$val }
-	    -merge { lappend-merge {*}$val }
-	    -grid { set-grid $val }
-	    -tree { set-tree $val }
-	    default { lappend-argvopts $opt $val }
+	    -favor -
+	    -hide -
+	    -merge { ::options lappend $opt {*}$val }
+	    -server -
+	    -title -
+	    -grid -
+	    -tree { ::argv set $opt $val }
+	    -start { ::argv lappend $opt {*}$val }
+	    default { ::argv lappend -argvopts $opt $val }
 	}
     }
 }
@@ -1059,24 +1069,25 @@ proc main {argv} {
     # load or create ~/.config/keyer/setups.tcl
     ::keyer::setups ::setups
     
+    # initialize options/components database
+    keyer::options ::options
+
+    # initialize argv option handling
+    keyer::argv ::argv
+    
     # make a usage message
     if {$argv eq {} || $argv eq {help}} { usage-message }
     
-    # initialize options/components database
-    keyer::options ::koptions
-
     # process arguments, first pass just to collect everything
     main-argv $argv
     
     # start components and collect their options
-    # puts "main: has-start [has-start]"
     if { ! [has-start]} { usage-message }
-    
-    foreach composite [get-start] { ::koptions process $composite }
+    foreach composite [get-start] { ::options process $composite }
     
     # process command line options for additional option definitions
     foreach {opt val} [get-argvopts] {
-	if {[::koptions is-option $opt]} continue; # already defined
+	if {[::options is-option $opt]} continue; # already defined
 	#error "undefined option: $opt $val"
 	# something missing here? - FIX.ME?
     }
@@ -1086,14 +1097,34 @@ proc main {argv} {
     
     # load the options collected from the command line
     foreach {opt val} [get-argvopts] { 
-	if {[catch {::koptions configure $opt $val} error]} {
-	    puts "koptions configure threw $error"
+	if {$opt eq {-hl-discover}} {
+	    if {$val eq {discover}} {
+		package require sdrtcl::hl-discover
+		sdrtcl::hl-discover ::discover
+		set val [lindex [::discover discover] 0]
+	    }
+	    if {[dict exists $val -status]} {
+		if {[dict get $val -status] != 2} {
+		    error "-hl-discover specifies an unavailable hermes lite"
+		}
+		dict unset val -status
+	    }
+	    foreach {sopt sval} $val {
+		if {$sopt eq {-status}} continue
+		if {[catch {::options configure -hl$sopt $sval} error]} {
+		    puts "::options configure threw $error"
+		}
+	    }
+	    continue
+	}
+	if {[catch {::options configure $opt $val} error]} {
+	    puts "::options configure $opt $val threw $error"
 	    # if the $opt is -$comp for one of the setup components,
 	    # then apply it to each opt value pair in $val to get
 	    # -$comp$opt $value
 	    if {[llength $val] > 1 && ([llength $val]&1) == 0} {
 		foreach {option value} $val {
-		    if {[catch {::koptions configure $opt$option $value} error2]} {
+		    if {[catch {::options configure $opt$option $value} error2]} {
 			puts "bad option: $opt $val"
 		    }
 		}
@@ -1117,15 +1148,20 @@ proc main {argv} {
 main $argv
 
 # current todo
-# [x] fix the volatile polling
-# [x] wrap the setups in a snit::type
-# [ ] wrap the loose options in a snit::type
+# [ ] catch window closures and cleanup
+# [ ] hlt window using ::options for values
+# [ ] cleanup printout from hl-connect
+# [ ] make treeview sync with <Left><Right> dialbook
 # [ ] implement option -merge
 # [ ] implement option -chain
+# [ ] dial-faves subtree with dial favorites
+# [ ] get as reliable a startup as quisk
+# [x] fix the volatile polling
+# [x] wrap the setups in a snit::type
+# [x] wrap the loose options in a snit::type
 # [x] create treeview to organize options, etc.
 # [x] all-options subtree with all options present
 # [x] merge all options and details into one dict.
-# [ ] dial-faves subtree with dial favorites
 # [ ] types subtree specifying options on values for shared types
 # [ ] out-connections subtree listing components and their sinks
 # [ ] in-connections subtree listing components and their sources

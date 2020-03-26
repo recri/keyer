@@ -35,6 +35,10 @@ namespace eval ::hlt {}
 # a manually refreshed information string
 # probably should just refresh on a timer
 
+proc hl-cget {opt} { return [dial-cget -hl$opt] }
+proc hl-cset {opt val} { dial-cset -hl$opt $val }
+proc hl-cvar {opt} { return [dial-cvar -hl$opt] }
+
 snit::widget hlt::refresh {
     component lbl
     option -subst -default {}
@@ -76,10 +80,10 @@ snit::widget hlt::slider {
 	pack $win.spn -side left -padx 16
 	pack $win.scl -side left -padx 16
     }
-    method get {} { return [hl cget $options(-hl-opt)] }
+    method get {} { return [hl-cget $options(-hl-opt)] }
     method set {{val {}}} {
 	if {$options(-integer)} { set value [expr {int($value)}] }
-	dial-set -hl$options(-hl-opt) $value
+	hl-cset $options(-hl-opt) $value
     }
 }
 
@@ -101,8 +105,8 @@ snit::widget hlt::choice {
 	$spn set $value
 	pack $win.l $win.p -side left -padx 16
     }
-    method get {} { return [hl cget $options(-hl-opt)] }
-    method set {{val {}}} { dial-set -hl$options(-hl-opt) $value }
+    method get {} { return [hl-cget $options(-hl-opt)] }
+    method set {{val {}}} { hl-cset $options(-hl-opt) $value }
 }
 
 snit::widget hlt::check {
@@ -112,12 +116,13 @@ snit::widget hlt::check {
     variable value
     constructor {args} {
 	$self configurelist $args
-	install chk using ttk::checkbutton $win.c -text $options(-label) -width 16 -variable [myvar value] -command [mymethod set]
+	install chk using ttk::checkbutton $win.c -text $options(-label) -width 16 -variable [myvar value] -onvalue 1 -offvalue 0 -command [mymethod toggle]
 	pack $win.c -side left -padx 16
 	set value [$self get]
+	# puts "hlt::check $options(-hl-opt) $value"
     }
-    method get {} { return [hl cget $options(-hl-opt)] }
-    method set {{val {}}} { dial-set -hl$options(-hl-opt) $value }
+    method get {} { return [hl-cget $options(-hl-opt)] }
+    method toggle {} { hl-cset $options(-hl-opt) $value }
 }
 
 snit::widget sdrtk::hl-test {
@@ -125,32 +130,35 @@ snit::widget sdrtk::hl-test {
     method exposed-options {} { return {} }
     
     constructor {args} {
+	after 500 [mymethod init {*}$args]
+    }
+    method init {args} {
 	set row -1
-
 	grid [hlt::refresh $win.id -period 2000 \
 		  -subst [join {
-		      {peer: [hl cget -peer]}
-		      {mac-addr: [hl cget -mac-addr]}
-		      {board-id: [hl cget -board-id]}
-		      {code-version: [hl cget -code-version]}
-		      {serial: [hl cget -serial]}
+		      {peer: [hl-cget -peer]}
+		      {mac-addr: [hl-cget -mac-addr]}
+		      {board-id: [hl-cget -board-id]}
+		      {gateware-version: [hl-cget -gateware-version]}
+		      {serial: [hl-cget -serial]}
 		  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
 	grid [hlt::refresh $win.stats -period 100 \
 		  -subst [join {
-		      {rx-calls: [format %9d [hl cget -rx-calls]]}
-		      {tx-calls: [format %9d [hl cget -tx-calls]]}
-		      {bs-calls: [format %9d [hl cget -bs-calls]]}
+		      {rx-calls: [format %9d [hl-cget -rx-calls]]}
+		      {tx-calls: [format %9d [hl-cget -tx-calls]]}
+		      {bs-calls: [format %9d [hl-cget -bs-calls]]}
 		  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
 	grid [hlt::refresh $win.pending -period 100 -subst {pending [format %s [hl pending]]}] -row [incr row] -column 0 -columnspan 10 -sticky ew
+
 	grid [hlt::refresh $win.mon -period 100 \
 		  -subst [join {
-		      {Temp: [format %4.1f [hl cget -temperature]]}
-		      {PA I: [format %4.1f [hl cget -pa-current]]}
-		      {Fwd P: [format %4.1f [hl cget -fwd-power]]}
-		      {Rev P: [format %4.1f [hl cget -rev-power]]}
-		      {Power: [format %4.2f [hl cget -power]]}
-		      {SWR: [format %s [hl cget -swr]]}
-		      {FIFO: [format %4d [hl cget -raw-tx-iq-fifo]]}
+		      {Temp: [format %4.1f [hl-cget -temperature]]}
+		      {PA I: [format %4.1f [hl-cget -pa-current]]}
+		      {Fwd P: [format %4.1f [hl-cget -fwd-power]]}
+		      {Rev P: [format %4.1f [hl-cget -rev-power]]}
+		      {Power: [format %4.2f [hl-cget -power]]}
+		      {SWR: [format %s [hl-cget -swr]]}
+		      {FIFO: [format %4d [hl-cget -tx-iq-fifo]]}
 		  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
 	
 	grid [hlt::slider $win.lna -label {Rx LNA dB} -from -12 -to 48 -increment 1 -integer true -hl-opt -lna-db] -row [incr row] -column 0 -sticky ew
@@ -177,11 +185,6 @@ snit::widget sdrtk::hl-test {
 	# -hw-key
 	# -hw-ptt
 	# -overflow
-	# -serial
-	# -temperature
-	# -fwd-power
-	# -rev-power
-	# -pa-current
 	foreach i {0 1 2 3 4 5 6 7 8 9} {
 	    grid columnconfigure . $i -weight 1
 	}

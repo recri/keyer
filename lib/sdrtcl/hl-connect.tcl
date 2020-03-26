@@ -21,7 +21,6 @@ package provide sdrtcl::hl-connect 0.0.1
 package require Thread
 package require snit
 package require udp
-package require sdrtcl::hl-discover
 package require sdrtcl::hl-udp-jack
 
 namespace eval ::sdrtcl {}
@@ -44,7 +43,6 @@ namespace eval ::sdrtcl {}
 snit::type sdrtcl::hl-connect-thread {
     component iqhandler;	# the rx and tx iq stream(s) handler
     component bshandler;	# the bandscope stream handler
-    component discover;		# the discovery phase, optional
     
     # local procedures
     # map a list of byte values as hex
@@ -84,7 +82,7 @@ snit::type sdrtcl::hl-connect-thread {
     # these are discovered during connection to the hl
     # most are probably being passed in directly
     option -peer -default {} -configuremethod Configure
-    option -code-version -default -1 -type snit::integer -configuremethod Configure
+    option -gateware-version -default -1 -type snit::integer -configuremethod Configure
     option -board-id -default -1 -type snit::integer -configuremethod Configure
     option -mac-addr -default {} -configuremethod Configure
     option -mcp4662 -default {} -configuremethod Configure
@@ -95,10 +93,6 @@ snit::type sdrtcl::hl-connect-thread {
     option -build-id -default -1 -configuremethod Configure
     option -gateware-minor -default -1 -configuremethod Configure
 
-    # -discover allows one to pass the entire output from hl-discover as a quoted string
-    # bad, end runs around option value management in dial-set
-    option -discover -default {} -configuremethod Discover
-    
     # this one enters into the start command
     option -bandscope -default 0 -type {snit::integer -min 0 -max 1} -configuremethod hl-conf
 
@@ -144,10 +138,9 @@ snit::type sdrtcl::hl-connect-thread {
     delegate method activate to iqhandler
 
     variable optiondocs -array {
-	-discover {One of the results of hl-discover describing available hardware.}
 	-peer {The IP address and port of the connected board.}
 	-mac-addr {The MAC address of the connected board.}
-	-code-version {The Hermes code version reported by the connected board.}
+	-gateware-version {The Hermes gateware version reported by the connected board.}
 	-board-id {The board identifier reported by the connected board}
 
 	-bandscope {Enable the bandscope samples.}
@@ -287,26 +280,15 @@ snit::type sdrtcl::hl-connect-thread {
 	    # readonly options from radio can be skipped
 	    if {$opt in {-hw-dash -hw-dot -hw-ptt -overload -recovery -tx-iq-fifo -serial -temperature -fwd-power -rev-power -pa-current}} continue
 	    # noise options from discovery can be skipped
-	    if {$opt in {}} continue
+	    if {$opt in {-status}} continue
 	    lappend f $opt $cvalue
 	}
 	return $f
     }
-    method {Discover -discover} {val} {
-	puts "hl-connect configure -discover {$val}"
-	if {$val eq {discover}} {
-	    install discover using sdrtcl::hl-discover $self.discover
-	    set val [lindex [$discover discover] 0]
-	    puts "hl-discover returned $val"
-	}
-	set status [from val -status]
-	if {$status != 2} { error "-discover specifies a hermes lite with -status $status" }
-	after 250 [mymethod configurelist $val]
-    }
     method Configure {opt val} {
 	set options($opt) $val
 	catch {$iqhandler configure $opt $val}
-	if {$opt eq {-peer}} { after 1 [mymethod hl-begin] }
+	if {$opt eq {-peer}} { after idle [mymethod hl-begin] }
     }
     
     proc pkt-format {hex} {
@@ -505,7 +487,7 @@ snit::type sdrtcl::hl-connect-thread {
     # main constructor
     #
     constructor {args} {
-	puts "constructor {$args}"
+	# puts "constructor {$args}"
 	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client hl
 	$self configurelist $args
 	array set options {-rx-calls 0 -tx-calls 0 -bs-calls 0 -rx-dropped 0 -rx-outofseq 0}

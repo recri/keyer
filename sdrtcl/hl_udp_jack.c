@@ -45,7 +45,7 @@
 
 typedef struct {
   /* discovered options */
-  int code_version;		/* gateware version */
+  int gateware_version;		/* gateware version */
   int board_id;			/* board identifier */
   Tcl_Obj *mac_addr;		/* radio MAC address */
   Tcl_Obj *mcp4662;		/* mcp4662 configuration bytes */
@@ -895,7 +895,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   /* options set from discover response from radio */
-  { "-gateware-version","int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.code_version), "gateware version" },
+  { "-gateware-version","int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.gateware_version), "gateware version" },
   { "-gateware-minor",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.gateware_minor), "gateware minor version." },
   { "-board-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.board_id), "board identifier." },
   { "-build-id",	"int", "Int", "-1", fw_option_int, 0, offsetof(_t, opts.build_id), "board sub-identifier." },
