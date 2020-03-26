@@ -1051,11 +1051,15 @@ proc manage-connections {} {
 proc main {argv} {
     
     # style, abolish invisible indicators
+    # these apply to the -grid displayed widgets
     ttk::style configure "." -indicatordiameter 12
     ttk::style configure TCheckbutton -relief raised
     ttk::style configure TRadiobutton -relief raised
     
-    # load or create ~/.config/keyer/keyer.tcl
+    # make label frame labels larger
+    ttk::style configure TLabelframe.Label -font {Helvetica 16}
+
+    # load or create ~/.config/keyer/setups.tcl
     ::keyer::setups ::setups
     
     # make a usage message
@@ -1113,8 +1117,8 @@ proc main {argv} {
 main $argv
 
 # current todo
-# [ ] fix the volatile polling
-# [ ] wrap the setups in a snit::type
+# [x] fix the volatile polling
+# [x] wrap the setups in a snit::type
 # [ ] wrap the loose options in a snit::type
 # [ ] implement option -merge
 # [ ] implement option -chain
@@ -1137,13 +1141,14 @@ main $argv
 # [ ] make a readout-vfo which tunes nicely
 # [x] bring up the overlap-save passband filter
 # [x] bring up the polyphase spectrum/waterfall (which should run as a separate process?)
-# [ ] run the polyphase spectrum/waterfall as a separate process
+# [ ] run the polyphase spectrum/waterfall as a separate process/thread
 # [ ] aggressive UI debouncing on all tunable components
 # [ ] rewire the spectrum waterfall to the tuner.
 # [ ] rewrite the tuner/radio component that switches bandpass filter and spectrum display
 #	of bandpass envelope, and the modem bank
 # [ ] can start qjackctl from the command line with a specified patch
 #     qjackctl --start -active-patchbay=[path] --server-name=[label] --preset=[label]
+#     but it may not be activated?
 #
 # old todo list
 # [-] make the -rise-fall option sort after the -rise and -fall that it joins
