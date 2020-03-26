@@ -31,7 +31,7 @@ snit::widgetadaptor sdrtk::spectrum {
     option -max -default 0 -type sdrtype::decibel -configuremethod Revertical
     option -min -default -160 -type sdrtype::decibel -configuremethod Revertical
 
-    option -smooth -default true -type sdrtype::smooth -configuremethod Resmooth
+    option -smooth -default 1 -type sdrtype::smooth -configuremethod Resmooth
 
     option -multi -default 1 -type sdrtype::multi -configuremethod Remulti
 

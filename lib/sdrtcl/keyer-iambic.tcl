@@ -121,8 +121,11 @@ snit::type sdrtcl::keyer-iambic {
     }
     method Cget {opt} {
 	if {$opt eq {-keyer}} { return $options($opt) }
-	if { ! [catch {$keyer cget $opt} result]} { return $result }
-	return {}
+	if {[lsearch $data($options(-keyer)) $opt] >= 0} {
+	    return [$keyer cget $opt]
+	} else {
+	    return $options($opt)
+	}
     }
 
 }

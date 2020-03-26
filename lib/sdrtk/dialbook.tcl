@@ -134,9 +134,11 @@ snit::widget sdrtk::dialbook {
 	install tab using ttk::frame $win.tab
 	install dial using sdrtk::dial $win.dial
 
-	bind $dial <<DialCW>> [mymethod Adjust 1]
-	bind $dial <<DialCCW>> [mymethod Adjust -1]
-	bind $dial <<DialPress>> [mymethod Press]
+	bind $dial <<DialCW>> [mymethod Adjust %W 1]
+	bind $dial <<DialCCW>> [mymethod Adjust %W -1]
+	bind $dial <<DialPress>> [mymethod Press %W]
+	bind $dial <Left> [mymethod PreviousTab %W]
+	bind $dial <Right> [mymethod NextTab %W]
 	#? bind $win <Enter> [list focus $win.dial]
 	#bind $dial <FocusIn> [list puts "FocusIn $win.dial"]
 	#bind $dial <FocusOut> [list puts "FocusOut $win.dial"]
@@ -321,21 +323,21 @@ snit::widget sdrtk::dialbook {
     ##
     ##
     ##
-    method Adjust {step} {
+    method Adjust {w step} {
 	# puts "$self Adjust $step for $data(current) menu $data(menu)"
 	# the units of $step are counts, where [$dial cget -cpr] are the counts per revolution
-	$dial Rotate $step
+	$w Rotate $step
 	if {$data(menu)} {
 	    
 	} else {
 	    if {$data(current) ne {}} {
-		# puts "$self Adjust $step [$data(current) get-window] adjust $step"
+		# puts "$self Adjust $w $step [$data(current) get-window] adjust $step"
 		[$data(current) get-window] adjust $step
 	    }
 	}
     }
 
-    method Press {} {
+    method Press {w} {
 	puts "$self Press"
 	if {0} {
 	if {$data(menu)} {
@@ -522,5 +524,24 @@ snit::widget sdrtk::dialbook {
 	} else {
 	    $self DisplayTab $data(current)
 	}
+    }
+
+    method NextTab {w} {
+	set t $data(tabs)
+	set c $data(current)
+	set j [lsearch $t $c]
+	set n [llength $t]
+	set i [expr {($j+1+$n)%$n}]
+	set data(current) [lindex $t $i]
+	$self UpdateCurrent
+    }
+    method PreviousTab {w} {
+	set t $data(tabs)
+	set c $data(current)
+	set j [lsearch $t $c]
+	set n [llength $t]
+	set i [expr {($j-1+$n)%$n}]
+	set data(current) [lindex $t $i]
+	$self UpdateCurrent
     }
 }    

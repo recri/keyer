@@ -72,7 +72,8 @@ snit::widgetadaptor sdrtk::dial {
     option -thumb-fill -default black -configuremethod Gconfig;		# color of the thumb outline
     option -thumb-width -default 3 -configuremethod Gconfig;		# thickness of the thumb outline
 
-    option -graticule -default 20 -configuremethod Gconfig;		# number of graticule lines to draw
+    option -graticule -default 20 -configuremethod Gconfig;		# resolution of graticule lines to draw
+    option -graticule-used -default 0 -configuremethod Gconfig;		# number of graticule lines to draw
     option -graticule-radius -default 95 -configuremethod Gconfig;	# radius of graticule lines in percent of max
     option -graticule-width -default 3 -configuremethod Gconfig;	# width of graticule lines in pixels
     option -graticule-fill -default black -configuremethod Gconfig;	# color of the graticule lines
@@ -253,14 +254,17 @@ snit::widgetadaptor sdrtk::dial {
 
 	# graticule radius
 	if {$options(-graticule) <= 0} {
+	    # no graticule
 	    set graticule [list $xc $yc $xc $yc]
 	    set mask [list $xc $yc $xc $yc]
 	} else {
+	    set gused $options(-graticule-used)
+	    if {$gused == 0} { set gused $options(-graticule) }
 	    set gr [expr {$r*$options(-graticule-radius)/100.0}]
 	    set graticule {}
 	    set p 0
 	    set dp [expr {$data(2pi)/$options(-graticule)}]
-	    for {set i 0} {$i < $options(-graticule)} {incr i} {
+	    for {set i 0} {$i < $gused} {incr i} {
 		set phi [xphi $p]
 		set x [expr {$xc+$gr*cos($phi)}]
 		set y [expr {$yc+$gr*sin($phi)}]
