@@ -926,7 +926,8 @@ proc get-start {} { return [::argv get -start] }
 proc has-start {} { return [::argv exists -start] }
 
 proc get-argvopts {} { return [::argv get -argvopts] }
-proc is-argvopts {o} { return [is-matched $o [get-argvopts]] }
+proc has-argvopts {} { return [::argv exists -argvopts] }
+proc is-argvopts {o} { return [expr {[has-argvopts] && [is-matched $o [get-argvopts]]}] }
 
 # user interface components
 # primary user interface component is the dialbook
@@ -1086,50 +1087,54 @@ proc main {argv} {
     foreach composite [get-start] { ::options process $composite }
     
     # process command line options for additional option definitions
-    foreach {opt val} [get-argvopts] {
-	if {[::options is-option $opt]} continue; # already defined
-	#error "undefined option: $opt $val"
-	# something missing here? - FIX.ME?
+    if {[has-argvopts]} {
+	foreach {opt val} [get-argvopts] {
+	    if {[::options is-option $opt]} continue; # already defined
+	    #error "undefined option: $opt $val"
+	    # something missing here? - FIX.ME?
+	}
     }
     
     # build the ui with the extracted options
     load-ui
     
     # load the options collected from the command line
-    foreach {opt val} [get-argvopts] { 
-	if {$opt eq {-hl-discover}} {
-	    if {$val eq {discover}} {
-		package require sdrtcl::hl-discover
-		sdrtcl::hl-discover ::discover
-		set val [lindex [::discover discover] 0]
-	    }
-	    if {[dict exists $val -status]} {
-		if {[dict get $val -status] != 2} {
-		    error "-hl-discover specifies an unavailable hermes lite"
+    if {[has-argvopts]} {
+	foreach {opt val} [get-argvopts] { 
+	    if {$opt eq {-hl-discover}} {
+		if {$val eq {discover}} {
+		    package require sdrtcl::hl-discover
+		    sdrtcl::hl-discover ::discover
+		    set val [lindex [::discover discover] 0]
 		}
-		dict unset val -status
-	    }
-	    foreach {sopt sval} $val {
-		if {$sopt eq {-status}} continue
-		if {[catch {::options configure -hl$sopt $sval} error]} {
-		    puts "::options configure threw $error"
+		if {[dict exists $val -status]} {
+		    if {[dict get $val -status] != 2} {
+			error "-hl-discover specifies an unavailable hermes lite"
+		    }
+		    dict unset val -status
 		}
-	    }
-	    continue
-	}
-	if {[catch {::options configure $opt $val} error]} {
-	    puts "::options configure $opt $val threw $error"
-	    # if the $opt is -$comp for one of the setup components,
-	    # then apply it to each opt value pair in $val to get
-	    # -$comp$opt $value
-	    if {[llength $val] > 1 && ([llength $val]&1) == 0} {
-		foreach {option value} $val {
-		    if {[catch {::options configure $opt$option $value} error2]} {
-			puts "bad option: $opt $val"
+		foreach {sopt sval} $val {
+		    if {$sopt eq {-status}} continue
+		    if {[catch {::options configure -hl$sopt $sval} error]} {
+			puts "::options configure threw $error"
 		    }
 		}
-	    } else {
-		puts "bad option: $opt $val"
+		continue
+	    }
+	    if {[catch {::options configure $opt $val} error]} {
+		puts "::options configure $opt $val threw $error"
+		# if the $opt is -$comp for one of the setup components,
+		# then apply it to each opt value pair in $val to get
+		# -$comp$opt $value
+		if {[llength $val] > 1 && ([llength $val]&1) == 0} {
+		    foreach {option value} $val {
+			if {[catch {::options configure $opt$option $value} error2]} {
+			    puts "bad option: $opt $val"
+			}
+		    }
+		} else {
+		    puts "bad option: $opt $val"
+		}
 	    }
 	}
     }

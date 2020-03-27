@@ -22,6 +22,7 @@ package require Thread
 package require snit
 package require udp
 package require sdrtcl::hl-udp-jack
+package require sdrtcl::hl-bandscope
 
 namespace eval ::sdrtcl {}
 
@@ -275,10 +276,19 @@ snit::type sdrtcl::hl-connect-thread {
 	    if {[llength $x] != 5} continue
 	    # split the parts of the configuration out
 	    foreach {opt name xclass dvalue cvalue} $x break
+	    # always keep these
+	    if {$opt in {-speed -n-rx -bandscope}} {
+		lappend f $opt [$self cget $opt]
+		continue
+	    }
 	    # default value need not be kept
 	    if {$dvalue == $cvalue} continue
 	    # readonly options from radio can be skipped
-	    if {$opt in {-hw-dash -hw-dot -hw-ptt -overload -recovery -tx-iq-fifo -serial -temperature -fwd-power -rev-power -pa-current}} continue
+	    if {$opt in {
+		-hw-dash -hw-dot -hw-ptt
+		-overload -recovery -tx-iq-fifo -serial -temperature -fwd-power -rev-power -pa-current
+		-raw-temperature -raw-fwd-power -raw-rev-power -raw-pa-current
+	    }} continue
 	    # noise options from discovery can be skipped
 	    if {$opt in {-status}} continue
 	    lappend f $opt $cvalue
@@ -408,7 +418,7 @@ snit::type sdrtcl::hl-connect-thread {
 		    4 { # bandscope samples
 			incr options(-bs-calls)
 			# puts "rx-recv bs [$iqhandler pending] $options(-rx-calls) $options(-tx-calls) $options(-bs-calls)"
-			{*}$options(-bs) $data		    
+			$bshandler samples $data		    
 		    }
 		    default {
 			puts "rx-recv: unknown endpoint $ep, [as-hex $data]"
@@ -489,6 +499,7 @@ snit::type sdrtcl::hl-connect-thread {
     constructor {args} {
 	# puts "constructor {$args}"
 	install iqhandler using sdrtcl::hl-udp-jack $self.iqhandler -client hl
+	install bshandler using sdrtcl::hl-bandscope $self.bshandler
 	$self configurelist $args
 	array set options {-rx-calls 0 -tx-calls 0 -bs-calls 0 -rx-dropped 0 -rx-outofseq 0}
     }
