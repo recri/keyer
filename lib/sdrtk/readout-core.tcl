@@ -96,7 +96,7 @@ snit::widget sdrtk::readout-core {
 	#  -integer-to-phi -phi-to-integer
 	foreach opt {-value-to-integer -integer-to-value} { set options($opt) [myproc identity] }
 	$self configurelist $args
-	install lvalue using ttk::label $win.value -textvar [myvar options(-value)] -width 15 -font $options(-font) -anchor e
+	install lvalue using ttk::label $win.value -textvar [myvar options(-value)] -width 20 -font $options(-font) -anchor e
 	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
 	grid $win.value $win.units
 	trace add variable options(-widget-value) write [mymethod TraceWriteWidgetValue]

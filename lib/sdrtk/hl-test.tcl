@@ -70,7 +70,7 @@ snit::widget hlt::slider {
     constructor {args} {
 	$self configure {*}$args
 	set value [$self get]
-	install lbl using ttk::label $win.lbl -text $options(-label) -width 10
+	install lbl using ttk::label $win.lbl -text $options(-label) -width 16
 	install spn using spinbox $win.spn -from $options(-from) -to $options(-to) -increment $options(-increment) \
 	    -format %3.0f -width 3 \
 	    -textvariable [myvar value] -command [mymethod set]
@@ -148,7 +148,7 @@ snit::widget sdrtk::hl-test {
 		      {tx-calls: [format %9d [hl-cget -tx-calls]]}
 		      {bs-calls: [format %9d [hl-cget -bs-calls]]}
 		  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
-	grid [hlt::refresh $win.pending -period 100 -subst {pending [format %s [hl pending]]}] -row [incr row] -column 0 -columnspan 10 -sticky ew
+	grid [hlt::refresh $win.pending -period 1000 -subst {pending [format %s [hl pending]]}] -row [incr row] -column 0 -columnspan 10 -sticky ew
 
 	grid [hlt::refresh $win.mon -period 100 \
 		  -subst [join {
@@ -158,11 +158,17 @@ snit::widget sdrtk::hl-test {
 		      {Rev P: [format %4.1f [hl-cget -rev-power]]}
 		      {Power: [format %4.2f [hl-cget -power]]}
 		      {SWR: [format %s [hl-cget -swr]]}
+		      {Overload: [format %d [hl-cget -overload]]}
+		      {Recovery: [format %d [hl-cget -recovery]]}
 		      {FIFO: [format %4d [hl-cget -tx-iq-fifo]]}
 		  } {, }]] -row [incr row] -column 0 -columnspan 10 -sticky ew
 	
-	grid [hlt::slider $win.lna -label {Rx LNA dB} -from -12 -to 48 -increment 1 -integer true -hl-opt -lna-db] -row [incr row] -column 0 -sticky ew
+	grid [hlt::slider $win.lna -label {Rx LNA (dB)} -from -12 -to 48 -increment 1 -integer true -hl-opt -lna-db] -row [incr row] -column 0 -sticky ew
 	grid [hlt::slider $win.lev -label {Tx Level} -from 0 -to 255 -increment 1 -integer 1 -hl-opt -level] -row [incr row] -column 0 -sticky ew
+	grid [hlt::slider $win.lat -label {Tx Latency (ms)} -from 0 -to 31 -increment 1 -integer 1 -hl-opt -tx-buffer-latency] -row [incr row] -column 0 -sticky ew
+	grid [hlt::slider $win.pht -label {PTT Hangtime (ms)} -from 0 -to 31 -increment 1 -integer 1 -hl-opt -ptt-hang-time] -row [incr row] -column 0 -sticky ew
+	grid [hlt::slider $win.cht -label {CW Hangtime (ms)} -from 0 -to 1023 -increment 1 -integer 1 -hl-opt -cw-hang-time] -row [incr row] -column 0 -sticky ew
+	
 
 	grid [hlt::check $win.mx -label {MOX} -hl-opt -mox] -row [incr row] -column 0 -sticky ew
 	grid [hlt::check $win.bs -label {Bandscope} -hl-opt -bandscope] -row [incr row] -column 0 -sticky ew
@@ -170,13 +176,13 @@ snit::widget sdrtk::hl-test {
 	grid [hlt::check $win.pa -label {PA Enable} -hl-opt -pa] -row [incr row] -column 0 -sticky ew
 	grid [hlt::check $win.sy -label {Not SYNC} -hl-opt -not-sync] -row [incr row] -column 0 -sticky ew
 	grid [hlt::check $win.du -label {Duplex} -hl-opt -duplex] -row [incr row] -column 0 -sticky ew
+	grid [hlt::check $win.ps -label {Pure Signal} -hl-opt -pure-signal] -row [incr row] -column 0 -sticky ew
 	
 	grid [hlt::choice $win.sp -label {Speed} -values {48000} -hl-opt -speed] -row [incr row] -column 0 -sticky ew
 	grid [hlt::choice $win.nr -label {N Rx} -values {1 2 3 4} -hl-opt -n-rx] -row [incr row] -column 0 -sticky ew
 
 	# -filters -
 	# -f-tx -f-rx?
-	# -pure-signal
 	# -bias-adjust
 	# -vna
 	# -vna-count

@@ -356,6 +356,7 @@ snit::type keyer::options {
 	    {* -window} { $self describe $option enum -values [lrange [get-window-types] 1 end] }
 	    {* -window2} { $self describe $option enum -values [get-window-types] }
 	    {* -gain} { $self describe $option value -format %.1f -min -50 -max 3 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
+	    {*sample-delay -delay} { $self describe $option value -format %.0f -min 0 -max 15000 -step 1 -units samples -graticule 20 -steps-per-div 50}
 	    {* -delay} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	    {* -hang} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
 	    {*spectrum* -period} {  $self describe $option ivalue -min 1 -max 500 -units ms -graticule 20 -steps-per-div 25 }
@@ -369,7 +370,7 @@ snit::type keyer::options {
 	    {* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
 	    {*insert* -window} { $self describe $option enum -values {none . .dial}}
 	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
-	    {* -bandwidth} { $self describe $option freq -format %.0f -min 10 -max 1000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
+	    {* -bandwidth} { $self describe $option freq -format %.0f -min 10 -max 24000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
 	    {* -on} - 
 	    {* -off} { $self describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 -graticule 20 -steps-per-div 5}
 	    {* -timeout} { $self describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
@@ -599,6 +600,7 @@ snit::type keyer::options {
 		toplevel .$name -class "keyer/$name"
 		wm title .$name "keyer/$name"
 		set window .$name.$name
+		#wm iconphoto .$name -default icon1 icon2
 		# no  {*}$args because it's only sdrtcl -server
 		pack [$factory $window] -side top -expand true -fill both
 	    }
@@ -606,6 +608,7 @@ snit::type keyer::options {
 		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
 		toplevel .$name -class "keyer/$name"
 		wm title .$name "keyer/$name"
+		#wm iconphoto .$name -default icon1 icon2
 		set window .$name.$name
 		pack [$factory $window {*}$args] -side top -expand true -fill both
 		$window activate
@@ -925,6 +928,9 @@ proc has-tree {} { return [::argv exists -tree] }
 proc get-start {} { return [::argv get -start] }
 proc has-start {} { return [::argv exists -start] }
 
+proc get-eval {} { return [::argv get -eval] }
+proc has-eval {} { return [::argv exists -eval] }
+
 proc get-argvopts {} { return [::argv get -argvopts] }
 proc has-argvopts {} { return [::argv exists -argvopts] }
 proc is-argvopts {o} { return [expr {[has-argvopts] && [is-matched $o [get-argvopts]]}] }
@@ -1033,6 +1039,7 @@ proc main-argv {argv} {
 	# -merge patterns - option patterns to merge
 	# -grid 1 - use dialbook grid setup
 	# -tree 1 - use dialbook tree setup
+	# -eval 'script' - evaluate the script
 	# otherwise - -option value pair to apply to parts
 	switch -- $opt { 
 	    -run { foreach v $val { main-argv [lrange [get-setup-start $v] 1 end] } }
@@ -1043,6 +1050,7 @@ proc main-argv {argv} {
 	    -title -
 	    -grid -
 	    -tree { ::argv set $opt $val }
+	    -eval { ::argv lappend $opt $val }
 	    -start { ::argv lappend $opt {*}$val }
 	    default { ::argv lappend -argvopts $opt $val }
 	}
@@ -1058,6 +1066,12 @@ proc manage-connections {} {
 
 proc main {argv} {
     
+    # install application icon
+    set dir [file join $::dirname .. icons]
+    image create photo icon1 -file [file join $dir qrv96.png]
+    image create photo icon2 -file [file join $dir qrv48.png]
+    wm iconphoto . -default icon1 icon2
+
     # style, abolish invisible indicators
     # these apply to the -grid displayed widgets
     ttk::style configure "." -indicatordiameter 12
@@ -1139,14 +1153,13 @@ proc main {argv} {
 	}
     }
     
-    # install application icon
-    set dir [file join $::dirname .. icons]
-    image create photo icon1 -file [file join $dir qrv96.png]
-    image create photo icon2 -file [file join $dir qrv48.png]
-    wm iconphoto . -default icon1 icon2
+    # evaluate -eval
+    if {[has-eval]} { foreach x [get-eval] { eval $x } }
+
     # update window title
     update-window-title
     
+    # worry about connecting ports
     manage-connections
 }
 

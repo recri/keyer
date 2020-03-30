@@ -79,6 +79,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   // get the input pointer
   float *in = jack_port_get_buffer(framework_input(dp,0), nframes);
+  float *out = jack_port_get_buffer(framework_output(dp,0), nframes);
   // get the output pointer and buffer
   void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
   jack_midi_data_t cmd;
@@ -87,10 +88,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // clear the jack output buffer
   jack_midi_clear_buffer(midi_out);
   // for all frames in the buffer
-  for(int i = 0; i < nframes; i++) {
+  for (int i = 0; i < nframes; i++) {
     if (dp->countdown > 0)
       dp->countdown -= 1;
     if (filter_goertzel_process(&dp->fg, *in++)) {
+      dp->power = dp->fg.power;
       cmd = 0;
       if (dp->on != 0 && dp->fg.power < dp->opts.off_threshold) {
 	cmd = MIDI_NOTE_OFF;	/* note change off */
@@ -111,6 +113,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	}
       }
     }
+    *out++ = dp->power;
   }
   return 0;
 }
@@ -146,7 +149,7 @@ static const fw_option_table_t _options[] = {
   { "-bandwidth", "bandwidth", "BWHertz", "100.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
   { "-on",	  "onThresh",  "Thresh",  "4.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
   { "-off",	  "offThresh", "Thresh",  "3.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
-  { "-timeout",	  "timeout",   "Timeout", "100",   fw_option_int,   fw_flag_none, offsetof(_t, opts.timeout),      "sample timeout between transitions" },
+  { "-timeout",	  "timeout",   "Timeout", "100",   fw_option_int,   fw_flag_none, offsetof(_t, opts.timeout),      "timeout between transitions in samples" },
   { NULL }
 };
 
@@ -164,7 +167,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  1, 0, 0, 1, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  1, 1, 0, 1, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component which converts audio tone to midi key on/off events"
 };
 

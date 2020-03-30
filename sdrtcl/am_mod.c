@@ -19,22 +19,24 @@
 
 /*
 */
+
 #define FRAMEWORK_USES_JACK 1
 
-#include "../dspmath/demod_sam.h"
+#include "../dspmath/mod_am.h"
 #include "framework.h"
 
 /*
-** demodulate AM synchronously.
+** modulate AM.
 */
 typedef struct {
   framework_t fw;
-  demod_sam_t sam;
+  mod_am_t am;
+  mod_am_options_t opts;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *e = demod_sam_init(&data->sam, sdrkit_sample_rate(&data->fw)); if (e != &data->sam) return e;
+  void *e = mod_am_init(&data->am, &data->opts); if (e != &data->am) return e;
   return arg;
 }
 
@@ -46,38 +48,37 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    float y = demod_sam_process(&data->sam, *in0++ + I * *in1++);
-    *out0++ = y;
-    *out1++ = y;
+    complex float z = mod_am_process(&data->am, (*in0++ + *in1++)/2.0f);
+    *out0++ = crealf(z);
+    *out1++ = cimagf(z);
   }
   return 0;
 }
 
-static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  if (argc != 2)
-    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
-  _t *data = (_t *)clientData;
-  Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
-    Tcl_NewDoubleObj(data->sam.pll.freq.f),
-    NULL
-  };
-  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
-  return TCL_OK;
-}
-
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_command(clientData, interp, argc, objv);
+  _t *data = (_t *)clientData;
+  float carrier_level = data->opts.carrier_level;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK)
+    return TCL_ERROR;
+  if (carrier_level != data->opts.carrier_level) {
+    void *e = mod_am_preconfigure(&data->am, &data->opts); if (e != &data->am) {
+      Tcl_SetResult(interp, e, TCL_STATIC);
+      data->opts.carrier_level = carrier_level;
+      return TCL_ERROR;
+    }
+    mod_am_configure(&data->am, &data->opts);
+  }
+  return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+  { "-level", "level", "Level", "0.5", fw_option_float, 0, offsetof(_t, opts.carrier_level), "carrier level" },
   { NULL }
 };
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
-  { "get", _get, "get the pll frequency" },
   { NULL }
 };
 
@@ -90,7 +91,7 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "a synchronous AM demodulation component"
+  "an AM modulation component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -98,7 +99,7 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Demod_sam_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrtcl::demod-sam", "1.0.0", "sdrtcl::demod-sam", _factory);
+int DLLEXPORT Am_mod_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrtcl::am-mod", "1.0.0", "sdrtcl::am-mod", _factory);
 }
 

@@ -84,7 +84,7 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Demod_fm_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrtcl::demod-fm", "1.0.0", "sdrtcl::demod-fm", _factory);
+int DLLEXPORT Fm_demod_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrtcl::fm-demod", "1.0.0", "sdrtcl::fm-demod", _factory);
 }
 

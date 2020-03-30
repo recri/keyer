@@ -19,24 +19,22 @@
 
 /*
 */
-
 #define FRAMEWORK_USES_JACK 1
 
-#include "../dspmath/mod_ssb.h"
+#include "../dspmath/demod_sam.h"
 #include "framework.h"
 
 /*
-** modulate SSB, any sideband modulation.
+** demodulate AM synchronously.
 */
 typedef struct {
   framework_t fw;
-  mod_ssb_t ssb;
-  mod_ssb_options_t opts;
+  demod_sam_t sam;
 } _t;
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  void *e = mod_ssb_init(&data->ssb, &data->opts); if (e != &data->ssb) return e;
+  void *e = demod_sam_init(&data->sam, sdrkit_sample_rate(&data->fw)); if (e != &data->sam) return e;
   return arg;
 }
 
@@ -48,11 +46,24 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   AVOID_DENORMALS;
   for (int i = nframes; --i >= 0; ) {
-    complex float z = mod_ssb_process(&data->ssb, (*in0++ + *in1++)/2.0f);
-    *out0++ = crealf(z);
-    *out1++ = cimagf(z);
+    float y = demod_sam_process(&data->sam, *in0++ + I * *in1++);
+    *out0++ = y;
+    *out1++ = y;
   }
   return 0;
+}
+
+static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  if (argc != 2)
+    return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
+  _t *data = (_t *)clientData;
+  Tcl_Obj *result[] = {
+    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
+    Tcl_NewDoubleObj(data->sam.pll.freq.f),
+    NULL
+  };
+  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result));
+  return TCL_OK;
 }
 
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -66,6 +77,7 @@ static const fw_option_table_t _options[] = {
 
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
+  { "get", _get, "get the pll frequency" },
   { NULL }
 };
 
@@ -78,7 +90,7 @@ static const framework_t _template = {
   NULL,				// sample rate function
   _process,			// process callback
   2, 2, 0, 0, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
-  "an SSB modulation component"
+  "a synchronous AM demodulation component"
 };
 
 static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
@@ -86,7 +98,7 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 }
 
 // the initialization function which installs the adapter factory
-int DLLEXPORT Mod_ssb_Init(Tcl_Interp *interp) {
-  return framework_init(interp, "sdrtcl::mod-ssb", "1.0.0", "sdrtcl::mod-ssb", _factory);
+int DLLEXPORT Sam_demod_Init(Tcl_Interp *interp) {
+  return framework_init(interp, "sdrtcl::sam-demod", "1.0.0", "sdrtcl::sam-demod", _factory);
 }
 

@@ -56,9 +56,8 @@ KEYERS=$(LIBDIR)/keyer_ascii.so \
 ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/audio_tap.so \
 	$(LIBDIR)/constant.so \
-	$(LIBDIR)/demod_am.so \
-	$(LIBDIR)/demod_fm.so \
-	$(LIBDIR)/demod_sam.so \
+	$(LIBDIR)/am_demod.so \
+	$(LIBDIR)/am_mod.so \
 	$(LIBDIR)/filter_complex_bandpass.so \
 	$(LIBDIR)/filter_biquad.so \
 	$(LIBDIR)/filter_fir.so \
@@ -82,13 +81,15 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/midi_insert.so \
 	$(LIBDIR)/midi_tap.so \
 	$(LIBDIR)/mixer.so \
-	$(LIBDIR)/mod_am.so \
-	$(LIBDIR)/mod_fm.so \
-	$(LIBDIR)/mod_ssb.so \
+	$(LIBDIR)/fm_demod.so \
+	$(LIBDIR)/fm_mod.so \
 	$(LIBDIR)/noise.so \
 	$(LIBDIR)/oscillator.so \
 	$(OSC_VARIANTS) \
+	$(LIBDIR)/sam_demod.so \
+	$(LIBDIR)/sample_delay.so \
 	$(LIBDIR)/spectrum_tap.so \
+	$(LIBDIR)/ssb_mod.so \
 	$(LIBDIR)/window.so \
 	$(LIBDIR)/window_polyphase.so \
 	$(LIBDIR)/hl_jack.so \
@@ -130,13 +131,13 @@ $(LIBDIR)/audio_tap.so: audio_tap.c framework.h
 $(LIBDIR)/constant.so: constant.c framework.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_am.so: demod_am.c framework.h ../dspmath/demod_am.h
+$(LIBDIR)/am_demod.so: am_demod.c framework.h ../dspmath/demod_am.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_fm.so: demod_fm.c framework.h ../dspmath/demod_fm.h
+$(LIBDIR)/fm_demod.so: fm_demod.c framework.h ../dspmath/demod_fm.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/demod_sam.so: demod_sam.c framework.h ../dspmath/demod_sam.h
+$(LIBDIR)/sam_demod.so: sam_demod.c framework.h ../dspmath/demod_sam.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/filter_complex_bandpass.so: filter_complex_bandpass.c framework.h ../dspmath/filter_complex_bandpass.h
@@ -208,13 +209,13 @@ $(LIBDIR)/midi_tap.so: midi_tap.c framework.h ../dspmath/ring_buffer.h
 $(LIBDIR)/mixer.so: mixer.c framework.h ../dspmath/dspmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/mod_am.so: mod_am.c framework.h ../dspmath/mod_am.h
+$(LIBDIR)/am_mod.so: am_mod.c framework.h ../dspmath/mod_am.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/mod_fm.so: mod_fm.c framework.h ../dspmath/mod_fm.h
+$(LIBDIR)/fm_mod.so: fm_mod.c framework.h ../dspmath/mod_fm.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/mod_ssb.so: mod_ssb.c framework.h ../dspmath/mod_ssb.h
+$(LIBDIR)/ssb_mod.so: ssb_mod.c framework.h ../dspmath/mod_ssb.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/noise.so: noise.c framework.h ../dspmath/dspmath.h ../dspmath/noise.h ../dspmath/random_uniform.h
@@ -240,6 +241,9 @@ $(LIBDIR)/oscillator_td.so: oscillator.c framework.h ../dspmath/dspmath.h ../dsp
 
 $(LIBDIR)/oscillator_zd.so: oscillator.c framework.h ../dspmath/dspmath.h ../dspmath/oscillator.h
 	gcc -fPIC -shared -o $@ $(OSCZD_CFLAGS) $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/sample_delay.so: sample_delay.c framework.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/spectrum_tap.so: spectrum_tap.c framework.h ../dspmath/window.h ../dspmath/polyphase_fft.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)

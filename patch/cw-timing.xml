@@ -1,0 +1,76 @@
+<!DOCTYPE patchbay>
+<patchbay name="cw-timing" version="0.5.0">
+ <output-sockets>
+  <socket client="system" exclusive="off" name="system" type="jack-midi">
+   <plug>midi_capture_1</plug>
+  </socket>
+  <socket client="key" exclusive="off" name="key" type="jack-midi">
+   <plug>midi_out</plug>
+  </socket>
+  <socket client="kyo" exclusive="off" name="kyo" type="jack-audio">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket client="dly" exclusive="off" name="dly" type="jack-audio">
+   <plug>out_i</plug>
+   <plug>out_q</plug>
+  </socket>
+  <socket client="cwt1" exclusive="off" name="cwt1" type="jack-midi">
+   <plug>midi_out</plug>
+  </socket>
+  <socket client="cwt2" exclusive="off" name="cwt2" type="jack-midi">
+   <plug>midi_out</plug>
+  </socket>
+  <socket client="outo" exclusive="off" name="detone" type="jack-midi">
+   <plug>midi_out</plug>
+  </socket>
+ </output-sockets>
+ <input-sockets>
+  <socket client="key" exclusive="off" name="key" type="jack-midi">
+   <plug>midi_in</plug>
+  </socket>
+  <socket client="kyo" exclusive="off" name="kyo" type="jack-midi">
+   <plug>midi_in</plug>
+  </socket>
+  <socket client="system" exclusive="off" name="system" type="jack-audio">
+   <plug>playback_1</plug>
+   <plug>playback_2</plug>
+  </socket>
+  <socket client="outo" exclusive="off" name="detone" type="jack-audio">
+   <plug>in_i</plug>
+  </socket>
+  <socket client="dly" exclusive="off" name="dly" type="jack-audio">
+   <plug>in_i</plug>
+   <plug>in_q</plug>
+  </socket>
+  <socket client="cwt1" exclusive="off" name="cwt1" type="jack-audio">
+   <plug>in_i</plug>
+  </socket>
+  <socket client="cwt2" exclusive="off" name="cwt2" type="jack-audio">
+   <plug>in_i</plug>
+  </socket>
+  <socket client="cwtt1" exclusive="off" name="cwtt1" type="jack-midi">
+   <plug>midi_in</plug>
+  </socket>
+  <socket client="cwtt2" exclusive="off" name="cwtt2" type="jack-midi">
+   <plug>midi_in</plug>
+  </socket>
+  <socket client="outi" exclusive="off" name="out" type="jack-midi">
+   <plug>midi_in</plug>
+  </socket>
+ </input-sockets>
+ <slots/>
+ <cables>
+  <cable input="key" type="jack-midi" output="system"/>
+  <cable input="kyo" type="jack-midi" output="key"/>
+  <cable input="system" type="jack-audio" output="kyo"/>
+  <cable input="detone" type="jack-audio" output="kyo"/>
+  <cable input="dly" type="jack-audio" output="kyo"/>
+  <cable input="cwt1" type="jack-audio" output="kyo"/>
+  <cable input="cwt2" type="jack-audio" output="dly"/>
+  <cable input="cwtt1" type="jack-midi" output="cwt1"/>
+  <cable input="cwtt2" type="jack-midi" output="cwt2"/>
+  <cable input="out" type="jack-midi" output="detone"/>
+ </cables>
+</patchbay>
+
