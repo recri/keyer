@@ -112,10 +112,10 @@ static void *_preconfigure(_t *data) {
   if (opts->decay <= 0) return "decay constant must be greater than zero";
   char *reduce_type_str = Tcl_GetString(opts->reduce_type_obj);
   if (strcmp(reduce_type_str, "") == 0 || strcmp(reduce_type_str, "mag2") == 0) prec->reduce = reduce_mag_squared;
-  else if (strcmp(reduce_type_str, "abs_real") == 0) prec->reduce = reduce_abs_real;
-  else if (strcmp(reduce_type_str, "abs_imag") == 0) prec->reduce = reduce_abs_imag;
-  else if (strcmp(reduce_type_str, "max_abs") == 0) prec->reduce = reduce_max_abs;
-  else return "reduce must be one of mag2, abs_real, abs_imag, or max_abs";
+  else if (strcmp(reduce_type_str, "abs-real") == 0) prec->reduce = reduce_abs_real;
+  else if (strcmp(reduce_type_str, "abs-imag") == 0) prec->reduce = reduce_abs_imag;
+  else if (strcmp(reduce_type_str, "max-abs") == 0) prec->reduce = reduce_max_abs;
+  else return "reduce must be one of mag2, abs-real, abs-imag, or max-abs";
   data->modified = data->fw.busy = 1;
   return data;
 }
@@ -194,7 +194,7 @@ static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-period",   "period",   "Period",    "4096",  fw_option_int,   0, offsetof(_t, opts.period),	   "samples to accumulate for meter measurement" },
   { "-decay",    "decay",    "Decay",     "0.999", fw_option_float, 0, offsetof(_t, opts.decay),	   "amount of decayed average retained at each sample" },
-  { "-reduce",   "reduce",   "Reduce",    "mag2",  fw_option_obj,   0, offsetof(_t, opts.reduce_type_obj), "reduction applied to samples: abs_real, abs_imag, max_abs, mag2" },
+  { "-reduce",   "reduce",   "Reduce",    "mag2",  fw_option_obj,   0, offsetof(_t, opts.reduce_type_obj), "reduction applied to samples: abs-real, abs-imag, max-abs, mag2" },
   { NULL }
 };
 

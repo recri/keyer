@@ -1,6 +1,6 @@
 # -*- mode: Tcl; tab-width: 8; -*-
 #
-# Copyright (C) 2018 by Roger E Critchlow Jr, Charlestown, MA, USA
+# Copyright (C) 2020 by Roger E Critchlow Jr, Charlestown, MA, USA
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

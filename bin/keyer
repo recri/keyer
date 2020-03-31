@@ -319,7 +319,8 @@ snit::type keyer::options {
 
     method populate-option {name opt option} {
 	# look for further guidance
-	
+	# puts "populate-option [dict get $option factory] $opt"
+
 	switch -glob -- [list [dict get $option factory] $opt] {
 	    {* -server} - 
 	    {* -client} { $self describe $option text ronly 1 hide 1 conly 1 -graticule 1 }
@@ -355,7 +356,8 @@ snit::type keyer::options {
 	    {* -ramp} { $self describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	    {* -window} { $self describe $option enum -values [lrange [get-window-types] 1 end] }
 	    {* -window2} { $self describe $option enum -values [get-window-types] }
-	    {* -gain} { $self describe $option value -format %.1f -min -50 -max 3 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
+	    {* -gain} { $self describe $option value -format %.1f -min -50 -max 50 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
+	    {*latency-timing -delay} -
 	    {*sample-delay -delay} { $self describe $option value -format %.0f -min 0 -max 15000 -step 1 -units samples -graticule 20 -steps-per-div 50}
 	    {* -delay} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	    {* -hang} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
@@ -521,7 +523,12 @@ snit::type keyer::options {
 	    {*iq-correct* -rate} { $self describe $option value info {the learning rate for the adaptive filter} -min -1e6 -max 1e6 }
 	    {*leveler* -mode} { $self describe $option enum -values {off leveler} }
 	    {*iambic* -keyer} { $self describe $option enum -values [get-iambic-keyers] }
+	    {*latency-timing* -reduce} -
 	    {*meter* -reduce} { $self describe $option enum -values {abs-real abs-imag max-abs mag2} }
+	    {*latency-timing* -period} -
+	    {*meter* -period} { $self describe $option value -min 1 -max 4000 -step 1 -units samples }
+	    {*latency-timing* -decay} -
+	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    default { puts "populate $name $opt: no clues" }
 	    other {
@@ -880,6 +887,14 @@ snit::type keyer::setups {
 	    test {
 		start { keyer key kbd out hl spec filt hlt -tree 1 } 
 		info { hermes lite test app }
+	    }
+	    cwt {
+		start { keyer -start cw-latency-timing@cwt }
+		info { cw latency detection widget }
+	    }
+	    cwtest {
+		start { keyer key cwt }
+		info { cw latency detection debugging }
 	    }
 	    nod {
 		start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }

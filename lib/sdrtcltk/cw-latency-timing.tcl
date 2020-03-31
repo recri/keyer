@@ -18,13 +18,31 @@
 package provide sdrtcltk::cw-latency-timing 1.0.0
 
 #
-# run two detone components and compare the timing
+# Run two detone components and compare the timing
+# of the signals arriving at each.
+#
+# Opened a can of worms.  My Goertzel filters need to be configured
+# for a -bandwidth that refers to the sample rate of the output of the
+# filter, so I was configuring it wrong.  Watching the filter output
+# as I varied the -bandwidth I see regions of click detection, regions
+# of oscillatory output, and small regions where the output approximates
+# the cw keying envelope.  So, need to understand how the shape of the
+# output varies with bandwidth, and how the magnitude of the output varies
+# with bandwidth, signal strength, etc..  And then get back to computing
+# the delay of a signal.
+#
+# insert a known delay to see how the timing works
+# insert a known attenuation to see how the detection varies
+# insert a series of meters to measure the responses
+# figure out how to properly parameterize the Goertzel filters
 #
 package require Tk
 package require snit
 
 package require sdrtcl::keyer-detone
 package require sdrtcl::midi-tap
+package require sdrtcl::gain
+package require sdrtcl::meter-tap
 package require sdrtcl::sample-delay
 package require sdrtcl::jack
 
@@ -35,29 +53,16 @@ snit::widget sdrtcltk::cw-latency-timing {
     component detone2
     component miditap1
     component miditap2
+    component meter1
+    component meter2
+    component meter3
+    component meter4
+    component gain
+    component delay
     component text1
     component text2
     component text3
-    component delay
-    option -verbose -default 0 -configuremethod ConfigAll
-    option -server -default {} -configuremethod ConfigAll
-    option -client -default 0 -configuremethod ConfigAll
-    option -chan -default 1 -configuremethod ConfigAll
-    option -note -default 0 -configuremethod ConfigAll
 
-    option -freq -default 700 -configuremethod ConfigDetone
-    option -bandwidth -default 700 -configuremethod ConfigDetone
-    option -on -default 4 -configuremethod ConfigDetone
-    option -off -default 3 -configuremethod ConfigDetone
-    option -timeout -default 100 -configuremethod ConfigDetone
-    
-    option -delay -default 100 -configuremethod ConfigDelay
-
-    variable handler {}
-
-    delegate option * to hull
-    delegate method * to hull
-    
     constructor {args} {
 	# puts "cw-latency-timing constructor {$args}"
 	set client [winfo name [namespace tail $self]]
@@ -68,21 +73,76 @@ snit::widget sdrtcltk::cw-latency-timing {
 	install detone2 using sdrtcl::keyer-detone $self.detone2 -client ${client}2 {*}$xargs
 	install miditap1 using sdrtcl::midi-tap $self.miditap1 -client ${client}t1 {*}$xargs
 	install miditap2 using sdrtcl::midi-tap $self.miditap2 -client ${client}t2 {*}$xargs
-	install delay using sdrtcl::sample-delay $self.delay -client dly {*}$xargs
+	install meter1 using sdrtcl::meter-tap $self.meter1 -client ${client}m1 {*}$xargs
+	install meter2 using sdrtcl::meter-tap $self.meter2 -client ${client}m2 {*}$xargs
+	install meter3 using sdrtcl::meter-tap $self.meter3 -client ${client}m3 {*}$xargs
+	install meter4 using sdrtcl::meter-tap $self.meter4 -client ${client}m4 {*}$xargs
+	install gain using sdrtcl::gain $self.gain -client ${client}g
+	install delay using sdrtcl::sample-delay $self.delay -client ${client}d {*}$xargs
 	install text1 using text $win.text1
 	install text2 using text $win.text2
 	install text3 using text $win.text3
+
 	$text1 configure -width 30 -height 15 -exportselection true {*}$args
 	$text2 configure -width 30 -height 15 -exportselection true {*}$args
 	$text3 configure -width 30 -height 15 -exportselection true {*}$args
 	grid $text1 -row 0 -column 0 -sticky nsew
 	grid $text2 -row 0 -column 1 -sticky nsew
 	grid $text3 -row 0 -column 2 -sticky nsew
-	grid [ttk::scale $win.d -from 0 -to 1000 -command [mymethod AdjustDelay]] -row 1 -column 0 -columnspan 3 -sticky ew
+	grid [ttk::frame $win.row1] -row 1 -column 0 -columnspan 3 -sticky nsew
+	foreach i {1 2 3 4} {
+	    pack [ttk::labelframe $win.row1.col$i -text Meter$i] -side left -expand true -fill x
+	    pack [ttk::label $win.row1.col$i.lbl -textvar [myvar data(meter$i)]]
+	}
     }
+
+    option -verbose -default 0 -configuremethod ConfigAll
+    option -server -default {} -configuremethod ConfigAll
+    option -client -default 0 -configuremethod ConfigAll
+
+    option -chan -default 1 -configuremethod ConfigMidi
+    option -note -default 0 -configuremethod ConfigMidi
+
+    option -freq -default 700 -configuremethod ConfigDetone
+    option -bandwidth -default 700 -configuremethod ConfigDetone
+    option -on -default 4 -configuremethod ConfigDetone
+    option -off -default 3 -configuremethod ConfigDetone
+    option -timeout -default 100 -configuremethod ConfigDetone;	# not implemented in component
+    
+    option -delay -default 500 -configuremethod ConfigDelay
+
+    option -gain -default -6 -configuremethod ConfigGain
+
+    option -period -default 4096 -configuremethod ConfigMeter
+    option -decay -default 0.999 -configuremethod ConfigMeter
+    option -reduce -default mag2 -configuremethod ConfigMeter
+
+    method exposed-options {} { return {-verbose -server -client -chan -note -freq -bandwidth -on -off -timeout -delay -gain -period -decay -reduce} }
+
+    variable optioninfo -array {
+    }
+
+    method info-option {opt} {
+	if { ! [catch {$detone1 info option $opt} info] ||
+	     ! [catch {$miditap1 info option $opt} info] ||
+	     ! [catch {$delay info option $opt} info] ||
+	     ! [catch {$gain info option $opt} info] ||
+	     ! [catch {$meter1 info option $opt} info]} { 
+	    return $info
+	}
+	if {[info exists optioninfo($opt)]} {
+	    return $optioninfo($opt)
+	}
+	return {}
+    }
+
+    delegate option * to hull
+    delegate method * to hull
+    
     method AdjustDelay {d} { if { ! [$delay is-busy] } { $self configure -delay [expr {int($d)}] } }
 
     method is-busy {} { return 0 }
+
     method activate {} { 
 	$detone1 activate
 	$detone2 activate
@@ -90,6 +150,11 @@ snit::widget sdrtcltk::cw-latency-timing {
 	$miditap1 start
 	$miditap2 activate
 	$miditap2 start
+	$meter1 activate
+	$meter2 activate
+	$meter3 activate
+	$meter4 activate
+	$gain activate
 	$delay activate
 	$delay start
 	set handler [after 100 [mymethod timeout]]
@@ -102,24 +167,20 @@ snit::widget sdrtcltk::cw-latency-timing {
 	$miditap1 deactivate
 	$miditap2 stop
 	$miditap2 deactivate
+	$meter1 deactivate
+	$meter2 deactivate
+	$meter3 deactivate
+	$meter4 deactivate
+	$gain deactivate
 	$delay stop
 	$delay deactivate
-    }
-    
-    method exposed-options {} { return {-verbose -server -client -chan -note -freq -bandwidth -on -off -timeout -delay} }
-
-    method info-option {opt} {
-	if { ! [catch {$detone1 info option $opt} info]} { return $info }
-	if { ! [catch {$miditap1 info option $opt} info]} { return $info }
-	if { ! [catch {$delay info option $opt} info]} { return $info }
-	return {}
     }
     method ConfigDetone {opt val} {
 	set options($opt) $val
 	$detone1 configure $opt $val
 	$detone2 configure $opt $val
     }
-    method ConfigAll {opt val} {
+    method ConfigMidi {opt val} {
 	set options($opt) $val
 	$self ConfigDetone $opt $val
 	$miditap1 configure $opt $val
@@ -127,7 +188,18 @@ snit::widget sdrtcltk::cw-latency-timing {
     }
     method ConfigDelay {opt val} {
 	set options($opt) $val
-	$delay configure $opt $val
+	if { ! [$delay is-busy] } { $delay configure -delay [expr {int($val)}] }
+    }
+    method ConfigGain {opt val} {
+	set options($opt) $val
+	$gain configure -gain $val
+    }
+    method ConfigMeter {opt val} {
+	set options($opt) $val
+	$meter1 configure $opt $val
+	$meter2 configure $opt $val
+	$meter3 configure $opt $val
+	$meter4 configure $opt $val
     }
     proc postevents {miditap text} {
 	set events {}
@@ -158,6 +230,10 @@ snit::widget sdrtcltk::cw-latency-timing {
 		$text3 insert end [format "%8ld %8ld $v1 $v2\n" [expr {$f2-$f1}] [expr {$t2-$t1}]]
 		$text3 see end
 	    }
+	    set data(meter1) [$meter1 get]
+	    set data(meter2) [$meter2 get]
+	    set data(meter3) [$meter3 get]
+	    set data(meter4) [$meter4 get]
 	} error]} { puts $error }
 	set handler [after 250 [mymethod timeout]]
     }

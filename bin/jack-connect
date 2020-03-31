@@ -1,0 +1,377 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2020 by Roger E Critchlow Jr, Charlestown, MA, USA
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+package require Tk
+package require snit
+package require sdrtcl::jack
+
+#
+# produce a canvas with nodes representing clients of jackd
+# and lines representing connections between nodes
+#
+# interface with live jack sessions and modify them
+# produce scripts to recreate connections
+# read and produce qjackctl patchbay descriptions
+#
+# connections get listed in both directions
+# ie forwards from outputs and backwards into inputs,
+#
+# nodes correspond to jack clients
+# their client name, or client alias, is their identifier
+# but that won't work inside canvas, so create a unique
+# tag for each node, port, and edge
+#
+# put inputs to left, outputs to right
+# double click on node title to hide/show inputs and outputs
+# grab node to drag it
+# click select node for making connection
+# normally show nodes as node labels only, ports hidden
+# distinguish sample and event streams by color? texture?
+# make connections between nodes in the obvious way if possible
+# pop up choices where obvious is ambiguous
+# system:input node separate from system:output node
+#
+# dang, the node-tag depends on the order, so if a node changes order
+# it changes tag and it won't persist in location, but making a persistent
+# tag breaks the tag-name hack.
+#
+#  { "sample-rate",_sample_rate, "get the jack server sample rate" },
+#  { "buffer-size",_buffer_size, "get the jack server buffer size" },
+#  { "cpu-load", _cpu_load,      "get the jack server cpu load percent" },
+#  { "is-realtime",_is_realtime, "get the jack server realtime status" },
+#  { "frame-time", _frame_time,  "get the jack server approximate frame time" },
+#  { "time", _time,	        "get the jack server time in microseconds?" },
+#  { "version", _version,        "get the jack server version" },
+#  { "version-string", _version_string, "get the jack server version string" },
+#  { "client-name-size", _client_name_size, "get the jack server client name size" },
+#  { "port-name-size", _port_name_size, "get the jack server port name size" },
+#  { "port-type-size", _port_type_size, "get the jack server port type size" },
+#  { "time-to-frames", _time_to_frames, "ask the jack server to convert time to frames" },
+#  { "frames-to-time", _frames_to_time, "ask the jack server to convert frames to time" },
+#  { "list-ports", _list_ports,  "get a list of the ports open on the jack server" },
+#  { "connect", _connect,        "connect ports on the jack server" },
+#  { "disconnect", _disconnect,  "disconnect ports on the jack server" },
+#
+
+pack [canvas .network -bg white] -side top -fill both -expand true
+pack [ttk::frame .buttons] -side top -fill x
+foreach button {refresh collapse expand dot} {
+    pack [ttk::button .buttons.$button -text $button -command $button] -side left -anchor w
+}
+
+bind .network <Double-1> [list double-click %W %x %y]
+bind .network <ButtonPress-1> [list drag-select %W %x %y]
+bind .network <ButtonPress-3> [list push-start %W %x %y]
+
+proc double-click {w x y} {
+    set tag [lindex [$w gettags [$w find withtag current]] 0]
+    if {$tag ne {}} { client-toggle $w [tag-name $tag] }
+    #puts "double-click $w $x $y [$w gettags [$w find withtag current]]"
+}
+proc drag-select {w x y} {
+    set current [$w find withtag current]
+    if {$current eq {}} return
+    set tag [lindex [$w gettags $current] 0]
+    if {$tag eq {}} return
+    $w raise $tag
+    set ::drag [dict create w $w x $x y $y t $tag]
+    bind $w <Motion> [list drag %W %x %y]
+    bind $w <ButtonRelease-1> [list drag-drop %W %x %y]
+}
+proc drag {w x y} {
+    set dx [expr {$x-[dict get $::drag x]}]
+    set dy [expr {$y-[dict get $::drag y]}]
+    $w move [dict get $::drag t] $dx $dy
+    dict set ::drag x $x
+    dict set ::drag y $y
+}
+proc drag-drop {w x y} {
+    bind $w <Motion> {}
+    bind $w <ButtonRelease-1> {}
+    unset ::drag
+}
+proc push-start {w x y} {
+    set ::push [dict create w $w x $x y $y]
+    bind $w <Motion> [list push %W %x %y]
+    bind $w <ButtonRelease-3> [list push-drop %W %x %y]
+}
+proc push {w x y} {
+}
+proc push-drop {w x y} {
+    unset ::push
+    bind $w <Motion> {}
+    bind $w <ButtonRelease-3> {}
+}
+
+set nodes [dict create]
+set ports [dict create]
+set edges [dict create]
+
+proc make-node {n args} { dict set ::nodes $n $args }
+proc make-node-id {} { return node-[dict size $::nodes] }
+proc nodes {} { return [dict keys $::nodes] }
+proc node-exists {n} { return [dict exists $::nodes $n] }
+proc node-name {n} { return [dict get $::nodes $n name] }
+proc node-ports {n} { return [dict get $::nodes $n ports] }
+proc node-input-ports {n} { return [dict get $::nodes $n input-ports] }
+proc node-output-ports {n} { return [dict get $::nodes $n output-ports] }
+proc node-tag {n} { return [dict get $::nodes $n tag] }
+proc node-width {n} { return [dict get $::nodes $n width] }
+proc node-expand {n} { return [dict get $::nodes $n expand] }
+proc node-coords {n} { return [dict get $::nodes $n coords] }
+proc node-add-port {n p} {
+    set d [dict get $::nodes $n]
+    dict lappend d ports $p
+    dict lappend d [port-direction $p]-ports $p
+    dict set ::nodes $n $d
+}
+proc node-set-width {n w} { dict set ::nodes $n width $w }
+proc node-set-expand {n e} { dict set ::nodes $n expand $e }
+proc node-set-coords {n c} { dict set ::nodes $n coords $c }
+
+proc port-normalize {port} {
+    switch -glob $port {
+	system:*capture* {
+	    regsub system: $port capture: port
+	}
+	system:*playback* {
+	    regsub system: $port playback: port
+	}
+	system:* {
+	    error "unmatched system port: $port"
+	}
+	default {
+	}
+    }
+    return $port
+}
+    
+proc make-port {p args} { dict set ::ports $p $args }
+proc make-port-id {} { return port-[dict size $::ports] }
+proc ports {} { return [dict keys $::ports] }
+proc port-exists {p} { return [dict exists $::ports $p] }
+proc port-name {p} { return [dict get $::ports $p name] }
+proc port-node {p} { return [dict get $::ports $p node] }
+proc port-pname {p} { return [dict get $::ports $p pname] }
+proc port-direction {p} { return [dict get $::ports $p direction] }
+proc port-type {p} { return [dict get $::ports $p type] }
+proc port-physical {p} { return [dict get $::ports $p physical] }
+proc port-connections {p} { return [dict get $::ports $p connections] }
+proc port-tag {p} { return [dict get $::ports $p tag] }
+
+proc make-edge {e args} { dict set ::edges $e $args }
+proc make-edge-id {} { return edge-[dict size $::edges] }
+proc edges {} { return [dict keys $::edges] }
+proc edge-exists {e} { return [dict exists $::edges $e] }
+proc edge-name {e} { return [dict get $::edges $e name] }
+proc edge-from {e} { return [dict get $::edges $e from] }
+proc edge-to {e} { return [dict get $::edges $e to] }
+proc edge-tag {e} { return [dict get $::edges $e tag] }
+
+proc tag-name {tag} {
+    foreach {type index} [split $tag -] break
+    switch -exact $type {
+	node { return [lindex [nodes] $index] }
+	port { return [lindex [ports] $index] }
+	edge { return [lindex [edges] $index] }
+	default { error "bad tag-name argument {$tag}" }
+    }
+}
+
+proc client-set-coords {w node} {
+    foreach {x y} [node-coords $node]
+    set tag [node-tag $node]
+    foreach {nx ny} [$w coords $tag-label] break
+    $w move $tag [expr {$x-$nx}] [expr {$y-$ny}]
+}
+
+proc client-draw {w node expand} {
+    node-set-expand $node $expand
+    set tag [node-tag $node]
+    set width [node-width $node]
+    set iports [node-input-ports $node]
+    set oports [node-output-ports $node]
+    set niports [llength $iports]
+    set noports [llength $oports]
+    set font {Courier 10}
+
+    .network create rect 0 0 1 1 -fill lightgrey -outline black -tag [list $tag $tag-box]
+
+    for {set text $node} {[string length $text] < $width-2} {} { set text " $text " }
+
+    if {$niports && ! $expand} { set text "\u25b6$text" } else { set text " $text" }
+    if {$noports && ! $expand} { set text "$text\u25b6" } else { set text "$text " }
+
+    .network create text 0 0 -text $text -tag [list $tag $tag-label] -anchor nw -font $font
+	
+    if {$expand} {
+	foreach {x0 y0 x1 y1} [.network bbox $tag-label] break
+	foreach port $iports {
+	    set text "\u25b6 [port-pname $port] "
+	    set ptag [port-tag $port]
+	    .network create text 0 $y1 -text $text -tag [list $tag $ptag $tag-input-port] -anchor nw -font $font
+	    foreach {x0 y0 x1 y1} [.network bbox $tag-input-port] break
+	}
+	
+	foreach {x0 y0 x1 y1} [.network bbox $tag-label] break
+	foreach port [node-output-ports $node] {
+	    set text " [port-pname $port] \u25b6"
+	    set ptag [port-tag $port]
+	    .network create text $x1 $y1 -text $text -tag [list $tag $ptag $tag-output-port] -anchor ne -font $font
+	    foreach {x0 y0 x1 y1} [.network bbox $tag-output-port] break
+	}
+    }
+    
+    .network coords $tag-box [.network bbox $tag]
+    .network move [node-tag $node] [expr {int(400*rand())}] [expr {int(400*rand())}]
+}
+
+proc client-redraw {w node expand} {
+    set tag [node-tag $node]
+    if {[$w coords $tag-label] ne {}} {
+	node-set-coords $node [$w coords $tag-label]
+	$w delete $tag
+	client-draw $w $node $expand
+	client-set-coords $w $node
+    } else {
+	$w delete $tag
+	client-draw $w $node $expand
+    }
+}
+
+proc client-expand {w node} { client-redraw $w $node 1 }
+proc client-collapse {w node} { client-redraw $w $node 0 }
+proc client-toggle {w node} { client-redraw $w $node [expr { ! [node-expand $node] }] }
+
+if {0} {
+    proc lmap-node-input-ports {n} { return [lmap p [node-ports $n] {expr {([port-direction $p] eq {input}) ? $p : [continue]}}] }
+    proc lmap-node-output-ports {n} { return [lmap p [node-ports $n] {expr {([port-direction $p] eq {output}) ? $p : [continue]}}] }
+
+    proc all-port-direction-check {} {
+	foreach port [ports] {
+	    set node [port-node $port]
+	    if {[lmap-node-input-ports $node] ne [node-input-ports $node]} { error "port direction failed $port $node" }
+	}
+    }
+
+    proc tag-name-check {tag name} {
+	switch -glob $tag {
+	    node-* { if {[node-tag $name] ne $tag} { error "tag-name-check $tag $name failed" } }
+	    port-* { if {[port-tag $name] ne $tag} { error "tag-name-check $tag $name failed" } }
+	    edge-* { if {[edge-tag $name] ne $tag} { error "tag-name-check $tag $name failed" } }
+	    default { error "bad tag-name-check $tag $name" }
+	}
+    }
+
+    proc all-tag-name-check {} {
+	#foreach node [nodes] { puts "node $node tag [node-tag $node]" }
+	foreach name [nodes] { tag-name-check [node-tag $name] $name }
+	foreach name [ports] { tag-name-check [port-tag $name] $name }
+	foreach name [edges] { tag-name-check [edge-tag $name] $name }
+    }
+}
+
+proc refresh {} {
+    
+    # thinking about preserving coordinates, state, etc.
+    set oldn $::nodes
+    set oldp $::ports
+    set old3 $::edges
+    
+    set ::nodes [dict create]
+    set ::ports [dict create]
+    set ::edges [dict create]
+    
+    # parse the current set of ports
+    dict for {port desc} [sdrtcl::jack list-ports] {
+	set port [port-normalize $port]
+	dict set desc connections [lmap c [dict get $desc connections] {port-normalize $c}]
+	foreach {cname pname} [split $port :] break
+	if { ! [node-exists $cname]} {
+	    make-node $cname name $cname ports {} tag [make-node-id] input-ports {} output-ports {}
+	}
+	if { ! [port-exists $port]} {
+	    make-port $port name $port node $cname pname $pname tag [make-port-id] {*}$desc
+	    node-add-port $cname $port
+	} else {
+	    error "duplicate port $port"
+	}
+    }
+    
+    # parse the port connections
+    foreach port [ports] {
+	if {[port-direction $port] eq {output}} {
+	    foreach nbr [port-normalize [port-connections $port]] {
+		if {[port-direction $nbr] eq {input}} {
+		    set e [list $port $nbr]
+		    make-edge $e name $e from $port to $nbr tag [make-edge-id]
+		}
+	    }
+	}
+    }
+    
+    # determine the size of the character strings in the node
+    foreach node [nodes] {
+	set nlab [string length $node]
+	set nip [tcl::mathfunc::max 0 {*}[lmap p [node-input-ports $node] {string length [port-pname $p]}]]
+	set nop [tcl::mathfunc::max 0 {*}[lmap p [node-output-ports $node] {string length [port-pname $p]}]]
+	set width [expr {max($nlab+4, $nip+3+$nop+3)}]
+	node-set-width $node $width
+    }
+    
+    # sanity checks
+    # all-tag-name-check;		# verify that all nodes, ports, and edges can be found by their canvas tags
+    # all-port-direction-check;	# 
+    
+    foreach node [nodes] { client-draw .network $node 0 }
+
+}
+
+proc all-collapse {} { foreach node [nodes] { client-collapse .network $node } }
+proc all-expand {} { foreach node [nodes]  { client-expand .network $node } }
+
+proc dot {} {
+    set nodes {}
+    set dot {}
+    append dot "digraph {"
+    foreach node [nodes] {
+	dict set graph $node {}
+	foreach port [node-output-ports $node] {
+	    foreach conn [port-connections $port] {
+		set node2 [port-node $conn]
+		if {$node2 ni $nodes} {
+		    lappend nodes $node2
+		    append dot " $node -> $node2;"
+		}
+	    }
+	}
+    }
+    append dot " }"
+    puts $dot
+}
+refresh
