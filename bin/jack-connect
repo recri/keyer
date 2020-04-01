@@ -138,11 +138,15 @@ proc make-tag {x} {
     return $hash
 }
 
+set tags [dict create]
 set nodes [dict create]
 set ports [dict create]
 set edges [dict create]
 
-proc make-node {n args} { dict set ::nodes $n $args }
+proc make-node {n args} { 
+    dict set ::nodes $n $args
+    dict set ::tags [node-tag $n] $n
+}
 proc nodes {} { return [dict keys $::nodes] }
 proc node-exists {n} { return [dict exists $::nodes $n] }
 proc node-name {n} { return [dict get $::nodes $n name] }
@@ -174,6 +178,11 @@ proc node-set-expand {n e} { dict set ::nodes $n expand $e }
 proc node-set-coords {n c} { dict set ::nodes $n coords $c }
 proc node-set-layout {n c} { dict set ::nodes $n layout $c }
 
+proc node-input-attach {n} { [dict get $::nodes $n input-attach] }
+proc node-output-attach {n} { [dict get $::nodes $n output-attach] }
+proc node-set-input-attach {n args} { dict set $::nodes $n input-attach $args }
+proc node-set-output-attach {n args} { dict set $::nodes $n output-attach $args }
+
 proc port-normalize {port} {
     switch -glob $port {
 	system:*capture* {
@@ -191,7 +200,10 @@ proc port-normalize {port} {
     return $port
 }
     
-proc make-port {p args} { dict set ::ports $p $args }
+proc make-port {p args} { 
+    dict set ::ports $p $args
+    dict set ::tags [port-tag $p] $p
+}
 proc ports {} { return [dict keys $::ports] }
 proc port-exists {p} { return [dict exists $::ports $p] }
 proc port-name {p} { return [dict get $::ports $p name] }
@@ -202,8 +214,16 @@ proc port-type {p} { return [dict get $::ports $p type] }
 proc port-physical {p} { return [dict get $::ports $p physical] }
 proc port-connections {p} { return [dict get $::ports $p connections] }
 proc port-tag {p} { return [dict get $::ports $p tag] }
+proc port-input-attach {p} { [dict get $::ports $p input-attach] }
+proc port-output-attach {p} { [dict get $::ports $p output-attach] }
+proc port-set-input-attach {p args} { dict set $::ports $p input-attach $args }
+proc port-set-output-attach {p args} { dict set $::ports $p output-attach $args }
 
-proc make-edge {e args} { dict set ::edges $e $args }
+
+proc make-edge {e args} {
+    dict set ::edges $e $args 
+    dict set ::tags [edge-tag $e] $e
+}
 proc edges {} { return [dict keys $::edges] }
 proc edge-exists {e} { return [dict exists $::edges $e] }
 proc edge-name {e} { return [dict get $::edges $e name] }
@@ -211,15 +231,7 @@ proc edge-from {e} { return [dict get $::edges $e from] }
 proc edge-to {e} { return [dict get $::edges $e to] }
 proc edge-tag {e} { return [dict get $::edges $e tag] }
 
-proc tag-name {tag} {
-    foreach {type index} [split $tag -] break
-    switch -exact $type {
-	node { return [lindex [nodes] $index] }
-	port { return [lindex [ports] $index] }
-	edge { return [lindex [edges] $index] }
-	default { error "bad tag-name argument {$tag}" }
-    }
-}
+proc tag-name {tag} { return [dict get $::tags $tag] }
 
 proc client-set-coords {w node} {
     foreach {x y} [node-coords $node] break
@@ -242,8 +254,12 @@ proc client-draw {w node expand} {
 
     set text [node-label $node $expand]
     
-    .network create text 0 0 -text $text -tag [list $tag $tag-label] -anchor nw -font $font
+    .network create text 0 0 -text $text -tag [list $tag $tag-label] -anchor n -font $font
 	
+    foreach {x0 y0 x1 y1} [.network bbox $tag-label] break
+    node-set-input-attach $node $x0 [expr {($y0+$y1)/2.0}]
+    node-set-output-attach $node $x1 [expr {($y0+$y1)/2.0}]
+
     if {$expand} {
 	foreach {x0 y0 x1 y1} [.network bbox $tag-label] break
 	foreach port $iports {
@@ -251,6 +267,7 @@ proc client-draw {w node expand} {
 	    set ptag [port-tag $port]
 	    .network create text 0 $y1 -text $text -tag [list $tag $ptag $tag-input-port] -anchor nw -font $font
 	    foreach {x0 y0 x1 y1} [.network bbox $tag-input-port] break
+	    port-set-input-attach $port $x0 [expr {($y0+$y1)/2.0}]
 	}
 	
 	foreach {x0 y0 x1 y1} [.network bbox $tag-label] break
@@ -259,6 +276,7 @@ proc client-draw {w node expand} {
 	    set ptag [port-tag $port]
 	    .network create text $x1 $y1 -text $text -tag [list $tag $ptag $tag-output-port] -anchor ne -font $font
 	    foreach {x0 y0 x1 y1} [.network bbox $tag-output-port] break
+	    port-set-output-attach $port $x1 [expr {($y0+$y1)/2.0}]
 	}
     }
     
@@ -369,7 +387,9 @@ proc refresh {w} {
     # all-tag-name-check;		# verify that all nodes, ports, and edges can be found by their canvas tags
     # all-port-direction-check;	# 
     
-    foreach node [nodes] { client-draw $w $node 0 }
+    foreach node [nodes] { 
+	client-draw $w $node 0
+    }
 
 }
 
