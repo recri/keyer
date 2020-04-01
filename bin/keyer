@@ -878,7 +878,7 @@ snit::type keyer::setups {
 		ports { out_i* out_q* in_i in_q }
 	    }
 	    hlt {
-		start { keyer -start {hl-test@hlt} -kyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
+		start { keyer -start {hl-test@hlt} -keyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
 		info { hermes lite test dashboard }
 	    }
 	    spec {

@@ -1,92 +1,93 @@
 <!DOCTYPE patchbay>
 <patchbay name="hl-test" version="0.5.0">
  <output-sockets>
-  <socket name="teensy midi" exclusive="off" client="system" type="jack-midi">
+  <socket client="system" name="teensy midi" type="jack-midi" exclusive="off">
    <plug>midi_capture_1</plug>
   </socket>
-  <socket name="kbd" exclusive="off" client="kbd" type="jack-midi">
+  <socket client="kbd" name="kbd" type="jack-midi" exclusive="off">
    <plug>midi_out</plug>
   </socket>
-  <socket name="kbo" exclusive="off" client="kbo" type="jack-audio">
+  <socket client="kbdo" name="kbdo" type="jack-audio" exclusive="off">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
-  <socket name="key" exclusive="off" client="key" type="jack-midi">
+  <socket client="key" name="key" type="jack-midi" exclusive="off">
    <plug>midi_out</plug>
   </socket>
-  <socket name="kyo" exclusive="off" client="kyo" type="jack-audio">
+  <socket client="keyo" name="keyo" type="jack-audio" exclusive="off">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
-  <socket name="detone" exclusive="off" client="outo" type="jack-midi">
+  <socket client="outo" name="detone" type="jack-midi" exclusive="off">
    <plug>midi_out</plug>
   </socket>
-  <socket name="hl" exclusive="off" client="hl" type="jack-audio">
+  <socket client="hl" name="hl" type="jack-audio" exclusive="off">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
-  <socket name="filt" exclusive="off" client="filt" type="jack-audio">
+  <socket client="filt" name="filt" type="jack-audio" exclusive="off">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
  </output-sockets>
  <input-sockets>
-  <socket name="key" exclusive="off" client="key" type="jack-midi">
+  <socket client="key" name="key" type="jack-midi" exclusive="off">
    <plug>midi_in</plug>
   </socket>
-  <socket name="kyo" exclusive="off" client="kyo" type="jack-midi">
+  <socket client="keyo" name="keyo" type="jack-midi" exclusive="off">
    <plug>midi_in</plug>
   </socket>
-  <socket name="kbo" exclusive="off" client="kbo" type="jack-midi">
+  <socket client="kbdo" name="kbdo" type="jack-midi" exclusive="off">
    <plug>midi_in</plug>
   </socket>
-  <socket name="detone" exclusive="off" client="outo" type="jack-audio">
+  <socket client="outo" name="detone" type="jack-audio" exclusive="off">
    <plug>in_i</plug>
   </socket>
-  <socket name="decode out" exclusive="off" client="outi" type="jack-midi">
+  <socket client="outi" name="decode out" type="jack-midi" exclusive="off">
    <plug>midi_in</plug>
   </socket>
-  <socket name="filt" exclusive="off" client="filt" type="jack-audio">
-   <plug>in_i</plug>
-   <plug>in_q</plug>
-  </socket>
-  <socket name="spec" exclusive="off" client="spec" type="jack-audio">
+  <socket client="filt" name="filt" type="jack-audio" exclusive="off">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket name="hl" exclusive="off" client="hl" type="jack-audio">
+  <socket client="spec" name="spec" type="jack-audio" exclusive="off">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket name="system" exclusive="off" client="system" type="jack-audio">
+  <socket client="hl" name="hl" type="jack-audio" exclusive="off">
+   <plug>in_i</plug>
+   <plug>in_q</plug>
+  </socket>
+  <socket client="system" name="system" type="jack-audio" exclusive="off">
    <plug>playback_1</plug>
    <plug>playback_2</plug>
   </socket>
-  <socket name="scope12" exclusive="off" client="Simple Scope \(4 channel\)" type="jack-audio">
+  <socket client="Simple Scope \(4 channel\)" name="scope12" type="jack-audio" exclusive="off">
    <plug>in1</plug>
    <plug>in2</plug>
   </socket>
-  <socket name="scope34" exclusive="off" client="Simple Scope \(4 channel\)" type="jack-audio">
+  <socket client="Simple Scope \(4 channel\)" name="scope34" type="jack-audio" exclusive="off">
    <plug>in3</plug>
    <plug>in4</plug>
   </socket>
  </input-sockets>
  <slots/>
  <cables>
-  <cable input="key" output="teensy midi" type="jack-midi"/>
-  <cable input="kyo" output="key" type="jack-midi"/>
-  <cable input="hl" output="kyo" type="jack-audio"/>
-  <cable input="scope12" output="kyo" type="jack-audio"/>
-  <cable input="detone" output="kyo" type="jack-audio"/>
-  <cable input="decode out" output="detone" type="jack-midi"/>
-  <cable input="scope34" output="hl" type="jack-audio"/>
-  <cable input="spec" output="hl" type="jack-audio"/>
-  <cable input="filt" output="hl" type="jack-audio"/>
-  <cable input="system" output="filt" type="jack-audio"/>
-  <cable input="detone" output="kbo" type="jack-audio"/>
-  <cable input="hl" output="kbo" type="jack-audio"/>
-  <cable input="scope12" output="kbo" type="jack-audio"/>
-  <cable input="kbo" output="kbd" type="jack-midi"/>
+  <cable output="teensy midi" type="jack-midi" input="key"/>
+  <cable output="kbd" type="jack-midi" input="kbdo"/>
+  <cable output="kbdo" type="jack-audio" input="detone"/>
+  <cable output="kbdo" type="jack-audio" input="hl"/>
+  <cable output="kbdo" type="jack-audio" input="scope12"/>
+  <cable output="key" type="jack-midi" input="keyo"/>
+  <cable output="keyo" type="jack-audio" input="hl"/>
+  <cable output="keyo" type="jack-audio" input="scope12"/>
+  <cable output="keyo" type="jack-audio" input="detone"/>
+  <cable output="detone" type="jack-midi" input="decode out"/>
+  <cable output="hl" type="jack-audio" input="scope34"/>
+  <cable output="hl" type="jack-audio" input="spec"/>
+  <cable output="hl" type="jack-audio" input="filt"/>
+  <cable output="filt" type="jack-audio" input="system"/>
+  <cable output="filt" type="jack-audio" input="detone"/>
  </cables>
 </patchbay>
 
