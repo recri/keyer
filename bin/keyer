@@ -817,56 +817,65 @@ snit::type keyer::setups {
 	
 	return [dict create {*}{ 
 	    key {
-		start { keyer -start {keyer-iambic@key keyer-tone@kyo} -key-wpm 16 -kyo-ramp 4.0 -key-mode B -key-alsp 1 }
+		start { keyer -start {keyer-iambic@key keyer-tone@keyo} -key-wpm 16 -keyo-ramp 4.0 -key-mode B -key-alsp 1 }
 		info { iambic keyer and a keyed oscillator }
-		connect { key:midi_out kyo:midi_in }
-		ports { key:midi_in kyo:midi_out kyo:out_i kyo:out_q }
+		connect { midi_out o:midi_in }
+		ports { midi_in o:midi_out o:out_i o:out_q }
 	    }
 	    key2 { 
-		start {keyer -start {keyer-iambic@key2 keyer-tone@kyo2} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -kyo2-ramp 4.0 -kyo2-note 2 }
+		start {keyer -start {keyer-iambic@key2 keyer-tone@key2o} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -key2o-ramp 4.0 -key2o-note 2 }
 		info { second iambic keyer and keyed oscillator }
-		connect { key2:midi_out kyo2:midi_in }
-		ports { key2:midi_in kyo2:midi_out kyo2:out_i kyo2:out_q }
+		connect { midi_out o:midi_in }
+		ports { midi_in o:midi_out o:out_i o:out_q }
 	    }
 	    kbd {
-		start { keyer -start {cw-encode-input@kbd keyer-tone@kbo} -kbd-wpm 80 -kbo-ramp 6.6 }
+		start { keyer -start {cw-encode-input@kbd keyer-tone@kbdo} -kbd-wpm 80 -kbdo-ramp 6.6 }
 		info {keyboard keyer and a keyed oscillator}
-		connect { kbd:midi_out kyo:midi_in }
-		ports { kyo:midi_out kyo:out_i kyo:out_q }
+		connect { midi_out o:midi_in }
+		ports { o:midi_out o:out_i o:out_q }
 	    }
 	    kbd2 {
-		start { keyer -start {cw-encode-input@kbd2 keyer-tone@kbo2} -kbd2-wpm 80 -kbo2-ramp 6.6 }
+		start { keyer -start {cw-encode-input@kbd2 keyer-tone@kbd2o} -kbd2-wpm 80 -kbd2o-ramp 6.6 }
 		info {second keyboard keyer and a keyed oscillator}
-		connect { kbd2:midi_out kyo2:midi_in }
-		ports { kyo2:midi_out kyo2:out_i kyo2:out_q }
+		connect { midi_out o:midi_in }
+		ports { o:midi_out o:out_i o:out_q }
 	    }
 	    ptt {
 		start { keyer -start {keyer-ptt@ptt} }
 		info {push-to-talk switch with tx delay}
+		ports { midi_in midi_out }
 	    }
 	    deb {
 		start { keyer -start {keyer-debounce@deb} }
 		info {key contact debouncer}
+		ports { midi_in midi_out }
 	    }
 	    cas {
 		start { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
 		info {midi events from keyboard keys}
+		ports { midi_out }
+		note { should this be cas:midi_capture_1? }
 	    }
 	    tap {
 		start { keyer -start {midi-tap-view@tap} }
 		info {midi monitor for timing events}
+		ports { midi_in }
 	    }
 	    tap2 {
 		start { keyer -start {midi-tap-view@tap2} }
 		info {second midi monitor for timing events}
+		ports { midi_in }
 	    }
 	    out {
 		start { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
 		info {audio to ascii morse decoder}
+		connect { o:midi_out i:midi_in }
+		ports { o:in_i o:out_i }
 	    }
 	    hl {
 		start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
 		info { hermes lite udp jack connection }
+		ports { out_i* out_q* in_i in_q }
 	    }
 	    hlt {
 		start { keyer -start {hl-test@hlt} -kyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
@@ -875,18 +884,23 @@ snit::type keyer::setups {
 	    spec {
 		start { keyer -start {spectrum-waterfall-view@spec}}
 		info { spectrum and waterfall display }
+		ports { in_i in_q }
 	    }
 	    spec2 {
 		start { keyer -start {spectrum-waterfall-view@spec2}}
 		info { spectrum and waterfall display }
+		ports { in_i in_q }
 	    }
 	    filt {
 		start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
 		info { overlap save bandpass filter }
+		ports { in_i in_q out_i out_q }
 	    }
 	    test {
 		start { keyer key kbd out hl spec filt hlt -tree 1 } 
 		info { hermes lite test app }
+		connect { key out kbd out key hl kbd hl hl spec hl filt }
+		ports { key:midi_in filt:out_i filt:out_q }
 	    }
 	    cwt {
 		start { keyer -start cw-latency-timing@cwt }

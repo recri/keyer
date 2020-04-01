@@ -60,6 +60,8 @@ package require sdrtcl::jack
 # it changes tag and it won't persist in location, but making a persistent
 # tag breaks the tag-name hack.
 #
+# need a block select or multiselect
+#
 #  { "sample-rate",_sample_rate, "get the jack server sample rate" },
 #  { "buffer-size",_buffer_size, "get the jack server buffer size" },
 #  { "cpu-load", _cpu_load,      "get the jack server cpu load percent" },
