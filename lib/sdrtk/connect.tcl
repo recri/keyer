@@ -254,7 +254,7 @@ snit::widget sdrtk::connect {
     # node expand/collapse
     method double-click {x y} {
 	set tag [lindex [$network gettags [$network find withtag current]] 0]
-	if {$tag ne {}} { $self client-toggle [$self tag-name $tag] }
+	if {[string match node-* $tag]} { $self client-toggle [$self tag-name $tag] }
     }
 
     # node dragging
@@ -263,6 +263,7 @@ snit::widget sdrtk::connect {
 	if {$current eq {}} return
 	set tag [lindex [$network gettags $current] 0]
 	if {$tag eq {}} return
+	if { ! [string match node-* $tag]} return
 	$network raise $tag
 	set data(drag) [dict create x $x y $y n [$self tag-name $tag]]
 	bind $network <Motion> [mymethod drag %x %y]
