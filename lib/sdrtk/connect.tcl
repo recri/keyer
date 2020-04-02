@@ -139,12 +139,10 @@ snit::type sdrtk::graph {
     method node-expand {n} { return [dict get $d(nodes) $n expand] }
     method node-input-attach {n} { [dict get $d(nodes) $n input-attach] }
     method node-output-attach {n} { [dict get $d(nodes) $n output-attach] }
-    method node-coords {n} { return [dict get $d(nodes) $n coords] }
 
     method node-set-expand {n e} { dict set d(nodes) $n expand $e }
     method node-set-input-attach {n args} { dict set d(nodes) $n input-attach $args }
     method node-set-output-attach {n args} { dict set d(nodes) $n output-attach $args }
-    method node-set-coords {n c} { dict set d(nodes) $n coords $c }
 
     method make-port {name args} { 
 	set tag port-[make-tag $name]
@@ -299,15 +297,13 @@ snit::widget sdrtk::connect {
     }
 
     method client-get-coords {node} {
-	foreach {x0 y0 x1 y1} [$network bbox [$self node-tag $node]-label] break
-	if {$x0 eq {}} { return {} }
-	return [list [expr {($x0+$x1)/2.0}] $y0]
+	return [$network coords [$self node-tag $node]-label]
     }
     method client-set-coords {node coords} {
-	foreach {ox oy} [$self client-get-coords $node] break
-	foreach {nx ny} $coords break
-	if {$ox eq {} || $nx eq {}} return
-	$network move [$self node-tag $node] [expr {$nx-$ox}] [expr {$ny-$oy}]
+	if {$coords eq {}} return
+	set oldcoords [$self client-get-coords $node]
+	if {$oldcoords eq {}} return
+	$network move [$self node-tag $node] {*}[lmap o $oldcoords n $coords {expr {$n-$o}}]
     }
     method client-redraw {node expand} {
 	set tag [$self node-tag $node]
@@ -320,7 +316,6 @@ snit::widget sdrtk::connect {
     method client-expand {node} { $self client-redraw $node 1 }
     method client-collapse {node} { $self client-redraw $node 0 }
     method client-toggle {node} { $self client-redraw $node [expr { ! [$self node-expand $node] }] }
-    method client-move {node coords} { $self client-set-coords $node $coords }
 
     method refresh {} {
 	# preserve coordinates
@@ -366,13 +361,14 @@ snit::widget sdrtk::connect {
 	# draw the nodes
 	foreach node [$self nodes] { 
 	    $self client-draw $node 0
-	    $self node-set-coords $node {0 0}
 	    if {[dict exists $save $node]} {
-		$self client-move $node [dict get $save $node]
+		$self client-set-coords $node [dict get $save $node]
 	    } else {
-		$self client-move $node [list [expr {int(400*rand())}] [expr {int(400*rand())}]]
+		$self client-set-coords $node [list [expr {int(400*rand())}] [expr {int(400*rand())}]]
 	    }
 	}
+	
+	$self test
     }
 
     method collapse-all {} { foreach node [$self nodes] { $self client-collapse $node } }
@@ -410,7 +406,7 @@ snit::widget sdrtk::connect {
 	set digraph [dict get $result digraph]
 	dict for {key val} [dict get $result digraph] {
 	    if {[$self node-exists $key]} { 
-		$self client-move $key [split [dict get $val pos] ,]
+		$self client-set-coords $key [split [dict get $val pos] ,]
 	    }
 	}
     }
@@ -437,10 +433,10 @@ snit::widget sdrtk::connect {
 	}
 	# verify input and output ports
 	foreach name [$self nodes] {
-	    if {[$self node-input-ports] ne [lmap p [$self node-ports $n] {expr {([port-direction $p] eq {input}) ? $p : [continue]}}]} {
+	    if {[$self node-input-ports $name] ne [lmap p [$self node-ports $name] {expr {([$self port-direction $p] eq {input}) ? $p : [continue]}}]} {
 		error "input-ports check failed for $name"
 	    }
-	    if {[$self node-output-ports] ne [lmap p [$self node-ports $n] {expr {([port-direction $p] eq {output}) ? $p : [continue]}}]} {
+	    if {[$self node-output-ports $name] ne [lmap p [$self node-ports $name] {expr {([$self port-direction $p] eq {output}) ? $p : [continue]}}]} {
 		error "output-ports check failed for $name"
 	    }
 		
