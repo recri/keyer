@@ -94,16 +94,19 @@ snit::type sdrtk::graph {
     method make-node {name args} { 
 	set tag node-[make-tag $name]
 	dict set d(nodes) $name [dict create name $name label $name tag $tag \
-				  n-port 0 ports {} \
-				  n-input 0 input-ports {} \
-				  n-output 0 output-ports {} \
-				  max-input-width 0 \
-				  max-output-width 0 \
-				  {*}$args]
+				     n-port 0 ports {} \
+				     n-input 0 input-ports {} \
+				     n-output 0 output-ports {} \
+				     from-edges {} to-edges {} \
+				     max-input-width 0 \
+				     max-output-width 0 \
+				     {*}$args]
 	dict set d(tags) $tag $name
     }
     method nodes {} { return [dict keys $d(nodes)] }
     method node-exists {name} { return [dict exists $d(nodes) $name] }
+    method node-get {name} { return [dict get $d(nodes) $name] }
+    method node-set {name value} { dict set d(nodes) $name $value }
     method node-name {n} { return [dict get $d(nodes) $n name] }
     method node-tag {n} { return [dict get $d(nodes) $n tag] }
     method node-ports {n} { return [dict get $d(nodes) $n ports] }
@@ -125,7 +128,7 @@ snit::type sdrtk::graph {
 	return $text
     }
     method node-add-port {n p} {
-	set dict [dict get $d(nodes) $n]
+	set dict [$self node-get $n]
 	set dir [$self port-direction $p]
 	dict lappend dict ports $p
 	dict lappend dict $dir-ports $p
@@ -133,24 +136,40 @@ snit::type sdrtk::graph {
 	dict incr dict n-$dir
 	dict set dict max-$dir-width [tcl::mathfunc::max [string length [$self port-pname $p]] [dict get $dict max-$dir-width]]
 	dict set dict width [expr {max([string length $n]+2+2, [dict get $dict max-input-width]+3+[dict get $dict max-output-width]+3)}]
-	dict set d(nodes) $n $dict
+	$self node-set $n $dict
     }
 
     method node-expand {n} { return [dict get $d(nodes) $n expand] }
-    method node-input-attach {n} { [dict get $d(nodes) $n input-attach] }
-    method node-output-attach {n} { [dict get $d(nodes) $n output-attach] }
+    method node-input-attach {n} { return [dict get $d(nodes) $n input-attach] }
+    method node-output-attach {n} { return [dict get $d(nodes) $n output-attach] }
 
     method node-set-expand {n e} { dict set d(nodes) $n expand $e }
     method node-set-input-attach {n args} { dict set d(nodes) $n input-attach $args }
     method node-set-output-attach {n args} { dict set d(nodes) $n output-attach $args }
 
+    method node-lappend {n key item} {
+	set dict [$self node-get $n]
+	dict lappend $dict $key $item
+	$self node-set $n $dict
+    }
+	
+    method node-add-from-edge {n edge} { $self node-lappend $n from-edges $edge }
+    method node-add-to-edge {n edge} { $self node-lappend $n to-edges $edge }
+    method node-from-edges {n} { return [dict get $d(nodes) $n from-edges] }
+    method node-to-edges {n} { return [dict get $d(nodes) $n to-edges] }
+
     method make-port {name args} { 
 	set tag port-[make-tag $name]
-	dict set d(ports) $name [dict create name $name tag $tag {*}$args]
+	dict set d(ports) $name [dict create name $name tag $tag \
+				     from-edges {} to-edges {} \
+				     {*}$args]
 	dict set d(tags) $tag $name
+	$self node-add-port [$self port-node $name] $name
     }
     method ports {} { return [dict keys $d(ports)] }
     method port-exists {name} { return [dict exists $d(ports) $name] }
+    method port-get {name} { return [dict get $d(ports) $name] }
+    method port-set {name value} { dict set d(ports) $name $value }
     method port-name {p} { return [dict get $d(ports) $p name] }
     method port-node {p} { return [dict get $d(ports) $p node] }
     method port-pname {p} { return [dict get $d(ports) $p pname] }
@@ -160,18 +179,34 @@ snit::type sdrtk::graph {
     method port-connections {p} { return [dict get $d(ports) $p connections] }
     method port-tag {p} { return [dict get $d(ports) $p tag] }
 
-    method port-input-attach {p} { [dict get $d(ports) $p input-attach] }
-    method port-output-attach {p} { [dict get $d(ports) $p output-attach] }
+    method port-input-attach {p} { return [dict get $d(ports) $p input-attach] }
+    method port-output-attach {p} { return [dict get $d(ports) $p output-attach] }
     method port-set-input-attach {p args} { dict set d(ports) $p input-attach $args }
     method port-set-output-attach {p args} { dict set d(ports) $p output-attach $args }
+
+    method port-lappend {p key item} {
+	set dict [$self port-get $p]
+	dict lappend $dict $key $item
+	$self port-set $p $dict
+    }
+	
+    method port-add-from-edge {p edge} { $self port-lappend $p from-edges $edge }
+    method port-add-to-edge {p edge} { $self port-lappend $p to-edges $edge }
+    method port-from-edges {p} { return [dict get $d(ports) $p from-edges] }
+    method port-to-edges {p} { return [dict get $d(ports) $p to-edges] }
 
     method make-edge {name args} { 
 	set tag edge-[make-tag $name]
 	dict set d(edges) $name [dict create name $name tag $tag {*}$args]
 	dict set d(tags) $tag $name
+	$self port-add-from-edge [$self edge-from $name] $name
+	$self port-add-to-edge [$self edge-to $name] $name
+	$self node-add-from-edge [$self port-node [$self edge-from $name]] $name
+	$self node-add-to-edge [$self port-node [$self edge-to $name]] $name
     }
     method edges {} { return [dict keys $d(edges)] }
     method edge-exists {name} { return [dict exists $d(edges) $name] }
+    method edge-get {name} { return [dict get $d(edges) $name] }
     method edge-name {e} { return [dict get $d(edges) $e name] }
     method edge-from {e} { return [dict get $d(edges) $e from] }
     method edge-to {e} { return [dict get $d(edges) $e to] }
@@ -211,7 +246,10 @@ snit::widget sdrtk::connect {
 	bind $network <Double-1> [mymethod double-click %x %y]
 	bind $network <ButtonPress-1> [mymethod drag-select %x %y]
 	bind $network <ButtonPress-3> [mymethod push-start %x %y]
+	bind $network <MouseWheel> [mymethod mouse-wheel %D]
     }
+
+    method mouse-wheel {delta} { puts "mouse-wheel $delta" }
 
     # node expand/collapse
     method double-click {x y} {
@@ -226,14 +264,15 @@ snit::widget sdrtk::connect {
 	set tag [lindex [$network gettags $current] 0]
 	if {$tag eq {}} return
 	$network raise $tag
-	set data(drag) [dict create x $x y $y t $tag]
+	set data(drag) [dict create x $x y $y n [$self tag-name $tag]]
 	bind $network <Motion> [mymethod drag %x %y]
 	bind $network <ButtonRelease-1> [mymethod drag-drop %x %y]
     }
     method drag {x y} {
 	set dx [expr {$x-[dict get $data(drag) x]}]
 	set dy [expr {$y-[dict get $data(drag) y]}]
-	$network move [dict get $data(drag) t] $dx $dy
+	$self client-displace [dict get $data(drag) n] [list $dx $dy]
+	# $network move [dict get $data(drag) t] $dx $dy
 	dict set data(drag) x $x
 	dict set data(drag) y $y
     }
@@ -257,11 +296,10 @@ snit::widget sdrtk::connect {
     }
     
     # content
-    method client-draw {node expand} {
+    method client-draw {node} {
+	set expand  [$self node-expand $node]
 	set tag [$self node-tag $node]
 	set font {Courier 10}
-
-	$self node-set-expand $node $expand
 
 	$network create rect 0 0 1 1 -fill lightgrey -outline black -tag [list $tag $tag-box]
 
@@ -279,7 +317,7 @@ snit::widget sdrtk::connect {
 		set text "\u25b6 [$self port-pname $port] "
 		set ptag [$self port-tag $port]
 		$network create text $x0 $y1 -text $text -tag [list $tag $ptag $tag-input-port] -anchor nw -font $font
-		foreach {x0 y0 x1 y1} [$network bbox $tag-input-port] break
+		foreach {x0 y0 x1 y1} [$network bbox $ptag] break
 		$self port-set-input-attach $port $x0 [expr {($y0+$y1)/2.0}]
 	    }
 	
@@ -288,39 +326,105 @@ snit::widget sdrtk::connect {
 		set text " [$self port-pname $port] \u25b6"
 		set ptag [$self port-tag $port]
 		$network create text $x1 $y1 -text $text -tag [list $tag $ptag $tag-output-port] -anchor ne -font $font
-		foreach {x0 y0 x1 y1} [$network bbox $tag-output-port] break
+		foreach {x0 y0 x1 y1} [$network bbox $ptag] break
 		$self port-set-output-attach $port $x1 [expr {($y0+$y1)/2.0}]
 	    }
 	}
-    
+
 	$network coords $tag-box [$network bbox $tag]
+    }
+
+    method connection-draw {edge} {
+	set fport [$self edge-from $edge]
+	set tport [$self edge-to $edge]
+	set fnode [$self port-node $fport]
+	set tnode [$self port-node $tport]
+	#puts "$fport -> [$self port-get $fport]"
+	#puts "$tport -> [$self port-get $tport]"
+	#puts "$fnode -> [$self node-get $fnode]"
+	#puts "$tnode -> [$self node-get $tnode]"
+	if {[$self node-expand $fnode]} {
+	    set origin [$self port-output-attach $fport]
+	} else {
+	    set origin [$self node-output-attach $fnode]
+	}
+	if {[$self node-expand $tnode]} {
+	    set dest [$self port-input-attach $tport]
+	} else {
+	    set dest [$self node-input-attach $tnode]
+	}
+	$network delete [$self edge-tag $edge]
+	$network create line {*}$origin {*}$origin {*}$dest {*}$dest -smooth true -splinesteps 10 -arrow last -tag [$self edge-tag $edge]
+	$network lower [$self edge-tag $edge]
     }
 
     method client-get-coords {node} {
 	return [$network coords [$self node-tag $node]-label]
     }
-    method client-set-coords {node coords} {
-	if {$coords eq {}} return
+
+    method client-set-coords {node newcoords} {
+	if {$newcoords eq {}} { error "client-set-coords $node {$newcoords}: no new coords?" }
 	set oldcoords [$self client-get-coords $node]
-	if {$oldcoords eq {}} return
-	$network move [$self node-tag $node] {*}[lmap o $oldcoords n $coords {expr {$n-$o}}]
+	if {$oldcoords eq {}} { error "client-set-coords $node {$oldcoords}: no old coords?" }
+	set delta [lmap o $oldcoords n $newcoords {expr {$n-$o}}]
+	$network move [$self node-tag $node] {*}$delta
     }
-    method client-redraw {node expand} {
+    method client-displace {node delta} {
+	# move the node
+	$network move [$self node-tag $node] {*}$delta
+	# update input attachment points
+	if {[$self node-n-input $node] > 0} {
+	    # puts "node-input-attach [$self node-input-attach $node]"
+	    $self node-set-input-attach $node {*}[lmap o [$self node-input-attach $node] d $delta {expr {$o+$d}}]
+	    if {[$self node-expand $node]} {
+		foreach port [$self node-input-ports $node] {
+		    # puts "port-input-attach [$self port-input-attach $port]"
+		    $self port-set-input-attach $port {*}[lmap o [$self port-input-attach $port] d $delta {expr {$o+$d}}]
+		}
+	    }
+	    foreach edge [$self node-to-edges $node] {
+		$self connection-draw $edge
+	    }
+	}
+	# update output attachment points
+	if {[$self node-n-output $node] > 0} {
+	    # puts "node-output-attach [$self node-output-attach $node]"
+	    $self node-set-output-attach $node {*}[lmap o [$self node-output-attach $node] d $delta {expr {$o+$d}}]
+	    if {[$self node-expand $node]} {
+		foreach port [$self node-output-ports $node] {
+		    # puts "port-output-attach [$self port-output-attach $port]"
+		    $self port-set-output-attach $port {*}[lmap o [$self port-output-attach $port] d $delta {expr {$o+$d}}]
+		}
+	    }
+	    foreach edge [$self node-from-edges $node] {
+		$self connection-draw $edge
+	    }
+	}
+    }
+    method client-move-to {node newcoords} {
+	# move the client and its attached connections
+	$self client-displace $node [lmap o [$self client-get-coords $node] n $newcoords {expr {$n-$o}}]
+    }
+    method client-redraw {node} {
 	set tag [$self node-tag $node]
 	set coords [$self client-get-coords $node]
 	$network delete $tag
-	$self client-draw $node $expand
+	$self client-draw $node
 	$self client-set-coords $node $coords
     }
 
-    method client-expand {node} { $self client-redraw $node 1 }
-    method client-collapse {node} { $self client-redraw $node 0 }
-    method client-toggle {node} { $self client-redraw $node [expr { ! [$self node-expand $node] }] }
+    method client-expand {node} {   $self node-set-expand $node 1; $self client-redraw $node }
+    method client-collapse {node} { $self node-set-expand $node 0; $self client-redraw $node }
+    method client-toggle {node} {   $self node-set-expand $node [expr { ! [$self node-expand $node] }]; $self client-redraw $node }
 
     method refresh {} {
-	# preserve coordinates
-	set save {}
-	foreach node [$self nodes] { lappend save $node [$self client-get-coords $node] }
+	# preserve coordinates and expand
+	set coords {}
+	set expand {}
+	foreach node [$self nodes] {
+	    lappend coords $node [$self client-get-coords $node]
+	    lappend expand $node [$self node-expand $node]
+	}
 	
 	# clear the decks
 	$self graph-init
@@ -332,15 +436,13 @@ snit::widget sdrtk::connect {
 	    dict set desc connections [lmap c [dict get $desc connections] {$self port-normalize $c}]
 	    foreach {cname pname} [split $port :] break
 	    if { ! [$self node-exists $cname]} { 
-		if {$cname in {capture playback}} {
-		    $self make-node $cname name $cname label system
-		} else {
-		    $self make-node $cname name $cname
-		}
+		set args [list $cname name $cname label $cname expand 0]
+		if {$cname in {capture playback}} { lappend args label system }
+		if {[dict exists $expand $cname]} { lappend args expand [dict get $expand $cname] }
+		$self make-node {*}$args
 	    }
 	    if { ! [$self port-exists $port]} {
 		$self make-port $port name $port node $cname pname $pname {*}$desc
-		$self node-add-port $cname $port
 	    } else {
 		error "duplicate port $port"
 	    }
@@ -357,17 +459,24 @@ snit::widget sdrtk::connect {
 		}
 	    }
 	}
-    
+	
 	# draw the nodes
 	foreach node [$self nodes] { 
-	    $self client-draw $node 0
-	    if {[dict exists $save $node]} {
-		$self client-set-coords $node [dict get $save $node]
-	    } else {
-		$self client-set-coords $node [list [expr {int(400*rand())}] [expr {int(400*rand())}]]
-	    }
+	    $self client-draw $node
+	}
+	# draw the edges
+	foreach edge [$self edges] {
+	    $self connection-draw $edge
+	}
+
+	# move them into position
+	if {[dict exists $coords $node]} {
+	    $self client-move-to $node [dict get $coords $node]
+	} else {
+	    $self client-move-to $node [list [expr {int(400*rand())}] [expr {int(400*rand())}]]
 	}
 	
+	# run tests
 	$self test
     }
 
@@ -406,7 +515,7 @@ snit::widget sdrtk::connect {
 	set digraph [dict get $result digraph]
 	dict for {key val} [dict get $result digraph] {
 	    if {[$self node-exists $key]} { 
-		$self client-set-coords $key [split [dict get $val pos] ,]
+		$self client-move-to $key [split [dict get $val pos] ,]
 	    }
 	}
     }
