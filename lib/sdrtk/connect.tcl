@@ -160,7 +160,9 @@ snit::type sdrtk::graph {
 	$self node-incr $n n-port
 	$self node-incr $n n-$dir
 	$self node-max $n max-$dir-width [string length [$self port-pname $p]]
-	$self node-set-width $n [expr {max([string length $n]+2+2, [$self node-max-input-width $n]+3+[$self node-max-input-width $n]+3)}]
+	set iw [$self node-max-input-width $n]
+	set ow [$self node-max-output-width $n]
+	$self node-set-width $n [expr {max([string length $n]+2+2, ($iw>0?$iw+3:0)+($ow>0?$ow+3:0))}]
     }
 
     method make-port {name args} { 
@@ -387,31 +389,32 @@ snit::widget sdrtk::connect {
 
 	# update input attachment points
 	if {[$self node-n-input $node] > 0} {
-	    puts "client-displace $node $delta : node-input-attach [$self node-input-attach $node]"
+	    #puts "client-displace $node $delta : node-input-attach [$self node-input-attach $node]"
 	    $self node-set-input-attach $node {*}[lmap o [$self node-input-attach $node] d $delta {expr {$o+$d}}]
 	    if {[$self node-expand $node]} {
 		foreach port [$self node-input-ports $node] {
-		    puts "client-displace $node $delta : port-input-attach [$self port-input-attach $port]"
+		    #puts "client-displace $node $delta : port-input-attach [$self port-input-attach $port]"
 		    $self port-set-input-attach $port {*}[lmap o [$self port-input-attach $port] d $delta {expr {$o+$d}}]
 		}
 	    }
 	    foreach edge [$self node-to-edges $node] {
-		puts "client-displace $node $delta : connection-draw $edge"
+		#puts "client-displace $node $delta : connection-draw $edge"
 		$self connection-draw $edge
 	    }
 	}
+
 	# update output attachment points
 	if {[$self node-n-output $node] > 0} {
-	    puts "client-displace $node $delta : node-output-attach [$self node-output-attach $node]"
+	    #puts "client-displace $node $delta : node-output-attach [$self node-output-attach $node]"
 	    $self node-set-output-attach $node {*}[lmap o [$self node-output-attach $node] d $delta {expr {$o+$d}}]
 	    if {[$self node-expand $node]} {
 		foreach port [$self node-output-ports $node] {
-		    puts "client-displace $node $delta : port-output-attach [$self port-output-attach $port]"
+		    # puts "client-displace $node $delta : port-output-attach [$self port-output-attach $port]"
 		    $self port-set-output-attach $port {*}[lmap o [$self port-output-attach $port] d $delta {expr {$o+$d}}]
 		}
 	    }
 	    foreach edge [$self node-from-edges $node] {
-		puts "client-displace $node $delta : connection-draw $edge"
+		#puts "client-displace $node $delta : connection-draw $edge"
 		$self connection-draw $edge
 	    }
 	}
