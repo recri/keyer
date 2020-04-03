@@ -918,6 +918,18 @@ snit::type keyer::setups {
 		start { keyer -merge {*-chan *-note} }
 		info {merge midi channel and note options}
 	    }
+	    xsco {
+		start { keyer -exec {x42-scope -j xsc >& ~/.config/keyer/xsco.log} }
+		info { x42-scope, 4 channel scope jack plugin }
+	    }
+	    xspe {
+		start { keyer -exec {x42-spectr -j xspe >& ~/.config/keyer/xspe.log} }
+		info { x42-spectr, audio spectrum analyser jack plugin }
+	    }
+	    xmet {
+		start { keyer -exec {x42-meter -j xmet >& ~/.config/keyer/xmet.log} }
+		info { x42-meter, audio level meter jack plugin }
+	    }
 	}]
     }
 }
@@ -959,6 +971,9 @@ proc has-start {} { return [::argv exists -start] }
 
 proc get-eval {} { return [::argv get -eval] }
 proc has-eval {} { return [::argv exists -eval] }
+
+proc get-exec {} { return [::argv get -exec] }
+proc has-exec {} { return [::argv exists -exec] }
 
 proc get-argvopts {} { return [::argv get -argvopts] }
 proc has-argvopts {} { return [::argv exists -argvopts] }
@@ -1061,8 +1076,9 @@ proc main-argv {argv} {
     foreach {opt val} $argv {
 	# -server - jack server
 	# -title - window title
-	# -run - saved setups to run
-	# -start components - components to start
+	# -run - saved setups to run by name
+	# -start components - component@name to start
+	# -exec args - command to run in background
 	# -favor patterns - option patterns to favor
 	# -hide patterns - option patterns to hide
 	# -merge patterns - option patterns to merge
@@ -1080,6 +1096,7 @@ proc main-argv {argv} {
 	    -grid -
 	    -tree { ::argv set $opt $val }
 	    -eval { ::argv lappend $opt $val }
+	    -exec { ::argv lappend $opt $val }
 	    -start { ::argv lappend $opt {*}$val }
 	    default { ::argv lappend -argvopts $opt $val }
 	}
@@ -1125,9 +1142,27 @@ proc main {argv} {
     # process arguments, first pass just to collect everything
     main-argv $argv
     
+    # if nothing asked for, nothing gained
+    if { ! [has-start] && ! [has-exec] && ! [has-eval] } { usage-message }
+
     # start components and collect their options
-    if { ! [has-start]} { usage-message }
-    foreach composite [get-start] { ::options process $composite }
+    if {[has-start]} {
+	foreach composite [get-start] { 
+	    ::options process $composite
+	}
+    }
+
+    if {[has-eval]} {
+	foreach x [get-eval] {
+	    eval $x 
+	} 
+    }
+
+    if {[has-exec]} { 
+	foreach x [get-exec] {
+	    exec {*}$x &
+	}
+    }
     
     # process command line options for additional option definitions
     if {[has-argvopts]} {
@@ -1182,9 +1217,6 @@ proc main {argv} {
 	}
     }
     
-    # evaluate -eval
-    if {[has-eval]} { foreach x [get-eval] { eval $x } }
-
     # update window title
     update-window-title
     
