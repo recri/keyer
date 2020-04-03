@@ -1,119 +1,119 @@
 <!DOCTYPE patchbay>
-<patchbay name="cw-timing" version="0.5.0">
+<patchbay version="0.5.0" name="cw-timing">
  <output-sockets>
-  <socket exclusive="off" type="jack-midi" client="system" name="system">
+  <socket type="jack-midi" client="system" exclusive="off" name="system">
    <plug>midi_capture_1</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="key" name="key">
+  <socket type="jack-midi" client="key" exclusive="off" name="key">
    <plug>midi_out</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="kyo" name="kyo">
+  <socket type="jack-audio" client="keyo" exclusive="off" name="kyo">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtd" name="delay">
+  <socket type="jack-audio" client="cwtd" exclusive="off" name="delay">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtg" name="gain">
+  <socket type="jack-audio" client="cwtg" exclusive="off" name="gain">
    <plug>out_i</plug>
    <plug>out_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="cwt1" name="detone1">
+  <socket type="jack-midi" client="cwt1" exclusive="off" name="detone1">
    <plug>midi_out</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwt1" name="power1">
+  <socket type="jack-audio" client="cwt1" exclusive="off" name="power1">
    <plug>out_i</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="cwt2" name="detone2">
+  <socket type="jack-midi" client="cwt2" exclusive="off" name="detone2">
    <plug>midi_out</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwt2" name="power2">
+  <socket type="jack-audio" client="cwt2" exclusive="off" name="power2">
    <plug>out_i</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="outo" name="detone">
+  <socket type="jack-midi" client="outo" exclusive="off" name="detone">
    <plug>midi_out</plug>
   </socket>
  </output-sockets>
  <input-sockets>
-  <socket exclusive="off" type="jack-midi" client="key" name="key">
+  <socket type="jack-midi" client="key" exclusive="off" name="key">
    <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="kyo" name="kyo">
+  <socket type="jack-midi" client="keyo" exclusive="off" name="keyo">
    <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="system" name="system">
+  <socket type="jack-audio" client="system" exclusive="off" name="system">
    <plug>playback_1</plug>
    <plug>playback_2</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="outo" name="detone">
+  <socket type="jack-audio" client="outo" exclusive="off" name="detone">
    <plug>in_i</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtd" name="delay">
+  <socket type="jack-audio" client="cwtd" exclusive="off" name="delay">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwt1" name="detone1">
+  <socket type="jack-audio" client="cwt1" exclusive="off" name="detone1">
    <plug>in_i</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="Simple Scope \(4 channel\)" name="x42-scope">
+  <socket type="jack-audio" client="Simple Scope \(4 channel\)" exclusive="off" name="x42-scope">
    <plug>in1</plug>
    <plug>in2</plug>
    <plug>in3</plug>
    <plug>in4</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtm1" name="meter1">
+  <socket type="jack-audio" client="cwtm1" exclusive="off" name="meter1">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtg" name="gain">
+  <socket type="jack-audio" client="cwtg" exclusive="off" name="gain">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwt2" name="detone2">
+  <socket type="jack-audio" client="cwt2" exclusive="off" name="detone2">
    <plug>in_i</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtm2" name="meter2">
+  <socket type="jack-audio" client="cwtm2" exclusive="off" name="meter2">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="cwtt1" name="miditap1">
+  <socket type="jack-midi" client="cwtt1" exclusive="off" name="miditap1">
    <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtm3" name="meter3">
+  <socket type="jack-audio" client="cwtm3" exclusive="off" name="meter3">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="cwtt2" name="miditap2">
+  <socket type="jack-midi" client="cwtt2" exclusive="off" name="miditap2">
    <plug>midi_in</plug>
   </socket>
-  <socket exclusive="off" type="jack-audio" client="cwtm4" name="meter4">
+  <socket type="jack-audio" client="cwtm4" exclusive="off" name="meter4">
    <plug>in_i</plug>
    <plug>in_q</plug>
   </socket>
-  <socket exclusive="off" type="jack-midi" client="outi" name="out">
+  <socket type="jack-midi" client="outi" exclusive="off" name="out">
    <plug>midi_in</plug>
   </socket>
  </input-sockets>
  <slots/>
  <cables>
-  <cable input="key" type="jack-midi" output="system"/>
-  <cable input="kyo" type="jack-midi" output="key"/>
-  <cable input="system" type="jack-audio" output="kyo"/>
-  <cable input="detone" type="jack-audio" output="kyo"/>
-  <cable input="delay" type="jack-audio" output="kyo"/>
-  <cable input="detone1" type="jack-audio" output="kyo"/>
-  <cable input="meter1" type="jack-audio" output="kyo"/>
-  <cable input="x42-scope" type="jack-audio" output="kyo"/>
-  <cable input="gain" type="jack-audio" output="delay"/>
-  <cable input="detone2" type="jack-audio" output="gain"/>
-  <cable input="meter2" type="jack-audio" output="gain"/>
-  <cable input="x42-scope" type="jack-audio" output="gain"/>
-  <cable input="miditap1" type="jack-midi" output="detone1"/>
-  <cable input="meter3" type="jack-audio" output="power1"/>
-  <cable input="miditap2" type="jack-midi" output="detone2"/>
-  <cable input="meter4" type="jack-audio" output="power2"/>
-  <cable input="out" type="jack-midi" output="detone"/>
+  <cable type="jack-midi" output="system" input="key"/>
+  <cable type="jack-midi" output="key" input="keyo"/>
+  <cable type="jack-audio" output="kyo" input="system"/>
+  <cable type="jack-audio" output="kyo" input="detone"/>
+  <cable type="jack-audio" output="kyo" input="delay"/>
+  <cable type="jack-audio" output="kyo" input="detone1"/>
+  <cable type="jack-audio" output="kyo" input="meter1"/>
+  <cable type="jack-audio" output="kyo" input="x42-scope"/>
+  <cable type="jack-audio" output="delay" input="gain"/>
+  <cable type="jack-audio" output="gain" input="detone2"/>
+  <cable type="jack-audio" output="gain" input="meter2"/>
+  <cable type="jack-audio" output="gain" input="x42-scope"/>
+  <cable type="jack-midi" output="detone1" input="miditap1"/>
+  <cable type="jack-audio" output="power1" input="meter3"/>
+  <cable type="jack-midi" output="detone2" input="miditap2"/>
+  <cable type="jack-audio" output="power2" input="meter4"/>
+  <cable type="jack-midi" output="detone" input="out"/>
  </cables>
 </patchbay>
 

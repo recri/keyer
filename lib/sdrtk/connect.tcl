@@ -107,6 +107,21 @@ snit::type sdrtk::graph {
     method node-exists {name} { return [dict exists $d(nodes) $name] }
     method node-get {name} { return [dict get $d(nodes) $name] }
     method node-set {name value} { dict set d(nodes) $name $value }
+    method node-lappend {n key item} {
+	set vals [$self node-get $n]
+	dict lappend vals $key $item
+	$self node-set $n $vals
+    }
+    method node-incr {n key {item 1}} {
+	set vals [$self node-get $n]
+	dict incr vals $key $item
+	$self node-set $n $vals
+    }
+    method node-max {n key item} {
+	set vals [$self node-get $n]
+	dict set vals $key [tcl::mathfunc::max [dict get $vals $key] $item]
+	$self node-set $n $vals
+    }
     method node-name {n} { return [dict get $d(nodes) $n name] }
     method node-tag {n} { return [dict get $d(nodes) $n tag] }
     method node-ports {n} { return [dict get $d(nodes) $n ports] }
@@ -119,6 +134,17 @@ snit::type sdrtk::graph {
     method node-max-output-width {n} { return [dict get $d(nodes) $n max-output-width] }
     method node-width {n} { return [dict get $d(nodes) $n width] }
     method node-label {n} { return [dict get $d(nodes) $n label] }
+    method node-expand {n} { return [dict get $d(nodes) $n expand] }
+    method node-input-attach {n} { return [dict get $d(nodes) $n input-attach] }
+    method node-output-attach {n} { return [dict get $d(nodes) $n output-attach] }
+    method node-to-edges {n} { return [dict get $d(nodes) $n to-edges] }
+    method node-from-edges {n} { return [dict get $d(nodes) $n from-edges] }
+
+    method node-set-width {n w} { dict set d(nodes) $n width $w }
+    method node-set-expand {n e} { dict set d(nodes) $n expand $e }
+    method node-set-input-attach {n args} { dict set d(nodes) $n input-attach $args }
+    method node-set-output-attach {n args} { dict set d(nodes) $n output-attach $args }
+
     method node-padded-label {n expand} {
 	set width [$self node-width $n]
 	set text [$self node-label $n]
@@ -128,41 +154,18 @@ snit::type sdrtk::graph {
 	return $text
     }
     method node-add-port {n p} {
-	set dict [$self node-get $n]
 	set dir [$self port-direction $p]
-	dict lappend dict ports $p
-	dict lappend dict $dir-ports $p
-	dict incr dict n-port
-	dict incr dict n-$dir
-	dict set dict max-$dir-width [tcl::mathfunc::max [string length [$self port-pname $p]] [dict get $dict max-$dir-width]]
-	dict set dict width [expr {max([string length $n]+2+2, [dict get $dict max-input-width]+3+[dict get $dict max-output-width]+3)}]
-	$self node-set $n $dict
+	$self node-lappend $n ports $p
+	$self node-lappend $n $dir-ports $p
+	$self node-incr $n n-port
+	$self node-incr $n n-$dir
+	$self node-max $n max-$dir-width [string length [$self port-pname $p]]
+	$self node-set-width $n [expr {max([string length $n]+2+2, [$self node-max-input-width $n]+3+[$self node-max-input-width $n]+3)}]
     }
-
-    method node-expand {n} { return [dict get $d(nodes) $n expand] }
-    method node-input-attach {n} { return [dict get $d(nodes) $n input-attach] }
-    method node-output-attach {n} { return [dict get $d(nodes) $n output-attach] }
-
-    method node-set-expand {n e} { dict set d(nodes) $n expand $e }
-    method node-set-input-attach {n args} { dict set d(nodes) $n input-attach $args }
-    method node-set-output-attach {n args} { dict set d(nodes) $n output-attach $args }
-
-    method node-lappend {n key item} {
-	set dict [$self node-get $n]
-	dict lappend $dict $key $item
-	$self node-set $n $dict
-    }
-	
-    method node-add-from-edge {n edge} { $self node-lappend $n from-edges $edge }
-    method node-add-to-edge {n edge} { $self node-lappend $n to-edges $edge }
-    method node-from-edges {n} { return [dict get $d(nodes) $n from-edges] }
-    method node-to-edges {n} { return [dict get $d(nodes) $n to-edges] }
 
     method make-port {name args} { 
 	set tag port-[make-tag $name]
-	dict set d(ports) $name [dict create name $name tag $tag \
-				     from-edges {} to-edges {} \
-				     {*}$args]
+	dict set d(ports) $name [dict create name $name tag $tag edges {} {*}$args]
 	dict set d(tags) $tag $name
 	$self node-add-port [$self port-node $name] $name
     }
@@ -190,19 +193,22 @@ snit::type sdrtk::graph {
 	$self port-set $p $dict
     }
 	
-    method port-add-from-edge {p edge} { $self port-lappend $p from-edges $edge }
-    method port-add-to-edge {p edge} { $self port-lappend $p to-edges $edge }
-    method port-from-edges {p} { return [dict get $d(ports) $p from-edges] }
-    method port-to-edges {p} { return [dict get $d(ports) $p to-edges] }
+    method port-add-edge {p edge} { 
+	$self port-lappend $p edges $edge 
+	if {[$self port-direction $p] eq {input}} {
+	    $self node-lappend [$self port-node $p] to-edges $edge
+	} else {
+	    $self node-lappend [$self port-node $p] from-edges $edge
+	}
+    }
+    method port-edges {p} { return [dict get $d(ports) $p edges] }
 
     method make-edge {name args} { 
 	set tag edge-[make-tag $name]
 	dict set d(edges) $name [dict create name $name tag $tag {*}$args]
 	dict set d(tags) $tag $name
-	$self port-add-from-edge [$self edge-from $name] $name
-	$self port-add-to-edge [$self edge-to $name] $name
-	$self node-add-from-edge [$self port-node [$self edge-from $name]] $name
-	$self node-add-to-edge [$self port-node [$self edge-to $name]] $name
+	$self port-add-edge [$self edge-from $name] $name
+	$self port-add-edge [$self edge-to $name] $name
     }
     method edges {} { return [dict keys $d(edges)] }
     method edge-exists {name} { return [dict exists $d(edges) $name] }
@@ -214,6 +220,11 @@ snit::type sdrtk::graph {
 
     method tag-name {tag} { return [dict get $d(tags) $tag] }
 
+    # it's convenient for layout 
+    # if the system:capture* ports are on a different
+    # node than the system:playback* ports, so we make
+    # make capture and playback nodes but label them both
+    # as system
     method port-normalize {port} {
 	switch -glob $port {
 	    system:*capture* { regsub system: $port capture: port }
@@ -373,31 +384,34 @@ snit::widget sdrtk::connect {
     method client-displace {node delta} {
 	# move the node
 	$network move [$self node-tag $node] {*}$delta
+
 	# update input attachment points
 	if {[$self node-n-input $node] > 0} {
-	    # puts "node-input-attach [$self node-input-attach $node]"
+	    puts "client-displace $node $delta : node-input-attach [$self node-input-attach $node]"
 	    $self node-set-input-attach $node {*}[lmap o [$self node-input-attach $node] d $delta {expr {$o+$d}}]
 	    if {[$self node-expand $node]} {
 		foreach port [$self node-input-ports $node] {
-		    # puts "port-input-attach [$self port-input-attach $port]"
+		    puts "client-displace $node $delta : port-input-attach [$self port-input-attach $port]"
 		    $self port-set-input-attach $port {*}[lmap o [$self port-input-attach $port] d $delta {expr {$o+$d}}]
 		}
 	    }
 	    foreach edge [$self node-to-edges $node] {
+		puts "client-displace $node $delta : connection-draw $edge"
 		$self connection-draw $edge
 	    }
 	}
 	# update output attachment points
 	if {[$self node-n-output $node] > 0} {
-	    # puts "node-output-attach [$self node-output-attach $node]"
+	    puts "client-displace $node $delta : node-output-attach [$self node-output-attach $node]"
 	    $self node-set-output-attach $node {*}[lmap o [$self node-output-attach $node] d $delta {expr {$o+$d}}]
 	    if {[$self node-expand $node]} {
 		foreach port [$self node-output-ports $node] {
-		    # puts "port-output-attach [$self port-output-attach $port]"
+		    puts "client-displace $node $delta : port-output-attach [$self port-output-attach $port]"
 		    $self port-set-output-attach $port {*}[lmap o [$self port-output-attach $port] d $delta {expr {$o+$d}}]
 		}
 	    }
 	    foreach edge [$self node-from-edges $node] {
+		puts "client-displace $node $delta : connection-draw $edge"
 		$self connection-draw $edge
 	    }
 	}
@@ -411,7 +425,7 @@ snit::widget sdrtk::connect {
 	set coords [$self client-get-coords $node]
 	$network delete $tag
 	$self client-draw $node
-	$self client-set-coords $node $coords
+	$self client-move-to $node $coords
     }
 
     method client-expand {node} {   $self node-set-expand $node 1; $self client-redraw $node }
@@ -471,12 +485,14 @@ snit::widget sdrtk::connect {
 	}
 
 	# move them into position
-	if {[dict exists $coords $node]} {
-	    $self client-move-to $node [dict get $coords $node]
-	} else {
-	    $self client-move-to $node [list [expr {int(400*rand())}] [expr {int(400*rand())}]]
+	foreach node [$self nodes] {
+	    if {[dict exists $coords $node]} {
+		$self client-move-to $node [dict get $coords $node]
+	    } else {
+		$self client-move-to $node [list [expr {int(400*rand())}] [expr {int(400*rand())}]]
+	    }
 	}
-	
+
 	# run tests
 	$self test
     }
@@ -549,7 +565,6 @@ snit::widget sdrtk::connect {
 	    if {[$self node-output-ports $name] ne [lmap p [$self node-ports $name] {expr {([$self port-direction $p] eq {output}) ? $p : [continue]}}]} {
 		error "output-ports check failed for $name"
 	    }
-		
 	}
     }
     
