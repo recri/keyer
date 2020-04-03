@@ -372,67 +372,67 @@ snit::type keyer::options {
 	    {* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
 	    {*insert* -window} { $self describe $option enum -values {none . .dial}}
 	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
-	    {* -bandwidth} { $self describe $option freq -format %.0f -min 10 -max 24000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
+	    {* -bandwidth} { $self describe $option value -format %.0f -min 10 -max 24000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
 	    {* -on} - 
 	    {* -off} { $self describe $option value -format %.1f -min 0.0 -max 5.0 -step 0.1 -graticule 20 -steps-per-div 5}
 	    {* -timeout} { $self describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
 	    {* -estimate} { $self describe $option ivalue -min 10 -max 1000 -units frames }
 	    {* -discover} { $self describe $option text hide 1 }
-	    {* -n-rx} -
-	    {* -speed} -
-	    {* -peer} -
-	    {* -gateware-version} -
-	    {* -board-id} -
-	    {* -mac-addr} -
-	    {* -mcp4662} -
-	    {* -fixed-ip} - 
-	    {* -fixed-mac} -
-	    {* -n-hw-rx} -
-	    {* -wb-fmt} -
-	    {* -build-id} -
-	    {* -gateware-minor} -
-	    {* -serial} { $self describe $option text }
-	    {* -bandscope} { $self describe $option bool }
-	    {* -hw-dash} -
-	    {* -raw-hw-dash} -
-	    {* -hw-dot} -
-	    {* -raw-hw-dot} -
-	    {* -hw-ptt} - 
-	    {* -raw-hw-ptt} -
-	    {* -overload} - 
-	    {* -raw-overload} -
-	    {* -recovery} - 
-	    {* -raw-recovery} -
-	    {* -tx-iq-fifo} - 
-	    {* -raw-tx-iq-fifo} -
-	    {* -temperature} - 
-	    {* -raw-temperature} - 
-	    {* -avg-temperature} - 
-	    {* -fwd-power} - 
-	    {* -raw-fwd-power} -
-	    {* -avg-fwd-power} -
-	    {* -rev-power} - 
-	    {* -raw-rev-power} -
-	    {* -avg-rev-power} -
-	    {* -pa-current} -
-	    {* -raw-pa-current} -
-	    {* -avg-pa-current} -
-	    {* -swr} -
-	    {* -power} { 
+	    {*hl* -n-rx} -
+	    {*hl* -speed} -
+	    {*hl* -peer} -
+	    {*hl* -gateware-version} -
+	    {*hl* -board-id} -
+	    {*hl* -mac-addr} -
+	    {*hl* -mcp4662} -
+	    {*hl* -fixed-ip} - 
+	    {*hl* -fixed-mac} -
+	    {*hl* -n-hw-rx} -
+	    {*hl* -wb-fmt} -
+	    {*hl* -build-id} -
+	    {*hl* -gateware-minor} -
+	    {*hl* -serial} { $self describe $option text }
+	    {*hl* -bandscope} { $self describe $option bool }
+	    {*hl* -hw-dash} -
+	    {*hl* -raw-hw-dash} -
+	    {*hl* -hw-dot} -
+	    {*hl* -raw-hw-dot} -
+	    {*hl* -hw-ptt} - 
+	    {*hl* -raw-hw-ptt} -
+	    {*hl* -overload} - 
+	    {*hl* -raw-overload} -
+	    {*hl* -recovery} - 
+	    {*hl* -raw-recovery} -
+	    {*hl* -tx-iq-fifo} - 
+	    {*hl* -raw-tx-iq-fifo} -
+	    {*hl* -temperature} - 
+	    {*hl* -raw-temperature} - 
+	    {*hl* -avg-temperature} - 
+	    {*hl* -fwd-power} - 
+	    {*hl* -raw-fwd-power} -
+	    {*hl* -avg-fwd-power} -
+	    {*hl* -rev-power} - 
+	    {*hl* -raw-rev-power} -
+	    {*hl* -avg-rev-power} -
+	    {*hl* -pa-current} -
+	    {*hl* -raw-pa-current} -
+	    {*hl* -avg-pa-current} -
+	    {*hl* -swr} -
+	    {*hl* -power} { 
 		$self describe $option text ronly 1 volatile 1
 	    }
-	    {* -rx-calls} -
-	    {* -tx-calls} -
-	    {* -bs-calls} -
-	    {* -rx-dropped} -
-	    {* -rx-outofseq} {
+	    {*hl* -rx-calls} -
+	    {*hl* -tx-calls} -
+	    {*hl* -bs-calls} -
+	    {*hl* -rx-dropped} -
+	    {*hl* -rx-outofseq} {
 		$self describe $option text ronly 1 volatile 1
 	    }
-	    {* -mox} { $self describe $option bool }
-	    {* -filters} { $self describe $option ivalue -min 0 -max 255 }
-	    {* -lna-db} { $self describe $option ivalue -min -12 -max 48 -units dB }
-	    {* -f-tx} - 
-	    {* -f-rx*} { 
+	    {*hl* -mox} { $self describe $option bool }
+	    {*hl* -filters} { $self describe $option ivalue -min 0 -max 255 }
+	    {*hl* -lna-db} { $self describe $option ivalue -min -12 -max 48 -units dB }
+	    {*hl* -f-tx} - 
+	    {*hl* -f-rx*} { 
 		# Transmitter NCO frequency
 		# Receiver NCO frequency.
 		set hide 0
@@ -440,30 +440,30 @@ snit::type keyer::options {
 		$self describe $option freq hide $hide -units Hz -format %.0f -min 1 -max 29999999 -step 1 -graticule 20 -steps-per-div 500
 		
 	    }
-	    {* -level} { $self describe $option freq -format %.0f -min 0 -max 255 -step 1 }
-	    {* -not-sync} -
-	    {* -duplex} -
-	    {* -pa} -
-	    {* -low-pwr} -
-	    {* -pure-signal} -
-	    {* -bias-adjust} -
-	    {* -vna} -
-	    {* -vna-started} -
-	    {* -vna-fixed-rx-gain} -
-	    {* -alex-manual-mode} - 
-	    {* -tune-request} -
-	    {* -hermes-lite-lna} -
-	    {* -cwx} -
-	    {* -reset-hl2-on-disconnect} { $self describe $option bool }
-	    {* -vna-count} {
+	    {*hl* -level} { $self describe $option value -format %.0f -min 0 -max 255 -step 1 }
+	    {*hl* -not-sync} -
+	    {*hl* -duplex} -
+	    {*hl* -pa} -
+	    {*hl* -low-pwr} -
+	    {*hl* -pure-signal} -
+	    {*hl* -bias-adjust} -
+	    {*hl* -vna} -
+	    {*hl* -vna-started} -
+	    {*hl* -vna-fixed-rx-gain} -
+	    {*hl* -alex-manual-mode} - 
+	    {*hl* -tune-request} -
+	    {*hl* -hermes-lite-lna} -
+	    {*hl* -cwx} -
+	    {*hl* -reset-hl2-on-disconnect} { $self describe $option bool }
+	    {*hl* -vna-count} {
 	    }
-	    {* -i2c-rx-filter} -
-	    {* -i2c-tx-filter} { $self describe $option ivalue -min 0 -max 255 }
-	    {* -cw-hang-time} { $self describe $option ivalue dvalue 10 -min 0 -max 1023 -units ms }
-	    {* -tx-buffer-latency} { $self describe $option ivalue dvalue 10 -min 0 -max 31 -units ms }
-	    {* -ptt-hang-time} { $self describe $option ivalue dvalue 4 -min 0 -max 31 -units ms }
-	    {* -predistortion-subindex} { $self describe $option ivalue -min 0 -max 255 }
-	    {* -predistortion} { $self describe $option ivalue -min 0 -max 15 }
+	    {*hl* -i2c-rx-filter} -
+	    {*hl* -i2c-tx-filter} { $self describe $option ivalue -min 0 -max 255 }
+	    {*hl* -cw-hang-time} { $self describe $option ivalue dvalue 10 -min 0 -max 1023 -units ms }
+	    {*hl* -tx-buffer-latency} { $self describe $option ivalue dvalue 10 -min 0 -max 31 -units ms }
+	    {*hl* -ptt-hang-time} { $self describe $option ivalue dvalue 4 -min 0 -max 31 -units ms }
+	    {*hl* -predistortion-subindex} { $self describe $option ivalue -min 0 -max 255 }
+	    {*hl* -predistortion} { $self describe $option ivalue -min 0 -max 15 }
 	    {* -sentcolor} -
 	    {* -unsentcolor} -
 	    {* -skippedcolor} -
@@ -495,16 +495,16 @@ snit::type keyer::options {
 	    {* -automatic} {}
 	    {* -smooth} { $self describe $option bool }
 	    {* -multi} { $self describe $option ivalue -min 1 -max 64 }
-	    {* -filter-low} -
-	    {* -filter-high} { $self describe $option value -min -8000 -max 8000 -units Hz}
 	    {* -band-low} -
 	    {* -band-high} { $self describe $option value -min 100 -max 37999999 -units Hz }
 	    {* -rx-frames-per-call} { $self describe $option text ronly 1 volatile 1 }
 	    {* -tx-frames-per-call} - 
 	    {* -bs-frames-per-call} { $self describe $option text ronly 1 }
 	    {* -length} { $self describe $option enum -values {64 128 256 512 1024} }
+	    {* -filter-low} -
+	    {* -filter-high} -
 	    {* -low} - 
-	    {* -high} { $self describe $option value -min -8000 -max 8000 }
+	    {* -high} { $self describe $option value -format %.0f -min -10000 -max 10000 -step 50 -units Hz}
 	    {*radio* -mode} { $self describe $option enum -values {USB LSB DSB CWU CWL AM SAM FMN DIGU DIGL} }
 	    {*radio* -mute} { $self describe $option bool }
 	    {*radio* -spot} { $self describe $option bool }
@@ -530,6 +530,7 @@ snit::type keyer::options {
 	    {*latency-timing* -decay} -
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
+	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
 	    default { puts "populate $name $opt: no clues" }
 	    other {
 		snit::enum	sdrtype::spec-size	-values {width/8 width/4 width/2 width width*2 width*4 width*8}
@@ -727,8 +728,8 @@ snit::type keyer::setups {
     method get-names {} { return [dict keys $setups] }
     method get-start {name} { return [dict get $setups $name start] }
     method get-info {name} { return [dict get $setups $name info] }
-    method get-ports {name} { return [dict get $setups $name ports] }
-    method get-connect {name} { return [dict get $setups $name connect] }
+    method get-ports {name} { if {[dict exists $setups $name ports]} { return [dict get $setups $name ports] } else { return {} } }
+    method get-connect {name} { if {[dict exists $setups $name connect]} { return [dict get $setups $name connect] } else { return {} } }
 
     method build-command-line {} {
 	set argv [file tail $::script]
@@ -877,9 +878,10 @@ snit::type keyer::setups {
 		info { hermes lite udp jack connection }
 		ports { out_i* out_q* in_i in_q }
 	    }
-	    hlt {
-		start { keyer -start {hl-test@hlt} -keyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
-		info { hermes lite test dashboard }
+	    noise {
+		start { keyer -start {iq-noise@noise} }
+		info { iq correlated noise generator }
+		ports { :out_i :out_q }
 	    }
 	    spec {
 		start { keyer -start {spectrum-waterfall-view@spec}}
@@ -895,20 +897,6 @@ snit::type keyer::setups {
 		start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
 		info { overlap save bandpass filter }
 		ports { in_i in_q out_i out_q }
-	    }
-	    test {
-		start { keyer key kbd out hl spec filt hlt -tree 1 } 
-		info { hermes lite test app }
-		connect { key out kbd out key hl kbd hl hl spec hl filt }
-		ports { key:midi_in filt:out_i filt:out_q }
-	    }
-	    cwt {
-		start { keyer -start cw-latency-timing@cwt }
-		info { cw latency detection widget }
-	    }
-	    cwtest {
-		start { keyer key cwt }
-		info { cw latency detection debugging }
 	    }
 	    nod {
 		start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
@@ -930,6 +918,35 @@ snit::type keyer::setups {
 		start { keyer -exec {x42-meter -j xmet >& ~/.config/keyer/xmet.log} }
 		info { x42-meter, audio level meter jack plugin }
 	    }
+
+	    hlt {
+		start { keyer -start {hl-test@hlt} -keyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
+		info { hermes lite test dashboard }
+	    }
+	    test {
+		start { keyer key kbd out hl spec filt hlt -tree 1 } 
+		info { hermes lite test app }
+		connect { {key kbd} {out hl} hl {spec filt} }
+		ports { key:midi_in filt:out_i filt:out_q }
+	    }
+	    cwt {
+		start { keyer -start cw-latency-timing@cwt }
+		info { cw latency detection widget }
+	    }
+	    cwtest {
+		start { keyer key cwt }
+		info { cw latency detection debugging }
+		connect { keyer key cwt }
+	    }
+	    filter-test {
+		start { keyer noise spec filt spec2 -noise-level -50 -filt-length 512 -filt-low 0 -filt-high 1400 -spec-filter-low 0 -spec-filter-high 1400}
+		info { test operation of overlap save filter on noise source }
+		connect { 
+		    noise:out_i filt:in_i noise:out_q filt:in_q 
+		    noise:out_i spec:in_i noise:out_q spec:in_q 
+		    filt:out_i spec2:in_i filt:out_q spec2:in_q 
+		}
+	    }
 	}]
     }
 }
@@ -938,6 +955,8 @@ proc is-setup {name} { return [::setups is-setup $name] }
 proc get-setup-names {} { return [::setups get-names] }
 proc get-setup-info {name} { return [::setups get-info $name] }
 proc get-setup-start {name} { return [::setups get-start $name] }
+proc get-setup-connect {name} { return [::setups get-connect $name] }
+proc get-setup-ports {name} { return [::setups get-ports $name] }
 
 #
 # miscellaneous argv options
@@ -974,6 +993,9 @@ proc has-eval {} { return [::argv exists -eval] }
 
 proc get-exec {} { return [::argv get -exec] }
 proc has-exec {} { return [::argv exists -exec] }
+
+proc get-connect {} { return [::argv get -connect] }
+proc has-connect {} { return [::argv exists -connect] }
 
 proc get-argvopts {} { return [::argv get -argvopts] }
 proc has-argvopts {} { return [::argv exists -argvopts] }
@@ -1072,6 +1094,8 @@ proc main-argv {argv} {
 	set v [lindex $argv 0]
 	set argv [lrange $argv 1 end]
 	main-argv [lrange [get-setup-start $v] 1 end]
+	# puts "start $v -connect [get-setup-connect $v]"
+	::argv lappend -connect {*}[get-setup-connect $v]
     }
     foreach {opt val} $argv {
 	# -server - jack server
@@ -1085,6 +1109,7 @@ proc main-argv {argv} {
 	# -grid 1 - use dialbook grid setup
 	# -tree 1 - use dialbook tree setup
 	# -eval 'script' - evaluate the script
+	# -connect list of pairs to connect
 	# otherwise - -option value pair to apply to parts
 	switch -- $opt { 
 	    -run { foreach v $val { main-argv [lrange [get-setup-start $v] 1 end] } }
@@ -1098,16 +1123,22 @@ proc main-argv {argv} {
 	    -eval { ::argv lappend $opt $val }
 	    -exec { ::argv lappend $opt $val }
 	    -start { ::argv lappend $opt {*}$val }
+	    -connect { ::argv lappend $opt {*}$val }
 	    default { ::argv lappend -argvopts $opt $val }
 	}
     }
 }
 
-package require sdrtcl::jack-client
-sdrtcl::jack-client jack
+package require sdrtcl::jack
 
-proc manage-connections {} {
-    # puts [jack list-ports]
+proc make-connections {from to} {
+    # a dictionary of ports and descriptions
+    set ports [sdrtcl::jack list-ports]
+    if { ! [dict exists $ports $from] } { error "$from is not a port" }
+    if { ! [dict exists $ports $to] } { error "$to is not a port" }
+    if { ! ([dict get $ports $from direction] eq {output}) } { error "$from is not an output port" }
+    if { ! ([dict get $ports $to direction] eq {input}) } { error "$to is not an input port" }
+    sdrtcl::jack connect $from $to
 }
 
 proc main {argv} {
@@ -1146,24 +1177,15 @@ proc main {argv} {
     if { ! [has-start] && ! [has-exec] && ! [has-eval] } { usage-message }
 
     # start components and collect their options
-    if {[has-start]} {
-	foreach composite [get-start] { 
-	    ::options process $composite
-	}
-    }
+    if {[has-start]} { foreach composite [get-start] { ::options process $composite } }
 
-    if {[has-eval]} {
-	foreach x [get-eval] {
-	    eval $x 
-	} 
-    }
+    if {[has-eval]} { foreach x [get-eval] { eval $x } }
 
-    if {[has-exec]} { 
-	foreach x [get-exec] {
-	    exec {*}$x &
-	}
-    }
+    if {[has-exec]} { foreach x [get-exec] { exec {*}$x & } }
     
+    # connecting ports
+    if {[has-connect]} { foreach {from to} [get-connect] { make-connections $from $to } }
+
     # process command line options for additional option definitions
     if {[has-argvopts]} {
 	foreach {opt val} [get-argvopts] {
@@ -1220,8 +1242,6 @@ proc main {argv} {
     # update window title
     update-window-title
     
-    # worry about connecting ports
-    manage-connections
 }
 
 main $argv
