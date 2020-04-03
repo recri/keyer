@@ -368,7 +368,10 @@ snit::widget sdrtk::connect {
 	    set dest [$self node-input-attach $tnode]
 	}
 	$network delete [$self edge-tag $edge]
-	$network create line {*}$origin {*}$origin {*}$dest {*}$dest -smooth true -splinesteps 10 -arrow last -tag [$self edge-tag $edge]
+	foreach {x y} $origin break; set dorigin [list [expr {$x+5}] $y]
+	foreach {x y} $dest break; set ddest [list [expr {$x-5}] $y]
+	$network create line {*}$origin {*}$dorigin {*}$ddest {*}$dest -smooth true -splinesteps 10 -tag [$self edge-tag $edge]
+	# $network create line {*}$origin {*}$dest -smooth true -splinesteps 10 -arrow last -tag [$self edge-tag $edge]
 	$network lower [$self edge-tag $edge]
     }
 
