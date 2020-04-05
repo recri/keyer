@@ -338,24 +338,25 @@ snit::type keyer::options {
 	    {* -word} { $self describe $option enum -values {50 60} -units dits}
 	    {*keyer* -dit} - 
 	    {*keyer* -dah} - 
-	    {* -ies} - 
-	    {* -ils} - 
-	    {* -iws} { 
+	    {*keyer* -ies} - 
+	    {*keyer* -ils} - 
+	    {*keyer* -iws} { 
 		set cdefault [dict get $option cdefault]
 		set min [expr {$cdefault-0.5}]
 		set max [expr {$cdefault+0.5}]
 		$self describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
 		#puts "$self describe $name $opt -value $cvalue -min $min -max $max -step 0.1 -units dits"
 	    }
-	    {* -weight} - 
-	    {* -ratio} { $self describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
-	    {* -comp} { $self describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	    {* -freq} { $self describe $option ivalue -min -1000 -max 1000 -units Hz -graticule 20 -steps-per-div 100}
-	    {* -rise} - 
-	    {* -fall} - 
-	    {* -ramp} { $self describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	    {* -window} { $self describe $option enum -values [lrange [get-window-types] 1 end] }
-	    {* -window2} { $self describe $option enum -values [get-window-types] }
+	    {*keyer* -weight} - 
+	    {*keyer* -ratio} { $self describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
+	    {*keyer* -comp} { $self describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {*cw-decode* -freq} -
+	    {*keyer* -freq} { $self describe $option ivalue -min -1000 -max 1000 -units Hz -graticule 20 -steps-per-div 100}
+	    {*keyer* -rise} - 
+	    {*keyer* -fall} - 
+	    {*keyer* -ramp} { $self describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {*keyer* -window} { $self describe $option enum -values [lrange [get-window-types] 1 end] }
+	    {*keyer* -window2} { $self describe $option enum -values [get-window-types] }
 	    {* -gain} { $self describe $option value -format %.1f -min -50 -max 50 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
 	    {*latency-timing -delay} -
 	    {*sample-delay -delay} { $self describe $option value -format %.0f -min 0 -max 15000 -step 1 -units samples -graticule 20 -steps-per-div 50}
@@ -820,25 +821,25 @@ snit::type keyer::setups {
 	    key {
 		start { keyer -start {keyer-iambic@key keyer-tone@keyo} -key-wpm 16 -keyo-ramp 4.0 -key-mode B -key-alsp 1 }
 		info { iambic keyer and a keyed oscillator }
-		connect { midi_out o:midi_in }
-		ports { midi_in o:midi_out o:out_i o:out_q }
+		connect { key:midi_out keyo:midi_in }
+		ports {  key:midi_in keyo:midi_out keyo:out_i keyo:out_q }
 	    }
 	    key2 { 
 		start {keyer -start {keyer-iambic@key2 keyer-tone@key2o} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -key2o-ramp 4.0 -key2o-note 2 }
 		info { second iambic keyer and keyed oscillator }
-		connect { midi_out o:midi_in }
+		connect { key2:midi_out key2o:midi_in }
 		ports { midi_in o:midi_out o:out_i o:out_q }
 	    }
 	    kbd {
 		start { keyer -start {cw-encode-input@kbd keyer-tone@kbdo} -kbd-wpm 80 -kbdo-ramp 6.6 }
 		info {keyboard keyer and a keyed oscillator}
-		connect { midi_out o:midi_in }
+		connect { kbd:midi_out kbdo:midi_in }
 		ports { o:midi_out o:out_i o:out_q }
 	    }
 	    kbd2 {
 		start { keyer -start {cw-encode-input@kbd2 keyer-tone@kbd2o} -kbd2-wpm 80 -kbd2o-ramp 6.6 }
 		info {second keyboard keyer and a keyed oscillator}
-		connect { midi_out o:midi_in }
+		connect { kbd2:midi_out kbd2o:midi_in }
 		ports { o:midi_out o:out_i o:out_q }
 	    }
 	    ptt {
@@ -867,11 +868,16 @@ snit::type keyer::setups {
 		info {second midi monitor for timing events}
 		ports { midi_in }
 	    }
+	    det {
+		start { keyer -start {detone@det} }
+		info {goertzel audio filter to detect cw tone}
+		ports { det:in_i det:out_i det:midi_out }
+	    }
 	    out {
 		start { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
 		info {audio to ascii morse decoder}
-		connect { o:midi_out i:midi_in }
-		ports { o:in_i o:out_i }
+		connect { outo:midi_out outi:midi_in }
+		ports { outo:in_i outo:out_i }
 	    }
 	    hl {
 		start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
@@ -899,8 +905,12 @@ snit::type keyer::setups {
 		ports { in_i in_q out_i out_q }
 	    }
 	    nod {
-		start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-alsp *-awsp *-word} }
+		start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-awsp *-word *-weight *-ratio *-comp *-mdit *-mdah *-mide} }
 		info {hide esoteric keyer options}
+	    }
+	    noc {
+		start { keyer -hide {*-client *-server *-verbose *-chan} }
+		info {hide common useless options}
 	    }
 	    1ch {
 		start { keyer -merge {*-chan *-note} }
@@ -945,6 +955,21 @@ snit::type keyer::setups {
 		    noise:out_i filt:in_i noise:out_q filt:in_q 
 		    noise:out_i spec:in_i noise:out_q spec:in_q 
 		    filt:out_i spec2:in_i filt:out_q spec2:in_q 
+		}
+	    }
+	    goertzel-test {
+		start { keyer cas key noise det tap nod noc -det-note 8 -det-freq 700}
+		info { test operation of goertzel filter on keyed tone }
+		connect { 
+		    cas:midi_out key:midi_in
+		    keyo:out_i system:playback_1
+		    keyo:out_i system:playback_2
+		    noise:out_i system:playback_1
+		    noise:out_i system:playback_2
+		    keyo:out_i det:in_i
+		    noise:out_i det:in_i
+		    key:midi_out tap:midi_in
+		    det:midi_out tap:midi_in
 		}
 	    }
 	}]
@@ -1131,14 +1156,17 @@ proc main-argv {argv} {
 
 package require sdrtcl::jack
 
-proc make-connections {from to} {
+proc make-connections {args} {
     # a dictionary of ports and descriptions
     set ports [sdrtcl::jack list-ports]
-    if { ! [dict exists $ports $from] } { error "$from is not a port" }
-    if { ! [dict exists $ports $to] } { error "$to is not a port" }
-    if { ! ([dict get $ports $from direction] eq {output}) } { error "$from is not an output port" }
-    if { ! ([dict get $ports $to direction] eq {input}) } { error "$to is not an input port" }
-    sdrtcl::jack connect $from $to
+    foreach {from to} $args {
+	puts "connect $from $to"
+	if { ! [dict exists $ports $from] } { puts "$from is not a port"; continue }
+	if { ! [dict exists $ports $to] } { puts "$to is not a port"; continue }
+	if { ! ([dict get $ports $from direction] eq {output}) } { puts "$from is not an output port"; continue }
+	if { ! ([dict get $ports $to direction] eq {input}) } { puts "$to is not an input port"; continue }
+	sdrtcl::jack connect $from $to
+    }
 }
 
 proc main {argv} {
@@ -1184,7 +1212,7 @@ proc main {argv} {
     if {[has-exec]} { foreach x [get-exec] { exec {*}$x & } }
     
     # connecting ports
-    if {[has-connect]} { foreach {from to} [get-connect] { make-connections $from $to } }
+    if {[has-connect]} { make-connections {*}[get-connect] }
 
     # process command line options for additional option definitions
     if {[has-argvopts]} {

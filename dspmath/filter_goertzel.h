@@ -68,7 +68,7 @@ static void *filter_goertzel_init(filter_goertzel_t *p, filter_goertzel_options_
 static int filter_goertzel_process(filter_goertzel_t *p, const float x) {
   p->s[(p->i)&3] = x + p->coeff * p->s[(p->i+1)&3] - p->s[(p->i+2)&3];
   if (--p->i < 0) {
-    p->power = p->s[1]*p->s[1] + p->s[0]*p->s[0] - p->coeff*p->s[0]*p->s[1];
+    p->power = (p->s[1]*p->s[1] + p->s[0]*p->s[0] - p->coeff*p->s[0]*p->s[1]) / p->block_size;
     p->i = p->block_size;
     p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
     return 1;

@@ -1,5 +1,6 @@
 /*
   Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+  Copyright (C) 2020 by Roger E Critchlow Jr, Charlestown, MA, USA.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -27,6 +28,15 @@
 **	note_off and power > on-threshold emit note_on, 
 **	note_on and power < off-threshold emit note_off
 ** add the thresholds and a midi out and we should be cool.
+**
+** Okay, the Goertzel filter scans n samples and computes the power of the 
+** signal at frequency f.  The catch is that n*f == sample-rate, so for 48000 Hz,
+** we get integral target frequencies of 24000*2 12000*4 6000*8 3000*16 1500*32 750*64 375*128.
+** So to use the Goertzel filter flexibly we need to resample to a rate that has our target
+** frequency as an integral factor, which probably means running an FFT.  But once we run an FFT
+** we can pluck any frequency bin out with a linear combination of frequency bin coefficients.
+**
+**
 */
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
@@ -40,7 +50,6 @@ typedef struct {
   filter_goertzel_options_t fg;
   float on_threshold;
   float off_threshold;
-  jack_nframes_t timeout;
 } options_t;
   
 typedef struct {
@@ -50,7 +59,6 @@ typedef struct {
   filter_goertzel_t fg;
   float power;
   int on;
-  jack_nframes_t countdown;
 } _t;
 
 static void _update(_t *dp) {
@@ -66,7 +74,6 @@ static void *_init(void *arg) {
   void *p = filter_goertzel_preconfigure(&dp->fg, &dp->opts.fg); if (p != &dp->fg) return p;
   filter_goertzel_configure(&dp->fg, &dp->opts.fg);
   dp->on = 0;
-  dp->countdown = 0;
   return arg;
 }
 
@@ -89,8 +96,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
   jack_midi_clear_buffer(midi_out);
   // for all frames in the buffer
   for (int i = 0; i < nframes; i++) {
-    if (dp->countdown > 0)
-      dp->countdown -= 1;
     if (filter_goertzel_process(&dp->fg, *in++)) {
       dp->power = dp->fg.power;
       cmd = 0;
@@ -109,7 +114,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  // fprintf(stderr, "keyer_detone sending %x %x %x\n", note[0], note[1], note[2]);
 	  memcpy(buffer, note, 3);
 	  dp->on ^= 1;
-	  dp->countdown = dp->opts.timeout; /* convert usec to frames? */
 	}
       }
     }
@@ -145,11 +149,10 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
-  { "-freq",      "frequency", "AFHertz", "800.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
-  { "-bandwidth", "bandwidth", "BWHertz", "100.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
-  { "-on",	  "onThresh",  "Thresh",  "4.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
-  { "-off",	  "offThresh", "Thresh",  "3.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
-  { "-timeout",	  "timeout",   "Timeout", "100",   fw_option_int,   fw_flag_none, offsetof(_t, opts.timeout),      "timeout between transitions in samples" },
+  { "-freq",      "frequency", "AFHertz", "700.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
+  { "-bandwidth", "bandwidth", "BWHertz", "750.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
+  { "-on",	  "onThresh",  "Thresh",  "0.5",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
+  { "-off",	  "offThresh", "Thresh",  "0.5",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
   { NULL }
 };
 
