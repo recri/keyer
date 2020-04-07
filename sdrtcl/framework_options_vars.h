@@ -70,4 +70,7 @@ float ratio;
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP
 float comp;
 #endif
+#if FRAMEWORK_OPTIONS_START
+int start;
+#endif
 #endif

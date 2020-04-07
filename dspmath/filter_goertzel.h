@@ -41,13 +41,15 @@ typedef struct {
   int block_size;
   int i;
   float power;
+  float energy;
 } filter_goertzel_t;
 
 static void filter_goertzel_configure(filter_goertzel_t *p, filter_goertzel_options_t *q) {
   p->coeff = 2.0f * cosf(two_pi * q->hertz / q->sample_rate);
-  p->block_size = (int) (q->sample_rate / q->bandwidth);
+  p->block_size = (int) (q->sample_rate / (int)q->bandwidth);
   p->i = p->block_size;
   p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
+  p->energy = 0.0f;
 }
 
 static void *filter_goertzel_preconfigure(filter_goertzel_t *p, filter_goertzel_options_t *q) {
@@ -67,8 +69,9 @@ static void *filter_goertzel_init(filter_goertzel_t *p, filter_goertzel_options_
 
 static int filter_goertzel_process(filter_goertzel_t *p, const float x) {
   p->s[(p->i)&3] = x + p->coeff * p->s[(p->i+1)&3] - p->s[(p->i+2)&3];
+  p->energy += x*x;
   if (--p->i < 0) {
-    p->power = (p->s[1]*p->s[1] + p->s[0]*p->s[0] - p->coeff*p->s[0]*p->s[1]) / p->block_size;
+    p->power = (p->s[1]*p->s[1] + p->s[0]*p->s[0] - p->coeff*p->s[0]*p->s[1]) / (p->block_size/2);
     p->i = p->block_size;
     p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
     return 1;

@@ -83,13 +83,19 @@ snit::widgetadaptor sdrtk::graph {
     # inset of graph inside frame as fraction
     option -inset -default {0.1 0.1 0.1 0.1} -configuremethod Configure
 
+    # redraw rate limit
+    option -redraw-rate -default 8
+
+    # send everything else to the canvas
+    delegate option * to hull
+    
     variable data {}
 
     constructor {args} {
 	installhull using canvas
 	install ticklabels using sdrtk::tick-labels %AUTO%
 	bind $win <Configure> [mymethod window-configure]
-	set data [dict create lines {} bbox [bbox-empty] inset {} frame {} title {}]
+	set data [dict create lines {} bbox [bbox-empty] inset {} frame {} title {} redraw-time [clock milliseconds]]
 	$self configure {*}$args
 	$self recompute frame
 	$self recompute inset
@@ -104,6 +110,13 @@ snit::widgetadaptor sdrtk::graph {
     method frame {} { return [dict get $data frame] }
     method window {} { return [list 0 0 [winfo width $win] [winfo height $win]] }
 
+    # return if a named object exists
+    method {exists line} {name} { return [dict exists $data lines $name] }
+    method {exists bbox} {name} { return [dict exists $data bbox $name] }
+    method {exists inset} {name} { return [dict exists $data inset $name] }
+    method {exists frame} {name} { return [dict exists $data frame $name] }
+
+    # return parts of a named line
     method {line points} {name} { return [dict get $data line $name points] }
     method {line bbox} {name} { return [dict get $data line $name bbox] }
     method {line index} {name} { return [dict get $data line $name index] }
@@ -112,7 +125,7 @@ snit::widgetadaptor sdrtk::graph {
     method window-configure {} {
 	$self recompute frame
 	$self recompute inset
-	$self redraw
+	after idle [mymethod redraw]
     }
 
     # convert an option for an inset proportion into a list of four insets
@@ -149,34 +162,53 @@ snit::widgetadaptor sdrtk::graph {
     # redraw and rescale the plot
     method redraw {} {
 	# don't redraw an empty graph
-	if {[bbox-is-empty [$self bbox]]} return
+	if {[bbox-is-empty [$self bbox]]} {
+	    $self ticks-delete
+	    return
+	}
+
+	# don't redraw more than options(-redraw-rate) times per second
+	set t [clock milliseconds]
+	if {$t - [dict get $data redraw-time] < 1000/$options(-redraw-rate)} return
+	dict set data redraw-time $t
+	
+	# puts "going to redraw [$self bbox]"
 
 	# redraw the lines in their native coordinates
 	foreach name [$self lines] {
 	    if {[llength [$self line points $name]] >= 4} {
 		$self line redraw $name
+		# puts "line $name [llength [$self line points $name]] points, [$self line bbox $name]"
 	    }
 	}
 
 	# redraw the frame
 	$hull coords frame [$self frame]
+	# puts "$self frame [$self frame]"
 	
 	# find the extent of the points drawn
 	lassign [$self bbox] x0 y0 x1 y1
+	# puts "\$self bbox [$self bbox] (extent of points plotted raw coordinates) x0 y0 x1 y1"
+	# puts "\$hull bbox plotted [$hull bbox plotted]  (after raw redraw)"
 
 	# find the box they go into
 	lassign [$self inset] wx0 wy0 wx1 wy1
+	# puts "$self inset [$self inset] (extent of window to be plotted into) wx0 wy0 wx1 wy1"
 
 	# compute and apply the transform
 	lassign [list [expr {-$x0+$wx0}] [expr {-$y0+$wy0}]] xo yo
+	# puts "xo yo $xo $yo"
 	$hull move plotted $xo $yo
+	# puts "\$hull bbox plotted [$hull bbox plotted] (after move)"
 	lassign [list  [expr {double($wx1-$wx0)/($x1-$x0)}] [expr {double($wy1-$wy0)/($y1-$y0)}]] xs ys
 	if {$xs == 0 || $ys == 0} {
 	    puts "bbox [$self bbox]"
 	    puts "xs = $xs, wwd = [expr {double($wx1-$wx0)}], pwd = [expr {($x1-$x0)}]"
 	    puts "ys = $ys, wht = [expr {double($wy1-$wy0)}], pht = [expr {($y1-$y0)}]"
 	} else {
+	    # puts "xs ys $xs $ys"
 	    $hull scale plotted $wx0 $wy0 $xs $ys
+	    # puts "\$hull bbox plotted [$hull bbox plotted] (after scale)"
 	}
 
 	# draw and label the tick marks 
@@ -188,6 +220,7 @@ snit::widgetadaptor sdrtk::graph {
     # located at window wv0 to window wv1
     # return a list of value-string window-coordinate tick-size triples
     method ticks-place {v0 wv0 v1 wv1} {
+	# puts "ticks-place $v0 .. $v1 inside $wv0 .. $wv1"
 	set n [expr {max(3,int(abs($wv0-$wv1)/30))}]
 	foreach mark [$ticklabels extended $v0 $v1 $n] {
 	    set c [expr {($mark-$v0)/($v1-$v0)*($wv1-$wv0)+$wv0}]
@@ -195,14 +228,19 @@ snit::widgetadaptor sdrtk::graph {
 	}
 	return $marks
     }
+    method ticks-delete {} { $hull delete x-tick; $hull delete y-tick }
     method ticks {coord places} {
 	$hull delete $coord-tick
+	set index 0
 	foreach {v w dw} $places {
 	    switch $coord {
 		x {
 		    set y [bbox-s [$self frame]]
 		    $hull create line $w $y $w [expr {$y+$dw}] -tags $coord-tick
-		    $hull create text $w [expr {$y+$dw}] -text $v -anchor n -tags $coord-tick
+		    if {($index & 1) == 0} {
+			$hull create text $w [expr {$y+$dw}] -text $v -anchor n -tags $coord-tick
+		    }
+		    incr index
 		}
 		y {
 		    set x [bbox-w [$self frame]]
@@ -231,7 +269,7 @@ snit::widgetadaptor sdrtk::graph {
 	dict set data line $name index [$hull create line 0 0 0 0 -tags [list plotted line line-$name]]
 	dict set data line $name points {}
 	dict set data line $name bbox [bbox-empty]
-	$self line add point $name {*}$args
+	if {$args ne {}} { $self line add point $name {*}$args }
     }
 
     # add a point(s) to a line
@@ -246,7 +284,7 @@ snit::widgetadaptor sdrtk::graph {
 	dict set data line $name points $points
 	dict set data line $name bbox $bbox
 
-	$self redraw
+	after idle [mymethod redraw]
     }
 
     # redraw the coordinates of a line

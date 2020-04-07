@@ -23,6 +23,7 @@
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_USES_INTERP 1
 #define FRAMEWORK_OPTIONS_MIDI 1
+#define FRAMEWORK_OPTIONS_START 1
 
 #include "framework.h"
 #include "../dspmath/ring_buffer.h"
@@ -67,7 +68,7 @@ static int _read(_t *data, jack_nframes_t *framep, Tcl_Obj **bytes) {
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *e = ring_buffer_init(&data->rb, sizeof(data->buff), data->buff); if (e != &data->rb) return e;
-  data->started = 0;
+  data->started = data->opts.start;
   return arg;
 }
 
@@ -127,7 +128,11 @@ static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
   return TCL_OK;
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-  return framework_command(clientData, interp, argc, objv);
+  _t *data = (_t *)clientData;
+  int start = data->opts.start;
+  if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
+  if (start != data->opts.start) data->started = start;
+  return TCL_OK;
 }
 
 static const fw_option_table_t _options[] = {

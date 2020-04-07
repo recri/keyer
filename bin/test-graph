@@ -1,0 +1,83 @@
+#!/usr/bin/wish8.6
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+# Copyright (C) 2018 by Roger E Critchlow Jr, Charlestown, MA, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# use the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+package require sdrtk::graph
+
+pack [sdrtk::graph .c] -fill both -expand true
+
+bind .c <3> [list options-menu %W %X %Y]
+
+set curves {sine cosine sawtooth up down constant}
+foreach c $curves { set origin($c) {587448292 0} }
+
+proc options-menu {win x y} {
+    if {[winfo exists $win.m]} { destroy $win.m }
+    menu $win.m -tearoff no
+    $win.m add command -label {Clear window} -command [list $win delete all]
+    $win.m add separator
+    foreach d $::curves {
+	$win.m add command -label $d -command [list draw $win $d]
+    }
+    tk_popup $win.m $x $y
+}
+
+proc draw {win curve} {
+    if { ! [$win exists line $curve]} {
+	$win add line $curve {*}[points $curve]
+    } else {
+	$win line add point $curve {*}[more-points $curve]
+    }
+}
+
+proc points {curve} {
+    set ::origin($curve) {587448292 0}
+    return [more-points $curve]
+}
+proc more-points {curve} {
+    foreach {xo yo} $::origin($curve) break
+    set points {}
+    for {set i 0} {$i < 1000} {incr i} {
+	set x [expr {$xo+$i*0.01}]
+	switch $curve {
+	    sine { set y [expr {sin($x)}] }
+	    cosine { set y [expr {cos($x)}] }
+	    sawtooth { for {set y $x} {$y > 1} {set y [expr {$y-1}]} {} }
+	    up { set y $x }
+	    down { set y -$x }
+	    constant { set y 0 }
+	    default { error "unmatched curve $curve" }
+	}
+	lappend points $x $y
+    }
+    set ::origin($curve) [list $x $y]
+    return $points
+}

@@ -58,10 +58,12 @@ ALL=$(LIBDIR)/agc.so \
 	$(LIBDIR)/constant.so \
 	$(LIBDIR)/am_demod.so \
 	$(LIBDIR)/am_mod.so \
-	$(LIBDIR)/filter_complex_bandpass.so \
 	$(LIBDIR)/filter_biquad.so \
+	$(LIBDIR)/filter_complex_bandpass.so \
+	$(LIBDIR)/filter_complex_goertzel.so \
 	$(LIBDIR)/filter_fir.so \
 	$(LIBDIR)/filter_overlap_save.so \
+	$(LIBDIR)/filter_goertzel.so \
 	$(LIBDIR)/fftw.so \
 	$(LIBDIR)/gain.so \
 	$(LIBDIR)/iq_balance.so \
@@ -140,14 +142,20 @@ $(LIBDIR)/fm_demod.so: fm_demod.c framework.h ../dspmath/demod_fm.h
 $(LIBDIR)/sam_demod.so: sam_demod.c framework.h ../dspmath/demod_sam.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBDIR)/filter_complex_bandpass.so: filter_complex_bandpass.c framework.h ../dspmath/filter_complex_bandpass.h
-	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
-
 $(LIBDIR)/filter_biquad.so: filter_biquad.c framework.h ../dspmath/filter_biquad.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
+$(LIBDIR)/filter_complex_bandpass.so: filter_complex_bandpass.c framework.h ../dspmath/filter_complex_bandpass.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/filter_complex_goertzel.so: filter_complex_goertzel.c framework.h ../dspmath/midi.h ../dspmath/filter_complex_goertzel.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
+
 $(LIBDIR)/filter_fir.so: filter_FIR.c framework.h ../dspmath/filter_FIR.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBDIR)/filter_goertzel.so: filter_goertzel.c framework.h ../dspmath/midi.h ../dspmath/filter_goertzel.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
 $(LIBDIR)/filter_overlap_save.so: filter_overlap_save.c framework.h ../dspmath/filter_overlap_save.h ../dspmath/filter_FIR.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(FFTW3_LIBS) $(LIBS)

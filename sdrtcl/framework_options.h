@@ -81,6 +81,9 @@
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP
   { "-comp",     "comp",     "Comp",      "0",	    fw_option_float,    fw_flag_none,	    offsetof(_t, opts.comp),       "keyer ms compensation" },
 #endif
+#if FRAMEWORK_OPTIONS_START
+  { "-start",    "start",   "Start",      "0",	    fw_option_boolean,    fw_flag_none,	    offsetof(_t, opts.start),     "auto start component" },
+#endif    
 #else
 #error "framework_options.h multiply included"
 #endif

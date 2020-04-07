@@ -23,7 +23,7 @@ package provide sdrtcltk::cw-decode-view 1.0.0
 package require Tk
 package require snit
 
-package require sdrtcl::keyer-detone
+package require sdrtcl::filter-goertzel
 package require sdrtcl::keyer-detime
 
 package require morse::morse
@@ -47,7 +47,6 @@ snit::widgetadaptor sdrtcltk::cw-decode-view {
     delegate option -bandwidth to detone
     delegate option -on to detone
     delegate option -off to detone
-    delegate option -timeout to detone
     delegate option -wpm to detime
     option -dict -default fldigi
     option -font -default TkDefaultFont
@@ -74,7 +73,7 @@ snit::widgetadaptor sdrtcltk::cw-decode-view {
 	set xargs {}
 	if {$server ne {}} { lappend xargs -server $server }
 	install detime using sdrtcl::keyer-detime $self.deti -client ${client}i {*}$xargs
-	install detone using sdrtcl::keyer-detone $self.deto -client ${client}o {*}$xargs
+	install detone using sdrtcl::filter-goertzel $self.deto -client ${client}o {*}$xargs
 	$self configure -width 30 -height 15 -exportselection true {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	set handler [after 100 [mymethod timeout]]
@@ -86,7 +85,7 @@ snit::widgetadaptor sdrtcltk::cw-decode-view {
     
     # {-color1 -color2 -background}
  
-    method exposed-options {} { return {-verbose -server -client -chan -note -freq -bandwidth -on -off -timeout -wpm -dict -font -foreground -background} }
+    method exposed-options {} { return {-verbose -server -client -chan -note -freq -bandwidth -on -off -wpm -dict -font -foreground -background} }
 
     method info-option {opt} {
 	if { ! [catch {$detone info option $opt} info]} { return $info }

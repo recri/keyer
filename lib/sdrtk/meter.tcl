@@ -53,8 +53,8 @@ snit::widgetadaptor sdrtk::meter {
     option -min -default -121.0 -configuremethod opt-handler
 
     variable data -array {
-	width 1
-	height 10
+	width 320
+	height 32
 	y 5
 	s-meter-points {-121 -115 -109 -103 -97 -91 -85 -79 -73 -53 -33}
     }
