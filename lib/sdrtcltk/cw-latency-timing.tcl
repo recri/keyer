@@ -39,7 +39,7 @@ package provide sdrtcltk::cw-latency-timing 1.0.0
 package require Tk
 package require snit
 
-package require sdrtcl::keyer-detone
+package require sdrtcl::filter-goertzel
 package require sdrtcl::midi-tap
 package require sdrtcl::gain
 package require sdrtcl::meter-tap
@@ -69,8 +69,8 @@ snit::widget sdrtcltk::cw-latency-timing {
 	set server [from args -server {}]
 	set xargs {}
 	if {$server ne {}} { lappend xargs -server $server }
-	install detone1 using sdrtcl::keyer-detone $self.detone1 -client ${client}1 {*}$xargs
-	install detone2 using sdrtcl::keyer-detone $self.detone2 -client ${client}2 {*}$xargs
+	install detone1 using sdrtcl::filter-goertzel $self.detone1 -client ${client}1 {*}$xargs
+	install detone2 using sdrtcl::filter-goertzel $self.detone2 -client ${client}2 {*}$xargs
 	install miditap1 using sdrtcl::midi-tap $self.miditap1 -client ${client}t1 {*}$xargs
 	install miditap2 using sdrtcl::midi-tap $self.miditap2 -client ${client}t2 {*}$xargs
 	install meter1 using sdrtcl::meter-tap $self.meter1 -client ${client}m1 {*}$xargs

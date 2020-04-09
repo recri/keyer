@@ -18,6 +18,8 @@
 
 /*
 ** filter_complex_goertzel uses a Goertzel filter to track the power on a specific tone
+** don't use this, there's something else needed to make it work, something using the phase
+** information.
 */
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1

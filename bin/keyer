@@ -352,9 +352,7 @@ snit::type keyer::options {
 	    {*keyer* -weight} - 
 	    {*keyer* -ratio} { $self describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
 	    {*keyer* -comp} { $self describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
-	    {*goertzel* -freq} -
-	    {*cw-decode* -freq} -
-	    {*keyer* -freq} { $self describe $option ivalue -min -24000 -max 24000 -units Hz -graticule 20 -steps-per-div 100}
+	    {* -freq} { $self describe $option ivalue -min -24000 -max 24000 -units Hz -graticule 20 -steps-per-div 100}
 	    {*keyer* -rise} - 
 	    {*keyer* -fall} - 
 	    {*keyer* -ramp} { $self describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
@@ -535,9 +533,17 @@ snit::type keyer::options {
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
+	    {*goertzel-char* -ins} -
+	    {*goertzel-char* -osc} -
+	    {*goertzel-char* -noise} -
+	    {*goertzel-char* -insert} -
 	    {*goertzel* -filter?} -
 	    {*goertzel* -tap} {
+		#puts "$self describe text $option"
 		$self describe $option text
+	    }
+	    {*goertzel-char* -replications} {
+		$self describe $option value -min 1 -max 32 -step 1 -units samples
 	    }
 	    * { puts "populate $name $opt: no clues" }
 	}
@@ -602,6 +608,7 @@ snit::type keyer::options {
 	# instantiate component
 	# and activate if necessary
 	set args {}
+	# puts "load $composite with $factory $name"
 	switch -glob $factory {
 	    sdrtcl::* { 
 		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
@@ -616,6 +623,7 @@ snit::type keyer::options {
 		#wm iconphoto .$name -default icon1 icon2
 		# no  {*}$args because it's only sdrtcl -server
 		pack [$factory $window] -side top -expand true -fill both
+		# puts "packed $window"
 	    }
 	    sdrtcltk::* {
 		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
@@ -637,9 +645,13 @@ snit::type keyer::options {
     }
     
     method process {composite} {
+	# puts "keyer::options::process-start $composite: argvopts [get-argvopts]"
 	foreach {name factory window composite} [$self load $composite] break
+	# puts "keyer::options::process-after-load $composite: argvopts [get-argvopts]"
 	$self define $name $factory $window $composite
+	# puts "keyer::options::process-after-define $composite: argvopts [get-argvopts]"
 	$self populate $name $factory $window $composite
+	# puts "keyer::options::process-finish $composite: argvopts [get-argvopts]"
     }
     
     method populate {name factory window composite} {
@@ -823,8 +835,12 @@ snit::type keyer::setups {
 	#
 	
 	return [dict create {*}{ 
+	    keyo {
+		start { keyer -start keyer-tone@keyo }
+		info { a keyed oscillator }
+	    }
 	    key {
-		start { keyer -start {keyer-iambic@key keyer-tone@keyo} -key-wpm 16 -keyo-ramp 4.0 -key-mode B -key-alsp 1 }
+		start { keyer -start keyer-iambic@key -run keyo -key-wpm 16 -keyo-ramp 4.0 -key-mode B -key-alsp 1 }
 		info { iambic keyer and a keyed oscillator }
 		connect { {?system:midi_capture_1 ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
 	    }
@@ -860,6 +876,10 @@ snit::type keyer::setups {
 		start { keyer -start {sdrtcl::midi-tap@tap} -tap-start 1 }
 		info {raw midi tap}
 	    }
+	    ins {
+		start { keyer -start midi-insert@ins }
+		info {start midi insert node}
+	    }
 	    tap {
 		start { keyer -start {midi-tap-view@tap} }
 		info {midi monitor for timing events}
@@ -871,6 +891,10 @@ snit::type keyer::setups {
 	    det {
 		start { keyer -start {filter-goertzel@det} }
 		info {goertzel audio filter to detect cw tone}
+	    }
+	    det2 {
+		start { keyer -start {filter-goertzel@det2} }
+		info {second goertzel audio filter to detect cw tone}
 	    }
 	    fg {
 		start { keyer -start {filter-goertzel@fg} }
@@ -947,11 +971,29 @@ snit::type keyer::setups {
 	    cwt {
 		start { keyer -start cw-latency-timing@cwt }
 		info { cw latency detection widget }
+		connect {
+		    cwt1:midi_out cwtt1:midi_in
+		    cwtd:out_i cwtg:in_i
+		    cwtd:out_q cwtg:in_q
+		    cwtg:out_i cwt2:in_i
+		    cwt2:midi_out cwtt2:midi_in
+		}
+		ports {
+		    cwt1:in_i
+		    cwtm1:in_i cwtm1:in_q
+		    cwtd:in_i cwtd:in_q
+		}
 	    }
 	    cwtest {
 		start { keyer key cwt }
 		info { cw latency detection debugging }
-		connect { keyer key cwt }
+		connect { 
+		    system:midi_capture_1 key:midi_in 
+		    keyo:out_i system:playback_1
+		    keyo:out_q system:playback_2
+		    keyo:out_i cwt1:in_i
+		    keyo:out_i cwtd:in_i keyo:out_q cwtd:in_q
+		}
 	    }
 	    filter-test {
 		start { keyer noise spec filt spec2 -noise-level -50 -filt-length 512 -filt-low 0 -filt-high 1400 -spec-filter-low 0 -spec-filter-high 1400}
@@ -963,7 +1005,7 @@ snit::type keyer::setups {
 		}
 	    }
 	    goertzel-test {
-		start { keyer cas key noise fg fcg mtap nod noc -start {sdrtk::goertzel@win} 
+		start { keyer cas key noise fg fcg mtap nod noc -start {sdrtk::goertzel-graph@win} 
 		    -fg-note 8 -fcg-note 16 -win-filter1 ::fg -win-filter2 ::fcg -win-tap ::tap}
 		info { test operation of goertzel filter on keyed tone }
 		connect { 
@@ -975,6 +1017,16 @@ snit::type keyer::setups {
 		    ?fg:out_i ?xsc:in2
 		    ?fcg:out_i ?xsc:in3
 		    ?fcg:out_q ?xsc:in4
+		}
+	    }
+	    goertzel-characterize {
+		start { keyer ins keyo noise fg fcg -start sdrtk::goertzel-characterize@top 
+		    -top-ins ins -top-osc keyo -top-noise noise -top-filter1 fg -top-filter2 fcg}
+		info { characterize goertzel filters performance with different parameters }
+		connect { 
+		    {keyo:out_i noise:out_i} {system:playback_1 system:playback_2 fg:in_i fcg:in_i}
+		    {keyo:out_q noise:out_q} fcg:in_q
+		    ins:midi_out keyo:midi_in
 		}
 	    }
 	}]
@@ -1130,7 +1182,7 @@ proc main-argv {argv} {
 	# -server - jack server
 	# -title - window title
 	# -run - saved setups to run by name
-	# -start components - component@name to start
+	# -start components - list of component@name to start
 	# -exec args - command to run in background
 	# -favor patterns - option patterns to favor
 	# -hide patterns - option patterns to hide
@@ -1153,8 +1205,12 @@ proc main-argv {argv} {
 	    -exec { ::argv lappend $opt $val }
 	    -start { ::argv lappend $opt {*}$val }
 	    -connect { ::argv lappend $opt {*}$val }
-	    default { ::argv lappend -argvopts $opt $val }
+	    default { 
+		# puts "lappend -argvopts $opt $val"
+		::argv lappend -argvopts $opt $val
+	    }
 	}
+	# if {[has-argvopts]} { puts "argvopts [get-argvopts]" }
     }
 }
 
@@ -1182,7 +1238,7 @@ proc make-connections {args} {
 		    if { ! [dict exists $ports [string range $to 1 end]] } continue
 		    set to [string range $to 1 end]
 		}
-		puts "connect $from $to"
+		# puts "connect $from $to"
 		if { ! [dict exists $ports $to] } { puts "$to is not a port"; continue }
 		if { ! ([dict get $ports $to direction] eq {input}) } { puts "$to is not an input port"; continue }
 		sdrtcl::jack connect $from $to
@@ -1222,7 +1278,7 @@ proc main {argv} {
     
     # process arguments, first pass just to collect everything
     main-argv $argv
-    
+        
     # if nothing asked for, nothing gained
     if { ! [has-start] && ! [has-exec] && ! [has-eval] } { usage-message }
 
@@ -1239,8 +1295,9 @@ proc main {argv} {
     # process command line options for additional option definitions
     if {[has-argvopts]} {
 	foreach {opt val} [get-argvopts] {
+	    # puts "first process $opt $val"
 	    if {[::options is-option $opt]} continue; # already defined
-	    #error "undefined option: $opt $val"
+	    error "undefined option: $opt $val"
 	    # something missing here? - FIX.ME?
 	}
     }
@@ -1250,7 +1307,9 @@ proc main {argv} {
     
     # load the options collected from the command line
     if {[has-argvopts]} {
+	# puts "second pass argvopts [get-argvopts]"
 	foreach {opt val} [get-argvopts] { 
+	    # puts "second process $opt $val"
 	    if {$opt eq {-hl-discover}} {
 		if {$val eq {discover}} {
 		    package require sdrtcl::hl-discover
@@ -1271,6 +1330,7 @@ proc main {argv} {
 		}
 		continue
 	    }
+	    # puts "configuring $opt $val"
 	    if {[catch {::options configure $opt $val} error]} {
 		puts "::options configure $opt $val threw $error"
 		# if the $opt is -$comp for one of the setup components,

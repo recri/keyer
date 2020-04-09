@@ -221,10 +221,15 @@ snit::widgetadaptor sdrtk::graph {
     # return a list of value-string window-coordinate tick-size triples
     method ticks-place {v0 wv0 v1 wv1} {
 	# puts "ticks-place $v0 .. $v1 inside $wv0 .. $wv1"
-	set n [expr {max(3,int(abs($wv0-$wv1)/30))}]
-	foreach mark [$ticklabels extended $v0 $v1 $n] {
-	    set c [expr {($mark-$v0)/($v1-$v0)*($wv1-$wv0)+$wv0}]
-	    lappend marks [format %.1f $mark] $c 3
+	set marks {}
+	if {[catch {
+	    set n [expr {max(3,int(abs($wv0-$wv1)/30))}]
+	    foreach mark [$ticklabels extended $v0 $v1 $n] {
+		set c [expr {($mark-$v0)/($v1-$v0)*($wv1-$wv0)+$wv0}]
+		lappend marks [format %.1f $mark] $c 3
+	    }
+	} error]} {
+	    set marks {}
 	}
 	return $marks
     }
@@ -265,25 +270,19 @@ snit::widgetadaptor sdrtk::graph {
     # add a new line with points
     method {add line} {name args} {
 	dict lappend data lines $name
-	dict set data line $name [dict create]
-	dict set data line $name index [$hull create line 0 0 0 0 -tags [list plotted line line-$name]]
-	dict set data line $name points {}
-	dict set data line $name bbox [bbox-empty]
-	if {$args ne {}} { $self line add point $name {*}$args }
+	dict set data line $name [dict create \
+				      index [$hull create line 0 0 0 0 -tags [list plotted line line-$name]] \
+				      points {} \
+				      bbox [bbox-empty] \
+				     ]
+	if {$args ne {}} { $self line add point $name $args }
     }
 
     # add a point(s) to a line
     method {line add point} {name args} {
-	set points [$self line points $name]
-	set bbox [$self line bbox $name]
-
-	lappend points {*}$args
-	set bbox [bbox-add-point $bbox {*}$args]
 	$self bbox-add-point {*}$args
-
-	dict set data line $name points $points
-	dict set data line $name bbox $bbox
-
+	dict set data line $name points [concat [$self line points $name] $args]
+	dict set data line $name bbox [bbox-add-point [$self line bbox $name] {*}$args]
 	after idle [mymethod redraw]
     }
 

@@ -108,6 +108,7 @@ typedef struct {
   float cosine;
   float sine;
   float complex s[4];
+  float sum2;
   int block_size;
   int i;
   float complex power;
@@ -119,17 +120,17 @@ static void filter_complex_goertzel_configure(filter_complex_goertzel_t *p, filt
   p->cosine = cosf(w);
   p->sine = sinf(w);
   p->coeff = 2.0f * p->cosine;
-  p->block_size = (int) (q->sample_rate / q->bandwidth);
+  p->block_size = (int) (0.5 + (q->sample_rate / q->bandwidth));
   p->i = p->block_size;
   p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
-  p->energy = 0;
+  p->sum2 = 0.0f;
 }
 
 static void *filter_complex_goertzel_preconfigure(filter_complex_goertzel_t *p, filter_complex_goertzel_options_t *q) {
   if (q->bandwidth <= 0) return (void *)"bandwidth must be positive";
   if (q->sample_rate <= 0) return (void *)"sample rate must be postive";
-  if (q->bandwidth > q->sample_rate / 2) return (void *)"bandwidth must be less than one-half of sample rate";
-  if (fabs(q->hertz) > q->sample_rate / 2) return (void *)"frequency must be less than one-half of sample rate";
+  // if (q->bandwidth > q->sample_rate / 2) return (void *)"bandwidth must be less than one-half of sample rate";
+  // if (fabs(q->hertz) > q->sample_rate / 2) return (void *)"frequency must be less than one-half of sample rate";
   return p;
 }
 
@@ -141,17 +142,33 @@ static void *filter_complex_goertzel_init(filter_complex_goertzel_t *p, filter_c
 
 static int filter_complex_goertzel_process(filter_complex_goertzel_t *p, const float complex x) {
   p->s[(p->i)&3] = x + p->coeff * p->s[(p->i+1)&3] - p->s[(p->i+2)&3];
-  p->energy += cabsf(x);
+  p->sum2 += x * conjf(x);
   if (--p->i < 0) {
     double real = p->cosine*p->s[0] - p->s[1];
     double imag = -p->sine*p->s[0];
     p->power = (real + I*imag) / (p->block_size/2);
+    p->energy = p->sum2;
     p->i = p->block_size;
     p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
+    p->sum2 = 0;
     return 1;
   } else {
     return 0;
   }
+}
+
+static void filter_complex_goertzel_block(filter_complex_goertzel_t *p, float complex *x, int n) {
+  p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
+  p->sum2 = 0.0f;
+  for (int i = 0; i < n; i += 1) {
+    p->s[(i+0)&3] = x[i] + p->coeff * p->s[(i+1)&3] - p->s[(i+2)&3];
+    p->sum2 += x[i] * conjf(x[i]);
+    double real = p->cosine*p->s[(i+0)&3] - p->s[(i+1)&3];
+    double imag = -p->sine*p->s[(i+0)&3];
+    x[i] = (real + I*imag) / ((i+1.0f)/2);
+  }
+  p->power = x[n-1];
+  p->energy = p->sum2;
 }
 
 #endif

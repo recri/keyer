@@ -28,6 +28,12 @@
 ** This is based on http://en.wikipedia.org/wiki/Goertzel_algorithm
 ** and the video presentation of CW mode for the NUE-PSK modem
 ** at TAPR DCC 2011 by George Heron N2APB and Dave Collins AD7JT.
+**
+** more on my own study.  the goertzel filter is interesting because
+** it allows you to compute the FFT bin power for a single bin.  The
+** frequency and bandwidth requested specify which FFT and which bin
+** is being evaluated.  But the computation to reach a particular 
+** bandwidth passes through all the wider bandwidths on the way to its
 */
 typedef struct {
   float hertz;			// frequency to track
@@ -38,6 +44,7 @@ typedef struct {
 typedef struct {
   float coeff;
   float s[4];
+  float sum2;
   int block_size;
   int i;
   float power;
@@ -46,18 +53,18 @@ typedef struct {
 
 static void filter_goertzel_configure(filter_goertzel_t *p, filter_goertzel_options_t *q) {
   p->coeff = 2.0f * cosf(two_pi * q->hertz / q->sample_rate);
-  p->block_size = (int) (q->sample_rate / (int)q->bandwidth);
+  p->block_size = (int) (0.5 + (q->sample_rate / (int)q->bandwidth));
   p->i = p->block_size;
   p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
-  p->energy = 0.0f;
+  p->sum2 = 0.0f;
 }
 
 static void *filter_goertzel_preconfigure(filter_goertzel_t *p, filter_goertzel_options_t *q) {
   if (q->bandwidth <= 0) return (void *)"bandwidth must be positive";
-  if (q->hertz <= 0) return (void *)"frequency must be positive";
+  // if (q->hertz <= 0) return (void *)"frequency must be positive";
   if (q->sample_rate <= 0) return (void *)"sample rate must be postive";
-  if (q->bandwidth > q->sample_rate / 4) return (void *)"bandwidth must be less than one-quarter of sample rate";
-  if (q->hertz > q->sample_rate / 4) return (void *)"frequency must be less than one-quarter of sample rate";
+  // if (q->bandwidth > q->sample_rate / 4) return (void *)"bandwidth must be less than one-quarter of sample rate";
+  // if (q->hertz > q->sample_rate / 4) return (void *)"frequency must be less than one-quarter of sample rate";
   return p;
 }
 
@@ -69,15 +76,34 @@ static void *filter_goertzel_init(filter_goertzel_t *p, filter_goertzel_options_
 
 static int filter_goertzel_process(filter_goertzel_t *p, const float x) {
   p->s[(p->i)&3] = x + p->coeff * p->s[(p->i+1)&3] - p->s[(p->i+2)&3];
-  p->energy += x*x;
+  p->sum2 += x*x;
   if (--p->i < 0) {
     p->power = (p->s[1]*p->s[1] + p->s[0]*p->s[0] - p->coeff*p->s[0]*p->s[1]) / (p->block_size/2);
+    p->energy = p->sum2;
     p->i = p->block_size;
     p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
+    p->sum2 = 0;
     return 1;
   } else {
     return 0;
   }
+}
+
+// compute all bandwidth filters over a block of samples
+// freq must have been previously configured
+static void filter_goertzel_block(filter_goertzel_t *p, float *x, int n) {
+  p->s[0] = p->s[1] = p->s[2] = p->s[3] = 0.0f;
+  p->sum2 = 0.0f;
+  for (int i = 0; i < n; i += 1) {
+    // compute this term in the filter
+    p->s[(i+0)&3] = x[i] + p->coeff * p->s[(i+1)&3] - p->s[(i+2)&3];
+    // accumulate the energy in the buffer
+    p->sum2 += x[i] * x[i];
+    // compute the power of the filter with block_size = i+1 and store it into the sample slot
+    x[i] = (p->s[(i+1)&3]*p->s[(i+1)&3] + p->s[(i+0)&3]*p->s[(i+0)&3] - p->coeff*p->s[(i+0)&3]*p->s[(i+1)&3]) / ((i+1.0f)/2);
+  }
+  p->power = x[n-1];
+  p->energy = p->sum2;
 }
 
 #endif
