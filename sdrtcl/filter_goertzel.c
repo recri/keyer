@@ -84,9 +84,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
       dp->energy = dp->fg.energy;
       dp->frame = sdrkit_last_frame_time(arg)+i;
       cmd = 0;
-      if (dp->on != 0 && dp->fg.power < dp->opts.off_threshold) {
+      if (dp->on != 0 && dp->power < 1e-8) {
+	// dp->opts.off_threshold * dp->energy
 	cmd = MIDI_NOTE_OFF;	/* note change off */
-      } else if (dp->on == 0 && dp->fg.power > dp->opts.on_threshold) {
+      } else if (dp->on == 0 && dp->power > 1e-8) {
+	// > dp->opts.on_threshold * dp->energy
 	cmd = MIDI_NOTE_ON;	/* note change on */
       }
       if (cmd != 0) {
@@ -138,9 +140,9 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-freq",      "frequency", "AFHertz", "700.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
-  { "-bandwidth", "bandwidth", "BWHertz", "750.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
-  { "-on",	  "onThresh",  "Thresh",  "0.5",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
-  { "-off",	  "offThresh", "Thresh",  "0.5",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
+  { "-bandwidth", "bandwidth", "BWHertz", "375.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
+  { "-on",	  "onThresh",  "Thresh",  "2.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
+  { "-off",	  "offThresh", "Thresh",  "1.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
   { NULL }
 };
 

@@ -35,7 +35,8 @@ package require snit
 # and records filter magnitude, band energy, and filter phase
 #
 # Well, that was fun and confusing.  Now, record the response of a few filters to presence and
-# absence of tones, see if there's a decision algorithm that works with mag and sum2 as 
+# absence of tones, see if there's a decision algorithm that works with mag and sum2 as inputs
+# and then add noise back after the primary question is answered
 
 snit::widget sdrtk::goertzel-characterize {
     option -ins -default {}
@@ -44,12 +45,14 @@ snit::widget sdrtk::goertzel-characterize {
     option -filter1 -default {}
     option -filter2 -default {}
     option -center-f -default 700
-    option -offset-f -default {-5000 -2000 -1000 -500 -250 0 250 500 1000 2000 5000}
+    option -offset-f -default {-5000 -2000 -1000 -750 -500 -250 0 250 500 750 1000 2000 5000}
     option -bandwidth -default {6000 3000 1500 750 375}
-    option -osc-gain -default {-20 -30 -40 -50 -60}
+    option -osc-gain -default {-40}
     option -noise-gain -default {-60 -50 -40 -30 -20}
+    option -on-off {0 1}
     option -timeout -default 6
     option -replications -default 10
+    option -skip -default 2
 
     variable data -array {
 	results {}
@@ -76,7 +79,9 @@ snit::widget sdrtk::goertzel-characterize {
 		foreach bw $options(-bandwidth) {
 		    foreach go $options(-osc-gain) {
 			foreach gn $options(-noise-gain) {
-			    lappend data(all-settings) [dict create f $f go $go gn $gn df $df bw $bw]
+			    foreach on $options(-on-off) {
+				lappend data(all-settings) [dict create f $f go $go gn $gn df $df bw $bw on $on]
+			    }
 			}
 		    }
 		}
@@ -100,13 +105,13 @@ snit::widget sdrtk::goertzel-characterize {
     method {info-option -replications} {} { return {number of measurements averaged} }
 
     method {tone on} {} {
-	set data(paused) 0
+	# set data(paused) 0
 	$options(-ins) puts [binary format ccc 0x90 0 1]
     }
 
     method {tone off} {} {
 	$options(-ins) puts [binary format ccc 0x90 0 0]
-	set data(paused) 1
+	# set data(paused) 1
     }
     
     method next-setting {} {
@@ -117,6 +122,9 @@ snit::widget sdrtk::goertzel-characterize {
 		::options configure -$options(-osc)-freq $f -$options(-osc)-gain $go -$options(-noise)-level $gn \
 		    -$options(-filter1)-freq $df -$options(-filter2)-freq $df \
 		    -$options(-filter1)-bandwidth $bw -$options(-filter2)-bandwidth $bw
+		#puts "next-setting on is $on"
+		#puts "next-setting $data(current-settings)"
+		if {$on} { $self tone on } else { $self tone off }
 	    }
 	    return 1
 	}
@@ -126,27 +134,28 @@ snit::widget sdrtk::goertzel-characterize {
     method start-processing {} {
 	# this has to wait until ::options is defined
 	$self next-setting
-	#set data(paused) 0
-	$self tone on
+	set data(paused) 0
+	# $self tone on
 	after $options(-timeout) [mymethod poll]
     }
     
     method poll {} {
-	if { ! $data(paused)} {
-	    set input {}
-	    foreach opt {-filter1 -filter2} {
-		if {$options($opt) ne {}} { 
-		    if {[$options($opt) is-busy]} continue
-		    if { ! [catch {$options($opt) get} get]} {
+	set input {}
+	#  -filter2
+	foreach opt {-filter1} {
+	    if {$options($opt) ne {}} { 
+		if {[$options($opt) is-busy]} continue
+		if { ! [catch {$options($opt) get} get]} {
+		    if { ! $data(paused)} {
 			lappend input $opt $get
-		    } else {
-			error "sdrtk::goertzel-characterize: $options($opt) get threw $get"
 		    }
+		} else {
+		    error "sdrtk::goertzel-characterize: $options($opt) get threw $get"
 		}
 	    }
-	    if {$input ne {}} { 
-		after idle [mymethod process $input]
-	    }
+	}
+	if {$input ne {}} { 
+	    after idle [mymethod process $input]
 	}
 	after $options(-timeout) [mymethod poll]
     }
@@ -167,20 +176,19 @@ snit::widget sdrtk::goertzel-characterize {
 		}
 	    }
 	}
-	if {[llength $data(-filter1)] < $options(-replications) || [llength $data(-filter2)] < $options(-replications)} {
+	#  || [llength $data(-filter2)] < $options(-replications)
+	if {[llength $data(-filter1)] < $options(-replications)} {
 	    # set data(paused) 0
-	    $self tone on
+	    # $self tone on
 	    return
 	}
 	after idle [mymethod accumulate $data(current-settings) -filter1 $data(-filter1) -filter2 $data(-filter2)]
 	set data(-filter1) {}
 	set data(-filter2) {}
-	$self tone off
-	if {[$self next-setting]} {
-	    # set data(paused) 0
-	    $self tone on
-	} else {
+	# $self tone off
+	if { ! [$self next-setting]} {
 	    # we're finished
+	    # puts "finished"
 	    flush stdout
 	    after 1000 [destroy .]
 	}
@@ -198,6 +206,8 @@ snit::widget sdrtk::goertzel-characterize {
 	    }
 	}
 	#puts [concat [dict keys $settings] {frame mag1 sum21 mag2 arg2 sum22}]
+	if {[dict keys $sum] ne [lsort [dict keys $sum]]} { error "frames are not in order" } 
+	set skip $options(-skip)
 	foreach frame [dict keys $sum] {
 	    set values [dict values $settings]
 	    lappend values $frame
@@ -213,10 +223,12 @@ snit::widget sdrtk::goertzel-characterize {
 	    } else {
 		lappend values NA NA NA
 	    }
-	    puts $values
+	    if {$skip > 0} {
+		incr skip -1
+	    } else {
+		puts $values
+	    }
 	}
-
-		
 	    
 	set data(current-results) $settings
 	#lappend data(results) $settings

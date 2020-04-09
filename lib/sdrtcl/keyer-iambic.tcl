@@ -110,13 +110,21 @@ snit::type sdrtcl::keyer-iambic {
     
     method Configure {opt val} {
 	if {$opt eq {-keyer}} {
+	    $keyer deactivate
 	    rename $self.keyer {}
-	    set options(-keyer) $val
+	    set options($opt) $val
 	    package require sdrtcl::keyer-iambic-$val
 	    install keyer using sdrtcl::keyer-iambic-$val $self.keyer -client $self
-	    return
+	    $keyer activate
+	    make-connections
+	    foreach opt [$keyer info options] {
+		if {[info exists options($opt)]} {
+		    $keyer configure $opt $options($opt)
+		}
+	    }
+	} else {
+	    if { ! [catch {$keyer configure $opt $val} result]} { return $result }
 	}
-	if { ! [catch {$keyer configure $opt $val} result]} { return $result }
 	return {}
     }
     method Cget {opt} {

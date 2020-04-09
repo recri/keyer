@@ -376,7 +376,7 @@ snit::type keyer::options {
 	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
 	    {* -bandwidth} { $self describe $option value -format %.0f -min 10 -max 24000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
 	    {* -on} - 
-	    {* -off} { $self describe $option value -format %.3f -min 0.001 -max 1.0 -step 0.001 -graticule 20 -steps-per-div 5}
+	    {* -off} { $self describe $option value -format %.3f -min 0.001 -max 16.0 -step 0.001 -graticule 20 -steps-per-div 5}
 	    {* -timeout} { $self describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
 	    {* -estimate} { $self describe $option ivalue -min 10 -max 1000 -units frames }
 	    {* -discover} { $self describe $option text hide 1 }
@@ -944,7 +944,10 @@ snit::type keyer::setups {
 	    key+out {
 		start { keyer key out}
 		info {iambic keyer and decoder}
-		connect { keyo:out_i outo:in_i }
+		connect {
+		    keyo:out_i outo:in_i
+		    keyo:out_i {system:playback_1 system:playback_2}
+		}
 	    }
 	    xsco {
 		start { keyer -exec {x42-scope -j xsc >& ~/.config/keyer/xsco.log} }
@@ -1020,11 +1023,11 @@ snit::type keyer::setups {
 		}
 	    }
 	    goertzel-characterize {
-		start { keyer ins keyo noise fg fcg -start sdrtk::goertzel-characterize@top 
+		start { keyer ins keyo noise fg fcg -start sdrtk::goertzel-characterize@top
 		    -top-ins ins -top-osc keyo -top-noise noise -top-filter1 fg -top-filter2 fcg}
 		info { characterize goertzel filters performance with different parameters }
 		connect { 
-		    {keyo:out_i noise:out_i} {system:playback_1 system:playback_2 fg:in_i fcg:in_i}
+		    {keyo:out_i noise:out_i} {fg:in_i fcg:in_i}
 		    {keyo:out_q noise:out_q} fcg:in_q
 		    ins:midi_out keyo:midi_in
 		}
@@ -1032,7 +1035,9 @@ snit::type keyer::setups {
 	}]
     }
 }
-
+#  -start gain@gain
+# 		    gain:out_i {system:playback_1 system:playback_2}
+#  gain:in_i
 proc is-setup {name} { return [::setups is-setup $name] }
 proc get-setup-names {} { return [::setups get-names] }
 proc get-setup-info {name} { return [::setups get-info $name] }
@@ -1222,7 +1227,9 @@ package require sdrtcl::jack
 # 2) if $from or $to starts with a ?, connect it if it exists, otherwise skip it
 # 3) allow from and to to be lists, connect each element of from to each element of to
  
-proc make-connections {args} {
+proc make-connections {} {
+    if { ! [has-connect]} return
+    set args [get-connect]
     # a dictionary of ports and descriptions
     set ports [sdrtcl::jack list-ports]
     foreach {flist tlist} $args {
@@ -1241,7 +1248,9 @@ proc make-connections {args} {
 		# puts "connect $from $to"
 		if { ! [dict exists $ports $to] } { puts "$to is not a port"; continue }
 		if { ! ([dict get $ports $to direction] eq {input}) } { puts "$to is not an input port"; continue }
-		sdrtcl::jack connect $from $to
+		if {$to ni [dict get $ports $from connections]} {
+		    sdrtcl::jack connect $from $to
+		}
 	    }
 	}
     }
@@ -1290,7 +1299,7 @@ proc main {argv} {
     if {[has-exec]} { foreach x [get-exec] { exec {*}$x & } }
     
     # connecting ports
-    if {[has-connect]} { make-connections {*}[get-connect] }
+    make-connections
 
     # process command line options for additional option definitions
     if {[has-argvopts]} {
