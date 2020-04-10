@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide sdrtcltk::cw-decode-view 1.0.0
+package provide sdrtk::cw-decode-view 1.0.0
 
 #
 # read only text widget, receiving decoded morse
@@ -23,31 +23,14 @@ package provide sdrtcltk::cw-decode-view 1.0.0
 package require Tk
 package require snit
 
-package require sdrtcl::filter-goertzel
-package require sdrtcl::keyer-detime
-
 package require morse::morse
 package require morse::itu
 package require morse::dicts
 
-namespace eval ::sdrtcltk {}
+namespace eval ::sdrtk {}
 
-snit::widgetadaptor sdrtcltk::cw-decode-view {
-    component detone
-    # -verbose -server -client -chan -note -freq -bandwidth -on -off -timeout
-    component detime
-    # -verbose -server -client -chan -note -wpm
-
-    option -verbose -default 0 -configuremethod ConfigShared
-    option -server -default {} -configuremethod ConfigShared
-    option -client -default 0 -configuremethod ConfigShared
-    option -chan -default 1 -configuremethod ConfigShared
-    option -note -default 0 -configuremethod ConfigShared
-    delegate option -freq to detone
-    delegate option -bandwidth to detone
-    delegate option -on to detone
-    delegate option -off to detone
-    delegate option -wpm to detime
+snit::widgetadaptor sdrtk::cw-decode-view {
+    option -detime -default {};	# sdrtcl::keyer-detime or equivalent
     option -dict -default fldigi
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
@@ -72,42 +55,35 @@ snit::widgetadaptor sdrtcltk::cw-decode-view {
 	set server [from args -server {}]
 	set xargs {}
 	if {$server ne {}} { lappend xargs -server $server }
-	install detime using sdrtcl::keyer-detime $self.deti -client ${client}i {*}$xargs
-	install detone using sdrtcl::filter-goertzel $self.deto -client ${client}o {*}$xargs
 	$self configure -width 30 -height 15 -exportselection true {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	set handler [after 100 [mymethod timeout]]
     }
 
     method is-busy {} { return 0 }
-    method activate {} { $detime activate; $detone activate }
-    method deactivate {} { $detime deactivate; $detone deactivate }
+    method activate {} { }
+    method deactivate {} { }
     
     # {-color1 -color2 -background}
  
-    method exposed-options {} { return {-verbose -server -client -chan -note -freq -bandwidth -on -off -wpm -dict -font -foreground -background} }
+    method exposed-options {} { return {-dict -font -foreground -background -detime} }
 
     method info-option {opt} {
-	if { ! [catch {$detone info option $opt} info]} { return $info }
-	if { ! [catch {$detime info option $opt} info]} { return $info }
 	switch -- $opt {
 	    -background { return {color of window background} }
 	    -foreground { return {color for text display} }
 	    -font { return {font for text display} }
 	    -dict { return {dictionary for decoding morse} }
+	    -detime { return {ASK detiming component} }
 	    default { puts "no info-option for $opt" }
 	}
-    }
-    method ConfigShared {opt val} {
-	$detone configure $opt $val
-	$detime configure $opt $val
     }
     method ConfigText {opt val} {
 	$hull configure $opt $val
     }
     method timeout {} {
 	# get new text
-	set text [$detime get]
+	set text [$options(-detime) get]
 	# insert into output display
 	$self ins end $text
 	$self see end

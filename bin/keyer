@@ -533,6 +533,8 @@ snit::type keyer::options {
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
+	    {*cw-decode-view* -detime} -
+	    {*cw-encode-input* -ascii} -
 	    {*goertzel-char* -ins} -
 	    {*goertzel-char* -osc} -
 	    {*goertzel-char* -noise} -
@@ -850,12 +852,12 @@ snit::type keyer::setups {
 		connect { key2:midi_out key2o:midi_in }
 	    }
 	    kbd {
-		start { keyer -start {cw-encode-input@kbd keyer-tone@kbdo} -kbd-wpm 80 -kbdo-ramp 6.6 }
+		start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cw-encode-input@enc keyer-tone@kbdo} -kbd-wpm 80 -kbdo-ramp 6.6 -enc-ascii kbd }
 		info {keyboard keyer and a keyed oscillator}
 		connect { kbd:midi_out kbdo:midi_in }
 	    }
 	    kbd2 {
-		start { keyer -start {cw-encode-input@kbd2 keyer-tone@kbd2o} -kbd2-wpm 80 -kbd2o-ramp 6.6 }
+		start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cw-encode-input@enc2 keyer-tone@kbd2o} -kbd2-wpm 80 -kbd2o-ramp 6.6 -enc2-ascii kbd2 }
 		info {second keyboard keyer and a keyed oscillator}
 		connect { kbd2:midi_out kbd2o:midi_in }
 	    }
@@ -888,12 +890,12 @@ snit::type keyer::setups {
 		start { keyer -start {midi-tap-view@tap2} }
 		info {second midi monitor for timing events}
 	    }
-	    det {
-		start { keyer -start {filter-goertzel@det} }
+	    detone {
+		start { keyer -start {sdrtcl::filter-goertzel@detone} }
 		info {goertzel audio filter to detect cw tone}
 	    }
-	    det2 {
-		start { keyer -start {filter-goertzel@det2} }
+	    detone2 {
+		start { keyer -start {sdrtcl::filter-goertzel@detone2} }
 		info {second goertzel audio filter to detect cw tone}
 	    }
 	    fg {
@@ -904,10 +906,18 @@ snit::type keyer::setups {
 		start { keyer -start {filter-complex-goertzel@fcg} }
 		info {complex valued Goertzel filter to detect cw tone}
 	    }
+	    detime {
+		start { keyer -start {keyer-detime@detime} }
+		info {key event to dits, dahs, and spaces translator}
+	    }
+	    detime2 {
+		start { keyer -start {keyer-detime@detime2} }
+		info {second key event to dits, dahs, and spaces translator}
+	    }
 	    out {
-		start { keyer -start {cw-decode-view@out} -out-freq 700 -out-wpm 16 }
+		start { keyer detone detime -start {sdrtk::cw-decode-view@out} -out-detime detime }
 		info {audio to ascii morse decoder}
-		connect { outo:midi_out outi:midi_in }
+		connect { detone:midi_out detime:midi_in }
 	    }
 	    hl {
 		start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
@@ -945,7 +955,7 @@ snit::type keyer::setups {
 		start { keyer key out}
 		info {iambic keyer and decoder}
 		connect {
-		    keyo:out_i outo:in_i
+		    keyo:out_i detone:in_i
 		    keyo:out_i {system:playback_1 system:playback_2}
 		}
 	    }

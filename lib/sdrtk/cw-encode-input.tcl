@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide sdrtcltk::cw-encode-input 1.0.0
+package provide sdrtk::cw-encode-input 1.0.0
 
 #
 # keyboard input into morse code
@@ -24,9 +24,8 @@ package require Tk
 package require snit
 
 package require sdrtk::cwtext
-package require sdrtcl::keyer-ascii
 
-namespace eval ::sdrtcltk {}
+namespace eval ::sdrtk {}
 #
 # cwtext window is a live text entry for sending to the ascii-keyer
 # cw-text simply supplies bindings for a menu and an abort key
@@ -34,57 +33,24 @@ namespace eval ::sdrtcltk {}
 # onto . so it works where ever you focused input.
 #
 
-snit::widgetadaptor sdrtcltk::cw-encode-input {
-    component ascii
-    # -verbose -server -client -chan -note -wpm -word -dit -dah -ies -ils -iws -weight -ratio -comp -dict
-    
-    option -verbose -default 0 -configuremethod Configure
-    option -server -default {} -readonly 1
-    option -client -default {} -readonly 1
-    delegate option -chan to ascii
-    delegate option -note to ascii
-    delegate option -wpm to ascii
-    delegate option -word to ascii
-    delegate option -dit to ascii
-    delegate option -dah to ascii
-    delegate option -ies to ascii
-    delegate option -ils to ascii
-    delegate option -iws to ascii
-    delegate option -weight to ascii
-    delegate option -ratio to ascii
-    delegate option -comp to ascii
-    delegate option -dict to ascii
-
+snit::widgetadaptor sdrtk::cw-encode-input {
+    option -ascii -default {};	# sdrtcl::keyer-ascii or equivalent
     option -sentcolor -default ? -configuremethod Configure
     option -unsentcolor -default ? -configuremethod Configure
     option -skippedcolor -default ? -configuremethod Configure
-
-    delegate method activate to ascii
-    delegate method deactivate to ascii
-    delegate method is-busy to ascii
 
     delegate method * to hull
     delegate option * to hull
     
     constructor {args} {
-	installhull using sdrtk::cwtext
-	set client [from args -client [winfo name [namespace tail $self]]]
-	set server [from args -server {}]
-	set xargs {}
-	if {$server ne {}} { lappend xargs -server $server }
-	install ascii using sdrtcl::keyer-ascii $self.ascii {*}$xargs -client $client
-	$self configure -ascii [mymethod call-ascii] -width 30 -height 15 -exportselection true {*}$args
+	installhull using sdrtk::cwtext -ascii [mymethod call-ascii] -width 30 -height 15 -exportselection true
+	$self configure {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	bind $win <Escape> [mymethod stop-sending]
     }
 
-    method call-ascii {args} { return [$ascii {*}$args] }
-    method exposed-options {} {
-	return {
-	    -verbose -server -client -chan -note -wpm -word -dit -dah -ies -ils -iws -weight -ratio -comp -dict 
-	    -sentcolor -unsentcolor -skippedcolor -background -font
-	}
-    }
+    method call-ascii {args} { return [$options(-ascii) {*}$args] }
+    method exposed-options {} { return { -sentcolor -unsentcolor -skippedcolor -background -font -ascii } }
     method info-option {opt} {
 	if { ! [catch {$ascii info option $opt} info]} { return $info }
 	switch -- $opt {
@@ -93,6 +59,7 @@ snit::widgetadaptor sdrtcltk::cw-encode-input {
 	    -skippedcolor { return {set the color of the unsent text which will not be sent} }
 	    -background { return {set the background color of the text} }
 	    -font { return {choose the font of the text} }
+	    -ascii { return {character to morse code sender component} }
 	    default { puts "cw-encode-input: uncaught info-option $opt" }
 	}
     }
