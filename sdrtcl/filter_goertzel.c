@@ -99,10 +99,12 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // for all frames in the buffer
   for (int i = 0; i < nframes; i++) {
     if (filter_goertzel_process(&dp->fg, *in++)) {
-      dp->dbpower = 20*log10(dp->fg.power);
-      dp->dbenergy = 20*log10(dp->fg.energy);
+      dp->dbpower = 20*log10(maxf(1e-16,dp->fg.power));
+      dp->dbenergy = 20*log10(maxf(1e-16,dp->fg.energy));
       moving_average_process(&dp->dbp, dp->dbpower);
       moving_average_process(&dp->dbe, dp->dbenergy);
+      /* fprintf(stderr, "power %.3e dbpower %.3f energy %.3e dbenergy %.3f dbp %.3f dbe %3.f\n",
+	 dp->fg.power, dp->dbpower, dp->fg.energy, dp->dbenergy, dp->dbp.average, dp->dbe.average); */
       dp->frame = sdrkit_last_frame_time(arg)+i;
       cmd = 0;
       if (dp->on != 0) {

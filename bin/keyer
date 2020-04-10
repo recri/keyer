@@ -842,7 +842,7 @@ snit::type keyer::setups {
 		info { a keyed oscillator }
 	    }
 	    key {
-		start { keyer -start keyer-iambic@key -run keyo -key-wpm 16 -keyo-ramp 4.0 -key-mode B -key-alsp 1 }
+		start { keyer -start keyer-iambic@key -run keyo -key-wpm 17 -keyo-ramp 4.0 -key-mode B }
 		info { iambic keyer and a keyed oscillator }
 		connect { {?system:midi_capture_1 ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
 	    }
@@ -915,7 +915,7 @@ snit::type keyer::setups {
 		info {second key event to dits, dahs, and spaces translator}
 	    }
 	    out {
-		start { keyer detone detime -start {sdrtk::cw-decode-view@out} -out-detime detime }
+		start { keyer detone detime -start {sdrtk::cw-decode-view@out} -out-detime detime -detime-wpm 17}
 		info {audio to ascii morse decoder}
 		connect { detone:midi_out detime:midi_in }
 	    }
