@@ -18,18 +18,31 @@
 */
 
 /*
-** filter_goertzal uses a real Goertzel filter to track the power on a specific tone
+** filter_goertzel uses a real Goertzel filter to track the power on a specific tone
+** running over a 256 sample block at 48000 samples/second, it sees 3.73 cycles of a 700 Hz
+** tone per block, yielding a bandwidth of 187.5 filter evaluations per second.
+**
+** dot length (ms) is 1200/wpm, samples/ms is 48 (for 48000 samples/s)
+** 10 wpm dot = 120ms = 5760 samples = 22.5 blocks (of 256 samples)
+** 20 wpm dot =  60ms = 2880         = 11.25
+** 40 wpm dot =  30ms = 1440	     =  5.625
+**
+** if we keep a running average of N filter results, the average will cover the last, a float filter power, and a float sum2
 */
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "../dspmath/filter_goertzel.h"
+#define N_MOVING_AVERAGE 512
+#include "../dspmath/moving_average.h"
 #include "../dspmath/midi.h"
 #include "framework.h"
 
 typedef struct {
 #include "framework_options_vars.h"
   filter_goertzel_options_t fg;
+  moving_average_options_t dbp;
+  moving_average_options_t dbe;
   float on_threshold;
   float off_threshold;
 } options_t;
@@ -39,9 +52,11 @@ typedef struct {
   int modified;
   options_t opts;
   filter_goertzel_t fg;
+  moving_average_t dbp;	/* moving average of 20*log10(power) */
+  moving_average_t dbe;	/* moving average of 20*log10(energy) */
   jack_nframes_t frame;
-  float power;
-  float energy;
+  float dbpower;		/* 20*log10(power) */
+  float dbenergy;		/* 20*log10(energy) */
   int on;
 } _t;
 
@@ -49,6 +64,8 @@ static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = dp->fw.busy = 0;
     filter_goertzel_configure(&dp->fg, &dp->opts.fg);
+    moving_average_configure(&dp->dbp, &dp->opts.dbp);
+    moving_average_configure(&dp->dbe, &dp->opts.dbe);
   }
 }
 
@@ -57,6 +74,8 @@ static void *_init(void *arg) {
   dp->opts.fg.sample_rate = sdrkit_sample_rate(&dp->fw);
   void *p = filter_goertzel_preconfigure(&dp->fg, &dp->opts.fg); if (p != &dp->fg) return p;
   filter_goertzel_configure(&dp->fg, &dp->opts.fg);
+  moving_average_configure(&dp->dbp, &dp->opts.dbp);
+  moving_average_configure(&dp->dbe, &dp->opts.dbe);
   dp->on = 0;
   return arg;
 }
@@ -80,16 +99,20 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // for all frames in the buffer
   for (int i = 0; i < nframes; i++) {
     if (filter_goertzel_process(&dp->fg, *in++)) {
-      dp->power = dp->fg.power;
-      dp->energy = dp->fg.energy;
+      dp->dbpower = 20*log10(dp->fg.power);
+      dp->dbenergy = 20*log10(dp->fg.energy);
+      moving_average_process(&dp->dbp, dp->dbpower);
+      moving_average_process(&dp->dbe, dp->dbenergy);
       dp->frame = sdrkit_last_frame_time(arg)+i;
       cmd = 0;
-      if (dp->on != 0 && dp->power < 1e-8) {
-	// dp->opts.off_threshold * dp->energy
-	cmd = MIDI_NOTE_OFF;	/* note change off */
-      } else if (dp->on == 0 && dp->power > 1e-8) {
-	// > dp->opts.on_threshold * dp->energy
-	cmd = MIDI_NOTE_ON;	/* note change on */
+      if (dp->on != 0) {
+	if (dp->dbpower < dp->dbp.average) {
+	  cmd = MIDI_NOTE_OFF;	/* note change off */
+	}
+      } else {
+	if (dp->dbpower > dp->dbp.average) {
+	  cmd = MIDI_NOTE_ON;	/* note change on */
+	}
       }
       if (cmd != 0) {
 	/* prepare to send note change */
@@ -110,14 +133,21 @@ static int _process(jack_nframes_t nframes, void *arg) {
 
 // return a list consisting of:
 //   the jack_nframes_t at which the filter computation completed, 
-//   the scaled value of the filter result, 
-//   and the sum of squared samples over the same block size
+//   the filter result, power in dB, 
+//   the sum of squared samples, energy in dB,
+//   the running average of powers,
+//   the running average of energies
+//
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 2)
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  Tcl_SetObjResult(interp, Tcl_NewListObj(3, (Tcl_Obj *[]){ Tcl_NewIntObj(data->frame), Tcl_NewDoubleObj(data->power), Tcl_NewDoubleObj(data->energy), NULL }));
-  return TCL_OK;
+  return fw_success_obj(interp, 
+			Tcl_NewListObj(5, (Tcl_Obj *[]){ 
+			    Tcl_NewIntObj(data->frame), 
+			      Tcl_NewDoubleObj(data->dbpower), Tcl_NewDoubleObj(data->dbenergy),
+			      Tcl_NewDoubleObj(data->dbp.average), Tcl_NewDoubleObj(data->dbe.average),
+			      NULL }));
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
