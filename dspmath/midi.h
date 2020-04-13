@@ -27,13 +27,15 @@ extern "C"
 ** MIDI commands semi-implemented
 ** We currently use note-on 1 and note-on 0 to change logical signals.
 ** Logical signals are allocated in blocks of 16, the keyer predefines
-** the following offsets within the block.
+** the following offsets within the block.  This change affect the keyer
+** to keyed-tone connection and subsequent PTT connections mostly.
 */
-#define MIDI_KEYER_KEY 0	/* the straight key, mono tip */
-#define MIDI_KEYER_DIT 1	/* the left paddle, stereo/trrs tip */
-#define MIDI_KEYER_DAH 2	/* the right paddle, stereo ring / trrs ring1 */
-#define MIDI_KEYER_AUX 3  	/* the other button, trrs ring2 */
-
+#define MIDI_KEYER_DIT 0	/* the left paddle, stereo/trrs tip */
+#define MIDI_KEYER_DAH 1	/* the right paddle, stereo ring / trrs ring1 */
+#define MIDI_KEYER_AUX 2  	/* the other button, trrs ring2 */
+#define MIDI_KEYER_KEY 3	/* the straight key, mono tip */
+#define MIDI_KEYER_PTT 4        /* the PTT signal */
+  
 /*
 ** If we did anything more, then information would travel as SYSEX strings.
 ** SYSEX is formatted:

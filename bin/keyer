@@ -539,8 +539,9 @@ snit::type keyer::options {
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
-	    {*cw-latency-timing* -mtap?} -
-	    {*cw-latency-timing* -atap?} -
+	    {*midi-tap-view* -tap*} -
+	    {*cw-latency-timing* -mtap*} -
+	    {*cw-latency-timing* -atap*} -
 	    {*cw-decode-view* -detime} -
 	    {*cw-encode-input* -ascii} -
 	    {*goertzel-char* -ins} -
@@ -634,6 +635,8 @@ snit::type keyer::options {
 		# no  {*}$args because it's only sdrtcl -server
 		pack [$factory $window] -side top -expand true -fill both
 		# puts "packed $window"
+		wm withdraw $window
+		wm deiconify $window
 	    }
 	    sdrtcltk::* {
 		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
@@ -643,6 +646,8 @@ snit::type keyer::options {
 		set window .$name.$name
 		pack [$factory $window {*}$args] -side top -expand true -fill both
 		$window activate
+		wm withdraw $window
+		wm deiconify $window
 	    }
 	    default { error "$factory did not match switch" }
 	}
@@ -852,7 +857,7 @@ snit::type keyer::setups {
 	    key {
 		start { keyer -start keyer-iambic@key -run keyo -key-wpm 17 -keyo-ramp 4.0 -key-mode B }
 		info { iambic keyer and a keyed oscillator }
-		connect { {?system:midi_capture_1 ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
+		connect { {?system:midi_capture_* ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
 	    }
 	    key2 { 
 		start {keyer -start {keyer-iambic@key2 keyer-tone@key2o} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -key2o-ramp 4.0 -key2o-note 2 }
@@ -903,7 +908,7 @@ snit::type keyer::setups {
 		info {start midi insert node}
 	    }
 	    tap {
-		start { keyer -start {midi-tap-view@tap} }
+		start { keyer mtap -start {midi-tap-view@tap} -tap-tap mtap }
 		info {midi monitor for timing events}
 	    }
 	    tap2 {
@@ -1271,7 +1276,7 @@ package require sdrtcl::jack
 # 1) connect $from to $to if both exist, $from is an output, and $to is an input
 # 2) if $from or $to starts with a ?, connect it if it exists, otherwise skip it
 # 3) allow from and to to be lists, connect each element of from to each element of to
- 
+# todo) allow from and to to be patterns which succeed if they match one port or an iq pair 
 proc make-connections {} {
     if { ! [has-connect]} return
     set args [get-connect]
@@ -1283,7 +1288,10 @@ proc make-connections {} {
 		if { ! [dict exists $ports [string range $from 1 end]]} continue
 		set from [string range $from 1 end]
 	    }
-	    if { ! [dict exists $ports $from] } { puts "$from is not a port"; continue }
+	    if { ! [dict exists $ports $from] } { 
+		puts "$from is not a port"
+		continue 
+	    }
 	    if { ! ([dict get $ports $from direction] eq {output}) } { puts "$from is not an output port"; continue }
 	    foreach to $tlist {
 		if {[string match {\?*} $to]} {
@@ -1291,7 +1299,10 @@ proc make-connections {} {
 		    set to [string range $to 1 end]
 		}
 		# puts "connect $from $to"
-		if { ! [dict exists $ports $to] } { puts "$to is not a port"; continue }
+		if { ! [dict exists $ports $to] } { 
+		    puts "$to is not a port"
+		    continue
+		}
 		if { ! ([dict get $ports $to direction] eq {input}) } { puts "$to is not an input port"; continue }
 		if {$to ni [dict get $ports $from connections]} {
 		    sdrtcl::jack connect $from $to

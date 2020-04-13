@@ -42,3 +42,14 @@ set b1 [binary format f* [concat 1 0 [zeroes 8190]]]
 set b2 [binary format f* [concat 0 0 1 0 [zeroes 8188]]]
 if {[string length $b1] != 4*8192} { error "string length \$b1 [string length $b1] != 4*8192" }
 if {[string length $b2] != 4*8192} { error "string length \$b2 [string length $b1] != 4*8192" }
+
+set b1b1 [dsptcl::vector-rdot $b1 $b1]
+set b2b2 [dsptcl::vector-rdot $b2 $b2]
+set b1b2at0 [dsptcl::vector-rdot $b1 $b2 0 0]
+set b1b2at1 [dsptcl::vector-rdot $b1 $b2 0 1]
+set b1b2at2 [dsptcl::vector-rdot $b1 $b2 0 2]
+# so b1b2at1 is larger than b1b1 and b2b2 because the overlap is shorter
+# puts "$b1b1 $b2b2 $b1b2at0 $b1b2at1 $b1b2at2"
+foreach v {b1b1 b2b2 b1b2at1 b1b2at2} {
+    if {$b1b2at1 < [set $v]} { error "b1b2at1 < $v" }
+}

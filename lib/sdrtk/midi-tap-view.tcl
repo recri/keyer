@@ -39,12 +39,13 @@ snit::widgetadaptor sdrtk::midi-tap-view {
 	installhull using text
 	$self configure -width 30 -height 15 {*}$args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
-	set handler [after 100 [mymethod timeout]]
+	set handler [after 500 [mymethod first-timeout]]
     }
     
-    method exposed-options {} { return {-font -foreground -background} }
+    method exposed-options {} { return {-font -foreground -background -tap} }
     method info-option {opt} {
 	switch -- $opt {
+	    -tap { return {midi tap component} }
 	    -background { return {color of window background} }
 	    -foreground { return {color for text display} }
 	    -font { return {font for text display} }
@@ -55,9 +56,12 @@ snit::widgetadaptor sdrtk::midi-tap-view {
     # should figure out how to make the tap stream into a channel
     # that fires a fileevent when readable, then there would be no
     # need for this timeout polling
-    
+    method first-timeout {} {
+	$options(-tap) start
+	$self timeout
+    }
     method timeout {} {
-	foreach event [$tap get] {
+	foreach event [$options(-tap) get] {
 	    foreach {frame midi} $event break
 	    binary scan $midi c* bytes
 	    set out [format {%8lu %8lu} $frame [expr {$frame-$tapframe}]]
@@ -84,8 +88,8 @@ snit::widgetadaptor sdrtk::midi-tap-view {
 	    $win.m add separator
 	    $win.m add command -label {Save To File} -command [mymethod save-file]
 	    $win.m add separator
-	    $win.m add command -label {Start} -command [list $tap start]
-	    $win.m add command -label {Stop} -command [list $tap stop]
+	    $win.m add command -label {Start} -command [list $options(-tap) start]
+	    $win.m add command -label {Stop} -command [list $options(-tap) stop]
 	}
 	tk_popup $win.m $x $y
     }

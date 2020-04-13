@@ -1,0 +1,13 @@
+#!/usr/bin/wish
+toplevel .foo1
+after idle {
+    foreach w [concat . [winfo children .]] {
+	foreach m {exists ismapped viewable class toplevel parent children} {
+	    catch {winfo $m $w} msg; puts "winfo $m $w -> {$msg}"
+	}
+    }
+    puts "wm state .foo1: [wm state .foo1]"
+    wm withdraw .foo1
+    wm deiconify .foo1
+    puts "wm state .foo1: [wm state .foo1]"
+}
