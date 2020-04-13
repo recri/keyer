@@ -25,9 +25,18 @@ extern "C"
 
 /*
 ** MIDI commands semi-implemented
-** We use note-on and note-off to change logical signals.
-** Most information travels as SYSEX strings.
-** Our sysex is formatted:
+** We currently use note-on 1 and note-on 0 to change logical signals.
+** Logical signals are allocated in blocks of 16, the keyer predefines
+** the following offsets within the block.
+*/
+#define MIDI_KEYER_KEY 0	/* the straight key, mono tip */
+#define MIDI_KEYER_DIT 1	/* the left paddle, stereo/trrs tip */
+#define MIDI_KEYER_DAH 2	/* the right paddle, stereo ring / trrs ring1 */
+#define MIDI_KEYER_AUX 3  	/* the other button, trrs ring2 */
+
+/*
+** If we did anything more, then information would travel as SYSEX strings.
+** SYSEX is formatted:
 ** (uint8_t[]){
 **	MIDI_SYSEX, MIDI_SYSEX_VENDOR, MIDI_SYSEX_SUBV1, MIDI_SYSEX_SUBV2, ..., MIDI_SYSEX_END
 ** }
