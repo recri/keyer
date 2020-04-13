@@ -836,257 +836,244 @@ snit::type keyer::setups {
 	}
     }
     
-    method default-setups {} {
-	#
-	# connection hints
-	#  -connect system-midi>key>kyo>system-audio
-	#  -connect system-midi>key2>kyo2>system-audio
-	#  -connect kbd>kbo>system-audio
-	#  -connect kbd2>kbo2>system-audio
-	#  -connect >ptt>
-	#  -connect >deb>
-	#  -connect cas>key*
-	#  -connect (kyo|kbo)*>detone>out (or receiver stream?)
-	#
-	
-	return [dict create {*}{ 
-	    keyo {
-		start { keyer -start keyer-tone@keyo }
-		info { a keyed oscillator }
+    variable defaults [dict create {*}{ 
+	keyo {
+	    start { keyer -start keyer-tone@keyo }
+	    info { a keyed oscillator }
+	}
+	key {
+	    start { keyer -start keyer-iambic@key -run keyo -key-wpm 17 -keyo-ramp 4.0 -key-mode B }
+	    info { iambic keyer and a keyed oscillator }
+	    connect { {?system:midi_capture_1 ?system:midi_capture_2 ?system:midi_capture_3 ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
+	}
+	key2 { 
+	    start {keyer -start {keyer-iambic@key2 keyer-tone@key2o} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -key2o-ramp 4.0 -key2o-note 2 }
+	    info { second iambic keyer and keyed oscillator }
+	    connect { key2:midi_out key2o:midi_in }
+	}
+	kbd {
+	    start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cw-encode-input@enc keyer-tone@kbdo} -kbd-wpm 80 -kbdo-ramp 6.6 -enc-ascii kbd }
+	    info {keyboard keyer and a keyed oscillator}
+	    connect { kbd:midi_out kbdo:midi_in }
+	}
+	kbd2 {
+	    start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cw-encode-input@enc2 keyer-tone@kbd2o} -kbd2-wpm 80 -kbd2o-ramp 6.6 -enc2-ascii kbd2 }
+	    info {second keyboard keyer and a keyed oscillator}
+	    connect { kbd2:midi_out kbd2o:midi_in }
+	}
+	ptt {
+	    start { keyer -start {keyer-ptt@ptt} }
+	    info {push-to-talk switch with tx delay}
+	}
+	deb {
+	    start { keyer -start {keyer-debounce@deb} }
+	    info {key contact debouncer}
+	}
+	cas {
+	    start { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
+	    info {midi events from keyboard keys}
+	    note { should this be cas:midi_capture_1? }
+	}
+	mtap {
+	    start { keyer -start {sdrtcl::midi-tap@mtap} }
+	    info {raw midi tap}
+	}
+	mtap2 {
+	    start { keyer -start {sdrtcl::midi-tap@mtap2} }
+	    info {second raw midi tap}
+	}
+	atap {
+	    start { keyer -start {sdrtcl::audio-tap@atap} }
+	    info {raw audio sample tap}
+	}
+	atap2 {
+	    start { keyer -start {sdrtcl::audio-tap@atap2} }
+	    info {second raw audio sample tap}
+	}
+	ins {
+	    start { keyer -start midi-insert@ins }
+	    info {start midi insert node}
+	}
+	tap {
+	    start { keyer mtap -start {midi-tap-view@tap} -tap-tap mtap }
+	    info {midi monitor for timing events}
+	}
+	tap2 {
+	    start { keyer -start {midi-tap-view@tap2} }
+	    info {second midi monitor for timing events}
+	}
+	detone {
+	    start { keyer -start {sdrtcl::filter-goertzel@detone} }
+	    info {goertzel audio filter to detect cw tone}
+	}
+	detone2 {
+	    start { keyer -start {sdrtcl::filter-goertzel@detone2} }
+	    info {second goertzel audio filter to detect cw tone}
+	}
+	fg {
+	    start { keyer -start {filter-goertzel@fg} }
+	    info {real valued Goertzel filter to detect cw tone}
+	}
+	fcg {
+	    start { keyer -start {filter-complex-goertzel@fcg} }
+	    info {complex valued Goertzel filter to detect cw tone}
+	}
+	detime {
+	    start { keyer -start {keyer-detime@detime} }
+	    info {key event to dits, dahs, and spaces translator}
+	}
+	detime2 {
+	    start { keyer -start {keyer-detime@detime2} }
+	    info {second key event to dits, dahs, and spaces translator}
+	}
+	out {
+	    start { keyer detone detime -start {sdrtk::cw-decode-view@out} -out-detime detime -detime-wpm 17}
+	    info {audio to ascii morse decoder}
+	    connect { detone:midi_out detime:midi_in }
+	}
+	hl {
+	    start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
+	    info { hermes lite udp jack connection }
+	}
+	noise {
+	    start { keyer -start {iq-noise@noise} }
+	    info { iq correlated noise generator }
+	}
+	spec {
+	    start { keyer -start {spectrum-waterfall-view@spec}}
+	    info { spectrum and waterfall display }
+	}
+	spec2 {
+	    start { keyer -start {spectrum-waterfall-view@spec2}}
+	    info { spectrum and waterfall display }
+	}
+	filt {
+	    start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
+	    info { overlap save bandpass filter }
+	}
+	nod {
+	    start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-awsp *-word *-weight *-ratio *-comp *-mdit *-mdah *-mide} }
+	    info {hide esoteric keyer options}
+	}
+	noc {
+	    start { keyer -hide {*-client *-server *-verbose *-chan} }
+	    info {hide common useless options}
+	}
+	1ch {
+	    start { keyer -merge {*-chan *-note} }
+	    info {merge midi channel and note options}
+	}
+	key+out {
+	    start { keyer key out}
+	    info {iambic keyer and decoder}
+	    connect {
+		keyo:out_i detone:in_i
+		keyo:out_i {system:playback_1 system:playback_2}
 	    }
-	    key {
-		start { keyer -start keyer-iambic@key -run keyo -key-wpm 17 -keyo-ramp 4.0 -key-mode B }
-		info { iambic keyer and a keyed oscillator }
-		connect { {?system:midi_capture_* ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
-	    }
-	    key2 { 
-		start {keyer -start {keyer-iambic@key2 keyer-tone@key2o} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -key2o-ramp 4.0 -key2o-note 2 }
-		info { second iambic keyer and keyed oscillator }
-		connect { key2:midi_out key2o:midi_in }
-	    }
-	    kbd {
-		start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cw-encode-input@enc keyer-tone@kbdo} -kbd-wpm 80 -kbdo-ramp 6.6 -enc-ascii kbd }
-		info {keyboard keyer and a keyed oscillator}
-		connect { kbd:midi_out kbdo:midi_in }
-	    }
-	    kbd2 {
-		start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cw-encode-input@enc2 keyer-tone@kbd2o} -kbd2-wpm 80 -kbd2o-ramp 6.6 -enc2-ascii kbd2 }
-		info {second keyboard keyer and a keyed oscillator}
-		connect { kbd2:midi_out kbd2o:midi_in }
-	    }
-	    ptt {
-		start { keyer -start {keyer-ptt@ptt} }
-		info {push-to-talk switch with tx delay}
-	    }
-	    deb {
-		start { keyer -start {keyer-debounce@deb} }
-		info {key contact debouncer}
-	    }
-	    cas {
-		start { keyer -start {midi-insert-key@cas} -cas-dit Alt_R -cas-dah Control_R }
-		info {midi events from keyboard keys}
-		note { should this be cas:midi_capture_1? }
-	    }
-	    mtap {
-		start { keyer -start {sdrtcl::midi-tap@mtap} }
-		info {raw midi tap}
-	    }
-	    mtap2 {
-		start { keyer -start {sdrtcl::midi-tap@mtap2} }
-		info {second raw midi tap}
-	    }
-	    atap {
-		start { keyer -start {sdrtcl::audio-tap@atap} }
-		info {raw audio sample tap}
-	    }
-	    atap2 {
-		start { keyer -start {sdrtcl::audio-tap@atap2} }
-		info {second raw audio sample tap}
-	    }
-	    ins {
-		start { keyer -start midi-insert@ins }
-		info {start midi insert node}
-	    }
-	    tap {
-		start { keyer mtap -start {midi-tap-view@tap} -tap-tap mtap }
-		info {midi monitor for timing events}
-	    }
-	    tap2 {
-		start { keyer -start {midi-tap-view@tap2} }
-		info {second midi monitor for timing events}
-	    }
-	    detone {
-		start { keyer -start {sdrtcl::filter-goertzel@detone} }
-		info {goertzel audio filter to detect cw tone}
-	    }
-	    detone2 {
-		start { keyer -start {sdrtcl::filter-goertzel@detone2} }
-		info {second goertzel audio filter to detect cw tone}
-	    }
-	    fg {
-		start { keyer -start {filter-goertzel@fg} }
-		info {real valued Goertzel filter to detect cw tone}
-	    }
-	    fcg {
-		start { keyer -start {filter-complex-goertzel@fcg} }
-		info {complex valued Goertzel filter to detect cw tone}
-	    }
-	    detime {
-		start { keyer -start {keyer-detime@detime} }
-		info {key event to dits, dahs, and spaces translator}
-	    }
-	    detime2 {
-		start { keyer -start {keyer-detime@detime2} }
-		info {second key event to dits, dahs, and spaces translator}
-	    }
-	    out {
-		start { keyer detone detime -start {sdrtk::cw-decode-view@out} -out-detime detime -detime-wpm 17}
-		info {audio to ascii morse decoder}
-		connect { detone:midi_out detime:midi_in }
-	    }
-	    hl {
-		start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
-		info { hermes lite udp jack connection }
-	    }
-	    noise {
-		start { keyer -start {iq-noise@noise} }
-		info { iq correlated noise generator }
-	    }
-	    spec {
-		start { keyer -start {spectrum-waterfall-view@spec}}
-		info { spectrum and waterfall display }
-	    }
-	    spec2 {
-		start { keyer -start {spectrum-waterfall-view@spec2}}
-		info { spectrum and waterfall display }
-	    }
-	    filt {
-		start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
-		info { overlap save bandpass filter }
-	    }
-	    nod {
-		start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-awsp *-word *-weight *-ratio *-comp *-mdit *-mdah *-mide} }
-		info {hide esoteric keyer options}
-	    }
-	    noc {
-		start { keyer -hide {*-client *-server *-verbose *-chan} }
-		info {hide common useless options}
-	    }
-	    1ch {
-		start { keyer -merge {*-chan *-note} }
-		info {merge midi channel and note options}
-	    }
-	    key+out {
-		start { keyer key out}
-		info {iambic keyer and decoder}
-		connect {
-		    keyo:out_i detone:in_i
-		    keyo:out_i {system:playback_1 system:playback_2}
-		}
-	    }
-	    xsco {
-		start { keyer -exec {x42-scope -j xsc >& ~/.config/keyer/xsco.log} }
-		info { x42-scope, 4 channel scope jack plugin }
-	    }
-	    xspe {
-		start { keyer -exec {x42-spectr -j xspe >& ~/.config/keyer/xspe.log} }
-		info { x42-spectr, audio spectrum analyser jack plugin }
-	    }
-	    xmet {
-		start { keyer -exec {x42-meter -j xmet >& ~/.config/keyer/xmet.log} }
-		info { x42-meter, audio level meter jack plugin }
-	    }
+	}
+	xsco {
+	    start { keyer -exec {x42-scope -j xsc >& ~/.config/keyer/xsco.log} }
+	    info { x42-scope, 4 channel scope jack plugin }
+	}
+	xspe {
+	    start { keyer -exec {x42-spectr -j xspe >& ~/.config/keyer/xspe.log} }
+	    info { x42-spectr, audio spectrum analyser jack plugin }
+	}
+	xmet {
+	    start { keyer -exec {x42-meter -j xmet >& ~/.config/keyer/xmet.log} }
+	    info { x42-meter, audio level meter jack plugin }
+	}
 
-	    hlt {
-		start { keyer -start {hl-test@hlt} -keyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
-		info { hermes lite test dashboard }
+	hlt {
+	    start { keyer -start {hl-test@hlt} -keyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
+	    info { hermes lite test dashboard }
+	}
+	test {
+	    start { keyer key kbd out hl spec filt hlt -tree 1 } 
+	    info { hermes lite test app }
+	    connect { {key kbd} {out hl} hl {spec filt} }
+	}
+	delay {
+	    start { keyer -start {sample-delay@delay} -eval { delay start }}
+	    info { iq delay }
+	}
+	gain {
+	    start { keyer -start {gain@gain} }
+	    info { iq gain/attenuation }
+	}
+	gain2 {
+	    start { keyer -start {gain@gain2} }
+	    info { second iq gain/attenuation }
+	}
+	cwt {
+	    start { 
+		keyer gain detone mtap atap delay gain2 detone2 mtap2 atap2 nod noc
+		-start cw-latency-timing@cwt -cwt-mtap1 mtap -cwt-mtap2 mtap2 -cwt-atap1 atap -cwt-atap2 atap2
+		-gain-gain 0 -gain2-gain 0
+		-detone-bandwidth 187.5 -detone2-bandwidth 187.5
 	    }
-	    test {
-		start { keyer key kbd out hl spec filt hlt -tree 1 } 
-		info { hermes lite test app }
-		connect { {key kbd} {out hl} hl {spec filt} }
+	    info { cw latency detection widget }
+	    connect {
+		gain:out_i {detone:in_i atap:in_i delay:in_i} 
+		gain:out_q {atap:in_q delay:in_q}
+		detone:midi_out mtap:midi_in
+		delay:out_i gain2:in_i 
+		delay:out_q gain2:in_q
+		gain2:out_i {detone2:in_i atap2:in_i system:playback_1 system:playback_2}
+		gain2:out_q atap2:in_q
+		detone2:midi_out mtap2:midi_in
 	    }
-	    delay {
-		start { keyer -start {sample-delay@delay} -eval { delay start }}
-		info { iq delay }
+	    ports {
+		cwt1:in_i
+		cwtm1:in_i cwtm1:in_q
+		cwtd:in_i cwtd:in_q
 	    }
-	    gain {
-		start { keyer -start {gain@gain} }
-		info { iq gain/attenuation }
+	}
+	cwtest {
+	    start { keyer key cwt }
+	    info { cw latency detection debugging }
+	    connect { 
+		{?system:midi_capture_1 ?cas:midi_out} key:midi_in 
+		keyo:out_i {system:playback_1 gain:in_i}
+		keyo:out_q {system:playback_2 gain:in_q}
 	    }
-	    gain2 {
-		start { keyer -start {gain@gain2} }
-		info { second iq gain/attenuation }
+	}
+	filter-test {
+	    start { keyer noise spec filt spec2 -noise-level -50 -filt-length 512 -filt-low 0 -filt-high 1400 -spec-filter-low 0 -spec-filter-high 1400}
+	    info { test operation of overlap save filter on noise source }
+	    connect { 
+		noise:out_i filt:in_i noise:out_q filt:in_q 
+		noise:out_i spec:in_i noise:out_q spec:in_q 
+		filt:out_i spec2:in_i filt:out_q spec2:in_q 
 	    }
-	    cwt {
-		start { 
-		    keyer gain detone mtap atap delay gain2 detone2 mtap2 atap2 nod noc
-		    -start cw-latency-timing@cwt -cwt-mtap1 mtap -cwt-mtap2 mtap2 -cwt-atap1 atap -cwt-atap2 atap2
-		    -gain-gain 0 -gain2-gain 0
-		    -detone-bandwidth 187.5 -detone2-bandwidth 187.5
-		}
-		info { cw latency detection widget }
-		connect {
-		    gain:out_i {detone:in_i atap:in_i delay:in_i} 
-		    gain:out_q {atap:in_q delay:in_q}
-		    detone:midi_out mtap:midi_in
-		    delay:out_i gain2:in_i 
-		    delay:out_q gain2:in_q
-		    gain2:out_i {detone2:in_i atap2:in_i system:playback_1 system:playback_2}
-		    gain2:out_q atap2:in_q
-		    detone2:midi_out mtap2:midi_in
-		}
-		ports {
-		    cwt1:in_i
-		    cwtm1:in_i cwtm1:in_q
-		    cwtd:in_i cwtd:in_q
-		}
+	}
+	goertzel-test {
+	    start { keyer cas key noise fg fcg mtap nod noc -start {sdrtk::goertzel-graph@win} 
+		-fg-note 8 -fcg-note 16 -win-filter1 fg -win-filter2 fcg -win-tap mtap}
+	    info { test operation of goertzel filter on keyed tone }
+	    connect { 
+		{?system:midi_capture_1 cas:midi_out} key:midi_in
+		{keyo:out_i noise:out_i} {system:playback_1 system:playback_2 fg:in_i fcg:in_i}
+		{keyo:out_q noise:out_q} fcg:in_q
+		{key:midi_out fg:midi_out fcg:midi_out} mtap:midi_in
+		keyo:out_i ?xsc:in1 
+		?fg:out_i ?xsc:in2
+		?fcg:out_i ?xsc:in3
+		?fcg:out_q ?xsc:in4
 	    }
-	    cwtest {
-		start { keyer key cwt }
-		info { cw latency detection debugging }
-		connect { 
-		    {?system:midi_capture_1 ?cas:midi_out} key:midi_in 
-		    keyo:out_i {system:playback_1 gain:in_i}
-		    keyo:out_q {system:playback_2 gain:in_q}
-		}
+	}
+	goertzel-characterize {
+	    start { keyer ins keyo noise fg fcg -start sdrtk::goertzel-characterize@top
+		-top-ins ins -top-osc keyo -top-noise noise -top-filter1 fg -top-filter2 fcg}
+	    info { characterize goertzel filters performance with different parameters }
+	    connect { 
+		{keyo:out_i noise:out_i} {fg:in_i fcg:in_i}
+		{keyo:out_q noise:out_q} fcg:in_q
+		ins:midi_out keyo:midi_in
 	    }
-	    filter-test {
-		start { keyer noise spec filt spec2 -noise-level -50 -filt-length 512 -filt-low 0 -filt-high 1400 -spec-filter-low 0 -spec-filter-high 1400}
-		info { test operation of overlap save filter on noise source }
-		connect { 
-		    noise:out_i filt:in_i noise:out_q filt:in_q 
-		    noise:out_i spec:in_i noise:out_q spec:in_q 
-		    filt:out_i spec2:in_i filt:out_q spec2:in_q 
-		}
-	    }
-	    goertzel-test {
-		start { keyer cas key noise fg fcg mtap nod noc -start {sdrtk::goertzel-graph@win} 
-		    -fg-note 8 -fcg-note 16 -win-filter1 fg -win-filter2 fcg -win-tap mtap}
-		info { test operation of goertzel filter on keyed tone }
-		connect { 
-		    {?system:midi_capture_1 cas:midi_out} key:midi_in
-		    {keyo:out_i noise:out_i} {system:playback_1 system:playback_2 fg:in_i fcg:in_i}
-		    {keyo:out_q noise:out_q} fcg:in_q
-		    {key:midi_out fg:midi_out fcg:midi_out} mtap:midi_in
-		    keyo:out_i ?xsc:in1 
-		    ?fg:out_i ?xsc:in2
-		    ?fcg:out_i ?xsc:in3
-		    ?fcg:out_q ?xsc:in4
-		}
-	    }
-	    goertzel-characterize {
-		start { keyer ins keyo noise fg fcg -start sdrtk::goertzel-characterize@top
-		    -top-ins ins -top-osc keyo -top-noise noise -top-filter1 fg -top-filter2 fcg}
-		info { characterize goertzel filters performance with different parameters }
-		connect { 
-		    {keyo:out_i noise:out_i} {fg:in_i fcg:in_i}
-		    {keyo:out_q noise:out_q} fcg:in_q
-		    ins:midi_out keyo:midi_in
-		}
-	    }
-	}]
-    }
+	}
+    }]
+    method default-setups {} { return $defaults }
 }
 proc is-setup {name} { return [::setups is-setup $name] }
 proc get-setup-names {} { return [::setups get-names] }
