@@ -125,7 +125,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   jack_nframes_t frame;
   Tcl_Obj *bytes;
   while (_read(data, &frame, &bytes)) {
-    Tcl_Obj *element[] = { Tcl_NewIntObj(frame), bytes, NULL };
+    Tcl_Obj *element[] = { Tcl_NewLongObj(frame), bytes, NULL };
     Tcl_ListObjAppendElement(interp, list, Tcl_NewListObj(2, element));
   }
   Tcl_SetObjResult(interp, list);

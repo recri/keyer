@@ -23,7 +23,6 @@
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_USES_INTERP 1
 #define FRAMEWORK_OPTIONS_MIDI 1
-#define FRAMEWORK_OPTIONS_START 1
 
 #include "framework.h"
 #include "../dspmath/ring_buffer.h"
@@ -68,7 +67,6 @@ static int _read(_t *data, jack_nframes_t *framep, Tcl_Obj **bytes) {
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
   void *e = ring_buffer_init(&data->rb, sizeof(data->buff), data->buff); if (e != &data->rb) return e;
-  data->started = data->opts.start;
   return arg;
 }
 
@@ -100,7 +98,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   jack_nframes_t frame;
   Tcl_Obj *bytes;
   while (_read(data, &frame, &bytes)) {
-    Tcl_Obj *element[] = { Tcl_NewIntObj(frame), bytes, NULL };
+    Tcl_Obj *element[] = { Tcl_NewLongObj(frame), bytes, NULL };
     Tcl_ListObjAppendElement(interp, list, Tcl_NewListObj(2, element));
   }
   Tcl_SetObjResult(interp, list);
@@ -129,9 +127,7 @@ static int _stop(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* c
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
-  int start = data->opts.start;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  if (start != data->opts.start) data->started = start;
   return TCL_OK;
 }
 

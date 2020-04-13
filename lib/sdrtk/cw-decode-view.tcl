@@ -60,12 +60,6 @@ snit::widgetadaptor sdrtk::cw-decode-view {
 	set handler [after 100 [mymethod timeout]]
     }
 
-    method is-busy {} { return 0 }
-    method activate {} { }
-    method deactivate {} { }
-    
-    # {-color1 -color2 -background}
- 
     method exposed-options {} { return {-dict -font -foreground -background -detime} }
 
     method info-option {opt} {

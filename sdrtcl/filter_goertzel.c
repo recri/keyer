@@ -146,7 +146,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   _t *data = (_t *)clientData;
   return fw_success_obj(interp, 
 			Tcl_NewListObj(5, (Tcl_Obj *[]){ 
-			    Tcl_NewIntObj(data->frame), 
+			    Tcl_NewLongObj(data->frame), 
 			      Tcl_NewDoubleObj(data->dbpower), Tcl_NewDoubleObj(data->dbenergy),
 			      Tcl_NewDoubleObj(data->dbp.average), Tcl_NewDoubleObj(data->dbe.average),
 			      NULL }));

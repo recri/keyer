@@ -39,9 +39,17 @@
 
 #define FRAMEWORK_USES_JACK 1
 
-#include "../dspmath/dspmath.h"
 #include "framework.h"
+#include "../dspmath/dspmath.h"
+#include "../dspmath/packet_ring_buffer.h"
 #include <strings.h>
+
+/*
+** this structure describes the options of the hermes lite.
+** some of these must be set at creation time, some are set and updated by
+** the user during operation of the radio, some are set and updated by 
+** information coming back from the radio hardware.
+*/
 
 typedef struct {
   /* discovered options */
@@ -121,22 +129,6 @@ typedef struct {
 **   2 bytes of L channel audio data
 **   2 bytes of R channel audio data
 */
-
-/*
-** ring buffers for shuffling byte arrays between threads
-*/
-#define PACKET_RING_SIZE 64	/* must be power of two */
-/* #assert(PACKET_RING_SIZE > 1) */
-/* #assert((PACKET_RING_SIZE & (PACKET_RING_SIZE-1)) == 0) */
-typedef struct {
-  Tcl_Obj *ring[PACKET_RING_SIZE];
-  unsigned short rdptr, wrptr;
-} packet_ring_buffer_t;
-static inline void packet_ring_buffer_init(packet_ring_buffer_t *rb) { rb->rdptr = rb->wrptr = 0; }
-static inline int packet_ring_buffer_can_read(packet_ring_buffer_t *rb) { return (rb->wrptr - rb->rdptr)&(PACKET_RING_SIZE-1); }
-static inline Tcl_Obj *packet_ring_buffer_read(packet_ring_buffer_t *rb) { return rb->ring[rb->rdptr++&(PACKET_RING_SIZE-1)]; }
-static inline int packet_ring_buffer_can_write(packet_ring_buffer_t *rb) { return PACKET_RING_SIZE-packet_ring_buffer_can_read(rb); }
-static inline void packet_ring_buffer_write(packet_ring_buffer_t *rb, Tcl_Obj *obj) { rb->ring[rb->wrptr++&(PACKET_RING_SIZE-1)] = obj; }
 
 /*
 ** current active packet for tx or rx samples

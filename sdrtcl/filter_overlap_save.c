@@ -77,7 +77,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   _t *data = (_t *)clientData;
   // fprintf(stderr, "ovsv max_abs in get = %.5f\n", complex_vector_max_abs(data->ovsv.zfilter, data->ovsv.fftlen));
   Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
+    Tcl_NewLongObj(jack_frame_time(data->fw.client)),
     Tcl_NewByteArrayObj((unsigned char *)data->ovsv.zfilter, data->ovsv.fftlen*sizeof(float complex)),
     NULL
   };

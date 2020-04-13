@@ -54,9 +54,6 @@ snit::widgetadaptor sdrtk::goertzel-graph {
 	after $data(timeout) [mymethod poll]
     }
     
-    method is-busy {} { return 0 }
-    method activate {} { return 0 }
-    method deactivate {} { return 0 }
     method exposed-options {} { return {-filter1 -filter2 -filter3 -tap} }
     method {info-option -filter1} {} { return {goertzel filter name} }
     method {info-option -filter2} {} { return {goertzel filter name} }

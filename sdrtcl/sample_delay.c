@@ -24,9 +24,10 @@
 #define FRAMEWORK_USES_JACK 1
 
 #include "framework.h"
-
+#include "../dspmath/dspmath.h"
 
 typedef struct {
+#include "framework_options_vars.h"
   int delay;			/* sample delay */
 } options_t;
 
@@ -59,17 +60,19 @@ static inline void sample_ring_buffer_write(sample_ring_buffer_t *rb, float samp
 typedef struct {
   framework_t fw;
   options_t opts;
-  // is this tap running
-  int started;
   // implementation
-  sample_ring_buffer_t ring;
+  int started;
+  int update;
+  sample_ring_buffer_t ring, new_ring, old_ring;
 } _t;
 
 /*
 ** release the memory allocated
 */
 static void _delete_impl(_t *data) {
+  sample_ring_buffer_free(&data->old_ring);
   sample_ring_buffer_free(&data->ring);
+  sample_ring_buffer_free(&data->new_ring);
 }
 
 // from the bit twiddle collection
@@ -89,25 +92,31 @@ unsigned upper_power_of_two(unsigned v)
 ** configure a new delay line, two samples per frame
 */
 static void *_configure_impl(_t *data) {
+  sample_ring_buffer_free(&data->old_ring);
   if (data->opts.delay < 0) return "delay must be non-negative";
-  void *p = sample_ring_buffer_init(&data->ring, upper_power_of_two(2*(data->opts.delay+1)));
-  if (p != &data->ring) return p;
-  if (sample_ring_buffer_can_write(&data->ring) < 2*data->opts.delay) {
-      sample_ring_buffer_free(&data->ring);
+  void *p = sample_ring_buffer_init(&data->new_ring, upper_power_of_two(2*(data->opts.delay+1)));
+  if (p != &data->new_ring) return p;
+  if (sample_ring_buffer_can_write(&data->new_ring) < 2*data->opts.delay) {
+      sample_ring_buffer_free(&data->new_ring);
       return "ring buffer overflow while filling up";
   }
-  for (int i = 0; i < data->opts.delay; i += 1) {
-    sample_ring_buffer_write(&data->ring, 0.0f);
-    sample_ring_buffer_write(&data->ring, 0.0f);
+  // I would rather copy the existing delayed data.
+  // but that's problematic here
+  for (int i = 0; i < 2*data->opts.delay; i += 1)
+    sample_ring_buffer_write(&data->new_ring, 0.0f);
+  fprintf(stderr, "delay %d can read %d\n", data->opts.delay, sample_ring_buffer_can_read(&data->new_ring));
+  if (data->started) {
+    data->update = data->fw.busy = 1;
+  } else {
+    sample_ring_buffer_free(&data->ring);
+    data->ring = data->new_ring;
+    data->new_ring.ring = NULL;
   }
   return data;
 }
 
 static void *_configure(_t *data) {
-  int started = data->started;
-  data->started = 0;		// this may not be as safe as I thought it was
   void *p = _configure_impl(data); if (p != data) return p;
-  data->started = started;
   return data;
 }
 
@@ -130,6 +139,12 @@ static int _process(jack_nframes_t nframes, void *arg) {
     float *in1 = jack_port_get_buffer(framework_input(arg,1), nframes);
     float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
     float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
+    if (data->update) {
+      data->old_ring = data->ring;
+      data->ring = data->new_ring;
+      data->new_ring.ring = NULL;
+      data->update = data->fw.busy = 0;
+    }
     for (int i = 0; i < nframes; i += 1) {
       sample_ring_buffer_write(&data->ring, *in0++);
       sample_ring_buffer_write(&data->ring, *in1++);

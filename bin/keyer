@@ -166,8 +166,11 @@ snit::type keyer::options {
     method component-opts {opt} {
 	set d [dict get $data(opts) $opt]
 	set w [dict get $d window]
-	if {$w ne {}} { return [list $w [dict get $d opt]] }
-	return [list [dict get $d name] [dict get $d opt]]
+	# component definition should test for presence of is-busy method
+	# ditto for activate/deactivate
+	set busyness [string match sdrtcl*::* [dict get $d factory]] 
+	if {$w ne {}} { return [list $w [dict get $d opt] $busyness] }
+	return [list [dict get $d name] [dict get $d opt] $busyness]
     }
 
     # these apply to lists of options or option patterns
@@ -260,11 +263,11 @@ snit::type keyer::options {
 	if {[catch {set options($opt) $val} result]} {
 	    puts "keyer::options configure $opt $val: {set options($opt) $val} threw $result"
 	}
-	foreach {comp opt2} [$self component-opts $opt] {
+	foreach {comp opt2 busyness} [$self component-opts $opt] {
 	    # puts "keyer-options::configure $comp $opt2"
 	    dict set data(busy) $comp $opt2 $val
 	    # puts "keyer-options::configure try: $comp is-busy"
-	    if { ! [$comp is-busy]} {
+	    if { ! $busyness || ! [$comp is-busy]} {
 		set opts [dict get $data(busy) $comp]
 		if {[catch {
 		    # puts "keyer-options::configure try: $comp configure $opts"
@@ -374,7 +377,7 @@ snit::type keyer::options {
 	    {* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
 	    {*insert* -window} { $self describe $option enum -values {none . .dial}}
 	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
-	    {* -bandwidth} { $self describe $option value -format %.0f -min 10 -max 24000 -step 1 -units Hz -graticule 20 -steps-per-div 50}
+	    {* -bandwidth} { $self describe $option value -format %.1f -min 10 -max 24000 -step 0.5 -units Hz -graticule 20 -steps-per-div 50}
 	    {* -on} - 
 	    {* -off} { $self describe $option value -format %.3f -min 0.001 -max 16.0 -step 0.001 -graticule 20 -steps-per-div 5}
 	    {* -timeout} { $self describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
@@ -523,6 +526,9 @@ snit::type keyer::options {
 	    {*iq* -swap} { $self describe $option bool }
 	    {*iq* -delay} { $self describe $option enum info {delay I by one sample, no delay, or delay Q by one sample} -values {-1 0 1} }
 	    {*iq-correct* -rate} { $self describe $option value info {the learning rate for the adaptive filter} -min -1e6 -max 1e6 }
+	    {*audio-tap* -log2n} { $self describe $option enum -values {1 2 3 4 5 6 7 8} }
+	    {*audio-tap* -log2size} { $self describe $option enum -values {8 9 10 11 12 13 14 15 16} }
+	    {*audio-tap* -complex} { $self describe $option bool }
 	    {*leveler* -mode} { $self describe $option enum -values {off leveler} }
 	    {*iambic* -keyer} { $self describe $option enum -values [get-iambic-keyers] }
 	    {*latency-timing* -reduce} -
@@ -533,6 +539,8 @@ snit::type keyer::options {
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
+	    {*cw-latency-timing* -mtap?} -
+	    {*cw-latency-timing* -atap?} -
 	    {*cw-decode-view* -detime} -
 	    {*cw-encode-input* -ascii} -
 	    {*goertzel-char* -ins} -
@@ -875,8 +883,20 @@ snit::type keyer::setups {
 		note { should this be cas:midi_capture_1? }
 	    }
 	    mtap {
-		start { keyer -start {sdrtcl::midi-tap@tap} -tap-start 1 }
+		start { keyer -start {sdrtcl::midi-tap@mtap} }
 		info {raw midi tap}
+	    }
+	    mtap2 {
+		start { keyer -start {sdrtcl::midi-tap@mtap2} }
+		info {second raw midi tap}
+	    }
+	    atap {
+		start { keyer -start {sdrtcl::audio-tap@atap} }
+		info {raw audio sample tap}
+	    }
+	    atap2 {
+		start { keyer -start {sdrtcl::audio-tap@atap2} }
+		info {second raw audio sample tap}
 	    }
 	    ins {
 		start { keyer -start midi-insert@ins }
@@ -981,15 +1001,35 @@ snit::type keyer::setups {
 		info { hermes lite test app }
 		connect { {key kbd} {out hl} hl {spec filt} }
 	    }
+	    delay {
+		start { keyer -start {sample-delay@delay} -eval { delay start }}
+		info { iq delay }
+	    }
+	    gain {
+		start { keyer -start {gain@gain} }
+		info { iq gain/attenuation }
+	    }
+	    gain2 {
+		start { keyer -start {gain@gain2} }
+		info { second iq gain/attenuation }
+	    }
 	    cwt {
-		start { keyer -start cw-latency-timing@cwt }
+		start { 
+		    keyer gain detone mtap atap delay gain2 detone2 mtap2 atap2 nod noc
+		    -start cw-latency-timing@cwt -cwt-mtap1 mtap -cwt-mtap2 mtap2 -cwt-atap1 atap -cwt-atap2 atap2
+		    -gain-gain 0 -gain2-gain 0
+		    -detone-bandwidth 187.5 -detone2-bandwidth 187.5
+		}
 		info { cw latency detection widget }
 		connect {
-		    cwt1:midi_out cwtt1:midi_in
-		    cwtd:out_i cwtg:in_i
-		    cwtd:out_q cwtg:in_q
-		    cwtg:out_i cwt2:in_i
-		    cwt2:midi_out cwtt2:midi_in
+		    gain:out_i {detone:in_i atap:in_i delay:in_i} 
+		    gain:out_q {atap:in_q delay:in_q}
+		    detone:midi_out mtap:midi_in
+		    delay:out_i gain2:in_i 
+		    delay:out_q gain2:in_q
+		    gain2:out_i {detone2:in_i atap2:in_i system:playback_1 system:playback_2}
+		    gain2:out_q atap2:in_q
+		    detone2:midi_out mtap2:midi_in
 		}
 		ports {
 		    cwt1:in_i
@@ -1001,11 +1041,9 @@ snit::type keyer::setups {
 		start { keyer key cwt }
 		info { cw latency detection debugging }
 		connect { 
-		    system:midi_capture_1 key:midi_in 
-		    keyo:out_i system:playback_1
-		    keyo:out_q system:playback_2
-		    keyo:out_i cwt1:in_i
-		    keyo:out_i cwtd:in_i keyo:out_q cwtd:in_q
+		    {?system:midi_capture_1 ?cas:midi_out} key:midi_in 
+		    keyo:out_i {system:playback_1 gain:in_i}
+		    keyo:out_q {system:playback_2 gain:in_q}
 		}
 	    }
 	    filter-test {
@@ -1019,13 +1057,13 @@ snit::type keyer::setups {
 	    }
 	    goertzel-test {
 		start { keyer cas key noise fg fcg mtap nod noc -start {sdrtk::goertzel-graph@win} 
-		    -fg-note 8 -fcg-note 16 -win-filter1 ::fg -win-filter2 ::fcg -win-tap ::tap}
+		    -fg-note 8 -fcg-note 16 -win-filter1 fg -win-filter2 fcg -win-tap mtap}
 		info { test operation of goertzel filter on keyed tone }
 		connect { 
 		    {?system:midi_capture_1 cas:midi_out} key:midi_in
 		    {keyo:out_i noise:out_i} {system:playback_1 system:playback_2 fg:in_i fcg:in_i}
 		    {keyo:out_q noise:out_q} fcg:in_q
-		    {key:midi_out fg:midi_out fcg:midi_out} tap:midi_in
+		    {key:midi_out fg:midi_out fcg:midi_out} mtap:midi_in
 		    keyo:out_i ?xsc:in1 
 		    ?fg:out_i ?xsc:in2
 		    ?fcg:out_i ?xsc:in3
@@ -1045,9 +1083,6 @@ snit::type keyer::setups {
 	}]
     }
 }
-#  -start gain@gain
-# 		    gain:out_i {system:playback_1 system:playback_2}
-#  gain:in_i
 proc is-setup {name} { return [::setups is-setup $name] }
 proc get-setup-names {} { return [::setups get-names] }
 proc get-setup-info {name} { return [::setups get-info $name] }

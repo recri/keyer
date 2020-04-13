@@ -58,7 +58,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(data->fw.client)),
+    Tcl_NewLongObj(jack_frame_time(data->fw.client)),
     Tcl_NewDoubleObj(data->sam.pll.freq.f),
     NULL
   };

@@ -93,9 +93,6 @@ snit::widget sdrtk::goertzel-characterize {
 	after idle [mymethod start-processing]
     }
     
-    method is-busy {} { return 0 }
-    method activate {} { return 0 }
-    method deactivate {} { return 0 }
     method exposed-options {} { return {-filter1 -filter2 -ins -osc -noise -replications} }
     method {info-option -filter1} {} { return {test goertzel filter name} }
     method {info-option -filter2} {} { return {test goertzel filter name} }

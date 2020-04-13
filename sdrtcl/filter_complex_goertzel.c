@@ -118,7 +118,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   if (argc != 2) return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_SetObjResult(interp, Tcl_NewListObj(4, (Tcl_Obj *[]){
-	Tcl_NewIntObj(data->frame), Tcl_NewDoubleObj(cabsf(data->power)), Tcl_NewDoubleObj(cargf(data->power)), Tcl_NewDoubleObj(data->energy), NULL
+	Tcl_NewLongObj(data->frame), Tcl_NewDoubleObj(cabsf(data->power)), Tcl_NewDoubleObj(cargf(data->power)), Tcl_NewDoubleObj(data->energy), NULL
 	  }));
   return TCL_OK;
 }

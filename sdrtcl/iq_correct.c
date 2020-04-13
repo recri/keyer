@@ -77,7 +77,7 @@ static int _error(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* 
     sum_z1_squared += data->buffer[i] * data->buffer[i];
   double complex avg_z1_squared = sum_z1_squared / n;
   Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(data->fw.client)), Tcl_NewDoubleObj(creal(avg_z1_squared)), Tcl_NewDoubleObj(cimag(avg_z1_squared)), NULL
+    Tcl_NewLongObj(jack_frame_time(data->fw.client)), Tcl_NewDoubleObj(creal(avg_z1_squared)), Tcl_NewDoubleObj(cimag(avg_z1_squared)), NULL
   };
   Tcl_SetObjResult(interp, Tcl_NewListObj(3, result));
   return TCL_OK;
@@ -98,7 +98,7 @@ static int _train(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* 
     w -= mu * z1 * z1;		// update filter coefficients += -mu * error
   }
   Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(data->fw.client)), Tcl_NewDoubleObj(creal(w)), Tcl_NewDoubleObj(cimag(w)), NULL
+    Tcl_NewLongObj(jack_frame_time(data->fw.client)), Tcl_NewDoubleObj(creal(w)), Tcl_NewDoubleObj(cimag(w)), NULL
   };
   Tcl_SetObjResult(interp, Tcl_NewListObj(3, result));
   return TCL_OK;
@@ -109,7 +109,7 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
   Tcl_Obj *result[] = {
-    Tcl_NewIntObj(jack_frame_time(data->fw.client)), Tcl_NewDoubleObj(data->iqb.mu), Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)), NULL
+    Tcl_NewLongObj(jack_frame_time(data->fw.client)), Tcl_NewDoubleObj(data->iqb.mu), Tcl_NewDoubleObj(crealf(data->iqb.w)), Tcl_NewDoubleObj(cimagf(data->iqb.w)), NULL
   };
   Tcl_SetObjResult(interp, Tcl_NewListObj(4, result));
   return TCL_OK;
