@@ -635,8 +635,8 @@ snit::type keyer::options {
 		# no  {*}$args because it's only sdrtcl -server
 		pack [$factory $window] -side top -expand true -fill both
 		# puts "packed $window"
-		wm withdraw $window
-		wm deiconify $window
+		wm withdraw .$name
+		wm deiconify .$name
 	    }
 	    sdrtcltk::* {
 		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
@@ -646,8 +646,8 @@ snit::type keyer::options {
 		set window .$name.$name
 		pack [$factory $window {*}$args] -side top -expand true -fill both
 		$window activate
-		wm withdraw $window
-		wm deiconify $window
+		wm withdraw .$name
+		wm deiconify .$name
 	    }
 	    default { error "$factory did not match switch" }
 	}
