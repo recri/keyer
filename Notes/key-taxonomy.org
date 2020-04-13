@@ -1,0 +1,64 @@
+* Key variations
+** Need to rewrite all the key handling to allocate specific notes to
+   specific purposes.
+*** A channel note block has a basenote, typically 0   
+*** basenote+0 is key, wired from tip on mono
+*** basenote+1 is left paddle, wired from tip on stereo
+*** basenote+2 is right paddle, wired from ring on stereo
+*** basenote+3 is aux, wired from fing2 on trrs
+*** basenote+4..15 are unassigned.
+*** channel blocks are defined at 0, 16, 32, 48, ..., 112
+** If you have a stereo jack for an dual contact key, then plugging in
+   a single contact key with a mono plug shorts right paddle to ground.
+   So mono plug, or hold right paddle closed at reset, both signal straight
+   key.
+** If you have a TRRS jack for a dual contact key and aux switch, then 
+   plugging in a stereo plug shorts the auxiliary, and plugging in a mono
+   plug shorts the right paddle and the auxiliary.
+** Auxiliary could be a PTT button, command button, or multi-function
+   single click, double click, triple click, ..., long click, morse code,
+   hi hi.
+** You can connect a rotary encoder with a TRRS jack
+** You can connect a stereo headset microphone with a TRRS jack
+** You can post process:
+*** a dual contact dual lever key into a dual contact single lever key
+    latest paddle contact cancels existing paddle contact
+*** a dual contact dual lever key into a single contact single lever key
+    simply map both contacts to the key signal, and insert some kind of gap
+    between the 
+* From k3ng_cw_keyer
+    \a     Iambic A mode
+    \b     Iambic B mode
+    \c     Single Paddle mode
+    \d     Ultimatic mode (if OPTION_NO_ULTIMATIC not set)
+    \g     Bug mode
+    \&     Toggle CMOS Super Keyer Timing on/off
+    \%##   Set CMOS Super Keyer Timing %
+    A  Switch to Iambic A mode
+    B  Switch to Iambic B mode
+    C  Switch to Single Paddle Mode
+    D  Switch to Ultimatic mode (if OPTION_NO_ULTIMATIC not set)
+    G  Switch to bug mode
+* Straight key
+  single lever single contact
+  contact generates key
+* Iambic paddles
+  dual lever dual contact
+  one paddle generates dits
+  other paddle generates dahs
+  squeeze generates alternating dits and dahs
+** Iambic mode A
+** Iambic mode B
+** Ultimatic
+**
+* Single Lever Paddle
+  single lever dual contact
+  one contact generates dits
+  other contact generates dahs
+* Cootie Key
+  single lever dual contacts shorted together
+  contact generates key
+* Bug
+  dual lever dual contact
+  one contact generates dits
+  other contact generates key

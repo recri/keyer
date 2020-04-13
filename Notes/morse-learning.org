@@ -1,0 +1,23 @@
+* Getting excited about the morse learning possibilities of keyer again.
+** It turns out that Echo practice has become fairly widespread.
+   This is where you key back what is sent to you.
+*** Morserino is a standalone appliance with touch key and speaker
+    that does echo practice
+*** The k3ng keyer includes echo practice
+* But reading n0hff's book I've noted a few good tricks.
+** Koch noticed that sending dits and dahs at different frequencies
+   enhanced the ability to hear their different lengths.
+** The general practice round is to get words and phrases
+   sent at high speed with expanded letter spaces and word spaces
+   and tonally distinguished dits and dahs, and then progressively
+   reduce the expanded spaces and tonal distinctions as lessons.
+** Reversing the phasing on stereo earphones allows for in brain
+   noise cancellation.
+** Never show a visual representation of dits and dahs.
+** Never play a morse code letter at less than 12 wpm.
+** Use a -- lost the thread completely.
+** More encouragement to distinguish key, dit, dah, ptt, and other signals
+   as a specific stack of MIDI signals.  So key would be a straight key
+   and the signal to key a single oscillator, while dit and dah would be
+   signals from an iambic paddle or single lever paddle, and the signals
+   to a frequency shifting oscillator,

@@ -1,0 +1,44 @@
+#!/usr/bin/tclsh
+# -*- mode: Tcl; tab-width: 8; -*-
+#
+# Copyright (C) 2020 by Roger E Critchlow Jr, Charlestown, MA, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+# 
+
+#
+# use the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+#
+# test dsptcl::vector-dot
+#
+package require dsptcl::vector-dot
+
+proc zeroes {n} { return [lrepeat $n 0] }
+proc ones {n} { return [lrepeat $n 1] }
+
+# 8192 floats, 4096 complex floats
+set b1 [binary format f* [concat 1 0 [zeroes 8190]]]
+set b2 [binary format f* [concat 0 0 1 0 [zeroes 8188]]]
+if {[string length $b1] != 4*8192} { error "string length \$b1 [string length $b1] != 4*8192" }
+if {[string length $b2] != 4*8192} { error "string length \$b2 [string length $b1] != 4*8192" }
