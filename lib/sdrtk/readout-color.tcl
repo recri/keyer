@@ -44,8 +44,8 @@ snit::widgetadaptor sdrtk::readout-color {
     method value-to-integer {val} {
 	set i [lsearch -exact $options(-values) $val]
 	if {$i < 0} { 
-	    lappend options(-values) $val
-	    return [value-to-integer $val]
+	    $self configure -values [concat $options(-values) [list $val]]
+	    return [$self value-to-integer $val]
 	}
 	return $i
     }

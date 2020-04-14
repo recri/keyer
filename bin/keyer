@@ -475,7 +475,7 @@ snit::type keyer::options {
 	    {* -background} -
 	    {* -foreground} {
 		#puts "describe $option $opt"
-		$self describe $option color -values {white lightgrey grey darkgrey black red yellow green blue violet magenta}
+		$self describe $option color -values {white grey60 grey40 grey20 black red yellow green blue violet magenta}
 	    }
 	    {* -font} {
 		$self describe $option font -values {TkFixedFont Courier {helvetica 10} {helvetica 12} {helvetica 14}}
