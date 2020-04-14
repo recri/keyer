@@ -67,7 +67,6 @@ namespace eval ::sdrtk {}
 #
 
 snit::widgetadaptor sdrtk::cwtext {
-
     option -background -default black -configuremethod Configure
     option -sentcolor -default white -configuremethod Configure
     option -skippedcolor -default white -configuremethod Configure
@@ -111,6 +110,21 @@ snit::widgetadaptor sdrtk::cwtext {
 	$self mark set transmit 1.0
 	$self mark gravity transmit left
 	#puts [$self mark names]
+	bind $self <ButtonPress-3> [list $self options-menu %X %Y]
+	bind $self <Escape> [list $self stop-sending]
+    }
+
+    method exposed-options {} { return { -sentcolor -unsentcolor -skippedcolor -background -font -ascii } }
+    method info-option {opt} {
+	switch -- $opt {
+	    -sentcolor { return {set the color of the sent text} }
+	    -unsentcolor { return {set the color of the yet to be sent text} }
+	    -skippedcolor { return {set the color of the unsent text which will not be sent} }
+	    -background { return {set the background color of the text} }
+	    -font { return {choose the font of the text} }
+	    -ascii { return {character to morse code sender component} }
+	    default { puts "cw-encode-input: uncaught info-option $opt" }
+	}
     }
 
     method timeout {} {
@@ -132,22 +146,36 @@ snit::widgetadaptor sdrtk::cwtext {
     method {Configure -background} {color} {
 	set options(-background) $color
 	$hull configure -background $color
+	$self top-configure -background $color
     }
     method {Configure -sentcolor} {color} {
 	set options(-sentcolor) $color
 	$self tag configure sent -foreground $color
+	$self top-configure -sentcolor $color
     }
     method {Configure -skippedcolor} {color} {
 	set options(-skippedcolor) $color
 	$self tag configure skipped -foreground $color
+	$self top-configure -skippedcolor $color
     }
     method {Configure -unsentcolor} {color} {
 	set options(-unsentcolor) $color
 	$hull configure -foreground $color
+	$self top-configure -unsentcolor $color
     }
     method {Configure -font} {font} {
 	set options(-font) $font
 	$hull configure -font $font
+	$self top-configure -font $font
+    }
+    method top-configure {opt val} {
+	puts "$self top-configure $opt $val"
+	set top [winfo name [namespace tail $self]]
+	if {[info proc ::options] ne {} &&
+	    [::options is-option -$top$opt] &&
+	    [::options cget -$top$opt] ne $val} {
+	    ::options configure -$top$opt $val
+	}
     }
     # get one character at the transmit cursor
     # and move the transmit cursor forward
@@ -219,7 +247,7 @@ snit::widgetadaptor sdrtk::cwtext {
 	if {$val ne {}} { $w configure $opt $val }
     }
     proc choose-font {w font args} { 
-	# puts "choose-font $w $font {$args}"
+	## puts "choose-font $w $font {$args}"
 	$w configure -font $font
     }
     method choose {opt} {

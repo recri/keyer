@@ -539,17 +539,16 @@ snit::type keyer::options {
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
-	    {*midi-tap-view* -tap*} -
-	    {*cw-latency-timing* -mtap*} -
-	    {*cw-latency-timing* -atap*} -
-	    {*cw-decode-view* -detime} -
-	    {*cw-encode-input* -ascii} -
-	    {*goertzel-char* -ins} -
-	    {*goertzel-char* -osc} -
-	    {*goertzel-char* -noise} -
-	    {*goertzel-char* -insert} -
-	    {*goertzel* -filter?} -
-	    {*goertzel* -tap} {
+	    {* -ascii} -
+	    {* -atap?} -
+	    {* -detime} -
+	    {* -filter?} -
+	    {* -insert} -
+	    {* -ins} -
+	    {* -mtap?} -
+	    {* -noise} -
+	    {* -osc} -
+	    {* -tap?} {
 		#puts "$self describe text $option"
 		$self describe $option text
 	    }
@@ -852,12 +851,12 @@ snit::type keyer::setups {
 	    connect { key2:midi_out key2o:midi_in }
 	}
 	kbd {
-	    start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cw-encode-input@enc keyer-tone@kbdo} -kbd-wpm 80 -kbdo-ramp 6.6 -enc-ascii kbd }
+	    start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cwtext@txt keyer-tone@kbdo} -kbd-wpm 30 -kbdo-ramp 6.6 -txt-ascii kbd }
 	    info {keyboard keyer and a keyed oscillator}
 	    connect { kbd:midi_out kbdo:midi_in }
 	}
 	kbd2 {
-	    start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cw-encode-input@enc2 keyer-tone@kbd2o} -kbd2-wpm 80 -kbd2o-ramp 6.6 -enc2-ascii kbd2 }
+	    start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cwtext@txt2 keyer-tone@kbd2o} -kbd2-wpm 30 -kbd2o-ramp 6.6 -txt2-ascii kbd2 }
 	    info {second keyboard keyer and a keyed oscillator}
 	    connect { kbd2:midi_out kbd2o:midi_in }
 	}
@@ -1073,6 +1072,7 @@ snit::type keyer::setups {
 	    }
 	}
     }]
+
     method default-setups {} { return $defaults }
 }
 proc is-setup {name} { return [::setups is-setup $name] }
@@ -1241,6 +1241,7 @@ proc main-argv {argv} {
 	    -merge { ::options lappend $opt {*}$val }
 	    -server -
 	    -title -
+	    -verbose -
 	    -grid -
 	    -tree { ::argv set $opt $val }
 	    -eval { ::argv lappend $opt $val }
@@ -1299,13 +1300,21 @@ proc make-connections {} {
     }
 }
 
+set verbose 0
+proc verbose-puts {msg} { 
+    if {[info proc ::argv] ne {} && [::argv exists -verbose] && [::argv get -verbose]} { set ::verbose [::argv get -verbose] }
+    if {$::verbose} { puts $msg }
+}
+
 proc main {argv} {
+    verbose-puts "main $argv"
     
     # install application icon
     set dir [file join $::dirname .. icons]
     image create photo icon1 -file [file join $dir qrv96.png]
     image create photo icon2 -file [file join $dir qrv48.png]
     wm iconphoto . -default icon1 icon2
+    verbose-puts "iconphoto installed"
 
     # style, abolish invisible indicators
     # these apply to the -grid displayed widgets
@@ -1318,32 +1327,45 @@ proc main {argv} {
 
     # load or create ~/.config/keyer/setups.tcl
     ::keyer::setups ::setups
+    verbose-puts "::setups loaded"
     
     # initialize options/components database
     keyer::options ::options
+    verbose-puts "::options loaded"
 
     # initialize argv option handling
     keyer::argv ::argv
+    verbose-puts "::argv loaded"
     
     # make a usage message
     if {$argv eq {} || $argv eq {help}} { usage-message }
+    verbose-puts "past usage message"
     
     # process arguments, first pass just to collect everything
     main-argv $argv
-        
+    verbose-puts "past main-argv"
+    
+    # see if we're going verbose
+    if {[::argv exists -verbose]} { puts "verbose = [::argv get -verbose]" }
+
     # if nothing asked for, nothing gained
     if { ! [has-start] && ! [has-exec] && ! [has-eval] } { usage-message }
+    verbose-puts "found something to start, exec, or eval"
 
     # start components and collect their options
     if {[has-start]} { foreach composite [get-start] { ::options process $composite } }
-
+    verbose-puts "past start list"
+    
     if {[has-eval]} { foreach x [get-eval] { eval $x } }
+    verbose-puts "past eval list"
 
     if {[has-exec]} { foreach x [get-exec] { exec {*}$x & } }
+    verbose-puts "past exec list"
     
     # connecting ports
     make-connections
-
+    verbose-puts "past make-connections"
+    
     # process command line options for additional option definitions
     if {[has-argvopts]} {
 	foreach {opt val} [get-argvopts] {
@@ -1403,7 +1425,6 @@ proc main {argv} {
     
     # update window title
     update-window-title
-    
 }
 
 main $argv
