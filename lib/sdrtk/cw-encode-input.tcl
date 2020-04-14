@@ -35,9 +35,11 @@ namespace eval ::sdrtk {}
 
 snit::widgetadaptor sdrtk::cw-encode-input {
     option -ascii -default {};	# sdrtcl::keyer-ascii or equivalent
-    option -sentcolor -default ? -configuremethod Configure
-    option -unsentcolor -default ? -configuremethod Configure
-    option -skippedcolor -default ? -configuremethod Configure
+    option -sentcolor -default grey -configuremethod Configure
+    option -unsentcolor -default white -configuremethod Configure
+    option -skippedcolor -default darkgrey -configuremethod Configure
+    option -background -default black -configuremethod Configure
+    option -font -default Courier -configuremethod Configure
 
     delegate method * to hull
     delegate option * to hull
