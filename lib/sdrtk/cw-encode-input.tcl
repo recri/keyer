@@ -54,7 +54,6 @@ snit::widgetadaptor sdrtk::cw-encode-input {
     method call-ascii {args} { return [$options(-ascii) {*}$args] }
     method exposed-options {} { return { -sentcolor -unsentcolor -skippedcolor -background -font -ascii } }
     method info-option {opt} {
-	if { ! [catch {$ascii info option $opt} info]} { return $info }
 	switch -- $opt {
 	    -sentcolor { return {set the color of the sent text} }
 	    -unsentcolor { return {set the color of the yet to be sent text} }

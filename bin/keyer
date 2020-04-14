@@ -474,11 +474,11 @@ snit::type keyer::options {
 	    {* -skippedcolor} -
 	    {* -background} -
 	    {* -foreground} {
-		# ignore these and -font for the moment, the foreground widget doesn't wrap things yet
-		#$self describe $option enum -values {white black gray lightgrey red orange yellow green blue indigo violet}
+		#puts "describe $option $opt"
+		$self describe $option color -values {white lightgrey grey darkgrey black red yellow green blue violet magenta}
 	    }
 	    {* -font} {
-		#$self describe $option enum -values {TkFixedFont {helvetica 10} {helvetica 12} {helvetica 14}}
+		$self describe $option font -values {TkFixedFont Courier {helvetica 10} {helvetica 12} {helvetica 14}}
 	    }
 	    {* -size} { $self describe $option enum -values {8 16 32 64 128 256 512 1024 2048 4096 8192 16384}}
 	    {* -planbits} { $self describe $option ivalue -min 0 -max 127}
