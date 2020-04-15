@@ -77,23 +77,18 @@ snit::widgetadaptor sdrtk::cw-decode-view {
     }
     method timeout {} {
 	# get new text
-	set text [$options(-detime) get]
-	# insert into output display
-	$self ins end $text
-	$self see end
 	# append to accumulated code
-	append code $text
-	while {[regexp {^([^ ]*) (.*)$} $code all symbol rest]} {
+	append code [$options(-detime) get]
+	while {[regexp {^([-.]*) (.*)$} $code all symbol code]} {
 	    if {$symbol ne {}} {
-		# each symbol must be terminated by a space
-		# replace symbol and space with translation
-		$self del end-[string length $code]chars-1chars end
-		$self ins end "[morse-to-text [$options(-dict)] $symbol]$rest"
+		# symbol terminated by a space
+		# insert translation
+		$self ins end "[morse-to-text [$options(-dict)] $symbol]"
 	    } else {
 		# an extra space indicates a word space
-		# and it's already there
+		$self ins end { }
 	    }
-	    set code $rest
+	    $self see end
 	}
 	set handler [after 250 [mymethod timeout]]
     }

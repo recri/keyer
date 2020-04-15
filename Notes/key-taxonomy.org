@@ -12,6 +12,10 @@
    a single contact key with a mono plug shorts right paddle to ground.
    So mono plug, or hold right paddle closed at reset, both signal straight
    key.
+*** You want the straight key wired to the tip,
+    the dah paddle is used as the straight key,
+    and the dah is wired to the ring,
+    and rewiring is a pain.
 ** If you have a TRRS jack for a dual contact key and aux switch, then 
    plugging in a stereo plug shorts the auxiliary, and plugging in a mono
    plug shorts the right paddle and the auxiliary.

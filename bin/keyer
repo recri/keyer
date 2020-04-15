@@ -681,7 +681,9 @@ snit::type keyer::options {
 	foreach opt $opts {
 	    # $opt is the option name used in direct configure and cget commands to $comp
 	    if {[$self is-option -$name$opt]} { error "keyer-components::populate: $name $opt ... is a duplicate" }
-	    set result [$call configure $opt]
+	    if {[catch {$call configure $opt} result]} {
+		error "$call configure $opt threw $result"
+	    }
 	    foreach {copt cname cclass cdefault cvalue} $result break
 	    # $copt should be $opt
 	    if {$opt ne $copt} { error "keyer-components::populate: $call configure $opt returned a different option name $copt" }
@@ -983,14 +985,31 @@ snit::type keyer::setups {
 	    info { x42-meter, audio level meter jack plugin }
 	}
 
+	echo {
+	    start { keyer key kbd out -start {sdrtcl::keyer-ascii@chk sdrtcl::keyer-tone@cho cw-echo@echo} -echo-detime detime}
+	    info {echo back challenge training}
+	    connect {
+		system:midi_capture_1 key:midi_in
+		chk:midi_out cho:midi_in 
+		{cho:out_i keyo:out_i kbdo:out_i} {system:playback_1 system:playback_2}
+		{keyo:out_i kbdo:out_i} detone:in_i
+	    }
+	}
 	hlt {
-	    start { keyer -start {hl-test@hlt} -keyo-gain -6 -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
+	    start { keyer hl -start {hl-test@hlt} -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
 	    info { hermes lite test dashboard }
 	}
 	test {
-	    start { keyer key kbd out hl spec filt hlt -tree 1 } 
+	    start { keyer key kbd out spec filt hlt -keyo-gain -6 -tree 1 } 
 	    info { hermes lite test app }
-	    connect { {key kbd} {out hl} hl {spec filt} }
+	    connect { 
+		{keyo:out_i kbdo:out_i} {detone:in_i hl:in_i} 
+		{keyo:out_q kbdo:out_q} hl:in_q 
+		hl:out_i {spec:in_i filt:in_i}
+		hl:out_q {spec:in_q filt:in_q} 
+		filt:out_i system:playback_1
+		filt:out_q system:playback_2
+	    }
 	}
 	delay {
 	    start { keyer -start {sample-delay@delay} -eval { delay start }}
@@ -1280,7 +1299,10 @@ proc make-connections {} {
 		puts "$from is not a port"
 		continue 
 	    }
-	    if { ! ([dict get $ports $from direction] eq {output}) } { puts "$from is not an output port"; continue }
+	    if { ! ([dict get $ports $from direction] eq {output}) } {
+		puts "$from is not an output port"
+		continue
+	    }
 	    foreach to $tlist {
 		if {[string match {\?*} $to]} {
 		    if { ! [dict exists $ports [string range $to 1 end]] } continue
@@ -1369,9 +1391,9 @@ proc main {argv} {
     # process command line options for additional option definitions
     if {[has-argvopts]} {
 	foreach {opt val} [get-argvopts] {
-	    # puts "first process $opt $val"
+	    verbose-puts "first process argvopts: $opt $val"
 	    if {[::options is-option $opt]} continue; # already defined
-	    error "undefined option: $opt $val"
+	    verbose-puts "undefined option: $opt $val"
 	    # something missing here? - FIX.ME?
 	}
     }
@@ -1383,7 +1405,7 @@ proc main {argv} {
     if {[has-argvopts]} {
 	# puts "second pass argvopts [get-argvopts]"
 	foreach {opt val} [get-argvopts] { 
-	    # puts "second process $opt $val"
+	    verbose-puts "second process argvopts: $opt $val"
 	    if {$opt eq {-hl-discover}} {
 		if {$val eq {discover}} {
 		    package require sdrtcl::hl-discover

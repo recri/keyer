@@ -46,11 +46,21 @@ namespace eval ::sdrtk {}
 
 snit::widgetadaptor sdrtk::cw-echo {
     option -kbd -default {}
+    option -detime -default {}
     option -dict -default fldigi
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
     option -background -default white -configuremethod ConfigText
     
+    # source of challenge {random callsign abbrev word qcode file}
+    option -source -default random-char
+    # length of challenge in characters
+    option -length -default 1
+    # number of times challenge is offered
+    option -attempts -default 3
+    # milliseconds pause after each offer
+    option -pause -default 5000
+    # number of challenges
     method delete {args} { }
     method insert {args} { }
     

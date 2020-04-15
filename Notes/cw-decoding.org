@@ -1,0 +1,20 @@
+* MRP40
+** 30Hz bandpass filter
+** automatic level control
+** automatic frequency tracking
+** automatic speed detection
+* CW Skimmer
+** a high sensitivity CW decoding algorithm based on the methods
+   of Bayesian statistics;
+** simultaneous decoding of ALL cw signals in the receiver passband
+   - up to 700 signals can be decoded in parallel on a 3-GHz P4 if a
+     wideband receiver is used;
+** a fast waterfall display, with a resolution sufficient for reading
+   Morse Code dots and dashes visually;
+** the callsigns are extracted from the decoded messages, and the
+   traces on the waterfall are labeled with stations' callsigns;
+** the extracted callsigns are exported as DX cluster spots via the
+   built-in Telnet cluster server;
+** a DSP processor with a noise blanker, AGC, and a sharp,
+   variable-bandwidth CW filter;
+** an I/Q Recorder and player.

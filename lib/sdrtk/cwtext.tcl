@@ -169,13 +169,12 @@ snit::widgetadaptor sdrtk::cwtext {
 	$self top-configure -font $font
     }
     method top-configure {opt val} {
-	puts "$self top-configure $opt $val"
+	# puts "$self top-configure $opt $val"
 	set top [winfo name [namespace tail $self]]
-	if {[info proc ::options] ne {} &&
-	    [::options is-option -$top$opt] &&
-	    [::options cget -$top$opt] ne $val} {
-	    ::options configure -$top$opt $val
-	}
+	# hmm, neither of these change the display of a dialbook readout
+	# when it is finally selected.
+	catch {::options configure -$top$opt $val} error
+	catch {dial-set -$top$opt $val} error
     }
     # get one character at the transmit cursor
     # and move the transmit cursor forward

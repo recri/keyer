@@ -19,6 +19,18 @@
 #ifndef DETIME_H
 #define DETIME_H
 
+/*
+** Still unhappy with this, it reverts to a slower speed when left to sit
+** for any length of time so every first element scores as a dah.  So you 
+** decode HHHHH, wait a few moments, send another H and it comes out as B.
+** Which is puzzling, since there's nothing that updates twodot in the
+** absence of any received elements.
+**
+** Strictly, my previous attempt was correct.  Each received mark or space
+** is either a sample of 1 dot clock, or 3 dot clocks, or something longer.
+** As soon as you've seen examples of both, then one interpretation becomes
+** untenable.
+*/
 #include "filter_moving_average16.h"
 
 // these are a mixture of values for 
@@ -83,6 +95,7 @@ static void *detime_init(detime_t *p, detime_options_t *q) {
 static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
   unsigned observation = frame - dp->frame; /* duration since last transition */
   switch (event) {
+
   case DETIME_OFF: {		/* the end of a dit or a dah */
 				// error if dp->state is wrong, should be DETIME_ON
 				// ignore if its a runt pulse
@@ -97,11 +110,13 @@ static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
     dp->state = DETIME_OFF;
     return (observation <= dp->two_dot) ? '.' : '-';
   }
+
   case DETIME_ON:		/* the end of a space */
 				// error if dp->state is wrong, should be DETIME_OFF or DETIME_IDLE*
     dp->frame = frame;
     dp->state = DETIME_ON;
     return 0;
+
   case DETIME_QUERY:		/* an intermediate tick */
     switch (dp->state) {
     case DETIME_ON:		// inside element
@@ -124,9 +139,11 @@ static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
       fprintf(stderr, "detime_process: invalid state %d in query\n", dp->state);
       return 0;
     }
+
   case DETIME_RESET:
     fprintf(stderr, "detime_process: reset event\n");
     return 0;
+
   default: 
     fprintf(stderr, "detime_process: invalid event %d\n", event);
     return 0;
