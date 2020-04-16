@@ -30,6 +30,11 @@
 ** is either a sample of 1 dot clock, or 3 dot clocks, or something longer.
 ** As soon as you've seen examples of both, then one interpretation becomes
 ** untenable.
+**
+** modified to initialize two_dot from the configured wpm, but not include it
+** in the moving average.  consider also using a shorter moving average window.
+** consider also resetting the moving average if a new two_dot value is way 
+** outside the previous information.
 */
 #include "filter_moving_average16.h"
 
@@ -66,7 +71,7 @@ static void detime_configure(detime_t *p, detime_options_t *q) {
   p->state = DETIME_IDLE;
   p->last_element = 0;
   filter_moving_average16_init(&p->avg);
-  p->two_dot = filter_moving_average16_process(&p->avg, 2 * q->spd);
+  p->two_dot = 2 * q->spd;
 }
 
 static void *detime_preconfigure(detime_t *p, detime_options_t *q) {

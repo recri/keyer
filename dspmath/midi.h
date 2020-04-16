@@ -27,15 +27,25 @@ extern "C"
 ** MIDI commands semi-implemented
 ** We currently use note-on 1 and note-on 0 to change logical signals.
 ** Logical signals are allocated in blocks of 16, the keyer predefines
-** the following offsets within the block.  This change affect the keyer
-** to keyed-tone connection and subsequent PTT connections mostly.
+** the following offsets within the block.
 */
 #define MIDI_KEYER_DIT 0	/* the left paddle, stereo/trrs tip */
 #define MIDI_KEYER_DAH 1	/* the right paddle, stereo ring / trrs ring1 */
-#define MIDI_KEYER_AUX 2  	/* the other button, trrs ring2 */
-#define MIDI_KEYER_KEY 3	/* the straight key, mono tip */
-#define MIDI_KEYER_PTT 4        /* the PTT signal */
+#define MIDI_KEYER_KEY 2	/* the straight key, mono tip */
+#define MIDI_KEYER_PTT 3        /* the PTT signal */
+#define MIDI_KEYER_AUX 4  	/* the other button, trrs ring2 */
   
+  /* offsets 5..15 available */
+
+/*
+** Another possibility is the RPN/NRPN mechanism discussed in http://www.philrees.co.uk/nrpnq.htm
+** RPN are registered parameter numbers assigned by the MIDI standard, NRPN are non-registered
+** parameter numbers assigned by whoever.  Send Control Change 100-101 to specify an RPN, 98-99
+** to specify an NRPN, then Control Change 6 sets the MSB (7 bits), Control Change 38 sets the LSB 
+** (7 bits), Control Change 96 is increment, and Control Change 97 is decrement.
+** So that would allow you to interface a rotary encoder or a slider.
+*/
+
 /*
 ** If we did anything more, then information would travel as SYSEX strings.
 ** SYSEX is formatted:

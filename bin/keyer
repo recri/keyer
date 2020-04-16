@@ -343,27 +343,27 @@ snit::type keyer::options {
 	    {* -word} { $self describe $option enum -values {50 60} -units dits}
 	    {*keyer* -dit} - 
 	    {*keyer* -dah} - 
-	    {*keyer* -ies} - 
-	    {*keyer* -ils} - 
-	    {*keyer* -iws} { 
+	    {* -ies} - 
+	    {* -ils} - 
+	    {* -iws} { 
 		set cdefault [dict get $option cdefault]
 		set min [expr {$cdefault-0.5}]
 		set max [expr {$cdefault+0.5}]
 		$self describe $option value -format %.1f -min $min -max $max -step 0.1 -units dits
 		#puts "$self describe $name $opt -value $cvalue -min $min -max $max -step 0.1 -units dits"
 	    }
-	    {*keyer* -weight} - 
-	    {*keyer* -ratio} { $self describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
-	    {*keyer* -comp} { $self describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {* -weight} - 
+	    {* -ratio} { $self describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
+	    {* -comp} { $self describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	    {* -freq} { $self describe $option ivalue -min -24000 -max 24000 -units Hz -graticule 20 -steps-per-div 100}
-	    {*keyer* -rise} - 
-	    {*keyer* -fall} - 
-	    {*keyer* -ramp} { $self describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {* -rise} - 
+	    {* -fall} - 
+	    {* -ramp} { $self describe $option value -format %.1f -min 0.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	    {*keyer* -window} { $self describe $option enum -values [lrange [get-window-types] 1 end] }
 	    {*keyer* -window2} { $self describe $option enum -values [get-window-types] }
 	    {* -gain} { $self describe $option value -format %.1f -min -50 -max 50 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
-	    {*latency-timing -delay} -
-	    {*sample-delay -delay} { $self describe $option value -format %.0f -min 0 -max 15000 -step 1 -units samples -graticule 20 -steps-per-div 50}
+	    {*latency-timing* -delay} -
+	    {*sample-delay* -delay} { $self describe $option value -format %.0f -min 0 -max 15000 -step 1 -units samples -graticule 20 -steps-per-div 50}
 	    {* -delay} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	    {* -hang} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
 	    {*spectrum* -period} {  $self describe $option ivalue -min 1 -max 500 -units ms -graticule 20 -steps-per-div 25 }
@@ -708,9 +708,9 @@ snit::type keyer::options {
     }
 }
 
-proc dial-cset {opt val} { ::options configure $opt $val }
-proc dial-cget {opt} { return [::options cget $opt] }
-proc dial-cvar {opt} { return [::options cvar $opt] }
+#proc dial-cset {opt val} { ::options configure $opt $val }
+#proc dial-cget {opt} { return [::options cget $opt] }
+#proc dial-cvar {opt} { return [::options cvar $opt] }
 
 #
 # manage option preferences
@@ -989,12 +989,12 @@ snit::type keyer::setups {
 	    start { keyer key kbd out -start {sdrtcl::keyer-ascii@chk sdrtcl::keyer-tone@cho cw-echo@echo} -echo-detime detime}
 	    info {echo back challenge training}
 	    connect {
-		system:midi_capture_1 key:midi_in
 		chk:midi_out cho:midi_in 
 		{cho:out_i keyo:out_i kbdo:out_i} {system:playback_1 system:playback_2}
 		{keyo:out_i kbdo:out_i} detone:in_i
 	    }
 	}
+
 	hlt {
 	    start { keyer hl -start {hl-test@hlt} -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
 	    info { hermes lite test dashboard }

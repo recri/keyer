@@ -1,6 +1,6 @@
 /* -*- mode: c++; tab-width: 8 -*- */
 /*
-  Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+  Copyright (C) 2011, 2012, 2020 by Roger E Critchlow Jr, Charlestown, MA, USA.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -48,6 +48,7 @@
 */
 
 // #include <stdio.h>
+#include "iambic.h"
 
 class iambic_ad5dz {
 private:
@@ -235,7 +236,7 @@ public:
   // with the specified duration
   // and set the key out state
   bool _transitionTo(keyerState newState, int newDuration, bool keyOut) {
-    _keyOut = keyOut ? 1 : 0;
+    _keyOut = keyOut ? (newState == KEYER_DIT ? IAMBIC_DIT : IAMBIC_DAH) : IAMBIC_OFF;
     if (keyOut) {
       _memKeyIn = 0;
       _startKeyIn = _keyIn;

@@ -147,15 +147,50 @@ extern "C" {
 	}
       }
       /* clock the iambic keyer */
-      if (dp->k.clock(dp->raw_dit, dp->raw_dah, 1) != dp->key_out) {
-	dp->key_out ^= 1;
-	unsigned char midi_note_event[] = { (unsigned char)(MIDI_NOTE_ON | (dp->opts.chan-1)),
-					    (unsigned char)dp->opts.note, (unsigned char)(dp->key_out ? 1 : 0) };
+      int new_key_out = dp->k.clock(dp->raw_dit, dp->raw_dah, 1);
+      if (new_key_out != dp->key_out) {
+	// fprintf(stderr, "key_out %d -> %d\n", dp->key_out, new_key_out);
 	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
 	if (buffer == NULL) {
 	  fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
 	} else {
-	  memcpy(buffer, midi_note_event, 3);
+#define iambic_note(p, chan, note, vel) (p)[0]=(unsigned char)(MIDI_NOTE_ON | ((chan)-1)); (p)[1]=(unsigned char)(note); (p)[2]=(unsigned char)(vel)
+#define iambic_key_off(p) iambic_note(p, dp->opts.chan, dp->opts.note+MIDI_KEYER_KEY, 0)
+#define iambic_key_on(p)  iambic_note(p, dp->opts.chan, dp->opts.note+MIDI_KEYER_KEY, 1)
+#define iambic_dit_off(p) iambic_note(p, dp->opts.chan, dp->opts.note+MIDI_KEYER_DIT, 0)
+#define iambic_dit_on(p)  iambic_note(p, dp->opts.chan, dp->opts.note+MIDI_KEYER_DIT, 1)
+#define iambic_dah_off(p) iambic_note(p, dp->opts.chan, dp->opts.note+MIDI_KEYER_DAH, 0)
+#define iambic_dah_on(p)  iambic_note(p, dp->opts.chan, dp->opts.note+MIDI_KEYER_DAH, 1)
+	  if (new_key_out) {
+	    iambic_key_on(buffer);
+	    if (new_key_out > IAMBIC_KEY) {
+	      buffer = jack_midi_event_reserve(midi_out, i, 3);
+	      if (buffer == NULL) {
+		fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
+	      } else {
+		switch (new_key_out) {
+		case IAMBIC_DIT: iambic_dit_on(buffer); break;
+		case IAMBIC_DAH: iambic_dah_on(buffer); break;
+		}
+	      }
+	    }
+	  } else {
+	    iambic_key_off(buffer);
+	    if (dp->key_out > IAMBIC_KEY) {
+	      buffer = jack_midi_event_reserve(midi_out, i, 3);
+	      if (buffer == NULL) {
+		fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
+	      } else {
+		switch (dp->key_out) {
+		case IAMBIC_DIT: iambic_dit_off(buffer); break;
+		case IAMBIC_DAH: iambic_dah_off(buffer); break;
+		}
+	      }
+	    }
+	  }
+
+
+	  dp->key_out = new_key_out;
 	}
       }
     }

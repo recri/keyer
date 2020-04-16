@@ -32,3 +32,19 @@
    ies_time = (1.0) * base_time - weight;
    ils_time = (3.0) * base_time - weight;
    iws_time = (7.0) * base_time - weight;
+* Morse timing ( at word 50 dits/word, rate = 48000 samples/second)
+  |-----+---------+-----------+--------------+--------+------------|
+  | wpm | dit/min |   dit/sec |       dit/ms | ms/dit | sample/dit |
+  |-----+---------+-----------+--------------+--------+------------|
+  |   5 |     250 | 4.1666667 | 4.1666667e-3 |    240 |      11520 |
+  |  10 |     500 | 8.3333333 | 8.3333333e-3 |    120 |       5760 |
+  |  20 |    1000 | 16.666667 |  0.016666667 |     60 |       2880 |
+  |  40 |    2000 | 33.333333 |  0.033333333 |     30 |       1440 |
+  |  60 |    3000 |        50 |         0.05 |     20 |        960 |
+  |  80 |    4000 | 66.666667 |  0.066666667 |     15 |        720 |
+  | 100 |    5000 | 83.333333 |  0.083333333 |     12 |        576 |
+  |-----+---------+-----------+--------------+--------+------------|
+  #+TBLFM: $2=50*$1::$3=$2/60::$4=$3/1000::$5=round(1/$4)::$6=48*$5
+  This table shows the problem with using narrow Goertzel filters
+  which is that the bandwidth of the filter begins to approach the
+  size of a dit.
