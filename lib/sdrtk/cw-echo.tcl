@@ -38,6 +38,12 @@ package require snit
 #    abbreviations
 #    callsigns
 #
+# echo only needs one screen,
+# it can capture keyboard input with focus dot
+# it can capture keyer input
+# it can echo in its own screen space
+
+
 package require morse::morse
 package require morse::itu
 package require morse::dicts
@@ -45,8 +51,18 @@ package require morse::dicts
 namespace eval ::sdrtk {}
 
 snit::widgetadaptor sdrtk::cw-echo {
+    option -chk -default {}
+    option -cho -default {}
+    option -key -default {}
+    option -keyo -default {}
     option -kbd -default {}
-    option -detime -default {}
+    option -kbdo -default {}
+    option -dto1 -default {}
+    option -dto2 -default {}
+    option -dti1 -default {}
+    option -dti2 -default {}
+    option -dec1 -default {}
+    option -dec2 -default {}
     option -dict -default fldigi
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
@@ -85,7 +101,7 @@ snit::widgetadaptor sdrtk::cw-echo {
 	set handler [after 100 [mymethod timeout]]
     }
 
-    method exposed-options {} { return {-dict -font -foreground -background -detime} }
+    method exposed-options {} { return {-dict -font -foreground -background -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2} }
 
     method info-option {opt} {
 	switch -- $opt {
@@ -93,45 +109,36 @@ snit::widgetadaptor sdrtk::cw-echo {
 	    -foreground { return {color for text display} }
 	    -font { return {font for text display} }
 	    -dict { return {dictionary for decoding morse} }
-	    -detime { return {ASK detiming component} }
+	    -chk { return {challenge encoder} }
+	    -cho { return {challenge oscillator} }
+	    -kbd { return {response keyboard} }
+	    -kbdo { return {response keyboard oscillator} }
+	    -key { return {response keyer} }
+	    -keyo { return {response keyer oscillator} }
+	    -dec1 { return {challenge cw decoder} }
+	    -dec2 { return {response cw decoder} }
+	    -dto1 { return {challenge tone decoder} }
+	    -dto2 { return {response tone decoder} }
+	    -dti1 { return {challenge time decoder} }
+	    -dti2 { return {response time decoder} }
 	    default { puts "no info-option for $opt" }
 	}
     }
+
     method ConfigText {opt val} {
 	$hull configure $opt $val
     }
+
     method timeout {} {
-	# get new text
-	set text [$options(-detime) get]
+	# get new challenge text
+	set text1 [$options(-dec1) get]
+	# get new response text
+	set text2 [$options(-dec2) get]
 	# insert into output display
-	$self ins end $text
-	$self see end
-	# append to accumulated code
-	append code $text
-	while {[regexp {^([^ ]*) (.*)$} $code all symbol rest]} {
-	    if {$symbol ne {}} {
-		# each symbol must be terminated by a space
-		# replace symbol and space with translation
-		$self del end-[string length $code]chars-1chars end
-		$self ins end "[morse-to-text [$options(-dict)] $symbol]$rest"
-	    } else {
-		# an extra space indicates a word space
-		# and it's already there
-	    }
-	    set code $rest
+	if {$text1 ne {} || $text2 ne {}} {
+	    puts "challenge {$text1} response {$text2}"
 	}
 	set handler [after 250 [mymethod timeout]]
-    }
-
-    method save {} {
-	set filename [tk_getSaveFile -title {Log to file}]
-	if {$filename ne {}} {
-	    write-file $filename [$self get 1.0 end]
-	}
-    }
-
-    method clear {} {
-	$self del 1.0 end
     }
 
     method option-menu {x y} {

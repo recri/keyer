@@ -539,6 +539,17 @@ snit::type keyer::options {
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
+	    {* -chk} -
+	    {* -cho} -
+	    {* -keyo} -
+	    {* -kbd} -
+	    {* -kbdo} -
+	    {* -dec1} -
+	    {* -dec2} -
+	    {* -dto1} -
+	    {* -dto2} -
+	    {* -dti1} -
+	    {* -dti2} -
 	    {* -ascii} -
 	    {* -atap?} -
 	    {* -detime} -
@@ -853,12 +864,12 @@ snit::type keyer::setups {
 	    connect { key2:midi_out key2o:midi_in }
 	}
 	kbd {
-	    start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cwtext@txt keyer-tone@kbdo} -kbd-wpm 30 -kbdo-ramp 6.6 -txt-ascii kbd }
+	    start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cw-text@txt keyer-tone@kbdo} -kbd-wpm 30 -kbdo-ramp 6.6 -txt-ascii kbd }
 	    info {keyboard keyer and a keyed oscillator}
 	    connect { kbd:midi_out kbdo:midi_in }
 	}
 	kbd2 {
-	    start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cwtext@txt2 keyer-tone@kbd2o} -kbd2-wpm 30 -kbd2o-ramp 6.6 -txt2-ascii kbd2 }
+	    start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cw-text@txt2 keyer-tone@kbd2o} -kbd2-wpm 30 -kbd2o-ramp 6.6 -txt2-ascii kbd2 }
 	    info {second keyboard keyer and a keyed oscillator}
 	    connect { kbd2:midi_out kbd2o:midi_in }
 	}
@@ -986,12 +997,23 @@ snit::type keyer::setups {
 	}
 
 	echo {
-	    start { keyer key kbd out -start {sdrtcl::keyer-ascii@chk sdrtcl::keyer-tone@cho cw-echo@echo} -echo-detime detime}
+	    start { 
+		keyer -start {
+		    sdrtcl::keyer-ascii@chk sdrtcl::keyer-tone@cho 
+		    sdrtcl::filter-goertzel@dto1 sdrtcl::keyer-detime@dti1 sdrtcl::cw-decode@dec1
+		    sdrtcl::keyer-iambic@key sdrtcl::keyer-tone@keyo
+		    sdrtcl::keyer-ascii@kbd sdrtcl::keyer-tone@kbdo 
+		    sdrtcl::filter-goertzel@dto2 sdrtcl::keyer-detime@dti2 sdrtcl::cw-decode@dec2
+		    sdrtk::cw-echo@echo
+		} -echo-chk chk -echo-cho cho -echo-dec1 dec1 -echo-dec2 dec2 -echo-kbd kbd -echo-kbdo kbdo -echo-key key -echo-keyo keyo
+		-dec1-detime dti1 -dec2-detime dti2
+	    }
 	    info {echo back challenge training}
 	    connect {
-		chk:midi_out cho:midi_in 
-		{cho:out_i keyo:out_i kbdo:out_i} {system:playback_1 system:playback_2}
-		{keyo:out_i kbdo:out_i} detone:in_i
+		chk:midi_out cho:midi_in cho:out_i {system:playback_1 system:playback_2 dto1:in_i} dto1:midi_out dti1:midi_in
+		{?system:midi_capture_1 ?system:midi_capture_2 ?system:midi_capture_3} key:midi_in
+		key:midi_out keyo:midi_in keyo:out_i {system:playback_1 system:playback_2 dto2:in_i} dto2:midi_out dti2:midi_in
+		kbd:midi_out kbdo:midi_in kbdo:out_i {system:playback_1 system:playback_2 dto2:in_i} dto2:midi_out dti2:midi_in
 	    }
 	}
 
@@ -1197,7 +1219,7 @@ proc load-ui {} {
 	set info [::options get $text info]
 	set readout [::options get $text readout]
 	set var [::options cvar $text]
-	
+	# puts "$text $cvalue $type $name $opt $info $readout $var"
 	# if already processed, error
 	if {[::options is-processed $text]} { error "$text already processed" }
 	::options set $text processed 1

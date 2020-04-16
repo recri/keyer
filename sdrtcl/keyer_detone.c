@@ -18,36 +18,31 @@
 */
 
 /*
-** keyer_detone uses a Goertzel filter to track the power on a specific tone
+** filter_goertzel uses a real Goertzel filter to track the power on a specific tone
+** running over a 256 sample block at 48000 samples/second, it sees 3.73 cycles of a 700 Hz
+** tone per block, yielding a bandwidth of 187.5 filter evaluations per second.
 **
-** a version with 128 stacked filters (one per MIDI note) might be nice once
-** I understand how to decide what's on and what's off.
+** dot length (ms) is 1200/wpm, samples/ms is 48 (for 48000 samples/s)
+** 10 wpm dot = 120ms = 5760 samples = 22.5 blocks (of 256 samples)
+** 20 wpm dot =  60ms = 2880         = 11.25
+** 40 wpm dot =  30ms = 1440	     =  5.625
 **
-** Oh, it's a simple threshold model, the thresholding was implemented in Tcl,
-** but it fits into this quite simply:
-**	note_off and power > on-threshold emit note_on, 
-**	note_on and power < off-threshold emit note_off
-** add the thresholds and a midi out and we should be cool.
-**
-** Okay, the Goertzel filter scans n samples and computes the power of the 
-** signal at frequency f.  The catch is that n*f == sample-rate, so for 48000 Hz,
-** we get integral target frequencies of 24000*2 12000*4 6000*8 3000*16 1500*32 750*64 375*128.
-** So to use the Goertzel filter flexibly we need to resample to a rate that has our target
-** frequency as an integral factor, which probably means running an FFT.  But once we run an FFT
-** we can pluck any frequency bin out with a linear combination of frequency bin coefficients.
-**
-**
+** if we keep a running average of N filter results, the average will cover the last, a float filter power, and a float sum2
 */
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "../dspmath/filter_goertzel.h"
+#define N_MOVING_AVERAGE 512
+#include "../dspmath/moving_average.h"
 #include "../dspmath/midi.h"
 #include "framework.h"
 
 typedef struct {
 #include "framework_options_vars.h"
   filter_goertzel_options_t fg;
+  moving_average_options_t dbp;
+  moving_average_options_t dbe;
   float on_threshold;
   float off_threshold;
 } options_t;
@@ -57,7 +52,11 @@ typedef struct {
   int modified;
   options_t opts;
   filter_goertzel_t fg;
-  float power;
+  moving_average_t dbp;	/* moving average of 20*log10(power) */
+  moving_average_t dbe;	/* moving average of 20*log10(energy) */
+  jack_nframes_t frame;
+  float dbpower;		/* 20*log10(power) */
+  float dbenergy;		/* 20*log10(energy) */
   int on;
 } _t;
 
@@ -65,6 +64,8 @@ static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = dp->fw.busy = 0;
     filter_goertzel_configure(&dp->fg, &dp->opts.fg);
+    moving_average_configure(&dp->dbp, &dp->opts.dbp);
+    moving_average_configure(&dp->dbe, &dp->opts.dbe);
   }
 }
 
@@ -73,6 +74,8 @@ static void *_init(void *arg) {
   dp->opts.fg.sample_rate = sdrkit_sample_rate(&dp->fw);
   void *p = filter_goertzel_preconfigure(&dp->fg, &dp->opts.fg); if (p != &dp->fg) return p;
   filter_goertzel_configure(&dp->fg, &dp->opts.fg);
+  moving_average_configure(&dp->dbp, &dp->opts.dbp);
+  moving_average_configure(&dp->dbe, &dp->opts.dbe);
   dp->on = 0;
   return arg;
 }
@@ -86,7 +89,6 @@ static int _process(jack_nframes_t nframes, void *arg) {
   _t *dp = (_t *)arg;
   // get the input pointer
   float *in = jack_port_get_buffer(framework_input(dp,0), nframes);
-  float *out = jack_port_get_buffer(framework_output(dp,0), nframes);
   // get the output pointer and buffer
   void* midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
   jack_midi_data_t cmd;
@@ -97,12 +99,22 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // for all frames in the buffer
   for (int i = 0; i < nframes; i++) {
     if (filter_goertzel_process(&dp->fg, *in++)) {
-      dp->power = dp->fg.power;
+      dp->dbpower = 20*log10(maxf(1e-16,dp->fg.power));
+      dp->dbenergy = 20*log10(maxf(1e-16,dp->fg.energy));
+      moving_average_process(&dp->dbp, dp->dbpower);
+      moving_average_process(&dp->dbe, dp->dbenergy);
+      /* fprintf(stderr, "power %.3e dbpower %.3f energy %.3e dbenergy %.3f dbp %.3f dbe %3.f\n",
+	 dp->fg.power, dp->dbpower, dp->fg.energy, dp->dbenergy, dp->dbp.average, dp->dbe.average); */
+      dp->frame = sdrkit_last_frame_time(arg)+i;
       cmd = 0;
-      if (dp->on != 0 && dp->fg.power < dp->opts.off_threshold) {
-	cmd = MIDI_NOTE_OFF;	/* note change off */
-      } else if (dp->on == 0 && dp->fg.power > dp->opts.on_threshold) {
-	cmd = MIDI_NOTE_ON;	/* note change on */
+      if (dp->on != 0) {
+	if (dp->dbpower < dp->dbp.average) {
+	  cmd = MIDI_NOTE_OFF;	/* note change off */
+	}
+      } else {
+	if (dp->dbpower > dp->dbp.average) {
+	  cmd = MIDI_NOTE_ON;	/* note change on */
+	}
       }
       if (cmd != 0) {
 	/* prepare to send note change */
@@ -117,17 +129,27 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	}
       }
     }
-    *out++ = dp->power;
   }
   return 0;
 }
 
+// return a list consisting of:
+//   the jack_nframes_t at which the filter computation completed, 
+//   the filter result, power in dB, 
+//   the sum of squared samples, energy in dB,
+//   the running average of powers,
+//   the running average of energies
+//
 static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   if (argc != 2)
     return fw_error_obj(interp, Tcl_ObjPrintf("usage: %s get", Tcl_GetString(objv[0])));
   _t *data = (_t *)clientData;
-  Tcl_SetObjResult(interp, Tcl_NewDoubleObj(data->fg.power));
-  return TCL_OK;
+  return fw_success_obj(interp, 
+			Tcl_NewListObj(5, (Tcl_Obj *[]){ 
+			    Tcl_NewLongObj(data->frame), 
+			      Tcl_NewDoubleObj(data->dbpower), Tcl_NewDoubleObj(data->dbenergy),
+			      Tcl_NewDoubleObj(data->dbp.average), Tcl_NewDoubleObj(data->dbe.average),
+			      NULL }));
 }
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
@@ -150,9 +172,9 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-freq",      "frequency", "AFHertz", "700.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
-  { "-bandwidth", "bandwidth", "BWHertz", "750.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
-  { "-on",	  "onThresh",  "Thresh",  "0.5",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
-  { "-off",	  "offThresh", "Thresh",  "0.5",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
+  { "-bandwidth", "bandwidth", "BWHertz", "375.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
+  { "-on",	  "onThresh",  "Thresh",  "2.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
+  { "-off",	  "offThresh", "Thresh",  "1.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
   { NULL }
 };
 
@@ -170,7 +192,7 @@ static const framework_t _template = {
   NULL,				// delete function
   NULL,				// sample rate function
   _process,			// process callback
-  1, 1, 0, 1, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
+  1, 0, 0, 1, 0,		// inputs,outputs,midi_inputs,midi_outputs,midi_buffers
   "a component which converts audio tone to midi key on/off events"
 };
 

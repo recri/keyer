@@ -65,12 +65,11 @@ snit::type sdrtcl::cw-decode {
 	    if {$symbol ne {}} {
 		# symbol terminated by a space
 		# insert translation
-		$self ins end "[morse-to-text [$options(-dict)] $symbol]"
+		append data(text) [morse-to-text [$options(-dict)] $symbol]
 	    } else {
 		# an extra space indicates a word space
-		$self ins end { }
+		append data(text) { }
 	    }
-	    $self see end
 	}
 	set handler [after 250 [mymethod timeout]]
     }

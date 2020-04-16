@@ -21,7 +21,7 @@
 package require Tk
 package require snit
 
-package provide sdrtk::cwtext 1.0
+package provide sdrtk::cw-text 1.0
 
 namespace eval ::sdrtk {}
 
@@ -66,7 +66,7 @@ namespace eval ::sdrtk {}
 # [ ] memories
 #
 
-snit::widgetadaptor sdrtk::cwtext {
+snit::widgetadaptor sdrtk::cw-text {
     option -background -default black -configuremethod Configure
     option -sentcolor -default white -configuremethod Configure
     option -skippedcolor -default white -configuremethod Configure
@@ -110,8 +110,8 @@ snit::widgetadaptor sdrtk::cwtext {
 	$self mark set transmit 1.0
 	$self mark gravity transmit left
 	#puts [$self mark names]
-	bind $self <ButtonPress-3> [list $self options-menu %X %Y]
-	bind $self <Escape> [list $self stop-sending]
+	bind $self <ButtonPress-3> [mymethod options-menu %X %Y]
+	bind $self <Escape> [mymethod stop-sending]
     }
 
     method exposed-options {} { return { -sentcolor -unsentcolor -skippedcolor -background -font -ascii } }
@@ -146,27 +146,22 @@ snit::widgetadaptor sdrtk::cwtext {
     method {Configure -background} {color} {
 	set options(-background) $color
 	$hull configure -background $color
-	$self top-configure -background $color
     }
     method {Configure -sentcolor} {color} {
 	set options(-sentcolor) $color
 	$self tag configure sent -foreground $color
-	$self top-configure -sentcolor $color
     }
     method {Configure -skippedcolor} {color} {
 	set options(-skippedcolor) $color
 	$self tag configure skipped -foreground $color
-	$self top-configure -skippedcolor $color
     }
     method {Configure -unsentcolor} {color} {
 	set options(-unsentcolor) $color
 	$hull configure -foreground $color
-	$self top-configure -unsentcolor $color
     }
     method {Configure -font} {font} {
 	set options(-font) $font
 	$hull configure -font $font
-	$self top-configure -font $font
     }
     method top-configure {opt val} {
 	# puts "$self top-configure $opt $val"
@@ -200,9 +195,7 @@ snit::widgetadaptor sdrtk::cwtext {
 	}
     }
 
-    method clear {} {
-	$self del 1.0 end
-    }
+    method clear {} { $self del 1.0 end }
 
     # generic make a list of options changed from default
     # so their values can be restored
@@ -243,11 +236,11 @@ snit::widgetadaptor sdrtk::cwtext {
     }
     proc choose-color {w opt title} {
 	set val [tk_chooseColor -parent $w -initialcolor [$w cget $opt] -title $title]
-	if {$val ne {}} { $w configure $opt $val }
+	if {$val ne {}} { $w top-configure $opt $val }
     }
     proc choose-font {w font args} { 
 	## puts "choose-font $w $font {$args}"
-	$w configure -font $font
+	if {$font ne {}} { $w top-configure -font $font }
     }
     method choose {opt} {
 	switch $opt {
@@ -269,7 +262,7 @@ snit::widgetadaptor sdrtk::cwtext {
     }
 }
 
-if {0 && [string match *cwtext.tcl $argv0]} {
+if {0 && [string match *cw-text.tcl $argv0]} {
     # testing 1, 2, 3
     lappend auto_path [file join [file dirname [info script]] .. lib]
     
@@ -292,9 +285,9 @@ if {0 && [string match *cwtext.tcl $argv0]} {
 	after 100 [list get-and-send $w]
     }
     
-    pack [sdrtk::cwtext .text] -side top -fill both -expand true
+    pack [sdrtk::cw-text .text] -side top -fill both -expand true
     bind .text <ButtonPress-3> [list .text options-menu %X %Y]
     bind .text <Escape> [list .text abort]
-    after 100 [list get-and-send .text]
+    after 100 [list .text get-and-send]
 }
 
