@@ -48,9 +48,11 @@ package require morse::morse
 package require morse::itu
 package require morse::dicts
 
+package require sdrtk::lradiomenubutton
+
 namespace eval ::sdrtk {}
 
-snit::widgetadaptor sdrtk::cw-echo {
+snit::widget sdrtk::cw-echo {
     option -chk -default {}
     option -cho -default {}
     option -key -default {}
@@ -70,13 +72,37 @@ snit::widgetadaptor sdrtk::cw-echo {
     
     # source of challenge {random callsign abbrev word qcode file}
     option -source -default random-char
+    option -source-label {Source}
+    option -source-values -default {chars callsigns abbrevs words phrases}
     # length of challenge in characters
     option -length -default 1
+    option -length-label {Length}
+    option -length-values {1 2 3 4 5 6 ...}
     # number of times challenge is offered
     option -attempts -default 3
+    option -attempts-label {Attempts}
+    option -attempts-values -default {1 2 3 4 5 6 7}
     # milliseconds pause after each offer
     option -pause -default 5000
-    # number of challenges
+    option -pause-label Pause
+    option -pause-values {500 1000 2000 3000 4000 5000 6000 7000}
+    # speed of challenge
+    option -challenge-wpm 30
+    option -challenge-wpm-label {Challenge WPM}
+    option -challenge-wpm-values {15 20 25 30 35 40}
+    # character space padding
+    option -char-space 3
+    option -char-space-label {Char Spacing}
+    option -char-space-values {3 3.5 4 4.5 5 5.5 6}
+    # word space padding
+    option -word-space 7
+    option -word-space-label {Word Spacing}
+    option -word-space-values {7 8 9 10 11 12 13 14}
+    # speed of response
+    option -response-wpm 20
+    option -response-wpm-label {Response WPM}
+    option -response-wpm-values {12 15 20 25 30 35 40}
+
     method delete {args} { }
     method insert {args} { }
     
@@ -86,19 +112,30 @@ snit::widgetadaptor sdrtk::cw-echo {
     delegate method ins to hull as insert
     delegate method del to hull as delete
     
-    variable handler {}
-    variable code {}
+    variable data -array {
+	handler {}
+	challenge {}
+	response {}
+    }
     
     constructor {args} {
-	# puts "cw-decode-view constructor {$args}"
-	installhull using text
-	set client [winfo name [namespace tail $self]]
-	set server [from args -server {}]
-	set xargs {}
-	if {$server ne {}} { lappend xargs -server $server }
-	$self configure -width 30 -height 15 -exportselection true {*}$args
+	$self configurelist $args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
-	set handler [after 100 [mymethod timeout]]
+	bind all <KeyPress> [mymethod keypress %A]
+	bind $win <Destroy> [list destroy .]
+	set row 0
+	foreach opt {-challenge-wpm -response-wpm -source -length -attempts -pause -char-space -word-space} {
+	    ttk::label $win.l$opt -text "$options($opt-label): "
+	    sdrtk::radiomenubutton $win.x$opt \
+		-defaultvalue $options($opt) \
+		-variable [myvar options($opt)] \
+		-values $options($opt-values) \
+		-command [mymethod update $opt]
+	    grid $win.l$opt -row $row -column 0 -sticky ew
+	    grid $win.x$opt -row $row -column 1 -sticky ew
+	    incr row
+	}
+	set data(handler) [after 500 [mymethod timeout]]
     }
 
     method exposed-options {} { return {-dict -font -foreground -background -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2} }
@@ -131,23 +168,20 @@ snit::widgetadaptor sdrtk::cw-echo {
 
     method timeout {} {
 	# get new challenge text
-	set text1 [$options(-dec1) get]
+	append data(challenge) [$options(-dec1) get]
 	# get new response text
-	set text2 [$options(-dec2) get]
-	# insert into output display
-	if {$text1 ne {} || $text2 ne {}} {
-	    puts "challenge {$text1} response {$text2}"
-	}
-	set handler [after 250 [mymethod timeout]]
+	append data(response) [$options(-dec2) get]
+	# score results in background
+	if {$data(challenge) ne {} || $data(response) ne {}} { after idle [mymethod score] }
+	# loop around
+	set data(handler) [after 250 [mymethod timeout]]
     }
 
-    method option-menu {x y} {
-	if { ! [winfo exists $win.m] } {
-	    menu $win.m -tearoff no
-	    $win.m add command -label {Clear} -command [mymethod clear]
-	    $win.m add separator
-	    $win.m add command -label {Save To File} -command [mymethod save]
-	}
-	tk_popup $win.m $x $y
+    method keypress {a} { $options(-kbd) puts [string toupper $a] }
+
+    method score {} {
+	puts "challenge $data(challenge) response $data(response)"
+	array set data { challenge {} response {} }
     }
+
 }
