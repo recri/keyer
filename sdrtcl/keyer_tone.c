@@ -101,19 +101,6 @@ static void _update(void *arg) {
 }
 
 /*
-** send midi key event through
-*/
-static void _send(_t *dp, void *midi_out, jack_nframes_t t, unsigned char cmd, unsigned char note, unsigned char velocity) {
-  unsigned char midi[] = { cmd | (dp->opts.chan-1), note, velocity };
-  unsigned char* buffer = jack_midi_event_reserve(midi_out, t, 3);
-  if (buffer == NULL) {
-    fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
-  } else {
-    memcpy(buffer, midi, 3);
-  }
-}
-
-/*
 ** Jack process callback
 */
 static int _process(jack_nframes_t nframes, void *arg) {
@@ -144,13 +131,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  case MIDI_NOTE_ON:
 	    if (velocity > 0) {
 	      keyed_tone_on(&dp->tone); 
-	      _send(dp, midi_out, i, command, note, velocity);
 	      break;
 	    }
 	    /* fall through */
 	  case MIDI_NOTE_OFF:
 	    keyed_tone_off(&dp->tone);
-	    _send(dp, midi_out, i, command, note, velocity);
 	    break;
 	  }
 	}
@@ -159,20 +144,20 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	  case MIDI_NOTE_ON:
 	    if (velocity > 0) {
 	      keyed_tone_on(&dp->tone2); 
-	      _send(dp, midi_out, i, command, note, velocity);
 	      break;
 	    }
 	    /* fall through */
 	  case MIDI_NOTE_OFF:
 	    keyed_tone_off(&dp->tone2);
-	    _send(dp, midi_out, i, command, note, velocity);
 	    break;
 	  }
 	}
       }
+      jack_midi_event_write(midi_out, i, event.buffer, event.size);
     }
     /* compute samples */
     float complex z = keyed_tone_process(&dp->tone);
+    if (dp->opts.two != 0) z += keyed_tone_process(&dp->tone2);
     *out_i++ = crealf(z);
     *out_q++ = cimagf(z);
 
