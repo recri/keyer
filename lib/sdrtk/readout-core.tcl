@@ -100,7 +100,7 @@ snit::widget sdrtk::readout-core {
 	install lunits using ttk::label $win.units -textvar [myvar options(-units)] -width 5 -font $options(-font) -anchor w
 	grid $win.value $win.units
 	# $self configure -widget-value $options(-value)
-	trace add variable options(-widget-value) write [mymethod TraceWriteWidgetValue]
+	# trace add variable options(-widget-value) write [mymethod TraceWriteWidgetValue]
 	# $hull configure -labelanchor sw
     }
     
@@ -136,8 +136,8 @@ snit::widget sdrtk::readout-core {
     }
 
     # method value {} { return $options(-value) }
-    # method value-var {} { return [myvar option(-value)] }
-    method widget-value-var {} { return [myvar option(-widget-value)] }
+    method value-var {} { return [myvar options(-value)] }
+    # method widget-value-var {} { return [myvar options(-widget-value)] }
 
     method integer-to-phi {i} { return [expr {$i*$twopi/($options(-steps-per-div)*$options(-graticule))}] }
     method phi-to-integer {phi} { return [expr {$options(-steps-per-div)*$options(-graticule)*$phi/$twopi}] }
@@ -181,13 +181,13 @@ snit::widget sdrtk::readout-core {
 	set val [format $options(-format) $val]
 	if {$options(-value) != $val} {
 	    set options(-value) $val
-	    set options(-widget-value) $val
+	    # set options(-widget-value) $val
 	    if {$options(-variable) ne {}} { set $options(-variable) $val }
 	    if {$options(-command) ne {}} { {*}$options(-command) $val }
 	}
 	$self Position
     }
-    method {Configure -widget-value} {val} { set options(-widget-value) $val }
+    # method {Configure -widget-value} {val} { set options(-widget-value) $val }
     method {Configure -format} {val} {
 	set options(-format) $val
 	#$self configure -value $options(-value)

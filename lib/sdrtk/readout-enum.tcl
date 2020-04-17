@@ -83,7 +83,7 @@ snit::widgetadaptor sdrtk::readout-enum {
 	    $m delete 0 end
 	}
 	foreach v $options(-values) {
-	    $m add radiobutton -label $v -value $v -variable [$self widget-value-var]
+	    $m add radiobutton -label $v -value $v -variable [$self value-var]
 	}
 	return [list cascade -label $text -menu $m]
     }
@@ -98,7 +98,7 @@ snit::widgetadaptor sdrtk::readout-enum {
 	$m configure -menu $m.m
 	set i 0
 	foreach v $options(-values) {
-	    $m.m add radiobutton -label $v -value $v -variable [$self widget-value-var] -columnbreak [expr {($i%10)==0}]
+	    $m.m add radiobutton -label $v -value $v -variable [$self value-var] -columnbreak [expr {($i%10)==0}]
 	    incr i
 	}
 	return $m

@@ -36,11 +36,11 @@ snit::widgetadaptor sdrtk::readout-bool {
     }
 
     method menu-entry {m text} {
-	return [list checkbutton -label $text -variable [$self widget-value-var]]
+	return [list checkbutton -label $text -variable [$self value-var]]
     }
 
     method button-entry {m text} {
-	return [ttk::checkbutton $m -text $text -variable [$self widget-value-var]]
+	return [ttk::checkbutton $m -text $text -variable [$self value-var]]
     }
 
 }

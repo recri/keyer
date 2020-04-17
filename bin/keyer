@@ -561,7 +561,7 @@ snit::type keyer::options {
 	    {* -osc} -
 	    {* -tap?} {
 		#puts "$self describe text $option"
-		$self describe $option text
+		$self describe $option text hide 1
 	    }
 	    {*goertzel-char* -replications} {
 		$self describe $option value -min 1 -max 32 -step 1 -units samples
@@ -1194,7 +1194,7 @@ proc load-ui {} {
 	if {[::options is-processed $text]} { error "$text already processed" }
 	::options set $text processed 1
 	
-	if {[is-hide $text]} continue
+	if {[::options is-hide $text]} continue
 	
 	if {$dial} {
 	    set w .dial.x$text
@@ -1361,7 +1361,7 @@ proc main {argv} {
     if {$argv eq {} || $argv eq {help}} { usage-message }
     verbose-puts "past usage message"
     
-    # default to having a dial
+    # default to having a dial, hide verbose, server, client
     ::argv set -dial 1
     
     # process arguments, first pass just to collect everything
