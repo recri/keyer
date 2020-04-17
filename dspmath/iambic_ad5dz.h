@@ -301,9 +301,9 @@ public:
 extern "C" {
   typedef struct {
     iambic_ad5dz k;
-  } iambic_t;
+  } iambic_ad5dz_t;
   typedef struct {
-  } iambic_options_t;
+  } iambic_ad5dz_options_t;
 }
 
 #endif

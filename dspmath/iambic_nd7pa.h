@@ -46,6 +46,7 @@
 // R. Traylor
 // 3.19.2012
 // iambic keyer      
+#include "iambic.h"
 
 class iambic_nd7pa {
 private:
@@ -178,8 +179,8 @@ public:
 extern "C" {
   typedef struct {
     iambic_nd7pa k;
-  } iambic_t;
+  } iambic_nd7pa_t;
   typedef struct {
-  } iambic_options_t;
+  } iambic_nd7pa_options_t;
 }
 #endif

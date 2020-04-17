@@ -168,6 +168,8 @@ snit::type keyer::options {
 	    bool -
 	    ivalue -
 	    value { return [expr {$val == $options($opt)}] }
+	    color -
+	    font -
 	    text -
 	    enum { return [expr {$val eq $options($opt)}] }
 	    default { error "missing case for type [$self opt-type $opt]" }

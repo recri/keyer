@@ -129,10 +129,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	if (channel == dp->opts.chan && note == dp->opts.note) {
 	  switch (command) {
 	  case MIDI_NOTE_ON:
-	    if (velocity > 0) {
-	      keyed_tone_on(&dp->tone); 
-	      break;
-	    }
+	    if (velocity > 0) { keyed_tone_on(&dp->tone); break; }
 	    /* fall through */
 	  case MIDI_NOTE_OFF:
 	    keyed_tone_off(&dp->tone);
@@ -142,10 +139,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	if (dp->opts.two != 0 && channel == dp->opts.chan && note == dp->opts.note+1) {
 	  switch (command) {
 	  case MIDI_NOTE_ON:
-	    if (velocity > 0) {
-	      keyed_tone_on(&dp->tone2); 
-	      break;
-	    }
+	    if (velocity > 0) { keyed_tone_on(&dp->tone2); break; }
 	    /* fall through */
 	  case MIDI_NOTE_OFF:
 	    keyed_tone_off(&dp->tone2);

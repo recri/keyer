@@ -85,6 +85,7 @@
 ** // parameter query
 ** k.get*(param)
 */
+#include "iambic.h"
 
 class iambic_k1el {
  private:
@@ -286,9 +287,9 @@ class iambic_k1el {
 extern "C" {
   typedef struct {
     iambic_k1el k;
-  } iambic_t;
+  } iambic_k1el_t;
   typedef struct {
-  } iambic_options_t;
+  } iambic_k1el_options_t;
 }
 
 #endif

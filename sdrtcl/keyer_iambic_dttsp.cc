@@ -33,6 +33,7 @@ extern "C" {
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_AWSP 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_MODE 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_TWO 1
 
 #include "framework.h"
 #include "../dspmath/midi.h"
@@ -44,7 +45,7 @@ extern "C" {
 
   typedef struct {
     framework_t fw;
-    iambic_dttsp_t key;
+    iambic_dttsp_t k;
     int modified;
     options_t opts;
     int raw_dit, raw_dah, key_out;
@@ -55,92 +56,72 @@ extern "C" {
   static void _update(_t *dp) {
     if (dp->modified) {
       dp->modified = 0;
-      iambic_dttsp_configure(&dp->key, &dp->opts.key_opts);
+      iambic_dttsp_configure(&dp->k, &dp->opts.key_opts);
     }
   }
 
   static void *_init(void *arg) {
     _t *dp = (_t *)arg;
-    void *p = iambic_dttsp_init(&dp->key, &dp->opts.key_opts); if (p != &dp->key) return p;
+    void *p = iambic_dttsp_init(&dp->k, &dp->opts.key_opts); if (p != &dp->k) return p;
     dp->millis_per_frame = 1000.0f / jack_get_sample_rate(dp->fw.client);
     dp->modified = 1;
     return arg;
   }
 
-  static void _decode(_t *dp, int count, unsigned char *p) {
-    if (count == 3) {
-      const unsigned char channel = (p[0]&0xF)+1;
-      if (channel == dp->opts.chan) {
-	const unsigned char note = p[1];
-	if (note == dp->opts.note) {
-	  const unsigned char command = p[0]&0xF0;
-	  const unsigned char velocity = p[2];
-	  switch (command) {
-	  case MIDI_NOTE_ON:
-	    dp->raw_dit = velocity > 0 ? 1 : 0; break;
-	  case MIDI_NOTE_OFF: 
-	    dp->raw_dit = 0; break;
-	  }
-	} else if (note == dp->opts.note+1) {
-	  const unsigned char command = p[0]&0xF0;
-	  const unsigned char velocity = p[2];
-	  switch (command) {
-	  case MIDI_NOTE_ON:
-	    dp->raw_dah = velocity > 0 ? 1 : 0; break;
-	  case MIDI_NOTE_OFF:
-	    dp->raw_dah = 0; break;
-	  }
-	}
-      }
-    }
-  }
-
   /*
   ** jack process callback
   */
-
   static int _process(jack_nframes_t nframes, void *arg) {
     _t *dp = (_t *)arg;
     void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
     void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-    int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
-    jack_midi_event_t in_event;
-    // fetch options if necessary
+
+    // update our timings
     _update(dp);
-    // find out what input events we need to process
-    if (in_event_index < in_event_count) {
-      jack_midi_event_get(&in_event, midi_in, in_event_index++);
-      in_event_time = in_event.time;
-    } else {
-      in_event_time = nframes+1;
-    }
+
     /* this is important, very strange if omitted */
     jack_midi_clear_buffer(midi_out);
+
+    /* set up the midi event queue */
+    framework_midi_event_init(&dp->fw, NULL, nframes);
+
     /* for all frames in the buffer */
     for (int i = 0; i < nframes; i++) {
-      int look_for_more_events = 0;
+
       /* process all midi input events at this sample frame */
-      while (in_event_time == i) {
-	_decode(dp, in_event.size, in_event.buffer); // this might trigger a keyout
-	if (in_event_index < in_event_count) {
-	  jack_midi_event_get(&in_event, midi_in, in_event_index++);
-	  in_event_time = in_event.time;
-	} else {
-	  in_event_time = nframes+1;
-	}
-	look_for_more_events = 1;
+      jack_midi_event_t event;
+      int port;
+      while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
+	/* decode the incoming event */
+	if (port != 0) continue;
+	if (event.size != 3) continue;
+	const unsigned char chan = (event.buffer[0]&0xF)+1;
+	if (chan != dp->opts.chan) continue;
+	const unsigned char note = event.buffer[1];
+	const unsigned char comm = event.buffer[0]&0xF0;
+	const unsigned char velo = event.buffer[2];
+	unsigned char key = 0;
+	if (comm == MIDI_NOTE_ON) 
+	  key = velo > 0 ? 1 : 0;
+	else if (comm != MIDI_NOTE_OFF)
+	  continue;
+	if (note == dp->opts.note)
+	  dp->raw_dit = key;
+	else if (note == dp->opts.note+1)
+	  dp->raw_dah = key;
       }
+
       /* clock the iambic keyer */
-      if (iambic_dttsp_process(&dp->key, dp->raw_dit, dp->raw_dah, dp->millis_per_frame) != dp->key_out) {
-	dp->key_out ^= 1;
-	unsigned char midi_note_event[] = { (unsigned char)(MIDI_NOTE_ON | (dp->opts.chan-1)),
-					    (unsigned char)dp->opts.note, (unsigned char) (dp->key_out ? 1 : 0) };
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
-	if (buffer == NULL) {
-	  fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
-	} else {
-	  memcpy(buffer, midi_note_event, 3);
-	}
+      const unsigned char new_key_out = dp->k.k.clock(dp->raw_dit, dp->raw_dah, 1);
+
+      /* encode the output event */
+      if (new_key_out != dp->key_out) {
+	const unsigned char chan = dp->opts.chan;
+	const unsigned char note = dp->opts.note;
+	unsigned char midi_note_event[3] = { (unsigned char)(MIDI_NOTE_ON|(chan-1)), note, (unsigned char)(new_key_out ? 1 : 0) };
+	if (dp->opts.two != 0 && new_key_out == IAMBIC_DAH) midi_note_event[1] = note+1;
+	jack_midi_event_write(midi_out, i, midi_note_event, 3);
+	dp->key_out = new_key_out;
       }
     }
     return 0;

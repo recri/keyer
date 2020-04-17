@@ -34,6 +34,7 @@
 */
 
 // #include <stdio.h>
+#include "iambic.h"
 
 class iambic_dttsp {
  private:

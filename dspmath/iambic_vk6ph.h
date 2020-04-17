@@ -83,6 +83,7 @@ Boston, MA  02110-1301, USA.
 
         Speed calculation -  Using standard PARIS timing, dot_period(mS) = 1200/WPM
 */
+#include "iambic.h"
 
 class iambic_vk6ph {
 
@@ -331,8 +332,8 @@ public:
 extern "C" {
   typedef struct {
     iambic_vk6ph k;
-  } iambic_t;
+  } iambic_vk6ph_t;
   typedef struct {
-  } iambic_options_t;
+  } iambic_vk6ph_options_t;
 }
 #endif // IAMBIC_VK6PH_H

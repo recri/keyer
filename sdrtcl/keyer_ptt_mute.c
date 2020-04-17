@@ -62,54 +62,60 @@ static int _process(jack_nframes_t nframes, void *arg) {
   float *out0 = jack_port_get_buffer(framework_output(arg,0), nframes);
   float *out1 = jack_port_get_buffer(framework_output(arg,1), nframes);
   void *midi_in = jack_port_get_buffer(framework_midi_input(arg,0), nframes);
-  int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
-  jack_midi_event_t in_event;
+  _update(dp);
+
   // find out what input events we need to process
+  int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0;
+  jack_midi_event_t in_event;
   if (in_event_index < in_event_count) {
     jack_midi_event_get(&in_event, midi_in, in_event_index++);
-    in_event_time = in_event.time;
   } else {
-    in_event_time = nframes+1;
+    in_event.time = nframes+1;
   }
-  _update(dp);
+
   AVOID_DENORMALS;
+
   for (int i = nframes; --i >= 0; ) {
+
     /* process all midi input events at this sample frame */
-    while (in_event_time == i) {
-      if (in_event.size == 3) {
-	const unsigned char channel = (in_event.buffer[0]&0xF)+1;
-	const unsigned char command = in_event.buffer[0]&0xF0;
-	const unsigned char note = in_event.buffer[1];
-	const unsigned char velocity = in_event.buffer[2];
-	if (channel == dp->opts.chan && note == dp->opts.note+1) { /* ptt convention? */
-	  if (MIDI_NOTE_ON) {
-	    if (velocity > 0) {
-	      dp->mute = 1;
-	      dp->ramp = 1.000;
-	      dp->dramp = -0.001;
-	      dp->transition = 1000;
-	    } else {
-	      dp->mute = 0;
-	      dp->ramp = 0.000;
-	      dp->dramp = 0.001;
-	      dp->transition = 1000;
-	    }
-	  } else if (command == MIDI_NOTE_OFF) {
-	    dp->mute = 0;
-	    dp->ramp = 0.000;
-	    dp->dramp = 0.001;
-	    dp->transition = 1000;
-	  }
-	}
-      }
-      // look for another event
+    while (in_event.time == i) {
+      /* unpack assuming size == 3 */
+      const unsigned char size = in_event.size;
+      const unsigned char comm = in_event.buffer[0]&0xF0;
+      const unsigned char chan = (in_event.buffer[0]&0xF)+1;
+      const unsigned char note = in_event.buffer[1];
+      const unsigned char velo = in_event.buffer[2];
+      /* read next event */
       if (in_event_index < in_event_count) {
 	jack_midi_event_get(&in_event, midi_in, in_event_index++);
-	in_event_time = in_event.time;
       } else {
-	in_event_time = nframes;
+	in_event.time = nframes+1;
       }
+      /* process this event */
+      if (size != 3) continue;
+      if (chan != dp->opts.chan) continue;
+      if (note != dp->opts.note+1) continue; /* ptt convention? */
+      if (comm == MIDI_NOTE_ON) {
+	if (velo > 0) {
+	  dp->mute = 1;
+	  dp->ramp = 1.000;
+	  dp->dramp = -0.001;
+	  dp->transition = 1000;
+	} else {
+	  dp->mute = 0;
+	  dp->ramp = 0.000;
+	  dp->dramp = 0.001;
+	  dp->transition = 1000;
+	}
+      } else if (comm == MIDI_NOTE_OFF) {
+	dp->mute = 0;
+	dp->ramp = 0.000;
+	dp->dramp = 0.001;
+	dp->transition = 1000;
+      } else
+	continue;
     }
+
     // process the audio
     float _Complex z = dp->gain * (*in0++ + I * *in1++);
     if (dp->transition != 0) {

@@ -1,6 +1,6 @@
 /* -*- mode: c++; tab-width: 8 -*- */
 /*
-  Copyright (C) 2011, 2012 by Roger E Critchlow Jr, Santa Fe, NM, USA.
+  Copyright (C) 2011, 2012, 2020 by Roger E Critchlow Jr, Charlestown, MA, USA.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -50,7 +50,7 @@ extern "C" {
     framework_t fw;
     int modified;
     options_t opts;
-    iambic_ad5dz k;
+    iambic_ad5dz_t k;
     int raw_dit;
     int raw_dah;
     int key_out;
@@ -62,25 +62,25 @@ extern "C" {
       dp->modified = 0;
 
       /* keyer recomputation */
-      dp->k.setVerbose(dp->fw.verbose);
-      dp->k.setTick(1000000.0 / sdrkit_sample_rate(dp));
-      dp->k.setWord(dp->opts.word);
-      dp->k.setWpm(dp->opts.wpm);
+      dp->k.k.setVerbose(dp->fw .verbose);
+      dp->k.k.setTick(1000000.0  / sdrkit_sample_rate(dp));
+      dp->k.k.setWord(dp->opts.word);
+      dp->k.k.setWpm(dp->opts.wpm);
 
       float microsPerDit = 60000000.0 / (dp->opts.wpm * dp->opts.word);
       float r = (dp->opts.ratio-50)/100.0; // why 50 is zero is left as an exercise
       float w = (dp->opts.weight-50)/100.0;
       float c = 1000.0 * dp->opts.comp / microsPerDit;
-      dp->k.setDit(dp->opts.dit+r+w+c);
-      dp->k.setDah(dp->opts.dah-r+w+c);
-      dp->k.setIes(dp->opts.ies  -w-c);
-      dp->k.setIls(dp->opts.ils  -w-c);
-      dp->k.setIws(dp->opts.iws  -w-c);
+      dp->k.k.setDit(dp->opts.dit+r+w+c);
+      dp->k.k.setDah(dp->opts.dah-r+w+c);
+      dp->k.k.setIes(dp->opts.ies  -w-c);
+      dp->k.k.setIls(dp->opts.ils  -w-c);
+      dp->k.k.setIws(dp->opts.iws  -w-c);
 
-      dp->k.setAutoIls(dp->opts.alsp != 0);
-      dp->k.setAutoIws(dp->opts.awsp != 0);
-      dp->k.setSwapped(dp->opts.swap != 0);
-      dp->k.setMode(dp->opts.mode);
+      dp->k.k.setAutoIls(dp->opts.alsp != 0);
+      dp->k.k.setAutoIws(dp->opts.awsp != 0);
+      dp->k.k.setSwapped(dp->opts.swap != 0);
+      dp->k.k.setMode(dp->opts.mode);
     }
   }
 
@@ -93,28 +93,6 @@ extern "C" {
     return arg;
   }
 
-  static void _decode(_t *dp, int count, unsigned char *p) {
-    if (count == 3) {
-      const unsigned char channel = (p[0]&0xF)+1;
-      if (channel == dp->opts.chan) {
-	const unsigned char note = p[1];
-	const unsigned char command = p[0]&0xF0;
-	const unsigned char velocity = p[2];
-	if (note == dp->opts.note) {
-	  switch (command) {
-	  case MIDI_NOTE_OFF: dp->raw_dit = 0; break;
-	  case MIDI_NOTE_ON:  dp->raw_dit = velocity > 0 ? 1 : 0; break;
-	  }
-	} else if (note == dp->opts.note+1) {
-	  switch (command) {
-	  case MIDI_NOTE_OFF: dp->raw_dah = 0; break;
-	  case MIDI_NOTE_ON:  dp->raw_dah = velocity > 0 ? 1 : 0; break;
-	  }
-	}
-      }
-    }
-  }
-
   /*
   ** jack process callback
   */
@@ -122,67 +100,53 @@ extern "C" {
     _t *dp = (_t *)arg;
     void *midi_in = jack_port_get_buffer(framework_midi_input(dp,0), nframes);
     void *midi_out = jack_port_get_buffer(framework_midi_output(dp,0), nframes);
-    int in_event_count = jack_midi_get_event_count(midi_in), in_event_index = 0, in_event_time = 0;
-    jack_midi_event_t in_event;
+
     // update our timings
     _update(dp);
-    // find out what input events we need to process
-    if (in_event_index < in_event_count) {
-      jack_midi_event_get(&in_event, midi_in, in_event_index++);
-      in_event_time = in_event.time;
-    } else {
-      in_event_time = nframes+1;
-    }
+
     /* this is important, very strange if omitted */
     jack_midi_clear_buffer(midi_out);
+
+    /* set up the midi event queue */
+    framework_midi_event_init(&dp->fw, NULL, nframes);
+
     /* for all frames in the buffer */
     for (int i = 0; i < nframes; i++) {
+
       /* process all midi input events at this sample frame */
-      while (in_event_time == i) {
-	_decode(dp, in_event.size, in_event.buffer);
-	if (in_event_index < in_event_count) {
-	  jack_midi_event_get(&in_event, midi_in, in_event_index++);
-	  in_event_time = in_event.time;
-	} else {
-	  in_event_time = nframes+1;
-	}
+      jack_midi_event_t event;
+      int port;
+      while (framework_midi_event_get(&dp->fw, i, &event, &port)) {
+	/* decode the incoming event */
+	if (port != 0) continue;
+	if (event.size != 3) continue;
+	const unsigned char chan = (event.buffer[0]&0xF)+1;
+	if (chan != dp->opts.chan) continue;
+	const unsigned char note = event.buffer[1];
+	const unsigned char comm = event.buffer[0]&0xF0;
+	const unsigned char velo = event.buffer[2];
+	unsigned char key = 0;
+	if (comm == MIDI_NOTE_ON) 
+	  key = velo > 0 ? 1 : 0;
+	else if (comm != MIDI_NOTE_OFF)
+	  continue;
+	if (note == dp->opts.note)
+	  dp->raw_dit = key;
+	else if (note == dp->opts.note+1)
+	  dp->raw_dah = key;
       }
+
       /* clock the iambic keyer */
-      int new_key_out = dp->k.clock(dp->raw_dit, dp->raw_dah, 1);
+      const unsigned char new_key_out = dp->k.k.clock(dp->raw_dit, dp->raw_dah, 1);
+
+      /* encode the output event */
       if (new_key_out != dp->key_out) {
-	// fprintf(stderr, "key_out %d -> %d\n", dp->key_out, new_key_out);
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
-	if (buffer == NULL) {
-	  fprintf(stderr, "jack won't buffer 3 midi bytes!\n");
-	} else {
-#define iambic_note(p, chan, note, vel) (p)[0]=(unsigned char)(MIDI_NOTE_ON | ((chan)-1)); (p)[1]=(unsigned char)(note); (p)[2]=(unsigned char)(vel)
-#define iambic_key_off(p) iambic_note(p, dp->opts.chan, dp->opts.note+0, 0)
-#define iambic_key_on(p)  iambic_note(p, dp->opts.chan, dp->opts.note+0, 1)
-#define iambic_dit_off(p) iambic_note(p, dp->opts.chan, dp->opts.note+0, 0)
-#define iambic_dit_on(p)  iambic_note(p, dp->opts.chan, dp->opts.note+0, 1)
-#define iambic_dah_off(p) iambic_note(p, dp->opts.chan, dp->opts.note+1, 0)
-#define iambic_dah_on(p)  iambic_note(p, dp->opts.chan, dp->opts.note+1, 1)
-	  if (new_key_out) {
-	    if (dp->opts.two == 0) {
-	      iambic_key_on(buffer);
-	    } else {
-	      switch (new_key_out) {
-	      case IAMBIC_DIT: iambic_dit_on(buffer); break;
-	      case IAMBIC_DAH: iambic_dah_on(buffer); break;
-	      }
-	    }
-	  } else {
-	    if (dp->opts.two == 0) {
-	      iambic_key_off(buffer);
-	    } else {
-	      switch (dp->key_out) {
-	      case IAMBIC_DIT: iambic_dit_off(buffer); break;
-	      case IAMBIC_DAH: iambic_dah_off(buffer); break;
-	      }
-	    }
-	  }
-	  dp->key_out = new_key_out;
-	}
+	const unsigned char chan = dp->opts.chan;
+	const unsigned char note = dp->opts.note;
+	unsigned char midi_note_event[3] = { (unsigned char)(MIDI_NOTE_ON|(chan-1)), note, (unsigned char)(new_key_out ? 1 : 0) };
+	if (dp->opts.two != 0 && new_key_out == IAMBIC_DAH) midi_note_event[1] = note+1;
+	jack_midi_event_write(midi_out, i, midi_note_event, 3);
+	dp->key_out = new_key_out;
       }
     }
     return 0;
