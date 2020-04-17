@@ -93,7 +93,7 @@ namespace eval ::keyer {}
 
 snit::type keyer::options {
     variable options -array {}
-
+    variable values -array {}
     variable data -array {
 	pkgs {}
 	comps {}
@@ -124,6 +124,8 @@ snit::type keyer::options {
     method describe {dict otype args} { 
 	set opt [dict get $dict text]
 	set options($opt) [dict get $dict cvalue]
+	set values($opt) $options($opt)
+	dict unset dict cvalue;	# one value to rule them all
 	# puts "keyer-options describe options($opt) is $options($opt)"
 	dict set dict type $otype
 	dict set dict described 1
@@ -143,6 +145,7 @@ snit::type keyer::options {
 
     method is-option {opt} { return [dict exists $data(opts) $opt] }
     method exists {opt key} { return [dict exists $data(opts) $opt $key] }
+    method opt-type {opt} { return [dict get $data(opts) $opt type] }
     method get {opt key} { return [dict get $data(opts) $opt $key] }
     method set {opt key val} { dict set data(opts) $opt $key $val }
 
@@ -155,14 +158,21 @@ snit::type keyer::options {
     method is-volatile {opt} { return [$self get $opt volatile] }
 
     method get-default {opt} { return [$self get $opt cdefault] }
-    method get-value {opt} { return [$self get $opt cvalue] }
-    method set-value {opt val} { return [$self set $opt cvalue $val] }
     method is-default {opt} {
 	if {[$self is-readonly $opt]} { return 1 }
-	if {[$self get-default $opt] eq $options($opt)} { return 1 }
+	if {[$self has-this-value $opt [$self get-default $opt]]} { return 1 }
 	return 0
     }
-
+    method has-this-value {opt val} {
+	switch [$self opt-type $opt] {
+	    bool -
+	    ivalue -
+	    value { return [expr {$val == $options($opt)}] }
+	    text -
+	    enum { return [expr {$val eq $options($opt)}] }
+	    default { error "missing case for type [$self opt-type $opt]" }
+	}
+    }
     method component-opts {opt} {
 	set d [dict get $data(opts) $opt]
 	set w [dict get $d window]
@@ -248,36 +258,32 @@ snit::type keyer::options {
 	if {($n&1) != 0} {
 	    error "configure requires an even number of arguments"
 	}
-	foreach {opt val} $args {	
-	    $self cset $opt $val
-	}
+	foreach {opt val} $args { $self cset $opt $val }
     }
 
     method cset {opt val} {
-	if { ! [$self is-option $opt]} {
-	    error "$opt is not defined in keyer-options::configure"
-	}
+	#puts "keyer::options cset $opt $val"
+	if { ! [$self is-option $opt]} { error "$opt is not defined in keyer-options::configure" }
 	if {[$self is-ronly $opt]} return
-	if {[$self get-value $opt] eq $val} return
-	$self set-value $opt $val
+	if {[$self has-this-value $opt $val]} return
 	if {[catch {set options($opt) $val} result]} {
-	    puts "keyer::options configure $opt $val: {set options($opt) $val} threw $result"
+	    puts "keyer::options cset $opt $val: {set options($opt) $val} threw $result"
 	}
+	set values($opt) $val
 	foreach {comp opt2 busyness} [$self component-opts $opt] {
-	    # puts "keyer-options::configure $comp $opt2"
+	    # puts "keyer::options cset $comp $opt2 ($busyness)"
 	    dict set data(busy) $comp $opt2 $val
-	    # puts "keyer-options::configure try: $comp is-busy"
 	    if { ! $busyness || ! [$comp is-busy]} {
 		set opts [dict get $data(busy) $comp]
 		if {[catch {
-		    # puts "keyer-options::configure try: $comp configure $opts"
 		    $comp configure {*}$opts
 		    dict unset data(busy) $comp
+		    # puts "keyer::options cset {$comp configure $opts} succeeded"
 		} error]} {
-		    puts "configure {$comp configure $opts} threw {$error}"
+		    puts "keyer::options cset {$comp configure $opts} threw {$error}"
 		}
 	    } elseif {$data(handler) eq {}} {
-		# puts "$comp is-busy"
+		# puts "keyer::options cset $comp is busy"
 		set data(handler) [after 100 [mymethod configure-timeout]]
 	    }
 	}
@@ -289,11 +295,12 @@ snit::type keyer::options {
 		if {[catch {
 		    $comp configure {*}$opts
 		    dict unset data(busy) $comp
+		    # puts "keyer::options configure-timeout {$comp configure $opts} succeeded"
 		} error]} {
-		    puts "keyer-options::configure-timeout {$comp configure $opts} threw {$error}"
+		    puts "keyer-options configure-timeout {$comp configure $opts} threw {$error}"
 		}
 	    } else {
-		# puts "$comp is-busy"
+		# puts "keyer-options configure-timeout $comp is still busy"
 	    }
 	}
 	if {[dict size $data(busy)] > 0} {
@@ -308,7 +315,10 @@ snit::type keyer::options {
 	    if {[$self is-volatile $opt]} {
 		foreach {name opt2} [$self component-opts $opt] break
 		set val [$name cget $opt2]
-		if {$val ne $options($opt)} { set options($opt) $val } 
+		if { ! [$self has-this-value $opt $val]} { 
+		    set options($opt) $val
+		    set values($opt) $val
+		} 
 	    }
 	    return $options($opt)
 	}
@@ -316,7 +326,7 @@ snit::type keyer::options {
     }
     
     method cvar {opt} {
-	if {[$self is-option $opt]} { return [myvar options($opt)] }
+	if {[$self is-option $opt]} { return [myvar values($opt)] }
 	error "keyer-options::cvar $opt is not defined"
     }
 
@@ -355,6 +365,7 @@ snit::type keyer::options {
 	    {* -weight} - 
 	    {* -ratio} { $self describe $option value -format %.1f -min 25.0 -max 75.0 -step 0.1 -units % -graticule 20 -steps-per-div 50}
 	    {* -comp} { $self describe $option value -format %.1f -min -15.0 -max 15.0 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {* -two} -
 	    {* -freq} { $self describe $option ivalue -min -24000 -max 24000 -units Hz -graticule 20 -steps-per-div 100}
 	    {* -rise} - 
 	    {* -fall} - 
@@ -551,15 +562,15 @@ snit::type keyer::options {
 	    {* -dti1} -
 	    {* -dti2} -
 	    {* -ascii} -
-	    {* -atap?} -
+	    {* -atap*} -
 	    {* -detime} -
-	    {* -filter?} -
+	    {* -filter*} -
 	    {* -insert} -
 	    {* -ins} -
 	    {* -mtap?} -
 	    {* -noise} -
 	    {* -osc} -
-	    {* -tap?} {
+	    {* -tap*} {
 		#puts "$self describe text $option"
 		$self describe $option text hide 1
 	    }
@@ -862,7 +873,7 @@ snit::type keyer::setups {
 	kbd {
 	    start { keyer -start {sdrtcl::keyer-ascii@kbd sdrtk::cw-text@txt keyer-tone@kbdo} -kbd-wpm 30 -kbdo-ramp 6.6 -txt-ascii kbd }
 	    info {keyboard keyer and a keyed oscillator}
-	    connect { kbd:midi_out kbdo:midi_in }
+	    connect { kbd:midi_out kbdo:midi_in kbdo:out_i {system:playback_1 system:playback_2} }
 	}
 	kbd2 {
 	    start { keyer -start {sdrtcl::keyer-ascii@kbd2 sdrtk::cw-text@txt2 keyer-tone@kbd2o} -kbd2-wpm 30 -kbd2o-ramp 6.6 -txt2-ascii kbd2 }
@@ -903,11 +914,11 @@ snit::type keyer::setups {
 	    info {start midi insert node}
 	}
 	tap {
-	    start { keyer mtap -start {midi-tap-view@tap} -tap-tap mtap }
+	    start { keyer mtap -start sdrtk::midi-tap-view@tap -tap-tap mtap }
 	    info {midi monitor for timing events}
 	}
 	tap2 {
-	    start { keyer -start {midi-tap-view@tap2} }
+	    start { keyer mtap2 -start sdrtk::midi-tap-view@tap2 -tap2-tap mtap2 }
 	    info {second midi monitor for timing events}
 	}
 	detone {

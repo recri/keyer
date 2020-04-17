@@ -33,7 +33,7 @@ snit::type sdrtcl::keyer-iambic {
     component keyer
 
     variable data -array {
-	ad5dz {-verbose -server -client -chan -note -wpm -swap -mode -ies -ils -iws -dit -dah -alsp -awsp -weight -ratio -comp -word}
+	ad5dz {-verbose -server -client -chan -note -wpm -swap -mode -ies -ils -iws -dit -dah -alsp -awsp -weight -ratio -comp -word                   -two}
 	dttsp {-verbose -server -client -chan -note -wpm -swap -mode                          -alsp -awsp -weight                    -mdit -mdah -mide}
 	k1el  {-verbose -server -client -chan -note -wpm -swap -mode -ies           -dit -dah             -weight -ratio -comp -word}
 	nd7pa {-verbose -server -client -chan -note -wpm -swap       -ies           -dit -dah             -weight -ratio -comp}
@@ -65,6 +65,8 @@ snit::type sdrtcl::keyer-iambic {
     option -mdah -default 0 -configuremethod Configure -cgetmethod Cget
     option -mide -default 0 -configuremethod Configure -cgetmethod Cget
 
+    option -two -default 0 -configuremethod Configure -cgetmethod Cget
+    
     # configure cget cset info is-busy activate deactivate is-active
 
     method is-busy {} { return [$keyer is-busy] }
@@ -99,6 +101,7 @@ snit::type sdrtcl::keyer-iambic {
 	    -mdit { return  {keep a dit memory} }
 	    -mdah { return  {keep a dah memory} }
 	    -mide { return  {remember key state at mid-element} }
+	    -two { return {enable independent dit dah keyout} }
 	    default { error "no match for $opt in keyer-iambic info-option" }
 	}
     }

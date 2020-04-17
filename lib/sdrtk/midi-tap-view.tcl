@@ -61,16 +61,18 @@ snit::widgetadaptor sdrtk::midi-tap-view {
 	$self timeout
     }
     method timeout {} {
-	foreach event [$options(-tap) get] {
-	    foreach {frame midi} $event break
-	    binary scan $midi c* bytes
-	    set out [format {%8lu %8lu} $frame [expr {$frame-$tapframe}]]
-	    set tapframe $frame
-	    foreach b $bytes {
-		append out [format { %02x} [expr {$b&0xff}]]
-	    }
-	    $self insert end $out\n
-	}	
+	if {$options(-tap) ne {}} {
+	    foreach event [$options(-tap) get] {
+		foreach {frame midi} $event break
+		binary scan $midi c* bytes
+		set out [format {%8lu %8lu} $frame [expr {$frame-$tapframe}]]
+		set tapframe $frame
+		foreach b $bytes {
+		    append out [format { %02x} [expr {$b&0xff}]]
+		}
+		$self insert end $out\n
+	    }	
+	}
 	set handler [after 100 [mymethod timeout]]
     }
 

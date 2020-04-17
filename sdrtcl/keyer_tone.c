@@ -40,7 +40,7 @@
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 #define FRAMEWORK_OPTIONS_KEYER_TONE 1
-#define FRAMEWORK_OPTIONS_KEYER_TWO 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_TWO 1
 
 #include "framework.h"		/* moved from three lines lower */
 #include "../dspmath/keyed_tone.h"
@@ -62,16 +62,22 @@ typedef struct {
 static void *_init(void *arg) {
   _t *dp = (_t *) arg;
   if (dp->fw.verbose) fprintf(stderr, "%s:%s:%d init\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__);
-  if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init freq %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.freq);
+  if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init freq %.2f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.freq);
   if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init gain %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.gain);
   if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.rise);
   if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.fall);
   if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
+  if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init two %.2f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.two);
   // dp->opts.chan = 1;
   // dp->opts.note = 0;
   void *p = keyed_tone_init(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall,
 			    dp->opts.window, dp->opts.window2, sdrkit_sample_rate(arg));
   if (p != &dp->tone) return p;
+  if (dp->opts.two != 0) {
+    p = keyed_tone_init(&dp->tone2, dp->opts.gain, dp->opts.two, dp->opts.rise, dp->opts.fall,
+			dp->opts.window, dp->opts.window2, sdrkit_sample_rate(arg));
+    if (p != &dp->tone2) return p;
+  }
   return arg;
 }
 
@@ -84,9 +90,13 @@ static void _update(void *arg) {
     if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _update rise %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.rise);
     if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _update fall %.1f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.fall);
     if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _update rate %d\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, sdrkit_sample_rate(arg));
-    dp->modified = dp->fw.busy = 0;
+    if (dp->fw.verbose > 1) fprintf(stderr, "%s:%s:%d _init two %.2f\n", Tcl_GetString(dp->fw.client_name), __FILE__, __LINE__, dp->opts.two);
     keyed_tone_update(&dp->tone, dp->opts.gain, dp->opts.freq, dp->opts.rise, dp->opts.fall, 
 		      dp->opts.window, dp->opts.window2, sdrkit_sample_rate(arg));
+    if (dp->opts.two != 0)
+      keyed_tone_update(&dp->tone2, dp->opts.gain, dp->opts.two, dp->opts.rise, dp->opts.fall, 
+			dp->opts.window, dp->opts.window2, sdrkit_sample_rate(arg));
+    dp->modified = dp->fw.busy = 0;
   }
 }
 
@@ -144,6 +154,21 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	    break;
 	  }
 	}
+	if (dp->opts.two != 0 && channel == dp->opts.chan && note == dp->opts.note+1) {
+	  switch (command) {
+	  case MIDI_NOTE_ON:
+	    if (velocity > 0) {
+	      keyed_tone_on(&dp->tone2); 
+	      _send(dp, midi_out, i, command, note, velocity);
+	      break;
+	    }
+	    /* fall through */
+	  case MIDI_NOTE_OFF:
+	    keyed_tone_off(&dp->tone2);
+	    _send(dp, midi_out, i, command, note, velocity);
+	    break;
+	  }
+	}
       }
     }
     /* compute samples */
@@ -161,11 +186,9 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   _t *dp = (_t *)clientData;
   options_t save = dp->opts;
   if (framework_command(clientData, interp, argc, objv) != TCL_OK) return TCL_ERROR;
-  dp->modified = dp->fw.busy = dp->modified || 
-    save.freq != dp->opts.freq || save.gain != dp->opts.gain || 
-    save.rise != dp->opts.rise || save.fall != dp->opts.fall || 
-    save.window != dp->opts.window || save.window2 != dp->opts.window2 ||
-    save.ramp != dp->opts.ramp;
+  dp->modified = dp->fw.busy = dp->modified || save.freq != dp->opts.freq || save.gain != dp->opts.gain || 
+    save.rise != dp->opts.rise || save.fall != dp->opts.fall || save.ramp != dp->opts.ramp || 
+    save.window != dp->opts.window || save.window2 != dp->opts.window2 || save.two != dp->opts.two;
   if (save.ramp != dp->opts.ramp)
     dp->opts.rise = dp->opts.fall = dp->opts.ramp;
   return TCL_OK;
