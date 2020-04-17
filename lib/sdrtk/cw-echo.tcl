@@ -20,7 +20,16 @@ package provide sdrtk::cw-echo 1.0.0
 package require Tk
 package require snit
 
+# c 261.63 c# 277.18 d 293.67 d# 311.13 e 329.63 f 349.23 f# 369.99
+# g 392.00 g# 415.30 a 440.0 a# 466.16 b 493.88 
+# c 523.25 c# 554.37 d 587.33 d# 622.25 e 659.26 f 698.46 f# 739.99
+# g 783.99 g# 830.61 a 880.0 a# 932.33 b 987.77
+# 
 #
+
+
+
+
 # generate morse code to be echoed back
 #
 # general options for generated code:
@@ -90,6 +99,8 @@ snit::widget sdrtk::cw-echo {
     option -challenge-wpm 30
     option -challenge-wpm-label {Challenge WPM}
     option -challenge-wpm-values {15 20 25 30 35 40}
+    # frequency of challenge sidetone
+    option -challenge-freq 698.46
     # character space padding
     option -char-space 3
     option -char-space-label {Char Spacing}
@@ -184,4 +195,34 @@ snit::widget sdrtk::cw-echo {
 	array set data { challenge {} response {} }
     }
 
+    method update {opt val} {
+	set options($opt) $val
+	switch -- $opt {
+	    -source {}
+	    -length {}
+	    -attempts {}
+	    -pause {}
+	    -challenge-wpm { $options(-chk) configure -wpm $val }
+	    -challenge-freq { $options(-cho) configure -freq $val }
+	    -char-space { $options(-chk) configure -ils $val }
+	    -word-space { $options(-chk) configure -iws $val }
+	    -response-wpm { 
+		$options(-kbd) configure -wpm $val 
+		$options(-key) configure -wpm $val
+	    }
+	    -response-freq { 
+		$options(-kbdo) configure -freq $val 
+		$options(-keyo) configure -freq $val
+	    }
+	    -two {
+		$options(-chk) configure -two $val
+		$options(-kbd) configure -two $val
+		$options(-key) configure -two $val
+		$options(-cho) configure -two $val
+		$options(-kbdo) configure -two $val
+		$options(-keyo) configure -two $val
+	    }
+	    default { error "uncaught option update $opt" }
+	}
+    }
 }

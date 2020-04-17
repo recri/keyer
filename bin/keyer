@@ -632,7 +632,7 @@ snit::type keyer::options {
 	# puts "load $composite with $factory $name"
 	switch -glob $factory {
 	    sdrtcl::* { 
-		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
+		if {[::argv exists -server] && [::argv get -server] ne {}} { lappend args -server [::argv get -server] }
 		set window {}
 		$factory ::$name {*}$args
 		$name activate
@@ -649,7 +649,7 @@ snit::type keyer::options {
 		wm deiconify .$name
 	    }
 	    sdrtcltk::* {
-		if {[has-server] && [get-server] ne {}} { lappend args -server [get-server] }
+		if {[::argv exists -server] && [::argv get -server] ne {}} { lappend args -server [::argv get -server] }
 		toplevel .$name -class "keyer/$name"
 		wm title .$name "keyer/$name"
 		#wm iconphoto .$name -default icon1 icon2
@@ -670,13 +670,13 @@ snit::type keyer::options {
     }
     
     method process {composite} {
-	# puts "keyer::options::process-start $composite: argvopts [get-argvopts]"
+	# puts "keyer::options::process-start $composite: argvopts [::argv get -argvopts]"
 	foreach {name factory window composite} [$self load $composite] break
-	# puts "keyer::options::process-after-load $composite: argvopts [get-argvopts]"
+	# puts "keyer::options::process-after-load $composite: argvopts [::argv get -argvopts]"
 	$self define $name $factory $window $composite
-	# puts "keyer::options::process-after-define $composite: argvopts [get-argvopts]"
+	# puts "keyer::options::process-after-define $composite: argvopts [::argv get -argvopts]"
 	$self populate $name $factory $window $composite
-	# puts "keyer::options::process-finish $composite: argvopts [get-argvopts]"
+	# puts "keyer::options::process-finish $composite: argvopts [::argv get -argvopts]"
     }
     
     method populate {name factory window composite} {
@@ -707,7 +707,7 @@ snit::type keyer::options {
 	    set merge [the-merge $opt]; # the merge pattern that matched this opt
 	    set hide [expr {[is-hide $opt] || [is-hide -$name$opt]}];    # the opt matched a hide pattern
 	    set favor [is-favor $opt];  # the opt is in the favorite list
-	    set argvopts [is-argvopts $opt]; # the opt was in the argv
+	    set argvopts [expr {[::argv exists -argvopts] && [is-matched $opt [::argv get -argvopts]]}]; # the opt was in the argv
 	    set option [dict create \
 			    text -$name$opt factory $factory name $name opt $opt window $window call $call \
 			    cname $cname cclass $cclass cdefault $cdefault cvalue $cvalue info $info type none \
@@ -718,10 +718,6 @@ snit::type keyer::options {
 	}
     }
 }
-
-#proc dial-cset {opt val} { ::options configure $opt $val }
-#proc dial-cget {opt} { return [::options cget $opt] }
-#proc dial-cvar {opt} { return [::options cvar $opt] }
 
 #
 # manage option preferences
@@ -778,8 +774,8 @@ snit::type keyer::setups {
 
     method build-command-line {} {
 	set argv [file tail $::script]
-	if {[get-server] ne {}} { lappend argv -server [get-server] }
-	lappend argv -start [get-start]
+	if {[::argv exists -server] && [::argv get -server] ne {}} { lappend argv -server [::argv get -server] }
+	lappend argv -start [::argv get -start]
 	# prefer specifically named options
 	# to the ones that are only inferred from component inspection
 	foreach opt [::options get-opts] {
@@ -1135,40 +1131,6 @@ snit::type keyer::argv {
     method names {} { return [dict keys $data(opts)] }
 }
 
-# these are options and groups of options collected from argv
-
-proc get-server {} { return [::argv get -server] }
-proc has-server {} { return [::argv exists -server] }
-
-proc get-title {} { return [::argv get -title] }
-proc has-title {} { return [::argv exists -title] }
-
-proc get-grid {} { return [::argv get -grid] }
-proc has-grid {} { return [::argv exists -grid] }
-
-proc get-tree {} { return [::argv get -tree] }
-proc has-tree {} { return [::argv exists -tree] }
-
-proc get-start {} { return [::argv get -start] }
-proc has-start {} { return [::argv exists -start] }
-
-proc get-eval {} { return [::argv get -eval] }
-proc has-eval {} { return [::argv exists -eval] }
-
-proc get-exec {} { return [::argv get -exec] }
-proc has-exec {} { return [::argv exists -exec] }
-
-proc get-connect {} { return [::argv get -connect] }
-proc has-connect {} { return [::argv exists -connect] }
-
-proc get-argvopts {} { return [::argv get -argvopts] }
-proc has-argvopts {} { return [::argv exists -argvopts] }
-proc is-argvopts {o} { return [expr {[has-argvopts] && [is-matched $o [get-argvopts]]}] }
-
-# user interface components
-# primary user interface component is the dialbook
-# which isn't finished.
-
 #
 # update the window
 # this doesn't work when -wpm, -window, and -window2 aren't obvious
@@ -1195,7 +1157,7 @@ proc update-window-title {} {
 	}
     }
     set title {recri keyer}
-    if {[has-title]} { set title [get-title] }
+    if {[::argv exists -title]} { set title [::argv get -title] }
     wm title . $title
 }
 
@@ -1204,14 +1166,20 @@ proc update-window-title {} {
 #
 proc load-ui {} {
     set args {}
-    if {[has-grid]} { lappend args -grid [get-grid] }
-    if {[has-tree]} { lappend args -tree [get-tree] }
-    #.p add [::sdrtk::dialbook .p.dial {*}$args]
-    #toplevel .dial
-    wm title . keyer/dial
-    pack [::sdrtk::dialbook .dial {*}$args]
-    array set compid {}
-    foreach text [::options get-opts] {
+    if {[::argv exists -grid]} { lappend args -grid [::argv get -grid] }
+    if {[::argv exists -tree]} { lappend args -tree [::argv get -tree] }
+    if {[::argv exists -invert-wheel]} { lappend args -invert-wheel [::argv get -invert-wheel] }
+
+    set dial [expr {[::argv exists -dial] && [::argv get -dial]}]
+    if {$dial} {
+	wm title . keyer/dial
+	pack [::sdrtk::dialbook .dial {*}$args]
+    }
+
+    set opts [::options get-opts]
+    if {[has-favor]} { set opts [get-favor] }
+
+    foreach text $opts {
 	set cvalue [::options cget $text]
 	set type [::options get $text type]
 	set name [::options get $text name]
@@ -1219,22 +1187,27 @@ proc load-ui {} {
 	set info [::options get $text info]
 	set readout [::options get $text readout]
 	set var [::options cvar $text]
-	# puts "$text $cvalue $type $name $opt $info $readout $var"
+
+	verbose-puts "$text $cvalue $type $name $opt $info $readout $var"
+
 	# if already processed, error
 	if {[::options is-processed $text]} { error "$text already processed" }
 	::options set $text processed 1
 	
 	if {[is-hide $text]} continue
 	
-	set w .dial.x$text
-	package require sdrtk::readout-$type
-	sdrtk::readout-$type $w -dialbook .dial \
-	    -text $text -info $info {*}$readout \
-	    -value $cvalue -variable $var -command [list ::options configure $text]
-	#if {$text in {-key-wpm -key-weight}} { $w test }
-	.dial add $w $name $type -text $text
+	if {$dial} {
+	    set w .dial.x$text
+	    package require sdrtk::readout-$type
+	    sdrtk::readout-$type $w -dialbook .dial \
+		-text $text -info $info {*}$readout \
+		-value $cvalue -variable $var -command [list ::options configure $text]
+	    .dial add $w $name $type -text $text
+	}
     }
-    if {[.dial select] eq {}} { .dial select 0 }
+    if {$dial} { 
+	if {[.dial select] eq {}} { .dial select 0 }
+    }
 }
 
 #
@@ -1283,6 +1256,9 @@ proc main-argv {argv} {
 	    -server -
 	    -title -
 	    -verbose -
+	    -hl-discover -
+	    -invert-wheel -
+	    -dial -
 	    -grid -
 	    -tree { ::argv set $opt $val }
 	    -eval { ::argv lappend $opt $val }
@@ -1294,7 +1270,7 @@ proc main-argv {argv} {
 		::argv lappend -argvopts $opt $val
 	    }
 	}
-	# if {[has-argvopts]} { puts "argvopts [get-argvopts]" }
+	# if {[::argv exists -argvopts]} { puts "argvopts [::argv get -argvopts]" }
     }
 }
 
@@ -1307,8 +1283,8 @@ package require sdrtcl::jack
 # 3) allow from and to to be lists, connect each element of from to each element of to
 # todo) allow from and to to be patterns which succeed if they match one port or an iq pair 
 proc make-connections {} {
-    if { ! [has-connect]} return
-    set args [get-connect]
+    if { ! [::argv exists -connect]} return
+    set args [::argv get -connect]
     # a dictionary of ports and descriptions
     set ports [sdrtcl::jack list-ports]
     foreach {flist tlist} $args {
@@ -1385,6 +1361,9 @@ proc main {argv} {
     if {$argv eq {} || $argv eq {help}} { usage-message }
     verbose-puts "past usage message"
     
+    # default to having a dial
+    ::argv set -dial 1
+    
     # process arguments, first pass just to collect everything
     main-argv $argv
     verbose-puts "past main-argv"
@@ -1393,17 +1372,17 @@ proc main {argv} {
     if {[::argv exists -verbose]} { puts "verbose = [::argv get -verbose]" }
 
     # if nothing asked for, nothing gained
-    if { ! [has-start] && ! [has-exec] && ! [has-eval] } { usage-message }
+    if { ! [::argv exists -start] && ! [::argv exists -exec] && ! [::argv exists -eval] } { usage-message }
     verbose-puts "found something to start, exec, or eval"
 
     # start components and collect their options
-    if {[has-start]} { foreach composite [get-start] { ::options process $composite } }
+    if {[::argv exists -start]} { foreach composite [::argv get -start] { ::options process $composite } }
     verbose-puts "past start list"
     
-    if {[has-eval]} { foreach x [get-eval] { eval $x } }
+    if {[::argv exists -eval]} { foreach x [::argv get -eval] { eval $x } }
     verbose-puts "past eval list"
 
-    if {[has-exec]} { foreach x [get-exec] { exec {*}$x & } }
+    if {[::argv exists -exec]} { foreach x [::argv get -exec] { exec {*}$x & } }
     verbose-puts "past exec list"
     
     # connecting ports
@@ -1411,8 +1390,8 @@ proc main {argv} {
     verbose-puts "past make-connections"
     
     # process command line options for additional option definitions
-    if {[has-argvopts]} {
-	foreach {opt val} [get-argvopts] {
+    if {[::argv exists -argvopts]} {
+	foreach {opt val} [::argv get -argvopts] {
 	    verbose-puts "first process argvopts: $opt $val"
 	    if {[::options is-option $opt]} continue; # already defined
 	    verbose-puts "undefined option: $opt $val"
@@ -1424,9 +1403,9 @@ proc main {argv} {
     load-ui
     
     # load the options collected from the command line
-    if {[has-argvopts]} {
-	# puts "second pass argvopts [get-argvopts]"
-	foreach {opt val} [get-argvopts] { 
+    if {[::argv exists -argvopts]} {
+	# puts "second pass argvopts [::argv get -argvopts]"
+	foreach {opt val} [::argv get -argvopts] { 
 	    verbose-puts "second process argvopts: $opt $val"
 	    if {$opt eq {-hl-discover}} {
 		if {$val eq {discover}} {

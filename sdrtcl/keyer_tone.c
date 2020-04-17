@@ -40,6 +40,7 @@
 #define FRAMEWORK_USES_JACK 1
 #define FRAMEWORK_OPTIONS_MIDI 1
 #define FRAMEWORK_OPTIONS_KEYER_TONE 1
+#define FRAMEWORK_OPTIONS_KEYER_TWO 1
 
 #include "framework.h"		/* moved from three lines lower */
 #include "../dspmath/keyed_tone.h"
@@ -52,6 +53,7 @@ typedef struct {
 typedef struct {
   framework_t fw;
   keyed_tone_t tone;
+  keyed_tone_t tone2;
   unsigned long frame;
   int modified;
   options_t opts;
