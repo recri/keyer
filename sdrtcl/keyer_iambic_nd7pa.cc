@@ -137,7 +137,7 @@ extern "C" {
 	const unsigned char chan = dp->opts.chan;
 	const unsigned char note = dp->opts.note;
 	unsigned char midi_note_event[3] = { (unsigned char)(MIDI_NOTE_ON|(chan-1)), note, (unsigned char)(new_key_out ? 1 : 0) };
-	if (dp->opts.two != 0 && new_key_out == IAMBIC_DAH) midi_note_event[1] = note+1;
+	if (dp->opts.two != 0 && (new_key_out == IAMBIC_DAH || dp->key_out == IAMBIC_DAH)) midi_note_event[1] = note+1;
 	jack_midi_event_write(midi_out, i, midi_note_event, 3);
 	dp->key_out = new_key_out;
       }
