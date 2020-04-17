@@ -40,13 +40,13 @@ snit::type sdrtcl::keyer-iambic {
 	vk6ph {-verbose -server -client -chan -note -wpm -swap -mode                          -alsp               -ratio}
     }
 
-    delegate option -verbose to keyer
-    delegate option -server to keyer
-    delegate option -client to keyer
-    delegate option -chan to keyer
-    delegate option -note to keyer
-    delegate option -wpm to keyer
-    delegate option -swap to keyer
+    option -verbose -default 0 -configuremethod Configure -cgetmethod Cget
+    option -server -default {} -configuremethod Configure -cgetmethod Cget
+    option -client -default {} -configuremethod Configure -cgetmethod Cget
+    option -chan -default 1 -configuremethod Configure -cgetmethod Cget
+    option -note -default 0 -configuremethod Configure -cgetmethod Cget
+    option -wpm -default 25.0 -configuremethod Configure -cgetmethod Cget
+    option -swap -default 0 -configuremethod Configure -cgetmethod Cget
 
     option -mode -default A -configuremethod Configure -cgetmethod Cget
     option -dit -default 1.0 -configuremethod Configure -cgetmethod Cget
@@ -107,24 +107,24 @@ snit::type sdrtcl::keyer-iambic {
     }
     
     constructor {args} {
-	install keyer using sdrtcl::keyer-iambic-$options(-keyer) $self.keyer -client $self
-	$self configurelist $args
+	set options(-client) [namespace tail $self]
+	install keyer using sdrtcl::keyer-iambic-$options(-keyer) $self.keyer -client $options(-client) {*}$args
     }
     
     method Configure {opt val} {
+	set options($opt) $val
 	if {$opt eq {-keyer}} {
 	    $keyer deactivate
 	    rename $self.keyer {}
-	    set options($opt) $val
+	    set opts {}
+	    foreach opt $data($val) {
+		if {$opt eq {-server} && $options($opt) eq {}} continue
+		lappend opts $opt $options($opt)
+	    }
 	    package require sdrtcl::keyer-iambic-$val
-	    install keyer using sdrtcl::keyer-iambic-$val $self.keyer -client $self
+	    install keyer using sdrtcl::keyer-iambic-$val $self.keyer {*}$opts
 	    $keyer activate
 	    make-connections
-	    foreach opt [$keyer info options] {
-		if {[info exists options($opt)]} {
-		    $keyer configure $opt $options($opt)
-		}
-	    }
 	} else {
 	    if { ! [catch {$keyer configure $opt $val} result]} { return $result }
 	}
