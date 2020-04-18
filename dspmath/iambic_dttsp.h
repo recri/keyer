@@ -33,14 +33,14 @@
 ** Doxygen comments added by Dave Larsen, KV0S
 */
 
-// #include <stdio.h>
+#include <cstdio>
 #include "iambic.h"
 
 class iambic_dttsp {
  private:
 
   static const int NO_TIME_LEFTS_SCHED	= (-2);
-  static const int  NO_ELEMENT		= (-1);
+  static const int NO_ELEMENT		= (-1);
   static const int DIT			= (0);
   static const int DAH			= (1);
   static const int MODE_A		= (0);
@@ -66,10 +66,11 @@ class iambic_dttsp {
       last;		      // -1 = nothing, 0 = dit, 1 = dah
   } element;
   struct {
-    double beep, dlay, elem, midl;
+    int beep, dlay, elem, midl;
   } time_left;
   int dlay_type;	     // 0 = none, 1 = interchar, 2 = interword
   // klogic parameters
+  int sample_rate;
   float wpm;
   int iambicmode;
   int need_midelemodeB;
@@ -79,7 +80,7 @@ class iambic_dttsp {
   int autowordspacing;
   int weight;
   // computed parameters
-  float ditlen;
+  int ditlen;
   
  public:
   iambic_dttsp() {
@@ -94,7 +95,8 @@ class iambic_dttsp {
     dlay_type = NO_DELAY;
   }
 
-  void set_wpm(float _wpm) { ditlen = 1200.0f / (wpm = _wpm); }
+  void set_sample_rate(int _sample_rate) { sample_rate = _sample_rate; }
+  void set_wpm(float _wpm) { ditlen = (sample_rate / 1000) * (1200.0f / (wpm = _wpm)); }
   void set_iambicmode_b() { iambicmode = MODE_B; }
   void set_iambicmode_a() { iambicmode = MODE_A; }
   void set_need_midelemodeB(int on) { need_midelemodeB = on; }
@@ -117,7 +119,7 @@ class iambic_dttsp {
   // ditlen in ms/dit = 1000 * seconds/dit = 1200 / wpm
   //
 
-  int clock(int dit, int dah, float ticklen) {
+  int clock(int dit, int dah, int ticklen) {
     int set_which_ele_time_left = NO_TIME_LEFTS_SCHED;
     /** Decrement the time_lefts */
     time_left.dlay -= time_left.dlay > 0 ? ticklen : 0;
@@ -165,7 +167,6 @@ class iambic_dttsp {
 	  set_which_ele_time_left = element.curr = DIT;
 	else
 	  set_which_ele_time_left = element.curr = DAH;
-
       } else {
 	/* No more element */
 	element.curr = NO_ELEMENT;
@@ -211,8 +212,9 @@ class iambic_dttsp {
 
     if (time_left.dlay > 0 && !dit && !dah &&
 	((element.curr == DIT && !want_dit_mem) ||
-	 (element.curr == DAH && !want_dah_mem)))
+	 (element.curr == DAH && !want_dah_mem))) {
       set_which_ele_time_left = element.curr = NO_ELEMENT;
+    }
 
     /** Set element time_lefts, if needed */
     switch (set_which_ele_time_left) {
@@ -238,7 +240,10 @@ class iambic_dttsp {
     flag.prev.dit = dit;
     flag.prev.dah = dah;
 
-    return (time_left.beep > 0 && time_left.dlay <= 0) ? 1 : 0;
+    if (time_left.beep > 0 && time_left.dlay <= 0)
+      return element.curr == DIT ? IAMBIC_DIT : IAMBIC_DAH;
+    else
+      return IAMBIC_OFF;
   }
 };
 
@@ -249,13 +254,14 @@ extern "C" {
   
   typedef struct {
     float wpm;
-    char mode;
+    int mode;
     int want_dit_mem;
     int want_dah_mem;
     int need_midelemodeB;
     int autocharspacing;
     int autowordspacing;
     int weight;
+    int sample_rate;
   } iambic_dttsp_options_t;
 
   static void *iambic_dttsp_init(iambic_dttsp_t *p, iambic_dttsp_options_t *q) {
@@ -263,11 +269,10 @@ extern "C" {
   }
 
   static void iambic_dttsp_configure(iambic_dttsp_t *p, iambic_dttsp_options_t *q) {
+    p->k.set_sample_rate(q->sample_rate);
     p->k.set_wpm(q->wpm);
-    if (q->mode == 'A')
-      p->k.set_iambicmode_a();
-    else if (q->mode == 'B')
-      p->k.set_iambicmode_b();
+    if (q->mode == 'A') p->k.set_iambicmode_a();
+    else if (q->mode == 'B') p->k.set_iambicmode_b();
     p->k.set_want_dit_mem(q->want_dit_mem);
     p->k.set_want_dah_mem(q->want_dah_mem);
     p->k.set_autocharspacing(q->autocharspacing);

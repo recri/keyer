@@ -33,11 +33,11 @@ snit::type sdrtcl::keyer-iambic {
     component keyer
 
     variable data -array {
-	ad5dz {-verbose -server -client -chan -note -wpm -swap -mode -ies -ils -iws -dit -dah -alsp -awsp -weight -ratio -comp -word                   -two}
-	dttsp {-verbose -server -client -chan -note -wpm -swap -mode                          -alsp -awsp -weight                    -mdit -mdah -mide}
-	k1el  {-verbose -server -client -chan -note -wpm -swap -mode -ies           -dit -dah             -weight -ratio -comp -word}
-	nd7pa {-verbose -server -client -chan -note -wpm -swap       -ies           -dit -dah             -weight -ratio -comp}
-	vk6ph {-verbose -server -client -chan -note -wpm -swap -mode                          -alsp               -ratio}
+	ad5dz {-verbose -server -client -chan -note -wpm -swap -two -mode -ies -ils -iws -dit -dah -alsp -awsp -weight -ratio -comp -word}
+	dttsp {-verbose -server -client -chan -note -wpm -swap -two -mode                          -alsp -awsp -weight                    -mdit -mdah -mide}
+	k1el  {-verbose -server -client -chan -note -wpm -swap -two -mode -ies           -dit -dah             -weight -ratio -comp -word}
+	nd7pa {-verbose -server -client -chan -note -wpm -swap -two       -ies           -dit -dah             -weight -ratio -comp}
+	vk6ph {-verbose -server -client -chan -note -wpm -swap -two -mode                          -alsp               -ratio}
     }
 
     option -verbose -default 0 -configuremethod Configure -cgetmethod Cget

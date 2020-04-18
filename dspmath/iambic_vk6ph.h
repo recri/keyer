@@ -124,7 +124,7 @@ private:
 
   float cw_micros_per_tick = 1000000.0/48000.0;
   
-  int keyer_out = 0;
+  int keyer_out = IAMBIC_OFF;
 
   void keyer_update() {
     dot_delay = (int)(((1200000.0 / cw_keyer_speed) / cw_micros_per_tick) + 0.5);
@@ -177,23 +177,21 @@ public:
     case CHECK:		// check for key press
       if (cw_keyer_mode == KEYER_STRAIGHT) { // Straight/External key or bug
 	if (*kdash) {	// send manual dashes
-	  keyer_out = 1;
+	  keyer_out = IAMBIC_DAH;
 	  key_state = CHECK;
-	}
-	else if (*kdot)	// and automatic dots
+	} else if (*kdot)	// and automatic dots
 	  key_state = PREDOT;
 	else {
-	  keyer_out = 0;
+	  keyer_out = IAMBIC_OFF;
 	  key_state = CHECK;
 	}
-      }
-      else {
+      } else {
 	if (*kdot)
 	  key_state = PREDOT;
 	else if (*kdash)
 	  key_state = PREDASH;
 	else {
-	  keyer_out = 0;
+	  keyer_out = IAMBIC_OFF;
 	  key_state = CHECK;
 	}
       }
@@ -210,13 +208,13 @@ public:
       // dot paddle  pressed so set keyer_out high for time dependant on speed
       // also check if dash paddle is pressed during this time
     case SENDDOT:
-      keyer_out = 1;
+      keyer_out = IAMBIC_DIT;
       if (kdelay >= dot_delay) {
 	kdelay = 0;
-	keyer_out = 0;
+	keyer_out = IAMBIC_OFF;
 	key_state = DOTDELAY; // add inter-character spacing of one dot length
-      }
-      else kdelay += ticks;
+      } else
+	kdelay += ticks;
 
       // if Mode A and both paddels are relesed then clear dash memory
       if (cw_keyer_mode == KEYER_MODE_A)
@@ -229,13 +227,13 @@ public:
       // dash paddle pressed so set keyer_out high for time dependant on 3 x dot delay and weight
       // also check if dot paddle is pressed during this time
     case SENDDASH:
-      keyer_out = 1;
+      keyer_out = IAMBIC_DAH;
       if (kdelay >= dash_delay) {
 	kdelay = 0;
-	keyer_out = 0;
+	keyer_out = IAMBIC_OFF;
 	key_state = DASHDELAY; // add inter-character spacing of one dot length
-      }
-      else kdelay += ticks;
+      } else 
+	kdelay += ticks;
 
       // if Mode A and both padles are relesed then clear dot memory
       if (cw_keyer_mode == KEYER_MODE_A)
@@ -253,9 +251,10 @@ public:
 	  key_state = CHECK;
 	else if (dash_memory) // dash has been set during the dot so service
 	  key_state = PREDASH;
-	else key_state = DOTHELD; // dot is still active so service
-      }
-      else kdelay += ticks;
+	else 
+	  key_state = DOTHELD; // dot is still active so service
+      } else
+	kdelay += ticks;
 
       if (*kdash)		// set dash memory
 	dash_memory = 1;
@@ -268,9 +267,10 @@ public:
 
 	if (dot_memory) // dot has been set during the dash so service
 	  key_state = PREDOT;
-	else key_state = DASHHELD; // dash is still active so service
-      }
-      else kdelay += ticks;
+	else 
+	  key_state = DASHHELD; // dash is still active so service
+      } else
+	kdelay += ticks;
 
       if (*kdot)		// set dot memory
 	dot_memory = 1;
@@ -285,8 +285,8 @@ public:
       else if (cw_keyer_spacing) { // Letter space enabled so clear any pending dots or dashes
 	clear_memory();
 	key_state = LETTERSPACE;
-      }
-      else key_state = CHECK;
+      } else
+	key_state = CHECK;
       break;
 
       // check if dash paddle is still held, if so repeat the dash. Else check if Letter space is required
@@ -298,8 +298,8 @@ public:
       else if (cw_keyer_spacing) { // Letter space enabled so clear any pending dots or dashes
 	clear_memory();
 	key_state = LETTERSPACE;
-      }
-      else key_state = CHECK;
+      } else
+	key_state = CHECK;
       break;
 
       // Add letter space (3 x dot delay) to end of character and check if a paddle is pressed during this time.
@@ -311,9 +311,10 @@ public:
 	  key_state = PREDOT;
 	else if (dash_memory)
 	  key_state = PREDASH;
-	else key_state = CHECK; // no memories set so restart
-      }
-      else kdelay += ticks;
+	else
+	  key_state = CHECK; // no memories set so restart
+      } else
+	kdelay += ticks;
 
       // save any key presses during the letter space delay
       if (*kdot) dot_memory = 1;

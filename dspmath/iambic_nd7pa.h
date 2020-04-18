@@ -104,7 +104,7 @@ public:
 
     bool dit_on = (_swapped ? raw_dah_on : raw_dit_on) != 0;
     bool dah_on = (_swapped ? raw_dit_on : raw_dah_on) != 0;
-    bool key_out = false;
+    char key_out = IAMBIC_OFF;
 
     // update timer
     timer -= ticks;
@@ -112,26 +112,26 @@ public:
 
     // keyer state machine   
     if (keyer_state == IDLE) {
-      key_out = false;
+      key_out = IAMBIC_OFF;
       if (dit_on) {
 	timer = _ticksPerDit; keyer_state = DIT;
       } else if (dah_on) {
 	timer = _ticksPerDah; keyer_state = DAH;
       }       
     } else if (keyer_state == DIT) {
-      key_out = true; 
+      key_out = IAMBIC_DIT; 
       if ( timer_expired ) { timer = _ticksPerIes; keyer_state = DIT_DLY; }  
     } else if (keyer_state == DAH) {
-      key_out = true; 
+      key_out = IAMBIC_DAH; 
       if ( timer_expired ) { timer = _ticksPerIes; keyer_state = DAH_DLY; }  
     } else if (keyer_state == DIT_DLY) {
-      key_out = false;  
+      key_out = IAMBIC_OFF;  
       if ( timer_expired ) {
 	if ( dah_pending ) { timer = _ticksPerDah; keyer_state = DAH;
 	} else { keyer_state = IDLE; }
       }
     } else if (keyer_state == DAH_DLY) {
-      key_out = false; 
+      key_out = IAMBIC_OFF; 
       if ( timer_expired ) {
         if ( dit_pending ) {
 	  timer = _ticksPerDit; keyer_state = DIT;
@@ -153,7 +153,7 @@ public:
       (dah_on && ((keyer_state == DIT && timer < _ticksPerDit/2) ||
 		  (keyer_state == DIT_DLY && timer > _ticksPerIes/2)));
 
-    return key_out ? 1 : 0;
+    return key_out;
   }
 
   // set the microseconds in a tick

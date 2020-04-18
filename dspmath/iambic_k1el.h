@@ -105,7 +105,7 @@ class iambic_k1el {
 
   bool _update;			// update computed values
 
-  unsigned char _keyOut;	// output key state
+  char _keyOut;		        // output key state
   int _keyerDuration;		// ticks to next keyer state transition
 
   int _ticksPerDit;
@@ -234,6 +234,7 @@ class iambic_k1el {
 	  _keyerControl |= DIT_PROC;
 	  _keyerDuration = _ticksPerDit;
 	  _keyerState = KEYED_PREP;
+	  _keyOut = IAMBIC_DIT;
 	  continue;
 	}
 	_keyerState = CHK_DAH;
@@ -243,13 +244,13 @@ class iambic_k1el {
 	if (_keyerControl & DAH_L) {
 	  _keyerDuration = _ticksPerDah;
 	  _keyerState = KEYED_PREP;
+	  _keyOut = IAMBIC_DAH;
 	  continue;
 	}
 	_keyerState = IDLE;
 	return _keyOut;
 
       case KEYED_PREP:	// Assert key down, start timing, state shared for dit or dah
-	_keyOut = 1;
 	_keyerControl &= ~(DIT_L + DAH_L);   // clear both paddle latch bits
 	_keyerState = KEYED;                 // next state
 	return _keyOut;
@@ -259,7 +260,7 @@ class iambic_k1el {
 	  if (_mode == 'B') update_PaddleLatch(raw_dit_on, raw_dah_on);	// early paddle latch in Iambic B mode
 	  return _keyOut;
 	}
-	_keyOut = 0;		       // key is off
+	_keyOut = IAMBIC_OFF;	       // key is off
 	_keyerDuration = _ticksPerIes; // inter-element time
 	_keyerState = INTER_ELEMENT;   // next state
 	return _keyOut;
