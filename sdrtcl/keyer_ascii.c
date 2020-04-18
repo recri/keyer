@@ -42,6 +42,7 @@
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_WEIGHT 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_RATIO 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_TWO 1
 
 #include "../dspmath/midi.h"
 #include "../dspmath/midi_buffer.h"
@@ -105,7 +106,6 @@ static void _delete(void *arg) {
 static int _process(jack_nframes_t nframes, void *arg) {
   _t *data = (_t *)arg;
   void* midi_out = jack_port_get_buffer(framework_midi_output(data,0), nframes);
-  jack_midi_event_t event;
   
   // find out what there is to do
   framework_midi_event_init(&data->fw, &data->midi, nframes);
@@ -116,12 +116,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // handle an abort signal
   if (data->abort) {
     midi_buffer_init(&data->midi);
-    unsigned char *buffer = jack_midi_event_reserve(midi_out, 0, 3);
     unsigned char note_off[] = { MIDI_NOTE_ON|(data->opts.chan-1), data->opts.note, 0 };
-    if (buffer == NULL) {
-      fprintf(stderr, "%s:%d: jack won't buffer %d midi bytes!\n", __FILE__, __LINE__, 3);
-    } else {
-      memcpy(buffer, note_off, 3);
+    jack_midi_event_write(midi_out, 0, note_off, 3);
+    if (data->opts.two != 0) {
+      note_off[2] = data->opts.note+1;
+      jack_midi_event_write(midi_out, 0, note_off, 3);
     }
     data->abort = 0;
     return 0;
@@ -130,16 +129,10 @@ static int _process(jack_nframes_t nframes, void *arg) {
   // for each frame in this callback
   for(int i = 0; i < nframes; i += 1) {
     // process all midi output events at this sample frame
+    jack_midi_event_t event;
     int port;
     while (framework_midi_event_get(&data->fw, i, &event, &port)) {
-      if (event.size != 0) {
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, event.size);
-	if (buffer == NULL) {
-	  fprintf(stderr, "%s:%d: jack won't buffer %ld midi bytes!\n", __FILE__, __LINE__, (long)event.size);
-	} else {
-	  memcpy(buffer, event.buffer, event.size);
-	}
-      }
+      jack_midi_event_write(midi_out, i, event.buffer, event.size);
     }
   }
   return 0;
@@ -164,16 +157,19 @@ static int _queue_midi(_t *data, Tcl_UniChar c, char *p, int continues) {
       if (midi_buffer_queue_delay(&data->midi, data->samples_per.iws-data->samples_per.ils) < 0) return 0;
     }
   } else {
+    unsigned char ditnote = data->opts.note;
+    unsigned char dahnote = data->opts.note + (data->opts.two == 0 ? 0 : 1);
     while (*p != 0) {
+      unsigned char note = (*p == '-') ? ditnote : dahnote;
       if (*p == '.') {
-	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dit, data->opts.chan, data->opts.note, 1) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dit, data->opts.chan, note, 1) < 0) return 0;
       } else if (*p == '-') {
-	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dah, data->opts.chan, data->opts.note, 1) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dah, data->opts.chan, note, 1) < 0) return 0;
       }
       if (p[1] != 0 || continues) {
-	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ies, data->opts.chan, data->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ies, data->opts.chan, note, 0) < 0) return 0;
       } else {
-	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ils, data->opts.chan, data->opts.note, 0) < 0) return 0;
+	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ils, data->opts.chan, note, 0) < 0) return 0;
       }
       p += 1;
     }

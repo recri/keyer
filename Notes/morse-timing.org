@@ -48,3 +48,6 @@
   This table shows the problem with using narrow Goertzel filters
   which is that the bandwidth of the filter begins to approach the
   size of a dit.
+* Weight/Ratio formulas
+** dttsp dit_length = ditlen * weight / 50, dah_length = ditlen * weight / 50 + ditlen * 2
+** vk6ph dit_length = 1 * scale, dah_length = ((3 * weight) / 50) * scale
