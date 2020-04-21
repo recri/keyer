@@ -160,7 +160,7 @@ snit::widgetadaptor sdrtk::stripchart {
 	switch $b {
 	    1 {
 		$self scan dragto $x 0
-		$self set-x-pan [expr {($x-[$self start-x-drag])/[$self frames-per-screen-x]}]
+		$self set-x-pan [expr {10*($x-[$self start-x-drag])*[$self frames-per-screen-x]}]
 		bind $w <Motion> {}
 	    }
 	    4 {}
@@ -282,6 +282,7 @@ snit::widgetadaptor sdrtk::stripchart {
 	    # puts "going to redraw {[$self bbox]} $nlines {$lines}"
 	    
 	    # find the extent of the points drawn, use the overall extent
+	    # start from the overall extent and whittle it down
 	    lassign [$self bbox] x0 y0 x1 y1
 
 	    # find the extent of the window to draw into
@@ -293,6 +294,7 @@ snit::widgetadaptor sdrtk::stripchart {
 		# pan to beginning of data set
 		set xpan $x0 
 	    } else { 
+		set xpan [expr {max($x0,min($xpan, $x1))}]
 		# truncate data set at pan point
 		set x0 $xpan
 	    }
