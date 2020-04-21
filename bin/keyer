@@ -384,10 +384,10 @@ snit::type keyer::options {
 	    {*debounce* -steps} { $self describe $option ivalue -min 1 -max 32 -units steps -graticule 20 -steps-per-div 1}
 	    {*insert* -dit} - 
 	    {*insert* -dah} - 
-	    {* -key} - 
+	    {*insert* -key} - 
 	    {*insert* -ptt} - 
-	    {* -key-4} - 
-	    {* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
+	    {*insert* -key-4} - 
+	    {*insert* -key-5} { $self describe $option enum -values {none Shift_L Control_L Alt_L Shift_R Control_R Alt_R} }
 	    {*insert* -window} { $self describe $option enum -values {none . .dial}}
 	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
 	    {* -bandwidth} { $self describe $option value -format %.1f -min 10 -max 24000 -step 0.5 -units Hz -graticule 20 -steps-per-div 50}
@@ -552,24 +552,24 @@ snit::type keyer::options {
 	    {*meter* -decay} { $self describe $option value -min 0.001 -max 0.999 -step 0.001 }
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {*noise* -level} { $self describe $option value -format %.0f -min -160 -max 0 -step 1 -units dB }
+	    {*cw-echo* -key} -
 	    {* -chk} -
 	    {* -cho} -
 	    {* -keyo} -
 	    {* -kbd} -
 	    {* -kbdo} -
-	    {* -dec1} -
-	    {* -dec2} -
-	    {* -dto1} -
-	    {* -dto2} -
-	    {* -dti1} -
-	    {* -dti2} -
+	    {* -dec*} -
+	    {* -dto*} -
+	    {* -dti*} -
+	    {* -out} -
 	    {* -ascii} -
 	    {* -atap*} -
 	    {* -detime} -
 	    {* -filter*} -
 	    {* -insert} -
 	    {* -ins} -
-	    {* -mtap?} -
+	    {* -mtap*} -
+	    {* -meter*} -
 	    {* -noise} -
 	    {* -osc} -
 	    {* -tap*} {
@@ -1013,16 +1013,25 @@ snit::type keyer::setups {
 		    sdrtcl::keyer-iambic@key sdrtcl::keyer-tone@keyo
 		    sdrtcl::keyer-ascii@kbd sdrtcl::keyer-tone@kbdo 
 		    sdrtcl::filter-goertzel@dto2 sdrtcl::keyer-detime@dti2 sdrtcl::cw-decode@dec2
+		    sdrtcl::gain@out
 		    sdrtk::cw-echo@echo
 		} -echo-chk chk -echo-cho cho -echo-dec1 dec1 -echo-dec2 dec2 -echo-kbd kbd -echo-kbdo kbdo -echo-key key -echo-keyo keyo
-		-dec1-detime dti1 -dec2-detime dti2
+		-echo-dti1 dti1 -echo-dti2 dti2 -echo-dto1 dto1 -echo-dto2 dto2 -echo-out out -dec1-detime dti1 -dec2-detime dti2
+		-dial 0 -eval {wm withdraw .}
 	    }
 	    info {echo back challenge training}
 	    connect {
-		chk:midi_out cho:midi_in cho:out_i {system:playback_1 system:playback_2 dto1:in_i} dto1:midi_out dti1:midi_in
+		chk:midi_out cho:midi_in 
+		cho:out_i {out:in_i dto1:in_i} cho:out_q out:in_q
+		dto1:midi_out dti1:midi_in
 		{?system:midi_capture_1 ?system:midi_capture_2 ?system:midi_capture_3} key:midi_in
-		key:midi_out keyo:midi_in keyo:out_i {system:playback_1 system:playback_2 dto2:in_i} dto2:midi_out dti2:midi_in
-		kbd:midi_out kbdo:midi_in kbdo:out_i {system:playback_1 system:playback_2 dto2:in_i} dto2:midi_out dti2:midi_in
+		key:midi_out keyo:midi_in
+		keyo:out_i {out:in_i dto2:in_i} keyo:out_q out:in_q
+		dto2:midi_out dti2:midi_in
+		kbd:midi_out kbdo:midi_in
+		kbdo:out_i {out:in_i dto2:in_i} kbdo:out_q out:in_q
+		dto2:midi_out dti2:midi_in
+		out:out_i {system:playback_1 system:playback_2}
 	    }
 	}
 
@@ -1109,6 +1118,18 @@ snit::type keyer::setups {
 		?fg:out_i ?xsc:in2
 		?fcg:out_i ?xsc:in3
 		?fcg:out_q ?xsc:in4
+	    }
+	}
+	tap-graph {
+	    start {
+		keyer cas key detone mtap mtap2 atap nod noc -start {sdrtk::tap-graph@win} 
+		-detone-note 1 -win-mtap1 mtap -win-mtap2 mtap2
+	    }
+	    info { test graphs of midi taps on keyed tone }
+	    connect { 
+		{?system:midi_capture_1 ?system:midi_capture_2 ?cas:midi_out} {key:midi_in mtap:midi_in}
+		keyo:out_i {system:playback_1 system:playback_2 detone:in_i}
+		{key:midi_out detone:midi_out} mtap2:midi_in
 	    }
 	}
 	goertzel-characterize {
@@ -1465,6 +1486,14 @@ proc main {argv} {
 
 main $argv
 
+# more new todos
+# [ ] repeatedly play something in cw-text, a memory maybe?
+# [ ] reverse the mouse-wheel sense of direction
+# [ ] options to disable none, some, or all of the automatic connections
+# [ ] implement right click menu that copies and pastes in text window
+# [ ] why does keyer-ascii lock up after 3 hours of running?
+# [ ] why can't keyer-detime decode properly?
+#
 # todos from google keep
 # [x] Fix ascii buffering error
 # [ ] find average buffer use per character in keyer-ascii and act prudently

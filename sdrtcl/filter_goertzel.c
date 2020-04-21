@@ -33,11 +33,12 @@
 #define FRAMEWORK_OPTIONS_MIDI 1
 
 #include "../dspmath/filter_goertzel.h"
-#define N_MOVING_AVERAGE 512
+#define N_MOVING_AVERAGE 32
 #include "../dspmath/moving_average.h"
 #include "../dspmath/midi.h"
 #include "framework.h"
 
+#define N_FILTER 16
 typedef struct {
 #include "framework_options_vars.h"
   filter_goertzel_options_t fg;
@@ -51,7 +52,7 @@ typedef struct {
   framework_t fw;
   int modified;
   options_t opts;
-  filter_goertzel_t fg;
+  filter_goertzel_t fg[N_FILTER];
   moving_average_t dbp;	/* moving average of 20*log10(power) */
   moving_average_t dbe;	/* moving average of 20*log10(energy) */
   jack_nframes_t frame;
@@ -63,8 +64,13 @@ typedef struct {
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = dp->fw.busy = 0;
-    filter_goertzel_configure(&dp->fg, &dp->opts.fg);
+    for (int i = 0; i < N_FILTER; i += 1) {
+      filter_goertzel_configure(&dp->fg[i], &dp->opts.fg);
+      dp->fg[i].i = dp->fg[i].block_size - i * dp->fg[i].block_size / N_FILTER;
+    }
+    dp->opts.dbp.initial_value = 0;
     moving_average_configure(&dp->dbp, &dp->opts.dbp);
+    dp->opts.dbe.initial_value = 0;
     moving_average_configure(&dp->dbe, &dp->opts.dbe);
   }
 }
@@ -72,8 +78,11 @@ static void _update(_t *dp) {
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
   dp->opts.fg.sample_rate = sdrkit_sample_rate(&dp->fw);
-  void *p = filter_goertzel_preconfigure(&dp->fg, &dp->opts.fg); if (p != &dp->fg) return p;
-  filter_goertzel_configure(&dp->fg, &dp->opts.fg);
+  for (int i = 0; i < N_FILTER; i += 1) {
+    void *p = filter_goertzel_preconfigure(&dp->fg[i], &dp->opts.fg); if (p != &dp->fg[i]) return p;
+    filter_goertzel_configure(&dp->fg[i], &dp->opts.fg);
+    dp->fg[i].i = dp->fg[i].block_size - i * dp->fg[i].block_size / N_FILTER;
+  }
   moving_average_configure(&dp->dbp, &dp->opts.dbp);
   moving_average_configure(&dp->dbe, &dp->opts.dbe);
   dp->on = 0;
@@ -98,33 +107,28 @@ static int _process(jack_nframes_t nframes, void *arg) {
   jack_midi_clear_buffer(midi_out);
   // for all frames in the buffer
   for (int i = 0; i < nframes; i++) {
-    if (filter_goertzel_process(&dp->fg, *in++)) {
-      dp->dbpower = 20*log10(maxf(1e-16,dp->fg.power));
-      dp->dbenergy = 20*log10(maxf(1e-16,dp->fg.energy));
-      moving_average_process(&dp->dbp, dp->dbpower);
-      moving_average_process(&dp->dbe, dp->dbenergy);
-      /* fprintf(stderr, "power %.3e dbpower %.3f energy %.3e dbenergy %.3f dbp %.3f dbe %3.f\n",
-	 dp->fg.power, dp->dbpower, dp->fg.energy, dp->dbenergy, dp->dbp.average, dp->dbe.average); */
-      dp->frame = sdrkit_last_frame_time(arg)+i;
-      cmd = 0;
-      if (dp->on != 0) {
-	if (dp->dbpower < dp->dbp.average) {
-	  cmd = MIDI_NOTE_OFF;	/* note change off */
-	}
-      } else {
-	if (dp->dbpower > dp->dbp.average) {
-	  cmd = MIDI_NOTE_ON;	/* note change on */
-	}
-      }
-      if (cmd != 0) {
-	/* prepare to send note change */
-	unsigned char* buffer = jack_midi_event_reserve(midi_out, i, 3);
-	if (buffer == NULL) {
-	  fprintf(stderr, "%s:%d: jack won't buffer %d midi bytes!\n", __FILE__, __LINE__, 3);
+    for (int j = 0; j < N_FILTER; j += 1) {
+      if (filter_goertzel_process(&dp->fg[j], in[i])) {
+	dp->dbpower = 20*log10(maxf(1e-16,dp->fg[j].power));
+	dp->dbenergy = 20*log10(maxf(1e-16,dp->fg[j].energy));
+	moving_average_process(&dp->dbp, dp->dbpower);
+	moving_average_process(&dp->dbe, dp->dbenergy);
+	/* fprintf(stderr, "power %.3e dbpower %.3f energy %.3e dbenergy %.3f dbp %.3f dbe %3.f\n",
+	   dp->fg[j].power, dp->dbpower, dp->fg[j].energy, dp->dbenergy, dp->dbp.average, dp->dbe.average); */
+	dp->frame = sdrkit_last_frame_time(arg)+i;
+	cmd = 0;
+	if (dp->on != 0) {
+	  if (dp->dbpower < dp->dbp.average) {
+	    cmd = MIDI_NOTE_OFF;	/* note change off */
+	  }
 	} else {
-	  unsigned char note[3] = { MIDI_NOTE_ON | dp->opts.chan-1, dp->opts.note, (cmd == MIDI_NOTE_ON ? 1 : 0) };
-	  // fprintf(stderr, "keyer_detone sending %x %x %x\n", note[0], note[1], note[2]);
-	  memcpy(buffer, note, 3);
+	  if (dp->dbpower > dp->dbp.average) {
+	    cmd = MIDI_NOTE_ON;	/* note change on */
+	  }
+	}
+	if (cmd != 0) {
+	  unsigned char midi_note_event[3] = { MIDI_NOTE_ON | dp->opts.chan-1, dp->opts.note, (cmd == MIDI_NOTE_ON ? 1 : 0) };
+	  jack_midi_event_write(midi_out, i, midi_note_event, 3);
 	  dp->on ^= 1;
 	}
       }
@@ -160,10 +164,13 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   }
   data->modified = data->fw.busy = (data->modified || data->opts.fg.hertz != save.fg.hertz || data->opts.fg.bandwidth != save.fg.bandwidth);
   if (data->modified) {
-    void *e = filter_goertzel_preconfigure(&data->fg, &data->opts.fg); if (e != &data->fg) {
-      data->opts = save;
-      data->modified = data->fw.busy = 0;
-      return fw_error_str(interp, e);
+    for (int i = 0; i < N_FILTER; i += 1) {
+      void *e = filter_goertzel_preconfigure(&data->fg[i], &data->opts.fg); if (e != &data->fg[i]) {
+	data->opts = save;
+	data->modified = data->fw.busy = 0;
+	return fw_error_str(interp, e);
+      }
+      data->fg[i].i = data->fg[i].block_size - i * data->fg[i].block_size / N_FILTER;
     }
   }
   return TCL_OK;

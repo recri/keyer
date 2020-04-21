@@ -86,8 +86,18 @@ snit::widgetadaptor sdrtk::graph {
     # redraw rate limit
     option -redraw-rate -default 8
 
+    # mode of combining lines
+    option -mode -default stack -type {snit::enum -values {stack overlay}}
+
+    # invert the y axis sense
+    option -invert -default 1 -type snit::boolean
+
+    # default foreground color
+    option -foreground -default black -configuremethod Configure
+
     # send everything else to the canvas
     delegate option * to hull
+    delegate method * to hull
     
     variable data {}
 
@@ -95,26 +105,31 @@ snit::widgetadaptor sdrtk::graph {
 	installhull using canvas
 	install ticklabels using sdrtk::tick-labels %AUTO%
 	bind $win <Configure> [mymethod window-configure]
-	set data [dict create lines {} bbox [bbox-empty] inset {} frame {} title {} redraw-time [clock milliseconds]]
+	set data [dict create bbox [bbox-empty] inset {} frame {} title {} redraw-time [clock milliseconds]]
 	$self configure {*}$args
 	$self recompute frame
 	$self recompute inset
 	# puts "constructor frame [$self frame], inset [$self inset]"
-	$hull create rectangle [$self frame] -tag frame
+	$hull create rectangle [$self frame] -tag frame -outline $options(-foreground)
     }
 	
     # return one of the objects we're managing
-    method lines {} { return [dict get $data lines] }
+    method lines {} { return [lsort [dict keys [dict get $data line]]] }
     method bbox {} { return [dict get $data bbox] }
     method inset {} { return [dict get $data inset] }
     method frame {} { return [dict get $data frame] }
     method window {} { return [list 0 0 [winfo width $win] [winfo height $win]] }
+    method stack {i n} {
+	lassign [$self window] wx0 wy0 wx1 wy1
+	set dy [expr {($wy1-$wy0)/$n}]
+	return [list $wx0 [expr {$wy0+$i*$dy}] $wx1 [expr {$wy0+$i*$dy+$dy}]]
+    }
 
     # return if a named object exists
-    method {exists line} {name} { return [dict exists $data lines $name] }
+    method {exists line} {name} { return [dict exists $data line $name] }
     method {exists bbox} {name} { return [dict exists $data bbox $name] }
-    method {exists inset} {name} { return [dict exists $data inset $name] }
-    method {exists frame} {name} { return [dict exists $data frame $name] }
+    #method {exists inset} {name} { return [dict exists $data inset $name] }
+    #method {exists frame} {name} { return [dict exists $data frame $name] }
 
     # return parts of a named line
     method {line points} {name} { return [dict get $data line $name points] }
@@ -149,6 +164,7 @@ snit::widgetadaptor sdrtk::graph {
 	$self recompute frame
 	$self recompute inset
     }
+    
     method {recompute frame} {} { dict set data frame [bbox-inset [$self window] $options(-frame)] }
 
     # configure the graph area inset inside the frame
@@ -157,6 +173,16 @@ snit::widgetadaptor sdrtk::graph {
 	$self recompute frame
 	$self recompute inset
     }
+    
+    # configure the foreground color
+    method {Configure -foreground} {val} {
+	set options(-foreground) $val
+	$hull itemconfigure frame -outline $options(-foreground)
+	$hull itemconfigure x-tick -fill $options(-foreground)
+	$hull itemconfigure y-tick -fill $options(-foreground)
+	$hull itemconfigure plotted -fill $options(-foreground)
+    }
+
     method {recompute inset} {} { dict set data inset [bbox-inset [$self frame] $options(-inset)] }
 
     # redraw and rescale the plot
@@ -181,39 +207,94 @@ snit::widgetadaptor sdrtk::graph {
 		# puts "line $name [llength [$self line points $name]] points, [$self line bbox $name]"
 	    }
 	}
+	$self itemconfigure plotted -fill $options(-foreground)
 
 	# redraw the frame
-	$hull coords frame [$self frame]
+	# $hull coords frame [$self frame]
 	# puts "$self frame [$self frame]"
 	
-	# find the extent of the points drawn
-	lassign [$self bbox] x0 y0 x1 y1
-	# puts "\$self bbox [$self bbox] (extent of points plotted raw coordinates) x0 y0 x1 y1"
-	# puts "\$hull bbox plotted [$hull bbox plotted]  (after raw redraw)"
+	switch $options(-mode) {
+	    overlay {
+		# find the extent of the points drawn
+		lassign [$self bbox] x0 y0 x1 y1
+		# puts "\$self bbox [$self bbox] (extent of points plotted raw coordinates) x0 y0 x1 y1"
+		# puts "\$hull bbox plotted [$hull bbox plotted]  (after raw redraw)"
 
-	# find the box they go into
-	lassign [$self inset] wx0 wy0 wx1 wy1
-	# puts "$self inset [$self inset] (extent of window to be plotted into) wx0 wy0 wx1 wy1"
+		# find the box they go into
+		lassign [$self window] wx0 wy0 wx1 wy1
+		# puts "$self inset [$self inset] (extent of window to be plotted into) wx0 wy0 wx1 wy1"
 
-	# compute and apply the transform
-	lassign [list [expr {-$x0+$wx0}] [expr {-$y0+$wy0}]] xo yo
-	# puts "xo yo $xo $yo"
-	$hull move plotted $xo $yo
-	# puts "\$hull bbox plotted [$hull bbox plotted] (after move)"
-	lassign [list  [expr {double($wx1-$wx0)/($x1-$x0)}] [expr {double($wy1-$wy0)/($y1-$y0)}]] xs ys
-	if {$xs == 0 || $ys == 0} {
-	    puts "bbox [$self bbox]"
-	    puts "xs = $xs, wwd = [expr {double($wx1-$wx0)}], pwd = [expr {($x1-$x0)}]"
-	    puts "ys = $ys, wht = [expr {double($wy1-$wy0)}], pht = [expr {($y1-$y0)}]"
-	} else {
-	    # puts "xs ys $xs $ys"
-	    $hull scale plotted $wx0 $wy0 $xs $ys
-	    # puts "\$hull bbox plotted [$hull bbox plotted] (after scale)"
+		# compute and apply the transform
+		lassign [list [expr {-$x0+$wx0}] [expr {-$y0+$wy0}]] xo yo
+		# puts "xo yo $xo $yo"
+		$hull move plotted $xo $yo
+		# puts "\$hull bbox plotted [$hull bbox plotted] (after move)"
+		lassign [list  [expr {double($wx1-$wx0)/($x1-$x0)}] [expr {double($wy1-$wy0)/($y1-$y0)}]] xs ys
+		if {$xs == 0 || $ys == 0} {
+		    puts "bbox [$self bbox]"
+		    puts "xs = $xs, wwd = [expr {double($wx1-$wx0)}], pwd = [expr {($x1-$x0)}]"
+		    puts "ys = $ys, wht = [expr {double($wy1-$wy0)}], pht = [expr {($y1-$y0)}]"
+		} else {
+		    # puts "xs ys $xs $ys"
+		    $hull scale plotted $wx0 $wy0 $xs $ys
+		    # puts "\$hull bbox plotted [$hull bbox plotted] (after scale)"
+		}
+
+		# draw and label the tick marks 
+		$self ticks x [$self ticks-place $x0 $wx0 $x1 $wx1]
+		$self ticks y [$self ticks-place $y0 $wy0 $y1 $wy1]
+	    }
+	    stack {
+		set lines [$self lines]
+		set nlines [llength $lines]
+		set iline 0
+		# puts "stack llength {$lines} is $nlines"
+		
+		# find the extent of the points drawn, use the overall extent
+		lassign [$self bbox] x0 y0 x1 y1
+		# puts "\$self bbox [$self bbox] (extent of points plotted raw coordinates) x0 y0 x1 y1"
+		# puts "\$hull bbox plotted [$hull bbox plotted]  (after raw redraw)"
+		
+		# find the box they go into
+		lassign [$self window] wx0 wy0 wx1 wy1
+		# puts [$self frame]
+
+		foreach line $lines {
+		    # puts "stack $line position $iline of $nlines"
+		    # inset by 0.1 at top and bottom
+		    lassign [bbox-inset [$self stack $iline $nlines] {0 0.1 0 0.1}] wx0 wy0 wx1 wy1
+		    incr iline
+		    # puts "$self inset [$self inset] (extent of window to be plotted into) wx0 wy0i wx1 wy1i"
+
+		    # compute and apply the transform
+		    set xo [expr {-$x0+$wx0}]
+		    set yo [expr {-$y0+$wy0}]
+		    # puts "xo yo $xo $yo"
+		    $hull move line-$line $xo $yo
+		    # puts "\$hull bbox plotted [$hull bbox plotted] (after move)"
+		    lassign [list  [expr {double($wx1-$wx0)/($x1-$x0)}] [expr {double($wy1-$wy0)/($y1-$y0)}]] xs ys
+		    if {$xs == 0 || $ys == 0} {
+			puts "bbox [$self bbox]"
+			puts "xs = $xs, wwd = [expr {double($wx1-$wx0)}], pwd = [expr {($x1-$x0)}]"
+			puts "ys = $ys, wht = [expr {double($wy1-$wy0)}], pht = [expr {($y1-$y0)}]"
+		    } else {
+			# puts "xs ys $xs $ys"
+			$hull scale line-$line $wx0 $wy0 $xs $ys
+			# puts "\$hull bbox plotted [$hull bbox plotted] (after scale)"
+		    }
+		    
+		    if {$options(-invert)} {
+			lassign [$self line bbox $line] x0 y0 x1 y1
+			set ym [expr {($y0+$y1)/2}]
+			#$hull scale line-$line 0 $ym 1 -1
+		    }
+		    # draw and label the tick marks 
+		    #$self ticks x [$self ticks-place $x0 $wx0 $x1 $wx1]
+		    #$self ticks y [$self ticks-place $y0 $wy0 $y1 $wy1]
+		}
+	    }
+	    default { error "uncaught graph mode $options(-mode)" }
 	}
-
-	# draw and label the tick marks 
-	$self ticks x [$self ticks-place $x0 $wx0 $x1 $wx1]
-	$self ticks y [$self ticks-place $y0 $wy0 $y1 $wy1]
     }
 
     # decide tick placement for value v0 to value v1
@@ -241,16 +322,16 @@ snit::widgetadaptor sdrtk::graph {
 	    switch $coord {
 		x {
 		    set y [bbox-s [$self frame]]
-		    $hull create line $w $y $w [expr {$y+$dw}] -tags $coord-tick
+		    $hull create line $w $y $w [expr {$y+$dw}] -tags $coord-tick -fill $options(-foreground)
 		    if {($index & 1) == 0} {
-			$hull create text $w [expr {$y+$dw}] -text $v -anchor n -tags $coord-tick
+			$hull create text $w [expr {$y+$dw}] -text $v -anchor n -tags $coord-tick -fill $options(-foreground)
 		    }
 		    incr index
 		}
 		y {
 		    set x [bbox-w [$self frame]]
-		    $hull create line $x $w [expr {$x-$dw}] $w -tags $coord-tick
-		    $hull create text [expr {$x-$dw}] $w -text $v -anchor e -tags $coord-tick
+		    $hull create line $x $w [expr {$x-$dw}] $w -tags $coord-tick -fill $options(-foreground)
+		    $hull create text [expr {$x-$dw}] $w -text $v -anchor e -tags $coord-tick -fill $options(-foreground)
 		}
 	    }
 	}
@@ -261,7 +342,6 @@ snit::widgetadaptor sdrtk::graph {
 
     # delete everything
     method {delete all} {} {
-	dict set data lines {}
 	dict set data line [dict create]
 	dict set data bbox [bbox-empty]
 	$hull delete plotted
@@ -269,13 +349,14 @@ snit::widgetadaptor sdrtk::graph {
 			 
     # add a new line with points
     method {add line} {name args} {
-	dict lappend data lines $name
+	#dict lappend data lines $name
 	dict set data line $name [dict create \
 				      index [$hull create line 0 0 0 0 -tags [list plotted line line-$name]] \
 				      points {} \
 				      bbox [bbox-empty] \
 				     ]
 	if {$args ne {}} { $self line add point $name $args }
+	# puts "lines [dict keys [dict get $data line]]"
     }
 
     # add a point(s) to a line

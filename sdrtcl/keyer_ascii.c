@@ -32,6 +32,7 @@
   The input text strings are in unicode so any text in any language can be specified for
   encoding.  See ~/keyer/lib/morse for morse code mappings for arabic, cyrillic, farsi,
   greek, hebrew, and wabun (the japanese kana coding).
+
 */
 
 #define FRAMEWORK_USES_JACK 1
@@ -160,15 +161,24 @@ static int _queue_midi(_t *data, Tcl_UniChar c, char *p, int continues) {
     unsigned char ditnote = data->opts.note;
     unsigned char dahnote = data->opts.note + (data->opts.two == 0 ? 0 : 1);
     while (*p != 0) {
-      unsigned char note = (*p == '-') ? ditnote : dahnote;
+      unsigned char note;	// remember which note we're sending
       if (*p == '.') {
+	// send a dit
+	note = ditnote;		// remember the note for the space element
 	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dit, data->opts.chan, note, 1) < 0) return 0;
       } else if (*p == '-') {
+	// send a dah
+	note = dahnote;		// remember the note for the space element
 	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.dah, data->opts.chan, note, 1) < 0) return 0;
-      }
+      } else
+	return 0;
       if (p[1] != 0 || continues) {
+	// not at end of string, or making a prosign
+	// send an inter-element space
 	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ies, data->opts.chan, note, 0) < 0) return 0;
       } else {
+	// at end of string and not making a prosign
+	// send an inter-letter space
 	if (midi_buffer_queue_note_on(&data->midi, data->samples_per.ils, data->opts.chan, note, 0) < 0) return 0;
       }
       p += 1;

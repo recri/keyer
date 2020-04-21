@@ -60,15 +60,17 @@ snit::type sdrtcl::cw-decode {
     method timeout {} {
 	# get new text
 	# append to accumulated code
-	append data(code) [$options(-detime) get]
-	while {[regexp {^([-.]*) (.*)$} $data(code) all symbol data(code)]} {
-	    if {$symbol ne {}} {
-		# symbol terminated by a space
-		# insert translation
-		append data(text) [morse-to-text [$options(-dict)] $symbol]
-	    } else {
-		# an extra space indicates a word space
-		append data(text) { }
+	if { ! [$options(-detime) is-busy]} {
+	    append data(code) [$options(-detime) get]
+	    while {[regexp {^([-.]*) (.*)$} $data(code) all symbol data(code)]} {
+		if {$symbol ne {}} {
+		    # symbol terminated by a space
+		    # insert translation
+		    append data(text) [morse-to-text [$options(-dict)] $symbol]
+		} else {
+		    # an extra space indicates a word space
+		    append data(text) { }
+		}
 	    }
 	}
 	set handler [after 250 [mymethod timeout]]

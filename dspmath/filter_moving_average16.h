@@ -37,34 +37,24 @@
 #define FILTER_MOVING_AVERAGE16_LEN 16
 
 typedef struct {
-  float in[FILTER_MOVING_AVERAGE16_LEN];
-  float out;
-  unsigned len, pint, empty;
+  unsigned sum;
+  unsigned i;
+  unsigned in[FILTER_MOVING_AVERAGE16_LEN];
 } filter_moving_average16_t;
 
-static void filter_moving_average16_init(filter_moving_average16_t *dp) {
-  dp->empty = 1;
+static unsigned filter_moving_average16_init(filter_moving_average16_t *dp, unsigned init) {
+  dp->sum = FILTER_MOVING_AVERAGE16_LEN * init;
+  dp->i = 0;
+  for (int i = 0; i < FILTER_MOVING_AVERAGE16_LEN; i++) dp->in[i] = init;
+  return init;
 }
 
-static float filter_moving_average16_process(filter_moving_average16_t *dp, float a) {
-  if (dp->empty) {
-    dp->empty = 0;
-    dp->out = 0;
-    dp->pint = 0;
-    for (int i = 0; i < FILTER_MOVING_AVERAGE16_LEN; i++) {
-      dp->in[i] = a;
-      dp->out += a;
-    }
-  } else {
-    dp->out = dp->out - dp->in[dp->pint] + a;
-    dp->in[dp->pint] = a;
-    dp->pint += 1;
-    dp->pint &= (FILTER_MOVING_AVERAGE16_LEN-1);
-  }
-  return dp->out / FILTER_MOVING_AVERAGE16_LEN;
+static unsigned filter_moving_average16_process(filter_moving_average16_t *dp, unsigned a) {
+  dp->sum -= dp->in[dp->i] - a;
+  dp->in[dp->i] = a;
+  dp->i += 1;
+  dp->i &= (FILTER_MOVING_AVERAGE16_LEN-1);
+  return dp->sum / FILTER_MOVING_AVERAGE16_LEN;
 }
 
-static void filter_moving_average16_reset(filter_moving_average16_t *dp) {
-  dp->empty = 1;
-}
 #endif // FILTER_MOVING_AVERAGE16_H

@@ -21,25 +21,33 @@
 
 #include "dspmath.h"
 
+#ifndef N_MOVING_AVERAGE
+#error "N_MOVING_AVERAGE must be defined, positive, and a power of two."
+#endif
+#if N_MOVING_AVERAGE <= 0
+#error "N_MOVING_AVERAGE must be positive."
+#endif
+#if (N_MOVING_AVERAGE&(N_MOVING_AVERAGE-1)) != 0
+#error "N_MOVING_AVERAGE must be a power of two."
+#endif
+
 typedef struct {
-  /* char dummy[1]; */
+  float initial_value;
 } moving_average_options_t;
 
 typedef struct {
   unsigned i;
-  unsigned mask;
   float average;
   float window[N_MOVING_AVERAGE];
 } moving_average_t;
 
 static void moving_average_configure(moving_average_t *p, moving_average_options_t *q) {
   p->i = 0;
-  p->mask = N_MOVING_AVERAGE-1;
+  p->average = q->initial_value;
+  for (int i = 0; i < N_MOVING_AVERAGE; i += 1) p->window[i] = q->initial_value;
 }
 
 static void *moving_average_preconfigure(moving_average_t *p, moving_average_options_t *q) {
-  if (N_MOVING_AVERAGE <= 0 || 
-      (N_MOVING_AVERAGE&(N_MOVING_AVERAGE-1)) != 0) return (void *)"N_MOVING_AVERAGE must be a positive power of two";
   return p;
 }
 
@@ -50,10 +58,10 @@ static void *moving_average_init(moving_average_t *p, moving_average_options_t *
 }
 
 static int moving_average_process(moving_average_t *p, const float x) {
-  p->average -= p->window[p->i&p->mask];
-  p->window[p->i&p->mask] = x / N_MOVING_AVERAGE;
-  p->average += p->window[p->i&p->mask];
+  p->average += (x - p->window[p->i]) / N_MOVING_AVERAGE;
+  p->window[p->i] = x;
   p->i += 1;
+  p->i &= (N_MOVING_AVERAGE-1);
 }
 
 #endif

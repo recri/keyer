@@ -61,6 +61,7 @@ static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = dp->fw.busy = 0;
     dp->opts.detime.spd = (unsigned) round((sdrkit_sample_rate(dp) * 60) / (dp->opts.wpm * 50));
+    fprintf(stderr, "detime update sr %u, wpm %f, spd %u\n", sdrkit_sample_rate(dp), dp->opts.wpm, dp->opts.detime.spd);
     detime_configure(&dp->detime, &dp->opts.detime);
   }
 }
@@ -68,6 +69,7 @@ static void _update(_t *dp) {
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
   dp->opts.detime.spd = (unsigned) round((sdrkit_sample_rate(arg) * 60) / (dp->opts.wpm * 50));
+  fprintf(stderr, "detime init sr %u, wpm %f, spd %u\n", sdrkit_sample_rate(arg), dp->opts.wpm, dp->opts.detime.spd);
   void *p = detime_preconfigure(&dp->detime, &dp->opts.detime); if (p != &dp->detime) return p;
   detime_configure(&dp->detime, &dp->opts.detime);
   ring_buffer_init(&dp->ring, RING_SIZE, dp->buff);
@@ -149,6 +151,14 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
+static int _status(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  // return the detimer data
+  _t *dp = (_t *)clientData;
+  detime_t *p = &dp->detime;
+  return fw_success_obj(interp, Tcl_ObjPrintf("s %u f %u l_e %u l_s %u 2d %u i %u sum %u",
+					      p->state, p->frame, p->last_element, p->last_space,
+					      p->two_dot, p->avg.i, p->avg.sum));
+}
 static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   _t *data = (_t *)clientData;
   options_t save = data->opts;
@@ -156,7 +166,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     data->opts = save;
     return TCL_ERROR;
   }
-  data->modified = data->fw.busy = data->modified;
+  data->modified = data->fw.busy = data->opts.wpm != save.wpm;
   return TCL_OK;
 }
 

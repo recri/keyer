@@ -55,13 +55,14 @@
 **
 */
 typedef struct {
-  unsigned spd;			// estimated samples per dot
+  unsigned spd;			// estimated samples per dot+ies
 } detime_options_t;
 
 typedef struct {
   unsigned state;		// is key on or off
   unsigned frame;		// frame time of last event
   unsigned last_element;	// duration of last mark element
+  unsigned last_space;		// duration of last space element
   unsigned two_dot;		// estimated duration of two dots 
   filter_moving_average16_t avg; // avg of last 16 two_dot observations
 } detime_t;
@@ -70,8 +71,8 @@ typedef struct {
 static void detime_configure(detime_t *p, detime_options_t *q) {
   p->state = DETIME_IDLE;
   p->last_element = 0;
-  filter_moving_average16_init(&p->avg);
-  p->two_dot = 2 * q->spd;
+  p->last_space = 0;
+  p->two_dot = filter_moving_average16_init(&p->avg, 2*q->spd);
 }
 
 static void *detime_preconfigure(detime_t *p, detime_options_t *q) {
@@ -108,9 +109,21 @@ static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
     if (dp->last_element) {
       if ( ((observation > 2 * dp->last_element) && (observation < 4 * dp->last_element)) ||
 	   ((dp->last_element > 2 * observation) && (dp->last_element < 4 * observation)) ) {
+	unsigned td = dp->two_dot;
 	dp->two_dot = filter_moving_average16_process(&dp->avg, (observation+dp->last_element)/2);
+	fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_element, observation);
       }
     }
+#if 0
+    if (dp->last_space) {
+      if ( ((observation > 2 * dp->last_space) && (observation < 4 * dp->last_space)) ||
+	   ((dp->last_space > 2 * observation) && (dp->last_space < 4 * observation)) ) {
+	unsigned td = dp->two_dot;
+	dp->two_dot = filter_moving_average16_process(&dp->avg, (observation+dp->last_space)/2);
+	fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_space, observation);
+      }
+    }
+#endif
     dp->last_element = observation;
     dp->state = DETIME_OFF;
     return (observation <= dp->two_dot) ? '.' : '-';
@@ -119,6 +132,17 @@ static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
   case DETIME_ON:		/* the end of a space */
 				// error if dp->state is wrong, should be DETIME_OFF or DETIME_IDLE*
     dp->frame = frame;
+#if 0
+    if (dp->last_element) {
+      if ( ((observation > 2 * dp->last_element) && (observation < 4 * dp->last_element)) ||
+	   ((dp->last_element > 2 * observation) && (dp->last_element < 4 * observation)) ) {
+	unsigned td = dp->two_dot;
+	dp->two_dot = filter_moving_average16_process(&dp->avg, (observation+dp->last_element)/2);
+	fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_element, observation);
+      }
+    }
+#endif
+    dp->last_space = observation;
     dp->state = DETIME_ON;
     return 0;
 
