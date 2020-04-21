@@ -75,9 +75,6 @@ snit::widgetadaptor sdrtk::stripchart {
     # redraw rate limit
     option -redraw-rate -default 8
 
-    # mode of combining lines
-    option -mode -default stack -type {snit::enum -values {stack overlay}}
-
     # default foreground color
     option -foreground -default black -configuremethod Configure
 
@@ -93,31 +90,141 @@ snit::widgetadaptor sdrtk::stripchart {
 	bind $win <Destroy> [mymethod window-destroy]
 	bind $win <ButtonPress> [mymethod button-press %W %X %Y %x %y %b]
 	bind $win <ButtonRelease> [mymethod button-release %W %X %Y %x %y %b]
-	set data [dict create bbox [bbox-empty] title {} changes 0 x-pan 0 x-zoom 0]
+	set data [dict create bbox [bbox-empty] title {} changes 0 x-pan 0 x-zoom 0 frames-per-screen-x 1 frame-at-left-edge 0]
 	$self configure {*}$args
 	$self redraw
     }
 
     # the window size has changed, recompute and redraw as necessary
     method window-configure {} { $self note-changes }
-    method window-destroy {} {
-	catch {after cancel [dict get data handler]}
-    }
+    method window-destroy {} { catch {after cancel [dict get data handler]} }
+
+    # a button was pressed or released
     method button-press {w rx ry x y b} {
-	puts "button-press w=$w rx=$rx ry=$ry x=$x y=$y b=$b, cx=[$w canvasx $x] cy=[$w canvasy $y]"
+	switch $b {
+	    1 {
+		# pan left/right, use scan dragto?
+		# translate x into frames
+		$self scan mark $x 0
+		$self set-start-x-drag $x
+		bind $w <Motion> [mymethod button-drag %W %X %Y %x %y 1]
+	    }
+	    2 {
+	    }
+	    3 {
+		# option menu
+		$self option-menu $w $rx $ry
+	    }
+	    4 {
+		# scroll button down, zoom in
+		# must change pan, too, to preserve mouse position
+		puts "zoom in x-zoom [$self x-zoom] frames-per-screen-x [$self frames-per-screen-x]"
+		set zoom [$self frames-per-screen-x]
+		switch -glob $zoom {
+		    1 - 1.0 { }
+		    1* { set zoom [expr {$zoom/2}] }
+		    2* { set zoom [expr {$zoom/2}] }
+		    5* { set zoom [expr {$zoom/2.5}] }
+		}
+		$self set-x-zoom $zoom
+	    }
+	    5 {
+		# scroll button, zoom out
+		# must change pan, too, to preserve mouse position
+		puts "zoom out x-zoom [$self x-zoom] frames-per-screen-x [$self frames-per-screen-x]"
+		set zoom [$self frames-per-screen-x]
+		switch -glob $zoom {
+		    1* { set zoom [expr {2*$zoom}] }
+		    2* { set zoom [expr {2.5*$zoom}] }
+		    5* { set zoom [expr {2*$zoom}] }
+		}
+		$self set-x-zoom $zoom
+	    }
+	    default {
+		puts "button-press w=$w rx=$rx ry=$ry x=$x y=$y b=$b, cx=[$w canvasx $x] cy=[$w canvasy $y]"
+	    }
+	}
+    }
+    method button-drag {w rx ry x y b} {
+	switch $b {
+	    1 {
+		$self scan dragto $x 0 
+		$self set-x-pan [expr {[$self frame-at-left-edge]+($x-[$self start-x-drag])*[$self frames-per-screen-x]}]
+	    }
+	    default {
+		puts "button-motion $w $rx $ry $x $y $b"
+	    }
+	}
     }
     method button-release {w rx ry x y b} {
-	puts "button-release $w $rx $ry $x $y $b"
+	switch $b {
+	    1 {
+		$self scan dragto $x 0
+		$self set-x-pan [expr {($x-[$self start-x-drag])/[$self frames-per-screen-x]}]
+		bind $w <Motion> {}
+	    }
+	    4 {}
+	    5 {}
+	    default {
+		puts "button-release $w $rx $ry $x $y $b"
+	    }
+	}
     }
+
+    method option-menu {w x y} {
+	if {[winfo exists $win.m]} { destroy $win.m }
+	menu $win.m -tearoff no
+	$win.m add command -label {Start collecting} -command [list $win start-collecting]
+	$win.m add command -label {Stop collecting} -command [list $win stop-collecting]
+	$win.m add separator
+	$win.m add command -label {Clear zoom/pan} -command [list $win clear-zoom-pan]
+	$win.m add command -label {Clear window} -command [list $win clear-window]
+	tk_popup $win.m $x $y
+    }
+    method start-collecting {} {
+	# foreach tap [$self get-taps] { $tap start }
+    }
+    method stop-collecting {} {
+	# foreach tap [$self get-taps] { $tap stop }
+    }
+    method clear-zoom-pan {} {
+	$self set-x-zoom 0
+	$self set-x-pan 0
+	$self note-changes
+    }
+    method clear-window {} {
+	$self delete lines
+    }
+    # someone noticed some changes
     method note-changes {} { dict incr data changes }
     method poll-changes {} { return [dict get $data changes] }
     method clear-changes {} { dict set data changes 0 }
 
-    # manage the x-pan and x-zoom
+    # the x-pan set by mouse twiddling
     method x-pan {} { return [dict get $data x-pan] }
-    method set-x-pan {v} { dict set data x-pan $v }
+    method set-x-pan {v} { 
+	puts "set-x-pan $v was [$self x-pan]"
+	dict set data x-pan $v
+	$self note-changes
+    }
+    # the x-zoom set by mouse twiddling
     method x-zoom {} { return [dict get $data x-zoom] }
-    method set-x-zoom {v} { dict set data x-zoom $v }
+    method set-x-zoom {v} { 
+	puts "set-x-zoom $v was [$self x-zoom]"
+	dict set data x-zoom $v
+	$self note-changes }
+    # the frames scale factor used to draw the screen
+    method frames-per-screen-x {} { return [dict get $data frames-per-screen-x] }
+    method set-frames-per-screen-x {v} {
+	puts "set-frames-per-screen-x $v was [$self frames-per-screen-x]"
+	dict set data frames-per-screen-x $v
+    }
+    # the frame at the left edge when the screen was drawn
+    method frame-at-left-edge {} { return [dict get $data frame-at-left-edge] }
+    method set-frame-at-left-edge {v} { return [dict set data frame-at-left-edge $v] }
+    # the screen x at the start of the drag
+    method start-x-drag {} { return [dict get $data start-x-drag] }
+    method set-start-x-drag {v} { dict set data start-x-drag $v }
     
     # return one of the objects we're managing
     method lines {} { return [lsort [dict keys [dict get $data line]]] }
@@ -182,15 +289,27 @@ snit::widgetadaptor sdrtk::stripchart {
 
 	    # find or make up the x-pan coordinate and write it into x0
 	    set xpan [$self x-pan]
-	    if {$xpan == 0} { set xpan $x0 } else { set x0 $xpan }
+	    if {$xpan == 0} { 
+		# pan to beginning of data set
+		set xpan $x0 
+	    } else { 
+		# truncate data set at pan point
+		set x0 $xpan
+	    }
+	    # remember where it landed
+	    $self set-frame-at-left-edge $x0
 
 	    # find or make up the x-zoom scale factor and use it to find x1
 	    set xzoom [$self x-zoom]
 	    if {$xzoom == 0} {
-		set xzoom [round-scale [expr {double($wx1-$wx0)/($x1-$x0)}]]
+		# compute zoom from points to display
+		set xzoom [round-scale [expr {double($x1-$x0)/($wx1-$wx0)}]]
 	    } else {
-		set x1 [expr {$x0+($wx1-$wx0)/$xzoom}]
+		# compute points displayed from amount to zoom
+		set x1 [expr {$x0+($wx1-$wx0)*$xzoom}]
 	    }
+	    # remember how it turned out
+	    $self set-frames-per-screen-x $xzoom
 
 	    # redraw the lines in their native coordinates, clipped to x0 y0 x1 y1
 	    foreach name $lines {
@@ -206,10 +325,10 @@ snit::widgetadaptor sdrtk::stripchart {
 	    $self move all 0 1
 	    
 	    # pan the x-axis
-	    $self move all -$x0 0
+	    $self move all [expr {-$x0}] 0
 
 	    # zoom the x-axis
-	    $self scale all 0 0 $xzoom 1
+	    $self scale all 0 0 [expr {1.0/$xzoom}] 1
 
 	    # move the lines to their position in the stack of strip charts
 	    foreach line $lines {
@@ -251,7 +370,14 @@ snit::widgetadaptor sdrtk::stripchart {
 	$hull delete all
 	$self note-changes
     }
-			 
+    method {delete lines} {} {
+	dict set data bbox [bbox-empty]
+	foreach name [$self lines] {
+	    dict set data line $name points {}
+	    dict set data line $name bbox [bbox-empty]
+	    $self coords [$self line index $name] 0 0 0 0
+	}
+    }
     # add a new line with points
     method {add line} {name args} {
 	#dict lappend data lines $name
@@ -272,18 +398,28 @@ snit::widgetadaptor sdrtk::stripchart {
 	$self note-changes
     }
 
-    # redraw the coordinates of a line
+    # redraw the coordinates of a line, args is a bounding box
     method {line redraw} {name args} {
 	if {$args eq {}} { set args [$self line bbox $name] }
 	lassign $args x0 y0 x1 y1
 	if {[llength [$self line points $name]] > 4} {
+	    set y0 {}
+	    set y1 {}
 	    set xy {}
 	    foreach {x y} [$self line points $name] {
-		if {$x>=$x0 && $x<=$x1} {
+		if {$x<$x0} {
+		    set y0 $y
+		} elseif {$x<=$x1} {
 		    lappend xy $x $y
+		    set y1 $y
+		} else {
+		    set y1 $y
+		    break
 		}
 	    }
-	    $hull coords [$self line index $name] $xy
+	    if {$y0 eq {}} { set y0 0 }
+	    if {$y1 eq {}} { set y1 0 }
+	    $hull coords [$self line index $name] [concat $x0 $y0 $xy $x1 $y1]
 	}
     }
 

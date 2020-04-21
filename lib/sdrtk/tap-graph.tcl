@@ -48,7 +48,7 @@ snit::widgetadaptor sdrtk::tap-graph {
 	$self configure {*}$args
 	set data(handle1) [after $data(timeout) [mymethod poll]]
 	bind $win <Destroy> [mymethod destroy-window %W]
-	bind $win <ButtonPress-3> [mymethod option-menu %W %X %Y]
+	# bind $win <ButtonPress-3> [mymethod option-menu %W %X %Y]
     }
     method destroy-window {w} {
 	catch {after cancel $data(handle1)}
