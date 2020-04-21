@@ -91,6 +91,8 @@ snit::widgetadaptor sdrtk::stripchart {
 	installhull using canvas
 	bind $win <Configure> [mymethod window-configure]
 	bind $win <Destroy> [mymethod window-destroy]
+	bind $win <ButtonPress> [mymethod button-press %W %X %Y %x %y %b]
+	bind $win <ButtonRelease> [mymethod button-release %W %X %Y %x %y %b]
 	set data [dict create bbox [bbox-empty] title {} changes 0]
 	$self configure {*}$args
 	$self redraw
@@ -100,7 +102,12 @@ snit::widgetadaptor sdrtk::stripchart {
     method window-destroy {} {
 	catch {after cancel [dict get data handler]}
     }
-	
+    method button-press {w rx ry x y b} {
+	puts "button-press w=$w rx=$rx ry=$ry x=$x y=$y b=$b, cx=[$w canvasx $x] cy=[$w canvasy $y]"
+    }
+    method button-release {w rx ry x y b} {
+	puts "button-release $w $rx $ry $x $y $b"
+    }
     method note-changes {} { dict incr data changes }
     method poll-changes {} { return [dict get $data changes] }
     method clear-changes {} { dict set data changes 0 }
@@ -148,13 +155,16 @@ snit::widgetadaptor sdrtk::stripchart {
 	
 	    # clear the change counter
 	    $self clear-changes
-	
 
 	    set lines [$self lines]
 	    set nlines [llength $lines]
 	    set iline 0
+
 	    # puts "going to redraw {[$self bbox]} $nlines {$lines}"
 	    
+	    # find the extent of the points drawn, use the overall extent
+	    lassign [$self bbox] x0 y0 x1 y1
+
 	    # redraw the lines in their native coordinates
 	    foreach name $lines {
 		if {[llength [$self line points $name]] >= 4} {
@@ -163,12 +173,15 @@ snit::widgetadaptor sdrtk::stripchart {
 		    # puts "line $name [llength [$self line points $name]] points, [$self line bbox $name]"
 		}
 	    }
+	    
+	    # flip the y-axis
+	    $self scale all 0 0 1 -1
+	    $self move all 0 1
+	    
+	    # pan the x-axis
 
-	    # puts "stack llength {$lines} is $nlines"
-		
-	    # puts "\$self bbox [$self bbox] (extent of points plotted raw coordinates) x0 y0 x1 y1"
-	    # puts "\$hull bbox plotted [$hull bbox plotted]  (after raw redraw)"
-		
+	    # zoom the x-axis
+	    
 	    foreach line $lines {
 		# puts "stack $line position $iline of $nlines"
 		# inset by 0.1 at top and bottom
