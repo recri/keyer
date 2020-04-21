@@ -118,11 +118,11 @@ snit::widgetadaptor sdrtk::stripchart {
 	    4 {
 		# scroll button down, zoom in
 		# must change pan, too, to preserve mouse position
-		puts "zoom in x-zoom [$self x-zoom] frames-per-screen-x [$self frames-per-screen-x]"
+		# puts "zoom in x-zoom [$self x-zoom] frames-per-screen-x [$self frames-per-screen-x]"
 		set zoom [$self frames-per-screen-x]
 		switch -glob $zoom {
 		    1 - 1.0 { }
-		    1* { set zoom [expr {$zoom/2}] }
+		    1* -
 		    2* { set zoom [expr {$zoom/2}] }
 		    5* { set zoom [expr {$zoom/2.5}] }
 		}
@@ -131,12 +131,12 @@ snit::widgetadaptor sdrtk::stripchart {
 	    5 {
 		# scroll button, zoom out
 		# must change pan, too, to preserve mouse position
-		puts "zoom out x-zoom [$self x-zoom] frames-per-screen-x [$self frames-per-screen-x]"
+		# puts "zoom out x-zoom [$self x-zoom] frames-per-screen-x [$self frames-per-screen-x]"
 		set zoom [$self frames-per-screen-x]
 		switch -glob $zoom {
-		    1* { set zoom [expr {2*$zoom}] }
-		    2* { set zoom [expr {2.5*$zoom}] }
+		    1* -
 		    5* { set zoom [expr {2*$zoom}] }
+		    2* { set zoom [expr {2.5*$zoom}] }
 		}
 		$self set-x-zoom $zoom
 	    }
@@ -149,7 +149,7 @@ snit::widgetadaptor sdrtk::stripchart {
 	switch $b {
 	    1 {
 		$self scan dragto $x 0 
-		$self set-x-pan [expr {[$self frame-at-left-edge]+($x-[$self start-x-drag])*[$self frames-per-screen-x]}]
+		#$self set-x-pan [expr {[$self frame-at-left-edge]+10*($x-[$self start-x-drag])*[$self frames-per-screen-x]}]
 	    }
 	    default {
 		puts "button-motion $w $rx $ry $x $y $b"
@@ -159,9 +159,9 @@ snit::widgetadaptor sdrtk::stripchart {
     method button-release {w rx ry x y b} {
 	switch $b {
 	    1 {
-		$self scan dragto $x 0
-		$self set-x-pan [expr {10*($x-[$self start-x-drag])*[$self frames-per-screen-x]}]
 		bind $w <Motion> {}
+		$self scan dragto $x 0
+		$self set-x-pan [expr {[$self frame-at-left-edge]+10*($x-[$self start-x-drag])*[$self frames-per-screen-x]}]
 	    }
 	    4 {}
 	    5 {}
@@ -203,20 +203,20 @@ snit::widgetadaptor sdrtk::stripchart {
     # the x-pan set by mouse twiddling
     method x-pan {} { return [dict get $data x-pan] }
     method set-x-pan {v} { 
-	puts "set-x-pan $v was [$self x-pan]"
+	puts "set-x-pan $v was [$self x-pan] and left-edge is [$self frame-at-left-edge]"
 	dict set data x-pan $v
 	$self note-changes
     }
     # the x-zoom set by mouse twiddling
     method x-zoom {} { return [dict get $data x-zoom] }
     method set-x-zoom {v} { 
-	puts "set-x-zoom $v was [$self x-zoom]"
+	# puts "set-x-zoom $v was [$self x-zoom]"
 	dict set data x-zoom $v
 	$self note-changes }
     # the frames scale factor used to draw the screen
     method frames-per-screen-x {} { return [dict get $data frames-per-screen-x] }
     method set-frames-per-screen-x {v} {
-	puts "set-frames-per-screen-x $v was [$self frames-per-screen-x]"
+	# puts "set-frames-per-screen-x $v was [$self frames-per-screen-x]"
 	dict set data frames-per-screen-x $v
     }
     # the frame at the left edge when the screen was drawn
@@ -294,7 +294,7 @@ snit::widgetadaptor sdrtk::stripchart {
 		# pan to beginning of data set
 		set xpan $x0 
 	    } else { 
-		set xpan [expr {max($x0,min($xpan, $x1))}]
+		#set xpan [expr {max($x0,min($xpan, $x1))}]
 		# truncate data set at pan point
 		set x0 $xpan
 	    }
@@ -308,12 +308,14 @@ snit::widgetadaptor sdrtk::stripchart {
 		set xzoom [round-scale [expr {double($x1-$x0)/($wx1-$wx0)}]]
 	    } else {
 		# compute points displayed from amount to zoom
+		puts "both x-pan and x-zoom set, new x1 [expr {$x0+($wx1-$wx0)*$xzoom}] old $x1"
 		set x1 [expr {$x0+($wx1-$wx0)*$xzoom}]
 	    }
 	    # remember how it turned out
 	    $self set-frames-per-screen-x $xzoom
 
 	    # redraw the lines in their native coordinates, clipped to x0 y0 x1 y1
+	    puts "redraw lines clipped at x {$x0 .. $x1}"
 	    foreach name $lines {
 		if {[llength [$self line points $name]] >= 4} {
 		    $self line redraw $name $x0 $y0 $x1 $y1
