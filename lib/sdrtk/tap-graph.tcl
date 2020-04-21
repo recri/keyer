@@ -41,7 +41,6 @@ snit::widgetadaptor sdrtk::tap-graph {
     variable data -array {
 	input {}
 	timeout 50
-	first-frame {}
     }
     
     constructor {args} {
@@ -91,15 +90,14 @@ snit::widgetadaptor sdrtk::tap-graph {
 	    }
 	}
 	if {$data(input) ne {}} { 
-	    set data(handle2) [after idle [mymethod process]]
+	    set data(handle2) [after idle [mymethod process $data(input)]]
+	    set data(input) {}
 	}
 	set data(handle1) [after $data(timeout) [mymethod poll]]
     }
 
-    method process {} {
+    method process {input} {
 	# puts "sdrtk::goertzel process called with [llength $data(input)] items queued"
-	set input $data(input)
-	set data(input) {}
 	foreach {opt get} $input {
 	    set tag [list [llength $get] $opt]
 	    switch -glob $tag {
@@ -112,8 +110,6 @@ snit::widgetadaptor sdrtk::tap-graph {
 		    regexp {^-mtap(\d)$} $opt all tap
 		    foreach item $get {
 			foreach {frame bytes} $item break
-			if {$data(first-frame) eq {}} { set data(first-frame) $frame }
-			incr frame -$data(first-frame)
 			if {[binary scan $bytes ccc cmd note vel] != 3} continue
 			if {($cmd&0xff) == 0x80} {
 			    # note off synthesized by someone
@@ -126,7 +122,7 @@ snit::widgetadaptor sdrtk::tap-graph {
 			    # puts "add line $line"
 			    $win add line $line
 			    set data(last-$line-vel) 0
-			    $self extend $line 0 0
+			    # $self extend $line 0 0
 			    # add the line margin icons
 			}
 			$self extend $line $frame $data(last-$line-vel) $frame $vel

@@ -93,7 +93,7 @@ snit::widgetadaptor sdrtk::stripchart {
 	bind $win <Destroy> [mymethod window-destroy]
 	bind $win <ButtonPress> [mymethod button-press %W %X %Y %x %y %b]
 	bind $win <ButtonRelease> [mymethod button-release %W %X %Y %x %y %b]
-	set data [dict create bbox [bbox-empty] title {} changes 0]
+	set data [dict create bbox [bbox-empty] title {} changes 0 first-frame 0 last-frame 0]
 	$self configure {*}$args
 	$self redraw
     }
