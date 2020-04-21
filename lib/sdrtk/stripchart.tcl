@@ -93,10 +93,11 @@ snit::widgetadaptor sdrtk::stripchart {
 	bind $win <Destroy> [mymethod window-destroy]
 	bind $win <ButtonPress> [mymethod button-press %W %X %Y %x %y %b]
 	bind $win <ButtonRelease> [mymethod button-release %W %X %Y %x %y %b]
-	set data [dict create bbox [bbox-empty] title {} changes 0 first-frame 0 last-frame 0]
+	set data [dict create bbox [bbox-empty] title {} changes 0 x-pan 0 x-zoom 0]
 	$self configure {*}$args
 	$self redraw
     }
+
     # the window size has changed, recompute and redraw as necessary
     method window-configure {} { $self note-changes }
     method window-destroy {} {
@@ -112,6 +113,12 @@ snit::widgetadaptor sdrtk::stripchart {
     method poll-changes {} { return [dict get $data changes] }
     method clear-changes {} { dict set data changes 0 }
 
+    # manage the x-pan and x-zoom
+    method x-pan {} { return [dict get $data x-pan] }
+    method set-x-pan {v} { dict set data x-pan $v }
+    method x-zoom {} { return [dict get $data x-zoom] }
+    method set-x-zoom {v} { dict set data x-zoom $v }
+    
     # return one of the objects we're managing
     method lines {} { return [lsort [dict keys [dict get $data line]]] }
     method bbox {} { return [dict get $data bbox] }
@@ -130,6 +137,10 @@ snit::widgetadaptor sdrtk::stripchart {
     method {line points} {name} { return [dict get $data line $name points] }
     method {line bbox} {name} { return [dict get $data line $name bbox] }
     method {line index} {name} { return [dict get $data line $name index] }
+    method {line first-x} {name} { return [lindex [$self line bbox $name] 0] }
+    method {line last-x} {name} { return [lindex [$self line bbox $name] 2] }
+    method {line first-y} {name} { return [lindex [$self line points $name] 1] }
+    method {line last-y} {name} { return  [lindex [$self line points $name] end] }
 
     # configure the foreground color
     method {Configure -foreground} {val} {
@@ -156,6 +167,7 @@ snit::widgetadaptor sdrtk::stripchart {
 	    # clear the change counter
 	    $self clear-changes
 
+	    # count the lines to draw
 	    set lines [$self lines]
 	    set nlines [llength $lines]
 	    set iline 0
@@ -165,10 +177,25 @@ snit::widgetadaptor sdrtk::stripchart {
 	    # find the extent of the points drawn, use the overall extent
 	    lassign [$self bbox] x0 y0 x1 y1
 
-	    # redraw the lines in their native coordinates
+	    # find the extent of the window to draw into
+	    lassign [$self window] wx0 wy0 wx1 wy1
+
+	    # find or make up the x-pan coordinate and write it into x0
+	    set xpan [$self x-pan]
+	    if {$xpan == 0} { set xpan $x0 } else { set x0 $xpan }
+
+	    # find or make up the x-zoom scale factor and use it to find x1
+	    set xzoom [$self x-zoom]
+	    if {$xzoom == 0} {
+		set xzoom [round-scale [expr {double($wx1-$wx0)/($x1-$x0)}]]
+	    } else {
+		set x1 [expr {$x0+($wx1-$wx0)/$xzoom}]
+	    }
+
+	    # redraw the lines in their native coordinates, clipped to x0 y0 x1 y1
 	    foreach name $lines {
 		if {[llength [$self line points $name]] >= 4} {
-		    $self line redraw $name
+		    $self line redraw $name $x0 $y0 $x1 $y1
 		    $self line configure $name -fill $options(-foreground)
 		    # puts "line $name [llength [$self line points $name]] points, [$self line bbox $name]"
 		}
@@ -179,43 +206,35 @@ snit::widgetadaptor sdrtk::stripchart {
 	    $self move all 0 1
 	    
 	    # pan the x-axis
+	    $self move all -$x0 0
 
 	    # zoom the x-axis
-	    
+	    $self scale all 0 0 $xzoom 1
+
+	    # move the lines to their position in the stack of strip charts
 	    foreach line $lines {
 		# puts "stack $line position $iline of $nlines"
 		# inset by 0.1 at top and bottom
 		lassign [bbox-inset [$self stack $iline $nlines] {0 0.1 0 0.1}] wx0 wy0 wx1 wy1
 		# puts "stack $iline: $wx0 $wy0 $wx1 $wy1"
 
-		# find the extent of the points drawn, use the overall extent
-		lassign [$self bbox] x0 y0 x1 y1
-
 		# compute and apply the transform
-		set xo [expr {-$x0+$wx0}]
 		set yo [expr {-$y0+$wy0}]
-		# puts "xo yo $xo $yo"
-		$hull move line-$line $xo $yo
+		# puts "yo $yo"
+		$hull move line-$line 0 $yo
 		# puts "\$hull bbox line-$line [$hull bbox line-$line] (after move)"
 		# incorporating the y-inversion by negating the y scale
-		lassign [list  [expr {double($wx1-$wx0)/($x1-$x0)}] [expr {double($wy1-$wy0)/($y1-$y0)}]] xs ys
+		set ys [expr {double($wy1-$wy0)/($y1-$y0)}]
 		
-		if {$xs == 0 || $ys == 0} {
+		if {$ys == 0} {
 		    puts "bbox [$self bbox]"
-		    puts "xs = $xs, wwd = [expr {double($wx1-$wx0)}], pwd = [expr {($x1-$x0)}]"
 		    puts "ys = $ys, wht = [expr {double($wy1-$wy0)}], pht = [expr {($y1-$y0)}]"
 		} else {
-		    # make the x scale 1, 2, or 5 * power of ten
-		    # puts "xs ys $xs $ys"
-		    $hull scale line-$line $wx0 $wy0 [round-scale $xs] $ys
+		    # puts "ys $ys"
+		    $hull scale line-$line $wx0 $wy0 1 $ys
 		    # puts "\$hull bbox line-$line [$hull bbox line-$line] (after scale)"
 		}
 		
-		#lassign [$hull bbox line-$line] x0 y0 x1 y1
-		#set ym [expr {($y0+$y1)/2}]
-		# puts "$iline {[$hull bbox line-$line]} ym = $ym"
-		# $hull scale line-$line 0 $ym 1 -1
-
 		incr iline
 	    }
 	}
@@ -254,9 +273,17 @@ snit::widgetadaptor sdrtk::stripchart {
     }
 
     # redraw the coordinates of a line
-    method {line redraw} {name} {
+    method {line redraw} {name args} {
+	if {$args eq {}} { set args [$self line bbox $name] }
+	lassign $args x0 y0 x1 y1
 	if {[llength [$self line points $name]] > 4} {
-	    $hull coords [$self line index $name] [$self line points $name]
+	    set xy {}
+	    foreach {x y} [$self line points $name] {
+		if {$x>=$x0 && $x<=$x1} {
+		    lappend xy $x $y
+		}
+	    }
+	    $hull coords [$self line index $name] $xy
 	}
     }
 
