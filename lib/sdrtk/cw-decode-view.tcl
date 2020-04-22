@@ -78,7 +78,9 @@ snit::widgetadaptor sdrtk::cw-decode-view {
     method timeout {} {
 	# get new text
 	# append to accumulated code
-	append code [$options(-detime) get]
+	if { ! [$options(-detime) is-busy] } {
+	    append code [$options(-detime) get]
+	}
 	while {[regexp {^([-.]*) (.*)$} $code all symbol code]} {
 	    if {$symbol ne {}} {
 		# symbol terminated by a space

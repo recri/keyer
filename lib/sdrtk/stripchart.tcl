@@ -26,7 +26,11 @@ package require snit
 # a stripchart plotting widget and friends
 # forked from graph.tcl when it began to lose generic function
 #
-
+# what this needs is a locator map in the lower right corner
+# which outlines the currently displayed area on a plot of the
+# entire session.  The displayed area should not go outside the
+# session.
+# 
 snit::widgetadaptor sdrtk::stripchart {
 
     # minimum and maximum of arguments
@@ -194,6 +198,7 @@ snit::widgetadaptor sdrtk::stripchart {
     }
     method clear-window {} {
 	$self delete lines
+	$self clear-zoom-pan
     }
     # someone noticed some changes
     method note-changes {} { dict incr data changes }

@@ -38,7 +38,7 @@
 #include "../dspmath/midi.h"
 #include "framework.h"
 
-#define N_FILTER 16
+#define N_FILTER 1
 typedef struct {
 #include "framework_options_vars.h"
   filter_goertzel_options_t fg;
