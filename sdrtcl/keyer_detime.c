@@ -151,6 +151,11 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
+static int _pending(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  // return the size of the current detimed string
+  _t *dp = (_t *)clientData;
+  return fw_success_obj(interp, Tcl_NewIntObj(ring_buffer_items_available_to_read(&dp->ring)));
+}
 static int _status(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   // return the detimer data
   _t *dp = (_t *)clientData;
@@ -178,6 +183,8 @@ static const fw_option_table_t _options[] = {
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get", _get, "get the currently converted string of dits and dahs" },
+  { "pending", _pending, "get the size of the currently converted string of dits and dahs" },
+  { "status", _status, "get the internal parameters of the detimer" },
   { NULL }
 };
 
