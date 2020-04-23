@@ -111,7 +111,7 @@ static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
 	   ((dp->last_element > 2 * observation) && (dp->last_element < 4 * observation)) ) {
 	unsigned td = dp->two_dot;
 	dp->two_dot = filter_moving_average16_process(&dp->avg, (observation+dp->last_element)/2);
-	fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_element, observation);
+	// fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_element, observation);
       }
     }
 #if 0
@@ -120,7 +120,7 @@ static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
 	   ((dp->last_space > 2 * observation) && (dp->last_space < 4 * observation)) ) {
 	unsigned td = dp->two_dot;
 	dp->two_dot = filter_moving_average16_process(&dp->avg, (observation+dp->last_space)/2);
-	fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_space, observation);
+	// fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_space, observation);
       }
     }
 #endif
@@ -138,7 +138,7 @@ static char detime_process(detime_t *dp, int event, jack_nframes_t frame) {
 	   ((dp->last_element > 2 * observation) && (dp->last_element < 4 * observation)) ) {
 	unsigned td = dp->two_dot;
 	dp->two_dot = filter_moving_average16_process(&dp->avg, (observation+dp->last_element)/2);
-	fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_element, observation);
+	// fprintf(stderr, "two_dot from %u to %u, last %u now %u\n", td, dp->two_dot, dp->last_element, observation);
       }
     }
 #endif

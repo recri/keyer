@@ -76,6 +76,9 @@ snit::widgetadaptor sdrtk::stripchart {
     proc bbox-e {bbox} { return [lindex $bbox 2] }
     proc bbox-s {bbox} { return [lindex $bbox 3] }
     
+    proc bbox-width {bbox} { return [expr {[bbox-e $bbox]-[bbox-w $bbox]}] }
+    proc bbox-height {bbox} { return [expr {[bbox-s $bbox]-[bbox-n $bbox]}] }
+
     # return the i'th of n horizontal strips of bbox
     proc stack {bbox i n} {
 	lassign $bbox wx0 wy0 wx1 wy1
@@ -140,8 +143,10 @@ snit::widgetadaptor sdrtk::stripchart {
 	switch $b {
 	    1 {
 		# pan left/right
-		dict set data last-x-drag $x
-		dict set data start-x-drag $x
+		dict update data last-x-drag last-x-drag start-x-drag start-x-drag {
+		    set last-x-drag $x
+		    set start-x-drag $x
+		}
 		bind $w <Motion> [mymethod button-drag %W %X %Y %x %y 1]
 	    }
 	    2 {
@@ -151,15 +156,19 @@ snit::widgetadaptor sdrtk::stripchart {
 		$self option-menu $w $rx $ry
 	    }
 	    4 {
-		# vertical scroll button down, zoom in
+		# vertical scroll button down, zoom out
 		# must change pan, too, to preserve mouse position
-		dict set data x-zoom [zoom-larger [dict get $data true-x-zoom]]
+		dict update data x-zoom x-zoom true-x-zoom true-x-zoom {
+		    set x-zoom [zoom-smaller ${true-x-zoom}]
+		}
 		$self note-changes
 	    }
 	    5 {
-		# vertical scroll button up, zoom out
+		# vertical scroll button up, zoom in
 		# must change pan, too, to preserve mouse position
-		dict set data x-zoom [zoom-smaller [dict get $data true-x-zoom]]
+		dict update data x-zoom x-zoom true-x-zoom true-x-zoom {
+		    set x-zoom [zoom-larger ${true-x-zoom}]
+		}
 		$self note-changes
 	    }
 	    6 {
@@ -176,8 +185,10 @@ snit::widgetadaptor sdrtk::stripchart {
     method button-drag {w rx ry x y b} {
 	switch $b {
 	    1 {
-		$hull move main [expr {$x-[dict get $data last-x-drag]}] 0
-		dict set data last-x-drag $x
+		dict update data last-x-drag last-x-drag {
+		    $hull move main [expr {$x-${last-x-drag}}] 0
+		    set last-x-drag $x
+		}
 	    }
 	    default {
 		puts "button-motion $w $rx $ry $x $y $b"
@@ -189,8 +200,10 @@ snit::widgetadaptor sdrtk::stripchart {
 	    1 {
 		bind $w <Motion> {}
 		$self button-drag $w $rx $ry $x $y $b
-		dict with data {
-		    dict set data x-pan [expr {${true-x-pan}+(${last-x-drag}-${start-x-drag})*${true-x-zoom}}]
+		dict update data x-pan x-pan true-x-pan true-x-pan true-x-zoom true-x-zoom start-x-drag start-x-drag last-x-drag last-x-drag {
+		    set x-pan [expr {${true-x-pan}-(${last-x-drag}-${start-x-drag})*${true-x-zoom}}]
+		    #puts "start ${start-x-drag} end ${last-x-drag} true-x-pan ${true-x-pan} true-x-zoom ${true-x-zoom}"
+		    #puts "delta x-pan [expr {-(${last-x-drag}-${start-x-drag})*${true-x-zoom}}]"
 		}
 		$self note-changes
 	    }
@@ -271,41 +284,55 @@ snit::widgetadaptor sdrtk::stripchart {
 	# don't try to redraw an empty graph
 	# don't redraw if no changes to reflect
 	if { ! [bbox-is-empty [$self bbox]] && [$self poll-changes] != 0} {
-	
-	    # clear the change counter
-	    $self clear-changes
+	    if {[catch {
+		# clear the change counter
+		$self clear-changes
+		
+		# clear the canvas
+		$hull delete all
+		
+		# count the lines to draw
+		set nlines [llength [$self lines]]
+		
+		# puts "going to redraw {[$self bbox]} $nlines {$lines}"
+		# draw the main screen
+		set mainframe [bbox-inset [$self window] [list 0 0 0 [expr {1/($nlines+1.0)}]]]
+		lassign [$self redraw-strips $mainframe [dict get $data x-pan] [dict get $data x-zoom] main] left zoom
+		
 
-	    # clear the canvas
-	    $hull delete all
-	    
-	    # count the lines to draw
-	    set nlines [llength [$self lines]]
-
-	    # puts "going to redraw {[$self bbox]} $nlines {$lines}"
-	    # draw the main screen
-	    set mainframe [bbox-inset [$self window] [list 0 0 0 [expr {1/($nlines+1.0)}]]]
-	    lassign [$self redraw-strips $mainframe [dict get $data x-pan] [dict get $data x-zoom] main] left zoom
-	    
-	    # save the result pan and zoom
-	    dict set data true-x-pan $left
-	    dict set data true-x-zoom $zoom
-
-	    # draw the locator map
-	    set locframe [bbox-inset [$self window] [list 0.5 [expr {$nlines/($nlines+1.0)}] 0 0]]
-	    set locinset [bbox-inset $locframe {0.1 0.1 0.1 0.1}]
-	    set locdraw [bbox-inset $locinset {0.1 0.1 0.1 0.1}]
-	    $hull create rect $locinset -outline $options(-foreground) -fill {} -tags locate-frame
-	    lassign [$self redraw-strips $locdraw 0 0 locate] left zoom
-	    
-	    # check that the result pan and zoom make sense
-	    # ...
-
-	    # draw the locator rectangle
-	    # ...
+		#puts "main drawn in $mainframe with $left $zoom"
+		#puts "main covers $left to [expr {$left+[bbox-width $mainframe]*$zoom}]"
+		set mainleft $left
+		set mainright [expr {$left+[bbox-width $mainframe]*$zoom}]
+		
+		# save the result pan and zoom
+		dict set data true-x-pan $left
+		dict set data true-x-zoom $zoom
+		
+		# draw the locator map
+		set locframe [bbox-inset [$self window] [list 0.5 [expr {$nlines/($nlines+1.0)}] 0 0]]
+		set locinset [bbox-inset $locframe {0.05 0.1 0.05 0.1}]
+		set locdraw [bbox-inset $locinset {0.05 0.1 0.05 0.1}]
+		$hull create rect $locframe -outline $options(-foreground) -fill {} -tags locate-frame
+		lassign [$self redraw-strips $locdraw 0 0 locate] left zoom
+		
+		# check that the result pan and zoom make sense
+		#puts "locate drawn in $locdraw with $left $zoom"
+		#puts "locate covers $left to [expr {$left+[bbox-width $locdraw]*$zoom}]"
+		
+		# draw the locator rectangle
+		set rleft [expr {[bbox-w $locdraw]+($mainleft-$left)/$zoom}]
+		set rright [expr {[bbox-w $locdraw]+($mainright-$left)/$zoom}]
+		set rect [list $rleft [bbox-n $locinset] $rright [bbox-s $locinset]]
+		$hull create rect $rect -outline $options(-foreground) -fill {} -tags locate-main
+		
+	    } error]} {
+		puts "error in redraw logic: $error"
+	    }
 	}
 	dict set data handler [after [expr {int(0.5+1000.0/$options(-redraw-rate))}] [mymethod redraw]]
     }
-
+    
     # draw the strips into a specified frame in the canvas, 
     # applying the specified pan and zoom (which are 0 if unspecified)
     # and returning the result xpan (frame at left edge) and xzoom (frames per screen x).
@@ -314,10 +341,10 @@ snit::widgetadaptor sdrtk::stripchart {
 	# so all strips get the same scaling
 	# start from the overall extent and whittle it down
 	lassign [$self bbox] x0 y0 x1 y1
-
+	
 	# find the extent of the window to draw into
 	lassign $frame wx0 wy0 wx1 wy1
-
+	
 	# get the lines to be drawn
 	
 	# find or make up the x-pan coordinate and write it into x0
@@ -332,19 +359,19 @@ snit::widgetadaptor sdrtk::stripchart {
 	}
 	# remember where it landed
 	set leftedge $x0
-
+	
 	# find or make up the x-zoom scale factor and use it to find x1
 	if {$xzoom == 0} {
 	    # compute zoom from points to display
 	    set xzoom [round-scale [expr {double($x1-$x0)/($wx1-$wx0)}]]
 	} else {
 	    # compute points displayed from amount to zoom
-	    puts "both x-pan and x-zoom set, new x1 [expr {$x0+($wx1-$wx0)*$xzoom}] old $x1"
+	    # puts "both x-pan and x-zoom set, new x1 [expr {$x0+($wx1-$wx0)*$xzoom}] old $x1"
 	    set x1 [expr {$x0+($wx1-$wx0)*$xzoom}]
 	}
 	# remember how it turned out
 	set framesper $xzoom
-
+	
 	# redraw the lines in their native coordinates, clipped to x0 y0 x1 y1
 	# puts "redraw lines clipped at x {$x0 .. $x1}"
 	foreach name [$self lines] {
@@ -354,20 +381,20 @@ snit::widgetadaptor sdrtk::stripchart {
 		# puts "line $name [llength [$self line points $name]] points, [$self line bbox $name]"
 	    }
 	}
-	    
+	
 	# flip the y-axis
 	$self scale $tag 0 0 1 -1
 	$self move $tag 0 1
-	    
+	
 	# pan the x-axis
 	$self move $tag [expr {-$x0}] 0
-
+	
 	# zoom the x-axis
 	$self scale $tag 0 0 [expr {1.0/$xzoom}] 1
-
+	
 	# position in window
 	$self move $tag $wx0 0
-
+	
 	# move the lines to their position in the stack of strip charts
 	set nlines [llength [$self lines]]
 	set iline 0

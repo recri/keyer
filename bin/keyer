@@ -391,8 +391,8 @@ snit::type keyer::options {
 	    {*insert* -window} { $self describe $option enum -values {none . .dial}}
 	    {* -dict} { $self describe $option enum -values [get-morse-dicts] }
 	    {* -bandwidth} { $self describe $option value -format %.1f -min 10 -max 24000 -step 0.5 -units Hz -graticule 20 -steps-per-div 50}
-	    {* -on} - 
-	    {* -off} { $self describe $option value -format %.3f -min 0.001 -max 16.0 -step 0.001 -graticule 20 -steps-per-div 5}
+	    {* -on-thresh} - 
+	    {* -off-thresh} { $self describe $option value -format %.3f -min 0.001 -max 16.0 -step 0.001 -graticule 20 -steps-per-div 5}
 	    {* -timeout} { $self describe $option ivalue -min 0 -max 1000 -units frames -graticule 20 -steps-per-div 50}
 	    {* -estimate} { $self describe $option ivalue -min 10 -max 1000 -units frames }
 	    {* -discover} { $self describe $option text hide 1 }
@@ -496,6 +496,7 @@ snit::type keyer::options {
 	    {* -size} { $self describe $option enum -values {8 16 32 64 128 256 512 1024 2048 4096 8192 16384}}
 	    {* -planbits} { $self describe $option ivalue -min 0 -max 127}
 	    {* -direction} {$self describe $option enum -values {-1 1}}
+	    {* -oversample} -
 	    {* -polyphase} { $self describe $option ivalue -min 1 -max 32 }
 	    {* -result} { $self describe $option enum -values {coeff mag2 mag dB short char}}
 	    {* -min-f} {}
@@ -952,6 +953,11 @@ snit::type keyer::setups {
 	    info {audio to ascii morse decoder}
 	    connect { detone:midi_out detime:midi_in }
 	}
+	out2 {
+	    start { keyer detone detime -start {sdrtk::cw-decode-view@out} -out-detime detime -detime-wpm 17}
+	    info {audio to ascii morse decoder, audio disconnected}
+	    connect { }
+	}
 	hl {
 	    start { keyer -start {hl-connect@hl} -hl-client hl -hide {-hl-raw-* -hl-avg-* -hl-hw-*} }
 	    info { hermes lite udp jack connection }
@@ -992,6 +998,14 @@ snit::type keyer::setups {
 		keyo:out_i {system:playback_1 system:playback_2}
 	    }
 	}
+	key+out2 {
+	    start { keyer key out2}
+	    info {iambic keyer and decoder with detone omitted}
+	    connect {
+		keyo:midi_out detime:midi_in
+		keyo:out_i {system:playback_1 system:playback_2}
+	    }
+	}
 	xsco {
 	    start { keyer -exec {x42-scope -j xsc >& ~/.config/keyer/xsco.log} }
 	    info { x42-scope, 4 channel scope jack plugin }
@@ -1019,18 +1033,18 @@ snit::type keyer::setups {
 		-echo-dti1 dti1 -echo-dti2 dti2 -echo-dto1 dto1 -echo-dto2 dto2 -echo-out out -dec1-detime dti1 -dec2-detime dti2
 		-dial 0 -eval {wm withdraw .}
 	    }
-	    info {echo back challenge training}
+	    info {echo back challenge training, goertzel removed}
 	    connect {
 		chk:midi_out cho:midi_in 
 		cho:out_i {out:in_i dto1:in_i} cho:out_q out:in_q
-		dto1:midi_out dti1:midi_in
+		cho:midi_out dti1:midi_in
 		{?system:midi_capture_1 ?system:midi_capture_2 ?system:midi_capture_3} key:midi_in
 		key:midi_out keyo:midi_in
 		keyo:out_i {out:in_i dto2:in_i} keyo:out_q out:in_q
-		dto2:midi_out dti2:midi_in
+		keyo:midi_out dti2:midi_in
 		kbd:midi_out kbdo:midi_in
 		kbdo:out_i {out:in_i dto2:in_i} kbdo:out_q out:in_q
-		dto2:midi_out dti2:midi_in
+		kbdo:midi_out dti2:midi_in
 		out:out_i {system:playback_1 system:playback_2}
 	    }
 	}

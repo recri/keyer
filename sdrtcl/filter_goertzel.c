@@ -38,14 +38,15 @@
 #include "../dspmath/midi.h"
 #include "framework.h"
 
-#define N_FILTER 1
+#define N_FILTER 32		/* do not change without looking for "32" in places */
 typedef struct {
 #include "framework_options_vars.h"
   filter_goertzel_options_t fg;
   moving_average_options_t dbp;
   moving_average_options_t dbe;
-  float on_threshold;
-  float off_threshold;
+  float on_thresh;
+  float off_thresh;
+  int oversample;
 } options_t;
   
 typedef struct {
@@ -56,6 +57,9 @@ typedef struct {
   moving_average_t dbp;	/* moving average of 20*log10(power) */
   moving_average_t dbe;	/* moving average of 20*log10(energy) */
   jack_nframes_t frame;
+  int oversample;
+  float off_thresh;
+  float on_thresh;
   float dbpower;		/* 20*log10(power) */
   float dbenergy;		/* 20*log10(energy) */
   int on;
@@ -64,24 +68,31 @@ typedef struct {
 static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = dp->fw.busy = 0;
-    for (int i = 0; i < N_FILTER; i += 1) {
+    dp->oversample = dp->opts.oversample;
+    dp->on_thresh = dp->opts.on_thresh;
+    dp->off_thresh = dp->opts.off_thresh;
+    for (int i = 0; i < dp->oversample; i += 1) {
       filter_goertzel_configure(&dp->fg[i], &dp->opts.fg);
-      dp->fg[i].i = dp->fg[i].block_size - i * dp->fg[i].block_size / N_FILTER;
+      dp->fg[i].i = dp->fg[i].block_size - i * dp->fg[i].block_size / dp->oversample;
     }
     dp->opts.dbp.initial_value = 0;
     moving_average_configure(&dp->dbp, &dp->opts.dbp);
     dp->opts.dbe.initial_value = 0;
     moving_average_configure(&dp->dbe, &dp->opts.dbe);
+
   }
 }
 
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
   dp->opts.fg.sample_rate = sdrkit_sample_rate(&dp->fw);
-  for (int i = 0; i < N_FILTER; i += 1) {
+  if (dp->opts.off_thresh > dp->opts.on_thresh) return (void*)"off threshold must be lesser than or equal to on threshold.";
+  if (dp->opts.oversample < 1) return (void*)"oversample must be greater than or equal to 1.";
+  if (dp->opts.oversample > N_FILTER) return (void*)"oversample must be lesser than or equal to 32."; /* N_FILTER reference */
+  for (int i = 0; i < dp->opts.oversample; i += 1) {
     void *p = filter_goertzel_preconfigure(&dp->fg[i], &dp->opts.fg); if (p != &dp->fg[i]) return p;
     filter_goertzel_configure(&dp->fg[i], &dp->opts.fg);
-    dp->fg[i].i = dp->fg[i].block_size - i * dp->fg[i].block_size / N_FILTER;
+    dp->fg[i].i = dp->fg[i].block_size - i * dp->fg[i].block_size / dp->opts.oversample;
   }
   moving_average_configure(&dp->dbp, &dp->opts.dbp);
   moving_average_configure(&dp->dbe, &dp->opts.dbe);
@@ -107,7 +118,8 @@ static int _process(jack_nframes_t nframes, void *arg) {
   jack_midi_clear_buffer(midi_out);
   // for all frames in the buffer
   for (int i = 0; i < nframes; i++) {
-    for (int j = 0; j < N_FILTER; j += 1) {
+    for (int j = 0; j < dp->oversample; j += 1) {
+      /* only one filter should hit per sample */
       if (filter_goertzel_process(&dp->fg[j], in[i])) {
 	dp->dbpower = 20*log10(maxf(1e-16,dp->fg[j].power));
 	dp->dbenergy = 20*log10(maxf(1e-16,dp->fg[j].energy));
@@ -118,11 +130,11 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	dp->frame = sdrkit_last_frame_time(arg)+i;
 	cmd = 0;
 	if (dp->on != 0) {
-	  if (dp->dbpower < dp->dbp.average) {
+	  if (dp->dbpower < dp->off_thresh * dp->dbp.average) {
 	    cmd = MIDI_NOTE_OFF;	/* note change off */
 	  }
 	} else {
-	  if (dp->dbpower > dp->dbp.average) {
+	  if (dp->dbpower > dp->on_thresh * dp->dbp.average) {
 	    cmd = MIDI_NOTE_ON;	/* note change on */
 	  }
 	}
@@ -180,8 +192,9 @@ static const fw_option_table_t _options[] = {
 #include "framework_options.h"
   { "-freq",      "frequency", "AFHertz", "700.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.hertz),     "frequency to tune in Hz"  },
   { "-bandwidth", "bandwidth", "BWHertz", "375.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fg.bandwidth), "bandwidth of output signal in Hz" },
-  { "-on",	  "onThresh",  "Thresh",  "2.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_threshold), "on threshold value" },
-  { "-off",	  "offThresh", "Thresh",  "1.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_threshold),"off threshold value" },
+  { "-on-thresh", "onThresh",  "Thresh",  "1.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.on_thresh),    "on threshold value" },
+  { "-off-thresh","offThresh", "Thresh",  "1.0",   fw_option_float, fw_flag_none, offsetof(_t, opts.off_thresh),   "off threshold value" },
+  { "-oversample","over",      "Over",    "1",     fw_option_int,   fw_flag_none, offsetof(_t, opts.oversample),   "number of interleaved filters<=32" }, /* N_FILTER ref */
   { NULL }
 };
 

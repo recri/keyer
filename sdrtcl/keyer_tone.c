@@ -135,8 +135,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	    keyed_tone_off(&dp->tone);
 	    break;
 	  }
-	}
-	if (dp->opts.two != 0 && channel == dp->opts.chan && note == dp->opts.note+1) {
+	} else if (dp->opts.two != 0 && channel == dp->opts.chan && note == dp->opts.note+1) {
 	  switch (command) {
 	  case MIDI_NOTE_ON:
 	    if (velocity > 0) { keyed_tone_on(&dp->tone2); break; }
@@ -145,6 +144,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
 	    keyed_tone_off(&dp->tone2);
 	    break;
 	  }
+	  event.buffer[1] = dp->opts.note; /* convert dah key to plain key */
 	}
       }
       jack_midi_event_write(midi_out, i, event.buffer, event.size);

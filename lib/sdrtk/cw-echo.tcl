@@ -196,7 +196,7 @@ snit::widget sdrtk::cw-echo {
 		set data(trimmed-response) [regsub -all { } $data(response) {}]
 		incr flag
 	    }
-	    if {$flag} { puts "challenge {$data(challenge)} response {$data(response)} state $data(state)" }
+	    # if {$flag} { puts "challenge {$data(challenge)} response {$data(response)} state $data(state)" }
 	    # switch on state
 	    switch $data(state) {
 		first-start {
@@ -226,32 +226,32 @@ snit::widget sdrtk::cw-echo {
 		    break
 		}
 		wait-challenge-echo {
-		    $self status "Waiting for challenge to echo ..." normal
+		    # $self status "Waiting for challenge to echo ..." normal
 		    if {$data(trimmed-challenge) eq $data(pre-challenge)} {
-			$self status "\n" normal
+			# $self status "\n" normal
 			set t [clock micros]
-			array set data [list time-of-echo $t time-to-echo [expr {4*$data(time-warp)*($t-$data(time-challenge))}] state wait-response-echo]
-			puts "time-to-echo $data(time-to-echo)"
+			array set data [list time-of-echo $t time-to-echo [expr {8*$data(time-warp)*($t-$data(time-challenge))}] state wait-response-echo]
+			# puts "time-to-echo $data(time-to-echo)"
 			continue
 		    } elseif {$data(challenge) ne {}} {
-			$self status "\n" normal
-			puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
+			# $self status "\n" normal
+			# puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
 			set data(state) challenge-again
 			continue
 		    }
 		    break
 		}
 		wait-response-echo {
-		    $self status "Waiting for response ..." normal
+		    # $self status "Waiting for response ..." normal
 		    if {$data(trimmed-response) eq $data(trimmed-challenge)} {
-			$self status "\n" normal $data(response) right " is correct!\n" normal
+			$self status $data(response) right " is correct!\n" normal
 			array set data [list time-pause [clock micros] state pause-before-new-challenge]
 		    } elseif {$data(trimmed-response) ne {} &&
 			      [string first $data(trimmed-response) $data(trimmed-challenge)] != 0} {
-			$self status "\n" normal "$data(response)" wrong " is wrong!\n" normal
+			$self status "$data(response)" wrong " is wrong!\n" normal
 			array set data [list time-pause [clock micros] state pause-before-challenge-again]
 		    } elseif {[clock micros] > $data(time-of-echo)+$data(time-to-echo)} {
-			$self status "\n" normal "too long!" tardy "\n" normal
+			# $self status "too long!" tardy "\n" normal
 			array set data [list time-pause [clock micros] state pause-before-challenge-again]
 		    }
 		}
@@ -292,7 +292,6 @@ snit::widget sdrtk::cw-echo {
 	    $win.play see end
 	    # puts -nonewline [join $args { }]
 	}
-	    
     }
     method dial-tab {w} {
 	::sdrtk::dialbook $w
@@ -431,7 +430,7 @@ snit::widget sdrtk::cw-echo {
 		    append draw [choose $data(sample)]
 		}
 		set draw [string toupper $draw]
-		puts "sample-draw -> $draw"
+		# puts "sample-draw -> $draw"
 		return $draw
 	    }
 	    default { error "uncaught source $options(-source) in sample-draw" }

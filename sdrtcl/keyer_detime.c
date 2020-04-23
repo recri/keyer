@@ -61,7 +61,7 @@ static void _update(_t *dp) {
   if (dp->modified) {
     dp->modified = dp->fw.busy = 0;
     dp->opts.detime.spd = (unsigned) round((sdrkit_sample_rate(dp) * 60) / (dp->opts.wpm * 50));
-    fprintf(stderr, "detime update sr %u, wpm %f, spd %u\n", sdrkit_sample_rate(dp), dp->opts.wpm, dp->opts.detime.spd);
+    // fprintf(stderr, "detime update sr %u, wpm %f, spd %u\n", sdrkit_sample_rate(dp), dp->opts.wpm, dp->opts.detime.spd);
     detime_configure(&dp->detime, &dp->opts.detime);
   }
 }
@@ -69,7 +69,7 @@ static void _update(_t *dp) {
 static void *_init(void *arg) {
   _t *dp = (_t *)arg;
   dp->opts.detime.spd = (unsigned) round((sdrkit_sample_rate(arg) * 60) / (dp->opts.wpm * 50));
-  fprintf(stderr, "detime init sr %u, wpm %f, spd %u\n", sdrkit_sample_rate(arg), dp->opts.wpm, dp->opts.detime.spd);
+  // fprintf(stderr, "detime init sr %u, wpm %f, spd %u\n", sdrkit_sample_rate(arg), dp->opts.wpm, dp->opts.detime.spd);
   void *p = detime_preconfigure(&dp->detime, &dp->opts.detime); if (p != &dp->detime) return p;
   detime_configure(&dp->detime, &dp->opts.detime);
   ring_buffer_init(&dp->ring, RING_SIZE, dp->buff);

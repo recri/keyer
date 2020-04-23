@@ -1,0 +1,12 @@
+* Goertzel filters - a way to compute one bin of an arbitrary FFT
+  with one multiply and two adds per sample.
+** specify frequency of bin
+   the center frequency of the bin you wish to compute
+** specify bandwidth of bin
+   both the width of the bin and the frequency at which results
+   are produced.
+** know the sample rate of the signal
+** sample rate / bandwidth = block length
+   we compute the Goertzel filter over block length samples
+*** so a 100Hz bandwidth at 48000Hz sample rate requires
+    480 samples.
