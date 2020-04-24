@@ -57,8 +57,23 @@ package require midi
 # it can capture keyboard input with focus dot
 # it can capture keyer input
 # it can echo in its own screen space
-
-
+#
+# introduce letters, immediately introduce combinations of letters,
+# followed by letters with the same combination of elements without the spaces
+# lesson 1: e t ee et | i a |
+#               te tt | n m |
+# lesson 2: e t a n i m  ee et ea en ei em | i a u r s w | * * u r s w |
+#                        te tt ta tn ti tm | n m k g d o | * * k g d o |
+#                        ae at aa an ai am | r w . p l j | r w . p l j |
+#                        ne nt na nn ni nm | d k x c b y | d k x c b y |
+#                        ie it ia in ii im | s u v f h . | s u v f h . |
+#                        me mt ma mn mi mm | g o q . z . | g o q . z . |
+#
+# choose these according to value of [llength [lsearch -glob -inline *$word*]]
+# tea ten eta team meat neat teen mean meta net nim nam men mat man mam
+# lesson 3: 
+# (some digrams do not appear in word lists)
+# (some digrams only appear in callsign lists)
 #
 # tally marks
 # 𝍩 U+1D369 COUNTING ROD TENS DIGIT ONE
@@ -101,13 +116,13 @@ snit::widget sdrtk::cw-echo {
     option -length-label {Length}
     option -length-values {1 2 3 4 5 6 ...}
     # length of session in minutes
-    option -session -default 5
+    option -session -default 0.5
     option -session-label {Session}
-    option -session-values -default {1 2 5 10 15 20 25 30 45 60}
+    option -session-values -default {0.5 1 2 5 10 15 20 25 30 45 60}
     # speed of challenge
     option -challenge-wpm 30
     option -challenge-wpm-label {Challenge WPM}
-    option -challenge-wpm-values {15 20 25 30 35 40}
+    option -challenge-wpm-values {15 17.5 20 22.5 25 30 35 40 50}
     # frequency of challenge sidetone
     option -challenge-tone E5
     option -challenge-tone-label {Challenge Tone}
@@ -142,7 +157,9 @@ snit::widget sdrtk::cw-echo {
     
     variable data -array {
 	handler {}
+	pre-challenge {}
 	challenge {}
+	challenge-trimmed {}
 	response {}
 	response-trimmed {}
 	sample {}
@@ -156,41 +173,40 @@ snit::widget sdrtk::cw-echo {
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	bind all <KeyPress> [mymethod keypress %A]
 	bind $win <Destroy> [list destroy .]
+	# five tabs in a notebook
 	pack [ttk::notebook $win.echo] -fill both -expand true
 	$win.echo add [$self play-tab $win.play] -text Echo
 	$win.echo add [$self setup-tab $win.setup] -text Setup
 	$win.echo add [$self about-tab $win.about] -text About
 	$win.echo add [$self sandbox-tab $win.sandbox] -text Sandbox
 	$win.echo add [$self dial-tab $win.dial] -text Dial
-	set data(state) first-start
-	set data(handler) [after 500 [mymethod timeout]]
+	after 500 [mymethod setup]
     }
 
     method keypress {a} { $options(-kbd) puts [string toupper $a] }
+    method setup {} {
+	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -source -length -session -char-space -word-space -gain -dah-offset} {
+	    $self update $opt $options($opt)
+	}
+	$win.echo select $win.play
+	$win.play.text tag configure wrong -foreground red
+	$win.play.text tag configure right -foreground green
+	set data(state) start
+    }
 
-    #
-    #
-    #
     #
     # state machine
     #
     method timeout {} {
 	while {1} {
 	    # check if pause
-	    if { ! $data(play-play/pause)} {
+	    if { ! $data(play/pause)} {
 		$self status "Press Play to continue\n" normal
-		break
+		return
 	    }
-	    # check time elapsed
-	    set data(play-play-time) [accumulate-playtime {*}$data(play-session-timestamps) play [clock millis]]
-	    set data(play-session-time) [format-time $data(play-play-time)]
-	    if {($data(play-play-time)/1000)/60 >= $options(-session)} {
-		$self status "Session complete\n"
-		$self score-session
-		$self play-button play/pause
-		set data(state) start
-		continue
-	    }
+	    # compute time elapsed
+	    set data(play-time) [accumulate-playtime {*}$data(session-stamps) play [clock millis]]
+	    set data(session-time) [format-time $data(play-time)]
 	    # update challenge text
 	    append data(challenge) [$options(-dec1) get]
 	    # trimmed challenge
@@ -201,40 +217,74 @@ snit::widget sdrtk::cw-echo {
 	    set data(trimmed-response) [regsub -all { } $data(response) {}]
 	    # switch on state
 	    switch $data(state) {
-		first-start {
-		    # initialize component options
-		    foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -source -length -session -char-space -word-space -gain -dah-offset} {
-			$self update $opt $options($opt)
-		    }
-		    $win.echo select $win.play
-		    $win.play.text tag configure wrong -foreground red
-		    $win.play.text tag configure right -foreground green
-		    set data(state) start
-		    continue
-		}
 		start {
-		    array set data { pre-challenge {} challenge {} response {} post-response {} state wait-for-start-signal}
-		    continue
+		    array set data [list \
+					session-time 0 \
+					session-log {} \
+					response-time 0 \
+					session-stamps [list play [clock millis]] \
+					challenges 0 \
+					hits 0 \
+					misses 0 \
+					passes 0 \
+					session-start [clock seconds] \
+					pre-challenge {} \
+					challenge {} \
+					trimmed-challenge {} \
+					response {} \
+					trimmed-response {} \
+					time-pause [clock millis] \
+					time-challenge 0 \
+					time-of-echo 0 \
+					time-to-echo 0 \
+					state pause-before-new-challenge \
+				       ]
 		}
-		wait-for-start-signal {
-		    # $self status "\nStarting session\n" normal
-		    if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
-			array set data [list pre-challenge [$self sample-draw] time-challenge [clock micros] state wait-challenge-echo]
-			$options(-chk) puts [string toupper $data(pre-challenge)]
-			incr data(play-challenges)
+		pause-before-new-challenge {
+		    if {($data(play-time)/1000.0)/60.0 >= $options(-session)} {
+			$self status "Session complete\n"
+			$self score-session
+			$self play-button play/pause
+			set data(state) start
 			continue
 		    }
-		    break
+		    if {[clock millis]-$data(time-pause) > 50} {
+			if {[$options(-dti2) pending]} {
+			    set data(time-pause) [clock millis]
+			} else {
+			    set data(state) new-challenge
+			}
+		    }
+		}
+		new-challenge {
+		    if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
+			array set data [list  \
+					    challenge {} trimmed-challenge {} response {} trimmed-response {} \
+					    state wait-challenge-echo ]
+			set data(pre-challenge) [$self sample-draw]
+			set data(time-challenge) [clock millis]
+			set data(challenge-dits) [morse-word-length [$options(-dict)] $data(pre-challenge)]
+			set data(challenge-dit-ms) [morse-dit-ms $options(-challenge-wpm)]
+			set data(response-dit-ms) [morse-dit-ms $options(-response-wpm)]
+			set data(challenge-response-ms) [expr {$data(challenge-dits)*($data(challenge-dit-ms)+$data(response-dit-ms))}]
+			$options(-chk) puts [string toupper $data(pre-challenge)]
+			incr data(challenges)
+		    }
 		}
 		wait-challenge-echo {
 		    # $self status "Waiting for challenge to echo ..." normal
+		    if {[string length $data(pre-challenge)] > [string length $data(trimmed-challenge)]} {
+			# waiting for more input
+			break
+		    }
 		    if {[string first $data(pre-challenge) $data(trimmed-challenge)] >= 0} {
 			# $self status "\n" normal
-			set t [clock micros]
+			set t [clock millis]
 			array set data [list time-of-echo $t time-to-echo [expr {8*$data(time-warp)*($t-$data(time-challenge))}] state wait-response-echo]
 			# puts "time-to-echo $data(time-to-echo)"
 			continue
-		    } elseif {$data(challenge) ne {}} {
+		    } 
+		    if {$data(trimmed-challenge) ne {}} {
 			# $self status "\n" normal
 			# puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
 			set data(state) challenge-again
@@ -244,41 +294,31 @@ snit::widget sdrtk::cw-echo {
 		}
 		wait-response-echo {
 		    # $self status "Waiting for response ... {$data(trimmed-challenge)} {$data(trimmed-response)}" normal
-		    if {[string first $data(trimmed-response) $data(trimmed-challenge)] >= 0} {
+		    if {[string length $data(trimmed-challenge)] > [string length $data(trimmed-response)]} {
+			break
+		    }
+		    set data(response-time) [expr {[clock millis]-$data(time-challenge)-$data(challenge-response-ms)}]
+		    if {[string first $data(trimmed-challenge) $data(trimmed-response)] >= 0} {
+			$self status {}
 			$self status $data(trimmed-response) right " is correct!\n" normal
-			incr data(play-hits)
-			set t [clock micros]
-			
-			array set data [list time-pause $t state pause-before-new-challenge]
+			$self score-challenge hits
+			array set data [list time-pause [clock millis] state pause-before-new-challenge]
 		    } elseif {$data(trimmed-response) ne {} &&
 			      [string first $data(trimmed-response) $data(trimmed-challenge)] != 0} {
-			incr data(play-misses) 1
+			$self status {}
 			$self status "$data(response)" wrong " is wrong!\n" normal
-			array set data [list time-pause [clock micros] state pause-before-challenge-again]
-		    } elseif {[clock micros] > $data(time-of-echo)+$data(time-to-echo)} {
+			$self score-challenge misses
+			array set data [list time-pause [clock millis] state pause-before-challenge-again]
+		    } elseif {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
 			# $self status "too long!" tardy "\n" normal
-			incr data(play-passes)
-			array set data [list time-pause [clock micros] state pause-before-challenge-again]
+			$self score-challenge passes
+			array set data [list time-pause [clock millis] state pause-before-challenge-again]
 		    }
-		}
-		pause-before-new-challenge {
-		    array set data [list pre-challenge [$self sample-draw] state pause-before-challenge-again ]
-		    incr data(play-challenges)
-		    continue
-		}
-		new-challenge {
-		    array set data {challenge {} trimmed-challenge {} response {} trimmed-response {}}
-		    if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
-			$options(-chk) puts [string toupper $data(pre-challenge)]
-			array set data [list  time-challenge [clock micros] state wait-challenge-echo]
-			continue
-		    }
-		    break
 		}
 		pause-before-challenge-again {
-		    if {[clock micros]-$data(time-pause) > 5e5} {
+		    if {[clock millis]-$data(time-pause) > 50} {
 			if {[$options(-dti2) pending]} {
-			    set data(time-pause) [clock micros]
+			    set data(time-pause) [clock millis]
 			    continue
 			}
 			set data(state) challenge-again
@@ -313,7 +353,7 @@ snit::widget sdrtk::cw-echo {
 	return [format {%d:%02d} [expr {($millis/1000)/60}] [expr {($millis/1000)%60}]]
     }
     proc accumulate-time {args} {
-	# puts "accumulate-time $args"
+	#puts "accumulate-time $args"
 	set playtime 0
 	set pausetime 0
 	foreach {tag millis} $args {
@@ -329,15 +369,20 @@ snit::widget sdrtk::cw-echo {
 	    set lasttag $tag
 	    set lastmillis $millis
 	}
+	#puts "accumulate-time $args -> $playtime $pausetime"
 	return [list $playtime $pausetime]
     }
     proc accumulate-playtime {args} { return [lindex [accumulate-time {*}$args] 0] }
     proc accumulate-pausetime {args} { return [lindex [accumulate-time {*}$args] 1] }
     # score the results of a timed session
     method score-session {} {
+	puts "score-session"
     }
     # score the results of a single challenge
-    method score-challenge {} {
+    method score-challenge {as} {
+	incr data($as)
+	lappend data(session-log) [list $data(pre-challenge) $data(trimmed-response) $as $data(response-time)]
+	# puts "score-challenge {$data(pre-challenge)} {$data(trimmed-response)} $as $data(response-time) ms"
     }
     proc choose {x} {
 	# puts "choose from {$x} [expr {int(rand()*[llength $x])}]"
@@ -364,56 +409,56 @@ snit::widget sdrtk::cw-echo {
     #
     method play-tab {w} {
 	array set data {
-	    play-session-timestamps {}
-	    play-play/pause 0
-	    play-session-time 0
-	    play-response-time 0
-	    play-challenges 0
-	    play-hits 0
-	    play-misses 0
-	    play-passes 0
-	    play-challenge {}
-	    play-response {}
+	    session-stamps {}
+	    play/pause 0
+	    session-time 0
+	    response-time 0
+	    challenges 0
+	    hits 0
+	    misses 0
+	    passes 0
+	    challenge {}
+	    response {}
 	}
 	pack [ttk::frame $w] -side top -expand true -fill x
 	set row 0
-	foreach var {session-time response-time challenges hits misses passes challenge response} {
+	foreach var {session-time response-time challenges hits misses passes challenge-wpm response-wpm} {
 	    grid [ttk::label $w.l$var -text "$var: "] -row $row -column 0
-	    grid [ttk::label $w.v$var -textvar [myvar data(play-$var)]] -row $row -column 1
+	    grid [ttk::label $w.v$var -textvar [myvar data($var)]] -row $row -column 1
 	    switch $var {
-		session-time { set data(play-$var) $options(-session) }
+		session-time { set data($var) 0:00 }
 		response-time -
 		challenges -
 		hits -
 		misses -
-		passes  { set data(play-$var) 0 }
-		challenge { set data(play-$var) "$options(-challenge-wpm) WPM" }
-		response { set data(play-$var) "$options(-response-wpm) WPM" }
+		passes  { set data($var) 0 }
+		challenge-wpm { set data($var) "$options(-challenge-wpm) WPM" }
+		response-wpm { set data($var) "$options(-response-wpm) WPM" }
 		default { error "uncaught dashboard variable $var" }
 	    }
 	    incr row
 	}
 	grid [text $w.text -height 8 -width 40 -background lightgrey] -row $row -column 0 -columnspan 2 -sticky ew
-	incr row
-	grid [ttk::frame $w.bot] -row $row -column 0 -columnspan 2 -sticky ew
-	foreach but {play/pause settings} {
-	    pack [ttk::button $w.bot.b$but -text $but -command [mymethod play-button $but]] -side left
-	}
 	bind $w.text <KeyPress> {}
+	incr row
+	foreach but {play/pause} {
+	    grid [ttk::button $w.b$but -text Play -command [mymethod play-button $but]] -row $row -column 0 -columnspan 2
+	}
 	return $w
     }
     method play-button {but} {
 	# puts "play-button $but"
 	switch $but {
 	    play/pause {
-		set data(play-play/pause) [expr {1^$data(play-play/pause)}]
-		if {$data(play-play/pause)} {
-		    $win.play.bot.b$but configure -text Pause
-		    lappend data(play-session-timestamps) play [clock millis]
-		    # array set data {challenge {} response {}}
+		set data(play/pause) [expr {1^$data(play/pause)}]
+		if {$data(play/pause)} {
+		    $win.play.b$but configure -text Pause
+		    lappend data(session-stamps) play [clock millis]
+		    $self timeout
 		} else {
-		    $win.play.bot.b$but configure -text Play
-		    lappend data(play-session-timestamps) pause [clock millis]
+		    $win.play.b$but configure -text Play
+		    lappend data(session-stamps) pause [clock millis]
+		    set data(handler) [after 50 [mymethod timeout]]
 		}
 	    }
 	    settings {
@@ -565,7 +610,12 @@ snit::widget sdrtk::cw-echo {
     #
     #
     #
-    method exposed-options {} { return {-dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out} }
+    method exposed-options {} { 
+	return {
+	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out
+	    -length
+	}
+    }
 
     method info-option {opt} {
 	switch -- $opt {
@@ -583,6 +633,7 @@ snit::widget sdrtk::cw-echo {
 	    -dti1 { return {challenge time decoder} }
 	    -dti2 { return {response time decoder} }
 	    -out { return {output gain} }
+	    -length { return {length of challenges} }
 	    default { puts "no info-option for $opt" }
 	}
     }

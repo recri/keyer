@@ -28,6 +28,8 @@ namespace eval ::morse::morse {}
 #
 # translate a text into morse
 # using a dictionary
+# should handle spaces
+# should handle <prosigns>
 #
 proc text-to-morse {dict text} {
     set code {}
@@ -116,6 +118,13 @@ proc morse-dit-length {code} {
     return $length
 }
     
+#
+# compute the dit time for words/minute in milliseconds
+#
+proc morse-dit-ms {wpm} {
+    return [expr {60*1000/($wpm*50.0)}]; # millis per minute / dits per minute
+}
+
 #
 # generate the length classes of a dictionary
 #

@@ -202,16 +202,8 @@ namespace eval ::morse::abbrev {
     }
 }
 
-proc morse-qcodes {} {
-    return $::morse::abbrev::qcodes
-}
-proc morse-ham-abbrev {} {
-    return $::morse::abbrev::abbrev
-}
-proc morse-ham-qcodes {} {
-    return $::morse::abbrev::hamqcodes
-}
-proc morse-ham {} {
-    return $::morse::abbrev::ham
-}
+proc morse-qcodes {} { return $::morse::abbrev::qcodes }
+proc morse-ham-abbrev {} { return $::morse::abbrev::abbrev }
+proc morse-ham-qcodes {} { return $::morse::abbrev::hamqcodes }
+proc morse-ham {} { return $::morse::abbrev::ham }
 
