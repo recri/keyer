@@ -329,8 +329,8 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       data->opts = save;
       return fw_error_str(interp, p);
     }
-    Tcl_DecrRefCount(save.result_type_obj);
   }
+  Tcl_DecrRefCount(save.result_type_obj);
   return TCL_OK;
 }
 

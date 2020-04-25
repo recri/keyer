@@ -56,10 +56,15 @@ snit::widgetadaptor sdrtk::cw-decode-view {
 	set xargs {}
 	if {$server ne {}} { lappend xargs -server $server }
 	$self configure -width 30 -height 15 -exportselection true {*}$args
+	bind $win <Destroy> [mymethod window-destroy]
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	set handler [after 100 [mymethod timeout]]
     }
 
+    method window-destroy {} {
+	catch { after cancel $handler }
+    }
+    
     method exposed-options {} { return {-dict -font -foreground -background -detime} }
 
     method info-option {opt} {
