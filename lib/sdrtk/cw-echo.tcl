@@ -38,15 +38,21 @@ package require midi
 #
 # generate morse code to be echoed back
 #
+# echo via key or paddle connected as a MIDI device
+# or use the keys of the keyboard or mouse buttons
+# or just type the answers.
+#
 # general options for generated code:
 #    speed, inter-letter space, inter-word space, ...
 #    tone frequency, ramp on/off, length on/off, level, ...
 #    inter-dit-dah frequency shift
+#
 # general options for response:
 #    keyed:
 #      key speed, spacing, mode, ...
 #      tone frequency, ramp on/off, length on/off, level, ...
 #    typed:
+#
 # general options for generated words:
 #    character sets: random words of n letters
 #    words and phrases
@@ -58,34 +64,24 @@ package require midi
 # it can capture keyer input
 # it can echo in its own screen space
 #
-# introduce letters, immediately introduce combinations of letters,
-# followed by letters with the same combination of elements without the spaces
-# lesson 1: e t ee et | i a |
-#               te tt | n m |
-# lesson 2: e t a n i m  ee et ea en ei em | i a u r s w | * * u r s w |
-#                        te tt ta tn ti tm | n m k g d o | * * k g d o |
-#                        ae at aa an ai am | r w . p l j | r w . p l j |
-#                        ne nt na nn ni nm | d k x c b y | d k x c b y |
-#                        ie it ia in ii im | s u v f h . | s u v f h . |
-#                        me mt ma mn mi mm | g o q . z . | g o q . z . |
+# The general principle is that we are working through a deck of flashcards,
+# such as the lines of text in a file, or the words in a file.  We grab a
+# bunch of cards from the front of the deck and present them.  When the response
+# is 90% correct, we add some more cards, when response is 100% correct, we promote
+# the card to the next tranche, which gets reviewed at lower frequency
 #
-# choose these according to value of [llength [lsearch -glob -inline *$word*]]
-# tea ten eta team meat neat teen mean meta net nim nam men mat man mam
-# lesson 3: 
-# (some digrams do not appear in word lists)
-# (some digrams only appear in callsign lists)
+# So the "lesson plan" is simply a recipe for constructing a deck of flash cards.
+# Obviously, it contains the letters, numbers, and common ham punctuation marks and
+# prosigns.
 #
-# tally marks
-# 𝍩 U+1D369 COUNTING ROD TENS DIGIT ONE
-# 𝍪 U+1D36A COUNTING ROD TENS DIGIT TWO
-# 𝍫 U+1D36B COUNTING ROD TENS DIGIT THREE
-# 𝍬 U+1D36C COUNTING ROD TENS DIGIT FOUR
-# 𝍭 U+1D36D COUNTING ROD TENS DIGIT FIVE
-# u1D377 - TALLY MARK ONE - 𝍷
-# u1D378 - TALLY MARK FIVE - 𝍸
-# ᚎ ogham straif
+# Starting from the original deck, we draw a primary deck and begin testing on it.
+# As elements in the primary deck are learned, they promote to a secondary deck and
+# the primary deck is replenished by new draws from the original deck.  The secondary 
+# deck is actually structured according to the time to last challenge and success rate.
 #
-
+# So we're keeping statistics on each card in the deck, challenges, misses, time to
+# answer, overall, and decaying averages.
+#
 namespace eval ::sdrtk {}
 
 snit::widget sdrtk::cw-echo {
@@ -180,9 +176,31 @@ snit::widget sdrtk::cw-echo {
 	$win.echo add [$self about-tab $win.about] -text About
 	$win.echo add [$self sandbox-tab $win.sandbox] -text Sandbox
 	$win.echo add [$self dial-tab $win.dial] -text Dial
+	bind $win.echo <<NotebookTabChanged>> [mymethod swaptabs]
 	after 500 [mymethod setup]
     }
 
+    method swaptabs {} {
+	switch -glob [$win.echo select] {
+	    *play {
+		# steal back the detimer on keyboard and key
+		$win.sandbox configure -detime {}
+	    }
+	    *setup {
+	    }
+	    *sandbox {
+		# steal the detimer on keyboard and key
+		$win.sandbox configure -detime $options(-dti2)
+	    }
+	    *about {
+	    }
+	    *dial {
+	    }
+	    default {
+		error "uncaught NotebookTabChanged select [$win.echo select]"
+	    }
+	}
+    }
     method keypress {a} { $options(-kbd) puts [string toupper $a] }
     method setup {} {
 	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -source -length -session -char-space -word-space -gain -dah-offset} {
@@ -211,10 +229,12 @@ snit::widget sdrtk::cw-echo {
 	    append data(challenge) [$options(-dec1) get]
 	    # trimmed challenge
 	    set data(trimmed-challenge) [string trim $data(challenge)]
+	    set data(n-t-c) [string length $data(trimmed-challenge)]
 	    # update response text
 	    append data(response) [$options(-dec2) get]
 	    # trimmed response
 	    set data(trimmed-response) [regsub -all { } $data(response) {}]
+	    set data(n-t-r) [string length $data(trimmed-response)]
 	    # switch on state
 	    switch $data(state) {
 		start {
@@ -249,7 +269,7 @@ snit::widget sdrtk::cw-echo {
 			continue
 		    }
 		    if {[clock millis]-$data(time-pause) > 50} {
-			if {[$options(-dti2) pending]} {
+			if {[$options(-dti2) pending] && [$options(-dti2) pending] ne { }} {
 			    set data(time-pause) [clock millis]
 			} else {
 			    set data(state) new-challenge
@@ -262,6 +282,7 @@ snit::widget sdrtk::cw-echo {
 					    challenge {} trimmed-challenge {} response {} trimmed-response {} \
 					    state wait-challenge-echo ]
 			set data(pre-challenge) [$self sample-draw]
+			set data(n-p-c) [string length $data(pre-challenge)]
 			set data(time-challenge) [clock millis]
 			set data(challenge-dits) [morse-word-length [$options(-dict)] $data(pre-challenge)]
 			set data(challenge-dit-ms) [morse-dit-ms $options(-challenge-wpm)]
@@ -273,7 +294,7 @@ snit::widget sdrtk::cw-echo {
 		}
 		wait-challenge-echo {
 		    # $self status "Waiting for challenge to echo ..." normal
-		    if {[string length $data(pre-challenge)] > [string length $data(trimmed-challenge)]} {
+		    if {$data(n-p-c) > $data(n-t-c)} {
 			# waiting for more input
 			break
 		    }
@@ -284,7 +305,7 @@ snit::widget sdrtk::cw-echo {
 			# puts "time-to-echo $data(time-to-echo)"
 			continue
 		    } 
-		    if {$data(trimmed-challenge) ne {}} {
+		    if {$data(n-t-c) != 0} {
 			# $self status "\n" normal
 			# puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
 			set data(state) challenge-again
@@ -294,30 +315,31 @@ snit::widget sdrtk::cw-echo {
 		}
 		wait-response-echo {
 		    # $self status "Waiting for response ... {$data(trimmed-challenge)} {$data(trimmed-response)}" normal
-		    if {[string length $data(trimmed-challenge)] > [string length $data(trimmed-response)]} {
-			break
-		    }
-		    set data(response-time) [expr {[clock millis]-$data(time-challenge)-$data(challenge-response-ms)}]
+		    set data(response-time) [format %.0f [expr {[clock millis]-$data(time-challenge)-$data(challenge-response-ms)}]]
 		    if {[string first $data(trimmed-challenge) $data(trimmed-response)] >= 0} {
 			$self status {}
-			$self status $data(trimmed-response) right " is correct!\n" normal
+			$self status $data(trimmed-challenge) right " is correct!\n" normal
 			$self score-challenge hits
 			array set data [list time-pause [clock millis] state pause-before-new-challenge]
-		    } elseif {$data(trimmed-response) ne {} &&
-			      [string first $data(trimmed-response) $data(trimmed-challenge)] != 0} {
+			break
+		    }
+		    if {$data(n-t-r) > 0 && [string first $data(trimmed-response) $data(trimmed-challenge)] < 0} {
 			$self status {}
 			$self status "$data(response)" wrong " is wrong!\n" normal
 			$self score-challenge misses
 			array set data [list time-pause [clock millis] state pause-before-challenge-again]
-		    } elseif {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
-			# $self status "too long!" tardy "\n" normal
+			break
+		    }
+		    if {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
 			$self score-challenge passes
 			array set data [list time-pause [clock millis] state pause-before-challenge-again]
+			continue
 		    }
 		}
 		pause-before-challenge-again {
 		    if {[clock millis]-$data(time-pause) > 50} {
-			if {[$options(-dti2) pending]} {
+			if {[$options(-dti2) pending] && [$options(-dti2) peek] ne { }} {
+			    set data(state) wait-response-echo
 			    set data(time-pause) [clock millis]
 			    continue
 			}
@@ -462,7 +484,6 @@ snit::widget sdrtk::cw-echo {
 		}
 	    }
 	    settings {
-		
 	    }
 	    default { error "uncaught button $but" }
 	}
@@ -480,7 +501,7 @@ snit::widget sdrtk::cw-echo {
     #
     method dial-tab {w} {
 	::sdrtk::dialbook $w
-	foreach text [::options get-opts] {
+	foreach text [lsort [::options get-opts]] {
 	    if {[::options is-hide $text]} continue
 
 	    set type [::options get $text type]
@@ -646,3 +667,11 @@ snit::widget sdrtk::cw-echo {
     }
 
 }
+
+#
+# todo - 20200429
+# [ ] - fix the repeat after no answer
+# [ ] - implement the flashcard algorithm
+# [ ] - implement several flashcard decks
+# [ ] - make the sandbox work, need to steal the focus
+#	when activated and give it back as necessary

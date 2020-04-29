@@ -81,6 +81,7 @@ static void _builtin_dict(void *arg) {
   _t *data = (_t *)arg;
   if (data->dict != NULL) Tcl_DecrRefCount(data->dict);
   data->dict = Tcl_NewStringObj(morse_coding_dict_string, -1);
+  // fprintf(stderr, "morse_coding_dict_string %s\n", morse_coding_dict_string);
   Tcl_IncrRefCount(data->dict);
 }
 static void *_init(void *arg) {

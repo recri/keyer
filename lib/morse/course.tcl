@@ -19,17 +19,15 @@
 #
 # morse code course
 #
-# an order for introducing letters and words
+# introduce characters and sequences of characters.
+# they should be keyed or typed back.
 #
-# e t | ee et | i a |
-#     | te tt | n m |
-# a n i m | ee et ea en ei em | i a u r 
-#         | te tt ta tn ti tm |
-#         | ae at aa an ai am |
-#         | ne nt na nn ni nm |
-#         | ie it ia in ii im |
-#         | me mt ma mn mi mm |
-
+# add new characters or sequences when 90% correct is reached on the current set.
+# manage the set of characters and sequences as a flash card deck using Leitner's
+# method, but modified because some "cards" are subsets or permutations of other
+# 
+# the sequence of introduced characters could take many different paths
+#
 package provide morse::course 1.0.0
 
 package require morse::abbrev

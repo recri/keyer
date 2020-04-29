@@ -151,6 +151,18 @@ static int _get(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* co
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
+static int _peek(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+  // return the current detimed string
+  _t *dp = (_t *)clientData;
+  // hmm, how to avoid the buffer here, allocate a byte array?
+  unsigned n = ring_buffer_items_available_to_read(&dp->ring);
+  // fprintf(stderr, "%s:%d %u bytes available\n", __FILE__, __LINE__, n);
+  Tcl_Obj *result = Tcl_NewObj();
+  char *buff = Tcl_SetByteArrayLength(result, n);
+  ring_buffer_peek(&dp->ring, n, buff);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
 static int _pending(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
   // return the size of the current detimed string
   _t *dp = (_t *)clientData;
@@ -183,6 +195,7 @@ static const fw_option_table_t _options[] = {
 static const fw_subcommand_table_t _subcommands[] = {
 #include "framework_subcommands.h"
   { "get", _get, "get the currently converted string of dits and dahs" },
+  { "peek",_peek,"get the currently converted string without dequeuing it" },
   { "pending", _pending, "get the size of the currently converted string of dits and dahs" },
   { "status", _status, "get the internal parameters of the detimer" },
   { NULL }

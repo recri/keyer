@@ -41,6 +41,7 @@ ALSA=$(LIBSDRTCL)/alsa_device.so \
 	$(LIBSDRTCL)/alsa_sequencer.so
 
 KEYERS=$(LIBSDRTCL)/keyer_ascii.so \
+	$(LIBSDRTCL)/keyer_builtin_dict.so \
 	$(LIBSDRTCL)/keyer_debounce.so \
 	$(LIBSDRTCL)/keyer_detime.so \
 	$(LIBSDRTCL)/keyer_detone.so \
@@ -285,6 +286,9 @@ $(LIBSDRTCL)/alsa_sequencer.so: alsa_sequencer.c
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/morse_timing.h ../dspmath/morse_coding.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBSDRTCL)/keyer_builtin_dict.so: keyer_builtin_dict.c framework.h ../dspmath/midi.h ../dspmath/morse_coding.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/keyer_debounce.so: keyer_debounce.cc framework.h ../dspmath/midi.h ../dspmath/debouncer.h
