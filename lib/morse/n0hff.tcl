@@ -22,15 +22,16 @@ package provide morse::n0hff 1.0
 namespace eval ::morse {}
 namespace eval ::morse::n0hff {
     # Some of the published orders for learning the characters are:, artskill.pdf p. 34
+    # Several corrections to these made to eliminate duplicates and insert missing letters
     array set data {
 	letter-orders {
-	    50etar-sluqj-honcv-ibyp-wkzm-dxfg.
-	    fghmjru-bdkntvy-ceilos-apqxzw.
-	    etaimn-sodrcu-kphgwl-qhfy-zbxj.
-	    eish-tmo-anwg-duvjb-rklf-pxzcyq.
-	    fkbqtczhwxmdyupajoersgnlvi.
-	    etimsoh-awujvg-cgkqfz-rylbxdn.
-	    aeiou-tnrsdlh-....
+	    {5 0 E T A R - S L U Q J - H O N C V - I B Y P - W K Z M - D X F G}
+	    {F G H M J R U - B D K N T V Y - C E I L O S - A P Q X Z W}
+	    {E T A I M N - S O D R C U - K P H G W L - Q B F Y - Z V X J}
+	    {E I S H - T M O - A N W G - D U V J B - R K L F - P X Z C Y Q}
+	    {F K B Q T C Z H W X M D Y U P A J O E R S G N L V I}
+	    {E T I M S O H - A W U J V P - C G K Q F Z - R Y L B X D N}
+	    {A E I O U - T N R S D L H - B C F G J K M - P Q V W X Y Z}
 	}
     }
     # The 100 Most Common Words in English, artskill.pdf p. 38
@@ -39,7 +40,7 @@ namespace eval ::morse::n0hff {
 	    go am me on by to up so it no of as he if an us or in is at my we do be
 	    and man him out not but can who has may was one she all you how any its say are now two for men her had the our his
 	    been some then like well made when have only your work over such time were with into very what then more will they come that from must said them this upon
-	    great about other shall every thes first their could which would there before should little people
+	    great about other shall every these first their could which would there before should little people
 	}
     }
     # Chapter 21, Methods Not Recommended, p. 137
@@ -198,7 +199,7 @@ namespace eval ::morse::n0hff {
     # as an unknown character grouping.
     #
 }
-proc n0hff-letter-orders {} { return [split [string trim $::morse::n0hff::data(letter-orders)] \n] }
+proc n0hff-letter-orders {} { return $::morse::n0hff::data(letter-orders) }
 proc n0hff-common-words {} { return $::morse::n0hff::data(100-most-common-words) }
 proc n0hff-words-by-function {} { return $::morse::n0hff::data(100-words-by-function) }
 proc n0hff-words-sentences {} { return [split [string trim $::morse::n0hff::data(100-words-sentences)] \n] }

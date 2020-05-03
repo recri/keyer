@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide prefixes 1.0.0
+package provide morse::prefixes 1.0.0
 
 namespace eval ::prefixes {
     foreach {country data} {

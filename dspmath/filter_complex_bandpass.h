@@ -26,7 +26,7 @@
 #include "dspmath.h"
 #include "filter_FIR.h"
 
-#define FILTER_COMPLEX_BANDPASS_MAX_LENGTH 1024
+#define FILTER_COMPLEX_BANDPASS_MAX_LENGTH (8*1024)
 
 typedef struct {
   int length;			/* length of filter */

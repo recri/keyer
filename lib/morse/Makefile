@@ -23,6 +23,6 @@ clean::
 all-clean:: clean
 	rm -f pkgIndex.tcl
 
-pkgIndex.tcl: $(wildcard *.so) $(filter-out pkgIndex.tcl, $(wildcard *.tcl))
+pkgIndex.tcl: $(wildcard *.so) $(filter-out course.tcl, $(filter-out pkgIndex.tcl, $(wildcard *.tcl))) course.tcl
 	echo 'pkg_mkIndex .' | tclsh8.6
 
