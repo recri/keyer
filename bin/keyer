@@ -979,6 +979,14 @@ snit::type keyer::setups {
 	    start { keyer -start {filter-overlap-save@filt} -filt-low 0 -filt-high 1400 }
 	    info { overlap save bandpass filter }
 	}
+	filt2 {
+	    start { keyer -start {filter-overlap-save@filt2} -filt2-low 0 -filt2-high 1400 }
+	    info { second overlap save bandpass filter }
+	}
+	filt3 {
+	    start { keyer -start {filter-overlap-save@filt3} -filt3-low 0 -filt3-high 1400 }
+	    info { third overlap save bandpass filter }
+	}
 	nod {
 	    start { keyer -hide {*-dit *-dah *-ies *-ils *-iws *-awsp *-word *-weight *-ratio *-comp *-mdit *-mdah *-mide} }
 	    info {hide esoteric keyer options}
