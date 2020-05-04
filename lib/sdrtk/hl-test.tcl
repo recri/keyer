@@ -35,9 +35,9 @@ namespace eval ::hlt {}
 # a manually refreshed information string
 # probably should just refresh on a timer
 
-proc hl-cget {opt} { return [dial-cget -hl$opt] }
-proc hl-cset {opt val} { dial-cset -hl$opt $val }
-proc hl-cvar {opt} { return [dial-cvar -hl$opt] }
+proc hl-cget {opt} { return [::options cget -hl$opt] }
+proc hl-cset {opt val} { ::options cset -hl$opt $val }
+proc hl-cvar {opt} { return [ ::options cvar -hl$opt] }
 
 snit::widget hlt::refresh {
     component lbl

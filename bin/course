@@ -25,3 +25,4 @@ lappend auto_path [file join $dirname .. lib]
 
 package require morse::course
 
+morse::course mycourse -seed [clock seconds]

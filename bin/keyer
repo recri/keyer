@@ -519,7 +519,7 @@ snit::type keyer::options {
 	    {* -rx-frames-per-call} { $self describe $option text ronly 1 volatile 1 }
 	    {* -tx-frames-per-call} - 
 	    {* -bs-frames-per-call} { $self describe $option text ronly 1 }
-	    {* -length} { $self describe $option enum -values {64 128 256 512 1024} }
+	    {* -length} { $self describe $option enum -values {64 128 256 512 1024 2048 4096 8192} }
 	    {* -filter-low} -
 	    {* -filter-high} -
 	    {* -low} - 

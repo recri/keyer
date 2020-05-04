@@ -103,6 +103,29 @@ snit::widget sdrtk::cw-echo {
     option -foreground -default black -configuremethod ConfigText
     option -background -default white -configuremethod ConfigText
     
+    # letter orders
+    option -order -default {THEBANDOFIVRYUWSMGCLKPJQXZ}
+    option -order-label {Character Order}
+    option -order-values {
+	{50ETARSLUQJHONCVIBYPWKZMDXFG}
+	{FGHMJRUBDKNTVYCEILOSAPQXZW}
+	{ETAIMNSODRCUKPHGWLQBFYZVXJ}
+	{EISHTMOANWGDUVJBRKLFPXZCYQ}
+	{FKBQTCZHWXMDYUPAJOERSGNLVI}
+	{ETIMSOHAWUJVPCGKQFZRYLBXDN}
+	{AEIOUTNRSDLHBCFGJKMPQVWXYZ}
+	{THEBANDOFIVRYUWSMGCLKPJQXZ}
+    }
+    option -order-labels {
+	{50ETAR...}
+	{FGHMJR...}
+	{ETAIMN...}
+	{EISHTM...}
+	{FKBQTC...}
+	{ETIMSO...}
+	{AEIOUT...}
+	{THEBAN...}
+    }
     # source of challenge
     option -source -default letters
     option -source-label {Source}
@@ -113,7 +136,7 @@ snit::widget sdrtk::cw-echo {
     option -length-values {1 2 3 4 5 6 ...}
     # length of session in minutes
     option -session -default 0.5
-    option -session-label {Session}
+    option -session-label {Session Length}
     option -session-values -default {0.5 1 2 5 10 15 20 25 30 45 60}
     # speed of challenge
     option -challenge-wpm 30
@@ -142,14 +165,11 @@ snit::widget sdrtk::cw-echo {
     # offset of dah tone from dit tone
     option -dah-offset 0
     option -dah-offset-label {Dah Tone Offset}
-    option -dah-offset-min -5.0
-    option -dah-offset-max  5.0
-    option -dah-offset-step 0.01
+    option -dah-offset-values {-0.10 -0.05 -0.02 -0.01 0 0.01 0.02 0.05 0.10}
     # output gain
     option -gain 0
     option -gain-label {Output Gain}
-    option -gain-min -30
-    option -gain-max +30
+    option -gain-values {-30 -20 -15 -12 -9 -6 -3 0 3 6}
     
     variable data -array {
 	handler {}
@@ -203,7 +223,8 @@ snit::widget sdrtk::cw-echo {
     }
     method keypress {a} { $options(-kbd) puts [string toupper $a] }
     method setup {} {
-	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -source -length -session -char-space -word-space -gain -dah-offset} {
+	#  -source -length
+	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -session -order -char-space -word-space -gain -dah-offset} {
 	    $self update $opt $options($opt)
 	}
 	$win.echo select $win.play
@@ -534,7 +555,8 @@ snit::widget sdrtk::cw-echo {
     method setup-tab {w} {
 	ttk::frame $w
 	set row 0
-	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -source -length -session -char-space -word-space} {
+	#  -source -length
+	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -order -session -char-space -word-space -gain -dah-offset} {
 	    ttk::label $w.l$opt -text "$options($opt-label): "
 	    sdrtk::radiomenubutton $w.x$opt \
 		-defaultvalue $options($opt) \
@@ -543,13 +565,13 @@ snit::widget sdrtk::cw-echo {
 		-command [mymethod update $opt]
 	    if {[info exists options($opt-labels)]} {
 		$w.x$opt configure -labels $options($opt-labels)
-		ttk::frame $w
 	    }
 	    grid $w.l$opt -row $row -column 0 -sticky ew
 	    grid $w.x$opt -row $row -column 1 -sticky ew
 	    incr row
 	}
-	foreach opt {-gain -dah-offset} {
+	# -gain -dah-offset
+	foreach opt {} {
 	    sdrtk::lscale $w.x$opt \
 		-label "$options($opt-label)" \
 		-from $options($opt-min) \
@@ -568,6 +590,9 @@ snit::widget sdrtk::cw-echo {
 	# puts "update $opt $val"
 	set options($opt) $val
 	switch -- $opt {
+	    -order {
+		set data(course) [morse::course course -order $val -seed [clock seconds] -old $data(course)]
+	    }
 	    -source {
 		switch -- $val {
 		    letters { set data(sample) [split {abcdefghijklmnopqrstuvwxyz} {}] }

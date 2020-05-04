@@ -1,6 +1,8 @@
 #include <midi_serialization.h>
 #include <usbmidi.h>
 
+typedef unsigned char u8;
+
 // See midictrl.png in the example folder for the wiring diagram,
 // as well as README.md.
 
