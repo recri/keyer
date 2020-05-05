@@ -73,18 +73,8 @@ public:
     _startKeyIn = KEYIN_OFF;
     _halfClockKeyIn = KEYIN_OFF;
 
-    setTick(1);
-    setSwapped(false);
-    setMode('A');
-    setWord(50);
-    setWpm(15);
-    setDit(1);
-    setDah(3);
-    setIes(1);
-    setIls(3);
-    setIws(7);
-    setAutoIls(false);
-    setAutoIws(false);
+    setTiming(1, 15, 50, 1, 3, 1, 3, 7);
+    setModes('A', false, false, false);
     update();
   }
 
@@ -94,7 +84,8 @@ public:
     if (_update) update();
 
     // fetch input state
-    byte keyIn = _swapped ? KEYIN(raw_dah_on&1, raw_dit_on&1) : KEYIN(raw_dit_on&1, raw_dah_on&1);
+    byte keyIn = fix_swapped(raw_dit_on, raw_dah_on);
+      //  ? KEYIN(raw_dah_on&1, raw_dit_on&1) : KEYIN(raw_dit_on&1, raw_dah_on&1);
     if (_keyIn != keyIn) {
       _lastKeyIn = _keyIn;
       _memKeyIn |= keyIn & ~_startKeyIn;
@@ -120,62 +111,52 @@ public:
 
     // determine the next element by the current paddle state
     switch (_keyerState) {
-    case KEYER_DIT: // finish the dit with an interelement space
-      _startSpace(KEYER_DIT_SPACE); break;
-    case KEYER_DAH: // finish the dah with an interelement space
-      _startSpace(KEYER_DAH_SPACE); break;
-    case KEYER_DIT_SPACE: // start the next element or finish the symbol
-      _startDah() || _startDit() || _symbolSpace() || _finish(); break;
-    case KEYER_DAH_SPACE: // start the next element or finish the symbol	
-      _startDit() || _startDah() || _symbolSpace() || _finish(); break;
-    case KEYER_SYMBOL_SPACE: // start a new symbol or finish the word
-      _startSymbol() || _wordSpace() || _finish(); break;
-    case KEYER_WORD_SPACE:  // start a new symbol or go to off
-      _startSymbol() || _finish(); break;
+    // finish the dit with an interelement space
+    case KEYER_DIT: _startSpace(KEYER_DIT_SPACE); break;
+    // finish the dah with an interelement space
+    case KEYER_DAH: _startSpace(KEYER_DAH_SPACE); break;
+    // start the next element or finish the symbol
+    case KEYER_DIT_SPACE: _startDah() || _startDit() || _symbolSpace() || _finish(); break;
+    // start the next element or finish the symbol	    
+    case KEYER_DAH_SPACE: _startDit() || _startDah() || _symbolSpace() || _finish(); break;
+    // start a new symbol or finish the word
+    case KEYER_SYMBOL_SPACE: _startSymbol() || _wordSpace() || _finish(); break;
+    // start a new symbol or go to off
+    case KEYER_WORD_SPACE: _startSymbol() || _finish(); break;
     }
     return _keyOut;
   }
 
-  // set the microseconds in a tick
-  void setTick(float tick) { _tick = tick; _update = true; }
-  float getTick() { return _tick; }
+  // set the timing
+  void setTiming(float tick, float wpm, float word, float ditLen, float dahLen, float iesLen, float ilsLen, float iwsLen) {
+    _tick = tick;	       // set the microseconds in a tick
+    _wpm = wpm;		       // set the words per minute generated
+    _word = word;	       // set the word length in dits
+    _ditLen = ditLen;	       // set the dit length in dits
+    _dahLen = dahLen;	       // set the dah length in dits 
+    _iesLen = iesLen;	       // set the inter-element length in dits
+    _ilsLen = ilsLen;	       // set the inter-letter length in dits
+    _iwsLen = iwsLen;	       // set the inter-word length in dits
+    _update = true;	       // recompute timing
+  }
+  // set the modes
+  void setModes(char mode, bool swapped, bool autoIls, bool autoIws) {
+    _mode = mode;		// set the paddle key mode
+    _swapped = swapped;		// swap the dit and dah paddles
+    _autoIls = autoIls;		// set the auto inter-letter spacing
+    _autoIws = autoIws;		// set the auto inter-word spacing
+    fix_swapped = _swapped ? &is_swapped : &is_not_swapped;
+  }
   // set the level of verbosity
   void setVerbose(int verbose) { _verbose = verbose; _update = true; }
-  int getVerbose() { return _verbose; }
-  // set the words per minute generated
-  void setWpm(float wpm) { _wpm = wpm; _update = true; }
-  float getWpm() { return _wpm; }
-  // word length in dits
-  void setWord(float word) { _word = word; _update = true; }
-  float getWord() { return _word; }
-  // set the paddle key mode
-  void setMode(char mode) { _mode = mode; }
-  char getMode() { return _mode; }
-  // swap the dit and dah paddles
-  void setSwapped(bool swapped) { _swapped = swapped; }
-  bool getSwapped() { return _swapped; } 
-  // set the dit length in dits
-  void setDit(float ditLen) { _ditLen = ditLen; _update = true; }
-  float getDit() { return _ditLen; }
-  // set the dah length in dits
-  void setDah(float dahLen) { _dahLen = dahLen; _update = true; }
-  float getDah() { return _dahLen; }
-  // set the inter-element length in dits
-  void setIes(float iesLen) { _iesLen = iesLen; _update = true; }
-  float getIes() { return _iesLen; }
-  // set the inter-letter length in dits
-  void setIls(float ilsLen) { _ilsLen = ilsLen; _update = true; }
-  float getIls() { return _ilsLen; }
-  // set the inter-word length in dits
-  void setIws(float iwsLen) { _iwsLen = iwsLen; _update = true; }
-  float getIws() { return _iwsLen; }
-  // set the auto inter-letter spacing
-  void setAutoIls(bool autoIls) { _autoIls = autoIls; }
-  bool getAutoIls() { return _autoIls; }
-  // set the auto inter-word spacing
-  void setAutoIws(bool autoIws) { _autoIws = autoIws; }
-  bool getAutoIws() { return _autoIws; }
   
+ private:
+
+  // build key state for swapped and unswapped states
+  static byte is_swapped(int raw_dit_on, int raw_dah_on) { return KEYIN(raw_dah_on&1, raw_dit_on&1); }
+  static byte is_not_swapped(int raw_dit_on, int raw_dah_on) { return KEYIN(raw_dit_on&1, raw_dah_on&1); }
+  byte (*fix_swapped)(int raw_dit_on, int raw_dit_off) = &is_not_swapped;
+
   // update the clock computations
   void update() {
     if (_update) {
@@ -191,7 +172,6 @@ public:
     }
   }
 
- private:
   typedef enum {
     KEY_OFF, KEY_DIT, KEY_DAH, KEY_DIDAH
   } keyState;
@@ -276,26 +256,16 @@ public:
       _transitionTo(KEYER_DAH, _ticksPerDah, true);
   }
   // start an interelement space
-  bool _startSpace(keyerState newState) {
-    return _transitionTo(newState, _ticksPerIes, false);
-  }
+  bool _startSpace(keyerState newState) { return _transitionTo(newState, _ticksPerIes, false); }
   // continue an interelement space to an intersymbol space
   // or an intersymbol space to an interword space
-  bool _continueSpace(keyerState newState, int newDuration) {
-    return _transitionTo(newState, newDuration);
-  }
+  bool _continueSpace(keyerState newState, int newDuration) { return _transitionTo(newState, newDuration); }
   // continue an interelement space into an intersymbol space
-  bool _symbolSpace() {
-    return _autoIls && _continueSpace(KEYER_SYMBOL_SPACE, _ticksPerIls-_ticksPerIes);
-  }
+  bool _symbolSpace() { return _autoIls && _continueSpace(KEYER_SYMBOL_SPACE, _ticksPerIls-_ticksPerIes); }
   // continue an intersymbol space into an interword space
-  bool _wordSpace() {
-    return _autoIws && _continueSpace(KEYER_WORD_SPACE, _ticksPerIws-_ticksPerIls);
-  }
+  bool _wordSpace() { return _autoIws && _continueSpace(KEYER_WORD_SPACE, _ticksPerIws-_ticksPerIls); }
   // return to keyer idle state
-  bool _finish() {
-    return _transitionTo(KEYER_OFF, 0);
-  }
+  bool _finish() { return _transitionTo(KEYER_OFF, 0); }
 };
 
 extern "C" {

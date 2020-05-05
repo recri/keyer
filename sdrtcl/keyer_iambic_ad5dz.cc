@@ -63,24 +63,27 @@ extern "C" {
 
       /* keyer recomputation */
       dp->k.k.setVerbose(dp->fw .verbose);
-      dp->k.k.setTick(1000000.0  / sdrkit_sample_rate(dp));
-      dp->k.k.setWord(dp->opts.word);
-      dp->k.k.setWpm(dp->opts.wpm);
-
       float microsPerDit = 60000000.0 / (dp->opts.wpm * dp->opts.word);
       float r = (dp->opts.ratio-50)/100.0; // why 50 is zero is left as an exercise
       float w = (dp->opts.weight-50)/100.0;
       float c = 1000.0 * dp->opts.comp / microsPerDit;
-      dp->k.k.setDit(dp->opts.dit+r+w+c);
-      dp->k.k.setDah(dp->opts.dah-r+w+c);
-      dp->k.k.setIes(dp->opts.ies  -w-c);
-      dp->k.k.setIls(dp->opts.ils  -w-c);
-      dp->k.k.setIws(dp->opts.iws  -w-c);
+      dp->k.k.setTiming(1000000.0  / sdrkit_sample_rate(dp), dp->opts.wpm, dp->opts.word, 
+			dp->opts.dit+r+w+c, dp->opts.dah-r+w+c,
+			dp->opts.ies  -w-c, dp->opts.ils  -w-c, dp->opts.iws  -w-c);
+      dp->k.k.setModes(dp->opts.mode, dp->opts.swap != 0, dp->opts.alsp != 0, dp->opts.awsp != 0);
+      // dp->k.k.setTick(1000000.0  / sdrkit_sample_rate(dp));
+      // dp->k.k.setWord(dp->opts.word);
+      // dp->k.k.setWpm();
+      // dp->k.k.setDit(dp->opts.dit+r+w+c);
+      // dp->k.k.setDah(dp->opts.dah-r+w+c);
+      // dp->k.k.setIes(dp->opts.ies  -w-c);
+      // dp->k.k.setIls(dp->opts.ils  -w-c);
+      // dp->k.k.setIws(dp->opts.iws  -w-c);
 
-      dp->k.k.setAutoIls(dp->opts.alsp != 0);
-      dp->k.k.setAutoIws(dp->opts.awsp != 0);
-      dp->k.k.setSwapped(dp->opts.swap != 0);
-      dp->k.k.setMode(dp->opts.mode);
+      // dp->k.k.setAutoIls(dp->opts.alsp != 0);
+      // dp->k.k.setAutoIws(dp->opts.awsp != 0);
+      // dp->k.k.setSwapped(dp->opts.swap != 0);
+      // dp->k.k.setMode(dp->opts.mode);
     }
   }
 

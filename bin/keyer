@@ -600,7 +600,9 @@ snit::type keyer::options {
 	    set pfp [open $pkgIndex r]
 	    foreach line [split [string trim [read-file $pkgIndex]] \n] {
 		if {[regexp "${lib}::" $line]} {
-		    dict set data(pkgs) [lindex $line 2] {}
+		    set pkg [lindex $line 2]
+		    if {$pkg in {sdrtcl::keyer-iambic-dttsp}} continue
+		    dict set data(pkgs) $pkg {}
 		}
 	    }
 	}

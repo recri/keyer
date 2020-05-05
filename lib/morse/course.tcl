@@ -74,14 +74,22 @@ snit::type morse::course {
     # the normally used punctuation in ham communications
     option -punctuation -default {+,-./=?}
 
-    # these could all be typevariables, constant across instances
-    typevariable data -array {
+    # these are constant across instances
+    typevariable tdata -array {
 	dict {}
 	dwor5k {}
 	wor5k {}
 	words {}
 	codes {}
 	prosigns {}
+    }
+    variable data -array {
+	letters {}
+	digrams {}
+	trigrams {}
+	tetragrams {}
+	pentagrams {}
+	longerwords {}
     }
     
     # map words to upper case only
@@ -186,14 +194,62 @@ snit::type morse::course {
 	    return $maxkey[shortest-prosign $dict $remnant]
 	}
     }
+
     typeconstructor {
-	set data(dict) [morse-itu-dict]
-	set data(dwor5k) [words-dict]
-	set data(wor5k) [onlyalpha [toupper [dict keys $data(dwor5k)]]]
-	set data(words) [toupper [concat [morse-voa-vocabulary] [n0hff-common-words] [n0hff-more-words] [n0hff-prefixes] [n0hff-suffixes]]]
-	set data(codes) [toupper [concat [morse-pileup-callsigns] [dict keys [morse-qcodes]] [morse-ham-abbrev]]]
-	set data(prosigns) [toupper [concat [morse-abbrev-prosigns] [morse-abbrev-milprosigns]]]
+	set tdata(dict) [morse-itu-dict]
+	set tdata(dwor5k) [words-dict]
+	set tdata(wor5k) [onlyalpha [toupper [dict keys $tdata(dwor5k)]]]
+	set tdata(words) [toupper [concat [morse-voa-vocabulary] [n0hff-common-words] [n0hff-more-words] [n0hff-prefixes] [n0hff-suffixes]]]
+	set tdata(codes) [toupper [concat [morse-pileup-callsigns] [dict keys [morse-qcodes]] [morse-ham-abbrev]]]
+	set tdata(prosigns) [toupper [concat [morse-abbrev-prosigns] [morse-abbrev-milprosigns]]]
+	# invert the itu morse dictionary
+	set tdata(idict) [dict create]
+	dict for {key val} $tdata(dict) { 
+	    if {[dict exists $tdata(idict) $val]} {
+		error "duplicate {$val} in inverse dictionary"
+	    }
+	    dict set tdata(idict) $val $key
+	}
+	# puts "$tdata(dict)"
+	# puts "$tdata(idict)"
+	# add in prosigns that are not already in the morse dictionary
+	foreach key [lsort -unique $tdata(prosigns)] {
+	    if { ! [regexp {^<([^>]+)>$} $key all key]} continue
+	    if {[string length $key] <= 1} continue
+	    if {[dict exists $tdata(dict) $key]} continue
+	    set code [text-to-morse $tdata(dict) <$key>]
+	    if {[dict exists $tdata(idict) $code]} {
+		# puts "not inserting <$key> as {$code}, already present as [dict get $tdata(idict) $code]"
+		continue
+	    }
+	    dict set tdata(dict) <$key> $code
+	    dict set tdata(idict) $code <$key>
+	    # puts "inserted <$key> as {$code}"
+	}
+	# fill in prosigns for run together letters
+	# so the wrong messages give a clue to what was decoded
+	set max [morse-dit-length ........]
+	for {set new 1} {$new != 0} {} {
+	    set new 0
+	    foreach code [dict keys $tdata(idict)] {
+		foreach {c dn} {. 1 - 3} {
+		    set n [morse-dit-length $code]
+		    if {$n + $dn < $max} {
+			set xcode ${code}${c}
+			# puts "extend $code to $xcode, length $n+$dn"
+			if { ! [dict exists $tdata(idict) $xcode]} {
+			    set key [shortest-prosign $tdata(dict) $xcode]
+			    dict set tdata(dict) <$key> $xcode
+			    dict set tdata(idict) $xcode <$key>
+			    incr new
+			    # puts "inserted <$key> as {$xcode}"
+			}
+		    }
+		}
+	    }
+	}
     }
+
     constructor {args} {
 	$self configurelist $args
     }
@@ -201,9 +257,48 @@ snit::type morse::course {
     method Configure {opt val} {
 	set options($opt) $val
 	switch -- $opt {
-	    -seed { tcl::mathfunc::srand $val }
+	    -old { }
+	    -order { }
+	    -seed { }
 	    default { error "uncaught option $opt in Configure" }
 	}
+    }
+    # begin the course from the beginning
+    # regenerate letter and ngram and word tables 
+    # reset statistics to zero
+    method begin {} {
+	tcl::mathfunc::srand $options(-seed)
+	foreach cat {letters digrams trigrams tetragrams pentagrams longerwords} {
+	    set data($cat) [dict create]
+	    foreach item [$self enumerate $cat] {
+		dict set data($cat) $item [$self initial-entry $cat $item]
+	    }
+	}
+	foreach
+    }
+    method enumerate {cat} {
+	switch $cat {
+	    letter { return [split $options(-order) {}] }
+	    digrams { return [$self ngrams 2] }
+	    trigrams { return [$self ngrams 3] }
+	    tetragrams { return [$self ngrams 4] }
+	    pentagrams { return [$self ngrams 5] }
+	    longerwords { return [$self longerwords] }
+	    default { error "uncaught category $cat" }
+	}
+    }
+    method initial-entry {cat item} {
+	return  [dict create freq [$self frequency $cat $item] challenge 0 hit 0 miss 0 pass 0 time]
+    }
+    method frequency {cat item} {
+	
+    method pause {} {
+    }
+    method play {} {
+    }
+    method save {} {
+    }
+    method restore {} {
     }
     if {0} {
 	#variable dist [dict create]

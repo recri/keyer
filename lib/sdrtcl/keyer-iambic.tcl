@@ -25,6 +25,7 @@
 package provide sdrtcl::keyer-iambic 0.0.1
 
 package require snit
+package require sdrtcl::jack
 package require sdrtcl::keyer-iambic-ad5dz
 
 snit::type sdrtcl::keyer-iambic {
@@ -32,12 +33,13 @@ snit::type sdrtcl::keyer-iambic {
 
     component keyer
 
+    # removed lists of mode values:  {abs} for A, B, or Straight key
     variable data -array {
-	ad5dz {-verbose -server -client -chan -note -wpm -swap -two -mode {ab } -dit -dah -ies -ils -iws -alsp -awsp -weight -ratio -comp -word}
-	dttsp {-verbose -server -client -chan -note -wpm -swap -two -mode {ab }                          -alsp -awsp -weight                    -mdit -mdah -mide}
-	k1el  {-verbose -server -client -chan -note -wpm -swap -two -mode {ab } -dit -dah -ies                                            -word}
-	nd7pa {-verbose -server -client -chan -note -wpm -swap -two             -dit -dah -ies}
-	vk6ph {-verbose -server -client -chan -note -wpm -swap -two -mode {abs}                          -alsp       -weight}
+	ad5dz {-verbose -server -client -chan -note -wpm -swap -two -mode -dit -dah -ies -ils -iws -alsp -awsp -weight -ratio -comp -word}
+	dttsp {-verbose -server -client -chan -note -wpm -swap -two -mode                          -alsp -awsp -weight                    -mdit -mdah -mide}
+	k1el  {-verbose -server -client -chan -note -wpm -swap -two -mode -dit -dah -ies                                            -word}
+	nd7pa {-verbose -server -client -chan -note -wpm -swap -two       -dit -dah -ies}
+	vk6ph {-verbose -server -client -chan -note -wpm -swap -two -mode                          -alsp               -ratio}
     }
 
     option -verbose -default 0 -configuremethod Configure -cgetmethod Cget
@@ -112,8 +114,17 @@ snit::type sdrtcl::keyer-iambic {
     }
     
     method Configure {opt val} {
+	# puts "keyer-iambic::Configure $opt $val"
 	set options($opt) $val
 	if {$opt eq {-keyer}} {
+	    set connections {}
+	    dict for {port props} [sdrtcl::jack list-ports] {
+		if {$port eq "$options(-client):midi_in"} {
+		    lappend connections [dict get $props connections] $options(-client):midi_in
+		} elseif {$port eq "$options(-client):midi_out"} {
+		    lappend connections $options(-client):midi_out [dict get $props connections]
+		}
+	    }
 	    $keyer deactivate
 	    rename $self.keyer {}
 	    set opts {}
@@ -124,12 +135,14 @@ snit::type sdrtcl::keyer-iambic {
 	    package require sdrtcl::keyer-iambic-$val
 	    install keyer using sdrtcl::keyer-iambic-$val $self.keyer {*}$opts
 	    $keyer activate
-	    make-connections
+	    # restore connections
+	    foreach {port1 port2} $connections { sdrtcl::jack connect $port1 $port2 }
 	} else {
 	    if { ! [catch {$keyer configure $opt $val} result]} { return $result }
 	}
 	return {}
     }
+ 
     method Cget {opt} {
 	if {$opt eq {-keyer}} { return $options($opt) }
 	if {[lsearch $data($options(-keyer)) $opt] >= 0} {

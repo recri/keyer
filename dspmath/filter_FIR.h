@@ -42,7 +42,7 @@
 ** lowpass and highpass are complements.
 */
 static void *complement_real(int size, float *coeff) {
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
   for (int i = 0; i < size; i += 1) coeff[i] = - coeff[i];
   coeff[midpoint-1] += 1.0f;
   return coeff;
@@ -63,7 +63,7 @@ static void *check_real(float lo, float hi, float sr, int size) {
 
 static void *bandpass_real(float lo, float hi, float sr, int size, float *coeff) {
   void *e = check_real(lo, hi, sr, size); if (e != NULL) return e;
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = (hi - lo) / 2.0f;
   float ff = ((lo + hi) * pi);
@@ -85,7 +85,7 @@ static void *bandstop_real(float lo, float hi, float sr, int size, float *coeff)
 
 static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) {
   void *e = check_real(lo, hi, sr, size); if (e != NULL) return e;
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = (hi - lo) / 2.0f;
   float ff = ((lo + hi) * pi);
@@ -105,7 +105,7 @@ static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) 
 */
 static void *lowpass_real(float cutoff, float sr, int size, float *coeff) {
   void *e = check_real(0.0f, cutoff, sr, size); if (e != NULL) return e;
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
   float fc = cutoff / sr;
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
@@ -126,7 +126,7 @@ static void *highpass_real(float cutoff, float sr, int size, float *coeff) {
 ** complex bandpass and bandstop are complements, complex lowpass and highpass are complements.
 */
 static void *complement_complex(int size, float complex *coeff) {
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
   for (int j = 0; j < size; j += 1) coeff[j] = - coeff[j];
   coeff[midpoint-1] += 1.0f;
   return (void *)coeff;
@@ -150,7 +150,7 @@ static void *check_complex(float lo, float hi, float sr, int size) {
 */
 static void *bandpass_complex(float lo, float hi, float sr, int size, float complex *coeff) {
   void *e = check_complex(lo, hi, sr, size); if (e != NULL) return e;
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = (hi - lo) / 2.0f;
   float ff = (lo + hi) * pi;
@@ -173,7 +173,7 @@ static void *bandstop_complex(float lo, float hi, float sr, int size, float comp
   
 static void *hilbert_complex(float lo, float hi, float sr, int size, float complex *coeff) {
   void *e = check_complex(lo, hi, sr, size); if (e != NULL) return e;
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = ((hi - lo) / 2.0);
   float ff = ((lo + hi) * pi);
@@ -195,7 +195,7 @@ static void *hilbert_complex(float lo, float hi, float sr, int size, float compl
 static void *lowpass_complex(float cutoff, float sr, int size, float complex *coeff) {
   void *e = check_complex(0.0f, cutoff, sr, size); if (e != NULL) return e;
   float fc = cutoff / sr;
-  int midpoint = (size >> 01) | 01;
+  int midpoint = (size >> 1) | 1;
 
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
