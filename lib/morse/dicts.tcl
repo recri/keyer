@@ -30,11 +30,13 @@ package require morse::greek
 package require morse::hebrew
 package require morse::itu
 package require morse::wabun
+package require sdrtcl::keyer-builtin-dict
 
 namespace eval ::morse {}
 proc morse-dicts {} {
-    return {arabic cyrillic farsi fldigi greek hebrew itu wabun}
+    return {builtin arabic cyrillic farsi fldigi greek hebrew itu wabun}
 }
+proc builtin {} { return [sdrtcl::keyer-builtin-dict] }
 proc arabic {} { return [morse-arabic-dict] }
 proc cyrillic {} { return [morse-cyrillic-dict] }
 proc farsi {} { return [morse-farsi-dict] }

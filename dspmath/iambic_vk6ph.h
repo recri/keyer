@@ -112,10 +112,10 @@ private:
   int kdelay = 0;
   int dot_delay = 0;
   int dash_delay = 0;
-  int kcwl = 0;
-  int kcwr = 0;
-  int *kdot;
-  int *kdash;
+  int kdot = 0;
+  int kdash = 0;
+  int *pkdot;
+  int *pkdash;
   int cw_keyer_speed = 20;
   int cw_keyer_weight = 55;
   int cw_keys_reversed = 0;
@@ -132,18 +132,13 @@ private:
     dash_delay = (dot_delay * 3 * cw_keyer_weight) / 50;
 
     if (cw_keys_reversed) {
-      kdot = &kcwr;
-      kdash = &kcwl;
+      pkdot = &kdash;
+      pkdash = &kdot;
     } else {
-      kdot = &kcwl;
-      kdash = &kcwr;
+      pkdot = &kdot;
+      pkdash = &kdash;
     }
   }
-  void clear_memory() {
-    dot_memory  = 0;
-    dash_memory = 0;
-  }
-
 
 public:
   iambic_vk6ph() {
@@ -170,25 +165,25 @@ public:
   void set_cw_micros_per_tick(float tick) { cw_micros_per_tick = tick; keyer_update(); }
 
   int clock(int raw_dit_on, int raw_dah_on, int ticks) {
-    kcwl = raw_dit_on;
-    kcwr = raw_dah_on;
+    *pkdot = raw_dit_on;
+    *pkdash = raw_dah_on;
     
     switch(key_state) {
     case CHECK:		// check for key press
       if (cw_keyer_mode == KEYER_STRAIGHT) { // Straight/External key or bug
-	if (*kdash) {	// send manual dashes
+	if (kdash) {	// send manual dashes
 	  keyer_out = IAMBIC_DAH;
 	  key_state = CHECK;
-	} else if (*kdot)	// and automatic dots
+	} else if (kdot)	// and automatic dots
 	  key_state = PREDOT;
 	else {
 	  keyer_out = IAMBIC_OFF;
 	  key_state = CHECK;
 	}
       } else {
-	if (*kdot)
+	if (kdot)
 	  key_state = PREDOT;
-	else if (*kdash)
+	else if (kdash)
 	  key_state = PREDASH;
 	else {
 	  keyer_out = IAMBIC_OFF;
@@ -197,14 +192,13 @@ public:
       }
       break;
     case PREDOT:	   // need to clear any pending dots or dashes
-      clear_memory();
       key_state = SENDDOT;
+      dot_memory = dash_memory = 0;
       break;
     case PREDASH:
-      clear_memory();
       key_state = SENDDASH;
+      dot_memory = dash_memory = 0;
       break;
-
       // dot paddle  pressed so set keyer_out high for time dependant on speed
       // also check if dash paddle is pressed during this time
     case SENDDOT:
@@ -215,15 +209,13 @@ public:
 	key_state = DOTDELAY; // add inter-character spacing of one dot length
       } else
 	kdelay += ticks;
-
       // if Mode A and both paddels are relesed then clear dash memory
-      if (cw_keyer_mode == KEYER_MODE_A)
-	if (!*kdot & !*kdash)
+      if (!kdot & !kdash) {
+	if (cw_keyer_mode == KEYER_MODE_A)
 	  dash_memory = 0;
-	else if (*kdash)	// set dash memory
-	  dash_memory = 1;
+      } else 
+	dash_memory |= kdash;	// set dash memory
       break;
-
       // dash paddle pressed so set keyer_out high for time dependant on 3 x dot delay and weight
       // also check if dot paddle is pressed during this time
     case SENDDASH:
@@ -234,20 +226,18 @@ public:
 	key_state = DASHDELAY; // add inter-character spacing of one dot length
       } else 
 	kdelay += ticks;
-
       // if Mode A and both padles are relesed then clear dot memory
-      if (cw_keyer_mode == KEYER_MODE_A)
-	if (!*kdot & !*kdash)
+      if (!kdot & !kdash) {
+	if (cw_keyer_mode == KEYER_MODE_A)
 	  dot_memory = 0;
-	else if (*kdot)	// set dot memory
-	  dot_memory = 1;
+      } else
+	dot_memory |= kdot;	// set dot memory
       break;
-
       // add dot delay at end of the dot and check for dash memory, then check if paddle still held
     case DOTDELAY:
       if (kdelay >= dot_delay) {
 	kdelay = 0;
-	if(!*kdot && cw_keyer_mode == KEYER_STRAIGHT)   // just return if in bug mode
+	if(!kdot && cw_keyer_mode == KEYER_STRAIGHT)   // just return if in bug mode
 	  key_state = CHECK;
 	else if (dash_memory) // dash has been set during the dot so service
 	  key_state = PREDASH;
@@ -255,56 +245,42 @@ public:
 	  key_state = DOTHELD; // dot is still active so service
       } else
 	kdelay += ticks;
-
-      if (*kdash)		// set dash memory
-	dash_memory = 1;
+      dash_memory = kdash;	// set dash memory
       break;
-
-      // add dot delay at end of the dash and check for dot memory, then check if paddle still held
-    case DASHDELAY:
+    case DASHDELAY: // add dot delay at end of the dash and check for dot memory, then check if paddle still held
       if (kdelay >= dot_delay) {
 	kdelay = 0;
-
 	if (dot_memory) // dot has been set during the dash so service
 	  key_state = PREDOT;
 	else 
 	  key_state = DASHHELD; // dash is still active so service
       } else
 	kdelay += ticks;
-
-      if (*kdot)		// set dot memory
-	dot_memory = 1;
+      dot_memory = kdot;	// set dot memory 
       break;
-
-      // check if dot paddle is still held, if so repeat the dot. Else check if Letter space is required
-    case DOTHELD:
-      if (*kdot)	// dot has been set during the dash so service
+    case DOTHELD: // check if dot paddle is still held, if so repeat the dot. Else check if Letter space is required
+      if (kdot)	// dot has been set during the dash so service
 	key_state = PREDOT;
-      else if (*kdash)	// has dash paddle been pressed
+      else if (kdash)	// has dash paddle been pressed
 	key_state = PREDASH;
       else if (cw_keyer_spacing) { // Letter space enabled so clear any pending dots or dashes
-	clear_memory();
+	dot_memory = dash_memory = 0;
 	key_state = LETTERSPACE;
       } else
 	key_state = CHECK;
       break;
-
-      // check if dash paddle is still held, if so repeat the dash. Else check if Letter space is required
-    case DASHHELD:
-      if (*kdash)	// dash has been set during the dot so service
+    case DASHHELD: // check if dash paddle is still held, if so repeat the dash. Else check if Letter space is required
+      if (kdash)   // dash has been set during the dot so service
 	key_state = PREDASH;
-      else if (*kdot)	// has dot paddle been pressed
+      else if (kdot)		// has dot paddle been pressed
 	key_state = PREDOT;
       else if (cw_keyer_spacing) { // Letter space enabled so clear any pending dots or dashes
-	clear_memory();
+	dot_memory = dash_memory = 0;
 	key_state = LETTERSPACE;
       } else
 	key_state = CHECK;
       break;
-
-      // Add letter space (3 x dot delay) to end of character and check if a paddle is pressed during this time.
-      // Actually add 2 x dot_delay since we already have a dot delay at the end of the character.
-    case LETTERSPACE:
+    case LETTERSPACE: // Add remainder of letter space (3 x dot delay) to end of character and check if a paddle is pressed during this time.
       if (kdelay >= 2 * dot_delay) {
 	kdelay = 0;
 	if (dot_memory) // check if a dot or dash paddle was pressed during the delay.
@@ -315,15 +291,13 @@ public:
 	  key_state = CHECK; // no memories set so restart
       } else
 	kdelay += ticks;
-
       // save any key presses during the letter space delay
-      if (*kdot) dot_memory = 1;
-      if (*kdash) dash_memory = 1;
+      dot_memory |= kdot;
+      dash_memory |= kdash;
       break;
-
     default:
       key_state = CHECK;
-
+      break;
     }
     
     return keyer_out;

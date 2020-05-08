@@ -31,7 +31,7 @@ namespace eval ::sdrtk {}
 
 snit::widgetadaptor sdrtk::cw-decode-view {
     option -detime -default {};	# sdrtcl::keyer-detime or equivalent
-    option -dict -default fldigi
+    option -dict -default builtin
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
     option -background -default white -configuremethod ConfigText

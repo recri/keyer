@@ -83,6 +83,7 @@ ALL=$(LIBSDRTCL)/agc.so \
 	$(LIBSDRTCL)/midi_delay.so \
 	$(LIBSDRTCL)/midi_insert.so \
 	$(LIBSDRTCL)/midi_tap.so \
+	$(LIBSDRTCL)/midi_transpose.so \
 	$(LIBSDRTCL)/mixer.so \
 	$(LIBSDRTCL)/fm_demod.so \
 	$(LIBSDRTCL)/fm_mod.so \
@@ -214,6 +215,9 @@ $(LIBSDRTCL)/midi_insert.so: midi_insert.c framework.h ../dspmath/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/midi_tap.so: midi_tap.c framework.h ../dspmath/ring_buffer.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBSDRTCL)/midi_transpose.so: midi_transpose.c framework.h ../dspmath/ring_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/mixer.so: mixer.c framework.h ../dspmath/dspmath.h

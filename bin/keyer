@@ -343,6 +343,7 @@ snit::type keyer::options {
 	    {* -client} { $self describe $option text ronly 1 hide 1 conly 1 -graticule 1 }
 	    {* -verbose} { $self describe $option ivalue ronly 1 hide 1 conly 1 -min 0 -max 10 -graticule 12 -steps-per-div 1 }
 	    {* -chan} { $self describe $option ivalue -min 1 -max 16 -graticule 16 -steps-per-div 1 }
+	    {* -transpose} -
 	    {* -note} { $self describe $option ivalue -min 0 -max 127 -graticule 16 -steps-per-div 8 }
 	    {* -wpm} { $self describe $option value -format %.1f -units wpm -min 5.0 -max 120.0 -step 0.5 -graticule 20 -steps-per-div 10 }
 	    {* -swap} - 

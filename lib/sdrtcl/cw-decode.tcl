@@ -29,10 +29,9 @@ package require morse::morse
 package require morse::itu
 package require morse::dicts
 
-
 snit::type sdrtcl::cw-decode {
     option -detime -default {}
-    option -dict -default fldigi
+    option -dict -default sdrtcl::keyer-builtin-dict
 
     variable data -array {
 	active 0
