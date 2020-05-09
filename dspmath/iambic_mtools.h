@@ -1,5 +1,28 @@
-https://sourceforge.net/p/morse-rss-news/code/HEAD/tree/trunk/iambickeyer/IambicKeyer.cs
+/* -*- mode: c++; tab-width: 8 -*- */
+/*
+  Copyright (C) 2020 by Roger E Critchlow Jr, Charlestown, MA, USA.
 
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+*/
+#ifndef IAMBIC_MTOOLS_H
+#define IAMBIC_MTOOLS_H
+/*
+** an iambic keyer converted from csharp
+** https://sourceforge.net/p/morse-rss-news/code/HEAD/tree/trunk/iambickeyer/IambicKeyer.cs
+*/
+#if 0
 //tabs=4
 //-----------------------------------------------------------------------------
 // TITLE:		IambicKeyer.cs
@@ -152,3 +175,76 @@ namespace com.dc3.morse
 		}
 	}
 }
+#endif
+class iambic_mtools {
+public:
+  typedef enum { DitPress, DitRelease, DahPress, DahRelease } key_event_t;
+  typedef enum { Dit, Dah } key_t;
+  typedef enum { Off, SendingModeBDit, SendingModeBDah, SendingDit, SendingDah } keyer_t;
+  bool _ditDown;
+  bool _ditWas;
+  bool _dahDown;
+  bool _dahWas;
+  bool _modeB;
+  bool _alt;
+  bool _lastDit;
+  keyer_t _state;
+  iambic_mtools() {
+    _modeB = true;
+    _ditDown = _ditWas = _dahDown = _dahWas = false;
+    _alt = false;
+    _lastDit = true
+  }
+  int clock(int raw_dit_on, int raw_dah_on, int ticks) {
+    if (_ditDown != (raw_dit_on != 0)) // a dit event
+      if (_ditDown)		       // event == DitRelease
+	_ditDown = false;
+      else			       // event == DitPress
+	_ditDown = _ditWas = true;
+    if (_dahDown != (raw_dah_on != 0)) // a dah event
+      if (_dahDown)		       // event == DahRelease
+	_dahDown = false;
+      else			       // event == DahPress
+	_dahDown = _dahWas = true;
+    if ((_duration -= tick) <= 0) {    // sending completed
+      while (true) {
+	switch (_state) {
+	case Off:
+	  if (!_ditDown && !_ditWas && !_dahDown && !_dahWas) {
+	    //Debug.Print("False False False False");
+	    //Debug.Print("alt=" + alt.ToString() + " lastSent=" + (lastDit ? "Dit" : "Dah"));
+	    if (_alt && _modeB) {
+	      _state = _lastDit ? SendingModeBDit : SendingModeBDah;
+	      continue;
+	    }
+	    alt = false;
+	  }
+	  while (_ditDown || _ditWas || _dahDown || _dahWas) {
+	    //Debug.Print("1 " +_ditDown.ToString() + " " + _ditWas.ToString() + " " + _dahDown.ToString() + " " + _dahWas.ToString());
+	    alt = false; // (_ditDown && _dahDown);
+	    if (_ditDown || _ditWas) {
+	      //Debug.Print("  dit!");
+	      state = SendingDit;
+	      _sender(MorseSymbol.Dit);
+	      lock (_stateLock) { _ditWas = false; }
+	      lastDit = true;
+					}
+					//Debug.Print("2 " + _ditDown.ToString() + " " + _ditWas.ToString() + " " + _dahDown.ToString() + " " + _dahWas.ToString());
+					alt |= (_ditDown && _dahDown);
+					if (_dahDown || _dahWas)
+					{
+						//Debug.Print("  dah!");
+--->						_sender(MorseSymbol.Dah);
+						lock (_stateLock) { _dahWas = false; }
+						lastDit = false;
+					}
+					//Debug.Print("3 " + _ditDown.ToString() + " " + _ditWas.ToString() + " " + _dahDown.ToString() + " " + _dahWas.ToString());
+					alt |= (_ditDown && _dahDown);
+				}
+
+			}
+		}
+	}
+#endif
+
+#include "iambic.h"

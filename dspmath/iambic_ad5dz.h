@@ -44,7 +44,7 @@
 **        )
 **
 ** // the mode is specified with
-** k.setModes(keyer_mode, // 'A' or 'B'
+** k.setModes(keyer_mode, // 'A' or 'B' or 'S' or 'G' or 'U'
 **            swap_paddles,
 **            automatic_inter_letter_space,
 **            automatic_inter_word_space
@@ -56,7 +56,7 @@
 ** in case the int is too small on an microprocessor
 */
 
-#include <stdio.h>
+// #include <stdio.h>
 #include "iambic.h"
 
 class iambic_ad5dz {
@@ -68,11 +68,6 @@ public:
   typedef enum {
     KEYER_OFF, KEYER_DIT, KEYER_DIT_SPACE, KEYER_DAH, KEYER_DAH_SPACE, KEYER_SYMBOL_SPACE, KEYER_WORD_SPACE,
   } keyer_t;
-  static key_t KEYIN(int dit, int dah) { return (key_t)((dit<<1)|dah); }
-  static bool KEY_IS_OFF(key_t key) { return key == KEY_OFF; }
-  static bool KEY_HAS_DIT(key_t key) { return (key&KEY_DIT)!=0; }
-  static bool KEY_HAS_DAH(key_t key) { return (key&KEY_DAH)!=0; }
-  static bool KEY_IS_DIDAH(key_t key) { return key == KEY_DIDAH; }
 
   char _mode;			// mode B or mode A or ...
   bool _autoIls;		// automatically time space between letters
@@ -98,15 +93,20 @@ public:
     setModes('A', false, false, false);
   }
 
+  // mask the key memory to the appropriate bits
+  void _memToDit() { _memKey = (key_t)(_memKey & KEY_DIT); }
+  void _memToDah() { _memKey = (key_t)(_memKey & KEY_DAH); }
+  void _memToOff() { _memKey = KEY_OFF; }
+
   // transition to the specified state, with the specified duration, and set the key out state
   bool _transitionTo(keyer_t newState, int newDuration) {
     switch (newState) {
     case KEYER_OFF: break;
-    case KEYER_DIT: _keyOut = IAMBIC_DIT; _memKey = KEY_OFF; break;
-    case KEYER_DAH: _keyOut = IAMBIC_DAH; _memKey = KEY_OFF; break;
+    case KEYER_DIT: _keyOut = IAMBIC_DIT; _memToOff(); break;
+    case KEYER_DAH: _keyOut = IAMBIC_DAH; _memToOff(); break;
     case KEYER_DIT_SPACE: // fall through
-    case KEYER_DAH_SPACE: _keyOut = IAMBIC_OFF; if (KEY_IS_OFF(_key) && _mode == 'A') _memKey = KEY_OFF; break;
-    case KEYER_SYMBOL_SPACE: _memKey = KEY_OFF; break;
+    case KEYER_DAH_SPACE: _keyOut = IAMBIC_OFF; if (_key == KEY_OFF && _mode == 'A') _memToOff(); break;
+    case KEYER_SYMBOL_SPACE: _memToOff(); break;
     case KEYER_WORD_SPACE: break;
       // default: fprintf(stderr, "uncaught case %d in transitionTo()", newState);
     }
@@ -114,22 +114,18 @@ public:
   }
   
   // each of these functions returns true if it performs the stated action
-  bool _startDit() { return (KEY_HAS_DIT(_key) || KEY_HAS_DIT(_memKey)) && _transitionTo(KEYER_DIT, _ticksPerDit); }
-  bool _startDah() { return (KEY_HAS_DAH(_key) || KEY_HAS_DAH(_memKey)) && _transitionTo(KEYER_DAH, _ticksPerDah); }
+  bool _startDit() { return ((_key|_memKey)&KEY_DIT) != 0 && _transitionTo(KEYER_DIT, _ticksPerDit); }
+  bool _startDah() { return ((_key|_memKey)&KEY_DAH) != 0 && _transitionTo(KEYER_DAH, _ticksPerDah); }
   bool _startSpace(keyer_t newState) { return  _transitionTo(newState, _ticksPerIes); }
   bool _continueSpace(keyer_t newState, int newDuration) { return _transitionTo(newState, newDuration); }
   bool _symbolSpace() { return (_autoIls && _continueSpace(KEYER_SYMBOL_SPACE, _ticksPerIls-_ticksPerIes)) || _finish(); }
   bool _wordSpace() { return (_autoIws && _continueSpace(KEYER_WORD_SPACE, _ticksPerIws-_ticksPerIls)) || _finish(); }
   bool _finish() { return _transitionTo(KEYER_OFF, 0); }
 
-  // mask the key memory to the appropriate bits
-  void _maskToDit() { _memKey = (key_t)(_memKey & KEY_DIT); }
-  void _maskToDah() { _memKey = (key_t)(_memKey & KEY_DAH); }
-  void _maskToOff() { _memKey = KEY_OFF; }
-
   // build key state for swapped and unswapped states
-  static key_t _is_swapped(int raw_dit_on, int raw_dah_on) { return KEYIN(raw_dah_on, raw_dit_on); }
-  static key_t _is_not_swapped(int raw_dit_on, int raw_dah_on) { return KEYIN(raw_dit_on, raw_dah_on); }
+  static key_t _key_in(int dit, int dah) { return (key_t)((dit<<1)|dah); }
+  static key_t _is_swapped(int raw_dit_on, int raw_dah_on) { return _key_in(raw_dah_on, raw_dit_on); }
+  static key_t _is_not_swapped(int raw_dit_on, int raw_dah_on) { return _key_in(raw_dit_on, raw_dah_on); }
   key_t (*_fix_swapped)(int raw_dit_on, int raw_dit_off) = &_is_not_swapped;
 
   // clock ticks
@@ -142,11 +138,11 @@ public:
     if ((_keyerDuration -= ticks) > 0) return _keyOut;
 
     switch (_keyerState) {
-    case KEYER_OFF: _keyerDuration = 0; _maskToOff(); _startDit() || _startDah(); break;
+    case KEYER_OFF: _keyerDuration = 0; _memToOff(); _startDit() || _startDah(); break;
     case KEYER_DIT: _startSpace(KEYER_DIT_SPACE); break;
     case KEYER_DAH: _startSpace(KEYER_DAH_SPACE); break;
-    case KEYER_DIT_SPACE: _maskToDah(); _startDah() || _startDit() || _symbolSpace(); break;
-    case KEYER_DAH_SPACE: _maskToDit(); _startDit() || _startDah() || _symbolSpace(); break;
+    case KEYER_DIT_SPACE: _memToDah(); _startDah() || _startDit() || _symbolSpace(); break;
+    case KEYER_DAH_SPACE: _memToDit(); _startDit() || _startDah() || _symbolSpace(); break;
     case KEYER_SYMBOL_SPACE: _startDit() || _startDah() || _wordSpace(); break;
     case KEYER_WORD_SPACE: _startDit() || _startDah() || _finish(); break;
     }

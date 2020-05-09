@@ -19,21 +19,18 @@
 #
 # morse code course
 #
-# given a character preference string, 
-# the characters will be introduced into the course roughly in the order specified.
-# new characters are introduced when the existing characters are learned
-# when characters have been learned,
-# words and fragments using the learned characters will be introduced.
-# new words and fragments are introduced when the existing words and fragments
-# have been learned.
-# longer words and fragments will be introduced when the existing words and fragments
-# have been learned.
+# given a character preference string, and a random number seed,
+# introduce characters, words of introduced characters, and longer words
+# introducing new elements when the current elements are recognized at 90%
 #
 # {0123456789
 # these could be handled by addition, subtraction, division, and multiplication (by juxtaposition) tables
 # with decimals, which misses ? and whichever of . or , is not the radix point.
 # 
-
+# In any case provide a course which will test all its elements
+# in a reasonable amount of time if the student gets everything right
+# so it may be used as a quick review/warmup
+#
 package provide morse::course 1.0.0
 
 package require morse::abbrev

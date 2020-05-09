@@ -65,10 +65,10 @@ void debuggingsetup() {
  * Revised 2020-04-13 to use new paddle/note mapping
  * Also blew off the Keyboard mapping
  */
-#define MIDI_KEYER_KEY 3 /* the straight key, mono tip */
+#define MIDI_KEYER_KEY 3  /* the straight key, mono tip */
 #define MIDI_KEYER_DIT 0  /* the left paddle, stereo/trrs tip */
 #define MIDI_KEYER_DAH 1  /* the right paddle, stereo ring / trrs ring1 */
-#define MIDI_KEYER_AUX 2    /* the other button, trrs ring2 */
+#define MIDI_KEYER_AUX 2  /* the other button, trrs ring2 */
 
 enum key_type { switch_key, touch_key, ground, output_active_high, output_active_low };
 enum connect_type { tip, ring1, ring2, shield, other };
@@ -110,7 +110,7 @@ static inline int touch_read(struct key *kp) {
   kp->raw_touch_level_min = min(v, kp->raw_touch_level_min);
   kp->raw_touch_level_sum += v;
   kp->raw_touch_level_n += 1;
-  kp->touch_level = 1000*(v-kp->raw_touch_level_min)/(kp->raw_touch_level_max-kp->raw_touch_level_min);    return kp->key;
+  kp->touch_level = 1000*(v-kp->raw_touch_level_min)/(kp->raw_touch_level_max-kp->raw_touch_level_min);
   if (kp->key != 0) {
     /* is off, active low */
     return kp->touch_level > kp->touch_threshold;
@@ -126,14 +126,13 @@ static inline void touch_key_stats(struct key *kp) {
   Serial.print(" sum "); Serial.print(kp->raw_touch_level_sum);
   Serial.print(" n "); Serial.print(kp->raw_touch_level_n);
   Serial.println();
-
-
 }
 
 static inline void touch_stats(void) {
   Serial.print("dit: "); touch_key_stats(&key[8]);
   Serial.print("dah: "); touch_key_stats(&key[9]);
 }
+
 static inline int digital_read(struct key *kp) {
   return digitalRead(kp->pin);
 }
@@ -180,9 +179,9 @@ static inline void keyloop() {
   uint32_t current_time = micros();
   for (unsigned i = 0; i < n_keys; i += 1) {
     if ( ! key[i].enabled ||
-	 key[i].type == ground ||
-	 key[i].type == output_active_low ||
-	 key[i].type == output_active_high)
+        key[i].type == ground ||
+        key[i].type == output_active_low ||
+        key[i].type == output_active_high)
       continue;
 
     const int new_key = 
@@ -191,8 +190,8 @@ static inline void keyloop() {
       key[i].key;
 
     if (new_key != key[i].key && 
-	(key[i].transition_time == 0 ||
-	 current_time-key[i].transition_time >= key[i].transition_timeout)) {
+        (key[i].transition_time == 0 ||
+        current_time-key[i].transition_time >= key[i].transition_timeout)) {
       key[i].transition_time = current_time;
       usbMIDI.sendNoteOn(key[i].note, new_key != 0 ? 0 : 1, key[i].channel);
       usbMIDI.send_now();

@@ -868,12 +868,12 @@ snit::type keyer::setups {
 	    info { a keyed oscillator }
 	}
 	key {
-	    start { keyer -start keyer-iambic@key -run keyo -key-wpm 17 -keyo-ramp 4.0 -key-mode B }
+	    start { keyer -start keyer-iambic@key -run keyo -key-wpm 22.5 -keyo-ramp 4.0 }
 	    info { iambic keyer and a keyed oscillator }
-	    connect { {?system:midi_capture_1 ?system:midi_capture_2 ?system:midi_capture_3 ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
+	    connect { {?system:midi_capture_2 ?system:midi_capture_3 ?cas:midi_out} key:midi_in key:midi_out keyo:midi_in }
 	}
 	key2 { 
-	    start {keyer -start {keyer-iambic@key2 keyer-tone@key2o} -key2-wpm 16 -key2-note 2 -key2-mode B -key2-alsp 1 -key2o-ramp 4.0 -key2o-note 2 }
+	    start {keyer -start {keyer-iambic@key2 keyer-tone@key2o} -key2-wpm 22.5 -key2-note 2 -key2o-ramp 4.0 -key2o-note 2 }
 	    info { second iambic keyer and keyed oscillator }
 	    connect { key2:midi_out key2o:midi_in }
 	}
