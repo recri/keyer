@@ -20,7 +20,9 @@
 # morse code course
 #
 # given a character preference string, and a random number seed,
-# introduce characters, words of introduced characters, and longer words
+# introduce the characters (roughly in the order given), words formed of 
+# introduced characters, and longer words
+#
 # introducing new elements when the current elements are recognized at 90%
 #
 # {0123456789
@@ -30,6 +32,14 @@
 # In any case provide a course which will test all its elements
 # in a reasonable amount of time if the student gets everything right
 # so it may be used as a quick review/warmup
+#
+# perhaps make altered courses by changing the size of the groups of letters added
+# at each step?  So {T H E} vs {T H E B} vs {T H E B A N} vs {T H E B A N D}
+#
+# hmm, measures of skill: 
+#  1) are the characters correct? 
+#  2) is the spacing correct?  
+#  3) how long did it take to answer?
 #
 package provide morse::course 1.0.0
 
@@ -53,11 +63,12 @@ package require snit
 snit::type morse::course {
     option -old -default {} -configuremethod Configure
     option -seed -default {314159} -configuremethod Configure
+    option -words -default wor5k -configuremethod Configure
     # the order is the rough order of introduction of the letters
     option -order -default {THEBANDOFIVRYUWSMGCLKPJQXZ} -configuremethod Configure
     # these are orders which have been used in courses, or our own invention
     option -orders -default {
-	{50ETARSLUQJHONCVIBYPWKZMDXFG}
+	{ETARSLUQJHONCVIBYPWKZMDXFG}
 	{FGHMJRUBDKNTVYCEILOSAPQXZW}
 	{ETAIMNSODRCUKPHGWLQBFYZVXJ}
 	{EISHTMOANWGDUVJBRKLFPXZCYQ}
@@ -79,6 +90,7 @@ snit::type morse::course {
 	words {}
 	codes {}
 	prosigns {}
+	grams {}
     }
     variable data -array {
 	letters {}
@@ -119,28 +131,30 @@ snit::type morse::course {
     # get ngram frequencies
     proc ngram-frequencies {words {freqs {}} {n 5}} {
 	set dist [dict create]
-	set total [dict create]
+	set totals [dict create]
 	foreach word $words freq $freqs {
 	    set word [string toupper $word]
 	    if {$freq eq {}} { set freq 1 }
 	    if {[regexp {<([^>]*)>} $word]} continue; # no prosigns this time
-	    set strip [regsub -all {[-'/]} $word {}]
-	    if {$word ne $strip} { puts "$word -> $strip"; set word $strip } 
+	    #set strip [regsub -all {[-'/]} $word {}]
+	    #if {$word ne $strip} { puts "$word -> $strip"; set word $strip } 
 	    while {$word ne {}} {
 		for {set i 0} {$i < $n} {incr i} {
 		    if {[string length $word] > $i} {
-			dict incr dist [string range $word 0 $i] $freq
+			set gram [string range $word 0 $i]
+			dict incr dist $gram $freq
+			# puts "$gram [dict get $dist $gram] $freq"
 			dict incr totals $i $freq
 		    }
 		}
 		set word [string range $word 1 end]
 	    }
 	}
-	dict for {key val} $dist { 
-	    set tot [dict get $totals [expr {[string length $key]-1}]]
-	    set value [expr {int(100000*double($val)/$tot)}]
-	    if {$value} { dict set dist $key $value }
-	}
+	#dict for {key val} $dist { 
+	#    set tot [dict get $totals [expr {[string length $key]-1}]]
+	#    set value [expr {int(100000*double($val)/$tot)}]
+	#    if {$value} { dict set dist $key $value }
+	#}
 	return $dist
     }
 
@@ -196,9 +210,23 @@ snit::type morse::course {
 	set tdata(dict) [morse-itu-dict]
 	set tdata(dwor5k) [words-dict]
 	set tdata(wor5k) [onlyalpha [toupper [dict keys $tdata(dwor5k)]]]
-	set tdata(words) [toupper [concat [morse-voa-vocabulary] [n0hff-common-words] [n0hff-more-words] [n0hff-prefixes] [n0hff-suffixes]]]
-	set tdata(codes) [toupper [concat [morse-pileup-callsigns] [dict keys [morse-qcodes]] [morse-ham-abbrev]]]
+	set tdata(words) [lsort -unique [toupper [concat [morse-voa-vocabulary] [n0hff-common-words] [n0hff-more-words] [n0hff-prefixes] [n0hff-suffixes]]]]
+	# foreach word $tdata(words) { if {$word ni $tdata(wor5k)} { puts "also $word" } }
+	set tdata(signs) [toupper [morse-pileup-callsigns]]
+	set tdata(codes) [toupper [concat [dict keys [morse-qcodes]] [morse-ham-abbrev]]]
 	set tdata(prosigns) [toupper [concat [morse-abbrev-prosigns] [morse-abbrev-milprosigns]]]
+	# the abbreviations should take the frequency of the words abbreviated
+	set tdata(abbrev) [toupper [concat morse-abbrev-summerland]]
+	# letter and ngram frequencies
+	set gram [dict create]
+	set ix [lsort -indices -real -decreasing [dict values $tdata(dwor5k)]]
+	set wx [lmap i $ix {lindex [dict keys $tdata(dwor5k)] $i}]
+	set vx [lmap i $ix {lindex [dict values $tdata(dwor5k)] $i}]
+	dict set grams wor5k [ngram-frequencies $wx $vx]
+	dict set grams words [ngram-frequencies $tdata(words)]
+	dict set grams codes [ngram-frequencies $tdata(codes)]
+	dict set grams prosigns [ngram-frequencies $tdata(prosigns)]
+	set tdata(grams) $grams
 	# invert the itu morse dictionary
 	set tdata(idict) [dict create]
 	dict for {key val} $tdata(dict) { 
@@ -249,6 +277,7 @@ snit::type morse::course {
 
     constructor {args} {
 	$self configurelist $args
+	$self test
     }
 
     method Configure {opt val} {
@@ -257,8 +286,25 @@ snit::type morse::course {
 	    -old { }
 	    -order { }
 	    -seed { }
+	    -words { }
 	    default { error "uncaught option $opt in Configure" }
 	}
+    }
+
+    # scramble a list of candidates, n is the number of exchanges to make
+    proc scramble {list {n 1}} {
+	set nl [llength $list]
+	for {set i 0} {$i < $n} {incr i} {
+	    set j [expr {int($nl*rand())}]
+	    set k [expr {$j+int(($nl-$j)*rand())}]
+	    if {$j != $k} {
+		set listj [lindex $list $j]
+		set listk [lindex $list $k]
+		lset list $j $listk
+		lset list $k $listj
+	    }
+	}
+	return $list
     }
     # begin the course from the beginning
     # regenerate letter and ngram and word tables 
@@ -267,12 +313,15 @@ snit::type morse::course {
 	tcl::mathfunc::srand $options(-seed)
 	foreach cat {letters digrams trigrams tetragrams pentagrams longerwords} {
 	    set data($cat) [dict create]
-	    foreach item [$self enumerate $cat] {
+	    foreach item [scramble [$self enumerate $cat] 2] {
 		dict set data($cat) $item [$self initial-entry $cat $item]
 	    }
 	}
-	foreach
     }
+    # we can enumerate the initial letter set, but we do not
+    # enumerate the ngrams on that set, we choose ngrams for
+    # the current set of letters in play, less the previous
+    # set of letters in play
     method enumerate {cat} {
 	switch $cat {
 	    letter { return [split $options(-order) {}] }
@@ -287,8 +336,56 @@ snit::type morse::course {
     method initial-entry {cat item} {
 	return  [dict create freq [$self frequency $cat $item] challenge 0 hit 0 miss 0 pass 0 time]
     }
+    #
+    # if only newletters are specified, then we get grams on the entire set
+    # and the glob is an n-fold repeat of all letters;
+    # but if oldletters are specified, then we need a pattern which requires at least one new letter
+    # in each gram returned.
+    method ngrams {n {newletters {}} {oldletters {}}} {
+	set newglob "\[[join $newletters {}]\]"
+	if {$oldletters eq {}} {
+	    set globs [join [lrepeat $n $newglob] {}]
+	} else {
+	    set allglob "\[[join [concat $newletters $oldletters] {}]\]"
+	    for {set i 0} {$i < $n} {incr i} {
+		lappend globs [join [lreplace [lrepeat $n $allglob] $i $i $newglob] {}]
+	    }
+	}
+	set d [dict filter [dict get $tdata(grams) $options(-words)] key {*}$globs]
+	set ix [lsort -indices -integer -decreasing [dict values $d]]
+	set kx [lmap i $ix {lindex [dict keys $d] $i}]
+	set vx [lmap i $ix {lindex [dict values $d] $i}]
+	# puts [lmap k $kx v $vx {list $k [format %.1f [expr {20*log10($v)}]]}]
+	return $kx
+    }
+    # as for ngrams, but only take whole words
+    method nwords {n {newletters {}} {oldletters {}}} {
+	set newglob [string tolower "\[[join $newletters {}]\]"]
+	if {$oldletters eq {}} {
+	    set globs [join [lrepeat $n $newglob] {}]
+	} else {
+	    set allglob [string tolower "\[[join [concat $newletters $oldletters] {}]\]"]
+	    for {set i 0} {$i < $n} {incr i} {
+		lappend globs [join [lreplace [lrepeat $n $allglob] $i $i $newglob] {}]
+	    }
+	}
+	set d [dict filter $tdata(dwor5k) key {*}$globs]
+	set ix [lsort -indices -integer -decreasing [dict values $d]]
+	set kx [lmap i $ix {lindex [dict keys $d] $i}]
+	set vx [lmap i $ix {lindex [dict values $d] $i}]
+	# puts [lmap k $kx v $vx {list $k [format %.1f [expr {20*log10($v)}]]}]
+	return $kx
+    }
     method frequency {cat item} {
-	
+	switch $cat {
+	    letter -
+	    digrams -
+	    trigrams -
+	    tetragrams -
+	    pentagrams { return [dict get $tdata(grams) $options(-words) $item] }
+	    longerwords { return [dict get $tdata(wor5k) $item] }
+	}
+    }
     method pause {} {
     }
     method play {} {
@@ -366,4 +463,34 @@ snit::type morse::course {
 	# puts [join $sorts1 {}]
     }
     
+    method test {} {
+	# test ngrams
+	# puts [dict filter [dict get $tdata(grams) wor5k] key ??]
+	# puts [dict filter $tdata(dwor5k) key *hth*]
+	# puts [dict filter $tdata(dwor5k) key *the*]
+	# hmm, so I need ngrams for a set of characters,
+	# and then I need ngrams for an augmented set of characters,
+	# where we skip the ngrams already found for the prior set
+	if {0} {
+	    foreach order $options(-orders) {
+		set count [dict create]
+		puts $order
+		set letters [split $order {}]
+		set oldlets {}
+		set newlets {}
+		set nlets 1
+		set nletsm1 0
+		for {set i 0} {$i < 26} {incr i $nlets} {
+		    lappend oldlets {*}$newlets
+		    set newlets [lrange $letters $i $i+$nletsm1]
+		    set nspread [lmap n {1 2 3 4 5} {llength [$self ngrams $n $newlets $oldlets]}]
+		    set wspread [lmap n {1 2 3 4 5} {llength [$self nwords $n $newlets $oldlets]}]
+		    foreach j {1 2 3 4 5} { dict incr count $j [lindex $wspread $j-1] }
+		    # puts "$newlets $spread"
+		}
+		puts $count
+	    }
+	}
+	# test scramble
+    }
 }

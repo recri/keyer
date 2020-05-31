@@ -337,6 +337,10 @@ snit::type keyer::options {
 	# puts "populate-option [dict get $option factory] $opt"
 
 	switch -glob -- [list [dict get $option factory] $opt] {
+	    {* -width} { $self describe $option value -format %.0f -min 0 -max 8192 }
+	    {* -height} { $self describe $option value -format %.0f -min 0 -max 8192 }
+	    {* -grid-width} { $self describe $option text }
+	    {* -grid-height} { $self describe $option text }
 	    {* -seed} { $self describe $option value -format %.0f -min -64000 -max 64000 -step 1 }
 	    {* -start} { $self describe $option bool }
 	    {* -server} - 

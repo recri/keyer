@@ -27,6 +27,7 @@ package require morse::abbrev
 package require morse::callsigns
 package require morse::voa
 package require morse::n0hff
+package require morse::course
 
 package require sdrtk::lscale
 package require sdrtk::lradiomenubutton
@@ -82,6 +83,17 @@ package require midi
 # So we're keeping statistics on each card in the deck, challenges, misses, time to
 # answer, overall, and decaying averages.
 #
+# The general scheme is that we have a set of characters, alphabetic, +numeric, +ham-punctuation,
+# +itu-punctuation, +prosigns (though I think the ITU character set covers the prosigns?)
+#
+# And then we have n-grams and words formed of the characters which we form from a dictionary of
+# of english words, a dictionary of callsigns, and a dictionary of abbreviations.
+# Even when doing only alphabetics, we need to augment the dictionary of words with the abbreviations
+# since they are generally formed of uncommon letter combinations.
+#
+# Given an order of introduction for the characters, we can introduce ngrams and words once their
+# constituent characters have been introduced as singletons.
+
 namespace eval ::sdrtk {}
 
 snit::widget sdrtk::cw-echo {
@@ -462,6 +474,7 @@ snit::widget sdrtk::cw-echo {
 	    passes 0
 	    challenge {}
 	    response {}
+	    course {}
 	}
 	pack [ttk::frame $w] -side top -expand true -fill x
 	set row 0
@@ -658,8 +671,7 @@ snit::widget sdrtk::cw-echo {
     #
     method exposed-options {} { 
 	return {
-	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out
-	    -length
+	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out -length
 	}
     }
 

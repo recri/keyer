@@ -21,7 +21,7 @@ void sendNoteDown(uint8_t channel, uint8_t note, uint8_t velocity) {
 const int BUTTON_PIN_COUNT = 2;
 
 // Change the order of the pins to change the ctrl or note order.
-int buttonPins[BUTTON_PIN_COUNT] = { 2, 3 };
+int buttonPins[BUTTON_PIN_COUNT] = { 9, 5 };
 
 int buttonDown[BUTTON_PIN_COUNT];
 
@@ -32,7 +32,8 @@ int isButtonDown(int pin) {
 }
 
 void setup() {
- 
+  pinMode(7, OUTPUT);
+  digitalWrite(7, LOW);
   for (int i=0; i<BUTTON_PIN_COUNT; ++i) {
     pinMode(buttonPins[i], INPUT);
     digitalWrite(buttonPins[i], HIGH);
@@ -55,7 +56,7 @@ void loop() {
     int down = isButtonDown(buttonPins[i]);
 
     if (down != buttonDown[i]) {
-      sendNoteDown(0, 64 + i, down ? 127 : 0);
+      sendNoteDown(0, i, down ? 1 : 0);
       buttonDown[i] = down;
     }
   }

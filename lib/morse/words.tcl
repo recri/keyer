@@ -17,25 +17,14 @@
 # 
 
 #
-# word frequency data for english from http://www.wordfrequency.info/
-# parts of speech key:
-#
-# a article 
-# c conjunction
-# d determiner
-# e existential there
-# i preposition
-# j adjective
-# m cardinal number
-# n noun
-# p pronoun
-# r adverb
-# t infinitive marker
-# u interjection
-# v verb 
-# x not, n't
-#
-
+# word frequency data for english from https://en.wiktionary.org/wiki/Wiktionary:Frequency_lists
+# Project Gutenberg derived Frequency lists as of 2006-04-16:
+# Wiktionary:Frequency lists/PG/2006/04/1-10000
+# < Wiktionary:Frequency lists
+# Jump to navigationJump to search
+# 1 - 10000
+# Frequencies listed here are per billion. Fractions are limited to two decimal places. Case insensitive.
+# Rank	Word	Count (per billion)
 package provide morse::words 1.0
 
 namespace eval morse::words {}
@@ -43,5161 +32,10020 @@ namespace eval morse::words {}
 #     {Rank}	   {Word}	{Part of speech}	{Frequency}	{Dispersion}
 
 set morse::words::words {
-    1	   the	a	22038615	0.98
-    2	   be	v	12545825	0.97
-    3	   and	c	10741073	0.99
-    4	   of	i	10343885	0.97
-    5	   a	a	10144200	0.98
-    6	   in	i	6996437	0.98
-    7	   to	t	6332195	0.98
-    8	   have	v	4303955	0.97
-    9	   to	i	3856916	0.99
-    10	   it	p	3872477	0.96
-    11	   I	p	3978265	0.93
-    12	   that	c	3430996	0.97
-    13	   for	i	3281454	0.98
-    14	   you	p	3081151	0.92
-    15	   he	p	2909254	0.94
-    16	   with	i	2683014	0.99
-    17	   on	i	2485306	0.99
-    18	   do	v	2573587	0.95
-    19	   say	v	1915138	0.95
-    20	   this	d	1885366	0.96
-    21	   they	p	1865580	0.96
-    22	   at	i	1767638	0.98
-    23	   but	c	1776767	0.97
-    24	   we	p	1820935	0.94
-    25	   his	a	1801708	0.95
-    26	   from	i	1635914	0.99
-    27	   that	d	1712406	0.94
-    28	   not	x	1638830	0.98
-    29	   n't	x	1619007	0.97
-    30	   by	i	1490548	0.96
-    31	   she	p	1484869	0.91
-    32	   or	c	1379320	0.97
-    33	   as	c	1296879	0.98
-    34	   what	d	1181023	0.94
-    35	   go	v	1151045	0.93
-    36	   their	a	1083029	0.97
-    37	   can	v	1022775	0.98
-    38	   who	p	1018283	0.97
-    39	   get	v	992596	0.94
-    40	   if	c	933542	0.97
-    41	   would	v	925515	0.97
-    42	   her	a	969591	0.91
-    43	   all	d	892102	0.98
-    44	   my	a	919821	0.93
-    45	   make	v	857168	0.98
-    46	   about	i	874406	0.96
-    47	   know	v	892535	0.93
-    48	   will	v	824568	0.97
-    49	   as	i	829018	0.95
-    50	   up	r	795534	0.95
-    51	   one	m	768232	0.98
-    52	   time	n	764657	0.98
-    53	   there	e	784528	0.96
-    54	   year	n	769254	0.96
-    55	   so	r	756550	0.95
-    56	   think	v	772787	0.91
-    57	   when	c	678626	0.98
-    58	   which	d	685982	0.96
-    59	   them	p	677870	0.97
-    60	   some	d	674193	0.98
-    61	   me	p	709623	0.92
-    62	   people	n	691468	0.95
-    63	   take	v	670745	0.97
-    64	   out	r	678603	0.96
-    65	   into	i	668172	0.97
-    66	   just	r	677711	0.94
-    67	   see	v	663645	0.96
-    68	   him	p	677707	0.92
-    69	   your	a	659622	0.94
-    70	   come	v	628254	0.95
-    71	   could	v	617932	0.96
-    72	   now	r	605997	0.94
-    73	   than	c	579757	0.97
-    74	   like	i	568850	0.96
-    75	   other	j	547799	0.97
-    76	   how	r	538893	0.97
-    77	   then	r	543977	0.95
-    78	   its	a	539719	0.96
-    79	   our	a	525107	0.97
-    80	   two	m	511027	0.99
-    81	   more	r	517536	0.97
-    82	   these	d	513864	0.95
-    83	   want	v	514972	0.95
-    84	   way	n	470401	0.98
-    85	   look	v	491707	0.93
-    86	   first	m	463566	0.98
-    87	   also	r	464606	0.96
-    88	   new	j	435993	0.97
-    89	   because	c	438539	0.96
-    90	   day	n	432773	0.97
-    91	   more	d	420170	0.97
-    92	   use	v	420781	0.96
-    93	   no	a	402222	0.98
-    94	   man	n	409760	0.95
-    95	   find	v	395203	0.98
-    96	   here	r	412315	0.93
-    97	   thing	n	400724	0.94
-    98	   give	v	384503	0.98
-    99	   many	d	385348	0.97
-    100	   well	r	411776	0.91
-    101	   only	r	379574	0.98
-    102	   those	d	378007	0.97
-    103	   tell	v	388155	0.94
-    104	   one	p	369553	0.98
-    105	   very	r	391821	0.92
-    106	   her	p	397950	0.89
-    107	   even	r	361067	0.98
-    108	   back	r	367844	0.94
-    109	   any	d	348100	0.98
-    110	   good	j	353973	0.96
-    111	   woman	n	341422	0.98
-    112	   through	i	340921	0.98
-    113	   us	p	351088	0.95
-    114	   life	n	333085	0.98
-    115	   child	n	333849	0.97
-    116	   there	r	333433	0.93
-    117	   work	v	318210	0.98
-    118	   down	r	329409	0.94
-    119	   may	v	324569	0.95
-    120	   after	i	311902	0.98
-    121	   should	v	310265	0.98
-    122	   call	v	308050	0.97
-    123	   world	n	303506	0.97
-    124	   over	i	300349	0.98
-    125	   school	n	304183	0.95
-    126	   still	r	296953	0.97
-    127	   try	v	294023	0.96
-    128	   in	r	285035	0.98
-    129	   as	r	281483	0.98
-    130	   last	m	289843	0.95
-    131	   ask	v	284632	0.96
-    132	   need	v	276744	0.98
-    133	   too	r	280396	0.96
-    134	   feel	v	275214	0.95
-    135	   three	m	266744	0.98
-    136	   when	r	268219	0.97
-    137	   state	n	272193	0.94
-    138	   never	r	262584	0.96
-    139	   become	v	259102	0.97
-    140	   between	i	264158	0.94
-    141	   high	j	255936	0.96
-    142	   really	r	263414	0.91
-    143	   something	p	254910	0.94
-    144	   most	r	246360	0.96
-    145	   another	d	240646	0.98
-    146	   much	d	244507	0.97
-    147	   family	n	243267	0.97
-    148	   own	d	240452	0.98
-    149	   out	i	242443	0.96
-    150	   leave	v	240482	0.96
-    151	   put	v	237480	0.96
-    152	   old	j	236577	0.96
-    153	   while	c	234555	0.97
-    154	   mean	v	242198	0.93
-    155	   on	r	236980	0.95
-    156	   keep	v	231760	0.96
-    157	   student	n	255047	0.88
-    158	   why	r	235442	0.95
-    159	   let	v	240300	0.93
-    160	   great	j	225005	0.97
-    161	   same	d	222836	0.98
-    162	   big	j	227169	0.96
-    163	   group	n	229435	0.93
-    164	   begin	v	218617	0.98
-    165	   seem	v	219627	0.97
-    166	   country	n	223138	0.95
-    167	   help	v	216082	0.98
-    168	   talk	v	229429	0.92
-    169	   where	c	213744	0.98
-    170	   turn	v	221392	0.94
-    171	   problem	n	217728	0.96
-    172	   every	a	212739	0.97
-    173	   start	v	213952	0.96
-    174	   hand	n	225247	0.91
-    175	   might	v	209059	0.98
-    176	   American	j	214968	0.95
-    177	   show	v	208037	0.98
-    178	   part	n	207861	0.98
-    179	   about	r	208550	0.97
-    180	   against	i	204379	0.98
-    181	   place	n	202427	0.98
-    182	   over	r	208260	0.95
-    183	   such	d	207065	0.95
-    184	   again	r	206895	0.94
-    185	   few	d	197266	0.97
-    186	   case	n	200773	0.95
-    187	   most	d	197086	0.96
-    188	   week	n	199268	0.95
-    189	   company	n	203345	0.93
-    190	   where	r	194427	0.96
-    191	   system	n	200175	0.94
-    192	   each	d	196522	0.95
-    193	   right	r	205250	0.90
-    194	   program	n	195985	0.93
-    195	   hear	v	196070	0.93
-    196	   so	c	191893	0.95
-    197	   question	n	192070	0.95
-    198	   during	i	190729	0.95
-    199	   work	n	187533	0.97
-    200	   play	v	188328	0.96
-    201	   government	n	191314	0.94
-    202	   run	v	187325	0.96
-    203	   small	j	185463	0.97
-    204	   number	n	186005	0.96
-    205	   off	r	183854	0.95
-    206	   always	r	179474	0.97
-    207	   move	v	179388	0.97
-    208	   like	v	182341	0.95
-    209	   night	n	184511	0.93
-    210	   live	v	176144	0.98
-    211	   Mr	n	188555	0.91
-    212	   point	n	177481	0.97
-    213	   believe	v	178397	0.96
-    214	   hold	v	177368	0.97
-    215	   today	r	183724	0.93
-    216	   bring	v	174366	0.98
-    217	   happen	v	182714	0.93
-    218	   next	m	176306	0.96
-    219	   without	i	172448	0.98
-    220	   before	i	172769	0.98
-    221	   large	j	175611	0.96
-    222	   all	r	177317	0.93
-    223	   million	m	176895	0.93
-    224	   must	v	171043	0.96
-    225	   home	n	170527	0.96
-    226	   under	i	164766	0.98
-    227	   water	n	167666	0.96
-    228	   room	n	172472	0.92
-    229	   write	v	161824	0.98
-    230	   mother	n	169407	0.93
-    231	   area	n	165812	0.95
-    232	   national	j	166359	0.95
-    233	   money	n	164794	0.95
-    234	   story	n	163582	0.96
-    235	   young	j	160011	0.98
-    236	   fact	n	164401	0.95
-    237	   month	n	162685	0.96
-    238	   different	j	162411	0.96
-    239	   lot	n	169570	0.92
-    240	   right	n	163259	0.95
-    241	   study	n	174069	0.88
-    242	   book	n	154013	0.98
-    243	   eye	n	169150	0.89
-    244	   job	n	154743	0.96
-    245	   word	n	152891	0.97
-    246	   though	c	152182	0.97
-    247	   business	n	154468	0.95
-    248	   issue	n	156417	0.94
-    249	   side	n	152559	0.96
-    250	   kind	n	155032	0.95
-    251	   four	m	150646	0.97
-    252	   head	n	160131	0.91
-    253	   far	r	148621	0.98
-    254	   black	j	150718	0.96
-    255	   long	j	149050	0.97
-    256	   both	d	146338	0.97
-    257	   little	j	149658	0.94
-    258	   house	n	149251	0.94
-    259	   yes	u	157364	0.89
-    260	   after	c	142289	0.98
-    261	   since	c	141264	0.98
-    262	   long	r	142007	0.97
-    263	   provide	v	150879	0.91
-    264	   service	n	146122	0.94
-    265	   around	i	143766	0.96
-    266	   friend	n	142697	0.96
-    267	   important	j	144194	0.95
-    268	   father	n	145051	0.93
-    269	   sit	v	147185	0.92
-    270	   away	r	144713	0.93
-    271	   until	c	140819	0.96
-    272	   power	n	141357	0.95
-    273	   hour	n	138955	0.96
-    274	   game	n	146311	0.92
-    275	   often	r	140731	0.95
-    276	   yet	r	135484	0.98
-    277	   line	n	135986	0.98
-    278	   political	j	144437	0.92
-    279	   end	n	134104	0.98
-    280	   among	i	138192	0.94
-    281	   ever	r	135774	0.96
-    282	   stand	v	140937	0.92
-    283	   bad	j	134910	0.96
-    284	   lose	v	134102	0.97
-    285	   however	r	142282	0.91
-    286	   member	n	134731	0.95
-    287	   pay	v	133133	0.96
-    288	   law	n	133706	0.95
-    289	   meet	v	128737	0.98
-    290	   car	n	133571	0.94
-    291	   city	n	132684	0.95
-    292	   almost	r	127907	0.98
-    293	   include	v	133563	0.93
-    294	   continue	v	126029	0.98
-    295	   set	v	127369	0.97
-    296	   later	r	126495	0.98
-    297	   community	n	133057	0.93
-    298	   much	r	126029	0.98
-    299	   name	n	127139	0.97
-    300	   five	m	125571	0.97
-    301	   once	r	126203	0.97
-    302	   white	j	126760	0.96
-    303	   least	r	123961	0.98
-    304	   president	n	134203	0.90
-    305	   learn	v	124346	0.97
-    306	   real	j	124187	0.97
-    307	   change	v	123183	0.98
-    308	   team	n	131489	0.92
-    309	   minute	n	126660	0.95
-    310	   best	j	124850	0.96
-    311	   several	d	124039	0.97
-    312	   idea	n	122140	0.98
-    313	   kid	n	126428	0.95
-    314	   body	n	125165	0.96
-    315	   information	n	127331	0.94
-    316	   nothing	p	126717	0.94
-    317	   ago	r	125252	0.95
-    318	   right	j	126278	0.94
-    319	   lead	v	122691	0.97
-    320	   social	j	132899	0.89
-    321	   understand	v	121354	0.97
-    322	   whether	c	121921	0.96
-    323	   back	n	125006	0.94
-    324	   watch	v	124976	0.94
-    325	   together	r	119186	0.98
-    326	   follow	v	119425	0.97
-    327	   around	r	122789	0.94
-    328	   parent	n	119610	0.97
-    329	   only	j	117700	0.98
-    330	   stop	v	121481	0.94
-    331	   face	n	127291	0.89
-    332	   anything	p	120292	0.94
-    333	   create	v	119419	0.95
-    334	   public	j	119825	0.95
-    335	   already	r	115220	0.98
-    336	   speak	v	117358	0.96
-    337	   others	n	115771	0.97
-    338	   read	v	114094	0.97
-    339	   level	n	121704	0.91
-    340	   allow	v	114892	0.97
-    341	   add	v	117842	0.94
-    342	   office	n	114791	0.97
-    343	   spend	v	114569	0.97
-    344	   door	n	124993	0.88
-    345	   health	n	117762	0.94
-    346	   person	n	113650	0.97
-    347	   art	n	117851	0.93
-    348	   sure	j	116186	0.94
-    349	   such	i	119125	0.92
-    350	   war	n	117804	0.93
-    351	   history	n	114904	0.95
-    352	   party	n	112962	0.96
-    353	   within	i	114599	0.93
-    354	   grow	v	110020	0.97
-    355	   result	n	116277	0.92
-    356	   open	v	111857	0.94
-    357	   change	n	112426	0.94
-    358	   morning	n	114002	0.92
-    359	   walk	v	113787	0.92
-    360	   reason	n	106863	0.97
-    361	   low	j	108990	0.95
-    362	   win	v	111478	0.93
-    363	   research	n	114802	0.90
-    364	   girl	n	110409	0.93
-    365	   guy	n	110409	0.93
-    366	   early	j	108171	0.95
-    367	   food	n	107728	0.96
-    368	   before	c	107448	0.96
-    369	   moment	n	109720	0.94
-    370	   himself	p	109288	0.94
-    371	   air	n	105932	0.96
-    372	   teacher	n	116100	0.88
-    373	   force	n	108005	0.95
-    374	   offer	v	106473	0.96
-    375	   enough	r	105880	0.96
-    376	   both	r	106361	0.95
-    377	   education	n	113731	0.89
-    378	   across	i	105559	0.96
-    379	   although	c	107925	0.93
-    380	   remember	v	106879	0.94
-    381	   foot	n	107285	0.94
-    382	   second	m	103621	0.97
-    383	   boy	n	107447	0.93
-    384	   maybe	r	108421	0.92
-    385	   toward	i	105984	0.94
-    386	   able	j	103171	0.97
-    387	   age	n	103402	0.96
-    388	   off	i	104122	0.95
-    389	   policy	n	107601	0.92
-    390	   everything	p	103591	0.95
-    391	   love	v	103681	0.95
-    392	   process	n	107341	0.91
-    393	   music	n	102657	0.95
-    394	   including	i	103650	0.94
-    395	   consider	v	101987	0.96
-    396	   appear	v	100671	0.97
-    397	   actually	r	105155	0.92
-    398	   buy	v	101105	0.95
-    399	   probably	r	99754	0.96
-    400	   human	j	101224	0.94
-    401	   wait	v	102463	0.93
-    402	   serve	v	99660	0.95
-    403	   market	n	100435	0.94
-    404	   die	v	98376	0.96
-    405	   send	v	96613	0.97
-    406	   expect	v	95566	0.98
-    407	   home	r	97937	0.95
-    408	   sense	n	95896	0.97
-    409	   build	v	96651	0.96
-    410	   stay	v	96933	0.96
-    411	   fall	v	96908	0.95
-    412	   oh	u	103613	0.89
-    413	   nation	n	97212	0.95
-    414	   plan	n	95824	0.96
-    415	   cut	v	96012	0.95
-    416	   college	n	97038	0.94
-    417	   interest	n	96620	0.95
-    418	   death	n	93222	0.98
-    419	   course	r	96224	0.95
-    420	   someone	p	95608	0.95
-    421	   experience	n	98106	0.93
-    422	   behind	i	95047	0.93
-    423	   reach	v	92375	0.96
-    424	   local	j	92970	0.95
-    425	   kill	v	92660	0.95
-    426	   six	m	90571	0.97
-    427	   remain	v	91319	0.96
-    428	   effect	n	95216	0.92
-    429	   use	n	96564	0.90
-    430	   yeah	u	103389	0.84
-    431	   suggest	v	92643	0.93
-    432	   class	n	91323	0.94
-    433	   control	n	90301	0.94
-    434	   raise	v	87036	0.98
-    435	   care	n	88862	0.96
-    436	   perhaps	r	87060	0.98
-    437	   little	r	88697	0.95
-    438	   late	j	86421	0.98
-    439	   hard	j	86817	0.97
-    440	   field	n	87243	0.96
-    441	   else	r	87876	0.95
-    442	   pass	v	86184	0.97
-    443	   former	d	88930	0.94
-    444	   sell	v	87865	0.95
-    445	   major	j	87487	0.95
-    446	   sometimes	r	84845	0.98
-    447	   require	v	89280	0.93
-    448	   along	i	84926	0.97
-    449	   development	n	91995	0.90
-    450	   themselves	p	85256	0.97
-    451	   report	v	88138	0.93
-    452	   role	n	88666	0.92
-    453	   better	j	83895	0.98
-    454	   economic	j	90392	0.91
-    455	   effort	n	86473	0.95
-    456	   up	i	85759	0.95
-    457	   decide	v	84035	0.97
-    458	   rate	n	87224	0.94
-    459	   strong	j	83677	0.98
-    460	   possible	j	85084	0.96
-    461	   heart	n	84536	0.96
-    462	   drug	n	86231	0.94
-    463	   show	n	86828	0.94
-    464	   leader	n	85438	0.95
-    465	   light	n	87427	0.93
-    466	   voice	n	89379	0.90
-    467	   wife	n	83601	0.96
-    468	   whole	j	83756	0.96
-    469	   police	n	85880	0.93
-    470	   mind	n	82808	0.96
-    471	   finally	r	81951	0.97
-    472	   pull	v	87243	0.91
-    473	   return	v	81812	0.97
-    474	   free	j	82090	0.97
-    475	   military	j	85152	0.93
-    476	   price	n	84443	0.94
-    477	   report	n	83174	0.95
-    478	   less	r	82930	0.95
-    479	   according	i	83773	0.94
-    480	   decision	n	82429	0.95
-    481	   explain	v	80797	0.97
-    482	   son	n	80895	0.97
-    483	   hope	v	81385	0.96
-    484	   even	c	79087	0.98
-    485	   develop	v	84835	0.92
-    486	   view	n	81338	0.96
-    487	   relationship	n	84549	0.92
-    488	   carry	v	79513	0.97
-    489	   town	n	79821	0.97
-    490	   road	n	80987	0.95
-    491	   drive	v	80476	0.96
-    492	   arm	n	84865	0.91
-    493	   true	j	79299	0.97
-    494	   federal	j	81826	0.94
-    495	   break	v	79310	0.97
-    496	   better	r	78334	0.98
-    497	   difference	n	82911	0.92
-    498	   thank	v	88574	0.86
-    499	   receive	v	80250	0.95
-    500	   value	n	82942	0.92
-    501	   international	j	81610	0.93
-    502	   building	n	78487	0.97
-    503	   action	n	80009	0.95
-    504	   full	j	77547	0.97
-    505	   model	n	82973	0.91
-    506	   join	v	80609	0.93
-    507	   season	n	83743	0.89
-    508	   society	n	81192	0.92
-    509	   because	i	77116	0.97
-    510	   tax	n	80713	0.92
-    511	   director	n	79813	0.93
-    512	   early	r	75605	0.98
-    513	   position	n	77124	0.96
-    514	   player	n	81358	0.91
-    515	   agree	v	76753	0.96
-    516	   especially	r	76304	0.96
-    517	   record	n	77509	0.94
-    518	   pick	v	77197	0.95
-    519	   wear	v	77921	0.94
-    520	   paper	n	75383	0.97
-    521	   special	j	75298	0.97
-    522	   space	n	75395	0.96
-    523	   ground	n	74713	0.97
-    524	   form	n	78493	0.92
-    525	   support	v	76544	0.94
-    526	   event	n	75559	0.95
-    527	   official	n	79026	0.91
-    528	   whose	d	74914	0.96
-    529	   matter	n	73842	0.97
-    530	   everyone	p	74534	0.96
-    531	   center	n	74559	0.96
-    532	   couple	n	74871	0.96
-    533	   site	n	75932	0.94
-    534	   end	v	73099	0.97
-    535	   project	n	75446	0.94
-    536	   hit	v	73999	0.95
-    537	   base	v	75887	0.93
-    538	   activity	n	77980	0.90
-    539	   star	n	73695	0.95
-    540	   table	n	75228	0.93
-    541	   need	n	74877	0.93
-    542	   court	n	74112	0.94
-    543	   produce	v	74169	0.94
-    544	   eat	v	73505	0.95
-    545	   American	n	73063	0.95
-    546	   teach	v	72668	0.95
-    547	   oil	n	74386	0.93
-    548	   half	d	70930	0.97
-    549	   situation	n	72603	0.95
-    550	   easy	j	71602	0.96
-    551	   cost	n	73512	0.94
-    552	   industry	n	73055	0.94
-    553	   figure	n	74858	0.92
-    554	   face	v	69493	0.98
-    555	   street	n	71645	0.95
-    556	   image	n	72216	0.94
-    557	   itself	p	71093	0.96
-    558	   phone	n	71599	0.95
-    559	   either	r	69497	0.97
-    560	   data	n	76594	0.88
-    561	   cover	v	69387	0.97
-    562	   quite	r	69966	0.96
-    563	   picture	n	69229	0.97
-    564	   clear	j	68662	0.98
-    565	   practice	n	73745	0.91
-    566	   piece	n	68901	0.97
-    567	   land	n	69750	0.96
-    568	   recent	j	70685	0.94
-    569	   describe	v	71377	0.93
-    570	   product	n	70883	0.94
-    571	   doctor	n	69446	0.95
-    572	   wall	n	71390	0.93
-    573	   patient	n	72217	0.91
-    574	   worker	n	69962	0.94
-    575	   news	n	70051	0.94
-    576	   test	n	69870	0.94
-    577	   movie	n	69387	0.94
-    578	   certain	j	67228	0.97
-    579	   north	n	68046	0.96
-    580	   love	n	67495	0.96
-    581	   personal	j	67917	0.96
-    582	   open	j	67218	0.97
-    583	   support	n	69431	0.93
-    584	   simply	r	66712	0.97
-    585	   third	m	67037	0.97
-    586	   technology	n	69565	0.93
-    587	   catch	v	68214	0.94
-    588	   step	n	66232	0.97
-    589	   baby	n	67881	0.94
-    590	   computer	n	67399	0.95
-    591	   type	n	68481	0.93
-    592	   attention	n	65271	0.97
-    593	   draw	v	65198	0.97
-    594	   film	n	66724	0.95
-    595	   Republican	n	71611	0.88
-    596	   tree	n	66630	0.94
-    597	   source	n	66862	0.94
-    598	   red	j	66217	0.94
-    599	   nearly	r	64860	0.96
-    600	   organization	n	67278	0.93
-    601	   choose	v	64348	0.97
-    602	   cause	v	64531	0.97
-    603	   hair	n	69564	0.89
-    604	   look	n	66194	0.94
-    605	   point	v	62980	0.98
-    606	   century	n	65667	0.94
-    607	   evidence	n	65360	0.94
-    608	   window	n	68303	0.90
-    609	   difficult	j	63947	0.96
-    610	   listen	v	64984	0.94
-    611	   soon	r	63168	0.96
-    612	   culture	n	67128	0.91
-    613	   billion	m	65243	0.93
-    614	   chance	n	62682	0.97
-    615	   brother	n	63406	0.95
-    616	   energy	n	64139	0.94
-    617	   period	n	64534	0.93
-    618	   course	n	64012	0.94
-    619	   summer	n	62503	0.96
-    620	   less	d	62154	0.96
-    621	   realize	v	61732	0.97
-    622	   hundred	m	61266	0.97
-    623	   available	j	63187	0.94
-    624	   plant	n	63476	0.93
-    625	   likely	j	63002	0.94
-    626	   opportunity	n	62422	0.95
-    627	   term	n	62962	0.94
-    628	   short	j	60451	0.98
-    629	   letter	n	60369	0.98
-    630	   condition	n	63489	0.93
-    631	   choice	n	60487	0.97
-    632	   place	v	60927	0.96
-    633	   single	j	60072	0.97
-    634	   rule	n	61062	0.95
-    635	   daughter	n	60424	0.96
-    636	   administration	n	62071	0.93
-    637	   south	n	60630	0.96
-    638	   husband	n	60126	0.96
-    639	   Congress	n	62841	0.92
-    640	   floor	n	62458	0.92
-    641	   campaign	n	64172	0.90
-    642	   material	n	62440	0.92
-    643	   population	n	62999	0.91
-    644	   well	i	61219	0.93
-    645	   call	n	59543	0.96
-    646	   economy	n	60990	0.93
-    647	   medical	j	59424	0.96
-    648	   hospital	n	58669	0.97
-    649	   church	n	59466	0.96
-    650	   close	v	60884	0.93
-    651	   thousand	m	58307	0.97
-    652	   risk	n	60432	0.94
-    653	   current	j	61252	0.92
-    654	   fire	n	59386	0.95
-    655	   future	n	58020	0.97
-    656	   wrong	j	58988	0.95
-    657	   involve	v	59542	0.94
-    658	   defense	n	59701	0.94
-    659	   anyone	p	58274	0.96
-    660	   increase	v	60442	0.93
-    661	   security	n	58914	0.95
-    662	   bank	n	58992	0.94
-    663	   myself	p	59716	0.93
-    664	   certainly	r	59739	0.93
-    665	   west	n	58169	0.95
-    666	   sport	n	59006	0.94
-    667	   board	n	58436	0.95
-    668	   seek	v	58495	0.94
-    669	   per	i	59432	0.93
-    670	   subject	n	61397	0.90
-    671	   officer	n	57617	0.96
-    672	   private	j	57248	0.96
-    673	   rest	n	56714	0.97
-    674	   behavior	n	62625	0.88
-    675	   deal	v	57462	0.96
-    676	   performance	n	59909	0.92
-    677	   fight	v	56886	0.96
-    678	   throw	v	57784	0.95
-    679	   top	n	57743	0.95
-    680	   quickly	r	56454	0.97
-    681	   past	j	56588	0.96
-    682	   goal	n	58728	0.93
-    683	   second	n	56022	0.97
-    684	   bed	n	60304	0.90
-    685	   order	n	56483	0.96
-    686	   author	n	58300	0.93
-    687	   fill	v	56915	0.95
-    688	   represent	v	58744	0.92
-    689	   focus	v	57177	0.94
-    690	   foreign	j	57540	0.94
-    691	   drop	v	56448	0.95
-    692	   plan	v	55829	0.96
-    693	   blood	n	56351	0.95
-    694	   upon	i	57033	0.94
-    695	   agency	n	56954	0.94
-    696	   push	v	56103	0.95
-    697	   nature	n	57929	0.92
-    698	   color	n	56978	0.94
-    699	   no	r	54602	0.98
-    700	   recently	r	55992	0.95
-    701	   store	n	56147	0.95
-    702	   reduce	v	57029	0.93
-    703	   sound	n	56828	0.94
-    704	   note	v	57025	0.93
-    705	   fine	j	55174	0.96
-    706	   before	r	55608	0.95
-    707	   near	i	54869	0.96
-    708	   movement	n	56201	0.94
-    709	   page	n	55937	0.94
-    710	   enter	v	54479	0.96
-    711	   share	v	54010	0.97
-    712	   than	i	55719	0.94
-    713	   common	j	55940	0.93
-    714	   poor	j	53820	0.97
-    715	   other	p	54372	0.96
-    716	   natural	j	55526	0.94
-    717	   race	n	54838	0.95
-    718	   concern	n	55203	0.94
-    719	   series	n	54549	0.95
-    720	   significant	j	58947	0.88
-    721	   similar	j	55901	0.92
-    722	   hot	j	54601	0.95
-    723	   language	n	55799	0.92
-    724	   each	p	53663	0.96
-    725	   usually	r	53477	0.96
-    726	   response	n	56342	0.91
-    727	   dead	j	55111	0.93
-    728	   rise	v	53542	0.95
-    729	   animal	n	53127	0.96
-    730	   factor	n	57612	0.89
-    731	   decade	n	53727	0.95
-    732	   article	n	54871	0.93
-    733	   shoot	v	53038	0.95
-    734	   east	n	53010	0.95
-    735	   save	v	52067	0.97
-    736	   seven	m	52011	0.97
-    737	   artist	n	54353	0.92
-    738	   away	i	52005	0.96
-    739	   scene	n	51248	0.97
-    740	   stock	n	54305	0.91
-    741	   career	n	52101	0.95
-    742	   despite	i	51526	0.96
-    743	   central	j	52501	0.94
-    744	   eight	m	50871	0.97
-    745	   thus	r	57039	0.87
-    746	   treatment	n	53390	0.92
-    747	   beyond	i	50742	0.97
-    748	   happy	j	51669	0.95
-    749	   exactly	r	52685	0.93
-    750	   protect	v	50649	0.97
-    751	   approach	n	53980	0.91
-    752	   lie	v	51657	0.95
-    753	   size	n	51868	0.95
-    754	   dog	n	52347	0.94
-    755	   fund	n	53859	0.91
-    756	   serious	j	50285	0.97
-    757	   occur	v	52768	0.93
-    758	   media	n	51798	0.94
-    759	   ready	j	50833	0.96
-    760	   sign	n	50045	0.98
-    761	   thought	n	51509	0.95
-    762	   list	n	50678	0.96
-    763	   individual	n	54738	0.89
-    764	   simple	j	50583	0.96
-    765	   quality	n	52224	0.93
-    766	   pressure	n	50773	0.96
-    767	   accept	v	49952	0.97
-    768	   answer	n	49969	0.97
-    769	   hard	r	50793	0.95
-    770	   resource	n	53398	0.90
-    771	   identify	v	53484	0.90
-    772	   left	j	50479	0.95
-    773	   meeting	n	49916	0.96
-    774	   determine	v	52130	0.92
-    775	   prepare	v	49208	0.98
-    776	   disease	n	51211	0.94
-    777	   whatever	d	50200	0.96
-    778	   success	n	50541	0.95
-    779	   argue	v	51013	0.94
-    780	   cup	n	53633	0.89
-    781	   particularly	r	50329	0.95
-    782	   amount	n	49944	0.95
-    783	   ability	n	51476	0.93
-    784	   staff	n	50177	0.95
-    785	   recognize	v	50042	0.95
-    786	   indicate	v	53215	0.89
-    787	   character	n	49530	0.96
-    788	   growth	n	50904	0.93
-    789	   loss	n	49759	0.95
-    790	   degree	n	50612	0.94
-    791	   wonder	v	50875	0.93
-    792	   attack	n	50898	0.93
-    793	   herself	p	52915	0.89
-    794	   region	n	50914	0.93
-    795	   television	n	49673	0.95
-    796	   box	n	49667	0.95
-    797	   TV	n	49438	0.95
-    798	   training	n	49997	0.93
-    799	   pretty	r	50385	0.93
-    800	   trade	n	49696	0.94
-    801	   deal	n	48975	0.95
-    802	   election	n	51322	0.91
-    803	   everybody	p	51147	0.91
-    804	   physical	j	51451	0.90
-    805	   lay	v	49358	0.94
-    806	   general	j	49657	0.93
-    807	   feeling	n	47349	0.98
-    808	   standard	n	49876	0.93
-    809	   bill	n	49011	0.94
-    810	   message	n	47533	0.97
-    811	   fail	v	47503	0.97
-    812	   outside	i	46628	0.98
-    813	   arrive	v	47435	0.97
-    814	   analysis	n	53840	0.85
-    815	   benefit	n	48594	0.94
-    816	   name	v	47375	0.97
-    817	   sex	n	47827	0.95
-    818	   forward	r	47877	0.95
-    819	   lawyer	n	47853	0.95
-    820	   present	v	49659	0.92
-    821	   section	n	49764	0.91
-    822	   environmental	j	51192	0.88
-    823	   glass	n	49686	0.91
-    824	   answer	v	47661	0.95
-    825	   skill	n	50431	0.90
-    826	   sister	n	48183	0.94
-    827	   PM	r	54765	0.82
-    828	   professor	n	46575	0.97
-    829	   operation	n	47276	0.95
-    830	   financial	j	47803	0.94
-    831	   crime	n	48010	0.93
-    832	   stage	n	46346	0.97
-    833	   ok	r	54697	0.82
-    834	   compare	v	48094	0.93
-    835	   authority	n	47309	0.94
-    836	   miss	v	46525	0.96
-    837	   design	n	48605	0.92
-    838	   sort	n	47086	0.95
-    839	   one	n	45596	0.98
-    840	   act	v	45648	0.98
-    841	   ten	m	46827	0.95
-    842	   knowledge	n	50335	0.88
-    843	   gun	n	47305	0.94
-    844	   station	n	46299	0.96
-    845	   blue	j	47622	0.93
-    846	   state	v	47977	0.93
-    847	   strategy	n	49126	0.90
-    848	   little	d	45469	0.97
-    849	   clearly	r	45912	0.96
-    850	   discuss	v	46852	0.94
-    851	   indeed	r	46184	0.95
-    852	   force	v	44931	0.97
-    853	   truth	n	45155	0.97
-    854	   song	n	45352	0.96
-    855	   example	n	47134	0.93
-    856	   democratic	j	47299	0.92
-    857	   check	v	45760	0.95
-    858	   environment	n	47807	0.91
-    859	   leg	n	47477	0.91
-    860	   dark	j	47565	0.91
-    861	   public	n	45684	0.95
-    862	   various	j	46777	0.92
-    863	   rather	r	44934	0.96
-    864	   laugh	v	48567	0.89
-    865	   guess	v	48046	0.90
-    866	   executive	n	47338	0.91
-    867	   set	n	45121	0.96
-    868	   study	v	44897	0.96
-    869	   prove	v	44304	0.97
-    870	   hang	v	46632	0.92
-    871	   entire	j	43997	0.98
-    872	   rock	n	45225	0.95
-    873	   design	v	45946	0.94
-    874	   enough	d	44378	0.97
-    875	   forget	v	45571	0.94
-    876	   since	i	45591	0.94
-    877	   claim	v	44259	0.97
-    878	   note	n	44720	0.96
-    879	   remove	v	44683	0.96
-    880	   manager	n	46187	0.93
-    881	   help	n	43721	0.98
-    882	   close	j	43568	0.98
-    883	   sound	v	45311	0.94
-    884	   enjoy	v	44020	0.97
-    885	   network	n	45122	0.94
-    886	   legal	j	44820	0.95
-    887	   religious	j	46425	0.91
-    888	   cold	j	44649	0.95
-    889	   form	v	44646	0.95
-    890	   final	j	43589	0.97
-    891	   main	j	43707	0.97
-    892	   science	n	45726	0.92
-    893	   green	j	44673	0.94
-    894	   memory	n	43531	0.97
-    895	   card	n	43605	0.96
-    896	   above	i	44130	0.95
-    897	   seat	n	44404	0.95
-    898	   cell	n	44831	0.94
-    899	   establish	v	45921	0.91
-    900	   nice	j	44792	0.93
-    901	   trial	n	44489	0.94
-    902	   expert	n	43898	0.95
-    903	   that	r	43359	0.96
-    904	   spring	n	44085	0.95
-    905	   firm	n	44704	0.93
-    906	   Democrat	n	46905	0.88
-    907	   radio	n	43156	0.96
-    908	   visit	v	42941	0.96
-    909	   management	n	45112	0.92
-    910	   care	v	42978	0.96
-    911	   avoid	v	42890	0.96
-    912	   imagine	v	43487	0.95
-    913	   tonight	r	47549	0.87
-    914	   huge	j	42582	0.96
-    915	   ball	n	43512	0.94
-    916	   no	u	44951	0.91
-    917	   close	r	42826	0.95
-    918	   finish	v	43143	0.95
-    919	   yourself	p	43401	0.94
-    920	   talk	n	43267	0.94
-    921	   theory	n	45553	0.90
-    922	   impact	n	43782	0.93
-    923	   respond	v	42139	0.96
-    924	   statement	n	42941	0.94
-    925	   maintain	v	43493	0.93
-    926	   charge	n	42353	0.95
-    927	   popular	j	42399	0.95
-    928	   traditional	j	43681	0.92
-    929	   onto	i	43538	0.92
-    930	   reveal	v	42605	0.94
-    931	   direction	n	41280	0.97
-    932	   weapon	n	43158	0.93
-    933	   employee	n	42824	0.93
-    934	   cultural	j	45673	0.87
-    935	   contain	v	42542	0.94
-    936	   peace	n	42273	0.94
-    937	   head	v	41658	0.95
-    938	   control	v	41771	0.95
-    939	   base	n	41154	0.96
-    940	   pain	n	41350	0.96
-    941	   apply	v	42391	0.93
-    942	   play	n	41662	0.95
-    943	   measure	n	43938	0.90
-    944	   wide	j	41233	0.96
-    945	   shake	v	45160	0.87
-    946	   fly	v	41373	0.95
-    947	   interview	n	41594	0.95
-    948	   manage	v	40536	0.97
-    949	   chair	n	43256	0.91
-    950	   fish	n	41488	0.95
-    951	   particular	j	42291	0.93
-    952	   camera	n	41218	0.95
-    953	   structure	n	43638	0.90
-    954	   politics	n	41758	0.94
-    955	   perform	v	41667	0.94
-    956	   bit	n	41915	0.93
-    957	   weight	n	41919	0.93
-    958	   suddenly	r	43382	0.90
-    959	   discover	v	40489	0.97
-    960	   candidate	n	43251	0.90
-    961	   top	j	41484	0.94
-    962	   production	n	42052	0.93
-    963	   treat	v	40264	0.97
-    964	   trip	n	40423	0.96
-    965	   evening	n	40881	0.95
-    966	   affect	v	41496	0.93
-    967	   inside	i	40856	0.95
-    968	   conference	n	40643	0.95
-    969	   unit	n	41087	0.94
-    970	   best	r	39959	0.97
-    971	   style	n	40889	0.94
-    972	   adult	n	40705	0.95
-    973	   worry	v	40210	0.96
-    974	   range	n	41326	0.93
-    975	   mention	v	39815	0.97
-    976	   rather	i	41558	0.93
-    977	   far	j	39967	0.96
-    978	   deep	j	40126	0.96
-    979	   past	n	39559	0.97
-    980	   edge	n	40960	0.94
-    981	   individual	j	42325	0.90
-    982	   specific	j	42397	0.90
-    983	   writer	n	39666	0.96
-    984	   trouble	n	39659	0.96
-    985	   necessary	j	40776	0.93
-    986	   throughout	i	40170	0.95
-    987	   challenge	n	40380	0.94
-    988	   fear	n	38857	0.98
-    989	   shoulder	n	42843	0.89
-    990	   institution	n	42153	0.90
-    991	   middle	j	40402	0.94
-    992	   sea	n	39516	0.96
-    993	   dream	n	39613	0.96
-    994	   bar	n	39853	0.95
-    995	   beautiful	j	40052	0.94
-    996	   property	n	40027	0.94
-    997	   instead	r	39051	0.97
-    998	   improve	v	40214	0.94
-    999	   stuff	n	40180	0.94
-    1000	   detail	n	38750	0.97
-    1001	   method	n	42667	0.88
-    1002	   sign	v	39418	0.95
-    1003	   somebody	p	41639	0.90
-    1004	   magazine	n	39197	0.96
-    1005	   hotel	n	39642	0.95
-    1006	   soldier	n	39552	0.95
-    1007	   reflect	v	40687	0.92
-    1008	   heavy	j	39160	0.96
-    1009	   sexual	j	41865	0.89
-    1010	   cause	n	38843	0.96
-    1011	   bag	n	40007	0.93
-    1012	   heat	n	40363	0.92
-    1013	   fall	n	38822	0.96
-    1014	   marriage	n	38517	0.96
-    1015	   tough	j	39600	0.94
-    1016	   sing	v	38575	0.96
-    1017	   surface	n	39367	0.94
-    1018	   purpose	n	40084	0.92
-    1019	   exist	v	39341	0.94
-    1020	   pattern	n	40397	0.91
-    1021	   whom	p	37950	0.97
-    1022	   skin	n	39893	0.92
-    1023	   agent	n	38265	0.96
-    1024	   owner	n	39492	0.93
-    1025	   machine	n	38407	0.96
-    1026	   gas	n	38194	0.96
-    1027	   down	i	39633	0.93
-    1028	   ahead	r	39705	0.92
-    1029	   generation	n	38323	0.96
-    1030	   commercial	j	40608	0.90
-    1031	   address	v	39774	0.92
-    1032	   cancer	n	39407	0.93
-    1033	   test	v	38644	0.95
-    1034	   item	n	40336	0.91
-    1035	   reality	n	38397	0.95
-    1036	   coach	n	40716	0.90
-    1037	   step	v	39356	0.93
-    1038	   Mrs	n	40545	0.90
-    1039	   yard	n	39253	0.93
-    1040	   beat	v	38268	0.95
-    1041	   violence	n	38474	0.94
-    1042	   total	j	38798	0.93
-    1043	   tend	v	38295	0.94
-    1044	   investment	n	38810	0.93
-    1045	   discussion	n	39616	0.91
-    1046	   finger	n	40842	0.88
-    1047	   garden	n	38800	0.93
-    1048	   notice	v	38910	0.92
-    1049	   collection	n	38431	0.93
-    1050	   modern	j	38372	0.93
-    1051	   task	n	39209	0.91
-    1052	   partner	n	37540	0.95
-    1053	   positive	j	39310	0.91
-    1054	   civil	j	37742	0.95
-    1055	   kitchen	n	39332	0.91
-    1056	   consumer	n	38079	0.94
-    1057	   shot	n	37505	0.95
-    1058	   budget	n	39165	0.91
-    1059	   wish	v	37532	0.95
-    1060	   painting	n	39264	0.91
-    1061	   scientist	n	37700	0.94
-    1062	   safe	j	36547	0.97
-    1063	   agreement	n	38141	0.93
-    1064	   capital	n	37443	0.95
-    1065	   mouth	n	40200	0.88
-    1066	   nor	c	37230	0.95
-    1067	   victim	n	36878	0.96
-    1068	   newspaper	n	37522	0.94
-    1069	   instead	i	36247	0.97
-    1070	   threat	n	37022	0.95
-    1071	   responsibility	n	37084	0.95
-    1072	   smile	v	41473	0.85
-    1073	   attorney	n	37959	0.92
-    1074	   score	n	39294	0.89
-    1075	   account	n	36786	0.95
-    1076	   interesting	j	37473	0.93
-    1077	   break	n	40348	0.86
-    1078	   audience	n	36227	0.96
-    1079	   rich	j	35940	0.97
-    1080	   dinner	n	37156	0.94
-    1081	   figure	v	36137	0.96
-    1082	   vote	n	39464	0.88
-    1083	   western	j	37389	0.93
-    1084	   relate	v	39143	0.89
-    1085	   travel	v	35746	0.97
-    1086	   debate	n	37228	0.93
-    1087	   prevent	v	36421	0.95
-    1088	   citizen	n	36408	0.95
-    1089	   majority	n	36758	0.94
-    1090	   none	p	35359	0.98
-    1091	   front	i	37363	0.92
-    1092	   born	v	35352	0.97
-    1093	   admit	v	35143	0.97
-    1094	   senior	j	36598	0.93
-    1095	   assume	v	35960	0.95
-    1096	   wind	n	36478	0.94
-    1097	   key	j	36056	0.95
-    1098	   professional	j	36319	0.93
-    1099	   mission	n	35217	0.96
-    1100	   fast	r	35474	0.95
-    1101	   alone	r	34982	0.96
-    1102	   customer	n	36000	0.94
-    1103	   suffer	v	34675	0.97
-    1104	   speech	n	35504	0.95
-    1105	   successful	j	35459	0.95
-    1106	   option	n	35434	0.95
-    1107	   participant	n	41462	0.81
-    1108	   southern	j	35314	0.95
-    1109	   fresh	j	35974	0.93
-    1110	   eventually	r	34534	0.97
-    1111	   no	p	35016	0.96
-    1112	   forest	n	35429	0.94
-    1113	   video	n	35230	0.95
-    1114	   global	j	36381	0.92
-    1115	   Senate	n	36809	0.91
-    1116	   reform	n	36103	0.92
-    1117	   access	n	35310	0.94
-    1118	   restaurant	n	35898	0.93
-    1119	   judge	n	35464	0.94
-    1120	   publish	v	35062	0.95
-    1121	   cost	v	34941	0.95
-    1122	   relation	n	36963	0.89
-    1123	   like	c	35636	0.93
-    1124	   release	v	34301	0.96
-    1125	   own	v	34577	0.95
-    1126	   bird	n	34835	0.94
-    1127	   opinion	n	34501	0.95
-    1128	   credit	n	34578	0.95
-    1129	   critical	j	35824	0.92
-    1130	   corner	n	35496	0.93
-    1131	   concerned	j	34331	0.96
-    1132	   recall	v	34442	0.95
-    1133	   version	n	34456	0.95
-    1134	   stare	v	39266	0.83
-    1135	   safety	n	34188	0.96
-    1136	   effective	j	35851	0.91
-    1137	   neighborhood	n	34691	0.94
-    1138	   original	j	34368	0.95
-    1139	   act	n	34104	0.96
-    1140	   troop	n	36001	0.91
-    1141	   income	n	34925	0.93
-    1142	   directly	r	34090	0.96
-    1143	   hurt	v	34445	0.94
-    1144	   species	n	35804	0.91
-    1145	   immediately	r	33067	0.98
-    1146	   track	n	33788	0.96
-    1147	   basic	j	34788	0.93
-    1148	   strike	v	33238	0.97
-    1149	   hope	n	33019	0.98
-    1150	   sky	n	35141	0.92
-    1151	   freedom	n	34174	0.94
-    1152	   absolutely	r	36740	0.88
-    1153	   plane	n	33900	0.95
-    1154	   nobody	p	34280	0.94
-    1155	   achieve	v	35166	0.92
-    1156	   object	n	35040	0.92
-    1157	   attitude	n	35437	0.91
-    1158	   labor	n	34400	0.93
-    1159	   refer	v	34317	0.94
-    1160	   concept	n	35944	0.89
-    1161	   client	n	34027	0.94
-    1162	   powerful	j	33151	0.97
-    1163	   perfect	j	33456	0.96
-    1164	   nine	m	32967	0.97
-    1165	   therefore	r	35842	0.89
-    1166	   conduct	v	34909	0.91
-    1167	   announce	v	33305	0.96
-    1168	   conversation	n	33046	0.96
-    1169	   examine	v	35826	0.89
-    1170	   touch	v	34737	0.92
-    1171	   please	r	34709	0.92
-    1172	   attend	v	33380	0.95
-    1173	   completely	r	32550	0.98
-    1174	   vote	v	35224	0.90
-    1175	   variety	n	34242	0.93
-    1176	   sleep	v	34801	0.91
-    1177	   turn	n	32944	0.96
-    1178	   involved	j	33428	0.95
-    1179	   investigation	n	33849	0.94
-    1180	   nuclear	j	34264	0.92
-    1181	   researcher	n	34742	0.91
-    1182	   press	n	33410	0.94
-    1183	   conflict	n	34710	0.91
-    1184	   spirit	n	32942	0.96
-    1185	   experience	v	34009	0.92
-    1186	   replace	v	32688	0.96
-    1187	   British	j	32929	0.95
-    1188	   encourage	v	33348	0.94
-    1189	   argument	n	33394	0.94
-    1190	   by	r	32560	0.96
-    1191	   once	c	32180	0.97
-    1192	   camp	n	32659	0.95
-    1193	   brain	n	32852	0.95
-    1194	   feature	n	33344	0.93
-    1195	   afternoon	n	33202	0.94
-    1196	   AM	r	34451	0.90
-    1197	   weekend	n	33239	0.93
-    1198	   dozen	m	32432	0.96
-    1199	   possibility	n	32466	0.95
-    1200	   along	r	32475	0.95
-    1201	   insurance	n	32928	0.94
-    1202	   department	n	32252	0.96
-    1203	   battle	n	31989	0.96
-    1204	   beginning	n	31866	0.97
-    1205	   date	n	31467	0.98
-    1206	   generally	r	33191	0.93
-    1207	   African	j	34557	0.89
-    1208	   very	j	31807	0.96
-    1209	   sorry	j	34270	0.89
-    1210	   crisis	n	32924	0.93
-    1211	   complete	v	32813	0.93
-    1212	   fan	n	32919	0.93
-    1213	   stick	v	32259	0.94
-    1214	   define	v	33958	0.90
-    1215	   easily	r	31755	0.96
-    1216	   through	r	31838	0.96
-    1217	   hole	n	32302	0.94
-    1218	   element	n	33053	0.92
-    1219	   vision	n	32358	0.94
-    1220	   status	n	33511	0.91
-    1221	   normal	j	31265	0.97
-    1222	   Chinese	j	32334	0.94
-    1223	   ship	n	32588	0.93
-    1224	   solution	n	32052	0.94
-    1225	   stone	n	32531	0.93
-    1226	   slowly	r	33403	0.90
-    1227	   scale	n	34375	0.88
-    1228	   bit	r	32087	0.94
-    1229	   university	n	33000	0.91
-    1230	   introduce	v	31345	0.96
-    1231	   driver	n	31633	0.95
-    1232	   attempt	n	31944	0.94
-    1233	   park	n	32322	0.93
-    1234	   spot	n	31612	0.95
-    1235	   lack	n	32157	0.93
-    1236	   ice	n	31686	0.95
-    1237	   boat	n	32079	0.93
-    1238	   drink	v	32078	0.93
-    1239	   sun	n	32646	0.92
-    1240	   front	j	32087	0.93
-    1241	   distance	n	31380	0.95
-    1242	   wood	n	31801	0.93
-    1243	   handle	v	30634	0.97
-    1244	   truck	n	31536	0.94
-    1245	   return	n	31058	0.95
-    1246	   mountain	n	31322	0.94
-    1247	   survey	n	32784	0.90
-    1248	   supposed	j	31005	0.95
-    1249	   tradition	n	32110	0.92
-    1250	   winter	n	31227	0.95
-    1251	   village	n	30741	0.96
-    1252	   Soviet	j	36193	0.82
-    1253	   refuse	v	30173	0.98
-    1254	   sales	n	32145	0.91
-    1255	   roll	v	31592	0.93
-    1256	   communication	n	31577	0.93
-    1257	   run	n	31325	0.94
-    1258	   screen	n	30758	0.95
-    1259	   gain	v	30667	0.95
-    1260	   resident	n	31836	0.92
-    1261	   hide	v	31098	0.94
-    1262	   gold	n	30733	0.95
-    1263	   club	n	30800	0.95
-    1264	   future	j	31494	0.92
-    1265	   farm	n	30291	0.96
-    1266	   potential	j	31289	0.93
-    1267	   increase	n	31247	0.93
-    1268	   middle	n	30199	0.96
-    1269	   European	j	31455	0.92
-    1270	   presence	n	30624	0.95
-    1271	   independent	j	31044	0.93
-    1272	   district	n	31327	0.92
-    1273	   shape	n	30396	0.95
-    1274	   reader	n	31442	0.92
-    1275	   Ms	n	31610	0.91
-    1276	   contract	n	30906	0.93
-    1277	   crowd	n	30542	0.94
-    1278	   Christian	j	30726	0.94
-    1279	   express	v	30947	0.93
-    1280	   apartment	n	31012	0.93
-    1281	   willing	j	29635	0.97
-    1282	   strength	n	29769	0.96
-    1283	   previous	j	30490	0.94
-    1284	   band	n	29769	0.96
-    1285	   obviously	r	31299	0.91
-    1286	   horse	n	30993	0.92
-    1287	   interested	j	29155	0.98
-    1288	   target	n	29866	0.96
-    1289	   prison	n	30248	0.94
-    1290	   ride	v	30476	0.94
-    1291	   guard	n	30159	0.94
-    1292	   terms	i	30996	0.92
-    1293	   demand	n	30519	0.93
-    1294	   reporter	n	30416	0.93
-    1295	   deliver	v	29169	0.97
-    1296	   text	n	32316	0.88
-    1297	   share	n	30752	0.92
-    1298	   tool	n	30286	0.93
-    1299	   wild	j	29473	0.96
-    1300	   vehicle	n	29421	0.96
-    1301	   observe	v	30737	0.92
-    1302	   flight	n	29535	0.95
-    1303	   inside	r	30715	0.91
-    1304	   facility	n	30107	0.93
-    1305	   understanding	n	31319	0.89
-    1306	   average	j	29717	0.94
-    1307	   emerge	v	29496	0.95
-    1308	   advantage	n	29340	0.95
-    1309	   quick	j	29108	0.96
-    1310	   light	j	29731	0.94
-    1311	   leadership	n	30047	0.93
-    1312	   earn	v	29560	0.94
-    1313	   pound	n	29946	0.93
-    1314	   basis	n	30377	0.92
-    1315	   bright	j	29780	0.93
-    1316	   operate	v	29345	0.95
-    1317	   guest	n	29328	0.95
-    1318	   sample	n	32436	0.86
-    1319	   contribute	v	30090	0.92
-    1320	   tiny	j	29756	0.93
-    1321	   block	n	28826	0.96
-    1322	   protection	n	29336	0.94
-    1323	   settle	v	28827	0.96
-    1324	   feed	v	28494	0.97
-    1325	   collect	v	28946	0.95
-    1326	   additional	j	29771	0.93
-    1327	   while	n	29579	0.93
-    1328	   highly	r	29554	0.93
-    1329	   identity	n	31163	0.88
-    1330	   title	n	29210	0.94
-    1331	   mostly	r	28178	0.97
-    1332	   lesson	n	28623	0.96
-    1333	   faith	n	28710	0.95
-    1334	   river	n	28862	0.95
-    1335	   promote	v	29679	0.92
-    1336	   living	n	28736	0.95
-    1337	   present	j	30645	0.89
-    1338	   count	v	28836	0.95
-    1339	   unless	c	27908	0.98
-    1340	   marry	v	28722	0.95
-    1341	   tomorrow	r	30098	0.91
-    1342	   technique	n	29828	0.91
-    1343	   path	n	28344	0.96
-    1344	   ear	n	29597	0.92
-    1345	   shop	n	28589	0.95
-    1346	   folk	n	28698	0.94
-    1347	   order	v	27950	0.97
-    1348	   principle	n	30011	0.90
-    1349	   survive	v	27682	0.98
-    1350	   lift	v	29354	0.92
-    1351	   border	n	28636	0.94
-    1352	   competition	n	28752	0.93
-    1353	   jump	v	28504	0.94
-    1354	   gather	v	27659	0.97
-    1355	   limit	v	28901	0.93
-    1356	   fit	v	27875	0.96
-    1357	   claim	n	28609	0.94
-    1358	   cry	v	29690	0.90
-    1359	   equipment	n	28023	0.95
-    1360	   worth	i	27687	0.97
-    1361	   associate	v	30406	0.88
-    1362	   critic	n	28244	0.94
-    1363	   warm	j	28600	0.93
-    1364	   aspect	n	29460	0.90
-    1365	   result	v	29515	0.90
-    1366	   insist	v	27205	0.97
-    1367	   failure	n	28234	0.94
-    1368	   annual	j	28471	0.93
-    1369	   French	j	27590	0.96
-    1370	   Christmas	n	28046	0.94
-    1371	   comment	n	27712	0.95
-    1372	   responsible	j	27569	0.96
-    1373	   affair	n	27432	0.96
-    1374	   approach	v	27449	0.96
-    1375	   until	i	27007	0.97
-    1376	   procedure	n	29044	0.90
-    1377	   regular	j	27244	0.96
-    1378	   spread	v	27266	0.96
-    1379	   chairman	n	28560	0.92
-    1380	   baseball	n	28551	0.92
-    1381	   soft	j	27970	0.94
-    1382	   ignore	v	27023	0.97
-    1383	   egg	n	27917	0.94
-    1384	   measure	v	28612	0.91
-    1385	   belief	n	28844	0.91
-    1386	   demonstrate	v	29170	0.90
-    1387	   anybody	p	28704	0.91
-    1388	   murder	n	28335	0.92
-    1389	   gift	n	27050	0.96
-    1390	   religion	n	28220	0.92
-    1391	   review	n	28141	0.93
-    1392	   editor	n	27734	0.94
-    1393	   past	i	28278	0.92
-    1394	   engage	v	28194	0.92
-    1395	   coffee	n	28331	0.92
-    1396	   document	n	29437	0.88
-    1397	   speed	n	27740	0.93
-    1398	   cross	v	27524	0.94
-    1399	   influence	n	28387	0.91
-    1400	   anyway	r	28170	0.92
-    1401	   threaten	v	26587	0.97
-    1402	   commit	v	26943	0.96
-    1403	   female	j	27952	0.92
-    1404	   youth	n	27755	0.93
-    1405	   wave	n	26844	0.96
-    1406	   move	n	26717	0.96
-    1407	   afraid	j	27727	0.93
-    1408	   quarter	n	27125	0.95
-    1409	   background	n	26907	0.96
-    1410	   native	j	28026	0.92
-    1411	   broad	j	27191	0.94
-    1412	   wonderful	j	27494	0.93
-    1413	   deny	v	26675	0.96
-    1414	   apparently	r	26513	0.97
-    1415	   slightly	r	26887	0.95
-    1416	   reaction	n	26771	0.96
-    1417	   twice	r	26450	0.97
-    1418	   suit	n	27066	0.95
-    1419	   perspective	n	28324	0.90
-    1420	   growing	j	26858	0.95
-    1421	   blow	v	27254	0.94
-    1422	   construction	n	27114	0.94
-    1423	   kind	r	29474	0.86
-    1424	   intelligence	n	27555	0.92
-    1425	   destroy	v	26177	0.97
-    1426	   cook	v	27725	0.91
-    1427	   connection	n	26552	0.95
-    1428	   charge	v	26432	0.96
-    1429	   burn	v	26646	0.95
-    1430	   shoe	n	26945	0.94
-    1431	   view	v	27258	0.92
-    1432	   grade	n	27178	0.92
-    1433	   context	n	29113	0.86
-    1434	   committee	n	26697	0.94
-    1435	   hey	u	27659	0.91
-    1436	   mistake	n	26080	0.96
-    1437	   focus	n	26815	0.93
-    1438	   smile	n	28698	0.87
-    1439	   location	n	26463	0.94
-    1440	   clothes	n	27033	0.92
-    1441	   Indian	j	27100	0.92
-    1442	   quiet	j	26732	0.93
-    1443	   dress	v	26669	0.93
-    1444	   promise	v	25720	0.97
-    1445	   aware	j	25503	0.97
-    1446	   neighbor	n	25497	0.97
-    1447	   complete	j	25699	0.97
-    1448	   drive	n	26373	0.94
-    1449	   function	n	28011	0.88
-    1450	   bone	n	26282	0.94
-    1451	   active	j	26507	0.93
-    1452	   extend	v	25969	0.95
-    1453	   chief	j	26456	0.93
-    1454	   average	n	26568	0.93
-    1455	   combine	v	26570	0.93
-    1456	   wine	n	26682	0.92
-    1457	   below	r	26765	0.92
-    1458	   cool	j	26279	0.94
-    1459	   voter	n	27768	0.89
-    1460	   mean	n	28991	0.85
-    1461	   demand	v	25207	0.97
-    1462	   learning	n	28869	0.85
-    1463	   bus	n	25850	0.95
-    1464	   hell	n	27278	0.90
-    1465	   dangerous	j	25170	0.97
-    1466	   remind	v	25525	0.96
-    1467	   moral	j	26980	0.91
-    1468	   United	j	26396	0.93
-    1469	   category	n	27219	0.90
-    1470	   relatively	r	26476	0.92
-    1471	   victory	n	26422	0.92
-    1472	   key	n	25436	0.96
-    1473	   academic	j	28216	0.86
-    1474	   visit	n	25000	0.97
-    1475	   Internet	n	26983	0.90
-    1476	   healthy	j	26009	0.94
-    1477	   fire	v	25390	0.96
-    1478	   negative	j	26847	0.90
-    1479	   following	j	26643	0.91
-    1480	   historical	j	27266	0.89
-    1481	   medicine	n	25511	0.95
-    1482	   tour	n	25781	0.94
-    1483	   depend	v	25405	0.95
-    1484	   photo	n	25492	0.94
-    1485	   finding	n	28246	0.85
-    1486	   grab	v	26951	0.89
-    1487	   direct	j	26008	0.92
-    1488	   classroom	n	27531	0.87
-    1489	   contact	n	25218	0.95
-    1490	   justice	n	25377	0.95
-    1491	   participate	v	26500	0.91
-    1492	   daily	j	25179	0.95
-    1493	   fair	j	25064	0.96
-    1494	   pair	n	25289	0.95
-    1495	   famous	j	24631	0.97
-    1496	   exercise	n	25934	0.92
-    1497	   knee	n	25912	0.92
-    1498	   flower	n	25642	0.93
-    1499	   tape	n	25730	0.93
-    1500	   hire	v	25073	0.95
-    1501	   familiar	j	24515	0.97
-    1502	   appropriate	j	26237	0.91
-    1503	   supply	n	24920	0.96
-    1504	   fully	r	24842	0.96
-    1505	   cut	n	25327	0.94
-    1506	   will	n	24351	0.98
-    1507	   actor	n	24848	0.96
-    1508	   birth	n	24515	0.97
-    1509	   search	n	27087	0.87
-    1510	   tie	v	24408	0.97
-    1511	   democracy	n	26039	0.91
-    1512	   eastern	j	25103	0.94
-    1513	   primary	j	26043	0.90
-    1514	   yesterday	r	26215	0.90
-    1515	   circle	n	24735	0.95
-    1516	   device	n	24918	0.94
-    1517	   progress	n	24645	0.95
-    1518	   next	i	25720	0.91
-    1519	   front	n	24402	0.96
-    1520	   bottom	n	24653	0.95
-    1521	   island	n	24311	0.96
-    1522	   exchange	n	24826	0.94
-    1523	   clean	j	24325	0.96
-    1524	   studio	n	24765	0.94
-    1525	   train	v	23990	0.97
-    1526	   lady	n	25436	0.92
-    1527	   colleague	n	24370	0.95
-    1528	   application	n	25735	0.90
-    1529	   neck	n	25716	0.90
-    1530	   lean	v	26896	0.86
-    1531	   damage	n	24155	0.96
-    1532	   plastic	n	24563	0.94
-    1533	   tall	j	25304	0.92
-    1534	   plate	n	24592	0.94
-    1535	   hate	v	24921	0.93
-    1536	   otherwise	r	23793	0.97
-    1537	   writing	n	24995	0.92
-    1538	   press	v	24716	0.93
-    1539	   male	j	24873	0.93
-    1540	   start	n	24071	0.96
-    1541	   alive	j	24184	0.95
-    1542	   expression	n	24748	0.93
-    1543	   football	n	25271	0.91
-    1544	   intend	v	23554	0.97
-    1545	   attack	v	23971	0.95
-    1546	   chicken	n	24465	0.93
-    1547	   army	n	23929	0.95
-    1548	   abuse	n	24534	0.93
-    1549	   theater	n	24447	0.93
-    1550	   shut	v	24773	0.92
-    1551	   map	n	23666	0.96
-    1552	   extra	j	24006	0.95
-    1553	   session	n	24010	0.95
-    1554	   danger	n	23244	0.97
-    1555	   welcome	v	25241	0.90
-    1556	   domestic	j	24313	0.93
-    1557	   lots	p	23750	0.95
-    1558	   literature	n	26254	0.86
-    1559	   rain	n	24134	0.93
-    1560	   desire	n	23994	0.94
-    1561	   assessment	n	26318	0.85
-    1562	   injury	n	23935	0.94
-    1563	   respect	n	23274	0.96
-    1564	   northern	j	23783	0.94
-    1565	   nod	v	27283	0.82
-    1566	   paint	v	24038	0.93
-    1567	   fuel	n	23934	0.94
-    1568	   leaf	n	24044	0.93
-    1569	   direct	v	23298	0.96
-    1570	   dry	j	23809	0.94
-    1571	   Russian	j	23739	0.94
-    1572	   instruction	n	25190	0.89
-    1573	   fight	n	23211	0.96
-    1574	   pool	n	23346	0.96
-    1575	   climb	v	24367	0.92
-    1576	   sweet	j	23843	0.94
-    1577	   lead	n	23301	0.96
-    1578	   engine	n	23617	0.94
-    1579	   fourth	m	23227	0.96
-    1580	   salt	n	24711	0.90
-    1581	   expand	v	23417	0.94
-    1582	   importance	n	24946	0.89
-    1583	   metal	n	23317	0.95
-    1584	   fat	n	24844	0.89
-    1585	   ticket	n	23902	0.92
-    1586	   software	n	23954	0.92
-    1587	   disappear	v	23389	0.94
-    1588	   corporate	j	23621	0.93
-    1589	   strange	j	23744	0.93
-    1590	   lip	n	25250	0.87
-    1591	   reading	n	23919	0.92
-    1592	   urban	j	23889	0.92
-    1593	   mental	j	23650	0.93
-    1594	   increasingly	r	23529	0.93
-    1595	   lunch	n	23220	0.94
-    1596	   educational	j	25282	0.87
-    1597	   somewhere	r	23527	0.93
-    1598	   farmer	n	23005	0.95
-    1599	   above	r	23866	0.92
-    1600	   sugar	n	24310	0.90
-    1601	   planet	n	23567	0.93
-    1602	   favorite	j	23159	0.94
-    1603	   explore	v	23744	0.92
-    1604	   obtain	v	24538	0.89
-    1605	   enemy	n	22621	0.97
-    1606	   greatest	j	22673	0.96
-    1607	   complex	j	23751	0.92
-    1608	   surround	v	22391	0.97
-    1609	   athlete	n	23868	0.91
-    1610	   invite	v	22158	0.98
-    1611	   repeat	v	22622	0.96
-    1612	   carefully	r	22837	0.95
-    1613	   soul	n	22713	0.96
-    1614	   scientific	j	23691	0.92
-    1615	   impossible	j	22233	0.98
-    1616	   panel	n	22529	0.96
-    1617	   meaning	n	24064	0.90
-    1618	   mom	n	23450	0.92
-    1619	   married	j	22352	0.97
-    1620	   alone	j	23106	0.93
-    1621	   instrument	n	23831	0.91
-    1622	   predict	v	22942	0.94
-    1623	   weather	n	22586	0.95
-    1624	   presidential	j	24057	0.89
-    1625	   emotional	j	22773	0.94
-    1626	   commitment	n	23152	0.93
-    1627	   Supreme	j	23904	0.90
-    1628	   bear	v	22190	0.97
-    1629	   pocket	n	23580	0.91
-    1630	   thin	j	23194	0.92
-    1631	   temperature	n	23111	0.93
-    1632	   surprise	n	22275	0.96
-    1633	   poll	n	24009	0.89
-    1634	   proposal	n	22830	0.94
-    1635	   consequence	n	23307	0.92
-    1636	   half	n	22029	0.97
-    1637	   breath	n	24668	0.87
-    1638	   sight	n	22878	0.93
-    1639	   cover	n	22301	0.96
-    1640	   balance	n	22243	0.96
-    1641	   adopt	v	22880	0.93
-    1642	   minority	n	23167	0.92
-    1643	   straight	r	22929	0.93
-    1644	   attempt	v	22758	0.93
-    1645	   connect	v	22100	0.96
-    1646	   works	n	22722	0.93
-    1647	   teaching	n	24387	0.87
-    1648	   belong	v	21856	0.97
-    1649	   aid	n	22642	0.93
-    1650	   advice	n	21970	0.96
-    1651	   okay	r	24243	0.87
-    1652	   photograph	n	22016	0.96
-    1653	   empty	j	23365	0.90
-    1654	   regional	j	23182	0.91
-    1655	   trail	n	23030	0.91
-    1656	   novel	n	22392	0.94
-    1657	   code	n	22015	0.95
-    1658	   somehow	r	22267	0.94
-    1659	   organize	v	22389	0.94
-    1660	   jury	n	24072	0.87
-    1661	   breast	n	22362	0.94
-    1662	   Iraqi	j	25446	0.82
-    1663	   human	n	22022	0.95
-    1664	   acknowledge	v	21983	0.95
-    1665	   theme	n	22494	0.93
-    1666	   storm	n	22562	0.93
-    1667	   union	n	22380	0.93
-    1668	   record	v	21939	0.95
-    1669	   desk	n	23455	0.89
-    1670	   fear	v	21333	0.98
-    1671	   thanks	n	23061	0.90
-    1672	   fruit	n	22401	0.93
-    1673	   under	r	21521	0.97
-    1674	   expensive	j	21706	0.96
-    1675	   yellow	j	22452	0.93
-    1676	   conclusion	n	23034	0.90
-    1677	   prime	j	22075	0.94
-    1678	   shadow	n	22803	0.91
-    1679	   struggle	v	21370	0.97
-    1680	   conclude	v	22247	0.93
-    1681	   analyst	n	22662	0.91
-    1682	   dance	n	21799	0.95
-    1683	   limit	n	21714	0.95
-    1684	   like	j	21723	0.95
-    1685	   regulation	n	22479	0.92
-    1686	   being	n	21695	0.95
-    1687	   last	v	21219	0.97
-    1688	   ring	n	21873	0.94
-    1689	   largely	r	22097	0.93
-    1690	   shift	v	21323	0.96
-    1691	   revenue	n	22445	0.92
-    1692	   mark	v	21236	0.97
-    1693	   locate	v	21843	0.94
-    1694	   county	n	22675	0.90
-    1695	   appearance	n	21146	0.97
-    1696	   package	n	21665	0.95
-    1697	   difficulty	n	22288	0.92
-    1698	   bridge	n	21497	0.95
-    1699	   recommend	v	21707	0.94
-    1700	   obvious	j	21052	0.97
-    1701	   train	n	21766	0.94
-    1702	   basically	r	23265	0.88
-    1703	   e-mail	n	22467	0.91
-    1704	   generate	v	22213	0.92
-    1705	   anymore	r	21771	0.94
-    1706	   propose	v	21691	0.94
-    1707	   thinking	n	21663	0.94
-    1708	   possibly	r	20953	0.97
-    1709	   trend	n	21894	0.93
-    1710	   visitor	n	21490	0.95
-    1711	   loan	n	22324	0.91
-    1712	   currently	r	21636	0.94
-    1713	   comfortable	j	21101	0.96
-    1714	   investor	n	22410	0.91
-    1715	   but	i	20961	0.97
-    1716	   profit	n	21754	0.93
-    1717	   angry	j	21485	0.94
-    1718	   crew	n	21238	0.95
-    1719	   deep	r	21413	0.95
-    1720	   accident	n	20964	0.97
-    1721	   male	n	22398	0.90
-    1722	   meal	n	21556	0.94
-    1723	   hearing	n	21560	0.94
-    1724	   traffic	n	21296	0.95
-    1725	   muscle	n	21931	0.92
-    1726	   notion	n	21801	0.93
-    1727	   capture	v	21018	0.96
-    1728	   prefer	v	20946	0.96
-    1729	   truly	r	20576	0.98
-    1730	   earth	n	21350	0.94
-    1731	   Japanese	j	21800	0.92
-    1732	   chest	n	22508	0.89
-    1733	   search	v	20943	0.96
-    1734	   thick	j	21932	0.92
-    1735	   cash	n	21343	0.94
-    1736	   museum	n	21715	0.93
-    1737	   beauty	n	21060	0.95
-    1738	   emergency	n	20796	0.96
-    1739	   unique	j	21436	0.93
-    1740	   feature	v	21678	0.92
-    1741	   internal	j	22025	0.91
-    1742	   ethnic	j	22632	0.88
-    1743	   link	v	21335	0.94
-    1744	   stress	n	21813	0.92
-    1745	   content	n	21821	0.91
-    1746	   select	v	21617	0.92
-    1747	   root	n	20774	0.96
-    1748	   nose	n	21938	0.91
-    1749	   declare	v	20550	0.97
-    1750	   outside	r	21556	0.92
-    1751	   appreciate	v	20806	0.95
-    1752	   actual	j	21321	0.93
-    1753	   bottle	n	21569	0.92
-    1754	   hardly	r	20757	0.95
-    1755	   setting	n	22004	0.90
-    1756	   launch	v	20767	0.95
-    1757	   dress	n	21362	0.92
-    1758	   file	n	20832	0.95
-    1759	   sick	j	20906	0.94
-    1760	   outcome	n	22721	0.87
-    1761	   ad	n	21064	0.93
-    1762	   defend	v	20510	0.96
-    1763	   matter	v	20534	0.96
-    1764	   judge	v	20320	0.97
-    1765	   duty	n	20204	0.97
-    1766	   sheet	n	20787	0.94
-    1767	   ought	v	21552	0.91
-    1768	   ensure	v	21341	0.92
-    1769	   Catholic	j	20866	0.94
-    1770	   extremely	r	20310	0.96
-    1771	   extent	n	21727	0.90
-    1772	   component	n	22085	0.88
-    1773	   mix	v	20642	0.95
-    1774	   long-term	j	20841	0.94
-    1775	   slow	j	20404	0.96
-    1776	   contrast	n	21581	0.91
-    1777	   zone	n	20472	0.95
-    1778	   wake	v	21330	0.91
-    1779	   challenge	v	20510	0.95
-    1780	   airport	n	20897	0.93
-    1781	   chief	n	20453	0.95
-    1782	   brown	j	21175	0.92
-    1783	   standard	j	20917	0.93
-    1784	   shirt	n	21486	0.90
-    1785	   pilot	n	20192	0.96
-    1786	   warn	v	19996	0.97
-    1787	   ultimately	r	20387	0.95
-    1788	   cat	n	21135	0.92
-    1789	   contribution	n	20912	0.92
-    1790	   capacity	n	21102	0.92
-    1791	   ourselves	p	19926	0.97
-    1792	   estate	n	20673	0.93
-    1793	   guide	n	20646	0.93
-    1794	   circumstance	n	20310	0.95
-    1795	   snow	n	21011	0.92
-    1796	   English	j	20235	0.95
-    1797	   politician	n	20360	0.95
-    1798	   steal	v	20296	0.95
-    1799	   pursue	v	20136	0.96
-    1800	   slip	v	21233	0.91
-    1801	   percentage	n	20774	0.92
-    1802	   meat	n	20271	0.95
-    1803	   funny	j	20399	0.94
-    1804	   neither	r	20100	0.95
-    1805	   soil	n	20916	0.91
-    1806	   influence	v	21448	0.89
-    1807	   surgery	n	20118	0.95
-    1808	   correct	j	20613	0.93
-    1809	   Jewish	j	20196	0.94
-    1810	   blame	v	19798	0.96
-    1811	   estimate	v	20474	0.93
-    1812	   due	i	21141	0.90
-    1813	   basketball	n	20955	0.91
-    1814	   late	r	19727	0.96
-    1815	   golf	n	20979	0.91
-    1816	   investigate	v	20117	0.94
-    1817	   crazy	j	20345	0.93
-    1818	   significantly	r	22038	0.86
-    1819	   chain	n	19688	0.96
-    1820	   address	n	19564	0.97
-    1821	   branch	n	19633	0.96
-    1822	   combination	n	20026	0.94
-    1823	   just	j	20096	0.94
-    1824	   frequently	r	20508	0.92
-    1825	   governor	n	20802	0.91
-    1826	   relief	n	19493	0.97
-    1827	   user	n	20681	0.91
-    1828	   dad	n	20164	0.94
-    1829	   kick	v	20092	0.94
-    1830	   part	r	19900	0.95
-    1831	   manner	n	20012	0.94
-    1832	   ancient	j	19818	0.95
-    1833	   silence	n	21169	0.89
-    1834	   rating	n	20413	0.92
-    1835	   golden	j	19852	0.95
-    1836	   motion	n	19649	0.95
-    1837	   German	j	20096	0.93
-    1838	   gender	n	22190	0.85
-    1839	   solve	v	19501	0.96
-    1840	   fee	n	20263	0.93
-    1841	   landscape	n	20171	0.93
-    1842	   used	j	19130	0.98
-    1843	   bowl	n	20662	0.91
-    1844	   equal	j	19952	0.94
-    1845	   long	c	19227	0.97
-    1846	   official	j	19628	0.95
-    1847	   forth	r	19531	0.96
-    1848	   frame	n	20016	0.93
-    1849	   typical	j	19724	0.95
-    1850	   except	i	19594	0.95
-    1851	   conservative	j	19778	0.94
-    1852	   eliminate	v	19773	0.94
-    1853	   host	n	19389	0.96
-    1854	   hall	n	20236	0.92
-    1855	   trust	v	19482	0.95
-    1856	   ocean	n	19421	0.96
-    1857	   score	v	20391	0.91
-    1858	   row	n	19519	0.95
-    1859	   producer	n	19679	0.94
-    1860	   afford	v	19035	0.97
-    1861	   meanwhile	r	19504	0.95
-    1862	   regime	n	21101	0.88
-    1863	   division	n	19772	0.94
-    1864	   confirm	v	19327	0.96
-    1865	   fix	v	19349	0.96
-    1866	   appeal	n	19561	0.95
-    1867	   mirror	n	20081	0.92
-    1868	   tooth	n	20515	0.90
-    1869	   smart	j	19370	0.95
-    1870	   length	n	19624	0.94
-    1871	   entirely	r	19075	0.97
-    1872	   rely	v	19614	0.94
-    1873	   topic	n	20640	0.89
-    1874	   complain	v	19102	0.97
-    1875	   issue	v	19300	0.95
-    1876	   variable	n	22868	0.81
-    1877	   back	v	19213	0.96
-    1878	   range	v	20067	0.92
-    1879	   telephone	n	19311	0.95
-    1880	   perception	n	21086	0.87
-    1881	   attract	v	19197	0.96
-    1882	   confidence	n	18955	0.97
-    1883	   bedroom	n	20387	0.90
-    1884	   secret	n	19125	0.96
-    1885	   debt	n	19506	0.94
-    1886	   rare	j	18978	0.97
-    1887	   his	p	19663	0.93
-    1888	   tank	n	19158	0.95
-    1889	   nurse	n	19385	0.94
-    1890	   coverage	n	19522	0.94
-    1891	   opposition	n	19847	0.92
-    1892	   aside	r	19056	0.96
-    1893	   anywhere	r	18970	0.96
-    1894	   bond	n	19856	0.92
-    1895	   file	v	19416	0.94
-    1896	   pleasure	n	19099	0.96
-    1897	   master	n	18880	0.96
-    1898	   era	n	19209	0.95
-    1899	   requirement	n	20358	0.89
-    1900	   check	n	18764	0.97
-    1901	   stand	n	18910	0.96
-    1902	   fun	n	18984	0.96
-    1903	   expectation	n	19603	0.92
-    1904	   wing	n	19028	0.95
-    1905	   separate	j	19064	0.95
-    1906	   now	c	19126	0.95
-    1907	   clear	v	19013	0.95
-    1908	   struggle	n	19014	0.95
-    1909	   mean	j	19792	0.91
-    1910	   somewhat	r	18801	0.96
-    1911	   pour	v	19300	0.93
-    1912	   stir	v	20174	0.89
-    1913	   judgment	n	19315	0.93
-    1914	   clean	v	18766	0.96
-    1915	   except	c	18857	0.95
-    1916	   beer	n	19349	0.93
-    1917	   English	n	18719	0.96
-    1918	   reference	n	19559	0.92
-    1919	   tear	n	19819	0.90
-    1920	   doubt	n	18542	0.97
-    1921	   grant	v	18598	0.96
-    1922	   seriously	r	18328	0.98
-    1923	   account	v	19403	0.92
-    1924	   minister	n	19154	0.93
-    1925	   totally	r	18720	0.95
-    1926	   hero	n	18348	0.97
-    1927	   industrial	j	19413	0.92
-    1928	   cloud	n	19214	0.92
-    1929	   stretch	v	19014	0.93
-    1930	   winner	n	19216	0.92
-    1931	   volume	n	18989	0.93
-    1932	   travel	n	18634	0.95
-    1933	   seed	n	19079	0.93
-    1934	   surprised	j	18822	0.94
-    1935	   rest	v	18915	0.94
-    1936	   fashion	n	18483	0.96
-    1937	   pepper	n	20220	0.87
-    1938	   separate	v	18251	0.97
-    1939	   busy	j	18500	0.95
-    1940	   intervention	n	21021	0.84
-    1941	   copy	n	18244	0.97
-    1942	   tip	n	18868	0.93
-    1943	   below	i	18353	0.96
-    1944	   cheap	j	18371	0.96
-    1945	   aim	v	18194	0.97
-    1946	   cite	v	19011	0.93
-    1947	   welfare	n	19580	0.90
-    1948	   vegetable	n	19363	0.91
-    1949	   gray	j	19408	0.90
-    1950	   dish	n	18887	0.93
-    1951	   beach	n	18451	0.95
-    1952	   improvement	n	18977	0.92
-    1953	   everywhere	r	18126	0.96
-    1954	   opening	n	18058	0.97
-    1955	   overall	j	19031	0.92
-    1956	   divide	v	18337	0.95
-    1957	   initial	j	19019	0.92
-    1958	   terrible	j	18659	0.93
-    1959	   oppose	v	18484	0.94
-    1960	   contemporary	j	19293	0.90
-    1961	   route	n	18313	0.95
-    1962	   multiple	j	19512	0.89
-    1963	   essential	j	19030	0.91
-    1964	   question	v	17924	0.97
-    1965	   league	n	19766	0.88
-    1966	   criminal	j	18424	0.94
-    1967	   careful	j	17885	0.97
-    1968	   core	n	18571	0.93
-    1969	   upper	j	18196	0.95
-    1970	   rush	v	18561	0.93
-    1971	   necessarily	r	18334	0.94
-    1972	   specifically	r	18873	0.92
-    1973	   tired	j	18597	0.93
-    1974	   rise	n	18055	0.96
-    1975	   tie	n	17787	0.97
-    1976	   employ	v	18912	0.91
-    1977	   holiday	n	18299	0.94
-    1978	   dance	v	18263	0.94
-    1979	   vast	j	17836	0.96
-    1980	   resolution	n	18922	0.91
-    1981	   household	n	18450	0.93
-    1982	   fewer	d	18223	0.94
-    1983	   abortion	n	18925	0.91
-    1984	   apart	r	17872	0.96
-    1985	   witness	n	18920	0.91
-    1986	   match	v	17788	0.97
-    1987	   barely	r	18533	0.93
-    1988	   sector	n	19103	0.90
-    1989	   representative	n	18189	0.94
-    1990	   lack	v	18215	0.94
-    1991	   beneath	i	19047	0.90
-    1992	   beside	i	19952	0.86
-    1993	   black	n	18441	0.93
-    1994	   incident	n	17880	0.96
-    1995	   limited	j	18532	0.92
-    1996	   proud	j	17841	0.96
-    1997	   flow	n	18469	0.92
-    1998	   faculty	n	20104	0.85
-    1999	   increased	j	18984	0.90
-    2000	   waste	n	19069	0.89
-    2001	   merely	r	18094	0.94
-    2002	   mass	n	18107	0.94
-    2003	   emphasize	v	18933	0.90
-    2004	   experiment	n	18440	0.92
-    2005	   definitely	r	18214	0.93
-    2006	   bomb	n	18284	0.93
-    2007	   enormous	j	17482	0.97
-    2008	   tone	n	17954	0.95
-    2009	   liberal	j	18228	0.93
-    2010	   massive	j	17551	0.97
-    2011	   engineer	n	17991	0.94
-    2012	   wheel	n	18296	0.93
-    2013	   female	n	18932	0.90
-    2014	   decline	v	18058	0.94
-    2015	   invest	v	18080	0.94
-    2016	   promise	n	17342	0.98
-    2017	   cable	n	18277	0.93
-    2018	   towards	i	18305	0.93
-    2019	   expose	v	17581	0.96
-    2020	   rural	j	18665	0.91
-    2021	   AIDS	n	19384	0.87
-    2022	   Jew	n	17893	0.95
-    2023	   narrow	j	17840	0.95
-    2024	   cream	n	18443	0.92
-    2025	   secretary	n	17922	0.94
-    2026	   gate	n	17999	0.94
-    2027	   solid	j	17675	0.96
-    2028	   hill	n	18131	0.93
-    2029	   typically	r	18254	0.92
-    2030	   noise	n	18024	0.93
-    2031	   grass	n	18139	0.93
-    2032	   unfortunately	r	17482	0.96
-    2033	   hat	n	18198	0.92
-    2034	   legislation	n	17934	0.94
-    2035	   succeed	v	17423	0.96
-    2036	   either	d	17257	0.97
-    2037	   celebrate	v	17421	0.96
-    2038	   achievement	n	18998	0.88
-    2039	   fishing	n	18103	0.93
-    2040	   drink	n	18227	0.92
-    2041	   accuse	v	17778	0.94
-    2042	   hand	v	18231	0.92
-    2043	   useful	j	18205	0.92
-    2044	   land	v	17401	0.96
-    2045	   secret	j	17305	0.96
-    2046	   reject	v	17656	0.94
-    2047	   talent	n	17474	0.95
-    2048	   taste	n	17409	0.96
-    2049	   characteristic	n	19621	0.85
-    2050	   milk	n	17812	0.93
-    2051	   escape	v	17195	0.97
-    2052	   cast	v	17163	0.97
-    2053	   sentence	n	17162	0.97
-    2054	   unusual	j	16997	0.97
-    2055	   closely	r	17220	0.96
-    2056	   convince	v	16948	0.98
-    2057	   height	n	17403	0.95
-    2058	   physician	n	17707	0.93
-    2059	   assess	v	19220	0.86
-    2060	   sleep	n	17882	0.92
-    2061	   plenty	p	17445	0.95
-    2062	   ride	n	17654	0.93
-    2063	   virtually	r	17426	0.94
-    2064	   first	r	17332	0.95
-    2065	   addition	i	17641	0.93
-    2066	   sharp	j	17403	0.94
-    2067	   creative	j	17597	0.93
-    2068	   lower	v	17206	0.95
-    2069	   behind	r	17347	0.95
-    2070	   approve	v	17329	0.95
-    2071	   explanation	n	17712	0.92
-    2072	   outside	j	16797	0.97
-    2073	   gay	j	17428	0.94
-    2074	   campus	n	17541	0.93
-    2075	   proper	j	17024	0.96
-    2076	   live	j	17365	0.94
-    2077	   guilty	j	17596	0.93
-    2078	   living	j	16823	0.97
-    2079	   acquire	v	17435	0.93
-    2080	   compete	v	17264	0.94
-    2081	   technical	j	17594	0.92
-    2082	   plus	i	17202	0.94
-    2083	   mind	v	17378	0.93
-    2084	   potential	n	17523	0.92
-    2085	   immigrant	n	17615	0.92
-    2086	   weak	j	16628	0.97
-    2087	   illegal	j	17258	0.94
-    2088	   hi	u	18910	0.85
-    2089	   alternative	n	17197	0.94
-    2090	   interaction	n	19144	0.84
-    2091	   column	n	16810	0.96
-    2092	   personality	n	16933	0.95
-    2093	   signal	n	16835	0.95
-    2094	   curriculum	n	19193	0.84
-    2095	   list	v	17006	0.94
-    2096	   honor	n	16686	0.96
-    2097	   passenger	n	16933	0.95
-    2098	   assistance	n	17396	0.92
-    2099	   forever	r	16890	0.95
-    2100	   fun	j	16932	0.94
-    2101	   regard	v	16890	0.94
-    2102	   Israeli	j	17967	0.89
-    2103	   association	n	17759	0.90
-    2104	   twenty	m	17491	0.91
-    2105	   knock	v	17146	0.93
-    2106	   review	v	16916	0.94
-    2107	   wrap	v	17073	0.93
-    2108	   lab	n	16498	0.96
-    2109	   offer	n	16612	0.95
-    2110	   display	v	16806	0.94
-    2111	   criticism	n	17049	0.93
-    2112	   asset	n	16977	0.93
-    2113	   depression	n	16976	0.93
-    2114	   spiritual	j	17074	0.92
-    2115	   musical	j	16931	0.93
-    2116	   journalist	n	16858	0.93
-    2117	   prayer	n	16296	0.97
-    2118	   suspect	v	16194	0.97
-    2119	   scholar	n	17482	0.90
-    2120	   warning	n	16205	0.97
-    2121	   climate	n	17189	0.91
-    2122	   cheese	n	17416	0.90
-    2123	   observation	n	17500	0.90
-    2124	   childhood	n	16268	0.96
-    2125	   payment	n	16704	0.94
-    2126	   sir	n	17733	0.88
-    2127	   permit	v	16764	0.93
-    2128	   cigarette	n	17160	0.91
-    2129	   definition	n	17499	0.89
-    2130	   priority	n	16586	0.94
-    2131	   bread	n	16686	0.94
-    2132	   creation	n	16967	0.92
-    2133	   graduate	n	16803	0.93
-    2134	   request	n	16241	0.96
-    2135	   emotion	n	16062	0.97
-    2136	   scream	v	17342	0.90
-    2137	   dramatic	j	16233	0.96
-    2138	   universe	n	16596	0.94
-    2139	   gap	n	16216	0.96
-    2140	   excellent	j	16094	0.96
-    2141	   deeply	r	15848	0.98
-    2142	   prosecutor	n	17260	0.90
-    2143	   mark	n	15973	0.97
-    2144	   green	n	16776	0.92
-    2145	   lucky	j	16550	0.94
-    2146	   drag	v	16685	0.93
-    2147	   airline	n	17164	0.90
-    2148	   library	n	16314	0.95
-    2149	   agenda	n	16449	0.94
-    2150	   recover	v	15786	0.98
-    2151	   factory	n	16240	0.95
-    2152	   selection	n	16706	0.92
-    2153	   primarily	r	17015	0.91
-    2154	   roof	n	16520	0.93
-    2155	   unable	j	15901	0.97
-    2156	   expense	n	16274	0.94
-    2157	   initiative	n	16445	0.93
-    2158	   diet	n	16933	0.90
-    2159	   arrest	v	16205	0.94
-    2160	   funding	n	16282	0.94
-    2161	   therapy	n	16351	0.93
-    2162	   wash	v	16314	0.93
-    2163	   schedule	n	15987	0.95
-    2164	   sad	j	16163	0.94
-    2165	   brief	j	15770	0.96
-    2166	   housing	n	16403	0.93
-    2167	   post	n	15693	0.97
-    2168	   purchase	v	16064	0.94
-    2169	   existing	j	16654	0.91
-    2170	   dark	n	16865	0.90
-    2171	   steel	n	15982	0.95
-    2172	   regarding	i	17220	0.88
-    2173	   shout	v	17239	0.88
-    2174	   remaining	j	15992	0.95
-    2175	   visual	j	17316	0.87
-    2176	   fairly	r	15701	0.96
-    2177	   chip	n	16162	0.94
-    2178	   violent	j	15765	0.96
-    2179	   silent	j	16802	0.90
-    2180	   suppose	v	16562	0.91
-    2181	   self	n	16708	0.90
-    2182	   bike	n	17306	0.87
-    2183	   tea	n	16373	0.92
-    2184	   perceive	v	17180	0.88
-    2185	   comparison	n	16809	0.90
-    2186	   settlement	n	16172	0.93
-    2187	   layer	n	16250	0.92
-    2188	   planning	n	16434	0.91
-    2189	   far	c	16006	0.94
-    2190	   description	n	16415	0.91
-    2191	   later	j	15734	0.95
-    2192	   slow	v	15633	0.96
-    2193	   slide	v	16805	0.89
-    2194	   widely	r	16000	0.93
-    2195	   wedding	n	15829	0.94
-    2196	   inform	v	15725	0.95
-    2197	   portion	n	15677	0.95
-    2198	   territory	n	15831	0.94
-    2199	   immediate	j	15680	0.95
-    2200	   opponent	n	15803	0.94
-    2201	   abandon	v	15323	0.97
-    2202	   link	n	15738	0.94
-    2203	   mass	j	15939	0.93
-    2204	   lake	n	15836	0.94
-    2205	   transform	v	15815	0.94
-    2206	   tension	n	15614	0.95
-    2207	   display	n	15575	0.95
-    2208	   leading	j	15665	0.95
-    2209	   bother	v	15870	0.94
-    2210	   consist	v	16648	0.89
-    2211	   alcohol	n	15877	0.93
-    2212	   enable	v	16293	0.91
-    2213	   bend	v	16285	0.91
-    2214	   saving	n	15917	0.93
-    2215	   gain	n	15822	0.94
-    2216	   desert	n	15653	0.94
-    2217	   shall	v	15997	0.92
-    2218	   error	n	15980	0.93
-    2219	   release	n	15540	0.95
-    2220	   cop	n	16228	0.91
-    2221	   Arab	j	16732	0.88
-    2222	   double	j	15233	0.97
-    2223	   walk	n	15632	0.94
-    2224	   sand	n	15658	0.94
-    2225	   Spanish	j	15512	0.95
-    2226	   rule	v	15310	0.96
-    2227	   hit	n	15766	0.93
-    2228	   print	n	15634	0.94
-    2229	   preserve	v	15527	0.95
-    2230	   passage	n	15702	0.93
-    2231	   formal	j	16078	0.91
-    2232	   transition	n	16058	0.91
-    2233	   existence	n	15969	0.92
-    2234	   album	n	15869	0.92
-    2235	   participation	n	17187	0.85
-    2236	   arrange	v	15258	0.96
-    2237	   atmosphere	n	15310	0.95
-    2238	   joint	j	15444	0.95
-    2239	   reply	v	16312	0.89
-    2240	   cycle	n	15775	0.93
-    2241	   opposite	j	15554	0.94
-    2242	   lock	v	15616	0.93
-    2243	   whole	n	15558	0.94
-    2244	   deserve	v	14944	0.97
-    2245	   consistent	j	16334	0.89
-    2246	   resistance	n	15686	0.93
-    2247	   discovery	n	15358	0.95
-    2248	   tear	v	15575	0.93
-    2249	   exposure	n	15979	0.91
-    2250	   pose	v	15230	0.95
-    2251	   stream	n	15400	0.94
-    2252	   sale	n	15351	0.94
-    2253	   trust	n	15170	0.96
-    2254	   benefit	v	15424	0.94
-    2255	   pot	n	15407	0.94
-    2256	   grand	j	15659	0.93
-    2257	   mine	p	15794	0.92
-    2258	   hello	u	16600	0.87
-    2259	   coalition	n	15720	0.92
-    2260	   tale	n	15004	0.97
-    2261	   knife	n	15792	0.92
-    2262	   resolve	v	15260	0.95
-    2263	   racial	j	15687	0.92
-    2264	   phase	n	16045	0.90
-    2265	   present	n	15267	0.95
-    2266	   joke	n	15284	0.95
-    2267	   coat	n	16010	0.90
-    2268	   Mexican	j	15514	0.93
-    2269	   symptom	n	15886	0.91
-    2270	   contact	v	15359	0.94
-    2271	   manufacturer	n	15741	0.92
-    2272	   philosophy	n	15746	0.92
-    2273	   potato	n	15561	0.93
-    2274	   interview	v	15687	0.92
-    2275	   foundation	n	15273	0.94
-    2276	   quote	v	15415	0.93
-    2277	   online	j	15848	0.91
-    2278	   pass	n	15599	0.92
-    2279	   negotiation	n	15680	0.92
-    2280	   good	n	15259	0.94
-    2281	   urge	v	14894	0.96
-    2282	   occasion	n	14792	0.97
-    2283	   dust	n	15475	0.93
-    2284	   breathe	v	15813	0.91
-    2285	   elect	v	15350	0.93
-    2286	   investigator	n	15258	0.94
-    2287	   jacket	n	15692	0.91
-    2288	   glad	j	15556	0.92
-    2289	   ordinary	j	14776	0.97
-    2290	   reduction	n	15862	0.90
-    2291	   rarely	r	14912	0.96
-    2292	   shift	n	15114	0.94
-    2293	   pack	v	15169	0.94
-    2294	   suicide	n	15145	0.94
-    2295	   numerous	j	15389	0.93
-    2296	   touch	n	14939	0.95
-    2297	   substance	n	15909	0.89
-    2298	   discipline	n	15684	0.91
-    2299	   elsewhere	r	14884	0.95
-    2300	   iron	n	15043	0.94
-    2301	   practical	j	15303	0.93
-    2302	   moreover	r	16163	0.88
-    2303	   passion	n	14632	0.97
-    2304	   volunteer	n	14958	0.95
-    2305	   implement	v	16124	0.88
-    2306	   essentially	r	15020	0.94
-    2307	   gene	n	15377	0.92
-    2308	   enforcement	n	15052	0.94
-    2309	   vs	i	16003	0.88
-    2310	   sauce	n	15903	0.88
-    2311	   independence	n	15259	0.92
-    2312	   marketing	n	15259	0.92
-    2313	   priest	n	14889	0.94
-    2314	   amazing	j	15124	0.93
-    2315	   intense	j	14452	0.97
-    2316	   advance	n	14645	0.96
-    2317	   employer	n	14846	0.94
-    2318	   shock	n	14551	0.96
-    2319	   inspire	v	14771	0.95
-    2320	   adjust	v	14564	0.96
-    2321	   retire	v	14979	0.93
-    2322	   sure	r	14854	0.94
-    2323	   visible	j	14691	0.95
-    2324	   kiss	v	16128	0.87
-    2325	   illness	n	14726	0.95
-    2326	   cap	n	14672	0.95
-    2327	   habit	n	14501	0.96
-    2328	   competitive	j	14938	0.93
-    2329	   juice	n	15388	0.90
-    2330	   congressional	j	14936	0.93
-    2331	   involvement	n	15640	0.89
-    2332	   dominate	v	14768	0.94
-    2333	   previously	r	15092	0.92
-    2334	   whenever	r	14484	0.96
-    2335	   transfer	v	14686	0.95
-    2336	   analyze	v	15587	0.89
-    2337	   another	p	14441	0.96
-    2338	   attach	v	14552	0.95
-    2339	   for	c	14594	0.95
-    2340	   Indian	n	15021	0.92
-    2341	   disaster	n	14684	0.95
-    2342	   parking	n	14970	0.93
-    2343	   prospect	n	14521	0.95
-    2344	   boss	n	14587	0.95
-    2345	   complaint	n	14551	0.95
-    2346	   championship	n	16008	0.86
-    2347	   coach	v	15910	0.87
-    2348	   exercise	v	14766	0.94
-    2349	   fundamental	j	15199	0.91
-    2350	   severe	j	14609	0.95
-    2351	   enhance	v	15393	0.90
-    2352	   mystery	n	14211	0.97
-    2353	   impose	v	14881	0.93
-    2354	   poverty	n	14891	0.93
-    2355	   other	i	14165	0.97
-    2356	   entry	n	14643	0.94
-    2357	   fat	j	14826	0.93
-    2358	   spending	n	14965	0.92
-    2359	   king	n	14445	0.95
-    2360	   evaluate	v	15780	0.87
-    2361	   symbol	n	14596	0.94
-    2362	   still	j	14308	0.96
-    2363	   trade	v	14624	0.94
-    2364	   maker	n	14586	0.94
-    2365	   mood	n	14227	0.96
-    2366	   accomplish	v	14325	0.96
-    2367	   emphasis	n	15337	0.89
-    2368	   illustrate	v	15091	0.91
-    2369	   boot	n	15033	0.91
-    2370	   monitor	v	14499	0.94
-    2371	   Asian	j	14873	0.92
-    2372	   entertainment	n	14615	0.94
-    2373	   bean	n	14996	0.91
-    2374	   evaluation	n	16213	0.84
-    2375	   creature	n	14852	0.92
-    2376	   commander	n	14425	0.94
-    2377	   digital	j	15048	0.90
-    2378	   arrangement	n	14403	0.94
-    2379	   concentrate	v	14155	0.96
-    2380	   total	n	14559	0.93
-    2381	   usual	j	14305	0.95
-    2382	   anger	n	14241	0.95
-    2383	   psychological	j	15249	0.89
-    2384	   heavily	r	13964	0.97
-    2385	   peak	n	14481	0.94
-    2386	   approximately	r	15172	0.89
-    2387	   increasing	j	14886	0.91
-    2388	   disorder	n	14780	0.92
-    2389	   missile	n	15147	0.89
-    2390	   equally	r	14389	0.94
-    2391	   vary	v	14954	0.90
-    2392	   wire	n	14310	0.95
-    2393	   round	n	14539	0.93
-    2394	   distribution	n	15249	0.89
-    2395	   transportation	n	14516	0.93
-    2396	   holy	j	14090	0.96
-    2397	   ring	v	14757	0.91
-    2398	   twin	n	14610	0.92
-    2399	   command	n	14022	0.96
-    2400	   commission	n	14371	0.94
-    2401	   interpretation	n	15613	0.86
-    2402	   breakfast	n	14397	0.93
-    2403	   stop	n	14117	0.95
-    2404	   strongly	r	14459	0.93
-    2405	   engineering	n	14853	0.90
-    2406	   luck	n	14186	0.95
-    2407	   so-called	j	14065	0.96
-    2408	   constant	j	14069	0.95
-    2409	   race	v	14233	0.94
-    2410	   clinic	n	14016	0.96
-    2411	   veteran	n	14366	0.93
-    2412	   smell	v	15214	0.88
-    2413	   tablespoon	n	15804	0.85
-    2414	   capable	j	13933	0.96
-    2415	   nervous	j	14100	0.95
-    2416	   tourist	n	13895	0.96
-    2417	   light	v	14720	0.91
-    2418	   toss	v	14565	0.92
-    2419	   crucial	j	14234	0.94
-    2420	   bury	v	14030	0.95
-    2421	   pray	v	14006	0.95
-    2422	   tomato	n	14864	0.89
-    2423	   exception	n	14136	0.94
-    2424	   butter	n	14780	0.90
-    2425	   deficit	n	15008	0.88
-    2426	   bathroom	n	14725	0.90
-    2427	   objective	n	15107	0.88
-    2428	   block	v	13688	0.97
-    2429	   electronic	j	14057	0.94
-    2430	   ally	n	14025	0.94
-    2431	   journey	n	13599	0.97
-    2432	   reputation	n	13681	0.96
-    2433	   mixture	n	14856	0.89
-    2434	   surely	r	13904	0.95
-    2435	   tower	n	13948	0.95
-    2436	   smoke	n	14327	0.92
-    2437	   confront	v	13757	0.96
-    2438	   pure	j	13671	0.96
-    2439	   glance	v	16008	0.82
-    2440	   dimension	n	14965	0.88
-    2441	   toy	n	13935	0.94
-    2442	   prisoner	n	13928	0.94
-    2443	   fellow	j	13585	0.97
-    2444	   smooth	j	14148	0.93
-    2445	   nearby	j	13820	0.95
-    2446	   peer	n	14738	0.89
-    2447	   designer	n	14210	0.92
-    2448	   personnel	n	14095	0.93
-    2449	   shape	v	13859	0.94
-    2450	   educator	n	15447	0.85
-    2451	   relative	n	13541	0.97
-    2452	   immigration	n	14526	0.90
-    2453	   belt	n	13826	0.94
-    2454	   teaspoon	n	15767	0.83
-    2455	   birthday	n	13757	0.95
-    2456	   implication	n	14791	0.88
-    2457	   perfectly	r	13671	0.95
-    2458	   coast	n	13515	0.96
-    2459	   supporter	n	13970	0.93
-    2460	   accompany	v	13666	0.95
-    2461	   silver	n	14033	0.92
-    2462	   teenager	n	13615	0.95
-    2463	   recognition	n	14249	0.91
-    2464	   retirement	n	13964	0.93
-    2465	   flag	n	13655	0.95
-    2466	   recovery	n	13703	0.95
-    2467	   whisper	v	15383	0.84
-    2468	   watch	n	13996	0.93
-    2469	   gentleman	n	14648	0.88
-    2470	   corn	n	13739	0.94
-    2471	   moon	n	13959	0.92
-    2472	   inner	j	13545	0.95
-    2473	   junior	j	13797	0.93
-    2474	   rather	c	13611	0.95
-    2475	   throat	n	14681	0.88
-    2476	   salary	n	13885	0.93
-    2477	   swing	v	14317	0.90
-    2478	   observer	n	13806	0.93
-    2479	   due	j	13252	0.97
-    2480	   straight	j	13474	0.96
-    2481	   publication	n	14045	0.92
-    2482	   pretty	j	13951	0.92
-    2483	   crop	n	13733	0.94
-    2484	   dig	v	13633	0.94
-    2485	   strike	n	13686	0.94
-    2486	   permanent	j	13390	0.96
-    2487	   plant	v	13526	0.95
-    2488	   phenomenon	n	14087	0.91
-    2489	   anxiety	n	14088	0.91
-    2490	   unlike	i	13248	0.97
-    2491	   wet	j	13963	0.92
-    2492	   literally	r	13425	0.95
-    2493	   resist	v	13330	0.96
-    2494	   convention	n	14497	0.88
-    2495	   embrace	v	13183	0.97
-    2496	   supply	v	13399	0.95
-    2497	   assist	v	13748	0.93
-    2498	   exhibition	n	13987	0.91
-    2499	   construct	v	14234	0.89
-    2500	   viewer	n	13479	0.94
-    2501	   pan	n	14148	0.90
-    2502	   consultant	n	13646	0.93
-    2503	   soon	c	13547	0.94
-    2504	   line	v	13373	0.95
-    2505	   administrator	n	14058	0.90
-    2506	   date	v	13231	0.96
-    2507	   occasionally	r	13321	0.95
-    2508	   mayor	n	13903	0.91
-    2509	   consideration	n	14047	0.90
-    2510	   CEO	n	13956	0.91
-    2511	   secure	v	13181	0.96
-    2512	   pink	j	13849	0.91
-    2513	   smoke	v	13438	0.94
-    2514	   estimate	n	13718	0.92
-    2515	   buck	n	13693	0.92
-    2516	   historic	j	13507	0.94
-    2517	   poem	n	13702	0.92
-    2518	   grandmother	n	13670	0.92
-    2519	   bind	v	13109	0.96
-    2520	   fifth	m	13150	0.96
-    2521	   constantly	r	13033	0.97
-    2522	   enterprise	n	13542	0.93
-    2523	   favor	v	13235	0.95
-    2524	   testing	n	13725	0.92
-    2525	   stomach	n	13845	0.91
-    2526	   apparent	j	13434	0.93
-    2527	   weigh	v	13051	0.96
-    2528	   install	v	13584	0.92
-    2529	   sensitive	j	13115	0.96
-    2530	   suggestion	n	13145	0.95
-    2531	   mail	n	13024	0.96
-    2532	   recipe	n	13840	0.90
-    2533	   reasonable	j	13130	0.95
-    2534	   preparation	n	13553	0.92
-    2535	   wooden	j	13518	0.92
-    2536	   elementary	j	13831	0.90
-    2537	   concert	n	13270	0.94
-    2538	   aggressive	j	13191	0.95
-    2539	   false	j	12871	0.97
-    2540	   intention	n	13207	0.94
-    2541	   channel	n	12975	0.96
-    2542	   extreme	j	13064	0.95
-    2543	   tube	n	13364	0.93
-    2544	   drawing	n	13377	0.93
-    2545	   protein	n	14036	0.89
-    2546	   quit	v	13045	0.95
-    2547	   absence	n	13597	0.92
-    2548	   roll	n	13053	0.95
-    2549	   Latin	j	13797	0.90
-    2550	   rapidly	r	13066	0.95
-    2551	   jail	n	13324	0.93
-    2552	   comment	v	12930	0.96
-    2553	   diversity	n	13872	0.89
-    2554	   honest	j	12916	0.96
-    2555	   Palestinian	j	14008	0.88
-    2556	   pace	n	12891	0.96
-    2557	   employment	n	13673	0.90
-    2558	   speaker	n	12889	0.96
-    2559	   impression	n	12746	0.97
-    2560	   essay	n	13802	0.89
-    2561	   respondent	n	15057	0.82
-    2562	   giant	j	12963	0.95
-    2563	   cake	n	13336	0.92
-    2564	   historian	n	13437	0.92
-    2565	   negotiate	v	13043	0.94
-    2566	   restore	v	12814	0.96
-    2567	   substantial	j	13376	0.92
-    2568	   pop	v	13123	0.93
-    2569	   particular	r	13259	0.92
-    2570	   specialist	n	13041	0.94
-    2571	   origin	n	13654	0.90
-    2572	   approval	n	12795	0.96
-    2573	   mine	n	12824	0.95
-    2574	   quietly	r	13503	0.91
-    2575	   advise	v	12709	0.96
-    2576	   conventional	j	13209	0.93
-    2577	   drop	n	12757	0.96
-    2578	   count	n	13007	0.94
-    2579	   depth	n	12927	0.95
-    2580	   wealth	n	12886	0.95
-    2581	   disability	n	14197	0.86
-    2582	   shell	n	12957	0.94
-    2583	   general	r	13256	0.92
-    2584	   criticize	v	12906	0.94
-    2585	   fast	j	12738	0.96
-    2586	   professional	n	13402	0.91
-    2587	   effectively	r	13277	0.92
-    2588	   biological	j	13233	0.92
-    2589	   pack	n	13238	0.92
-    2590	   onion	n	13769	0.88
-    2591	   deputy	n	12972	0.94
-    2592	   flat	j	12899	0.94
-    2593	   brand	n	13103	0.93
-    2594	   assure	v	12542	0.97
-    2595	   mad	j	12903	0.94
-    2596	   award	n	12874	0.94
-    2597	   criteria	n	14160	0.86
-    2598	   dealer	n	12999	0.93
-    2599	   via	i	13064	0.93
-    2600	   alternative	j	13289	0.91
-    2601	   utility	n	13150	0.92
-    2602	   precisely	r	12878	0.94
-    2603	   arise	v	13351	0.91
-    2604	   armed	j	12966	0.93
-    2605	   nevertheless	r	13190	0.92
-    2606	   highway	n	12649	0.96
-    2607	   clinical	j	13593	0.89
-    2608	   routine	n	12576	0.96
-    2609	   schedule	v	12881	0.94
-    2610	   wage	n	13033	0.93
-    2611	   normally	r	12402	0.97
-    2612	   phrase	n	12558	0.96
-    2613	   ingredient	n	13382	0.90
-    2614	   stake	n	12603	0.96
-    2615	   Muslim	j	13147	0.92
-    2616	   dream	v	12887	0.93
-    2617	   fiber	n	13606	0.88
-    2618	   activist	n	12737	0.94
-    2619	   Islamic	j	13323	0.90
-    2620	   snap	v	13362	0.90
-    2621	   terrorism	n	13806	0.87
-    2622	   refugee	n	13010	0.92
-    2623	   incorporate	v	13310	0.90
-    2624	   hip	n	12863	0.93
-    2625	   ultimate	j	12542	0.95
-    2626	   switch	v	12508	0.95
-    2627	   corporation	n	12612	0.95
-    2628	   valuable	j	12628	0.94
-    2629	   assumption	n	13434	0.89
-    2630	   gear	n	12872	0.93
-    2631	   graduate	v	12480	0.95
-    2632	   barrier	n	12772	0.93
-    2633	   minor	j	12346	0.96
-    2634	   provision	n	13256	0.90
-    2635	   killer	n	12631	0.94
-    2636	   assign	v	12836	0.93
-    2637	   gang	n	12662	0.94
-    2638	   developing	j	13171	0.90
-    2639	   classic	j	12610	0.94
-    2640	   chemical	n	12673	0.94
-    2641	   wave	v	13567	0.87
-    2642	   label	n	12497	0.95
-    2643	   teen	n	12663	0.94
-    2644	   index	n	12751	0.93
-    2645	   vacation	n	12424	0.95
-    2646	   advocate	n	12565	0.94
-    2647	   draft	n	12684	0.93
-    2648	   extraordinary	j	12356	0.96
-    2649	   heaven	n	12461	0.95
-    2650	   rough	j	12365	0.96
-    2651	   yell	v	13131	0.90
-    2652	   pregnant	j	12329	0.96
-    2653	   distant	j	12542	0.94
-    2654	   drama	n	12393	0.95
-    2655	   satellite	n	12438	0.94
-    2656	   personally	r	12317	0.95
-    2657	   wonder	n	12265	0.96
-    2658	   clock	n	12395	0.95
-    2659	   chocolate	n	12682	0.92
-    2660	   Italian	j	12384	0.95
-    2661	   Canadian	j	12820	0.91
-    2662	   ceiling	n	12668	0.92
-    2663	   sweep	v	12431	0.94
-    2664	   advertising	n	12601	0.93
-    2665	   universal	j	12590	0.93
-    2666	   spin	v	12673	0.92
-    2667	   house	v	12268	0.95
-    2668	   button	n	12552	0.93
-    2669	   bell	n	12421	0.94
-    2670	   rank	n	12236	0.95
-    2671	   darkness	n	13275	0.88
-    2672	   ahead	i	12125	0.96
-    2673	   clothing	n	12078	0.96
-    2674	   super	j	12586	0.92
-    2675	   yield	v	12634	0.92
-    2676	   fence	n	12390	0.94
-    2677	   portrait	n	12340	0.94
-    2678	   paint	n	12673	0.91
-    2679	   survival	n	12335	0.94
-    2680	   roughly	r	12200	0.95
-    2681	   lawsuit	n	12656	0.91
-    2682	   bottom	j	12169	0.95
-    2683	   testimony	n	12679	0.91
-    2684	   bunch	n	12225	0.95
-    2685	   beat	n	13118	0.88
-    2686	   wind	v	12054	0.96
-    2687	   found	v	12376	0.93
-    2688	   burden	n	12054	0.96
-    2689	   react	v	11874	0.97
-    2690	   chamber	n	12034	0.96
-    2691	   furniture	n	12461	0.92
-    2692	   cooperation	n	12833	0.90
-    2693	   string	n	11974	0.96
-    2694	   ceremony	n	11923	0.97
-    2695	   communicate	v	12179	0.95
-    2696	   taste	v	12397	0.93
-    2697	   cheek	n	13411	0.86
-    2698	   lost	j	11886	0.97
-    2699	   profile	n	12089	0.95
-    2700	   mechanism	n	12948	0.89
-    2701	   disagree	v	12280	0.93
-    2702	   like	r	13238	0.87
-    2703	   penalty	n	12310	0.93
-    2704	   match	n	12025	0.95
-    2705	   ie	r	13724	0.83
-    2706	   advance	v	12056	0.95
-    2707	   resort	n	12379	0.92
-    2708	   destruction	n	12356	0.92
-    2709	   bear	n	12194	0.94
-    2710	   unlikely	j	11869	0.96
-    2711	   tissue	n	12342	0.92
-    2712	   constitutional	j	12567	0.91
-    2713	   pant	n	12457	0.91
-    2714	   stranger	n	12261	0.93
-    2715	   infection	n	12402	0.92
-    2716	   cabinet	n	11846	0.96
-    2717	   broken	j	12097	0.94
-    2718	   apple	n	12172	0.93
-    2719	   electric	j	12007	0.95
-    2720	   proceed	v	11808	0.96
-    2721	   track	v	11773	0.96
-    2722	   bet	v	12079	0.94
-    2723	   literary	j	12801	0.88
-    2724	   virus	n	12106	0.93
-    2725	   stupid	j	12467	0.91
-    2726	   dispute	n	12203	0.93
-    2727	   fortune	n	11815	0.96
-    2728	   strategic	j	12347	0.92
-    2729	   assistant	n	11828	0.96
-    2730	   overcome	v	11801	0.96
-    2731	   remarkable	j	11683	0.96
-    2732	   occupy	v	11756	0.96
-    2733	   statistics	n	12086	0.93
-    2734	   shopping	n	11957	0.94
-    2735	   cousin	n	12155	0.93
-    2736	   encounter	v	11974	0.94
-    2737	   wipe	v	12435	0.91
-    2738	   initially	r	12022	0.94
-    2739	   blind	j	12005	0.94
-    2740	   white	n	11815	0.95
-    2741	   port	n	11893	0.95
-    2742	   honor	v	11653	0.96
-    2743	   electricity	n	11954	0.94
-    2744	   genetic	j	12069	0.93
-    2745	   adviser	n	12112	0.93
-    2746	   pay	n	11883	0.94
-    2747	   spokesman	n	12689	0.88
-    2748	   retain	v	12041	0.93
-    2749	   latter	d	12527	0.89
-    2750	   incentive	n	12105	0.92
-    2751	   slave	n	11863	0.94
-    2752	   chemical	j	12006	0.93
-    2753	   translate	v	11722	0.95
-    2754	   accurate	j	11842	0.94
-    2755	   whereas	c	12668	0.88
-    2756	   terror	n	12342	0.90
-    2757	   though	r	12073	0.92
-    2758	   expansion	n	12054	0.92
-    2759	   elite	n	12329	0.90
-    2760	   Olympic	j	13072	0.85
-    2761	   dirt	n	12063	0.92
-    2762	   odd	j	11849	0.94
-    2763	   rice	n	11944	0.93
-    2764	   bullet	n	11706	0.95
-    2765	   tight	j	11641	0.95
-    2766	   Bible	n	11539	0.96
-    2767	   chart	n	11861	0.93
-    2768	   solar	j	12121	0.91
-    2769	   decline	n	11956	0.92
-    2770	   conservative	n	11941	0.92
-    2771	   process	v	11940	0.92
-    2772	   square	j	11630	0.95
-    2773	   stick	n	11795	0.94
-    2774	   concentration	n	12146	0.91
-    2775	   complicated	j	11306	0.98
-    2776	   gently	r	12233	0.90
-    2777	   champion	n	12247	0.90
-    2778	   scenario	n	11747	0.94
-    2779	   telescope	n	12754	0.86
-    2780	   reflection	n	11882	0.93
-    2781	   revolution	n	11800	0.93
-    2782	   strip	n	11543	0.95
-    2783	   interpret	v	12321	0.89
-    2784	   friendly	j	11360	0.97
-    2785	   tournament	n	12684	0.87
-    2786	   fiction	n	11701	0.94
-    2787	   detect	v	11776	0.93
-    2788	   balance	v	11536	0.95
-    2789	   likely	r	11551	0.95
-    2790	   tremendous	j	11678	0.94
-    2791	   lifetime	n	11293	0.97
-    2792	   recommendation	n	11824	0.93
-    2793	   flow	v	11365	0.96
-    2794	   senator	n	12091	0.91
-    2795	   market	v	11650	0.94
-    2796	   hunting	n	12100	0.90
-    2797	   salad	n	12103	0.90
-    2798	   guarantee	v	11430	0.96
-    2799	   innocent	j	11530	0.95
-    2800	   boundary	n	12082	0.90
-    2801	   pause	v	12583	0.87
-    2802	   remote	j	11346	0.96
-    2803	   satisfaction	n	12237	0.89
-    2804	   journal	n	11849	0.92
-    2805	   bench	n	11666	0.93
-    2806	   lover	n	11499	0.95
-    2807	   raw	j	11310	0.96
-    2808	   awareness	n	12013	0.91
-    2809	   surprising	j	11327	0.96
-    2810	   withdraw	v	11352	0.96
-    2811	   general	n	11344	0.96
-    2812	   deck	n	11830	0.92
-    2813	   similarly	r	12180	0.89
-    2814	   newly	r	11388	0.95
-    2815	   pole	n	11446	0.95
-    2816	   testify	v	11843	0.91
-    2817	   mode	n	12107	0.89
-    2818	   dialogue	n	11706	0.92
-    2819	   imply	v	12061	0.90
-    2820	   naturally	r	11304	0.96
-    2821	   mutual	j	11566	0.93
-    2822	   founder	n	11570	0.93
-    2823	   top	i	11397	0.95
-    2824	   advanced	j	11626	0.93
-    2825	   pride	n	11107	0.97
-    2826	   dismiss	v	11160	0.97
-    2827	   aircraft	n	11591	0.93
-    2828	   delivery	n	11323	0.95
-    2829	   mainly	r	11367	0.95
-    2830	   bake	v	12253	0.88
-    2831	   freeze	v	11596	0.93
-    2832	   platform	n	11209	0.96
-    2833	   finance	n	11501	0.94
-    2834	   sink	v	11592	0.93
-    2835	   attractive	j	11119	0.97
-    2836	   respect	v	11083	0.97
-    2837	   diverse	j	12015	0.89
-    2838	   relevant	j	12212	0.88
-    2839	   ideal	j	11609	0.92
-    2840	   joy	n	11171	0.96
-    2841	   worth	n	11237	0.95
-    2842	   regularly	r	11329	0.95
-    2843	   working	j	11200	0.96
-    2844	   singer	n	11277	0.95
-    2845	   evolve	v	11442	0.93
-    2846	   shooting	n	11633	0.92
-    2847	   partly	r	11132	0.96
-    2848	   unknown	j	11095	0.96
-    2849	   assistant	j	11391	0.94
-    2850	   offense	n	11680	0.91
-    2851	   counter	n	11676	0.91
-    2852	   DNA	n	11580	0.92
-    2853	   smell	n	12123	0.88
-    2854	   potentially	r	11387	0.94
-    2855	   transfer	n	11830	0.90
-    2856	   thirty	m	11637	0.92
-    2857	   justify	v	11409	0.93
-    2858	   protest	n	11181	0.95
-    2859	   crash	n	11250	0.94
-    2860	   craft	n	11559	0.92
-    2861	   treaty	n	11689	0.91
-    2862	   terrorist	n	12169	0.87
-    2863	   insight	n	11591	0.92
-    2864	   possess	v	11474	0.93
-    2865	   politically	r	11324	0.94
-    2866	   tap	v	11279	0.94
-    2867	   lie	n	11199	0.95
-    2868	   extensive	j	11580	0.92
-    2869	   episode	n	11070	0.96
-    2870	   double	v	11195	0.95
-    2871	   swim	v	11342	0.93
-    2872	   tire	v	11494	0.92
-    2873	   fault	n	11116	0.95
-    2874	   loose	j	11299	0.94
-    2875	   free	v	10898	0.97
-    2876	   shortly	r	10864	0.97
-    2877	   originally	r	10995	0.96
-    2878	   considerable	j	11544	0.91
-    2879	   prior	i	11746	0.90
-    2880	   intellectual	j	11842	0.89
-    2881	   mix	n	11247	0.94
-    2882	   assault	n	11039	0.95
-    2883	   relax	v	11202	0.94
-    2884	   stair	n	12171	0.86
-    2885	   adventure	n	11031	0.95
-    2886	   external	j	12260	0.86
-    2887	   proof	n	10775	0.97
-    2888	   confident	j	10831	0.97
-    2889	   headquarters	n	11135	0.94
-    2890	   sudden	j	11370	0.92
-    2891	   dirty	j	11112	0.94
-    2892	   violation	n	11154	0.94
-    2893	   tongue	n	11674	0.89
-    2894	   license	n	10943	0.95
-    2895	   hold	n	10984	0.95
-    2896	   shelter	n	10891	0.96
-    2897	   rub	v	11695	0.89
-    2898	   controversy	n	11054	0.94
-    2899	   entrance	n	11121	0.94
-    2900	   favorite	n	11134	0.94
-    2901	   practice	v	10858	0.96
-    2902	   properly	r	10783	0.97
-    2903	   fade	v	11373	0.92
-    2904	   defensive	j	11442	0.91
-    2905	   tragedy	n	11039	0.94
-    2906	   net	n	10918	0.95
-    2907	   characterize	v	11799	0.88
-    2908	   funeral	n	11086	0.94
-    2909	   profession	n	11469	0.91
-    2910	   alter	v	11106	0.94
-    2911	   spot	v	11143	0.93
-    2912	   constitute	v	11945	0.87
-    2913	   establishment	n	11355	0.91
-    2914	   squeeze	v	11280	0.92
-    2915	   imagination	n	10913	0.95
-    2916	   target	v	10960	0.95
-    2917	   mask	n	11196	0.93
-    2918	   convert	v	10990	0.94
-    2919	   comprehensive	j	11602	0.89
-    2920	   prominent	j	10948	0.95
-    2921	   presentation	n	11372	0.91
-    2922	   regardless	r	11042	0.94
-    2923	   easy	r	10790	0.96
-    2924	   load	v	10736	0.96
-    2925	   stable	j	10964	0.94
-    2926	   introduction	n	11483	0.90
-    2927	   appeal	v	10745	0.96
-    2928	   pretend	v	11330	0.91
-    2929	   not	c	11295	0.91
-    2930	   elderly	j	10976	0.94
-    2931	   representation	n	12063	0.85
-    2932	   deer	n	11665	0.88
-    2933	   split	v	10593	0.97
-    2934	   violate	v	10822	0.95
-    2935	   partnership	n	11115	0.92
-    2936	   pollution	n	11396	0.90
-    2937	   emission	n	11688	0.88
-    2938	   steady	j	10715	0.96
-    2939	   vital	j	10866	0.94
-    2940	   neither	d	10587	0.97
-    2941	   fate	n	10521	0.97
-    2942	   earnings	n	11324	0.90
-    2943	   oven	n	11454	0.89
-    2944	   distinction	n	11383	0.90
-    2945	   segment	n	10850	0.94
-    2946	   nowhere	r	10658	0.96
-    2947	   poet	n	10840	0.94
-    2948	   mere	j	10778	0.95
-    2949	   exciting	j	10595	0.96
-    2950	   variation	n	11403	0.89
-    2951	   comfort	n	10674	0.95
-    2952	   radical	j	10924	0.93
-    2953	   stress	v	10951	0.93
-    2954	   adapt	v	10987	0.93
-    2955	   Irish	j	10833	0.94
-    2956	   honey	n	11009	0.92
-    2957	   correspondent	n	12008	0.85
-    2958	   pale	j	11598	0.88
-    2959	   musician	n	10580	0.96
-    2960	   significance	n	11520	0.88
-    2961	   load	n	10869	0.93
-    2962	   round	j	10771	0.94
-    2963	   vessel	n	10920	0.93
-    2964	   storage	n	10893	0.93
-    2965	   flee	v	10508	0.96
-    2966	   mm-hmm	u	13755	0.73
-    2967	   leather	n	11155	0.91
-    2968	   distribute	v	10747	0.94
-    2969	   evolution	n	11066	0.91
-    2970	   ill	j	10446	0.97
-    2971	   tribe	n	10855	0.93
-    2972	   shelf	n	10741	0.94
-    2973	   can	n	10718	0.94
-    2974	   grandfather	n	11003	0.91
-    2975	   lawn	n	10815	0.93
-    2976	   buyer	n	10953	0.92
-    2977	   dining	n	10843	0.92
-    2978	   wisdom	n	10561	0.95
-    2979	   council	n	10695	0.94
-    2980	   vulnerable	j	10397	0.96
-    2981	   instance	n	10885	0.92
-    2982	   garlic	n	11449	0.87
-    2983	   capability	n	10906	0.92
-    2984	   poetry	n	10671	0.94
-    2985	   celebrity	n	10756	0.93
-    2986	   gradually	r	10537	0.95
-    2987	   stability	n	10901	0.91
-    2988	   doubt	v	10352	0.96
-    2989	   fantasy	n	10448	0.95
-    2990	   scared	j	10752	0.93
-    2991	   guide	v	10524	0.94
-    2992	   plot	n	10484	0.95
-    2993	   framework	n	11710	0.85
-    2994	   gesture	n	10739	0.92
-    2995	   depending	i	10461	0.95
-    2996	   ongoing	j	10721	0.92
-    2997	   psychology	n	11316	0.88
-    2998	   since	r	10334	0.96
-    2999	   counselor	n	12170	0.81
-    3000	   witness	v	10178	0.97
-    3001	   chapter	n	10579	0.94
-    3002	   fellow	n	10339	0.96
-    3003	   divorce	n	10322	0.96
-    3004	   owe	v	10141	0.97
-    3005	   pipe	n	10432	0.95
-    3006	   athletic	j	10803	0.91
-    3007	   slight	j	10500	0.94
-    3008	   math	n	10430	0.94
-    3009	   shade	n	10677	0.92
-    3010	   tail	n	10663	0.92
-    3011	   sustain	v	10550	0.93
-    3012	   mount	v	10303	0.96
-    3013	   obligation	n	10538	0.93
-    3014	   angle	n	10456	0.94
-    3015	   palm	n	11014	0.89
-    3016	   differ	v	11222	0.88
-    3017	   custom	n	10408	0.94
-    3018	   store	v	10446	0.94
-    3019	   economist	n	10625	0.92
-    3020	   fifteen	m	10739	0.91
-    3021	   soup	n	10571	0.93
-    3022	   celebration	n	10209	0.96
-    3023	   efficient	j	10452	0.94
-    3024	   damage	v	10163	0.96
-    3025	   composition	n	10961	0.89
-    3026	   satisfy	v	10194	0.96
-    3027	   pile	n	10594	0.92
-    3028	   briefly	r	10125	0.97
-    3029	   carbon	n	10799	0.90
-    3030	   closer	j	9976	0.98
-    3031	   consume	v	10308	0.95
-    3032	   scheme	n	10428	0.93
-    3033	   crack	n	10330	0.94
-    3034	   frequency	n	11284	0.86
-    3035	   tobacco	n	10600	0.92
-    3036	   survivor	n	10317	0.94
-    3037	   besides	r	10537	0.92
-    3038	   in	c	9996	0.97
-    3039	   psychologist	n	10698	0.91
-    3040	   wealthy	j	10054	0.96
-    3041	   galaxy	n	11159	0.87
-    3042	   given	j	10622	0.91
-    3043	   fund	v	10218	0.95
-    3044	   ski	n	11656	0.83
-    3045	   limitation	n	11038	0.88
-    3046	   OK	j	10733	0.90
-    3047	   trace	v	10033	0.96
-    3048	   appointment	n	9993	0.97
-    3049	   preference	n	10833	0.89
-    3050	   meter	n	10246	0.94
-    3051	   explosion	n	10148	0.95
-    3052	   arrest	n	10250	0.94
-    3053	   publicly	r	10169	0.95
-    3054	   incredible	j	10342	0.93
-    3055	   fighter	n	10306	0.94
-    3056	   rapid	j	10427	0.92
-    3057	   admission	n	10356	0.93
-    3058	   hunter	n	10839	0.89
-    3059	   educate	v	10171	0.95
-    3060	   painful	j	9896	0.97
-    3061	   friendship	n	10130	0.95
-    3062	   aide	n	10335	0.93
-    3063	   infant	n	10205	0.94
-    3064	   calculate	v	10485	0.92
-    3065	   fifty	m	10524	0.91
-    3066	   rid	v	10104	0.95
-    3067	   porch	n	10894	0.88
-    3068	   tendency	n	10642	0.90
-    3069	   uniform	n	10193	0.94
-    3070	   formation	n	10553	0.91
-    3071	   scholarship	n	10305	0.93
-    3072	   reservation	n	10215	0.94
-    3073	   efficiency	n	10579	0.91
-    3074	   waste	v	9956	0.96
-    3075	   qualify	v	10090	0.95
-    3076	   mall	n	10189	0.94
-    3077	   derive	v	10913	0.87
-    3078	   scandal	n	10403	0.92
-    3079	   PC	n	11072	0.86
-    3080	   helpful	j	10120	0.94
-    3081	   impress	v	9896	0.96
-    3082	   heel	n	10288	0.93
-    3083	   resemble	v	10050	0.95
-    3084	   privacy	n	9956	0.96
-    3085	   fabric	n	10320	0.92
-    3086	   surprise	v	10023	0.95
-    3087	   contest	n	10002	0.95
-    3088	   proportion	n	10521	0.90
-    3089	   guideline	n	10303	0.92
-    3090	   rifle	n	10204	0.93
-    3091	   maintenance	n	10167	0.93
-    3092	   conviction	n	9834	0.96
-    3093	   trick	n	10041	0.94
-    3094	   organic	j	10572	0.89
-    3095	   tent	n	10110	0.94
-    3096	   examination	n	10722	0.88
-    3097	   publisher	n	10282	0.92
-    3098	   strengthen	v	10159	0.93
-    3099	   French	n	9845	0.96
-    3100	   proposed	j	10288	0.92
-    3101	   myth	n	10161	0.93
-    3102	   sophisticated	j	9886	0.95
-    3103	   cow	n	10032	0.94
-    3104	   etc	r	10112	0.93
-    3105	   standing	n	9691	0.97
-    3106	   asleep	j	10684	0.88
-    3107	   tennis	n	9985	0.94
-    3108	   nerve	n	9933	0.94
-    3109	   barrel	n	9951	0.94
-    3110	   bombing	n	10462	0.90
-    3111	   membership	n	10273	0.91
-    3112	   ratio	n	10457	0.90
-    3113	   menu	n	10238	0.91
-    3114	   purchase	n	10001	0.94
-    3115	   controversial	j	9918	0.94
-    3116	   desperate	j	9795	0.96
-    3117	   rate	v	10244	0.91
-    3118	   lifestyle	n	9904	0.94
-    3119	   humor	n	9654	0.97
-    3120	   loud	j	10324	0.90
-    3121	   glove	n	10218	0.91
-    3122	   suspect	n	10204	0.91
-    3123	   sufficient	j	10275	0.91
-    3124	   narrative	n	10954	0.85
-    3125	   photographer	n	9739	0.96
-    3126	   helicopter	n	9986	0.93
-    3127	   Catholic	n	9955	0.94
-    3128	   modest	j	9746	0.96
-    3129	   provider	n	10196	0.91
-    3130	   delay	n	9868	0.94
-    3131	   agricultural	j	10535	0.88
-    3132	   explode	v	9821	0.95
-    3133	   stroke	n	9891	0.94
-    3134	   scope	n	10115	0.92
-    3135	   punishment	n	9986	0.93
-    3136	   handful	n	9735	0.95
-    3137	   badly	r	9652	0.96
-    3138	   horizon	n	9857	0.94
-    3139	   curious	j	9738	0.95
-    3140	   downtown	j	10172	0.91
-    3141	   girlfriend	n	9832	0.94
-    3142	   prompt	v	9741	0.95
-    3143	   request	v	9619	0.96
-    3144	   cholesterol	n	10641	0.87
-    3145	   absorb	v	9762	0.95
-    3146	   adjustment	n	10309	0.90
-    3147	   taxpayer	n	10113	0.91
-    3148	   eager	j	9627	0.96
-    3149	   principal	n	9920	0.93
-    3150	   detailed	j	10006	0.92
-    3151	   motivation	n	10566	0.87
-    3152	   assignment	n	9874	0.93
-    3153	   restriction	n	9928	0.93
-    3154	   across	r	9825	0.94
-    3155	   Palestinian	n	10484	0.88
-    3156	   laboratory	n	9972	0.92
-    3157	   workshop	n	9926	0.93
-    3158	   differently	r	9565	0.96
-    3159	   auto	n	10006	0.92
-    3160	   romantic	j	9561	0.96
-    3161	   cotton	n	9734	0.94
-    3162	   motor	n	9977	0.92
-    3163	   sue	v	9797	0.94
-    3164	   flavor	n	10143	0.91
-    3165	   overlook	v	9553	0.96
-    3166	   float	v	9982	0.92
-    3167	   undergo	v	9826	0.93
-    3168	   sequence	n	10041	0.91
-    3169	   demonstration	n	9729	0.94
-    3170	   jet	n	9690	0.95
-    3171	   orange	j	9755	0.94
-    3172	   consumption	n	10162	0.90
-    3173	   assert	v	10125	0.90
-    3174	   blade	n	10394	0.88
-    3175	   temporary	j	9465	0.96
-    3176	   medication	n	9789	0.93
-    3177	   print	v	9508	0.96
-    3178	   cabin	n	9955	0.92
-    3179	   bite	v	9982	0.91
-    3180	   relative	j	10283	0.89
-    3181	   edition	n	9638	0.95
-    3182	   valley	n	9708	0.94
-    3183	   yours	p	10004	0.91
-    3184	   pitch	n	9586	0.95
-    3185	   pine	n	9824	0.93
-    3186	   brilliant	j	9493	0.96
-    3187	   versus	i	10007	0.91
-    3188	   manufacturing	n	9822	0.92
-    3189	   risk	v	9285	0.98
-    3190	   Christian	n	9751	0.93
-    3191	   complex	n	9573	0.95
-    3192	   absolute	j	9622	0.94
-    3193	   chef	n	10131	0.89
-    3194	   discrimination	n	9872	0.92
-    3195	   offensive	j	9902	0.91
-    3196	   German	n	9586	0.94
-    3197	   suit	v	9477	0.95
-    3198	   boom	n	9457	0.96
-    3199	   register	v	9389	0.96
-    3200	   appoint	v	9541	0.95
-    3201	   heritage	n	9670	0.93
-    3202	   God	n	9694	0.93
-    3203	   terrorist	j	10390	0.87
-    3204	   dominant	j	10143	0.89
-    3205	   successfully	r	9728	0.93
-    3206	   shit	n	11047	0.82
-    3207	   lemon	n	10095	0.89
-    3208	   hungry	j	9653	0.93
-    3209	   sense	v	9697	0.93
-    3210	   dry	v	9678	0.93
-    3211	   wander	v	9822	0.92
-    3212	   submit	v	9507	0.95
-    3213	   economics	n	9758	0.92
-    3214	   naked	j	9897	0.91
-    3215	   anticipate	v	9345	0.96
-    3216	   nut	n	9605	0.94
-    3217	   legacy	n	9461	0.95
-    3218	   extension	n	9672	0.93
-    3219	   shrug	v	10689	0.84
-    3220	   fly	n	9689	0.93
-    3221	   battery	n	9793	0.92
-    3222	   arrival	n	9302	0.97
-    3223	   legitimate	j	9543	0.94
-    3224	   orientation	n	10613	0.85
-    3225	   inflation	n	9758	0.92
-    3226	   cope	v	9952	0.90
-    3227	   flame	n	9716	0.92
-    3228	   cluster	n	9821	0.91
-    3229	   host	v	9750	0.92
-    3230	   wound	n	9404	0.95
-    3231	   dependent	j	10029	0.89
-    3232	   shower	n	9624	0.93
-    3233	   institutional	j	10397	0.86
-    3234	   depict	v	9721	0.92
-    3235	   operating	n	9480	0.94
-    3236	   flesh	n	9867	0.90
-    3237	   garage	n	9573	0.93
-    3238	   operator	n	9351	0.95
-    3239	   instructor	n	9912	0.90
-    3240	   collapse	v	9163	0.97
-    3241	   borrow	v	9150	0.97
-    3242	   furthermore	r	10349	0.86
-    3243	   comedy	n	9596	0.93
-    3244	   mortgage	n	10022	0.89
-    3245	   sanction	n	10163	0.87
-    3246	   civilian	j	9684	0.92
-    3247	   twelve	m	9638	0.92
-    3248	   weekly	j	9297	0.95
-    3249	   habitat	n	9665	0.92
-    3250	   grain	n	9520	0.93
-    3251	   brush	v	9806	0.90
-    3252	   consciousness	n	9758	0.91
-    3253	   devote	v	9326	0.95
-    3254	   crack	v	9334	0.94
-    3255	   measurement	n	10187	0.87
-    3256	   province	n	9491	0.93
-    3257	   ease	v	9247	0.95
-    3258	   seize	v	9106	0.97
-    3259	   ethics	n	9561	0.92
-    3260	   nomination	n	9698	0.91
-    3261	   permission	n	9298	0.95
-    3262	   wise	j	9101	0.97
-    3263	   actress	n	9448	0.93
-    3264	   summit	n	9628	0.91
-    3265	   acid	n	9772	0.90
-    3266	   odds	n	9094	0.96
-    3267	   gifted	j	10941	0.80
-    3268	   frustration	n	9005	0.97
-    3269	   medium	n	9523	0.92
-    3270	   function	v	9570	0.91
-    3271	   physically	r	9039	0.97
-    3272	   grant	n	9372	0.93
-    3273	   distinguish	v	9664	0.90
-    3274	   shore	n	9191	0.95
-    3275	   repeatedly	r	9059	0.96
-    3276	   lung	n	9206	0.95
-    3277	   firm	j	9036	0.97
-    3278	   running	j	9271	0.94
-    3279	   correct	v	8988	0.97
-    3280	   distinct	j	9682	0.90
-    3281	   artistic	j	9423	0.93
-    3282	   discourse	n	10560	0.83
-    3283	   basket	n	9316	0.94
-    3284	   ah	u	9788	0.89
-    3285	   fighting	n	9274	0.94
-    3286	   impressive	j	9100	0.95
-    3287	   competitor	n	9377	0.93
-    3288	   ugly	j	9267	0.94
-    3289	   worried	j	9215	0.94
-    3290	   portray	v	9202	0.94
-    3291	   powder	n	9639	0.90
-    3292	   ghost	n	9564	0.91
-    3293	   persuade	v	8998	0.96
-    3294	   moderate	j	9220	0.94
-    3295	   subsequent	j	9796	0.89
-    3296	   continued	j	9402	0.92
-    3297	   cookie	n	9480	0.91
-    3298	   carrier	n	9251	0.94
-    3299	   cooking	n	9403	0.92
-    3300	   frequent	j	9267	0.93
-    3301	   ban	v	9226	0.94
-    3302	   swing	n	9214	0.94
-    3303	   orange	n	9219	0.94
-    3304	   awful	j	9300	0.93
-    3305	   admire	v	9016	0.96
-    3306	   pet	n	9118	0.95
-    3307	   miracle	n	8981	0.96
-    3308	   exceed	v	9362	0.92
-    3309	   rhythm	n	9010	0.96
-    3310	   widespread	j	9319	0.93
-    3311	   killing	n	9109	0.95
-    3312	   lovely	j	9327	0.92
-    3313	   sin	n	9048	0.95
-    3314	   charity	n	9054	0.95
-    3315	   script	n	8924	0.96
-    3316	   tactic	n	8993	0.96
-    3317	   identification	n	9793	0.88
-    3318	   transformation	n	9561	0.90
-    3319	   everyday	j	9065	0.95
-    3320	   headline	n	9272	0.92
-    3321	   crash	v	9101	0.94
-    3322	   venture	n	9278	0.92
-    3323	   invasion	n	9412	0.91
-    3324	   military	n	9288	0.92
-    3325	   nonetheless	r	9168	0.93
-    3326	   adequate	j	9406	0.91
-    3327	   piano	n	8968	0.95
-    3328	   grocery	n	9017	0.95
-    3329	   intensity	n	9238	0.92
-    3330	   exhibit	v	9459	0.90
-    3331	   high	r	8771	0.97
-    3332	   blanket	n	9385	0.91
-    3333	   margin	n	8994	0.95
-    3334	   principal	j	9218	0.92
-    3335	   quarterback	n	10014	0.85
-    3336	   mouse	n	9449	0.90
-    3337	   rope	n	9300	0.91
-    3338	   concrete	j	8871	0.96
-    3339	   prescription	n	9169	0.93
-    3340	   African-American	j	9121	0.93
-    3341	   chase	v	8980	0.95
-    3342	   document	v	9274	0.91
-    3343	   brick	n	9069	0.93
-    3344	   recruit	v	9028	0.94
-    3345	   patch	n	9155	0.93
-    3346	   consensus	n	9250	0.92
-    3347	   horror	n	8875	0.95
-    3348	   recording	n	8866	0.95
-    3349	   changing	j	9055	0.93
-    3350	   painter	n	9153	0.92
-    3351	   colonial	j	9628	0.88
-    3352	   pie	n	9019	0.94
-    3353	   sake	n	8954	0.94
-    3354	   gaze	n	9852	0.86
-    3355	   courage	n	8720	0.97
-    3356	   pregnancy	n	8944	0.94
-    3357	   swear	v	9181	0.92
-    3358	   defeat	v	8945	0.94
-    3359	   clue	n	8732	0.97
-    3360	   reinforce	v	9345	0.90
-    3361	   win	n	9584	0.88
-    3362	   confusion	n	8751	0.96
-    3363	   slice	n	9337	0.90
-    3364	   occupation	n	9115	0.92
-    3365	   dear	j	9151	0.92
-    3366	   coal	n	8928	0.94
-    3367	   sacred	j	9018	0.93
-    3368	   criminal	n	8854	0.95
-    3369	   formula	n	8965	0.94
-    3370	   cognitive	j	10166	0.83
-    3371	   collective	j	9384	0.90
-    3372	   exact	j	8643	0.97
-    3373	   uncle	n	9355	0.90
-    3374	   square	n	8906	0.94
-    3375	   captain	n	9087	0.92
-    3376	   sigh	v	10099	0.83
-    3377	   attribute	v	9228	0.91
-    3378	   dare	v	9033	0.93
-    3379	   okay	j	9499	0.88
-    3380	   homeless	j	9149	0.92
-    3381	   cool	v	8980	0.93
-    3382	   gallery	n	8963	0.93
-    3383	   soccer	n	9212	0.91
-    3384	   defendant	n	9230	0.91
-    3385	   tunnel	n	9024	0.93
-    3386	   fitness	n	9261	0.90
-    3387	   lap	n	9260	0.90
-    3388	   grave	n	8868	0.94
-    3389	   toe	n	9047	0.92
-    3390	   container	n	8956	0.93
-    3391	   virtue	n	9111	0.91
-    3392	   abroad	r	8788	0.95
-    3393	   architect	n	8969	0.93
-    3394	   dramatically	r	8712	0.95
-    3395	   makeup	n	8916	0.93
-    3396	   inquiry	n	9136	0.91
-    3397	   rose	n	8988	0.92
-    3398	   surprisingly	r	8704	0.95
-    3399	   highlight	v	9119	0.91
-    3400	   decrease	v	9291	0.89
-    3401	   indication	n	8715	0.95
-    3402	   rail	n	8826	0.93
-    3403	   anniversary	n	8676	0.95
-    3404	   couch	n	9209	0.89
-    3405	   alliance	n	8948	0.92
-    3406	   hypothesis	n	9890	0.83
-    3407	   boyfriend	n	8755	0.94
-    3408	   compose	v	8866	0.93
-    3409	   peer	v	9099	0.90
-    3410	   mess	n	8745	0.94
-    3411	   rank	v	8879	0.92
-    3412	   legend	n	8660	0.95
-    3413	   regulate	v	8856	0.93
-    3414	   adolescent	n	10568	0.78
-    3415	   shine	v	8984	0.91
-    3416	   norm	n	9360	0.88
-    3417	   upset	v	8570	0.96
-    3418	   remark	n	8453	0.97
-    3419	   resign	v	8867	0.92
-    3420	   reward	n	8662	0.94
-    3421	   gentle	j	8766	0.93
-    3422	   related	j	9227	0.89
-    3423	   organ	n	8596	0.95
-    3424	   lightly	r	8893	0.92
-    3425	   concerning	i	9329	0.87
-    3426	   invent	v	8461	0.96
-    3427	   laughter	n	9019	0.90
-    3428	   fit	j	8550	0.95
-    3429	   northwest	n	8650	0.94
-    3430	   counseling	n	9303	0.88
-    3431	   tight	r	8980	0.91
-    3432	   receiver	n	8882	0.92
-    3433	   ritual	n	8883	0.92
-    3434	   insect	n	8814	0.92
-    3435	   interrupt	v	8757	0.93
-    3436	   salmon	n	8860	0.92
-    3437	   favor	n	8403	0.97
-    3438	   trading	n	8787	0.93
-    3439	   concern	v	8702	0.93
-    3440	   magic	j	8506	0.95
-    3441	   superior	j	8632	0.94
-    3442	   combat	n	8675	0.94
-    3443	   stem	n	8963	0.90
-    3444	   surgeon	n	8519	0.95
-    3445	   acceptable	j	8723	0.93
-    3446	   physics	n	9184	0.88
-    3447	   rape	n	8790	0.92
-    3448	   counsel	n	9387	0.86
-    3449	   brush	n	8821	0.92
-    3450	   jeans	n	8851	0.91
-    3451	   hunt	v	8812	0.92
-    3452	   continuous	j	8996	0.90
-    3453	   log	n	8606	0.94
-    3454	   echo	v	8477	0.95
-    3455	   pill	n	8537	0.94
-    3456	   excited	j	8491	0.95
-    3457	   sculpture	n	8659	0.93
-    3458	   compound	n	8573	0.94
-    3459	   integrate	v	9060	0.89
-    3460	   flour	n	9103	0.88
-    3461	   bitter	j	8353	0.96
-    3462	   bare	j	8943	0.90
-    3463	   slope	n	8573	0.94
-    3464	   rent	v	8446	0.95
-    3465	   presidency	n	8814	0.91
-    3466	   serving	n	9453	0.85
-    3467	   subtle	j	8442	0.95
-    3468	   greatly	r	8648	0.93
-    3469	   bishop	n	8639	0.93
-    3470	   drinking	n	8446	0.95
-    3471	   delay	v	8333	0.96
-    3472	   cry	n	8648	0.93
-    3473	   acceptance	n	8870	0.90
-    3474	   collapse	n	8397	0.95
-    3475	   shop	v	8509	0.94
-    3476	   pump	n	8617	0.93
-    3477	   candy	n	8633	0.93
-    3478	   evil	n	8391	0.95
-    3479	   final	n	8964	0.89
-    3480	   finance	v	8571	0.93
-    3481	   pleased	j	8502	0.94
-    3482	   medal	n	8991	0.89
-    3483	   beg	v	8542	0.93
-    3484	   sponsor	v	8542	0.93
-    3485	   ethical	j	9018	0.88
-    3486	   secondary	j	9121	0.87
-    3487	   slam	v	9076	0.88
-    3488	   export	n	9013	0.88
-    3489	   experimental	j	9019	0.88
-    3490	   melt	v	8533	0.93
-    3491	   midnight	n	8440	0.94
-    3492	   net	j	8563	0.93
-    3493	   curve	n	8397	0.95
-    3494	   integrity	n	8463	0.94
-    3495	   entitle	v	8381	0.95
-    3496	   evident	j	8753	0.91
-    3497	   logic	n	8646	0.92
-    3498	   essence	n	8388	0.94
-    3499	   park	v	8650	0.92
-    3500	   exclude	v	8780	0.90
-    3501	   harsh	j	8092	0.98
-    3502	   closet	n	8597	0.92
-    3503	   suburban	j	8463	0.93
-    3504	   greet	v	8367	0.94
-    3505	   favor	i	8357	0.94
-    3506	   interior	n	8370	0.94
-    3507	   corridor	n	8842	0.89
-    3508	   murder	v	8462	0.93
-    3509	   retail	j	8600	0.92
-    3510	   pitcher	n	8835	0.89
-    3511	   march	v	8267	0.95
-    3512	   snake	n	8523	0.92
-    3513	   pitch	v	8628	0.91
-    3514	   excuse	v	8722	0.90
-    3515	   cross	n	8207	0.96
-    3516	   weakness	n	8275	0.95
-    3517	   pig	n	8307	0.95
-    3518	   cold	n	8527	0.92
-    3519	   classical	j	8475	0.93
-    3520	   estimated	j	8464	0.93
-    3521	   T-shirt	n	8386	0.94
-    3522	   online	r	8729	0.90
-    3523	   unemployment	n	8471	0.93
-    3524	   civilization	n	8447	0.93
-    3525	   fold	v	8630	0.91
-    3526	   patient	j	8504	0.92
-    3527	   pop	n	8316	0.94
-    3528	   daily	r	8405	0.93
-    3529	   reverse	v	8154	0.96
-    3530	   missing	j	8232	0.95
-    3531	   correlation	n	9584	0.82
-    3532	   humanity	n	8259	0.95
-    3533	   flash	v	8815	0.89
-    3534	   developer	n	8671	0.90
-    3535	   reliable	j	8302	0.94
-    3536	   excitement	n	8160	0.96
-    3537	   beef	n	8416	0.93
-    3538	   Islam	n	8755	0.89
-    3539	   Roman	j	8299	0.94
-    3540	   stretch	n	8285	0.94
-    3541	   architecture	n	8449	0.92
-    3542	   occasional	j	8162	0.95
-    3543	   administrative	j	8895	0.88
-    3544	   elbow	n	8536	0.91
-    3545	   deadly	j	8196	0.95
-    3546	   Muslim	n	8498	0.91
-    3547	   Hispanic	j	8690	0.89
-    3548	   allegation	n	8675	0.89
-    3549	   tip	v	8300	0.93
-    3550	   confuse	v	8045	0.96
-    3551	   airplane	n	8254	0.94
-    3552	   monthly	j	8335	0.93
-    3553	   duck	n	8335	0.93
-    3554	   dose	n	8291	0.93
-    3555	   Korean	j	8441	0.92
-    3556	   plead	v	8140	0.95
-    3557	   initiate	v	8630	0.90
-    3558	   lecture	n	8278	0.93
-    3559	   van	n	8364	0.92
-    3560	   sixth	m	8170	0.95
-    3561	   bay	n	8209	0.94
-    3562	   mainstream	j	8170	0.94
-    3563	   suburb	n	8249	0.93
-    3564	   sandwich	n	8298	0.93
-    3565	   unlike	j	8103	0.95
-    3566	   trunk	n	8400	0.92
-    3567	   rumor	n	8023	0.96
-    3568	   implementation	n	9293	0.83
-    3569	   swallow	v	8583	0.90
-    3570	   motivate	v	8324	0.92
-    3571	   render	v	8288	0.93
-    3572	   longtime	j	8439	0.91
-    3573	   trap	v	8030	0.96
-    3574	   restrict	v	8340	0.92
-    3575	   cloth	n	8287	0.93
-    3576	   seemingly	r	8010	0.96
-    3577	   legislative	j	8384	0.91
-    3578	   effectiveness	n	8889	0.86
-    3579	   enforce	v	8162	0.94
-    3580	   lens	n	8313	0.92
-    3581	   reach	n	7982	0.96
-    3582	   inspector	n	8652	0.88
-    3583	   lend	v	7961	0.96
-    3584	   plain	j	8015	0.95
-    3585	   fraud	n	8176	0.93
-    3586	   companion	n	8136	0.94
-    3587	   contend	v	8249	0.93
-    3588	   nail	n	8255	0.92
-    3589	   array	n	8167	0.93
-    3590	   strict	j	8013	0.95
-    3591	   assemble	v	7996	0.95
-    3592	   frankly	r	8620	0.88
-    3593	   rat	n	8177	0.93
-    3594	   burst	v	8393	0.91
-    3595	   hallway	n	8717	0.87
-    3596	   cave	n	8261	0.92
-    3597	   inevitable	j	7889	0.96
-    3598	   southwest	n	8190	0.93
-    3599	   monster	n	8164	0.93
-    3600	   speed	v	7936	0.96
-    3601	   protest	v	7871	0.96
-    3602	   unexpected	j	7829	0.97
-    3603	   obstacle	n	8075	0.94
-    3604	   facilitate	v	8946	0.85
-    3605	   encounter	n	8073	0.94
-    3606	   rip	v	8164	0.93
-    3607	   herb	n	8279	0.91
-    3608	   overwhelming	j	7831	0.97
-    3609	   integration	n	8847	0.85
-    3610	   crystal	n	8035	0.94
-    3611	   recession	n	8809	0.86
-    3612	   wish	n	7789	0.97
-    3613	   top	v	8162	0.92
-    3614	   written	j	8371	0.90
-    3615	   motive	n	8029	0.94
-    3616	   label	v	7969	0.95
-    3617	   flood	n	7986	0.94
-    3618	   pen	n	8117	0.93
-    3619	   ownership	n	8177	0.92
-    3620	   nightmare	n	7895	0.95
-    3621	   notice	n	7762	0.97
-    3622	   inspection	n	8128	0.93
-    3623	   supervisor	n	8049	0.93
-    3624	   consult	v	7778	0.96
-    3625	   arena	n	8008	0.94
-    3626	   laugh	n	8164	0.92
-    3627	   diagnosis	n	8454	0.89
-    3628	   possession	n	7828	0.96
-    3629	   forgive	v	8003	0.93
-    3630	   warm	v	7973	0.94
-    3631	   consistently	r	8104	0.92
-    3632	   basement	n	7988	0.94
-    3633	   project	v	7871	0.95
-    3634	   drift	v	8311	0.90
-    3635	   drain	v	8123	0.92
-    3636	   last	r	8415	0.89
-    3637	   prosecution	n	8941	0.83
-    3638	   maximum	j	8075	0.92
-    3639	   announcement	n	7863	0.95
-    3640	   warrior	n	7975	0.93
-    3641	   prediction	n	7996	0.93
-    3642	   bacteria	n	8256	0.90
-    3643	   questionnaire	n	9123	0.82
-    3644	   mud	n	8026	0.93
-    3645	   infrastructure	n	7961	0.93
-    3646	   hurry	v	8723	0.85
-    3647	   privilege	n	7923	0.94
-    3648	   temple	n	7949	0.94
-    3649	   medium	j	8586	0.87
-    3650	   outdoor	j	8101	0.92
-    3651	   suck	v	8204	0.91
-    3652	   and/or	c	8481	0.88
-    3653	   broadcast	n	8130	0.91
-    3654	   re	i	15773	0.47
-    3655	   leap	v	8376	0.89
-    3656	   random	j	7818	0.95
-    3657	   past	r	7921	0.94
-    3658	   wrist	n	8250	0.90
-    3659	   curtain	n	8204	0.90
-    3660	   monitor	n	7879	0.94
-    3661	   pond	n	7971	0.93
-    3662	   domain	n	8641	0.86
-    3663	   guilt	n	7746	0.96
-    3664	   cattle	n	7827	0.95
-    3665	   subject	i	8087	0.91
-    3666	   walking	n	7847	0.94
-    3667	   playoff	n	8803	0.84
-    3668	   minimum	j	8011	0.92
-    3669	   fiscal	j	8005	0.92
-    3670	   skirt	n	8167	0.90
-    3671	   dump	v	7689	0.96
-    3672	   hence	r	8468	0.87
-    3673	   database	n	8094	0.91
-    3674	   uncomfortable	j	7667	0.96
-    3675	   aim	n	7973	0.92
-    3676	   execute	v	7671	0.96
-    3677	   limb	n	8018	0.92
-    3678	   ideology	n	8485	0.87
-    3679	   average	v	8106	0.91
-    3680	   welcome	j	7798	0.94
-    3681	   tune	v	7934	0.92
-    3682	   continuing	j	7845	0.94
-    3683	   harm	n	7619	0.96
-    3684	   railroad	n	7796	0.94
-    3685	   endure	v	7586	0.97
-    3686	   radiation	n	7912	0.93
-    3687	   horn	n	7813	0.94
-    3688	   chronic	j	8036	0.91
-    3689	   peaceful	j	7704	0.95
-    3690	   innovation	n	8099	0.90
-    3691	   strain	n	7713	0.95
-    3692	   guitar	n	7712	0.95
-    3693	   replacement	n	7734	0.94
-    3694	   behave	v	7546	0.97
-    3695	   administer	v	8135	0.90
-    3696	   simultaneously	r	7960	0.92
-    3697	   dancer	n	7664	0.95
-    3698	   amendment	n	8132	0.90
-    3699	   guard	v	7659	0.95
-    3700	   hay	n	7846	0.93
-    3701	   transmission	n	7829	0.93
-    3702	   await	v	7550	0.96
-    3703	   retired	j	7869	0.92
-    3704	   trigger	v	7630	0.95
-    3705	   spill	v	7798	0.93
-    3706	   grateful	j	7597	0.96
-    3707	   grace	n	7634	0.95
-    3708	   virtual	j	7776	0.93
-    3709	   response	i	7868	0.92
-    3710	   colony	n	7822	0.93
-    3711	   adoption	n	7986	0.91
-    3712	   slide	n	7780	0.93
-    3713	   indigenous	j	8785	0.83
-    3714	   closed	j	7500	0.97
-    3715	   convict	v	7940	0.91
-    3716	   civilian	n	7889	0.92
-    3717	   towel	n	7978	0.91
-    3718	   modify	v	8997	0.80
-    3719	   particle	n	7925	0.91
-    3720	   award	v	7666	0.94
-    3721	   glance	n	8122	0.89
-    3722	   prize	n	7519	0.96
-    3723	   landing	n	7646	0.94
-    3724	   conduct	n	7821	0.92
-    3725	   blue	n	7671	0.94
-    3726	   boost	v	7863	0.92
-    3727	   bat	n	7694	0.94
-    3728	   alarm	n	7631	0.94
-    3729	   festival	n	7775	0.92
-    3730	   grip	n	7724	0.93
-    3731	   weird	j	7709	0.93
-    3732	   undermine	v	7762	0.92
-    3733	   freshman	n	7849	0.91
-    3734	   sweat	n	8036	0.89
-    3735	   outer	j	7618	0.94
-    3736	   European	n	7688	0.93
-    3737	   drunk	j	7890	0.91
-    3738	   survey	v	7556	0.95
-    3739	   research	v	7618	0.94
-    3740	   separation	n	7760	0.92
-    3741	   traditionally	r	7717	0.93
-    3742	   stuff	v	7687	0.93
-    3743	   govern	v	7668	0.93
-    3744	   southeast	n	7589	0.94
-    3745	   intelligent	j	7373	0.97
-    3746	   wherever	r	7382	0.97
-    3747	   ballot	n	9217	0.77
-    3748	   rhetoric	n	7765	0.92
-    3749	   convinced	j	7389	0.97
-    3750	   driving	j	7438	0.96
-    3751	   vitamin	n	8245	0.86
-    3752	   enthusiasm	n	7368	0.97
-    3753	   accommodate	v	7571	0.94
-    3754	   praise	v	7379	0.96
-    3755	   injure	v	7574	0.94
-    3756	   wilderness	n	7916	0.90
-    3757	   nearby	r	7545	0.94
-    3758	   endless	j	7458	0.95
-    3759	   mandate	n	7704	0.92
-    3760	   pause	n	8140	0.87
-    3761	   excuse	n	7388	0.96
-    3762	   respectively	r	8223	0.86
-    3763	   uncertainty	n	7671	0.92
-    3764	   chaos	n	7304	0.97
-    3765	   short	r	7495	0.95
-    3766	   mechanical	j	7835	0.90
-    3767	   canvas	n	7795	0.91
-    3768	   forty	m	7692	0.92
-    3769	   matter	d	7396	0.96
-    3770	   lobby	n	7556	0.94
-    3771	   profound	j	7477	0.95
-    3772	   format	n	7910	0.90
-    3773	   trait	n	7980	0.89
-    3774	   currency	n	7753	0.91
-    3775	   turkey	n	7757	0.91
-    3776	   reserve	n	7585	0.93
-    3777	   beam	n	7625	0.93
-    3778	   abuse	v	7554	0.94
-    3779	   astronomer	n	8157	0.87
-    3780	   corruption	n	7518	0.94
-    3781	   contractor	n	7634	0.92
-    3782	   apologize	v	7485	0.94
-    3783	   doctrine	n	8081	0.87
-    3784	   genuine	j	7336	0.96
-    3785	   thumb	n	7659	0.92
-    3786	   unity	n	7810	0.90
-    3787	   compromise	n	7469	0.94
-    3788	   horrible	j	7538	0.93
-    3789	   behavioral	j	8320	0.85
-    3790	   exclusive	j	7402	0.95
-    3791	   scatter	v	7461	0.94
-    3792	   commonly	r	7861	0.89
-    3793	   convey	v	7529	0.93
-    3794	   rush	n	7458	0.94
-    3795	   twist	v	7875	0.89
-    3796	   complexity	n	7813	0.90
-    3797	   fork	n	7742	0.91
-    3798	   disk	n	7898	0.89
-    3799	   relieve	v	7352	0.95
-    3800	   suspicion	n	7187	0.97
-    3801	   lock	n	7605	0.92
-    3802	   finish	n	7585	0.92
-    3803	   residence	n	7332	0.95
-    3804	   shame	n	7347	0.95
-    3805	   meaningful	j	7719	0.90
-    3806	   sidewalk	n	7668	0.91
-    3807	   Olympics	n	8039	0.87
-    3808	   technological	j	7780	0.90
-    3809	   signature	n	7349	0.95
-    3810	   pleasant	j	7425	0.94
-    3811	   wow	u	8016	0.87
-    3812	   suspend	v	7228	0.96
-    3813	   rebel	n	7525	0.92
-    3814	   frozen	j	7474	0.93
-    3815	   desire	v	7454	0.93
-    3816	   spouse	n	7510	0.93
-    3817	   fluid	n	7464	0.93
-    3818	   pension	n	7660	0.91
-    3819	   resume	v	7243	0.96
-    3820	   theoretical	j	8320	0.83
-    3821	   sodium	n	7998	0.87
-    3822	   blow	n	7324	0.95
-    3823	   promotion	n	7416	0.94
-    3824	   delicate	j	7332	0.95
-    3825	   forehead	n	8123	0.85
-    3826	   rebuild	v	7474	0.93
-    3827	   bounce	v	7451	0.93
-    3828	   electrical	j	7347	0.94
-    3829	   hook	n	7382	0.94
-    3830	   detective	n	7441	0.93
-    3831	   traveler	n	7336	0.94
-    3832	   click	v	7549	0.92
-    3833	   compensation	n	7512	0.92
-    3834	   signal	v	7171	0.97
-    3835	   exit	n	7333	0.94
-    3836	   attraction	n	7280	0.95
-    3837	   dedicate	v	7226	0.96
-    3838	   altogether	r	7147	0.97
-    3839	   pickup	n	7415	0.93
-    3840	   carve	v	7294	0.95
-    3841	   needle	n	7378	0.94
-    3842	   belly	n	7784	0.89
-    3843	   ship	v	7264	0.95
-    3844	   scare	v	7367	0.94
-    3845	   portfolio	n	7663	0.90
-    3846	   shuttle	n	7593	0.91
-    3847	   invisible	j	7355	0.94
-    3848	   timing	n	7345	0.94
-    3849	   engagement	n	7675	0.90
-    3850	   ankle	n	7397	0.93
-    3851	   transaction	n	7418	0.93
-    3852	   rescue	v	7187	0.96
-    3853	   counterpart	n	7484	0.92
-    3854	   historically	r	7426	0.92
-    3855	   firmly	r	7189	0.95
-    3856	   mild	j	7211	0.95
-    3857	   rider	n	7450	0.92
-    3858	   doll	n	7351	0.93
-    3859	   noon	n	7425	0.92
-    3860	   exhibit	n	7326	0.93
-    3861	   amid	i	7264	0.94
-    3862	   identical	j	7247	0.94
-    3863	   precise	j	7211	0.95
-    3864	   anxious	j	7096	0.96
-    3865	   structural	j	7870	0.87
-    3866	   residential	j	7415	0.92
-    3867	   loud	r	7541	0.90
-    3868	   diagnose	v	7255	0.94
-    3869	   carbohydrate	n	8057	0.85
-    3870	   liberty	n	7442	0.91
-    3871	   poster	n	7069	0.96
-    3872	   theology	n	7866	0.86
-    3873	   nonprofit	j	7482	0.91
-    3874	   crawl	v	7596	0.90
-    3875	   oxygen	n	7191	0.94
-    3876	   handsome	j	7512	0.90
-    3877	   magic	n	7415	0.92
-    3878	   sum	n	7217	0.94
-    3879	   provided	c	7431	0.91
-    3880	   businessman	n	7190	0.94
-    3881	   promising	j	7075	0.96
-    3882	   conscious	j	7152	0.95
-    3883	   determination	n	7170	0.94
-    3884	   donor	n	7231	0.94
-    3885	   hers	p	7770	0.87
-    3886	   pastor	n	7260	0.93
-    3887	   jazz	n	7220	0.94
-    3888	   opera	n	7332	0.92
-    3889	   Japanese	n	7419	0.91
-    3890	   bite	n	7160	0.94
-    3891	   frame	v	7063	0.95
-    3892	   evil	j	7045	0.96
-    3893	   acquisition	n	7338	0.92
-    3894	   pit	n	7132	0.94
-    3895	   hug	v	7478	0.90
-    3896	   wildlife	n	7361	0.91
-    3897	   punish	v	6955	0.97
-    3898	   giant	n	7102	0.95
-    3899	   primary	n	7823	0.86
-    3900	   equity	n	7277	0.92
-    3901	   wrong	r	7038	0.95
-    3902	   doorway	n	7914	0.85
-    3903	   departure	n	7008	0.96
-    3904	   elevator	n	7535	0.89
-    3905	   teenage	j	7030	0.95
-    3906	   guidance	n	7399	0.91
-    3907	   happiness	n	7036	0.95
-    3908	   statue	n	7058	0.95
-    3909	   pursuit	n	7070	0.95
-    3910	   repair	n	7088	0.95
-    3911	   decent	j	6954	0.96
-    3912	   gym	n	7229	0.93
-    3913	   oral	j	7448	0.90
-    3914	   clerk	n	7234	0.93
-    3915	   Israeli	n	7673	0.87
-    3916	   envelope	n	7241	0.92
-    3917	   reporting	n	7184	0.93
-    3918	   destination	n	7039	0.95
-    3919	   fist	n	7729	0.86
-    3920	   endorse	v	7167	0.93
-    3921	   exploration	n	7294	0.92
-    3922	   generous	j	6907	0.97
-    3923	   bath	n	7149	0.93
-    3924	   rescue	n	7094	0.94
-    3925	   thereby	r	7588	0.88
-    3926	   overall	r	7225	0.92
-    3927	   indicator	n	7574	0.88
-    3928	   sunlight	n	7349	0.91
-    3929	   feedback	n	7735	0.86
-    3930	   spectrum	n	7216	0.92
-    3931	   purple	j	7216	0.92
-    3932	   laser	n	7197	0.93
-    3933	   bold	j	6936	0.96
-    3934	   reluctant	j	6842	0.97
-    3935	   starting	n	7118	0.93
-    3936	   expertise	n	7219	0.92
-    3937	   practically	r	6914	0.96
-    3938	   program	v	7015	0.95
-    3939	   picture	v	7103	0.93
-    3940	   tune	n	6887	0.96
-    3941	   eating	n	7067	0.94
-    3942	   age	v	7005	0.95
-    3943	   volunteer	v	6864	0.97
-    3944	   hint	n	6951	0.95
-    3945	   sharply	r	6966	0.95
-    3946	   parade	n	7010	0.95
-    3947	   advocate	v	7198	0.92
-    3948	   realm	n	7261	0.91
-    3949	   ban	n	7070	0.94
-    3950	   strip	v	6894	0.96
-    3951	   cancel	v	6932	0.95
-    3952	   blend	v	7238	0.91
-    3953	   therapist	n	7170	0.92
-    3954	   slice	v	7316	0.90
-    3955	   peel	v	7182	0.92
-    3956	   pizza	n	7130	0.93
-    3957	   recipient	n	7126	0.93
-    3958	   hesitate	v	7462	0.88
-    3959	   flip	v	7274	0.91
-    3960	   accounting	n	7319	0.90
-    3961	   debate	v	6952	0.95
-    3962	   bias	n	7388	0.89
-    3963	   huh	u	7563	0.87
-    3964	   metaphor	n	7461	0.88
-    3965	   candle	n	7204	0.91
-    3966	   handle	n	7101	0.93
-    3967	   worry	n	6811	0.96
-    3968	   judicial	j	7213	0.91
-    3969	   entity	n	7276	0.90
-    3970	   suffering	n	6955	0.94
-    3971	   full-time	j	6945	0.94
-    3972	   feel	n	6939	0.95
-    3973	   lamp	n	7290	0.90
-    3974	   garbage	n	6933	0.95
-    3975	   servant	n	7064	0.93
-    3976	   addition	n	7027	0.93
-    3977	   regulatory	j	7274	0.90
-    3978	   diplomatic	j	7193	0.91
-    3979	   elegant	j	6974	0.94
-    3980	   inside	n	6955	0.94
-    3981	   reception	n	6896	0.95
-    3982	   vanish	v	7154	0.91
-    3983	   automatically	r	6823	0.96
-    3984	   chin	n	7585	0.86
-    3985	   trail	v	7049	0.93
-    3986	   necessity	n	7071	0.92
-    3987	   confess	v	6815	0.96
-    3988	   racism	n	7026	0.93
-    3989	   starter	n	7487	0.87
-    3990	   interior	j	6931	0.94
-    3991	   banking	n	7120	0.92
-    3992	   casual	j	6946	0.94
-    3993	   gravity	n	7000	0.93
-    3994	   enroll	v	7053	0.92
-    3995	   diminish	v	6875	0.95
-    3996	   prevention	n	7352	0.88
-    3997	   Arab	n	7222	0.90
-    3998	   value	v	7000	0.93
-    3999	   minimize	v	7139	0.91
-    4000	   chop	v	7452	0.87
-    4001	   performer	n	6896	0.94
-    4002	   intent	n	6879	0.94
-    4003	   isolate	v	6920	0.94
-    4004	   pump	v	6765	0.96
-    4005	   inventory	n	7090	0.92
-    4006	   productive	j	7006	0.93
-    4007	   assembly	n	6914	0.94
-    4008	   civic	j	7088	0.91
-    4009	   silk	n	7128	0.91
-    4010	   magnitude	n	7115	0.91
-    4011	   steep	j	6972	0.93
-    4012	   hostage	n	8605	0.75
-    4013	   collector	n	6976	0.93
-    4014	   popularity	n	6836	0.95
-    4015	   kiss	n	7195	0.90
-    4016	   alien	n	7134	0.90
-    4017	   dynamic	j	7175	0.90
-    4018	   scary	j	6865	0.94
-    4019	   equation	n	7372	0.87
-    4020	   angel	n	6978	0.92
-    4021	   switch	n	6781	0.95
-    4022	   offering	n	6856	0.94
-    4023	   rage	n	6877	0.94
-    4024	   photography	n	7087	0.91
-    4025	   repair	v	6730	0.96
-    4026	   toilet	n	6939	0.93
-    4027	   disappointed	j	6724	0.96
-    4028	   precious	j	6716	0.96
-    4029	   prohibit	v	6896	0.93
-    4030	   representative	j	7008	0.92
-    4031	   content	j	7113	0.90
-    4032	   realistic	j	6786	0.95
-    4033	   Russian	n	6891	0.93
-    4034	   hidden	j	6787	0.95
-    4035	   command	v	6688	0.96
-    4036	   tender	j	7013	0.92
-    4037	   wake	n	6630	0.97
-    4038	   gathering	n	6671	0.96
-    4039	   outstanding	j	6803	0.94
-    4040	   stumble	v	7076	0.91
-    4041	   lonely	j	6868	0.94
-    4042	   automobile	n	6829	0.94
-    4043	   artificial	j	6730	0.95
-    4044	   dawn	n	6929	0.93
-    4045	   abstract	j	7165	0.90
-    4046	   descend	v	6896	0.93
-    4047	   silly	j	6857	0.93
-    4048	   hook	v	6800	0.94
-    4049	   tide	n	6698	0.96
-    4050	   shared	j	7069	0.91
-    4051	   hopefully	r	6986	0.92
-    4052	   readily	r	6964	0.92
-    4053	   cooperate	v	6763	0.95
-    4054	   revolutionary	j	6886	0.93
-    4055	   romance	n	6705	0.95
-    4056	   hardware	n	6951	0.92
-    4057	   pillow	n	7122	0.90
-    4058	   kit	n	6912	0.92
-    4059	   cook	n	6866	0.93
-    4060	   spread	n	6686	0.95
-    4061	   continent	n	6730	0.95
-    4062	   seal	v	6660	0.96
-    4063	   circuit	n	6747	0.94
-    4064	   sink	n	7052	0.90
-    4065	   ruling	n	6947	0.92
-    4066	   shortage	n	6776	0.94
-    4067	   annually	r	6928	0.92
-    4068	   lately	r	6696	0.95
-    4069	   trap	n	6694	0.95
-    4070	   scan	v	6879	0.92
-    4071	   fool	n	6990	0.91
-    4072	   deadline	n	6932	0.91
-    4073	   rear	j	6910	0.92
-    4074	   processing	n	7220	0.88
-    4075	   ranch	n	6759	0.94
-    4076	   coastal	j	6880	0.92
-    4077	   undertake	v	7044	0.90
-    4078	   softly	r	7487	0.84
-    4079	   reserve	v	6636	0.95
-    4080	   burning	j	6665	0.95
-    4081	   verbal	j	7227	0.87
-    4082	   tribal	j	6995	0.90
-    4083	   ridiculous	j	6695	0.94
-    4084	   automatic	j	6580	0.96
-    4085	   diamond	n	6743	0.93
-    4086	   credibility	n	6742	0.93
-    4087	   import	n	6944	0.91
-    4088	   sexually	r	6806	0.93
-    4089	   spring	v	6689	0.94
-    4090	   way	r	6604	0.95
-    4091	   divine	j	7059	0.89
-    4092	   sentiment	n	6658	0.95
-    4093	   cart	n	6822	0.92
-    4094	   oversee	v	6773	0.93
-    4095	   stem	v	6712	0.94
-    4096	   elder	n	6808	0.92
-    4097	   pro	n	6867	0.91
-    4098	   inspiration	n	6584	0.95
-    4099	   Dutch	j	6690	0.94
-    4100	   quantity	n	6833	0.92
-    4101	   trailer	n	6713	0.93
-    4102	   mate	n	6693	0.94
-    4103	   o'clock	r	6972	0.97
-    4104	   Greek	j	6642	0.94
-    4105	   genius	n	6509	0.96
-    4106	   monument	n	6680	0.94
-    4107	   bid	n	6954	0.90
-    4108	   quest	n	6613	0.95
-    4109	   sacrifice	n	6591	0.95
-    4110	   invitation	n	6460	0.97
-    4111	   accuracy	n	6942	0.90
-    4112	   juror	n	7497	0.83
-    4113	   officially	r	6462	0.97
-    4114	   broker	n	6929	0.90
-    4115	   treasure	n	6648	0.94
-    4116	   loyalty	n	6604	0.94
-    4117	   credit	v	6611	0.94
-    4118	   shock	v	6492	0.96
-    4119	   talented	j	6584	0.95
-    4120	   gasoline	n	6696	0.93
-    4121	   stiff	j	6697	0.93
-    4122	   output	n	7041	0.88
-    4123	   nominee	n	7138	0.87
-    4124	   extended	j	6641	0.94
-    4125	   please	v	6565	0.95
-    4126	   diabetes	n	7073	0.88
-    4127	   slap	v	7015	0.89
-    4128	   toxic	j	6672	0.93
-    4129	   alleged	j	6658	0.93
-    4130	   jaw	n	6922	0.90
-    4131	   grief	n	6591	0.94
-    4132	   mysterious	j	6484	0.96
-    4133	   rocket	n	6722	0.92
-    4134	   donate	v	6606	0.94
-    4135	   inmate	n	6718	0.92
-    4136	   tackle	v	6644	0.93
-    4137	   dynamics	n	7084	0.87
-    4138	   bow	n	6800	0.91
-    4139	   ours	p	6422	0.96
-    4140	   senior	n	6768	0.91
-    4141	   dignity	n	6585	0.94
-    4142	   carpet	n	6658	0.93
-    4143	   parental	j	7251	0.85
-    4144	   bubble	n	6570	0.94
-    4145	   heat	v	6650	0.93
-    4146	   buddy	n	6554	0.94
-    4147	   barn	n	6785	0.91
-    4148	   sword	n	7029	0.88
-    4149	   flash	n	6741	0.91
-    4150	   seventh	m	6517	0.95
-    4151	   glory	n	6443	0.96
-    4152	   tightly	r	6643	0.93
-    4153	   protective	j	6503	0.95
-    4154	   tuck	v	6847	0.90
-    4155	   drum	n	6423	0.96
-    4156	   faint	j	6886	0.89
-    4157	   post	v	6558	0.94
-    4158	   queen	n	6606	0.93
-    4159	   dilemma	n	6703	0.92
-    4160	   input	n	7004	0.88
-    4161	   specialize	v	6538	0.94
-    4162	   northeast	n	6500	0.94
-    4163	   shallow	j	6512	0.94
-    4164	   liability	n	6775	0.90
-    4165	   sail	v	6525	0.94
-    4166	   merchant	n	6474	0.94
-    4167	   stadium	n	6977	0.88
-    4168	   improved	j	6720	0.91
-    4169	   bloody	j	6513	0.94
-    4170	   defeat	n	6380	0.96
-    4171	   associated	j	6754	0.90
-    4172	   withdrawal	n	6624	0.92
-    4173	   refrigerator	n	6497	0.94
-    4174	   nest	n	6541	0.93
-    4175	   near	j	6296	0.97
-    4176	   thoroughly	r	6384	0.96
-    4177	   lane	n	6540	0.93
-    4178	   ancestor	n	6529	0.93
-    4179	   condemn	v	6418	0.95
-    4180	   steam	n	6426	0.95
-    4181	   accent	n	6486	0.94
-    4182	   escape	n	6358	0.96
-    4183	   optimistic	j	6412	0.95
-    4184	   unite	v	6391	0.95
-    4185	   cage	n	6621	0.92
-    4186	   equip	v	6436	0.94
-    4187	   shrimp	n	6631	0.91
-    4188	   homeland	n	6726	0.90
-    4189	   exchange	v	6394	0.95
-    4190	   rack	n	6677	0.91
-    4191	   costume	n	6349	0.95
-    4192	   wolf	n	6718	0.90
-    4193	   courtroom	n	6772	0.89
-    4194	   statute	n	6838	0.88
-    4195	   cartoon	n	6403	0.94
-    4196	   besides	i	6198	0.97
-    4197	   productivity	n	6651	0.91
-    4198	   grin	v	7242	0.83
-    4199	   symbolic	j	6755	0.89
-    4200	   seal	n	6543	0.92
-    4201	   bug	n	6541	0.92
-    4202	   bless	v	6293	0.96
-    4203	   aunt	n	6662	0.90
-    4204	   agriculture	n	6621	0.91
-    4205	   rock	v	6473	0.93
-    4206	   hostile	j	6319	0.95
-    4207	   root	v	6276	0.96
-    4208	   conceive	v	6486	0.93
-    4209	   combined	j	6495	0.93
-    4210	   instantly	r	6476	0.93
-    4211	   bankruptcy	n	6690	0.90
-    4212	   vaccine	n	6761	0.89
-    4213	   bonus	n	6531	0.92
-    4214	   collaboration	n	6889	0.87
-    4215	   mixed	j	6327	0.95
-    4216	   opposed	i	6418	0.93
-    4217	   orbit	n	6490	0.92
-    4218	   grasp	v	6357	0.94
-    4219	   patience	n	6532	0.92
-    4220	   spite	i	6339	0.94
-    4221	   tropical	j	6473	0.92
-    4222	   voting	n	6621	0.90
-    4223	   patrol	n	6382	0.94
-    4224	   willingness	n	6461	0.92
-    4225	   position	v	6288	0.95
-    4226	   revelation	n	6297	0.95
-    4227	   rent	n	6360	0.94
-    4228	   calm	v	6484	0.92
-    4229	   jewelry	n	6338	0.94
-    4230	   Cuban	j	6601	0.90
-    4231	   haul	v	6401	0.93
-    4232	   concede	v	6303	0.95
-    4233	   trace	n	6345	0.94
-    4234	   wagon	n	6577	0.91
-    4235	   afterward	r	6353	0.94
-    4236	   spectacular	j	6276	0.95
-    4237	   ruin	v	6267	0.95
-    4238	   sheer	j	6209	0.96
-    4239	   prior	j	6720	0.88
-    4240	   immune	j	6492	0.91
-    4241	   reliability	n	7053	0.84
-    4242	   ass	n	6911	0.86
-    4243	   alongside	i	6166	0.96
-    4244	   bush	n	6307	0.94
-    4245	   exotic	j	6185	0.96
-    4246	   fascinating	j	6231	0.95
-    4247	   secure	j	6138	0.96
-    4248	   clip	n	6660	0.89
-    4249	   thigh	n	6576	0.90
-    4250	   bull	n	6346	0.93
-    4251	   drawer	n	6665	0.89
-    4252	   regard	i	6665	0.89
-    4253	   sheep	n	6320	0.94
-    4254	   discourage	v	6177	0.96
-    4255	   coordinator	n	6478	0.91
-    4256	   ideological	j	6793	0.87
-    4257	   runner	n	6333	0.93
-    4258	   secular	j	6560	0.90
-    4259	   intimate	j	6143	0.96
-    4260	   empire	n	6268	0.94
-    4261	   cab	n	6561	0.90
-    4262	   divorce	v	6086	0.97
-    4263	   exam	n	6176	0.95
-    4264	   documentary	n	6321	0.93
-    4265	   neutral	j	6331	0.93
-    4266	   biology	n	6334	0.93
-    4267	   flexible	j	6312	0.93
-    4268	   progressive	j	6387	0.92
-    4269	   web	n	6411	0.92
-    4270	   conspiracy	n	6261	0.94
-    4271	   catch	n	6377	0.92
-    4272	   casualty	n	6439	0.91
-    4273	   republic	n	7519	0.78
-    4274	   execution	n	6278	0.93
-    4275	   terrific	j	6356	0.92
-    4276	   whale	n	6928	0.84
-    4277	   functional	j	6736	0.87
-    4278	   star	v	6328	0.92
-    4279	   draft	v	6234	0.94
-    4280	   instinct	n	6076	0.96
-    4281	   teammate	n	6572	0.89
-    4282	   aluminum	n	6468	0.90
-    4283	   whoever	p	6250	0.93
-    4284	   ministry	n	6250	0.93
-    4285	   verdict	n	6529	0.89
-    4286	   instruct	v	6117	0.95
-    4287	   skull	n	6313	0.92
-    4288	   self-esteem	n	6727	0.86
-    4289	   ease	n	6103	0.95
-    4290	   cooperative	j	6671	0.87
-    4291	   manipulate	v	6159	0.94
-    4292	   bee	n	6342	0.92
-    4293	   practitioner	n	6670	0.87
-    4294	   loop	n	6175	0.94
-    4295	   edit	v	6157	0.94
-    4296	   whip	v	6255	0.93
-    4297	   puzzle	n	6153	0.94
-    4298	   mushroom	n	6454	0.90
-    4299	   subsidy	n	6236	0.93
-    4300	   boil	v	6180	0.94
-    4301	   tragic	j	6038	0.96
-    4302	   mathematics	n	6828	0.85
-    4303	   mechanic	n	6092	0.95
-    4304	   jar	n	6284	0.92
-    4305	   respect	i	6659	0.87
-    4306	   earthquake	n	6439	0.90
-    4307	   pork	n	6261	0.92
-    4308	   creativity	n	6452	0.89
-    4309	   safely	r	5959	0.97
-    4310	   underlying	j	6340	0.91
-    4311	   dessert	n	6286	0.92
-    4312	   sympathy	n	6044	0.95
-    4313	   fisherman	n	6317	0.91
-    4314	   incredibly	r	6141	0.94
-    4315	   isolation	n	6251	0.92
-    4316	   sock	n	6273	0.92
-    4317	   near	r	6097	0.94
-    4318	   jump	n	6088	0.95
-    4319	   eleven	m	6239	0.92
-    4320	   sexy	j	6300	0.91
-    4321	   entrepreneur	n	6238	0.92
-    4322	   syndrome	n	6157	0.93
-    4323	   bureau	n	6199	0.93
-    4324	   seat	v	6227	0.92
-    4325	   workplace	n	6186	0.93
-    4326	   ambition	n	5962	0.96
-    4327	   touchdown	n	6954	0.82
-    4328	   utilize	v	6607	0.87
-    4329	   breeze	n	6423	0.89
-    4330	   costly	j	6130	0.93
-    4331	   ambitious	j	6040	0.95
-    4332	   Christianity	n	6312	0.91
-    4333	   presumably	r	6039	0.95
-    4334	   influential	j	6161	0.93
-    4335	   translation	n	6266	0.91
-    4336	   uncertain	j	5951	0.96
-    4337	   dissolve	v	6157	0.93
-    4338	   object	v	5909	0.97
-    4339	   statistical	j	6634	0.86
-    4340	   gut	n	6067	0.94
-    4341	   metropolitan	j	6149	0.93
-    4342	   rolling	j	6066	0.94
-    4343	   aesthetic	j	6647	0.86
-    4344	   spell	v	5887	0.97
-    4345	   insert	v	6067	0.94
-    4346	   booth	n	6191	0.92
-    4347	   helmet	n	6203	0.92
-    4348	   waist	n	6394	0.89
-    4349	   expected	j	6144	0.93
-    4350	   lion	n	6075	0.94
-    4351	   accomplishment	n	5980	0.95
-    4352	   royal	j	6028	0.94
-    4353	   panic	n	6087	0.93
-    4354	   cast	n	6007	0.95
-    4355	   crush	v	5985	0.95
-    4356	   actively	r	6232	0.91
-    4357	   cliff	n	6117	0.93
-    4358	   minimal	j	6176	0.92
-    4359	   cord	n	6071	0.94
-    4360	   fortunately	r	5974	0.95
-    4361	   cocaine	n	6207	0.91
-    4362	   illusion	n	6035	0.94
-    4363	   anonymous	j	5949	0.95
-    4364	   tolerate	v	5871	0.97
-    4365	   appreciation	n	6054	0.94
-    4366	   commissioner	n	6303	0.90
-    4367	   harm	v	5810	0.97
-    4368	   flexibility	n	6149	0.92
-    4369	   instructional	j	7014	0.81
-    4370	   scramble	v	6061	0.93
-    4371	   casino	n	6205	0.91
-    4372	   tumor	n	6427	0.88
-    4373	   decorate	v	5997	0.94
-    4374	   sort	v	5809	0.97
-    4375	   charge	i	5893	0.96
-    4376	   pulse	n	5992	0.94
-    4377	   equivalent	n	5935	0.95
-    4378	   fixed	j	6042	0.93
-    4379	   experienced	j	6031	0.93
-    4380	   donation	n	6086	0.92
-    4381	   diary	n	5945	0.95
-    4382	   sibling	n	6102	0.92
-    4383	   irony	n	5818	0.97
-    4384	   spoon	n	6194	0.91
-    4385	   midst	n	5760	0.98
-    4386	   alley	n	6236	0.90
-    4387	   upset	j	5954	0.94
-    4388	   interact	v	6247	0.90
-    4389	   soap	n	5952	0.94
-    4390	   cute	j	6089	0.92
-    4391	   rival	n	6005	0.93
-    4392	   short-term	j	5998	0.93
-    4393	   punch	v	6071	0.92
-    4394	   pin	n	6000	0.93
-    4395	   hockey	n	6171	0.91
-    4396	   passing	j	5903	0.95
-    4397	   persist	v	6013	0.93
-    4398	   supplier	n	6038	0.93
-    4399	   known	j	5892	0.95
-    4400	   momentum	n	5911	0.94
-    4401	   purse	n	6161	0.91
-    4402	   shed	v	5769	0.97
-    4403	   liquid	n	5948	0.94
-    4404	   icon	n	6030	0.92
-    4405	   elephant	n	6038	0.92
-    4406	   consequently	r	6463	0.86
-    4407	   legislature	n	6027	0.92
-    4408	   associate	n	5860	0.95
-    4409	   franchise	n	6332	0.88
-    4410	   correctly	r	5884	0.95
-    4411	   mentally	r	5793	0.96
-    4412	   foster	v	6237	0.89
-    4413	   bicycle	n	5960	0.93
-    4414	   encouraging	j	5868	0.95
-    4415	   cheat	v	5819	0.96
-    4416	   access	v	6023	0.92
-    4417	   heal	v	5797	0.96
-    4418	   fever	n	5874	0.95
-    4419	   filter	n	6210	0.90
-    4420	   rabbit	n	6095	0.91
-    4421	   coin	n	5947	0.93
-    4422	   exploit	v	5909	0.94
-    4423	   accessible	j	5965	0.93
-    4424	   organism	n	6210	0.89
-    4425	   sensation	n	5882	0.94
-    4426	   partially	r	5882	0.94
-    4427	   stay	n	5779	0.96
-    4428	   upstairs	r	6271	0.88
-    4429	   dried	j	6109	0.91
-    4430	   minimum	n	5867	0.94
-    4431	   pro	j	6101	0.91
-    4432	   conservation	n	6129	0.90
-    4433	   shove	v	6327	0.87
-    4434	   backyard	n	5890	0.94
-    4435	   charter	n	6011	0.92
-    4436	   stove	n	6082	0.91
-    4437	   consent	n	6239	0.89
-    4438	   comprise	v	6258	0.88
-    4439	   reminder	n	5681	0.97
-    4440	   alike	r	5740	0.96
-    4441	   placement	n	6275	0.88
-    4442	   dough	n	6294	0.88
-    4443	   grandchild	n	5826	0.95
-    4444	   dam	n	5968	0.92
-    4445	   reportedly	r	5911	0.93
-    4446	   well-known	j	5782	0.95
-    4447	   surrounding	j	5826	0.95
-    4448	   ecological	j	6443	0.86
-    4449	   outfit	n	5850	0.94
-    4450	   unprecedented	j	5798	0.95
-    4451	   columnist	n	5997	0.92
-    4452	   workout	n	6414	0.86
-    4453	   preliminary	j	5908	0.93
-    4454	   patent	n	6024	0.91
-    4455	   shy	j	5806	0.95
-    4456	   quote	n	6228	0.88
-    4457	   trash	n	5811	0.95
-    4458	   disabled	j	5952	0.92
-    4459	   gross	j	5802	0.95
-    4460	   damn	j	6269	0.88
-    4461	   hormone	n	6230	0.88
-    4462	   texture	n	5994	0.92
-    4463	   counter	v	5722	0.96
-    4464	   pencil	n	5936	0.92
-    4465	   associate	j	5859	0.94
-    4466	   frontier	n	5897	0.93
-    4467	   spray	n	6005	0.91
-    4468	   bet	n	5801	0.95
-    4469	   disclose	v	5879	0.93
-    4470	   custody	n	5957	0.92
-    4471	   banker	n	5933	0.92
-    4472	   beast	n	6052	0.90
-    4473	   interfere	v	5709	0.96
-    4474	   oak	n	5938	0.92
-    4475	   case	c	5791	0.94
-    4476	   eighth	m	5814	0.94
-    4477	   notebook	n	5884	0.93
-    4478	   outline	v	5859	0.93
-    4479	   gaze	v	6379	0.86
-    4480	   attendance	n	5963	0.92
-    4481	   speculation	n	5698	0.96
-    4482	   uncover	v	5696	0.96
-    4483	   behalf	i	5727	0.95
-    4484	   innovative	j	5921	0.92
-    4485	   shark	n	6164	0.88
-    4486	   reward	v	5676	0.96
-    4487	   mill	n	5761	0.95
-    4488	   installation	n	5938	0.92
-    4489	   stimulate	v	5898	0.92
-    4490	   tag	n	5735	0.95
-    4491	   vertical	j	5950	0.91
-    4492	   swimming	n	5735	0.95
-    4493	   fleet	n	5781	0.94
-    4494	   catalog	n	5925	0.92
-    4495	   outsider	n	5690	0.96
-    4496	   sacrifice	v	5641	0.96
-    4497	   desperately	r	5701	0.95
-    4498	   stance	n	5812	0.93
-    4499	   compel	v	5728	0.95
-    4500	   sensitivity	n	5981	0.91
-    4501	   someday	r	5744	0.94
-    4502	   instant	j	5765	0.94
-    4503	   debut	n	5986	0.91
-    4504	   proclaim	v	5716	0.95
-    4505	   worldwide	r	5781	0.94
-    4506	   hike	v	6111	0.89
-    4507	   required	j	5953	0.91
-    4508	   confrontation	n	5762	0.94
-    4509	   colorful	j	5773	0.94
-    4510	   ideal	n	5978	0.91
-    4511	   constitution	n	6111	0.89
-    4512	   trainer	n	5845	0.93
-    4513	   Thanksgiving	n	5859	0.92
-    4514	   scent	n	6050	0.89
-    4515	   stack	n	5858	0.92
-    4516	   eyebrow	n	6212	0.87
-    4517	   sack	n	5880	0.92
-    4518	   cease	v	5679	0.95
-    4519	   inherit	v	5563	0.97
-    4520	   tray	n	6021	0.90
-    4521	   pioneer	n	5755	0.94
-    4522	   organizational	j	6445	0.84
-    4523	   textbook	n	5968	0.90
-    4524	   uh	u	6155	0.87
-    4525	   nasty	j	5682	0.95
-    4526	   shrink	v	5617	0.96
-    4527	   model	v	5925	0.91
-    4528	   emerging	j	5942	0.91
-    4529	   dot	n	5795	0.93
-    4530	   wheat	n	5730	0.94
-    4531	   fierce	j	5622	0.96
-    4532	   envision	v	5619	0.96
-    4533	   rational	j	5941	0.90
-    4534	   kingdom	n	5674	0.95
-    4535	   aisle	n	5828	0.92
-    4536	   weaken	v	5640	0.95
-    4537	   protocol	n	6031	0.89
-    4538	   exclusively	r	5852	0.92
-    4539	   vocal	j	5727	0.94
-    4540	   marketplace	n	5650	0.95
-    4541	   openly	r	5558	0.96
-    4542	   unfair	j	5656	0.95
-    4543	   terrain	n	5873	0.91
-    4544	   deploy	v	5674	0.94
-    4545	   risky	j	5632	0.95
-    4546	   pasta	n	6062	0.88
-    4547	   genre	n	5919	0.90
-    4548	   distract	v	5720	0.93
-    4549	   merit	n	5670	0.94
-    4550	   planner	n	5797	0.92
-    4551	   depressed	j	5543	0.96
-    4552	   chunk	n	5682	0.94
-    4553	   closest	j	5506	0.97
-    4554	   discount	n	5809	0.92
-    4555	   no	d	5591	0.95
-    4556	   ladder	n	5720	0.93
-    4557	   jungle	n	5693	0.94
-    4558	   migration	n	6067	0.88
-    4559	   breathing	n	5798	0.92
-    4560	   invade	v	5653	0.94
-    4561	   hurricane	n	6439	0.83
-    4562	   retailer	n	5915	0.90
-    4563	   classify	v	5964	0.89
-    4564	   wound	v	5660	0.94
-    4565	   coup	n	6179	0.86
-    4566	   aid	v	5676	0.94
-    4567	   ambassador	n	5847	0.91
-    4568	   density	n	6040	0.88
-    4569	   supportive	j	5662	0.94
-    4570	   curiosity	n	5630	0.94
-    4571	   skip	v	5635	0.94
-    4572	   aggression	n	6215	0.85
-    4573	   stimulus	n	6215	0.85
-    4574	   journalism	n	5684	0.93
-    4575	   robot	n	6023	0.88
-    4576	   flood	v	5531	0.96
-    4577	   dip	v	5664	0.93
-    4578	   likewise	r	5821	0.91
-    4579	   informal	j	5931	0.89
-    4580	   Persian	j	6340	0.83
-    4581	   feather	n	5744	0.92
-    4582	   sphere	n	5881	0.90
-    4583	   tighten	v	5665	0.93
-    4584	   boast	v	5731	0.92
-    4585	   pat	v	5968	0.89
-    4586	   perceived	j	6386	0.83
-    4587	   sole	j	5535	0.95
-    4588	   publicity	n	5557	0.95
-    4589	   major	n	5678	0.93
-    4590	   unfold	v	5420	0.97
-    4591	   joke	v	5576	0.95
-    4592	   well-being	n	6005	0.88
-    4593	   validity	n	6401	0.82
-    4594	   ecosystem	n	6215	0.85
-    4595	   strictly	r	5532	0.95
-    4596	   partial	j	5716	0.92
-    4597	   collar	n	5791	0.91
-    4598	   weed	n	5642	0.93
-    4599	   compliance	n	5973	0.88
-    4600	   streak	n	5826	0.90
-    4601	   supposedly	r	5451	0.97
-    4602	   added	j	5616	0.94
-    4603	   builder	n	5720	0.92
-    4604	   glimpse	n	5567	0.95
-    4605	   premise	n	5695	0.92
-    4606	   specialty	n	5622	0.94
-    4607	   deem	v	5639	0.93
-    4608	   artifact	n	5773	0.91
-    4609	   sneak	v	5690	0.92
-    4610	   monkey	n	5698	0.92
-    4611	   mentor	n	5757	0.91
-    4612	   two-thirds	m	5558	0.95
-    4613	   listener	n	5621	0.93
-    4614	   lightning	n	5674	0.93
-    4615	   legally	r	5484	0.96
-    4616	   sleeve	n	5855	0.90
-    4617	   disappointment	n	5464	0.96
-    4618	   disturb	v	5532	0.95
-    4619	   rib	n	5662	0.93
-    4620	   excessive	j	5633	0.93
-    4621	   high-tech	j	5681	0.92
-    4622	   debris	n	5491	0.95
-    4623	   pile	v	5609	0.93
-    4624	   rod	n	5788	0.90
-    4625	   logical	j	5644	0.93
-    4626	   liberal	n	5677	0.92
-    4627	   ash	n	5647	0.93
-    4628	   socially	r	5814	0.90
-    4629	   parish	n	5723	0.91
-    4630	   slavery	n	5712	0.92
-    4631	   blank	j	5585	0.94
-    4632	   commodity	n	5659	0.92
-    4633	   cure	n	5468	0.96
-    4634	   mineral	n	5758	0.91
-    4635	   hunger	n	5460	0.96
-    4636	   dying	j	5504	0.95
-    4637	   developmental	j	6255	0.84
-    4638	   faster	j	5538	0.94
-    4639	   spare	v	5492	0.95
-    4640	   halfway	r	5695	0.92
-    4641	   cure	v	5444	0.96
-    4642	   equality	n	5841	0.89
-    4643	   cemetery	n	5584	0.93
-    4644	   harassment	n	5882	0.89
-    4645	   deliberately	r	5388	0.97
-    4646	   fame	n	5485	0.95
-    4647	   regret	v	5479	0.95
-    4648	   striking	j	5516	0.94
-    4649	   likelihood	n	5790	0.90
-    4650	   carrot	n	5718	0.91
-    4651	   atop	i	5578	0.93
-    4652	   toll	n	5587	0.93
-    4653	   rim	n	5676	0.91
-    4654	   embarrassed	j	5627	0.92
-    4655	   fucking	j	6472	0.80
-    4656	   cling	v	5678	0.91
-    4657	   isolated	j	5482	0.95
-    4658	   blink	v	6160	0.84
-    4659	   suspicious	j	5412	0.96
-    4660	   wheelchair	n	5670	0.91
-    4661	   squad	n	5520	0.94
-    4662	   eligible	j	5529	0.94
-    4663	   processor	n	5882	0.88
-    4664	   plunge	v	5490	0.94
-    4665	   this	r	5517	0.94
-    4666	   sponsor	n	5622	0.92
-    4667	   grin	n	5944	0.87
-    4668	   color	v	5465	0.95
-    4669	   demographic	j	6103	0.85
-    4670	   rain	v	5597	0.92
-    4671	   chill	n	5675	0.91
-    4672	   refuge	n	5505	0.94
-    4673	   steer	v	5452	0.95
-    4674	   legislator	n	5593	0.92
-    4675	   rally	n	5619	0.92
-    4676	   programming	n	5507	0.94
-    4677	   cheer	v	5442	0.95
-    4678	   outlet	n	5497	0.94
-    4679	   intact	j	5350	0.96
-    4680	   vendor	n	5543	0.93
-    4681	   thrive	v	5472	0.94
-    4682	   peanut	n	5604	0.92
-    4683	   chew	v	5669	0.91
-    4684	   elaborate	j	5349	0.96
-    4685	   intellectual	n	5773	0.89
-    4686	   conception	n	5953	0.86
-    4687	   auction	n	5621	0.91
-    4688	   steak	n	5596	0.92
-    4689	   comply	v	5452	0.94
-    4690	   triumph	n	5337	0.96
-    4691	   shareholder	n	5742	0.89
-    4692	   comparable	j	5600	0.91
-    4693	   transport	v	5336	0.96
-    4694	   conscience	n	5317	0.96
-    4695	   calculation	n	5577	0.92
-    4696	   considerably	r	5481	0.93
-    4697	   interval	n	5708	0.89
-    4698	   scratch	v	5629	0.91
-    4699	   awake	j	5806	0.88
-    4700	   jurisdiction	n	5691	0.90
-    4701	   inevitably	r	5420	0.94
-    4702	   feminist	j	5719	0.89
-    4703	   constraint	n	5942	0.86
-    4704	   emotionally	r	5321	0.96
-    4705	   expedition	n	5467	0.93
-    4706	   allegedly	r	5451	0.93
-    4707	   compromise	v	5322	0.96
-    4708	   strain	v	5435	0.94
-    4709	   similarity	n	5709	0.89
-    4710	   butt	n	5490	0.93
-    4711	   lid	n	5558	0.92
-    4712	   dumb	j	5486	0.93
-    4713	   bulk	n	5324	0.95
-    4714	   sprinkle	v	5777	0.88
-    4715	   mortality	n	5785	0.88
-    4716	   philosophical	j	5731	0.89
-    4717	   conversion	n	5627	0.90
-    4718	   patron	n	5331	0.95
-    4719	   municipal	j	5536	0.92
-    4720	   any	r	5352	0.95
-    4721	   liver	n	5415	0.94
-    4722	   harmony	n	5410	0.94
-    4723	   solely	r	5456	0.93
-    4724	   tolerance	n	5513	0.92
-    4725	   instant	n	5755	0.88
-    4726	   goat	n	5459	0.93
-    4727	   arm	v	5232	0.97
-    4728	   blessing	n	5222	0.97
-    4729	   banana	n	5458	0.93
-    4730	   running	n	5271	0.96
-    4731	   palace	n	5347	0.94
-    4732	   formerly	r	5350	0.94
-    4733	   peasant	n	5609	0.90
-    4734	   neat	j	5359	0.94
-    4735	   grandparent	n	5334	0.95
-    4736	   lawmaker	n	5755	0.88
-    4737	   supermarket	n	5389	0.94
-    4738	   cruise	n	5434	0.93
-    4739	   mobile	j	5339	0.94
-    4740	   plain	n	5337	0.94
-    4741	   part	i	5503	0.91
-    4742	   calendar	n	5258	0.96
-    4743	   widow	n	5309	0.95
-    4744	   deposit	n	5497	0.91
-    4745	   beard	n	5528	0.91
-    4746	   brake	n	5522	0.91
-    4747	   downtown	r	5483	0.92
-    4748	   screening	n	5407	0.93
-    4749	   impulse	n	5305	0.95
-    4750	   forbid	v	5167	0.97
-    4751	   fur	n	5466	0.92
-    4752	   brutal	j	5193	0.97
-    4753	   predator	n	5400	0.93
-    4754	   poke	v	5575	0.90
-    4755	   opt	v	5371	0.93
-    4756	   voluntary	j	5504	0.91
-    4757	   trouble	v	5177	0.97
-    4758	   valid	j	5509	0.91
-    4759	   forum	n	5419	0.92
-    4760	   dancing	n	5243	0.95
-    4761	   happily	r	5331	0.94
-    4762	   soar	v	5344	0.94
-    4763	   removal	n	5488	0.91
-    4764	   autonomy	n	5849	0.85
-    4765	   enact	v	5441	0.92
-    4766	   round	v	5247	0.95
-    4767	   thread	n	5340	0.93
-    4768	   light	i	5458	0.91
-    4769	   landmark	n	5332	0.93
-    4770	   unhappy	j	5162	0.96
-    4771	   offender	n	5417	0.92
-    4772	   coming	j	5181	0.96
-    4773	   privately	r	5212	0.95
-    4774	   fraction	n	5313	0.94
-    4775	   distinctive	j	5373	0.93
-    4776	   tourism	n	5429	0.92
-    4777	   threshold	n	5490	0.91
-    4778	   calm	j	5309	0.94
-    4779	   routinely	r	5269	0.94
-    4780	   suite	n	5321	0.93
-    4781	   remark	v	5289	0.94
-    4782	   regulator	n	5462	0.91
-    4783	   straw	n	5297	0.94
-    4784	   theological	j	5684	0.87
-    4785	   apart	i	5216	0.95
-    4786	   exhaust	v	5204	0.95
-    4787	   globe	n	5166	0.96
-    4788	   fragile	j	5125	0.97
-    4789	   objection	n	5276	0.94
-    4790	   chemistry	n	5192	0.95
-    4791	   old-fashioned	j	5200	0.95
-    4792	   crowded	j	5196	0.95
-    4793	   circle	v	5401	0.91
-    4794	   blast	n	5241	0.94
-    4795	   prevail	v	5207	0.95
-    4796	   overnight	r	5170	0.96
-    4797	   denial	n	5207	0.95
-    4798	   rental	n	5357	0.92
-    4799	   fantastic	j	5269	0.94
-    4800	   fragment	n	5308	0.93
-    4801	   level	j	5367	0.92
-    4802	   screw	v	5361	0.92
-    4803	   warmth	n	5383	0.92
-    4804	   undergraduate	n	5683	0.87
-    4805	   liquid	j	5265	0.94
-    4806	   headache	n	5256	0.94
-    4807	   policeman	n	5278	0.93
-    4808	   yield	n	5648	0.87
-    4809	   projection	n	5288	0.93
-    4810	   battle	v	5240	0.94
-    4811	   suitable	j	5291	0.93
-    4812	   mention	n	5137	0.96
-    4813	   graduation	n	5218	0.94
-    4814	   drill	v	5279	0.93
-    4815	   cruel	j	5128	0.96
-    4816	   mansion	n	5233	0.94
-    4817	   regard	n	5263	0.93
-    4818	   grape	n	5318	0.92
-    4819	   authorize	v	5209	0.94
-    4820	   cottage	n	5328	0.92
-    4821	   driveway	n	5459	0.90
-    4822	   charm	n	5157	0.95
-    4823	   sexuality	n	5531	0.88
-    4824	   loyal	j	5066	0.97
-    4825	   clay	n	5287	0.93
-    4826	   pound	v	5327	0.92
-    4827	   balloon	n	5187	0.94
-    4828	   invention	n	5211	0.94
-    4829	   ego	n	5239	0.93
-    4830	   fare	n	5362	0.91
-    4831	   homework	n	5093	0.96
-    4832	   disc	n	5403	0.90
-    4833	   sofa	n	5499	0.89
-    4834	   guarantee	n	5205	0.94
-    4835	   availability	n	5519	0.88
-    4836	   radar	n	5221	0.93
-    4837	   frown	v	5903	0.83
-    4838	   regain	v	5041	0.97
-    4839	   leave	n	5087	0.96
-    4840	   permit	n	5305	0.92
-    4841	   sweater	n	5392	0.90
-    4842	   rehabilitation	n	5547	0.88
-    4843	   rubber	j	5190	0.94
-    4844	   retreat	n	5132	0.95
-    4845	   molecule	n	5445	0.89
-    4846	   freely	r	5085	0.96
-    4847	   favorable	j	5324	0.91
-    4848	   steadily	r	5085	0.96
-    4849	   veteran	j	5312	0.92
-    4850	   integrated	j	5455	0.89
-    4851	   ha	u	5372	0.90
-    4852	   youngster	n	5184	0.94
-    4853	   broadcast	v	5138	0.95
-    4854	   premium	n	5279	0.92
-    4855	   accountability	n	5409	0.90
-    4856	   overwhelm	v	4976	0.97
-    4857	   one-third	m	5210	0.93
-    4858	   contemplate	v	5027	0.96
-    4859	   update	v	5227	0.93
-    4860	   spark	v	5071	0.96
-    4861	   ironically	r	5154	0.94
-    4862	   fatigue	n	5214	0.93
-    4863	   beyond	r	5036	0.96
-    4864	   speculate	v	5012	0.97
-    4865	   marker	n	5156	0.94
-    4866	   low	r	5024	0.96
-    4867	   preach	v	5063	0.96
-    4868	   bucket	n	5233	0.92
-    4869	   bomb	v	5275	0.92
-    4870	   blond	j	5479	0.88
-    4871	   confession	n	5074	0.95
-    4872	   provoke	v	5063	0.95
-    4873	   marble	n	5210	0.93
-    4874	   substantially	r	5344	0.90
-    4875	   twist	n	5060	0.95
-    4876	   defender	n	5136	0.94
-    4877	   fish	v	5183	0.93
-    4878	   explicit	j	5461	0.88
-    4879	   transport	n	5313	0.91
-    4880	   disturbing	j	4990	0.97
-    4881	   surveillance	n	5132	0.94
-    4882	   magnetic	j	5377	0.90
-    4883	   technician	n	5048	0.95
-    4884	   mutter	v	5753	0.84
-    4885	   devastating	j	5055	0.95
-    4886	   depart	v	5035	0.96
-    4887	   arrow	n	5208	0.92
-    4888	   trauma	n	5880	0.82
-    4889	   neighboring	j	5082	0.95
-    4890	   soak	v	5186	0.93
-    4891	   ribbon	n	5159	0.93
-    4892	   meantime	n	5022	0.96
-    4893	   transmit	v	5117	0.94
-    4894	   screen	v	5079	0.95
-    4895	   harvest	n	5125	0.94
-    4896	   consecutive	j	5471	0.88
-    4897	   republican	j	5297	0.91
-    4898	   coordinate	v	5152	0.93
-    4899	   worldwide	j	5089	0.94
-    4900	   within	r	5085	0.94
-    4901	   spy	n	5076	0.95
-    4902	   slot	n	5130	0.94
-    4903	   riot	n	5203	0.92
-    4904	   nutrient	n	5426	0.88
-    4905	   citizenship	n	5602	0.86
-    4906	   severely	r	5035	0.95
-    4907	   sovereignty	n	5541	0.86
-    4908	   ridge	n	5229	0.91
-    4909	   brave	j	5061	0.94
-    4910	   lighting	n	5081	0.94
-    4911	   specify	v	5379	0.89
-    4912	   contributor	n	5084	0.94
-    4913	   frustrate	v	4933	0.97
-    4914	   crowd	v	5083	0.94
-    4915	   articulate	v	5350	0.89
-    4916	   importantly	r	5130	0.93
-    4917	   transit	n	5226	0.91
-    4918	   dense	j	5061	0.94
-    4919	   seminar	n	5106	0.93
-    4920	   electronics	n	5116	0.93
-    4921	   sunny	j	5117	0.93
-    4922	   shorts	n	5148	0.93
-    4923	   swell	v	5125	0.93
-    4924	   accusation	n	4987	0.95
-    4925	   soften	v	5112	0.93
-    4926	   photograph	v	5006	0.95
-    4927	   straighten	v	5352	0.89
-    4928	   terribly	r	5096	0.93
-    4929	   cue	n	5186	0.92
-    4930	   sudden	r	5211	0.91
-    4931	   bride	n	5613	0.85
-    4932	   biography	n	5015	0.95
-    4933	   hazard	n	5159	0.92
-    4934	   compelling	j	4995	0.95
-    4935	   seldom	r	5009	0.95
-    4936	   tile	n	5200	0.91
-    4937	   economically	r	5169	0.92
-    4938	   honestly	r	5042	0.94
-    4939	   troubled	j	4991	0.95
-    4940	   bow	v	5293	0.90
-    4941	   twentieth	m	5458	0.87
-    4942	   balanced	j	5486	0.86
-    4943	   foreigner	n	5076	0.93
-    4944	   launch	n	5080	0.93
-    4945	   convenience	n	4972	0.95
-    4946	   delight	n	5038	0.94
-    4947	   weave	v	5015	0.94
-    4948	   timber	n	5150	0.92
-    4949	   till	c	5269	0.90
-    4950	   accurately	r	5156	0.92
-    4951	   plea	n	5000	0.95
-    4952	   bulb	n	5157	0.92
-    4953	   copy	v	4970	0.95
-    4954	   flying	j	5056	0.93
-    4955	   sustainable	j	5339	0.89
-    4956	   devil	n	5051	0.94
-    4957	   bolt	n	5148	0.92
-    4958	   cargo	n	4991	0.95
-    4959	   spine	n	5110	0.92
-    4960	   seller	n	5083	0.93
-    4961	   skilled	j	5047	0.94
-    4962	   managing	j	5126	0.92
-    4963	   public	r	4877	0.97
-    4964	   marine	j	5154	0.92
-    4965	   dock	n	5178	0.91
-    4966	   organized	j	5011	0.94
-    4967	   fog	n	5186	0.91
-    4968	   diplomat	n	5185	0.91
-    4969	   boring	j	4922	0.96
-    4970	   sometime	r	4938	0.95
-    4971	   summary	n	5304	0.89
-    4972	   missionary	n	5438	0.87
-    4973	   epidemic	n	5010	0.94
-    4974	   fatal	j	4875	0.97
-    4975	   trim	v	5113	0.92
-    4976	   warehouse	n	5020	0.94
-    4977	   accelerate	v	4923	0.96
-    4978	   butterfly	n	5031	0.94
-    4979	   bronze	n	5118	0.92
-    4980	   drown	v	5097	0.92
-    4981	   inherent	j	5339	0.88
-    4982	   praise	n	4896	0.96
-    4983	   nationwide	r	5104	0.92
-    4984	   spit	v	5286	0.89
-    4985	   harvest	v	5065	0.93
-    4986	   kneel	v	5467	0.86
-    4987	   vacuum	n	5028	0.93
-    4988	   selected	j	5315	0.88
-    4989	   dictate	v	4935	0.95
-    4990	   stereotype	n	5109	0.92
-    4991	   sensor	n	5154	0.91
-    4992	   laundry	n	5063	0.93
-    4993	   manual	n	5040	0.93
-    4994	   pistol	n	5261	0.89
-    4995	   naval	j	4990	0.94
-    4996	   plaintiff	n	5312	0.88
-    4997	   kid	v	5094	0.92
-    4998	   middle-class	j	5025	0.93
-    4999	   apology	n	4972	0.94
-    5000	   till	i	5079	0.92
-}
-
-# the full parts of speech key
-set morse::words::pos {
-    APPGE possessive pronoun, pre-nominal (e.g. my, your, our)
-    AT article (e.g. the, no)
-    AT1	singular article (e.g. a, an, every)
-    BCL	before-clause marker (e.g. in order (that),in order (to))
-    CC coordinating conjunction (e.g. and, or)
-    CCB	adversative coordinating conjunction ( but)
-    CS subordinating conjunction (e.g. if, because, unless, so, for)
-    CSA	as (as conjunction)
-    CSN	than (as conjunction)
-    CST	that (as conjunction)
-    CSW	whether (as conjunction)
-    DA	after-determiner or post-determiner capable of pronominal function (e.g. such, former, same)
-    DA1	singular after-determiner (e.g. little, much)
-    DA2	plural after-determiner (e.g. few, several, many)
-    DAR	comparative after-determiner (e.g. more, less, fewer)
-    DAT	superlative after-determiner (e.g. most, least, fewest)
-    DB	before determiner or pre-determiner capable of pronominal function (all, half)
-    DB2	plural before-determiner ( both)
-    DD	determiner (capable of pronominal function) (e.g any, some)
-    DD1	singular determiner (e.g. this, that, another)
-    DD2	plural determiner ( these,those)
-    DDQ	wh-determiner (which, what)
-    DDQGE	wh-determiner, genitive (whose)
-    DDQV	wh-ever determiner, (whichever, whatever)
-    EX	existential there
-    FO	formula
-    FU	unclassified word
-    FW	foreign word
-    GE	germanic genitive marker - (' or's)
-    IF	for (as preposition)
-    II	general preposition
-    IO	of (as preposition)
-    IW	with, without (as prepositions)
-    JJ	general adjective
-    JJR	general comparative adjective (e.g. older, better, stronger)
-    JJT	general superlative adjective (e.g. oldest, best, strongest)
-    JK	catenative adjective (able in be able to, willing in be willing to)
-    MC	cardinal number,neutral for number (two, three..)
-    MC1	singular cardinal number (one)
-    MC2	plural cardinal number (e.g. sixes, sevens)
-    MCGE	genitive cardinal number, neutral for number (two's, 100's)
-    MCMC	hyphenated number (40-50, 1770-1827)
-    MD	ordinal number (e.g. first, second, next, last)
-    MF	fraction,neutral for number (e.g. quarters, two-thirds)
-    ND1	singular noun of direction (e.g. north, southeast)
-    NN	common noun, neutral for number (e.g. sheep, cod, headquarters)
-    NN1	singular common noun (e.g. book, girl)
-    NN2	plural common noun (e.g. books, girls)
-    NNA	following noun of title (e.g. M.A.)
-    NNB	preceding noun of title (e.g. Mr., Prof.)
-    NNL1	singular locative noun (e.g. Island, Street)
-    NNL2	plural locative noun (e.g. Islands, Streets)
-    NNO	numeral noun, neutral for number (e.g. dozen, hundred)
-    NNO2	numeral noun, plural (e.g. hundreds, thousands)
-    NNT1	temporal noun, singular (e.g. day, week, year)
-    NNT2	temporal noun, plural (e.g. days, weeks, years)
-    NNU	unit of measurement, neutral for number (e.g. in, cc)
-    NNU1	singular unit of measurement (e.g. inch, centimetre)
-    NNU2	plural unit of measurement (e.g. ins., feet)
-    NP	proper noun, neutral for number (e.g. IBM, Andes)
-    NP1	singular proper noun (e.g. London, Jane, Frederick)
-    NP2	plural proper noun (e.g. Browns, Reagans, Koreas)
-    NPD1	singular weekday noun (e.g. Sunday)
-    NPD2	plural weekday noun (e.g. Sundays)
-    NPM1	singular month noun (e.g. October)
-    NPM2	plural month noun (e.g. Octobers)
-    PN	indefinite pronoun, neutral for number (none)
-    PN1	indefinite pronoun, singular (e.g. anyone, everything, nobody, one)
-    PNQO	objective wh-pronoun (whom)
-    PNQS	subjective wh-pronoun (who)
-    PNQV	wh-ever pronoun (whoever)
-    PNX1	reflexive indefinite pronoun (oneself)
-    PPGE	nominal possessive personal pronoun (e.g. mine, yours)
-    PPH1	3rd person sing. neuter personal pronoun (it)
-    PPHO1	3rd person sing. objective personal pronoun (him, her)
-    PPHO2	3rd person plural objective personal pronoun (them)
-    PPHS1	3rd person sing. subjective personal pronoun (he, she)
-    PPHS2	3rd person plural subjective personal pronoun (they)
-    PPIO1	1st person sing. objective personal pronoun (me)
-    PPIO2	1st person plural objective personal pronoun (us)
-    PPIS1	1st person sing. subjective personal pronoun (I)
-    PPIS2	1st person plural subjective personal pronoun (we)
-    PPX1	singular reflexive personal pronoun (e.g. yourself, itself)
-    PPX2	plural reflexive personal pronoun (e.g. yourselves, themselves)
-    PPY	2nd person personal pronoun (you)
-    RA	adverb, after nominal head (e.g. else, galore)
-    REX	adverb introducing appositional constructions (namely, e.g.)
-    RG	degree adverb (very, so, too)
-    RGQ	wh- degree adverb (how)
-    RGQV	wh-ever degree adverb (however)
-    RGR	comparative degree adverb (more, less)
-    RGT	superlative degree adverb (most, least)
-    RL	locative adverb (e.g. alongside, forward)
-    RP	prep. adverb, particle (e.g about, in)
-    RPK	prep. adv., catenative (about in be about to)
-    RR	general adverb
-    RRQ	wh- general adverb (where, when, why, how)
-    RRQV	wh-ever general adverb (wherever, whenever)
-    RRR	comparative general adverb (e.g. better, longer)
-    RRT	superlative general adverb (e.g. best, longest)
-    RT	quasi-nominal adverb of time (e.g. now, tomorrow)
-    TO	infinitive marker (to)
-    UH	interjection (e.g. oh, yes, um)
-    VB0	be, base form (finite i.e. imperative, subjunctive)
-    VBDR	were
-    VBDZ	was
-    VBG	being
-    VBI	be, infinitive (To be or not... It will be ..)
-    VBM	am
-    VBN	been
-    VBR	are
-    VBZ	is
-    VD0	do, base form (finite)
-    VDD	did
-    VDG	doing
-    VDI	do, infinitive (I may do... To do...)
-    VDN	done
-    VDZ	does
-    VH0	have, base form (finite)
-    VHD	had (past tense)
-    VHG	having
-    VHI	have, infinitive
-    VHN	had (past participle)
-    VHZ	has
-    VM	modal auxiliary (can, will, would, etc.)
-    VMK	modal catenative (ought, used)
-    VV0	base form of lexical verb (e.g. give, work)
-    VVD	past tense of lexical verb (e.g. gave, worked)
-    VVG	-ing participle of lexical verb (e.g. giving, working)
-    VVGK	-ing participle catenative (going in be going to)
-    VVI	infinitive (e.g. to give... It will work...)
-    VVN	past participle of lexical verb (e.g. given, worked)
-    VVNK	past participle catenative (e.g. bound in be bound to)
-    VVZ	-s form of lexical verb (e.g. gives, works)
-    XX	not, n't
-    ZZ1	singular letter of the alphabet (e.g. A,b)
-    ZZ2	plural letter of the alphabet (e.g. A's, b's)
+    1	the	56271872
+    2	of	33950064
+    3	and	29944184
+    4	to	25956096
+    5	in	17420636
+    6	i	11764797
+    7	that	11073318
+    8	was	10078245
+    9	his	8799755
+    10	he	8397205
+    11	it	8058110
+    12	with	7725512
+    13	is	7557477
+    14	for	7097981
+    15	as	7037543
+    16	had	6139336
+    17	you	6048903
+    18	not	5741803
+    19	be	5662527
+    20	her	5202501
+    21	on	5113263
+    22	at	5091841
+    23	by	5061050
+    24	which	4580906
+    25	have	4346500
+    26	or	4228287
+    27	from	4108111
+    28	this	4015425
+    29	him	3971997
+    30	but	3894211
+    31	all	3703342
+    32	she	3415846
+    33	they	3340398
+    34	were	3323884
+    35	my	3277699
+    36	are	3224178
+    37	me	3027134
+    38	one	2832569
+    39	their	2820265
+    40	so	2802481
+    41	an	2641417
+    42	said	2637136
+    43	them	2509917
+    44	we	2491655
+    45	who	2472663
+    46	would	2400858
+    47	been	2357654
+    48	will	2320022
+    49	no	2241145
+    50	when	1980046
+    51	there	1961200
+    52	if	1951102
+    53	more	1899787
+    54	out	1875351
+    55	up	1792712
+    56	into	1703963
+    57	do	1680164
+    58	any	1665366
+    59	your	1658553
+    60	what	1605908
+    61	has	1602329
+    62	man	1573117
+    63	could	1571110
+    64	other	1533530
+    65	than	1508779
+    66	our	1498473
+    67	some	1476767
+    68	very	1462382
+    69	time	1449681
+    70	upon	1424595
+    71	about	1414687
+    72	may	1400642
+    73	its	1373270
+    74	only	1318367
+    75	now	1317723
+    76	like	1280625
+    77	little	1273589
+    78	then	1255636
+    79	can	1210074
+    80	should	1192154
+    81	made	1188501
+    82	did	1185720
+    83	us	1171742
+    84	such	1136757
+    85	a	1135294
+    86	great	1120163
+    87	before	1117089
+    88	must	1108116
+    89	two	1093366
+    90	these	1090510
+    91	see	1084286
+    92	know	1075612
+    93	over	1056659
+    94	much	1021822
+    95	down	989808
+    96	after	978575
+    97	first	978196
+    98	Mr	974419
+    99	good	966602
+    100	men	923053
+    101	own	922130
+    102	never	899673
+    103	most	889691
+    104	old	887917
+    105	shall	883846
+    106	day	882331
+    107	where	881975
+    108	those	878621
+    109	came	873144
+    110	come	873007
+    111	himself	863478
+    112	way	860027
+    113	work	829823
+    114	life	825485
+    115	without	819684
+    116	go	816536
+    117	make	807600
+    118	well	799596
+    119	through	792925
+    120	being	792220
+    121	long	791686
+    122	say	788124
+    123	might	787455
+    124	how	770603
+    125	am	761957
+    126	too	758856
+    127	even	750750
+    128	def	748992
+    129	again	745230
+    130	many	744168
+    131	back	740270
+    132	here	729829
+    133	think	715780
+    134	every	704444
+    135	people	701741
+    136	went	690186
+    137	same	689376
+    138	last	680833
+    139	thought	674623
+    140	away	673810
+    141	under	671168
+    142	take	656486
+    143	found	654512
+    144	hand	648227
+    145	eyes	647788
+    146	still	640067
+    147	place	621773
+    148	while	613918
+    149	just	610168
+    150	also	608042
+    151	young	591821
+    152	yet	588615
+    153	though	570877
+    154	against	569459
+    155	things	567559
+    156	get	564674
+    157	ever	559207
+    158	give	554003
+    159	god	552668
+    160	years	547420
+    161	off	545832
+    162	face	544251
+    163	nothing	541692
+    164	right	536737
+    165	once	534154
+    166	another	533985
+    167	left	531797
+    168	part	526137
+    169	saw	520922
+    170	house	517564
+    171	world	517557
+    172	head	512481
+    173	three	502146
+    174	took	501669
+    175	new	498040
+    176	love	496496
+    177	always	495834
+    178	Mrs	495443
+    179	put	495189
+    180	night	484878
+    181	each	484599
+    182	king	479849
+    183	between	479034
+    184	tell	475277
+    185	mind	470313
+    186	heart	467157
+    187	few	466338
+    188	because	465587
+    189	thing	461472
+    190	whom	458312
+    191	far	456267
+    192	seemed	447884
+    193	looked	447491
+    194	called	445602
+    195	whole	435059
+    196	de	433393
+    197	set	432637
+    198	both	432491
+    199	got	432016
+    200	find	431120
+    201	done	430389
+    202	heard	429972
+    203	look	428871
+    204	name	427021
+    205	days	426104
+    206	told	424696
+    207	let	424320
+    208	lord	422407
+    209	country	420788
+    210	asked	420044
+    211	going	419315
+    212	seen	418862
+    213	better	416463
+    214	p	415673
+    215	having	415355
+    216	home	413499
+    217	knew	413101
+    218	side	405810
+    219	something	398727
+    220	moment	390988
+    221	father	387790
+    222	among	387549
+    223	course	385303
+    224	hands	385081
+    225	woman	384156
+    226	enough	382266
+    227	words	380328
+    228	mother	373898
+    229	soon	373813
+    230	full	371831
+    231	end	369761
+    232	gave	369036
+    233	room	366719
+    234	almost	366630
+    235	small	359970
+    236	thou	355857
+    237	cannot	355656
+    238	water	355467
+    239	want	354212
+    240	however	352828
+    241	light	351253
+    242	quite	350537
+    243	brought	349925
+    244	nor	349691
+    245	word	349685
+    246	whose	344377
+    247	given	344141
+    248	door	342388
+    249	best	337544
+    250	turned	337367
+    251	taken	335210
+    252	does	334332
+    253	use	333883
+    254	morning	330567
+    255	myself	328630
+    256	Gutenberg	328324
+    257	felt	326524
+    258	until	326391
+    259	since	326386
+    260	power	326243
+    261	themselves	325793
+    262	used	325791
+    263	rather	325719
+    264	began	325327
+    265	present	324509
+    266	voice	322870
+    267	others	322643
+    268	white	322465
+    269	works	318937
+    270	less	316490
+    271	money	315642
+    272	next	313167
+    273	poor	311818
+    274	death	309653
+    275	stood	308025
+    276	form	307506
+    277	within	307223
+    278	together	304955
+    279	till	304735
+    280	thy	304489
+    281	large	304240
+    282	matter	301283
+    283	kind	298191
+    284	often	296798
+    285	certain	296795
+    286	herself	295916
+    287	year	295745
+    288	friend	295078
+    289	half	293866
+    290	order	293593
+    291	round	291647
+    292	true	291427
+    293	anything	289997
+    294	keep	289304
+    295	sent	287876
+    296	wife	286847
+    297	means	284431
+    298	believe	281965
+    299	passed	279864
+    300	feet	279821
+    301	near	278870
+    302	public	278365
+    303	state	277682
+    304	son	277227
+    305	hundred	275990
+    306	children	275607
+    307	thus	275221
+    308	hope	273746
+    309	alone	272173
+    310	above	271641
+    311	case	271588
+    312	dear	270503
+    313	thee	269414
+    314	says	268542
+    315	person	267878
+    316	high	266672
+    317	read	265947
+    318	city	265138
+    319	already	264662
+    320	received	264606
+    321	fact	263613
+    322	gone	263585
+    323	girl	262689
+    324	known	262571
+    325	hear	260746
+    326	times	260596
+    327	least	259916
+    328	perhaps	257964
+    329	sure	255885
+    330	indeed	255789
+    331	english	255212
+    332	open	254373
+    333	body	252812
+    334	itself	251252
+    335	along	251163
+    336	land	249677
+    337	return	249533
+    338	leave	249063
+    339	air	247480
+    340	nature	246792
+    341	answered	246251
+    342	either	244426
+    343	law	244138
+    344	help	243712
+    345	lay	242753
+    346	point	242269
+    347	child	242201
+    348	letter	242178
+    349	four	242099
+    350	wish	241091
+    351	fire	240652
+    352	cried	240280
+    353	2	240009
+    354	women	239735
+    355	speak	239025
+    356	number	238734
+    357	therefore	238281
+    358	hour	237964
+    359	friends	237481
+    360	held	235474
+    361	free	235012
+    362	war	234544
+    363	during	233771
+    364	several	233197
+    365	business	233158
+    366	whether	230819
+    367	er	230485
+    368	manner	230401
+    369	second	230300
+    370	reason	229940
+    371	replied	229913
+    372	united	226953
+    373	call	226661
+    374	general	226391
+    375	why	226216
+    376	behind	226205
+    377	became	224811
+    378	john	224569
+    379	become	224326
+    380	dead	224049
+    381	earth	222546
+    382	boy	222315
+    383	lost	222264
+    384	forth	220598
+    385	thousand	218623
+    386	looking	218510
+    387	I'll	218372
+    388	family	218118
+    389	soul	217840
+    390	feel	216356
+    391	coming	215147
+    392	England	214339
+    393	spirit	213257
+    394	question	213124
+    395	care	213072
+    396	truth	212548
+    397	ground	212369
+    398	really	211722
+    399	rest	211668
+    400	mean	211299
+    401	different	211043
+    402	making	210031
+    403	possible	209099
+    404	fell	208344
+    405	towards	208199
+    406	human	206740
+    407	kept	206329
+    408	short	206216
+    409	town	205687
+    410	following	205653
+    411	need	204955
+    412	cause	204686
+    413	met	203956
+    414	evening	203331
+    415	returned	202041
+    416	five	201451
+    417	strong	200224
+    418	able	200145
+    419	french	199969
+    420	live	199658
+    421	lady	199560
+    422	subject	198566
+    423	sn	198498
+    424	answer	198187
+    425	sea	198128
+    426	fear	196739
+    427	understand	196729
+    428	hard	196458
+    429	terms	196252
+    430	doubt	195905
+    431	around	195594
+    432	ask	194903
+    433	arms	194298
+    434	turn	192763
+    435	sense	192719
+    436	seems	192229
+    437	black	191272
+    438	bring	191148
+    439	followed	190649
+    440	beautiful	190563
+    441	close	188915
+    442	dark	188316
+    443	hold	186609
+    444	character	186256
+    445	sort	186136
+    446	sight	185862
+    447	ten	184612
+    448	show	184074
+    449	party	184068
+    450	fine	183059
+    451	ye	182978
+    452	ready	181866
+    453	story	180998
+    454	common	180061
+    455	book	179739
+    456	electronic	179347
+    457	talk	178877
+    458	account	178452
+    459	mark	178084
+    460	interest	178001
+    461	written	177232
+    462	can't	176728
+    463	bed	176635
+    464	necessary	176467
+    465	age	176320
+    466	else	175980
+    467	force	175520
+    468	idea	174236
+    469	longer	173897
+    470	art	173544
+    471	spoke	172990
+    472	across	172901
+    473	brother	172692
+    474	early	172467
+    475	ought	171690
+    476	sometimes	171309
+    477	line	170962
+    478	saying	170695
+    479	table	170143
+    480	appeared	169913
+    481	river	169470
+    482	continued	169086
+    483	eye	168723
+    484	ety	168713
+    485	sun	168545
+    486	information	168408
+    487	later	167805
+    488	everything	166395
+    489	reached	165752
+    490	suddenly	164850
+    491	past	164703
+    492	hours	164326
+    493	strange	164147
+    494	deep	163819
+    495	change	163514
+    496	miles	163341
+    497	feeling	163269
+    498	act	162869
+    499	meet	162687
+    500	paid	162605
+    501	further	162328
+    502	purpose	162154
+    503	happy	162105
+    504	added	161953
+    505	seem	161549
+    506	taking	160626
+    507	blood	160547
+    508	rose	159794
+    509	south	158664
+    510	beyond	158344
+    511	cold	158204
+    512	neither	158200
+    513	forward	157578
+    514	view	157416
+    515	I've	157210
+    516	position	156851
+    517	sound	156616
+    518	none	155743
+    519	entered	155480
+    520	clear	155472
+    521	road	154977
+    522	late	154840
+    523	stand	154582
+    524	suppose	154536
+    525	la	154457
+    526	daughter	154261
+    527	real	154046
+    528	nearly	154001
+    529	mine	153940
+    530	laws	153830
+    531	knowledge	153829
+    532	comes	153299
+    533	toward	152972
+    534	bad	152889
+    535	cut	152625
+    536	copy	151661
+    537	husband	151651
+    538	six	151612
+    539	France	151108
+    540	living	151043
+    541	peace	150281
+    542	didn't	149696
+    543	low	149690
+    544	north	149601
+    545	remember	149323
+    546	effect	148795
+    547	natural	148744
+    548	pretty	148124
+    549	fall	147435
+    550	fair	147401
+    551	service	146483
+    552	below	146062
+    553	except	145998
+    554	American	145980
+    555	hair	145817
+    556	London	145606
+    557	laid	145490
+    558	pass	145440
+    559	led	145393
+    560	copyright	145244
+    561	doing	145131
+    562	army	144925
+    563	run	144688
+    564	horse	144022
+    565	future	143658
+    566	opened	143625
+    567	pleasure	142952
+    568	history	141958
+    569	west	141745
+    570	pay	141597
+    571	red	141588
+    572	an'	141517
+    573	4	141402
+    574	hath	141246
+    575	note	140679
+    576	although	140667
+    577	wanted	140608
+    578	gold	139711
+    579	makes	139167
+    580	desire	138288
+    581	play	138228
+    582	master	137871
+    583	office	136616
+    584	tried	136507
+    585	front	136296
+    586	big	136265
+    587	Dr	135902
+    588	lived	135512
+    589	certainly	135386
+    590	wind	134689
+    591	receive	134351
+    592	attention	134257
+    593	government	134075
+    594	unto	134048
+    595	church	133975
+    596	strength	133771
+    597	length	133663
+    598	company	133159
+    599	placed	133084
+    600	paper	133030
+    601	letters	132785
+    602	probably	132560
+    603	glad	132368
+    604	important	132288
+    605	especially	132096
+    606	greater	132045
+    607	yourself	131617
+    608	fellow	131509
+    609	bear	131397
+    610	opinion	130867
+    611	window	130590
+    612	ran	130394
+    613	faith	130376
+    614	ago	130255
+    615	agreement	130079
+    616	charge	129644
+    617	beauty	129586
+    618	lips	129473
+    619	remained	129411
+    620	arm	129325
+    621	latter	129276
+    622	duty	129116
+    623	send	129075
+    624	distance	129046
+    625	silence	128067
+    626	foot	128053
+    627	wild	127758
+    628	object	127468
+    629	die	127167
+    630	save	126799
+    631	gentleman	126761
+    632	trees	126469
+    633	green	126431
+    634	trouble	125885
+    635	smile	125830
+    636	books	125827
+    637	wrong	125401
+    638	various	125006
+    639	sleep	124634
+    640	persons	123820
+    641	blockquote	123703
+    642	happened	123421
+    643	particular	123182
+    644	drew	122264
+    645	minutes	122201
+    646	hardly	121603
+    647	walked	121276
+    648	chief	121207
+    649	chance	120739
+    650	according	120733
+    651	beginning	120733
+    652	action	120590
+    653	deal	120186
+    654	loved	120145
+    655	visit	119807
+    656	thinking	119753
+    657	follow	119666
+    658	standing	119506
+    659	knows	119114
+    660	try	118860
+    661	presence	118852
+    662	heavy	118834
+    663	sweet	118754
+    664	plain	118641
+    665	donations	118443
+    666	immediately	118250
+    667	wrote	118114
+    668	mouth	117921
+    669	rich	117386
+    670	thoughts	117251
+    671	months	116955
+    672	u	116586
+    673	won't	116568
+    674	afraid	116467
+    675	Paris	116402
+    676	single	115905
+    677	joy	115788
+    678	enemy	115195
+    679	broken	115006
+    680	unless	114054
+    681	states	113807
+    682	ship	113611
+    683	condition	113578
+    684	carry	113357
+    685	exclaimed	113352
+    686	including	113104
+    687	filled	112921
+    688	seeing	112889
+    689	influence	112447
+    690	write	112285
+    691	boys	112125
+    692	appear	112044
+    693	outside	111849
+    694	secret	111678
+    695	parts	111194
+    696	please	111114
+    697	appearance	110932
+    698	evil	110898
+    699	march	110834
+    700	George	110754
+    701	whatever	110549
+    702	slowly	110500
+    703	tears	110314
+    704	horses	110296
+    705	places	110250
+    706	caught	110061
+    707	stay	109894
+    708	instead	109837
+    709	struck	109662
+    710	blue	109449
+    711	York	109354
+    712	impossible	109330
+    713	period	109160
+    714	sister	108983
+    715	battle	108781
+    716	school	108701
+    717	Mary	108633
+    718	raised	108580
+    719	occasion	108544
+    720	married	108419
+    721	man's	108346
+    722	former	108299
+    723	food	108140
+    724	youth	108097
+    725	learned	108072
+    726	merely	108034
+    727	reach	107787
+    728	system	107496
+    729	twenty	107475
+    730	dinner	107414
+    731	quiet	107167
+    732	easily	107012
+    733	moved	106996
+    734	afterwards	106992
+    735	giving	106981
+    736	walk	106858
+    737	stopped	106661
+    738	laughed	106591
+    739	language	106445
+    740	expression	106415
+    741	week	106184
+    742	hall	106108
+    743	danger	105775
+    744	property	105765
+    745	wonder	105588
+    746	usual	105412
+    747	figure	105403
+    748	born	104938
+    749	court	104606
+    750	generally	104448
+    751	grew	104326
+    752	showed	104205
+    753	getting	103981
+    754	ancient	103755
+    755	respect	103497
+    756	third	103468
+    757	worth	103346
+    758	simple	102885
+    759	tree	102872
+    760	leaving	102830
+    761	remain	102801
+    762	society	102355
+    763	fight	102206
+    764	wall	102124
+    765	result	102039
+    766	heaven	101875
+    767	William	101780
+    768	started	101771
+    769	command	101717
+    770	tone	101569
+    771	regard	101139
+    772	expected	101117
+    773	mere	101061
+    774	month	101037
+    775	beside	100710
+    776	silent	100695
+    777	perfect	100522
+    778	experience	100504
+    779	street	100499
+    780	writing	100292
+    781	goes	100235
+    782	circumstances	100166
+    783	entirely	99803.2
+    784	fresh	99654.4
+    785	duke	99561.9
+    786	covered	99439.2
+    787	bound	99304.7
+    788	east	99220.9
+    789	wood	99157.6
+    790	stone	99073.7
+    791	quickly	98994.6
+    792	notice	98872.0
+    793	bright	98773.9
+    794	Christ	98758.1
+    795	boat	98756.5
+    796	noble	98714.6
+    797	meant	98705.1
+    798	somewhat	98651.3
+    799	sudden	98497.8
+    800	value	98232.8
+    801	c.	97991.5
+    802	direction	97628.3
+    803	chair	97567.4
+    804	due	97353.0
+    805	support	97334.0
+    806	tom	97093.5
+    807	date	96908.4
+    808	waiting	96834.8
+    809	Christian	96735.9
+    810	village	96681.3
+    811	lives	96547.6
+    812	reading	96465.4
+    813	agree	96413.9
+    814	lines	96198.0
+    815	considered	96182.9
+    816	field	96170.3
+    817	observed	96110.1
+    818	scarcely	95979.6
+    819	wished	95538.2
+    820	wait	95523.9
+    821	greatest	95398.1
+    822	permission	95391.0
+    823	success	95371.2
+    824	piece	95303.2
+    825	British	95149.7
+    826	ex	95127.6
+    827	Charles	95049.2
+    828	formed	94978.0
+    829	speaking	94833.3
+    830	trying	94706.7
+    831	conversation	94578.5
+    832	proper	94480.4
+    833	hill	94379.1
+    834	music	94284.2
+    835	opportunity	94123.6
+    836	that's	93912.4
+    837	German	93866.5
+    838	afternoon	93839.6
+    839	cry	93675.0
+    840	cost	93470.1
+    841	allowed	93398.1
+    842	girls	93384.7
+    843	considerable	93235.2
+    844	c	92990.7
+    845	broke	92800.8
+    846	honour	92446.4
+    847	seven	92292.1
+    848	private	92260.5
+    849	sit	92217.0
+    850	news	92204.3
+    851	top	91995.5
+    852	scene	91985.2
+    853	discovered	91968.6
+    854	marriage	91937.7
+    855	step	91592.0
+    856	garden	91392.6
+    857	race	91305.6
+    858	begin	91207.5
+    859	per	91115.7
+    860	individual	90923.5
+    861	sitting	90632.3
+    862	learn	90513.7
+    863	political	90412.4
+    864	difficult	90385.5
+    865	bit	90352.3
+    866	speech	90319.0
+    867	Henry	90034.2
+    868	lie	89756.5
+    869	cast	89723.3
+    870	eat	89650.5
+    871	authority	89562.7
+    872	etc.	89480.4
+    873	floor	89151.3
+    874	ill	89125.2
+    875	ways	88381.5
+    876	officers	88207.5
+    877	offered	88164.0
+    878	original	88133.9
+    879	happiness	88005.0
+    880	flowers	87879.2
+    881	produced	87876.0
+    882	summer	87793.7
+    883	provide	87573.0
+    884	study	87538.2
+    885	religion	87445.6
+    886	picture	87340.4
+    887	walls	87300.1
+    888	personal	87235.2
+    889	America	87195.6
+    890	watch	87073.8
+    891	pleased	86744.7
+    892	leaves	86702.0
+    893	declared	86560.4
+    894	hot	86478.9
+    895	understood	86271.6
+    896	effort	86256.6
+    897	prepared	86240.7
+    898	escape	86157.7
+    899	attempt	86132.4
+    900	supposed	86122.1
+    901	killed	86020.0
+    902	fast	86008.1
+    903	author	85992.3
+    904	Indian	85940.9
+    905	brown	85875.2
+    906	determined	85873.7
+    907	pain	85833.3
+    908	spring	85777.9
+    909	takes	85761.3
+    910	drawn	85701.2
+    911	soldiers	85694.1
+    912	houses	85488.4
+    913	beneath	85453.6
+    914	talking	85391.1
+    915	turning	85325.4
+    916	century	85256.6
+    917	steps	84796.1
+    918	intended	84789.0
+    919	soft	84783.5
+    920	straight	84750.2
+    921	matters	84637.1
+    922	likely	84636.3
+    923	corner	84584.1
+    924	trademark	84518.4
+    925	justice	84500.2
+    926	simply	84365.0
+    927	produce	84323.0
+    928	trust	84298.5
+    929	appears	84153.7
+    930	Rome	84141.1
+    931	laugh	84072.2
+    932	forget	84004.2
+    933	Europe	83940.9
+    934	passage	83908.5
+    935	eight	83853.9
+    936	closed	83814.3
+    937	ourselves	83716.2
+    938	gives	83639.5
+    939	dress	83486.0
+    940	passing	83482.1
+    941	terrible	83421.9
+    942	required	83248.7
+    943	medium	83151.4
+    944	efforts	83147.4
+    945	sake	83124.5
+    946	breath	83075.4
+    947	wise	83039.0
+    948	ladies	82918.0
+    949	possession	82883.2
+    950	pleasant	82839.7
+    951	perfectly	82830.9
+    952	o'	82761.3
+    953	memory	82725.7
+    954	usually	82644.2
+    955	grave	82623.7
+    956	fixed	82566.7
+    957	modern	82562.0
+    958	spot	82338.9
+    959	troops	82223.4
+    960	rise	82126.8
+    961	break	82118.1
+    962	fifty	82035.1
+    963	island	81974.9
+    964	meeting	81962.3
+    965	camp	81899.8
+    966	nation	81890.3
+    967	existence	81804.1
+    968	reply	81671.1
+    969	I'd	81624.5
+    970	copies	81479.7
+    971	sky	81457.5
+    972	touch	81396.6
+    973	equal	81392.7
+    974	fortune	81232.1
+    975	v.	81207.5
+    976	shore	81109.4
+    977	domain	81056.4
+    978	named	80756.6
+    979	situation	80651.4
+    980	looks	80463.1
+    981	promise	80426.7
+    982	orders	80294.6
+    983	degree	80293.8
+    984	middle	80239.2
+    985	winter	80239.2
+    986	plan	80069.9
+    987	spent	80046.2
+    988	allow	79876.1
+    989	pale	79860.2
+    990	conduct	79819.9
+    991	running	79752.6
+    992	religious	79751.1
+    993	surprise	79635.6
+    994	minute	79605.5
+    995	roman	79482.1
+    996	cases	79432.2
+    997	shot	79425.1
+    998	lead	79418.8
+    999	move	79376.1
+    1000	names	79366.6
+    1001	stop	79301.7
+    1002	higher	79280.3
+    1003	et	79225.0
+    1004	father's	79201.2
+    1005	threw	79179.1
+    1006	worse	79163.2
+    1007	built	79110.2
+    1008	spoken	79085.7
+    1009	glass	79053.3
+    1010	board	78858.7
+    1011	vain	78809.6
+    1012	affairs	78788.3
+    1013	instance	78564.4
+    1014	safe	78317.5
+    1015	loss	78305.7
+    1016	doctor	78281.9
+    1017	offer	78246.3
+    1018	class	78173.5
+    1019	complete	78039.8
+    1020	access	77716.3
+    1021	lower	77368.2
+    1022	wouldn't	77327.0
+    1023	repeated	77300.1
+    1024	forms	77286.7
+    1025	darkness	77261.4
+    1026	military	77249.5
+    1027	warm	77220.2
+    1028	drink	77183.8
+    1029	passion	77028.0
+    1030	ones	76976.6
+    1031	physical	76974.2
+    1032	example	76922.8
+    1033	ears	76672.0
+    1034	questions	76596.8
+    1035	start	76592.9
+    1036	lying	76560.4
+    1037	smiled	76547.8
+    1038	keeping	76541.4
+    1039	spite	76495.5
+    1040	shown	76402.2
+    1041	directly	76333.4
+    1042	james	76067.5
+    1043	hart	76059.6
+    1044	serious	75990.8
+    1045	hat	75918.0
+    1046	dog	75874.5
+    1047	silver	75859.5
+    1048	sufficient	75856.3
+    1049	main	75850.0
+    1050	mentioned	75813.6
+    1051	servant	75473.4
+    1052	pride	75429.9
+    1053	crowd	75422.0
+    1054	train	75404.6
+    1055	wonderful	75347.6
+    1056	moral	75253.5
+    1057	instant	75209.9
+    1058	associated	75153.0
+    1059	path	75150.6
+    1060	greek	75128.5
+    1061	meaning	74981.3
+    1062	fit	74906.9
+    1063	ordered	74834.2
+    1064	lot	74745.6
+    1065	he's	74505.0
+    1066	proved	74438.6
+    1067	obliged	74413.3
+    1068	enter	74391.9
+    1069	rule	74378.5
+    1070	sword	74342.9
+    1071	attack	74293.0
+    1072	seat	74266.1
+    1073	game	74220.2
+    1074	health	74210.7
+    1075	paragraph	74195.7
+    1076	statement	74053.3
+    1077	social	74035.9
+    1078	refund	73914.1
+    1079	sorry	73906.2
+    1080	courage	73882.4
+    1081	members	73833.4
+    1082	grace	73826.3
+    1083	official	73755.1
+    1084	dream	73726.6
+    1085	worthy	73622.1
+    1086	rock	73581.8
+    1087	jack	73527.2
+    1088	provided	73443.3
+    1089	special	73437.8
+    1090	shook	73338.9
+    1091	request	73327.8
+    1092	mighty	73313.6
+    1093	glance	73302.5
+    1094	heads	73281.2
+    1095	movement	73266.9
+    1096	fee	73232.9
+    1097	share	73182.3
+    1098	expect	73178.3
+    1099	couldn't	73076.3
+    1100	dollars	72925.9
+    1101	spread	72890.3
+    1102	opposite	72815.2
+    1103	glory	72644.3
+    1104	twelve	72570.7
+    1105	space	72550.2
+    1106	engaged	72545.4
+    1107	peter	72509.0
+    1108	wine	72450.5
+    1109	ordinary	72404.6
+    1110	mountains	72333.4
+    1111	taste	72268.5
+    1112	iron	72252.7
+    1113	isn't	72166.5
+    1114	distribute	72160.9
+    1115	trade	72098.4
+    1116	consider	72033.5
+    1117	greatly	71894.3
+    1118	accepted	71888.0
+    1119	forced	71884.8
+    1120	advantage	71878.5
+    1121	ideas	71849.2
+    1122	decided	71766.1
+    1123	using	71751.9
+    1124	officer	71744.0
+    1125	rate	71688.6
+    1126	clothes	71654.6
+    1127	sign	71582.6
+    1128	feelings	71558.9
+    1129	native	71399.1
+    1130	promised	71195.7
+    1131	judge	71190.2
+    1132	difference	71072.3
+    1133	working	71042.3
+    1134	anxious	71040.7
+    1135	marry	70948.9
+    1136	captain	70861.9
+    1137	finished	70763.8
+    1138	extent	70649.8
+    1139	watched	70643.5
+    1140	curious	70641.1
+    1141	foreign	70609.5
+    1142	besides	70524.9
+    1143	method	70513.0
+    1144	excellent	70452.9
+    1145	confidence	70414.1
+    1146	marked	70264.6
+    1147	'em	70256.7
+    1148	jesus	70228.2
+    1149	exactly	70213.1
+    1150	importance	70066.8
+    1151	finally	70018.5
+    1152	bill	69973.4
+    1153	vast	69861.1
+    1154	prove	69854.0
+    1155	fancy	69771.7
+    1156	quick	69761.4
+    1157	yes	69731.3
+    1158	sought	69666.5
+    1159	prevent	69664.1
+    1160	neck	69634.8
+    1161	hearts	69628.5
+    1162	liberty	69603.2
+    1163	interesting	69601.6
+    1164	sides	69594.5
+    1165	legal	69532.8
+    1166	gentlemen	69507.5
+    1167	dry	69442.6
+    1168	serve	69414.9
+    1169	aside	69368.2
+    1170	pure	69287.5
+    1171	concerning	69279.6
+    1172	forgotten	69212.4
+    1173	lose	69115.8
+    1174	powers	69073.1
+    1175	possessed	68995.6
+    1176	thrown	68931.5
+    1177	evidence	68904.6
+    1178	distant	68882.5
+    1179	Michael	68874.5
+    1180	progress	68830.2
+    1181	similar	68603.2
+    1182	narrow	68505.9
+    1183	altogether	68471.9
+    1184	building	68394.3
+    1185	page	68234.5
+    1186	particularly	68193.4
+    1187	knowing	68050.2
+    1188	weeks	67942.6
+    1189	settled	67880.1
+    1190	holding	67815.2
+    1191	mountain	67762.2
+    1192	search	67660.2
+    1193	sad	67596.1
+    1194	sin	67589.7
+    1195	lies	67551.0
+    1196	proud	67492.4
+    1197	pieces	67423.6
+    1198	clearly	67318.4
+    1199	price	67277.2
+    1200	ships	67259.0
+    1201	thirty	67229.0
+    1202	sick	67152.2
+    1203	honest	67088.2
+    1204	shut	67063.6
+    1205	talked	66998.0
+    1206	bank	66981.4
+    1207	fate	66946.5
+    1208	dropped	66940.2
+    1209	judgment	66827.9
+    1210	conditions	66803.4
+    1211	king's	66590.5
+    1212	accept	66498.8
+    1213	hills	66475.8
+    1214	removed	66429.1
+    1215	forest	66263.0
+    1216	measure	66262.2
+    1217	species	66220.3
+    1218	seek	66141.2
+    1219	highest	66066.0
+    1220	otherwise	66054.9
+    1221	stream	66003.5
+    1222	honor	65994.0
+    1223	carefully	65960.0
+    1224	obtained	65884.1
+    1225	ear	65819.2
+    1226	bread	65708.4
+    1227	bottom	65645.1
+    1228	additional	65640.4
+    1229	presented	65615.9
+    1230	aid	65581.1
+    1231	fingers	65564.4
+    1232	q	65556.5
+    1233	remembered	65554.2
+    1234	choose	65396.7
+    1235	agreed	65284.4
+    1236	animal	65255.1
+    1237	events	65118.2
+    1238	there's	65017.8
+    1239	fully	64982.2
+    1240	delight	64971.9
+    1241	rights	64836.6
+    1242	amount	64720.3
+    1243	obtain	64706.1
+    1244	tax	64658.6
+    1245	servants	64642.0
+    1246	sons	64592.9
+    1247	cross	64403.8
+    1248	shoulders	64397.5
+    1249	thick	64364.3
+    1250	points	64311.3
+    1251	stranger	64270.9
+    1252	woods	64227.4
+    1253	facts	64155.4
+    1254	dare	64055.0
+    1255	grow	64005.1
+    1256	creature	63988.5
+    1257	hung	63988.5
+    1258	rain	63905.4
+    1259	false	63861.1
+    1260	tall	63854.8
+    1261	gate	63851.6
+    1262	nations	63793.9
+    1263	created	63774.9
+    1264	refused	63774.9
+    1265	quietly	63767.8
+    1266	surface	63717.1
+    1267	freely	63711.6
+    1268	holy	63709.2
+    1269	streets	63695.0
+    1270	blow	63577.9
+    1271	july	63558.1
+    1272	regarded	63536.0
+    1273	fashion	63526.5
+    1274	report	63492.5
+    1275	coast	63479.8
+    1276	daily	63422.8
+    1277	file	63420.5
+    1278	shoulder	63340.6
+    1279	surprised	63312.9
+    1280	faces	63252.7
+    1281	succeeded	63179.2
+    1282	birds	63162.6
+    1283	distribution	63155.4
+    1284	royal	63124.6
+    1285	song	63090.6
+    1286	wealth	63067.6
+    1287	comfort	63064.5
+    1288	failed	63013.0
+    1289	freedom	62979.8
+    1290	peculiar	62951.3
+    1291	anyone	62941.8
+    1292	advance	62895.1
+    1293	gentle	62856.4
+    1294	surely	62831.1
+    1295	animals	62815.2
+    1296	waited	62808.1
+    1297	secure	62770.9
+    1298	desired	62740.1
+    1299	grass	62726.6
+    1300	touched	62649.9
+    1301	occupied	62645.1
+    1302	draw	62587.4
+    1303	stage	62536.0
+    1304	portion	62479.8
+    1305	expressed	62460.0
+    1306	opening	62316.0
+    1307	june	62288.3
+    1308	spirits	62147.5
+    1309	fish	62138.0
+    1310	tongue	62119.8
+    1311	capital	62114.3
+    1312	angry	61966.4
+    1313	growing	61954.5
+    1314	served	61954.5
+    1315	carriage	61920.5
+    1316	weather	61892.8
+    1317	breast	61786.0
+    1318	presently	61503.5
+    1319	snow	61384.9
+    1320	David	61377.8
+    1321	papers	61338.2
+    1322	necessity	61325.5
+    1323	practice	61313.7
+    1324	claim	61248.0
+    1325	hast	61220.3
+    1326	education	61160.2
+    1327	sharp	61096.9
+    1328	prince	60998.8
+    1329	permitted	60987.7
+    1330	group	60983.0
+    1331	enemies	60982.2
+    1332	robert	60967.2
+    1333	played	60926.0
+    1334	throughout	60896.7
+    1335	pity	60858.0
+    1336	expense	60836.6
+    1337	yours	60770.2
+    1338	million	60752.8
+    1339	add	60647.5
+    1340	pray	60553.4
+    1341	taught	60553.4
+    1342	explained	60525.7
+    1343	tired	60525.7
+    1344	leading	60475.9
+    1345	kill	60435.5
+    1346	shadow	60402.3
+    1347	companion	60384.9
+    1348	weight	60339.8
+    1349	mass	60298.6
+    1350	established	60226.7
+    1351	suffered	60210.0
+    1352	gray	60200.5
+    1353	brave	60085.0
+    1354	thin	60068.4
+    1355	satisfied	60044.7
+    1356	check	60002.0
+    1357	virtue	59979.0
+    1358	golden	59969.5
+    1359	numerous	59925.2
+    1360	frequently	59873.8
+    1361	famous	59843.0
+    1362	telling	59831.9
+    1363	powerful	59634.9
+    1364	alive	59632.5
+    1365	waters	59569.2
+    1366	national	59565.3
+    1367	weak	59510.7
+    1368	divine	59479.8
+    1369	material	59413.4
+    1370	principal	59406.2
+    1371	gathered	59324.8
+    1372	suggested	59261.5
+    1373	frank	59180.8
+    1374	valley	59172.1
+    1375	guess	59171.3
+    1376	finding	59160.2
+    1377	yellow	59051.8
+    1378	heat	58979.8
+    1379	remains	58941.1
+    1380	bent	58939.5
+    1381	seized	58899.1
+    1382	guard	58892.8
+    1383	equally	58840.6
+    1384	naturally	58811.3
+    1385	box	58805.8
+    1386	remarkable	58805.8
+    1387	gods	58789.2
+    1388	moon	58760.7
+    1389	slight	58710.8
+    1390	style	58699.8
+    1391	pointed	58669.7
+    1392	saved	58632.5
+    1393	windows	58556.6
+    1394	crossed	58551.8
+    1395	louis	58498.8
+    1396	pounds	58458.5
+    1397	ain't	58451.3
+    1398	evidently	58378.6
+    1399	principle	58369.9
+    1400	immediate	58268.6
+    1401	willing	58218.0
+    1402	consequence	58195.8
+    1403	richard	58188.7
+    1404	principles	58148.3
+    1405	characters	58140.4
+    1406	paul	58106.4
+    1407	season	58088.2
+    1408	remarked	58020.2
+    1409	science	57960.1
+    1410	tender	57959.3
+    1411	worked	57946.6
+    1412	grown	57772.6
+    1413	whispered	57721.1
+    1414	interested	57714.8
+    1415	quarter	57661.0
+    1416	midst	57518.6
+    1417	liked	57509.9
+    1418	advanced	57495.7
+    1419	apparently	57471.1
+    1420	bore	57458.5
+    1421	pwh	57456.9
+    1422	active	57449.0
+    1423	noticed	57389.6
+    1424	aware	57388.9
+    1425	thomas	57341.4
+    1426	uncle	57326.4
+    1427	list	57295.5
+    1428	dangerous	57292.3
+    1429	august	57283.6
+    1430	calm	57251.2
+    1431	genius	57225.1
+    1432	sacred	57211.6
+    1433	kingdom	57199.0
+    1434	entire	57187.9
+    1435	popular	57115.1
+    1436	unknown	57040.8
+    1437	nice	57038.4
+    1438	habit	57035.2
+    1439	spanish	56981.4
+    1440	familiar	56835.1
+    1441	reader	56832.7
+    1442	published	56807.4
+    1443	direct	56755.2
+    1444	handsome	56748.8
+    1445	you'll	56740.1
+    1446	joined	56737.0
+    1447	actually	56699.0
+    1448	kings	56630.2
+    1449	sd	56603.3
+    1450	posted	56561.3
+    1451	approach	56555.8
+    1452	Washington	56527.3
+    1453	hearing	56509.9
+    1454	needed	56455.3
+    1455	increased	56113.5
+    1456	walking	56094.6
+    1457	twice	55893.6
+    1458	throw	55850.1
+    1459	intellectual	55849.3
+    1460	appointed	55847.7
+    1461	wisdom	55827.2
+    1462	ceased	55810.5
+    1463	truly	55776.5
+    1464	numbers	55771.8
+    1465	demanded	55718.0
+    1466	priest	55667.3
+    1467	wounded	55666.6
+    1468	sorrow	55657.1
+    1469	drive	55626.2
+    1470	fault	55610.4
+    1471	listened	55604.1
+    1472	palace	55599.3
+    1473	affair	55588.2
+    1474	contact	55576.4
+    1475	distinguished	55568.5
+    1476	station	55551.0
+    1477	beat	55452.9
+    1478	distributed	55431.6
+    1479	e	55405.5
+    1480	listen	55400.7
+    1481	Italy	55327.9
+    1482	fool	55324.0
+    1483	becomes	55307.4
+    1484	watching	55264.7
+    1485	hurt	55227.5
+    1486	wants	55209.3
+    1487	express	55193.5
+    1488	occurred	55186.3
+    1489	favour	55161.8
+    1490	height	55161.8
+    1491	size	55123.0
+    1492	edge	55074.8
+    1493	subjects	55021.8
+    1494	task	54999.6
+    1495	follows	54945.8
+    1496	interests	54938.7
+    1497	nine	54922.9
+    1498	sympathy	54921.3
+    1499	burst	54920.5
+    1500	putting	54835.9
+    1501	dressed	54816.9
+    1502	lifted	54796.3
+    1503	hopes	54772.6
+    1504	suffer	54764.7
+    1505	noise	54731.4
+    1506	smiling	54720.4
+    1507	rode	54627.8
+    1508	tells	54559.0
+    1509	minds	54524.9
+    1510	farther	54471.1
+    1511	literature	54426.1
+    1512	vessel	54407.9
+    1513	affection	54381.0
+    1514	suffering	54363.6
+    1515	proceeded	54343.8
+    1516	flesh	54333.5
+    1517	advice	54172.9
+    1518	grand	54172.9
+    1519	carrying	54168.9
+    1520	legs	54149.2
+    1521	Spain	54147.6
+    1522	post	54054.2
+    1523	collection	54031.3
+    1524	empty	54020.2
+    1525	rank	54009.9
+    1526	storm	54009.1
+    1527	god's	53975.9
+    1528	imagine	53930.8
+    1529	wore	53915.0
+    1530	duties	53904.7
+    1531	admitted	53846.2
+    1532	countries	53834.3
+    1533	pocket	53783.7
+    1534	arrival	53776.5
+    1535	imagination	53768.6
+    1536	driven	53753.6
+    1537	loud	53742.5
+    1538	sentence	53699.0
+    1539	lovely	53673.7
+    1540	extraordinary	53589.0
+    1541	November	53551.8
+    1542	December	53541.6
+    1543	happen	53527.3
+    1544	absence	53502.8
+    1545	breakfast	53488.6
+    1546	population	53423.7
+    1547	thank	53413.4
+    1548	rules	53386.5
+    1549	inhabitants	53168.1
+    1550	series	53157.9
+    1551	laughing	53113.6
+    1552	address	53096.2
+    1553	relief	53061.3
+    1554	bird	52958.5
+    1555	owner	52920.5
+    1556	impression	52901.5
+    1557	satisfaction	52896.8
+    1558	coat	52869.9
+    1559	prepare	52846.2
+    1560	relations	52841.4
+    1561	shape	52710.9
+    1562	birth	52703.0
+    1563	rapidly	52677.6
+    1564	smoke	52676.9
+    1565	January	52657.1
+    1566	mother+'s	52657.1
+    1567	machine	52618.3
+    1568	content	52615.1
+    1569	consideration	52606.4
+    1570	accompanied	52581.1
+    1571	regular	52519.4
+    1572	moving	52512.3
+    1573	stands	52512.3
+    1574	wholly	52482.2
+    1575	teeth	52449.0
+    1576	busy	52407.1
+    1577	treated	52378.6
+    1578	burning	52322.4
+    1579	shame	52312.9
+    1580	quality	52292.4
+    1581	bay	52212.5
+    1582	discover	52201.4
+    1583	inside	52123.1
+    1584	brain	52105.7
+    1585	soil	52100.9
+    1586	completely	52050.3
+    1587	message	52049.5
+    1588	ring	52000.4
+    1589	resolved	51981.4
+    1590	calling	51950.6
+    1591	phrase	51940.3
+    1592	acts	51907.1
+    1593	mention	51888.9
+    1594	square	51832.7
+    1595	pair	51818.5
+    1596	won	51798.7
+    1597	title	51777.3
+    1598	understanding	51713.3
+    1599	Sunday	51687.9
+    1600	fruit	51674.5
+    1601	mad	51668.9
+    1602	forces	51593.8
+    1603	included	51591.4
+    1604	tea	51547.1
+    1605	rocks	51540.0
+    1606	nearer	51456.1
+    1607	slaves	51427.7
+    1608	falling	51396.0
+    1609	absolutely	51394.4
+    1610	slow	51380.2
+    1611	bearing	51315.3
+    1612	mercy	51306.6
+    1613	larger	51297.9
+    1614	explain	51285.2
+    1615	contain	51210.9
+    1616	grief	51205.3
+    1617	soldier	51200.6
+    1618	wasn't	51135.7
+    1619	countenance	51077.2
+    1620	previous	51055.8
+    1621	explanation	51050.3
+    1622	welcome	51009.1
+    1623	proposed	51006.8
+    1624	prayer	50987.8
+    1625	stars	50977.5
+    1626	Germany	50905.5
+    1627	belief	50725.9
+    1628	informed	50691.1
+    1629	moments	50676.1
+    1630	poetry	50673.7
+    1631	constant	50650.8
+    1632	buy	50619.9
+    1633	final	50604.9
+    1634	faithful	50587.5
+    1635	ride	50551.9
+    1636	policy	50464.8
+    1637	supper	50460.9
+    1638	drawing	50447.4
+    1639	excitement	50435.6
+    1640	dying	50335.1
+    1641	demand	50257.6
+    1642	fighting	50245.7
+    1643	fields	50201.4
+    1644	drove	50184.8
+    1645	upper	50168.2
+    1646	sum	50041.6
+    1647	Philip	49999.7
+    1648	motion	49955.4
+    1649	assistance	49929.2
+    1650	forty	49903.1
+    1651	April	49899.2
+    1652	stones	49887.3
+    1653	Edward	49840.6
+    1654	fees	49820.1
+    1655	kindly	49809.8
+    1656	dignity	49803.5
+    1657	catch	49718.8
+    1658	October	49715.6
+    1659	seated	49654.7
+    1660	knees	49642.1
+    1661	amongst	49628.6
+    1662	current	49580.4
+    1663	sending	49578.8
+    1664	parties	49574.0
+    1665	objects	49571.7
+    1666	gained	49550.3
+    1667	bitter	49544.8
+    1668	possibly	49520.2
+    1669	slave	49489.4
+    1670	separate	49480.7
+    1671	loose	49427.7
+    1672	text	49423.7
+    1673	receiving	49391.3
+    1674	worst	49369.1
+    1675	sold	49339.1
+    1676	don	49305.0
+    1677	credit	49262.3
+    1678	chosen	49225.9
+    1679	hoped	49174.5
+    1680	printed	49171.3
+    1681	terror	49161.1
+    1682	features	49124.7
+    1683	fond	49101.7
+    1684	control	49074.0
+    1685	capable	49070.1
+    1686	fifteen	49002.8
+    1687	doesn't	48968.0
+    1688	firm	48962.5
+    1689	superior	48948.2
+    1690	cruel	48839.1
+    1691	spiritual	48809.8
+    1692	Harry	48809.0
+    1693	splendid	48752.0
+    1694	proof	48702.2
+    1695	pressed	48635.7
+    1696	sooner	48619.1
+    1697	join	48614.4
+    1698	process	48561.4
+    1699	crime	48528.9
+    1700	dust	48502.8
+    1701	instantly	48494.9
+    1702	lands	48475.9
+    1703	relation	48472.8
+    1704	doors	48413.4
+    1705	concerned	48411.1
+    1706	deeply	48404.7
+    1707	practical	48402.4
+    1708	colour	48371.5
+    1709	sing	48331.2
+    1710	destroy	48261.5
+    1711	anger	48238.6
+    1712	distributing	48223.6
+    1713	results	48202.2
+    1714	increase	48197.5
+    1715	reasons	48062.2
+    1716	nose	48059.8
+    1717	friendly	48021.0
+    1718	entrance	47983.8
+    1719	rooms	47962.5
+    1720	admit	47956.2
+    1721	supply	47924.5
+    1722	clean	47921.3
+    1723	useful	47849.4
+    1724	yesterday	47824.0
+    1725	delicate	47818.5
+    1726	fail	47778.1
+    1727	continue	47737.8
+    1728	remove	47699.0
+    1729	addressed	47673.7
+    1730	choice	47671.3
+    1731	huge	47619.9
+    1732	needs	47619.1
+    1733	wear	47608.8
+    1734	blind	47599.4
+    1735	unable	47589.1
+    1736	cover	47574.0
+    1737	double	47550.3
+    1738	victory	47530.5
+    1739	dozen	47519.4
+    1740	constantly	47490.2
+    1741	level	47487.8
+    1742	India	47392.1
+    1743	release	47389.7
+    1744	rough	47332.7
+    1745	ended	47325.6
+    1746	shows	47324.0
+    1747	fly	47316.9
+    1748	praise	47267.9
+    1749	devil	47254.4
+    1750	ahead	47194.3
+    1751	smith	47190.3
+    1752	connected	47128.6
+    1753	degrees	47110.4
+    1754	gain	47094.6
+    1755	addition	47084.3
+    1756	committed	47063.0
+    1757	chamber	47055.8
+    1758	notes	47051.9
+    1759	Italian	47021.8
+    1760	gradually	46902.4
+    1761	acquaintance	46877.8
+    1762	bought	46854.1
+    1763	souls	46847.0
+    1764	mission	46837.5
+    1765	sacrifice	46810.6
+    1766	cities	46797.1
+    1767	mistake	46768.7
+    1768	exercise	46752.0
+    1769	conscience	46747.3
+    1770	based	46717.2
+    1771	car	46691.1
+    1772	buried	46646.8
+    1773	theory	46621.5
+    1774	commanded	46561.4
+    1775	nobody	46560.6
+    1776	minister	46464.9
+    1777	closely	46446.7
+    1778	energy	46407.9
+    1779	dick	46399.2
+    1780	bare	46386.5
+    1781	fought	46382.6
+    1782	partly	46369.9
+    1783	mistress	46298.7
+    1784	hate	46287.7
+    1785	arose	46271.0
+    1786	playing	46253.6
+    1787	color	46252.1
+    1788	lake	46240.2
+    1789	safety	46193.5
+    1790	provisions	46145.2
+    1791	description	46112.0
+    1792	asleep	46108.9
+    1793	centre	46093.8
+    1794	faint	46085.1
+    1795	thinks	46053.5
+    1796	parents	46044.8
+    1797	escaped	46024.2
+    1798	careful	45995.7
+    1799	enjoy	45987.8
+    1800	drop	45918.2
+    1801	brilliant	45799.5
+    1802	brief	45788.4
+    1803	bringing	45758.4
+    1804	worship	45744.1
+    1805	goods	45735.4
+    1806	tale	45733.1
+    1807	skin	45696.7
+    1808	roof	45695.9
+    1809	grey	45689.6
+    1810	highly	45680.1
+    1811	crown	45638.1
+    1812	castle	45581.2
+    1813	excited	45567.7
+    1814	throne	45558.2
+    1815	stated	45524.2
+    1816	despair	45463.3
+    1817	ease	45457.8
+    1818	attached	45447.5
+    1819	total	45438.8
+    1820	kindness	45424.5
+    1821	mile	45375.5
+    1822	citizens	45309.8
+    1823	circle	45281.3
+    1824	dull	45281.3
+    1825	extreme	45269.5
+    1826	clouds	45264.7
+    1827	figures	45251.3
+    1828	intention	45248.1
+    1829	prison	45241.0
+    1830	term	45215.7
+    1831	assured	45181.6
+    1832	hidden	45123.9
+    1833	thoroughly	45123.1
+    1834	cup	45107.3
+    1835	member	45100.2
+    1836	civil	44958.5
+    1837	apply	44943.5
+    1838	labor	44925.3
+    1839	everywhere	44877.1
+    1840	intelligence	44856.5
+    1841	strike	44825.6
+    1842	fairly	44822.5
+    1843	comply	44817.7
+    1844	fellows	44813.0
+    1845	haven't	44742.6
+    1846	event	44675.3
+    1847	gently	44659.5
+    1848	connection	44629.4
+    1849	protection	44625.5
+    1850	conscious	44568.5
+    1851	edition	44551.1
+    1852	directed	44487.0
+    1853	pulled	44473.6
+    1854	flight	44454.6
+    1855	evident	44453.8
+    1856	surrounded	44441.1
+    1857	wishes	44411.9
+    1858	yards	44411.9
+    1859	voices	44401.6
+    1860	weary	44397.6
+    1861	couple	44368.4
+    1862	variety	44354.1
+    1863	whilst	44316.1
+    1864	volume	44293.2
+    1865	details	44279.0
+    1866	older	44260.0
+    1867	requirements	44256.0
+    1868	custom	44253.6
+    1869	apart	44248.1
+    1870	bow	44208.5
+    1871	awful	44175.3
+    1872	everybody	44135.8
+    1873	labour	44127.9
+    1874	asking	44097.8
+    1875	lover	44066.9
+    1876	showing	44052.7
+    1877	introduced	44021.8
+    1878	suit	43998.9
+    1879	becoming	43985.4
+    1880	composed	43982.3
+    1881	plans	43978.3
+    1882	rendered	43966.5
+    1883	pictures	43960.1
+    1884	lest	43949.8
+    1885	volunteers	43949.8
+    1886	singing	43942.7
+    1887	eager	43919.0
+    1888	precious	43892.9
+    1889	paused	43885.0
+    1890	require	43847.0
+    1891	meat	43838.3
+    1892	whenever	43837.5
+    1893	milk	43784.5
+    1894	dogs	43682.4
+    1895	successful	43611.2
+    1896	plants	43609.7
+    1897	vision	43605.7
+    1898	rare	43603.3
+    1899	granted	43561.4
+    1900	raise	43533.7
+    1901	Egypt	43529.8
+    1902	manners	43503.6
+    1903	cousin	43494.9
+    1904	you've	43454.6
+    1905	development	43431.7
+    1906	Arthur	43405.5
+    1907	obs	43402.4
+    1908	cool	43305.1
+    1909	trial	43233.9
+    1910	learning	43177.7
+    1911	approached	43176.9
+    1912	bridge	43143.7
+    1913	abroad	43081.2
+    1914	devoted	43071.7
+    1915	paying	43055.9
+    1916	literary	43044.0
+    1917	writer	42938.0
+    1918	fn	42935.6
+    1919	Israel	42903.2
+    1920	disappeared	42899.2
+    1921	interrupted	42888.9
+    1922	stock	42862.8
+    1923	readers	42829.6
+    1924	dreadful	42801.9
+    1925	female	42767.9
+    1926	protect	42699.1
+    1927	accustomed	42696.7
+    1928	Virginia	42695.1
+    1929	type	42657.9
+    1930	recognized	42656.3
+    1931	salt	42649.2
+    1932	destroyed	42641.3
+    1933	signs	42635.0
+    1934	innocent	42613.6
+    1935	temper	42601.8
+    1936	plenty	42597.0
+    1937	pope	42596.2
+    1938	avoid	42559.0
+    1939	hurried	42480.7
+    1940	represented	42461.7
+    1941	favor	42434.8
+    1942	mental	42347.0
+    1943	attitude	42329.6
+    1944	returning	42271.9
+    1945	admiration	42255.2
+    1946	brothers	42245.0
+    1947	anxiety	42233.9
+    1948	queen	42223.6
+    1949	teach	42216.5
+    1950	count	42207.8
+    1951	curiosity	42203.8
+    1952	solemn	42188.8
+    1953	causes	42152.4
+    1954	vessels	42102.5
+    1955	compelled	42082.0
+    1956	dance	42075.7
+    1957	hotel	42072.5
+    1958	wicked	42017.9
+    1959	fled	41992.6
+    1960	kissed	41987.0
+    1961	guns	41921.4
+    1962	fill	41911.9
+    1963	visible	41884.2
+    1964	younger	41825.7
+    1965	guide	41750.5
+    1966	earnest	41745.7
+    1967	actual	41729.1
+    1968	companions	41728.3
+    1969	prisoner	41725.2
+    1970	miserable	41704.6
+    1971	lad	41692.0
+    1972	harm	41617.6
+    1973	views	41499.7
+    1974	Irish	41490.2
+    1975	utterly	41479.9
+    1976	ends	41431.7
+    1977	shop	41349.4
+    1978	stairs	41339.1
+    1979	pardon	41335.1
+    1980	gay	41319.3
+    1981	beg	41312.2
+    1982	seldom	41303.5
+    1983	kinds	41287.7
+    1984	record	41281.4
+    1985	fat	41278.2
+    1986	sand	41232.3
+    1987	violent	41203.8
+    1988	branches	41195.1
+    1989	inquired	41185.6
+    1990	IV	41152.4
+    1991	September	41145.3
+    1992	worn	41117.6
+    1993	Ireland	41105.7
+    1994	flat	41104.1
+    1995	departure	41101.0
+    1996	delivered	41099.4
+    1997	gift	41080.4
+    1998	ruin	41073.3
+    1999	skill	41029.8
+    2000	cattle	40983.1
+    2001	equipment	40935.6
+    2002	temple	40926.1
+    2003	calls	40860.5
+    2004	earlier	40843.1
+    2005	license	40827.2
+    2006	visited	40818.5
+    2007	en	40812.2
+    2008	consent	40810.6
+    2009	sufficiently	40787.7
+    2010	natives	40772.7
+    2011	wound	40752.1
+    2012	laughter	40713.3
+    2013	contained	40691.2
+    2014	perceived	40691.2
+    2015	scattered	40669.8
+    2016	whence	40661.1
+    2017	rushed	40657.9
+    2018	chiefly	40639.0
+    2019	bold	40614.4
+    2020	anywhere	40597.0
+    2021	witness	40545.6
+    2022	foolish	40523.4
+    2023	helped	40487.8
+    2024	kitchen	40483.9
+    2025	sell	40483.9
+    2026	anybody	40479.1
+    2027	self	40477.6
+    2028	extremely	40476.0
+    2029	treatment	40449.1
+    2030	throat	40414.3
+    2031	dreams	40383.4
+    2032	patient	40380.2
+    2033	speed	40372.3
+    2034	growth	40351.0
+    2035	quantity	40347.8
+    2036	Latin	40314.6
+    2037	immense	40278.2
+    2038	conclusion	40262.4
+    2039	computer	40222.0
+    2040	affected	40214.1
+    2041	severe	40200.7
+    2042	excuse	40180.9
+    2043	triumph	40169.8
+    2044	origin	40165.1
+    2045	Joseph	40161.1
+    2046	slept	40160.3
+    2047	eternal	40157.1
+    2048	thine	40157.1
+    2049	audience	40127.9
+    2050	pages	40117.6
+    2051	sounds	40089.1
+    2052	swift	40080.4
+    2053	limited	40060.6
+    2054	wings	40014.0
+    2055	stepped	39957.0
+    2056	services	39933.3
+    2057	library	39915.9
+    2058	remaining	39911.9
+    2059	containing	39908.7
+    2060	base	39900.8
+    2061	confusion	39871.6
+    2062	win	39858.9
+    2063	maid	39847.8
+    2064	charming	39846.2
+    2065	editions	39843.1
+    2066	attended	39842.3
+    2067	softly	39831.2
+    2068	reality	39813.0
+    2069	performed	39808.3
+    2070	glorious	39774.2
+    2071	likewise	39757.6
+    2072	site	39722.8
+    2073	sail	39713.3
+    2074	frightened	39697.5
+    2075	acquainted	39660.3
+    2076	unhappy	39660.3
+    2077	feared	39591.5
+    2078	article	39586.7
+    2079	prisoners	39576.5
+    2080	store	39566.2
+    2081	adopted	39561.4
+    2082	shalt	39534.5
+    2083	remark	39519.5
+    2084	cook	39479.1
+    2085	thousands	39463.3
+    2086	pause	39426.1
+    2087	inclined	39411.1
+    2088	convinced	39401.6
+    2089	band	39397.7
+    2090	valuable	39324.1
+    2091	hence	39316.2
+    2092	desert	39278.2
+    2093	effects	39257.6
+    2094	kiss	39251.3
+    2095	plant	39201.5
+    2096	ice	39198.3
+    2097	ball	39180.9
+    2098	stick	39108.1
+    2099	absolute	39093.1
+    2100	readily	39085.2
+    2101	behold	39051.1
+    2102	fierce	39048.0
+    2103	argument	38991.0
+    2104	observe	38990.2
+    2105	blessed	38967.3
+    2106	bosom	38956.2
+    2107	rage	38949.1
+    2108	striking	38941.2
+    2109	discovery	38883.4
+    2110	creatures	38875.5
+    2111	shouted	38859.7
+    2112	guilty	38836.7
+    2113	related	38810.6
+    2114	setting	38686.4
+    2115	forgot	38668.2
+    2116	punishment	38650.8
+    2117	gun	38632.6
+    2118	slightly	38629.5
+    2119	articles	38575.7
+    2120	police	38557.5
+    2121	mysterious	38550.4
+    2122	extended	38536.1
+    2123	confess	38535.3
+    2124	shade	38527.4
+    2125	murder	38525.0
+    2126	emotion	38510.0
+    2127	destruction	38505.3
+    2128	wondered	38474.4
+    2129	increasing	38463.3
+    2130	hide	38423.8
+    2131	expedition	38402.4
+    2132	horror	38361.3
+    2133	local	38355.7
+    2134	expenses	38353.4
+    2135	ignorant	38321.7
+    2136	doctrine	38303.5
+    2137	generous	38301.1
+    2138	range	38284.5
+    2139	host	38240.2
+    2140	wet	38201.5
+    2141	cloud	38187.2
+    2142	mystery	38185.6
+    2143	Ed	38165.9
+    2144	waste	38164.3
+    2145	changes	38156.4
+    2146	possess	38151.6
+    2147	consciousness	38142.1
+    2148	February	38131.1
+    2149	trembling	38110.5
+    2150	disease	38039.3
+    2151	formerly	38037.7
+    2152	spend	38033.7
+    2153	production	38021.1
+    2154	source	38004.5
+    2155	mankind	37996.6
+    2156	universal	37991.8
+    2157	deck	37965.7
+    2158	sees	37923.0
+    2159	habits	37913.5
+    2160	estate	37878.7
+    2161	aunt	37832.8
+    2162	reign	37816.2
+    2163	humble	37795.6
+    2164	compliance	37787.7
+    2165	delay	37771.1
+    2166	shining	37764.0
+    2167	reported	37740.2
+    2168	hers	37736.3
+    2169	unfortunate	37731.5
+    2170	midnight	37703.8
+    2171	listening	37700.7
+    2172	flower	37688.8
+    2173	hero	37673.8
+    2174	accomplished	37666.7
+    2175	doth	37665.1
+    2176	classes	37658.7
+    2177	thanks	37642.1
+    2178	banks	37623.1
+    2179	philosophy	37611.3
+    2180	belong	37593.9
+    2181	finger	37580.4
+    2182	comfortable	37542.5
+    2183	market	37529.0
+    2184	cap	37514.8
+    2185	waves	37462.5
+    2186	woman's	37437.2
+    2187	glanced	37392.9
+    2188	troubled	37376.3
+    2189	difficulties	37338.3
+    2190	picked	37330.4
+    2191	European	37324.9
+    2192	purposes	37314.6
+    2193	somewhere	37273.5
+    2194	delighted	37264.0
+    2195	pushed	37259.2
+    2196	press	37241.8
+    2197	household	37219.7
+    2198	fleet	37214.9
+    2199	baby	37208.6
+    2200	region	37161.9
+    2201	lately	37158.7
+    2202	uttered	37142.1
+    2203	exact	37133.4
+    2204	image	37131.9
+    2205	ages	37127.1
+    2206	murmured	37113.7
+    2207	melancholy	37112.9
+    2208	suspicion	37107.3
+    2209	bowed	37089.9
+    2210	refuse	37051.9
+    2211	Elizabeth	37040.9
+    2212	staff	37036.1
+    2213	liability	37032.2
+    2214	we'll	37019.5
+    2215	enjoyed	36985.5
+    2216	stretched	36973.6
+    2217	gaze	36916.7
+    2218	belonged	36888.2
+    2219	ashamed	36880.3
+    2220	reward	36873.2
+    2221	meal	36778.2
+    2222	blame	36775.0
+    2223	nodded	36767.1
+    2224	status	36747.4
+    2225	opinions	36725.2
+    2226	indicate	36699.1
+    2227	poem	36654.0
+    2228	savage	36642.9
+    2229	arise	36635.0
+    2230	voyage	36628.7
+    2231	misery	36563.8
+    2232	guests	36562.2
+    2233	painted	36515.6
+    2234	attend	36513.2
+    2235	afford	36482.3
+    2236	donate	36471.3
+    2237	job	36450.7
+    2238	proceed	36439.6
+    2239	loves	36414.3
+    2240	forehead	36382.6
+    2241	regret	36381.9
+    2242	plainly	36355.7
+    2243	risk	36336.8
+    2244	ad	36312.2
+    2245	lighted	36312.2
+    2246	angel	36288.5
+    2247	rapid	36285.3
+    2248	distinct	36267.9
+    2249	doubtless	36256.1
+    2250	properly	36256.1
+    2251	wit	36238.7
+    2252	fame	36237.9
+    2253	singular	36221.3
+    2254	error	36182.5
+    2255	utmost	36158.0
+    2256	methods	36155.6
+    2257	reputation	36155.6
+    2258	appeal	36123.2
+    2259	she's	36120.8
+    2260	w	36088.3
+    2261	strongly	36080.4
+    2262	Margaret	36006.9
+    2263	lack	35996.6
+    2264	breaking	35977.6
+    2265	dawn	35959.4
+    2266	violence	35957.8
+    2267	fatal	35917.5
+    2268	render	35896.1
+    2269	career	35881.1
+    2270	design	35854.2
+    2271	displayed	35848.6
+    2272	gets	35843.1
+    2273	commercial	35830.4
+    2274	forgive	35809.9
+    2275	lights	35807.5
+    2276	agreeable	35805.1
+    2277	suggestion	35777.4
+    2278	utter	35777.4
+    2279	sheep	35725.2
+    2280	resolution	35703.9
+    2281	spare	35671.4
+    2282	patience	35631.9
+    2283	domestic	35618.4
+    2284	concluded	35542.5
+    2285	'tis	35536.9
+    2286	farm	35520.3
+    2287	reference	35509.2
+    2288	Chinese	35506.1
+    2289	exist	35494.2
+    2290	corn	35491.8
+    2291	approaching	35449.1
+    2292	alike	35448.3
+    2293	mounted	35384.2
+    2294	Jane	35352.6
+    2295	issue	35310.7
+    2296	key	35281.4
+    2297	providing	35281.4
+    2298	majority	35276.6
+    2299	measures	35270.3
+    2300	towns	35240.2
+    2301	flame	35233.1
+    2302	Boston	35180.9
+    2303	dared	35177.7
+    2304	ignorance	35152.4
+    2305	reduced	35122.4
+    2306	occasionally	35100.2
+    2307	y	35094.7
+    2308	weakness	35090.7
+    2309	furnished	35089.1
+    2310	china	35058.3
+    2311	priests	35025.1
+    2312	flying	34986.3
+    2313	cloth	34966.5
+    2314	gazed	34953.9
+    2315	profit	34932.5
+    2316	fourth	34923.8
+    2317	bell	34920.6
+    2318	hitherto	34911.1
+    2319	benefit	34854.2
+    2320	movements	34847.1
+    2321	eagerly	34842.3
+    2322	acted	34841.5
+    2323	urged	34841.5
+    2324	ascii	34791.7
+    2325	disposed	34790.9
+    2326	electronically	34761.6
+    2327	atmosphere	34748.2
+    2328	chapter	34699.9
+    2329	begged	34626.3
+    2330	Helen	34619.2
+    2331	hole	34616.8
+    2332	invited	34593.1
+    2333	borne	34548.8
+    2334	departed	34546.4
+    2335	catholic	34522.7
+    2336	files	34514.0
+    2337	reasonable	34512.4
+    2338	sugar	34501.3
+    2339	replacement	34483.9
+    2340	sigh	34454.7
+    2341	humanity	34419.1
+    2342	thrust	34395.3
+    2343	frame	34362.9
+    2344	opposition	34350.2
+    2345	disk	34347.1
+    2346	haste	34328.9
+    2347	lonely	34328.1
+    2348	artist	34290.1
+    2349	knight	34282.2
+    2350	quarters	34277.4
+    2351	charm	34223.6
+    2352	substance	34163.5
+    2353	rolled	34154.0
+    2354	email	34145.3
+    2355	flung	34144.5
+    2356	celebrated	34143.7
+    2357	division	34136.6
+    2358	slavery	34114.5
+    2359	verse	34107.3
+    2360	decision	34067.8
+    2361	probable	34063.8
+    2362	painful	34042.5
+    2363	governor	34023.5
+    2364	forever	33999.7
+    2365	turns	33988.7
+    2366	branch	33961.0
+    2367	ocean	33958.6
+    2368	rear	33947.5
+    2369	leader	33937.2
+    2370	delightful	33915.1
+    2371	stared	33876.3
+    2372	boats	33808.3
+    2373	keen	33788.5
+    2374	disposition	33779.8
+    2375	senses	33722.1
+    2376	occasions	33700.7
+    2377	readable	33692.8
+    2378	beloved	33687.3
+    2379	inches	33684.1
+    2380	bones	33679.3
+    2381	enthusiasm	33648.5
+    2382	materials	33589.9
+    2383	luck	33588.4
+    2384	derived	33575.7
+    2385	managed	33479.2
+    2386	community	33464.9
+    2387	apparent	33464.2
+    2388	preserved	33454.7
+    2389	magnificent	33434.9
+    2390	hurry	33396.1
+    2391	scheme	33393.7
+    2392	oil	33392.2
+    2393	thence	33382.7
+    2394	reaching	33374.8
+    2395	dim	33362.1
+    2396	wretched	33290.1
+    2397	hanging	33275.9
+    2398	pipe	33218.1
+    2399	useless	33215.7
+    2400	nevertheless	33203.1
+    2401	print	33203.1
+    2402	smooth	33167.5
+    2403	solid	33148.5
+    2404	pursued	33135.0
+    2405	necessarily	33108.1
+    2406	build	33084.4
+    2407	attempted	33080.5
+    2408	centuries	33059.9
+    2409	eggs	33059.9
+    2410	equivalent	33033.8
+    2411	hastily	33032.2
+    2412	burned	33008.5
+    2413	you'd	33008.5
+    2414	recent	33000.5
+    2415	oh	32957.0
+    2416	travel	32951.5
+    2417	cries	32925.4
+    2418	noon	32919.9
+    2419	crying	32901.7
+    2420	generations	32858.9
+    2421	located	32835.2
+    2422	cabin	32809.1
+    2423	announcement	32782.2
+    2424	Britain	32752.9
+    2425	compared	32731.6
+    2426	handed	32720.5
+    2427	cease	32714.2
+    2428	smaller	32668.3
+    2429	circumstance	32666.7
+    2430	tent	32665.1
+    2431	frequent	32616.8
+    2432	alarm	32602.6
+    2433	nervous	32602.6
+    2434	beast	32586.8
+    2435	what's	32580.5
+    2436	aloud	32565.4
+    2437	independent	32519.5
+    2438	gates	32509.3
+    2439	distinction	32502.9
+    2440	essential	32487.9
+    2441	observation	32472.9
+    2442	stronger	32455.5
+    2443	recovered	32450.7
+    2444	belonging	32404.8
+    2445	loving	32402.4
+    2446	masters	32388.2
+    2447	writers	32341.5
+    2448	cf.	32326.5
+    2449	permanent	32324.9
+    2450	mortal	32284.6
+    2451	stern	32284.6
+    2452	gratitude	32278.2
+    2453	preserve	32248.2
+    2454	burden	32242.6
+    2455	aspect	32240.3
+    2456	millions	32199.1
+    2457	merry	32182.5
+    2458	knife	32177.8
+    2459	dread	32133.5
+    2460	clever	32114.5
+    2461	applicable	32052.0
+    2462	district	32050.4
+    2463	shadows	32038.5
+    2464	Jim	32031.4
+    2465	silk	32029.8
+    2466	failure	32022.7
+    2467	links	32009.3
+    2468	cent	31995.0
+    2469	sentiment	31990.3
+    2470	amid	31980.0
+    2471	profits	31968.9
+    2472	agent	31949.1
+    2473	finds	31934.9
+    2474	Russia	31928.6
+    2475	bade	31920.6
+    2476	Russian	31857.4
+    2477	desperate	31847.9
+    2478	union	31834.4
+    2479	imagined	31804.4
+    2480	contempt	31802.0
+    2481	raising	31786.2
+    2482	lords	31775.1
+    2483	hell	31770.3
+    2484	separated	31752.1
+    2485	grant	31743.4
+    2486	seriously	31736.3
+    2487	tribes	31726.8
+    2488	hit	31725.2
+    2489	enormous	31700.7
+    2490	defective	31696.0
+    2491	conviction	31688.8
+    2492	secured	31688.8
+    2493	mixed	31679.4
+    2494	insisted	31661.2
+    2495	wooden	31632.7
+    2496	prefer	31621.6
+    2497	prayers	31606.6
+    2498	fever	31586.8
+    2499	selected	31568.6
+    2500	daughters	31553.6
+    2501	treat	31550.4
+    2502	warning	31522.7
+    2503	flew	31518.0
+    2504	speaks	31489.5
+    2505	developed	31472.9
+    2506	impulse	31472.9
+    2507	slipped	31472.1
+    2508	ours	31465.0
+    2509	Johnson	31408.8
+    2510	mistaken	31390.6
+    2511	damages	31382.7
+    2512	ambition	31356.6
+    2513	resumed	31351.8
+    2514	christmas	31347.9
+    2515	yield	31347.1
+    2516	ideal	31343.1
+    2517	schools	31335.2
+    2518	confirmed	31324.1
+    2519	descended	31322.5
+    2520	rush	31290.9
+    2521	falls	31268.0
+    2522	deny	31254.5
+    2523	calculated	31233.2
+    2524	correct	31211.8
+    2525	perform	31210.2
+    2526	hadn't	31207.0
+    2527	somehow	31184.9
+    2528	accordingly	31181.7
+    2529	stayed	31165.9
+    2530	acquired	31144.5
+    2531	counsel	31135.1
+    2532	distress	31131.9
+    2533	sins	31105.0
+    2534	notion	31102.6
+    2535	discussion	31093.9
+    2536	constitution	31085.2
+    2537	Anne	31055.9
+    2538	hundreds	31006.1
+    2539	instrument	31001.3
+    2540	firmly	30976.0
+    2541	actions	30971.3
+    2542	steady	30965.7
+    2543	remarks	30933.3
+    2544	empire	30925.4
+    2545	elements	30909.6
+    2546	idle	30891.4
+    2547	pen	30885.8
+    2548	entering	30872.4
+    2549	online	30872.4
+    2550	Africa	30843.1
+    2551	permit	30835.2
+    2552	th'	30812.3
+    2553	tide	30803.6
+    2554	vol	30800.4
+    2555	leaned	30798.8
+    2556	college	30750.6
+    2557	maintain	30737.9
+    2558	sovereign	30706.3
+    2559	tail	30699.9
+    2560	generation	30695.2
+    2561	crowded	30692.8
+    2562	fears	30679.4
+    2563	nights	30650.9
+    2564	limitation	30643.8
+    2565	tied	30625.6
+    2566	horrible	30622.4
+    2567	cat	30600.2
+    2568	displaying	30545.7
+    2569	port	30537.7
+    2570	male	30525.9
+    2571	experienced	30487.9
+    2572	opposed	30485.5
+    2573	treaty	30483.2
+    2574	contents	30481.6
+    2575	rested	30450.7
+    2576	mode	30448.3
+    2577	poured	30431.7
+    2578	les	30400.1
+    2579	occur	30399.3
+    2580	seeking	30389.0
+    2581	practically	30323.3
+    2582	abandoned	30312.3
+    2583	reports	30295.7
+    2584	eleven	30294.1
+    2585	sank	30292.5
+    2586	begins	30288.5
+    2587	founded	30249.0
+    2588	brings	30244.2
+    2589	trace	30238.7
+    2590	instinct	30233.9
+    2591	collected	30227.6
+    2592	Scotland	30202.3
+    2593	characteristic	30186.5
+    2594	chose	30184.1
+    2595	cheerful	30177.0
+    2596	tribe	30165.9
+    2597	costs	30125.6
+    2598	threatened	30120.8
+    2599	arrangement	30110.5
+    2600	western	30106.6
+    2601	sang	30102.6
+    2602	beings	30093.1
+    2603	Sam	30027.5
+    2604	pressure	30019.6
+    2605	politics	30010.8
+    2606	sorts	29999.8
+    2607	shelter	29992.7
+    2608	rude	29987.1
+    2609	scientific	29984.0
+    2610	revealed	29965.0
+    2611	winds	29930.9
+    2612	riding	29915.1
+    2613	scenes	29905.6
+    2614	shake	29900.9
+    2615	industry	29891.4
+    2616	claims	29884.3
+    2617	pp.	29884.3
+    2618	merit	29862.9
+    2619	profession	29855.0
+    2620	lamp	29830.5
+    2621	interview	29817.0
+    2622	territory	29813.1
+    2623	sleeping	29806.7
+    2624	sex	29802.8
+    2625	coffee	29791.7
+    2626	devotion	29791.7
+    2627	thereof	29758.5
+    2628	creation	29755.3
+    2629	trail	29747.4
+    2630	Romans	29746.6
+    2631	supported	29741.9
+    2632	requires	29704.7
+    2633	fathers	29703.9
+    2634	prospect	29680.9
+    2635	obey	29679.4
+    2636	Alexander	29667.5
+    2637	shone	29662.0
+    2638	operation	29642.2
+    2639	northern	29598.7
+    2640	nurse	29567.8
+    2641	profound	29544.1
+    2642	hungry	29534.6
+    2643	Scott	29470.5
+    2644	sisters	29453.1
+    2645	assure	29451.5
+    2646	exceedingly	29445.2
+    2647	match	29445.2
+    2648	wrath	29406.4
+    2649	continually	29405.6
+    2650	rest.	29404.0
+    2651	gifts	29381.1
+    2652	folly	29369.2
+    2653	chain	29362.9
+    2654	uniform	29359.0
+    2655	debt	29346.3
+    2656	teaching	29345.5
+    2657	venture	29333.6
+    2658	execution	29331.3
+    2659	shoes	29324.1
+    2660	mood	29319.4
+    2661	crew	29317.0
+    2662	perceive	29302.0
+    2663	accounts	29288.5
+    2664	eating	29284.6
+    2665	multitude	29272.7
+    2666	declare	29260.1
+    2667	yard	29253.7
+    2668	o'er	29218.1
+    2669	astonishment	29188.1
+    2670	version	29178.6
+    2671	vague	29158.0
+    2672	odd	29121.6
+    2673	grateful	29103.4
+    2674	nearest	29094.7
+    2675	infinite	29093.9
+    2676	elsewhere	29086.0
+    2677	copying	29053.6
+    2678	apartment	29045.7
+    2679	activity	29037.0
+    2680	wives	29022.7
+    2681	parted	29014.0
+    2682	security	29002.2
+    2683	cared	28977.6
+    2684	sensible	28974.5
+    2685	owing	28972.1
+    2686	Martin	28942.0
+    2687	Saturday	28923.8
+    2688	cottage	28919.1
+    2689	Jews	28880.3
+    2690	leaning	28852.6
+    2691	capacity	28840.8
+    2692	joe	28833.6
+    2693	settle	28821.0
+    2694	referred	28805.2
+    2695	Francis	28802.8
+    2696	holder	28802.0
+    2697	involved	28795.7
+    2698	sunshine	28794.1
+    2699	Dutch	28790.1
+    2700	council	28741.1
+    2701	princes	28733.2
+    2702	ate	28730.0
+    2703	examination	28722.1
+    2704	steel	28720.5
+    2705	strangers	28717.3
+    2706	beheld	28689.7
+    2707	test	28684.1
+    2708	noted	28678.6
+    2709	slightest	28678.6
+    2710	widow	28660.4
+    2711	charity	28623.2
+    2712	realized	28608.2
+    2713	element	28584.4
+    2714	shed	28565.4
+    2715	errors	28560.7
+    2716	communication	28547.2
+    2717	reflection	28544.9
+    2718	attacked	28530.6
+    2719	organization	28527.5
+    2720	maintained	28505.3
+    2721	restored	28491.1
+    2722	folks	28478.4
+    2723	concealed	28468.1
+    2724	accordance	28450.7
+    2725	heavens	28450.7
+    2726	star	28433.3
+    2727	examined	28407.2
+    2728	deeds	28369.2
+    2729	wordforms	28357.4
+    2730	somebody	28352.6
+    2731	incident	28345.5
+    2732	oath	28324.1
+    2733	guest	28321.0
+    2734	bar	28297.3
+    2735	row	28295.7
+    2736	poverty	28267.2
+    2737	bottle	28240.3
+    2738	prevented	28237.9
+    2739	bless	28226.8
+    2740	stir	28214.2
+    2741	intense	28207.1
+    2742	completed	28162.0
+    2743	quarrel	28149.3
+    2744	touching	28146.9
+    2745	inner	28146.1
+    2746	available	28136.7
+    2747	fix	28136.7
+    2748	resistance	28131.9
+    2749	unusual	28120.8
+    2750	deed	28114.5
+    2751	derive	28109.8
+    2752	hollow	28106.6
+    2753	suspected	28105.8
+    2754	contains	28103.4
+    2755	sighed	28101.8
+    2756	province	28082.9
+    2757	deserted	28082.1
+    2758	establishment	28072.6
+    2759	vote	28063.9
+    2760	muttered	28043.3
+    2761	thither	28028.3
+    2762	oxford	28020.4
+    2763	cavalry	28018.8
+    2764	lofty	28017.2
+    2765	endure	27969.7
+    2766	succeed	27952.3
+    2767	leg	27931.0
+    2768	bid	27910.4
+    2769	Alice	27885.9
+    2770	hated	27883.5
+    2771	civilization	27878.7
+    2772	u.s.	27877.2
+    2773	acting	27874.0
+    2774	landed	27866.9
+    2775	Christians	27862.1
+    2776	passions	27855.0
+    2777	interior	27851.1
+    2778	scarce	27839.2
+    2779	lightly	27830.5
+    2780	disturbed	27825.7
+    2781	rev	27825.0
+    2782	supreme	27819.4
+    2783	hang	27813.9
+    2784	notwithstanding	27812.3
+    2785	shock	27777.5
+    2786	exception	27775.9
+    2787	offering	27766.4
+    2788	display	27765.6
+    2789	strain	27765.6
+    2790	drank	27750.6
+    2791	confined	27737.9
+    2792	o	27727.6
+    2793	exhausted	27713.4
+    2794	poets	27693.6
+    2795	sounded	27690.5
+    2796	aim	27679.4
+    2797	critical	27665.9
+    2798	Jerusalem	27662.0
+    2799	directions	27660.4
+    2800	negro	27637.4
+    2801	fearful	27624.0
+    2802	standard	27611.3
+    2803	studied	27586.0
+    2804	bag	27579.7
+    2805	n	27563.9
+    2806	buildings	27546.5
+    2807	consequences	27544.1
+    2808	commenced	27534.6
+    2809	deeper	27506.1
+    2810	repeat	27504.5
+    2811	driving	27495.8
+    2812	beasts	27484.8
+    2813	track	27484.0
+    2814	rid	27457.1
+    2815	holds	27452.3
+    2816	residence	27445.2
+    2817	steadily	27404.1
+    2818	intimate	27403.3
+    2819	drinking	27385.1
+    2820	swear	27380.3
+    2821	treasure	27351.1
+    2822	fun	27345.5
+    2823	throwing	27340.0
+    2824	apt	27321.0
+    2825	enterprise	27321.0
+    2826	queer	27302.0
+    2827	seed	27296.5
+    2828	tower	27285.4
+    2829	runs	27276.7
+    2830	defend	27261.7
+    2831	favourite	27258.5
+    2832	desires	27249.0
+    2833	heavily	27238.7
+    2834	assembled	27230.0
+    2835	existed	27221.3
+    2836	depends	27216.6
+    2837	poems	27210.2
+    2838	hesitated	27208.7
+    2839	stuff	27203.9
+    2840	section	27202.3
+    2841	settlement	27201.5
+    2842	staring	27199.2
+    2843	sole	27191.2
+    2844	roads	27188.9
+    2845	plate	27174.6
+    2846	Mexico	27162.8
+    2847	overcome	27160.4
+    2848	pains	27159.6
+    2849	performing	27141.4
+    2850	dwell	27132.7
+    2851	grounds	27110.5
+    2852	taxes	27100.3
+    2853	marble	27081.3
+    2854	recently	27076.5
+    2855	tones	27064.7
+    2856	ability	27037.8
+    2857	awake	27037.8
+    2858	Walter	27037.8
+    2859	wave	27034.6
+    2860	shaking	27018.0
+    2861	folk	26996.6
+    2862	possibility	26961.0
+    2863	butter	26960.2
+    2864	fury	26960.2
+    2865	marched	26915.9
+    2866	Moses	26908.8
+    2867	writes	26901.7
+    2868	issued	26897.7
+    2869	sailed	26858.2
+    2870	instructions	26838.4
+    2871	hatred	26834.4
+    2872	pursuit	26832.9
+    2873	pull	26815.5
+    2874	furniture	26789.3
+    2875	additions	26788.6
+    2876	hid	26783.0
+    2877	rope	26781.4
+    2878	vi	26770.4
+    2879	adventure	26767.2
+    2880	royalty	26757.7
+    2881	vanished	26753.7
+    2882	arts	26748.2
+    2883	elder	26727.6
+    2884	signal	26715.8
+    2885	wanting	26696.0
+    2886	supplied	26694.4
+    2887	feast	26689.7
+    2888	safely	26650.1
+    2889	burn	26627.2
+    2890	describe	26605.8
+    2891	references	26602.6
+    2892	lesson	26592.4
+    2893	annual	26582.9
+    2894	card	26574.2
+    2895	passes	26556.0
+    2896	application	26542.5
+    2897	intelligent	26535.4
+    2898	county	26518.8
+    2899	beaten	26513.2
+    2900	presents	26511.7
+    2901	format	26507.7
+    2902	flow	26504.5
+    2903	sixty	26488.7
+    2904	scale	26480.8
+    2905	damage	26479.2
+    2906	marks	26478.4
+    2907	obtaining	26468.9
+    2908	moreover	26447.6
+    2909	commerce	26403.3
+    2910	startled	26381.1
+    2911	southern	26375.6
+    2912	consequently	26362.1
+    2913	outer	26352.6
+    2914	belongs	26350.3
+    2915	ben	26346.3
+    2916	wrought	26343.9
+    2917	average	26342.4
+    2918	naked	26341.6
+    2919	conducted	26318.6
+    2920	rivers	26306.8
+    2921	songs	26299.6
+    2922	obvious	26283.8
+    2923	foundation	26269.6
+    2924	concern	26239.5
+    2925	ceremony	26230.0
+    2926	magic	26210.2
+    2927	campaign	26203.9
+    2928	hunting	26202.3
+    2929	Carolina	26199.2
+    2930	liberal	26184.1
+    2931	whisper	26184.1
+    2932	largely	26177.0
+    2933	commonly	26158.8
+    2934	torn	26151.7
+    2935	exists	26145.4
+    2936	contributions	26143.0
+    2937	hunt	26139.8
+    2938	teacher	26128.8
+    2939	Christianity	26112.9
+    2940	lawyer	26093.2
+    2941	operations	26091.6
+    2942	detail	26089.2
+    2943	shortly	26070.2
+    2944	Caesar	26043.3
+    2945	wondering	26040.9
+    2946	leaders	26037.0
+    2947	blessing	26023.5
+    2948	princess	26022.7
+    2949	he'd	26014.8
+    2950	altar	26013.2
+    2951	tenderness	26013.2
+    2952	tiny	25980.0
+    2953	web	25971.3
+    2954	cardinal	25968.9
+    2955	sharply	25962.6
+    2956	regiment	25926.2
+    2957	chest	25915.1
+    2958	distinctly	25914.4
+    2959	purple	25912.0
+    2960	creating	25910.4
+    2961	gather	25905.7
+    2962	depth	25902.5
+    2963	indignation	25876.4
+    2964	performance	25870.8
+    2965	election	25863.7
+    2966	prosperity	25843.9
+    2967	gloomy	25825.7
+    2968	conception	25822.6
+    2969	clerk	25785.4
+    2970	decide	25779.1
+    2971	drunk	25774.3
+    2972	victim	25770.4
+    2973	reflected	25768.8
+    2974	pour	25765.6
+    2975	preceding	25764.0
+    2976	individuals	25759.3
+    2977	gazing	25737.9
+    2978	absurd	25718.9
+    2979	lift	25715.0
+    2980	gesture	25714.2
+    2981	armies	25710.2
+    2982	limbs	25667.5
+    2983	manage	25667.5
+    2984	brethren	25642.2
+    2985	Hugh	25616.1
+    2986	plays	25582.1
+    2987	hastened	25580.5
+    2988	dragged	25533.0
+    2989	motive	25512.5
+    2990	whatsoever	25421.5
+    2991	pointing	25416.7
+    2992	verses	25411.2
+    2993	pronounced	25410.4
+    2994	exchange	25408.0
+    2995	definite	25393.8
+    2996	emperor	25366.9
+    2997	tendency	25363.7
+    2998	remote	25339.2
+    2999	finish	25337.6
+    3000	flag	25313.9
+    3001	boots	25307.6
+    3002	enabled	25290.1
+    3003	administration	25289.4
+    3004	denied	25283.8
+    3005	churches	25279.1
+    3006	rarely	25251.4
+    3007	earnestly	25212.6
+    3008	considering	25210.2
+    3009	previously	25203.9
+    3010	ugly	25169.9
+    3011	bears	25165.9
+    3012	signed	25156.4
+    3013	genuine	25153.3
+    3014	harmless	25150.1
+    3015	mingled	25120.1
+    3016	obedience	25107.4
+    3017	walks	25103.4
+    3018	training	25071.0
+    3019	badly	25045.7
+    3020	feed	25028.3
+    3021	central	25010.1
+    3022	contrast	25009.3
+    3023	relieved	24995.8
+    3024	romance	24988.7
+    3025	Mississippi	24987.9
+    3026	structure	24976.1
+    3027	payment	24963.4
+    3028	pace	24960.2
+    3029	passages	24957.9
+    3030	succession	24955.5
+    3031	persuaded	24952.3
+    3032	sources	24952.3
+    3033	inquiry	24950.0
+    3034	inspired	24932.6
+    3035	angels	24925.4
+    3036	roll	24922.3
+    3037	wilt	24907.2
+    3038	inch	24887.5
+    3039	troubles	24878.8
+    3040	perfection	24870.1
+    3041	Lee	24850.3
+    3042	wherever	24845.5
+    3043	owe	24817.8
+    3044	handle	24805.2
+    3045	advantages	24802.8
+    3046	trip	24790.2
+    3047	shoot	24775.9
+    3048	fortunate	24755.3
+    3049	newspaper	24752.2
+    3050	employment	24726.1
+    3051	fitted	24721.3
+    3052	refuge	24717.4
+    3053	misfortune	24711.0
+    3054	providence	24702.3
+    3055	owns	24692.8
+    3056	cutting	24671.5
+    3057	beard	24658.8
+    3058	stirred	24654.1
+    3059	tear	24653.3
+    3060	Dan	24639.8
+    3061	resist	24634.3
+    3062	Bob	24620.1
+    3063	depths	24612.9
+    3064	maiden	24599.5
+    3065	determine	24596.3
+    3066	commission	24594.0
+    3067	merchant	24578.9
+    3068	whereas	24576.5
+    3069	crossing	24575.0
+    3070	independence	24561.5
+    3071	lively	24553.6
+    3072	breeze	24552.0
+    3073	provinces	24533.8
+    3074	Jean	24520.4
+    3075	virtues	24516.4
+    3076	conceived	24510.1
+    3077	relative	24507.7
+    3078	solitary	24481.6
+    3079	smell	24476.1
+    3080	wandering	24466.6
+    3081	thereby	24465.0
+    3082	eighteen	24454.7
+    3083	locked	24438.1
+    3084	provision	24386.7
+    3085	courts	24372.4
+    3086	eaten	24366.9
+    3087	historical	24366.9
+    3088	regarding	24365.3
+    3089	Florence	24349.5
+    3090	preferred	24349.5
+    3091	pick	24343.2
+    3092	ruined	24340.0
+    3093	wherein	24337.6
+    3094	vanity	24324.2
+    3095	condemned	24297.3
+    3096	deliver	24296.5
+    3097	unexpected	24270.4
+    3098	desk	24263.3
+    3099	gross	24261.7
+    3100	lane	24259.3
+    3101	happens	24249.0
+    3102	represent	24244.3
+    3103	Billy	24241.9
+    3104	root	24241.9
+    3105	Holland	24220.5
+    3106	mud	24215.0
+    3107	respectable	24197.6
+    3108	cleared	24196.8
+    3109	feels	24189.7
+    3110	fruits	24181.8
+    3111	testimony	24178.6
+    3112	Milton	24177.8
+    3113	existing	24176.2
+    3114	bride	24170.7
+    3115	rang	24165.2
+    3116	ranks	24146.2
+    3117	responsibility	24110.6
+    3118	beating	24105.8
+    3119	disappointed	24102.7
+    3120	suitable	24099.5
+    3121	depend	24080.5
+    3122	judges	24065.5
+    3123	giant	24050.4
+    3124	grasp	24039.4
+    3125	arrive	24036.2
+    3126	simplicity	24033.8
+    3127	autumn	24030.7
+    3128	absent	24029.9
+    3129	legally	24015.6
+    3130	veil	24014.0
+    3131	gloom	23980.8
+    3132	doubtful	23956.3
+    3133	suspect	23953.1
+    3134	weapons	23950.8
+    3135	limits	23919.9
+    3136	determination	23918.3
+    3137	feeble	23902.5
+    3138	prophet	23900.1
+    3139	Shak	23892.2
+    3140	gathering	23868.5
+    3141	basis	23866.1
+    3142	examine	23826.5
+    3143	corrupt	23785.4
+    3144	payments	23779.9
+    3145	returns	23775.1
+    3146	laying	23756.9
+    3147	prize	23749.0
+    3148	instances	23733.2
+    3149	Greeks	23730.8
+    3150	d	23730.0
+    3151	they're	23719.0
+    3152	theatre	23711.0
+    3153	purchase	23704.7
+    3154	comparison	23702.3
+    3155	composition	23694.4
+    3156	rival	23688.9
+    3157	someone	23680.2
+    3158	realize	23669.1
+    3159	defeat	23665.2
+    3160	demands	23635.9
+    3161	foe	23628.8
+    3162	shared	23620.1
+    3163	consists	23616.9
+    3164	studies	23614.5
+    3165	balance	23609.8
+    3166	intercourse	23609.0
+    3167	ID	23605.0
+    3168	forming	23571.0
+    3169	slender	23570.2
+    3170	coach	23561.5
+    3171	criminal	23556.8
+    3172	knocked	23553.6
+    3173	silly	23553.6
+    3174	humour	23550.4
+    3175	masses	23542.5
+    3176	indifferent	23541.0
+    3177	recall	23534.6
+    3178	occupation	23529.1
+    3179	discourse	23524.3
+    3180	keeps	23523.5
+    3181	regions	23516.4
+    3182	intervals	23510.9
+    3183	assist	23508.5
+    3184	novel	23506.1
+    3185	intellect	23493.5
+    3186	leads	23492.7
+    3187	hither	23489.5
+    3188	tales	23483.2
+    3189	sale	23476.9
+    3190	revenge	23465.8
+    3191	Lucy	23459.5
+    3192	yonder	23446.8
+    3193	resources	23435.7
+    3194	jealous	23421.5
+    3195	we're	23376.4
+    3196	wheel	23376.4
+    3197	invitation	23368.5
+    3198	narrative	23365.3
+    3199	risen	23364.5
+    3200	burnt	23335.3
+    3201	sentiments	23335.3
+    3202	inferior	23327.3
+    3203	amusement	23320.2
+    3204	Marie	23309.9
+    3205	flash	23304.4
+    3206	recognize	23302.8
+    3207	swiftly	23299.7
+    3208	portrait	23294.9
+    3209	create	23259.3
+    3210	summoned	23245.9
+    3211	suggest	23241.1
+    3212	induced	23229.2
+    3213	conflict	23227.7
+    3214	fed	23220.5
+    3215	curse	23215.8
+    3216	disappointment	23215.8
+    3217	helpless	23213.4
+    3218	preparing	23208.7
+    3219	construction	23205.5
+    3220	Lincoln	23183.4
+    3221	zeal	23168.3
+    3222	responsible	23160.4
+    3223	indicated	23152.5
+    3224	groups	23150.1
+    3225	positive	23135.1
+    3226	Germans	23128.8
+    3227	attracted	23124.0
+    3228	vengeance	23121.6
+    3229	fort	23113.7
+    3230	club	23099.5
+    3231	cure	23094.0
+    3232	stout	23094.0
+    3233	missed	23090.0
+    3234	gracious	23082.1
+    3235	include	23071.0
+    3236	flood	23042.5
+    3237	satisfy	23040.2
+    3238	agony	23033.0
+    3239	respects	23020.4
+    3240	ventured	23020.4
+    3241	implied	23018.8
+    3242	Maria	23010.1
+    3243	stupid	22992.7
+    3244	seas	22991.9
+    3245	Spaniards	22987.9
+    3246	grain	22985.6
+    3247	enjoyment	22982.4
+    3248	wearing	22981.6
+    3249	indifference	22936.5
+    3250	conceal	22933.4
+    3251	horizon	22922.3
+    3252	pleasures	22903.3
+    3253	therein	22901.7
+    3254	precisely	22900.1
+    3255	Canada	22872.4
+    3256	day's	22868.5
+    3257	assume	22844.8
+    3258	registered	22844.8
+    3259	estimate	22841.6
+    3260	steep	22823.4
+    3261	route	22808.4
+    3262	gardens	22789.4
+    3263	visitor	22780.7
+    3264	closer	22770.4
+    3265	harmony	22753.0
+    3266	non	22749.0
+    3267	thunder	22749.0
+    3268	wire	22741.1
+    3269	graceful	22736.4
+    3270	crept	22735.6
+    3271	Greece	22734.0
+    3272	childhood	22726.9
+    3273	knee	22696.0
+    3274	saddle	22691.3
+    3275	supplies	22683.4
+    3276	weeping	22673.1
+    3277	mostly	22658.0
+    3278	paragraphs	22647.8
+    3279	unconscious	22647.0
+    3280	mutual	22639.8
+    3281	scorn	22638.3
+    3282	grows	22628.0
+    3283	external	22592.4
+    3284	agents	22586.8
+    3285	software	22586.1
+    3286	institutions	22584.5
+    3287	losing	22575.0
+    3288	universe	22574.2
+    3289	clock	22548.9
+    3290	attempts	22547.3
+    3291	instruction	22538.6
+    3292	injury	22525.9
+    3293	roots	22522.8
+    3294	receipt	22519.6
+    3295	jumped	22518.8
+    3296	dearest	22502.2
+    3297	sore	22499.8
+    3298	earliest	22496.7
+    3299	finest	22488.0
+    3300	enable	22482.4
+    3301	discipline	22480.8
+    3302	motives	22465.8
+    3303	fastened	22454.7
+    3304	introduction	22446.0
+    3305	converted	22419.9
+    3306	wilderness	22419.1
+    3307	confused	22416.0
+    3308	fancied	22410.4
+    3309	offices	22410.4
+    3310	slip	22402.5
+    3311	revolution	22396.2
+    3312	wedding	22374.8
+    3313	girl's	22366.1
+    3314	farmer	22364.5
+    3315	silently	22363.7
+    3316	fires	22362.2
+    3317	wept	22355.0
+    3318	behalf	22346.3
+    3319	reckon	22346.3
+    3320	responded	22333.7
+    3321	uncertain	22328.9
+    3322	neglected	22328.1
+    3323	stroke	22326.6
+    3324	exquisite	22305.2
+    3325	engagement	22298.9
+    3326	dirty	22289.4
+    3327	rolling	22286.2
+    3328	platform	22282.3
+    3329	messenger	22272.0
+    3330	privilege	22260.9
+    3331	admirable	22255.4
+    3332	offers	22252.2
+    3333	mischief	22247.4
+    3334	physician	22245.1
+    3335	imposed	22228.5
+    3336	organized	22222.1
+    3337	covering	22208.7
+    3338	student	22207.1
+    3339	daring	22198.4
+    3340	cave	22174.7
+    3341	wars	22170.7
+    3342	convey	22166.7
+    3343	he'll	22163.6
+    3344	sincere	22162.0
+    3345	tradition	22160.4
+    3346	gravely	22153.3
+    3347	combined	22149.3
+    3348	gallant	22122.4
+    3349	sensation	22120.9
+    3350	travelling	22120.1
+    3351	charges	22089.2
+    3352	submit	22087.6
+    3353	tragedy	22082.1
+    3354	specific	22075.0
+    3355	commander	22064.7
+    3356	inn	22059.2
+    3357	stiff	22057.6
+    3358	accompany	22056.8
+    3359	score	22052.0
+    3360	virgin	22052.0
+    3361	farewell	22033.0
+    3362	paradise	22014.9
+    3363	villages	22012.5
+    3364	hunger	21975.3
+    3365	trembled	21947.6
+    3366	favorite	21929.4
+    3367	criticism	21925.5
+    3368	proprietary	21921.5
+    3369	customs	21915.2
+    3370	cotton	21910.4
+    3371	Ruth	21907.3
+    3372	hospital	21895.4
+    3373	restrictions	21881.2
+    3374	outward	21868.5
+    3375	impressed	21857.4
+    3376	blows	21851.1
+    3377	plains	21847.1
+    3378	flashed	21836.8
+    3379	rent	21836.8
+    3380	prey	21827.4
+    3381	owed	21813.1
+    3382	longing	21804.4
+    3383	musical	21803.6
+    3384	satisfactory	21803.6
+    3385	ridiculous	21802.8
+    3386	sheet	21798.1
+    3387	disgrace	21776.7
+    3388	colored	21769.6
+    3389	shouldn't	21767.2
+    3390	originally	21762.5
+    3391	Samuel	21760.1
+    3392	wages	21755.4
+    3393	papa	21749.8
+    3394	gas	21748.2
+    3395	inevitable	21741.1
+    3396	extensive	21735.6
+    3397	leisure	21729.3
+    3398	deadly	21718.2
+    3399	chin	21717.4
+    3400	claimed	21713.4
+    3401	glow	21707.1
+    3402	husband's	21703.9
+    3403	emotions	21695.2
+    3404	Adam	21681.8
+    3405	jealousy	21661.2
+    3406	leaf	21659.6
+    3407	publication	21649.3
+    3408	Englishman	21647.8
+    3409	Allah	21647.0
+    3410	Jones	21635.1
+    3411	hostile	21631.9
+    3412	wandered	21621.7
+    3413	railway	21615.3
+    3414	translation	21607.4
+    3415	procession	21575.8
+    3416	betrayed	21573.4
+    3417	pound	21572.6
+    3418	admired	21561.5
+    3419	elected	21552.0
+    3420	Pierre	21522.8
+    3421	sunk	21519.6
+    3422	ruins	21516.4
+    3423	eastern	21515.6
+    3424	roses	21511.7
+    3425	citizen	21498.2
+    3426	reminded	21497.4
+    3427	deceived	21495.9
+    3428	tables	21432.6
+    3429	beach	21431.8
+    3430	starting	21427.8
+    3431	funeral	21414.4
+    3432	arrested	21412.0
+    3433	flour	21409.6
+    3434	feature	21404.1
+    3435	correspondence	21403.3
+    3436	consisted	21398.6
+    3437	counted	21397.8
+    3438	reserve	21391.4
+    3439	proceedings	21381.2
+    3440	roar	21378.8
+    3441	romantic	21377.2
+    3442	twenty-five	21374.8
+    3443	hut	21374.0
+    3444	strangely	21361.4
+    3445	absorbed	21357.4
+    3446	propose	21352.7
+    3447	seats	21348.7
+    3448	bark	21347.1
+    3449	reception	21339.2
+    3450	pleasing	21334.5
+    3451	attained	21329.7
+    3452	wake	21326.6
+    3453	research	21323.4
+    3454	prayed	21309.2
+    3455	monarch	21306.8
+    3456	clothing	21300.5
+    3457	dollar	21293.3
+    3458	illness	21291.8
+    3459	calmly	21282.3
+    3460	obeyed	21275.9
+    3461	heartily	21268.8
+    3462	pressing	21264.9
+    3463	daylight	21264.1
+    3464	warriors	21243.5
+    3465	jest	21238.7
+    3466	abruptly	21222.1
+    3467	washed	21200.8
+    3468	comment	21197.6
+    3469	metal	21196.0
+    3470	preparations	21193.7
+    3471	nerves	21177.8
+    3472	solution	21177.8
+    3473	pretended	21173.1
+    3474	sixteen	21166.0
+    3475	assembly	21155.7
+    3476	tobacco	21154.1
+    3477	entity	21142.2
+    3478	dwelling	21136.7
+    3479	depart	21135.9
+    3480	swung	21134.3
+    3481	bitterly	21130.4
+    3482	alteration	21128.0
+    3483	colony	21126.4
+    3484	disclaimers	21124.8
+    3485	wing	21122.5
+    3486	peaceful	21120.9
+    3487	lion	21119.3
+    3488	opportunities	21097.9
+    3489	alarmed	21090.8
+    3490	furnish	21090.0
+    3491	resting	21086.9
+    3492	accused	21084.5
+    3493	culture	21083.7
+    3494	writings	21073.4
+    3495	dwelt	21071.0
+    3496	conquered	21067.1
+    3497	trick	21052.8
+    3498	trusted	21049.7
+    3499	column	21046.5
+    3500	financial	21028.3
+    3501	cunning	21027.5
+    3502	preparation	21022.0
+    3503	drama	21014.9
+    3504	joke	21010.1
+    3505	entertained	21003.0
+    3506	mist	20999.0
+    3507	hypertext	20994.3
+    3508	shell	20981.6
+    3509	medicine	20972.9
+    3510	proofread	20964.2
+    3511	nest	20950.0
+    3512	reverence	20947.6
+    3513	situated	20945.2
+    3514	yielded	20942.9
+    3515	conceive	20938.9
+    3516	appointment	20934.2
+    3517	lessons	20897.8
+    3518	fetch	20895.4
+    3519	tomb	20895.4
+    3520	candle	20894.6
+    3521	offence	20882.7
+    3522	coarse	20870.1
+    3523	heap	20866.1
+    3524	mixture	20863.8
+    3525	homes	20847.9
+    3526	model	20843.2
+    3527	men's	20819.4
+    3528	defect	20818.7
+    3529	destined	20814.7
+    3530	occasional	20813.1
+    3531	fourteen	20803.6
+    3532	hint	20802.0
+    3533	knights	20795.7
+    3534	solicit	20783.8
+    3535	dreamed	20774.4
+    3536	objection	20756.2
+    3537	craft	20753.8
+    3538	acid	20752.2
+    3539	namely	20747.5
+    3540	Asia	20744.3
+    3541	neglect	20734.8
+    3542	data	20722.9
+    3543	weapon	20717.4
+    3544	confessed	20715.0
+    3545	arrangements	20709.5
+    3546	repose	20701.6
+    3547	complying	20700.0
+    3548	copied	20700.0
+    3549	pink	20698.4
+    3550	user	20696.0
+    3551	heels	20695.2
+    3552	grandfather	20692.1
+    3553	other's	20690.5
+    3554	income	20679.4
+    3555	i.e.	20661.2
+    3556	regards	20650.1
+    3557	streams	20649.4
+    3558	vigorous	20633.5
+    3559	accepting	20628.8
+    3560	bishop	20628.8
+    3561	lightning	20622.5
+    3562	authors	20613.8
+    3563	flames	20613.8
+    3564	observations	20602.7
+    3565	compressed	20599.5
+    3566	sport	20588.4
+    3567	powder	20587.6
+    3568	beds	20576.6
+    3569	orange	20573.4
+    3570	painting	20559.2
+    3571	shout	20548.9
+    3572	Austria	20499.0
+    3573	bath	20495.9
+    3574	careless	20495.1
+    3575	chap	20493.5
+    3576	derivative	20492.7
+    3577	roused	20491.1
+    3578	primitive	20488.8
+    3579	doorway	20487.2
+    3580	climbed	20484.8
+    3581	volumes	20479.3
+    3582	vulgar	20448.4
+    3583	arguments	20441.3
+    3584	1st	20440.5
+    3585	sunset	20435.0
+    3586	convenient	20431.0
+    3587	mail	20423.9
+    3588	recalled	20419.1
+    3589	wrapped	20419.1
+    3590	abode	20409.6
+    3591	planted	20405.7
+    3592	paint	20381.2
+    3593	surrender	20362.2
+    3594	establish	20357.4
+    3595	mild	20353.5
+    3596	promptly	20342.4
+    3597	appearing	20328.2
+    3598	department	20315.5
+    3599	parish	20302.8
+    3600	Stephen	20288.6
+    3601	nay	20246.7
+    3602	lit	20243.5
+    3603	handkerchief	20229.3
+    3604	basket	20219.8
+    3605	easier	20216.6
+    3606	deserve	20213.4
+    3607	quit	20213.4
+    3608	assurance	20212.6
+    3609	mirror	20210.3
+    3610	plot	20208.7
+    3611	yer	20196.8
+    3612	upward	20192.9
+    3613	sadly	20191.3
+    3614	secretary	20190.5
+    3615	adding	20187.3
+    3616	modest	20185.7
+    3617	dish	20176.3
+    3618	cares	20161.2
+    3619	straw	20158.9
+    3620	net	20152.5
+    3621	advised	20146.2
+    3622	heavenly	20124.0
+    3623	largest	20119.3
+    3624	proceeding	20107.4
+    3625	impatient	20085.3
+    3626	wounds	20076.6
+    3627	warmth	20071.8
+    3628	certainty	20053.6
+    3629	restless	20048.1
+    3630	meantime	20043.3
+    3631	rays	20040.2
+    3632	salvation	20031.5
+    3633	lovers	20030.7
+    3634	experiment	20024.4
+    3635	shores	20017.2
+    3636	today	20016.4
+    3637	tremendous	20006.2
+    3638	afforded	20004.6
+    3639	moonlight	20002.2
+    3640	intend	19999.0
+    3641	California	19991.1
+    3642	cultivated	19976.9
+    3643	flushed	19971.4
+    3644	Shakespeare	19966.6
+    3645	newspapers	19953.2
+    3646	rocky	19916.8
+    3647	pious	19900.9
+    3648	wont	19900.9
+    3649	steam	19892.2
+    3650	improvement	19883.5
+    3651	garments	19878.8
+    3652	Ned	19874.8
+    3653	treasury	19873.3
+    3654	merchants	19868.5
+    3655	perpetual	19866.9
+    3656	trained	19866.9
+    3657	products	19866.1
+    3658	affectionate	19858.2
+    3659	dispute	19854.3
+    3660	visitors	19847.9
+    3661	poison	19814.7
+    3662	proposition	19793.3
+    3663	maybe	19771.2
+    3664	rifle	19769.6
+    3665	warned	19767.2
+    3666	parting	19751.4
+    3667	shield	19736.4
+    3668	erected	19722.9
+    3669	employ	19722.1
+    3670	prevailed	19721.4
+    3671	talent	19714.2
+    3672	rises	19713.4
+    3673	climate	19693.7
+    3674	chairs	19690.5
+    3675	searched	19689.7
+    3676	unlike	19687.3
+    3677	recover	19681.0
+    3678	mate	19655.7
+    3679	arrange	19648.6
+    3680	fortunes	19647.0
+    3681	puzzled	19639.1
+    3682	committee	19637.5
+    3683	aged	19628.8
+    3684	Ohio	19605.1
+    3685	ashes	19593.2
+    3686	ghost	19563.9
+    3687	b	19549.7
+    3688	promises	19547.3
+    3689	bushes	19541.0
+    3690	effective	19525.9
+    3691	distinguish	19508.5
+    3692	manifest	19496.7
+    3693	comparatively	19486.4
+    3694	esteem	19478.5
+    3695	blew	19452.4
+    3696	revelation	19451.6
+    3697	wash	19425.5
+    3698	recognition	19417.6
+    3699	confession	19405.7
+    3700	clay	19398.6
+    3701	nonsense	19375.6
+    3702	trunk	19374.8
+    3703	management	19371.7
+    3704	undoubtedly	19371.7
+    3705	dried	19369.3
+    3706	Dorothy	19360.6
+    3707	chiefs	19347.1
+    3708	coal	19337.7
+    3709	stolen	19337.7
+    3710	earthly	19335.3
+    3711	restore	19332.1
+    3712	indirectly	19327.4
+    3713	lasted	19324.2
+    3714	selfish	19316.3
+    3715	renewed	19313.9
+    3716	canoe	19310.8
+    3717	protest	19307.6
+    3718	vice	19294.1
+    3719	races	19291.0
+    3720	deemed	19279.1
+    3721	temporary	19278.3
+    3722	pile	19276.7
+    3723	Frederick	19263.3
+    3724	chapel	19251.4
+    3725	moderate	19245.9
+    3726	spell	19236.4
+    3727	Massachusetts	19235.6
+    3728	upright	19228.5
+    3729	quoted	19226.9
+    3730	area	19226.1
+    3731	bone	19221.4
+    3732	solitude	19215.8
+    3733	instruments	19215.0
+    3734	formal	19211.9
+    3735	students	19209.5
+    3736	greatness	19206.3
+    3737	struggling	19192.1
+    3738	Monday	19175.5
+    3739	reproach	19173.1
+    3740	altered	19167.6
+    3741	grim	19161.2
+    3742	leaped	19157.3
+    3743	Venice	19153.3
+    3744	federal	19149.4
+    3745	questioned	19147.0
+    3746	editor	19143.0
+    3747	desirable	19141.5
+    3748	acknowledge	19137.5
+    3749	motionless	19137.5
+    3750	remedy	19135.9
+    3751	bestowed	19130.4
+    3752	pursue	19121.7
+    3753	representative	19117.7
+    3754	pole	19116.9
+    3755	gladly	19111.4
+    3756	linen	19109.8
+    3757	vital	19099.5
+    3758	sink	19096.4
+    3759	pacific	19093.2
+    3760	hopeless	19090.0
+    3761	dangers	19087.7
+    3762	gratefully	19087.7
+    3763	president	19068.7
+    3764	travelled	19061.5
+    3765	ward	19060.8
+    3766	nephew	19041.8
+    3767	ms	19038.6
+    3768	cheer	19029.9
+    3769	bloody	19023.6
+    3770	siege	19020.4
+    3771	commands	19005.4
+    3772	justified	19003.8
+    3773	Atlantic	18995.1
+    3774	stomach	18991.9
+    3775	improved	18971.4
+    3776	admire	18965.0
+    3777	openly	18962.7
+    3778	sailors	18961.1
+    3779	abide	18940.5
+    3780	advancing	18937.3
+    3781	forests	18927.1
+    3782	records	18920.7
+    3783	Polly	18909.6
+    3784	recorded	18908.9
+    3785	modification	18904.9
+    3786	dramatic	18897.8
+    3787	statements	18891.5
+    3788	upstairs	18873.3
+    3789	varied	18858.2
+    3790	letting	18857.4
+    3791	Wilson	18857.4
+    3792	comrades	18855.9
+    3793	sets	18848.7
+    3794	descent	18847.9
+    3795	whither	18847.9
+    3796	envy	18837.7
+    3797	load	18836.9
+    3798	pretend	18834.5
+    3799	folded	18829.0
+    3800	brass	18824.2
+    3801	internal	18823.4
+    3802	furious	18820.3
+    3803	curtain	18816.3
+    3804	healthy	18814.7
+    3805	obscure	18810.0
+    3806	summit	18806.0
+    3807	alas	18755.4
+    3808	fifth	18753.0
+    3809	center	18747.5
+    3810	faced	18734.8
+    3811	cheap	18723.7
+    3812	saints	18722.9
+    3813	colonel	18721.4
+    3814	Egyptian	18719.0
+    3815	contest	18707.9
+    3816	owned	18702.4
+    3817	adventures	18700.8
+    3818	exclusion	18688.1
+    3819	seize	18670.7
+    3820	chances	18669.9
+    3821	springs	18661.2
+    3822	alter	18660.4
+    3823	landing	18659.7
+    3824	fence	18652.5
+    3825	leagues	18642.2
+    3826	glimpse	18634.3
+    3827	statue	18632.0
+    3828	contract	18625.6
+    3829	luxury	18614.6
+    3830	artillery	18598.7
+    3831	doubts	18597.2
+    3832	saving	18594.8
+    3833	fro	18586.9
+    3834	string	18586.1
+    3835	combination	18582.9
+    3836	awakened	18575.8
+    3837	faded	18573.4
+    3838	arrest	18570.3
+    3839	protected	18568.7
+    3840	temperature	18567.1
+    3841	strict	18564.7
+    3842	contented	18563.9
+    3843	professional	18563.9
+    3844	intent	18559.2
+    3845	brother's	18548.9
+    3846	injured	18548.9
+    3847	neighborhood	18546.5
+    3848	Andrew	18543.4
+    3849	abundance	18541.0
+    3850	smoking	18541.0
+    3851	yourselves	18529.9
+    3852	medical	18527.5
+    3853	garrison	18525.9
+    3854	likes	18508.5
+    3855	corps	18503.8
+    3856	heroic	18497.5
+    3857	inform	18494.3
+    3858	wife's	18488.8
+    3859	retained	18477.7
+    3860	agitation	18469.0
+    3861	nobles	18462.7
+    3862	prominent	18457.1
+    3863	institution	18454.0
+    3864	judged	18441.3
+    3865	embrace	18431.0
+    3866	wheels	18427.8
+    3867	closing	18397.8
+    3868	damaged	18391.5
+    3869	pack	18390.7
+    3870	affections	18389.1
+    3871	eldest	18389.1
+    3872	anguish	18382.8
+    3873	surrounding	18381.2
+    3874	obviously	18376.4
+    3875	strictly	18366.1
+    3876	capture	18344.0
+    3877	drops	18339.2
+    3878	inquire	18336.1
+    3879	ample	18328.2
+    3880	remainder	18325.8
+    3881	justly	18324.2
+    3882	recollection	18324.2
+    3883	deer	18321.0
+    3884	answers	18317.9
+    3885	bedroom	18311.6
+    3886	purely	18310.0
+    3887	bush	18306.8
+    3888	plunged	18299.7
+    3889	thyself	18296.5
+    3890	joint	18291.8
+    3891	refer	18275.9
+    3892	expecting	18274.4
+    3893	madam	18271.2
+    3894	railroad	18264.9
+    3895	spake	18253.8
+    3896	respecting	18252.2
+    3897	Jan	18250.6
+    3898	columns	18248.3
+    3899	weep	18242.7
+    3900	identify	18232.4
+    3901	discharge	18215.8
+    3902	bench	18207.1
+    3903	Ralph	18196.0
+    3904	heir	18192.9
+    3905	oak	18186.6
+    3906	rescue	18177.1
+    3907	limit	18168.4
+    3908	unpleasant	18163.6
+    3909	anxiously	18159.7
+    3910	innocence	18153.3
+    3911	awoke	18151.7
+    3912	expectation	18145.4
+    3913	incomplete	18143.8
+    3914	program	18109.8
+    3915	reserved	18096.4
+    3916	secretly	18083.7
+    3917	we've	18079.7
+    3918	invention	18079.0
+    3919	faults	18075.8
+    3920	disagreeable	18074.2
+    3921	piano	18074.2
+    3922	defeated	18073.4
+    3923	charms	18072.6
+    3924	purse	18067.9
+    3925	persuade	18066.3
+    3926	deprived	18063.1
+    3927	electric	18058.4
+    3928	endless	18058.4
+    3929	interval	18054.4
+    3930	chase	18052.8
+    3931	heroes	18052.1
+    3932	invisible	18048.9
+    3933	well-known	18044.9
+    3934	occupy	18038.6
+    3935	Jacob	18036.2
+    3936	gown	18026.0
+    3937	cruelty	18021.2
+    3938	lock	18018.0
+    3939	lowest	18007.8
+    3940	hesitation	18003.8
+    3941	withdrew	18003.8
+    3942	proposal	18001.4
+    3943	destiny	17999.1
+    3944	recognised	17998.3
+    3945	commons	17995.1
+    3946	foul	17994.3
+    3947	loaded	17991.9
+    3948	amidst	17989.6
+    3949	titles	17984.8
+    3950	ancestors	17984.0
+    3951	types	17972.2
+    3952	commanding	17959.5
+    3953	madness	17954.7
+    3954	happily	17954.0
+    3955	assigned	17951.6
+    3956	declined	17932.6
+    3957	temptation	17932.6
+    3958	lady's	17929.4
+    3959	subsequent	17917.6
+    3960	jewels	17912.8
+    3961	breathed	17910.4
+    3962	willingly	17906.5
+    3963	youthful	17906.5
+    3964	bells	17904.1
+    3965	spectacle	17903.3
+    3966	uneasy	17897.8
+    3967	shine	17896.2
+    3968	formidable	17893.0
+    3969	stately	17892.2
+    3970	machinery	17886.7
+    3971	fragments	17875.6
+    3972	rushing	17859.0
+    3973	attractive	17857.4
+    3974	product	17857.4
+    3975	economic	17854.3
+    3976	sickness	17847.9
+    3977	uses	17822.6
+    3978	dashed	17819.5
+    3979	engine	17817.1
+    3980	ashore	17813.9
+    3981	dates	17805.2
+    3982	theirs	17793.4
+    3983	adv	17783.1
+    3984	clasped	17773.6
+    3985	international	17772.8
+    3986	leather	17768.8
+    3987	spared	17758.5
+    3988	crushed	17753.0
+    3989	interfere	17748.3
+    3990	subtle	17745.9
+    3991	waved	17743.5
+    3992	slope	17739.6
+    3993	floating	17737.2
+    3994	worry	17730.1
+    3995	effected	17725.3
+    3996	passengers	17723.7
+    3997	violently	17715.8
+    3998	donation	17715.0
+    3999	steamer	17714.2
+    4000	witnesses	17712.7
+    4001	specified	17710.3
+    4002	learnt	17698.4
+    4003	stores	17677.9
+    4004	designed	17666.8
+    4005	guessed	17654.9
+    4006	roger	17654.9
+    4007	timber	17654.1
+    4008	talents	17639.9
+    4009	heed	17636.7
+    4010	Jackson	17631.2
+    4011	murdered	17629.6
+    4012	vivid	17628.0
+    4013	woe	17614.6
+    4014	calculate	17612.2
+    4015	killing	17608.2
+    4016	Laura	17605.9
+    4017	savages	17603.5
+    4018	wasted	17600.3
+    4019	trifle	17584.5
+    4020	funny	17576.6
+    4021	pockets	17560.0
+    4022	philosopher	17552.9
+    4023	insult	17544.2
+    4024	den	17543.4
+    4025	representation	17541.0
+    4026	incapable	17538.6
+    4027	eloquence	17537.0
+    4028	dine	17526.7
+    4029	temples	17526.0
+    4030	Ann	17521.2
+    4031	sensitive	17519.6
+    4032	robin	17518.8
+    4033	appetite	17507.0
+    4034	wishing	17501.4
+    4035	picturesque	17495.9
+    4036	Douglas	17494.3
+    4037	courtesy	17472.2
+    4038	flowing	17467.4
+    4039	remembrance	17465.8
+    4040	lawyers	17464.2
+    4041	sphere	17464.2
+    4042	murmur	17463.5
+    4043	elegant	17460.3
+    4044	honourable	17453.2
+    4045	stopping	17452.4
+    4046	guilt	17440.5
+    4047	welfare	17437.3
+    4048	avoided	17429.4
+    4049	fishing	17423.9
+    4050	perish	17420.7
+    4051	sober	17416.0
+    4052	steal	17415.2
+    4053	delicious	17401.0
+    4054	infant	17393.8
+    4055	lip	17393.0
+    4056	Norman	17392.3
+    4057	offended	17392.3
+    4058	dost	17373.3
+    4059	memories	17358.2
+    4060	wheat	17354.3
+    4061	Japanese	17343.2
+    4062	humor	17342.4
+    4063	exhibited	17329.0
+    4064	encounter	17321.8
+    4065	footsteps	17314.7
+    4066	marquis	17308.4
+    4067	smiles	17302.1
+    4068	amiable	17294.9
+    4069	twilight	17290.2
+    4070	arrows	17287.8
+    4071	consisting	17287.0
+    4072	park	17285.4
+    4073	retire	17280.7
+    4074	economy	17278.3
+    4075	sufferings	17276.7
+    4076	secrets	17276.0
+    4077	na	17275.2
+    4078	halted	17268.0
+    4079	govern	17262.5
+    4080	favourable	17260.9
+    4081	colors	17248.3
+    4082	translated	17245.9
+    4083	stretch	17245.1
+    4084	formation	17240.4
+    4085	immortal	17234.8
+    4086	gallery	17233.2
+    4087	parallel	17233.2
+    4088	lean	17230.1
+    4089	tempted	17229.3
+    4090	frontier	17228.5
+    4091	continent	17226.1
+    4092	knock	17221.4
+    4093	impatience	17210.3
+    4094	unity	17210.3
+    4095	dealing	17192.9
+    4096	prohibition	17169.9
+    4097	decent	17166.8
+    4098	fiery	17163.6
+    4099	images	17163.6
+    4100	tie	17162.8
+    4101	punished	17161.2
+    4102	submitted	17161.2
+    4103	Julia	17140.7
+    4104	Albert	17127.2
+    4105	rejoined	17126.4
+    4106	speedily	17125.6
+    4107	consented	17122.5
+    4108	major	17113.8
+    4109	preliminary	17113.8
+    4110	cell	17112.2
+    4111	void	17112.2
+    4112	placing	17111.4
+    4113	prudence	17103.5
+    4114	egg	17096.4
+    4115	amazement	17090.0
+    4116	border	17086.9
+    4117	artificial	17080.5
+    4118	hereafter	17075.8
+    4119	fanny	17065.5
+    4120	crimes	17063.1
+    4121	breathe	17060.0
+    4122	exempt	17056.8
+    4123	anchor	17037.8
+    4124	Chicago	17037.8
+    4125	sits	17036.2
+    4126	purchased	17032.3
+    4127	eminent	17031.5
+    4128	neighbors	17029.1
+    4129	glowing	17016.5
+    4130	sunlight	17008.6
+    4131	examples	17006.2
+    4132	exercised	17005.4
+    4133	wealthy	17003.8
+    4134	seeming	16999.1
+    4135	Bonaparte	16995.1
+    4136	shouting	16994.3
+    4137	thanked	16992.7
+    4138	illustrious	16985.6
+    4139	curiously	16984.8
+    4140	inspiration	16984.0
+    4141	seeds	16983.2
+    4142	naval	16971.4
+    4143	foes	16954.8
+    4144	everyone	16950.8
+    4145	longed	16944.5
+    4146	abundant	16940.5
+    4147	doubted	16936.6
+    4148	painter	16933.4
+    4149	greeted	16931.0
+    4150	erect	16929.4
+    4151	glasses	16926.3
+    4152	meanwhile	16926.3
+    4153	shooting	16918.4
+    4154	Athens	16914.4
+    4155	wagon	16913.6
+    4156	lend	16903.3
+    4157	lent	16901.7
+    4158	crisis	16892.3
+    4159	undertake	16885.9
+    4160	particulars	16872.5
+    4161	eh	16870.9
+    4162	veins	16869.3
+    4163	polite	16864.6
+    4164	Anna	16863.0
+    4165	experiences	16859.0
+    4166	seal	16858.2
+    4167	header	16850.3
+    4168	clergy	16848.7
+    4169	mount	16843.2
+    4170	array	16834.5
+    4171	corners	16834.5
+    4172	magazine	16833.7
+    4173	loudly	16832.1
+    4174	bitterness	16825.8
+    4175	Texas	16816.3
+    4176	guardian	16813.1
+    4177	searching	16811.6
+    4178	rejected	16802.1
+    4179	harsh	16801.3
+    4180	includes	16800.5
+    4181	boldly	16791.8
+    4182	Maurice	16791.8
+    4183	Kate	16790.2
+    4184	lunch	16786.2
+    4185	pine	16785.5
+    4186	shells	16783.9
+    4187	seconds	16783.1
+    4188	despite	16779.1
+    4189	hoping	16776.7
+    4190	injustice	16768.0
+    4191	expressions	16766.5
+    4192	flies	16766.5
+    4193	push	16757.0
+    4194	tight	16756.2
+    4195	problems	16753.0
+    4196	landscape	16749.1
+    4197	sue	16742.7
+    4198	protested	16739.6
+    4199	scarlet	16734.8
+    4200	abandon	16734.0
+    4201	artistic	16721.4
+    4202	mainly	16720.6
+    4203	measured	16688.9
+    4204	loyal	16683.4
+    4205	boiling	16681.8
+    4206	desirous	16644.6
+    4207	suited	16644.6
+    4208	alliance	16641.5
+    4209	advise	16635.1
+    4210	waist	16634.3
+    4211	sinking	16631.2
+    4212	apprehension	16616.1
+    4213	stable	16611.4
+    4214	gregory	16607.4
+    4215	maximum	16592.4
+    4216	commit	16590.0
+    4217	hideous	16575.0
+    4218	hamilton	16571.1
+    4219	sweetness	16566.3
+    4220	dismissed	16563.9
+    4221	tore	16560.8
+    4222	affect	16558.4
+    4223	shaken	16556.0
+    4224	evils	16552.1
+    4225	unworthy	16547.3
+    4226	significance	16544.9
+    4227	modified	16531.5
+    4228	miracle	16529.9
+    4229	lieu	16522.0
+    4230	peasant	16519.6
+    4231	considerably	16501.4
+    4232	observing	16495.9
+    4233	conveyed	16494.3
+    4234	resemblance	16475.3
+    4235	extend	16473.0
+    4236	riches	16471.4
+    4237	personally	16466.6
+    4238	morality	16455.5
+    4239	rebellion	16450.8
+    4240	thread	16435.8
+    4241	dumb	16431.8
+    4242	inclination	16427.9
+    4243	forbidden	16427.1
+    4244	copper	16426.3
+    4245	differences	16418.4
+    4246	sailor	16411.2
+    4247	requested	16408.1
+    4248	Alfred	16401.8
+    4249	response	16401.8
+    4250	promoting	16398.6
+    4251	imperial	16392.3
+    4252	blank	16390.7
+    4253	purity	16382.8
+    4254	victor	16382.8
+    4255	bending	16376.4
+    4256	solemnly	16363.0
+    4257	twenty-four	16363.0
+    4258	minor	16356.7
+    4259	del	16353.5
+    4260	crimson	16348.7
+    4261	republic	16343.2
+    4262	teachers	16332.9
+    4263	ma'am	16329.8
+    4264	danced	16326.6
+    4265	bargain	16325.8
+    4266	dealt	16321.8
+    4267	fatigue	16319.5
+    4268	telephone	16317.9
+    4269	cents	16317.1
+    4270	whip	16310.8
+    4271	Adams	16303.7
+    4272	dislike	16280.7
+    4273	witnessed	16265.7
+    4274	infantry	16260.9
+    4275	acres	16254.6
+    4276	checked	16253.8
+    4277	countrymen	16252.2
+    4278	enemy's	16249.9
+    4279	companies	16249.1
+    4280	normal	16248.3
+    4281	shirt	16247.5
+    4282	addresses	16243.5
+    4283	introduce	16242.7
+    4284	sofa	16237.2
+    4285	mothers	16235.6
+    4286	sweep	16222.2
+    4287	conversion	16219.8
+    4288	sketch	16215.0
+    4289	African	16205.6
+    4290	deserved	16204.0
+    4291	answering	16200.0
+    4292	virtuous	16198.4
+    4293	Persian	16176.3
+    4294	anyway	16169.9
+    4295	thief	16152.5
+    4296	driver	16147.8
+    4297	retain	16145.4
+    4298	constructed	16144.6
+    4299	Daniel	16143.8
+    4300	UT	16132.8
+    4301	Philadelphia	16130.4
+    4302	conspicuous	16129.6
+    4303	channel	16126.4
+    4304	nobility	16124.1
+    4305	Edith	16114.6
+    4306	Berlin	16113.8
+    4307	editing	16105.9
+    4308	Cambridge	16103.5
+    4309	declaration	16094.8
+    4310	guards	16094.8
+    4311	personality	16088.5
+    4312	smallest	16080.6
+    4313	excess	16077.4
+    4314	separation	16075.8
+    4315	disgust	16071.8
+    4316	ha	16062.4
+    4317	accomplish	16054.4
+    4318	speeches	16054.4
+    4319	Herbert	16053.7
+    4320	convent	16048.1
+    4321	rightly	16044.2
+    4322	suspended	16042.6
+    4323	reform	16035.5
+    4324	mob	16028.3
+    4325	thirst	16027.5
+    4326	unnecessary	16021.2
+    4327	treasures	16018.8
+    4328	asks	16018.1
+    4329	viewed	16016.5
+    4330	designs	16004.6
+    4331	gleam	16000.6
+    4332	threatening	15999.1
+    4333	palm	15994.3
+    4334	Missouri	15992.7
+    4335	filling	15984.0
+    4336	quoth	15980.9
+    4337	fur	15978.5
+    4338	fortnight	15973.0
+    4339	holes	15972.2
+    4340	addressing	15970.6
+    4341	frightful	15954.8
+    4342	encourage	15954.0
+    4343	speaker	15945.3
+    4344	tribute	15944.5
+    4345	procure	15935.8
+    4346	frankly	15931.0
+    4347	recommended	15913.6
+    4348	relieve	15912.0
+    4349	intentions	15910.5
+    4350	unjust	15909.7
+    4351	legislation	15904.1
+    4352	project	15894.6
+    4353	threshold	15894.6
+    4354	merits	15893.8
+    4355	morrow	15885.1
+    4356	traces	15885.1
+    4357	induce	15883.6
+    4358	spear	15882.0
+    4359	inward	15873.3
+    4360	pupils	15863.8
+    4361	corresponding	15859.0
+    4362	fairy	15854.3
+    4363	conclude	15850.3
+    4364	clung	15846.4
+    4365	neat	15845.6
+    4366	lucky	15834.5
+    4367	lap	15823.4
+    4368	session	15822.6
+    4369	torture	15818.7
+    4370	damp	15814.7
+    4371	ridge	15802.1
+    4372	spoil	15785.5
+    4373	liable	15784.7
+    4374	swords	15780.7
+    4375	hearty	15778.3
+    4376	BC	15774.4
+    4377	Abraham	15769.6
+    4378	thoughtful	15768.8
+    4379	traveller	15764.9
+    4380	chains	15760.9
+    4381	favorable	15760.1
+    4382	tin	15755.4
+    4383	imp.	15748.3
+    4384	strongest	15748.3
+    4385	Horace	15745.1
+    4386	dependent	15738.0
+    4387	couch	15736.4
+    4388	bills	15732.5
+    4389	warrant	15731.7
+    4390	complaint	15722.2
+    4391	endeavour	15721.4
+    4392	sails	15716.6
+    4393	dined	15705.6
+    4394	convention	15701.6
+    4395	guarded	15696.1
+    4396	angle	15694.5
+    4397	widely	15692.1
+    4398	Illinois	15677.9
+    4399	Charlotte	15677.1
+    4400	endeavoured	15677.1
+    4401	ardent	15674.7
+    4402	cow	15670.0
+    4403	mill	15668.4
+    4404	victims	15667.6
+    4405	prejudice	15666.0
+    4406	foremost	15665.2
+    4407	map	15665.2
+    4408	probability	15656.5
+    4409	porch	15645.4
+    4410	lieutenant	15641.5
+    4411	surprising	15633.6
+    4412	fountain	15632.0
+    4413	sustained	15630.4
+    4414	appropriate	15626.4
+    4415	Ford	15620.9
+    4416	Clara	15616.2
+    4417	assisted	15615.4
+    4418	Lewis	15615.4
+    4419	rejoice	15609.8
+    4420	extending	15608.2
+    4421	marvellous	15601.1
+    4422	clothed	15597.2
+    4423	Jew	15579.8
+    4424	collar	15568.7
+    4425	bands	15567.9
+    4426	confident	15563.1
+    4427	hasty	15560.0
+    4428	nigh	15557.6
+    4429	organ	15557.6
+    4430	prose	15545.0
+    4431	privileges	15533.1
+    4432	selection	15523.6
+    4433	inquiries	15522.8
+    4434	codes	15510.1
+    4435	replace	15496.7
+    4436	saint	15492.7
+    4437	districts	15491.9
+    4438	deliberately	15481.7
+    4439	awe	15474.5
+    4440	beforehand	15470.6
+    4441	strife	15470.6
+    4442	released	15468.2
+    4443	compare	15466.6
+    4444	beer	15465.0
+    4445	retorted	15461.9
+    4446	relate	15459.5
+    4447	cheerfully	15448.4
+    4448	pistol	15448.4
+    4449	presume	15447.6
+    4450	velvet	15446.1
+    4451	wretch	15446.1
+    4452	Susan	15438.2
+    4453	Pennsylvania	15432.6
+    4454	stirring	15430.2
+    4455	righteousness	15429.4
+    4456	missing	15428.7
+    4457	fain	15427.1
+    4458	facing	15425.5
+    4459	fashionable	15425.5
+    4460	producing	15420.7
+    4461	peoples	15416.8
+    4462	positively	15408.9
+    4463	reasoning	15402.5
+    4464	gravity	15401.8
+    4465	disturb	15393.1
+    4466	sermon	15389.1
+    4467	exchanged	15385.1
+    4468	partner	15379.6
+    4469	brains	15374.1
+    4470	lowered	15372.5
+    4471	association	15365.4
+    4472	estates	15352.7
+    4473	abuse	15338.5
+    4474	flock	15329.8
+    4475	niece	15329.8
+    4476	languages	15325.0
+    4477	asserted	15321.1
+    4478	bodily	15318.7
+    4479	notions	15315.5
+    4480	Oliver	15313.2
+    4481	faculty	15304.4
+    4482	cannon	15302.1
+    4483	thirteen	15290.2
+    4484	sailing	15289.4
+    4485	rings	15285.5
+    4486	smart	15284.7
+    4487	possessions	15280.7
+    4488	disciples	15272.0
+    4489	petty	15271.2
+    4490	widest	15253.0
+    4491	divisions	15252.2
+    4492	prudent	15248.3
+    4493	caution	15246.7
+    4494	justify	15239.6
+    4495	awhile	15236.4
+    4496	boxes	15233.2
+    4497	manuscript	15228.5
+    4498	cigar	15225.3
+    4499	warrior	15223.0
+    4500	impressions	15221.4
+    4501	aught	15217.4
+    4502	lifting	15217.4
+    4503	inaccurate	15212.7
+    4504	tidings	15207.9
+    4505	Friday	15206.3
+    4506	liquid	15202.4
+    4507	staying	15202.4
+    4508	concept	15191.3
+    4509	creek	15186.6
+    4510	lo	15173.1
+    4511	brush	15172.3
+    4512	download	15171.5
+    4513	specially	15168.4
+    4514	cream	15166.8
+    4515	meetings	15162.0
+    4516	jump	15159.7
+    4517	unwilling	15158.9
+    4518	adapted	15157.3
+    4519	practised	15157.3
+    4520	combat	15151.8
+    4521	subdued	15151.8
+    4522	Jewish	15144.6
+    4523	innumerable	15141.5
+    4524	blowing	15139.9
+    4525	extra	15138.3
+    4526	civilized	15130.4
+    4527	invented	15123.3
+    4528	Japan	15120.9
+    4529	pitch	15109.8
+    4530	cliff	15107.5
+    4531	crowned	15092.4
+    4532	portions	15090.8
+    4533	awkward	15086.9
+    4534	horrid	15085.3
+    4535	pulling	15067.1
+    4536	appreciate	15065.5
+    4537	communicated	15060.8
+    4538	Kentucky	15056.8
+    4539	jury	15050.5
+    4540	encountered	15046.5
+    4541	attacks	15041.8
+    4542	monster	15031.5
+    4543	Simon	15022.0
+    4544	maintaining	15021.2
+    4545	sites	15019.6
+    4546	frozen	15015.7
+    4547	invariably	15010.9
+    4548	dies	15009.4
+    4549	survive	15007.8
+    4550	literally	15005.4
+    4551	consolation	14994.3
+    4552	m	14994.3
+    4553	phenomena	14994.3
+    4554	pot	14993.5
+    4555	Ellen	14984.0
+    4556	briefly	14979.3
+    4557	rice	14975.3
+    4558	planned	14974.5
+    4559	Barbara	14966.6
+    4560	respected	14958.7
+    4561	sublime	14954.0
+    4562	dropping	14948.4
+    4563	guy	14945.3
+    4564	behaviour	14940.5
+    4565	desolate	14938.9
+    4566	penny	14935.0
+    4567	adopt	14934.2
+    4568	replaced	14933.4
+    4569	revenue	14923.1
+    4570	formats	14918.4
+    4571	hired	14912.8
+    4572	regularly	14904.9
+    4573	infringement	14893.8
+    4574	curtains	14892.3
+    4575	eagerness	14883.6
+    4576	helping	14882.8
+    4577	investigation	14882.8
+    4578	constitutional	14878.8
+    4579	insist	14878.8
+    4580	occurs	14875.7
+    4581	fools	14871.7
+    4582	inheritance	14870.9
+    4583	latest	14868.5
+    4584	leap	14866.2
+    4585	games	14846.4
+    4586	apple	14840.1
+    4587	visiting	14840.1
+    4588	travellers	14836.1
+    4589	experiments	14830.6
+    4590	hasn't	14830.6
+    4591	pupil	14830.6
+    4592	enjoying	14829.0
+    4593	totally	14821.9
+    4594	twisted	14821.9
+    4595	discuss	14813.9
+    4596	firing	14802.9
+    4597	background	14801.3
+    4598	subscribe	14795.0
+    4599	tenderly	14786.3
+    4600	transcribe	14783.1
+    4601	descend	14779.9
+    4602	differ	14772.0
+    4603	majesty's	14763.3
+    4604	avail	14758.6
+    4605	disaster	14756.2
+    4606	bet	14753.8
+    4607	periodic	14750.7
+    4608	bull	14749.1
+    4609	entertainment	14748.3
+    4610	computers	14743.5
+    4611	cursed	14738.0
+    4612	raw	14734.0
+    4613	fulfilled	14732.5
+    4614	Georgia	14728.5
+    4615	virus	14726.9
+    4616	log	14726.1
+    4617	skies	14707.9
+    4618	scotch	14706.4
+    4619	embraced	14705.6
+    4620	hospitality	14703.2
+    4621	faintly	14701.6
+    4622	Solomon	14690.5
+    4623	robbed	14689.7
+    4624	cart	14688.9
+    4625	influences	14686.6
+    4626	ascended	14682.6
+    4627	incidents	14682.6
+    4628	childish	14674.7
+    4629	robe	14668.4
+    4630	aboard	14658.1
+    4631	resembling	14657.3
+    4632	reflect	14652.6
+    4633	dominion	14649.4
+    4634	dreary	14644.6
+    4635	serving	14639.1
+    4636	complexion	14636.7
+    4637	engage	14624.1
+    4638	tents	14620.9
+    4639	herd	14619.3
+    4640	attain	14618.5
+    4641	collect	14617.0
+    4642	disclaims	14617.0
+    4643	pan	14614.6
+    4644	relatives	14613.8
+    4645	borrowed	14610.6
+    4646	convert	14601.9
+    4647	outline	14598.8
+    4648	blown	14594.8
+    4649	comprehend	14578.2
+    4650	peasants	14575.8
+    4651	opera	14571.9
+    4652	assault	14568.7
+    4653	deceive	14566.3
+    4654	doctrines	14560.0
+    4655	representatives	14555.2
+    4656	dedicated	14553.7
+    4657	struggled	14548.1
+    4658	officials	14545.8
+    4659	hiding	14540.2
+    4660	paths	14537.8
+    4661	backs	14533.9
+    4662	prominently	14518.1
+    4663	prices	14517.3
+    4664	procured	14517.3
+    4665	mourning	14510.1
+    4666	compliment	14505.4
+    4667	heights	14503.0
+    4668	approval	14502.2
+    4669	gasped	14495.1
+    4670	breadth	14492.0
+    4671	withdraw	14488.8
+    4672	tune	14473.8
+    4673	compassion	14470.6
+    4674	polished	14468.2
+    4675	latitude	14463.5
+    4676	dishes	14461.1
+    4677	parent	14461.1
+    4678	contrived	14459.5
+    4679	delicacy	14459.5
+    4680	projected	14456.4
+    4681	akin	14454.0
+    4682	f	14452.4
+    4683	betray	14448.4
+    4684	traced	14446.9
+    4685	resentment	14432.6
+    4686	indemnify	14431.8
+    4687	pseud	14428.7
+    4688	sacrifices	14418.4
+    4689	disguise	14416.0
+    4690	transcription	14410.5
+    4691	document	14408.1
+    4692	neighbour	14405.7
+    4693	squire	14402.6
+    4694	punish	14393.9
+    4695	bars	14391.5
+    4696	glittering	14390.7
+    4697	tossed	14388.3
+    4698	block	14383.6
+    4699	lots	14375.7
+    4700	worldly	14370.1
+    4701	muscles	14367.0
+    4702	elbow	14365.4
+    4703	obligation	14359.8
+    4704	trifling	14359.8
+    4705	decline	14357.5
+    4706	attachment	14356.7
+    4707	ambitious	14355.9
+    4708	filename	14351.1
+    4709	artists	14341.6
+    4710	bloom	14341.6
+    4711	holiday	14340.8
+    4712	brute	14335.3
+    4713	repair	14329.8
+    4714	fist	14325.8
+    4715	recollect	14324.2
+    4716	eagle	14313.9
+    4717	honorable	14313.9
+    4718	significant	14309.2
+    4719	barren	14302.9
+    4720	functions	14296.5
+    4721	guided	14289.4
+    4722	dense	14283.9
+    4723	fiction	14277.6
+    4724	viz.	14273.6
+    4725	adds	14270.4
+    4726	rows	14270.4
+    4727	recommend	14264.1
+    4728	suspicious	14261.7
+    4729	resulting	14257.8
+    4730	seventy	14257.0
+    4731	shillings	14253.8
+    4732	educational	14252.2
+    4733	duly	14247.5
+    4734	governed	14246.7
+    4735	scripture	14237.2
+    4736	upwards	14235.6
+    4737	sworn	14234.0
+    4738	Nicholas	14226.9
+    4739	horn	14226.1
+    4740	brook	14225.3
+    4741	fund	14222.2
+    4742	Vienna	14213.5
+    4743	lodge	14209.5
+    4744	infinitely	14207.9
+    4745	clergyman	14207.1
+    4746	marshal	14206.4
+    4747	ruled	14205.6
+    4748	fiercely	14200.0
+    4749	Portuguese	14200.0
+    4750	costume	14192.9
+    4751	pit	14192.1
+    4752	disorder	14188.2
+    4753	sheer	14184.2
+    4754	exalted	14179.5
+    4755	fare	14175.5
+    4756	applause	14173.9
+    4757	Chaucer	14166.8
+    4758	remind	14161.3
+    4759	binary	14155.7
+    4760	packed	14141.5
+    4761	pillow	14140.7
+    4762	jersey	14139.1
+    4763	abbey	14136.7
+    4764	nowhere	14135.2
+    4765	anyhow	14125.7
+    4766	agitated	14122.5
+    4767	marching	14122.5
+    4768	catching	14121.7
+    4769	el	14119.3
+    4770	grasped	14117.7
+    4771	arrow	14115.4
+    4772	tend	14113.8
+    4773	carved	14109.8
+    4774	fitting	14108.3
+    4775	bonds	14105.9
+    4776	instructed	14105.9
+    4777	elaborate	14101.1
+    4778	corpse	14095.6
+    4779	bewildered	14088.5
+    4780	essence	14071.9
+    4781	positions	14071.9
+    4782	Emily	14067.1
+    4783	edited	14063.9
+    4784	continues	14062.4
+    4785	Harold	14056.8
+    4786	elevation	14055.2
+    4787	realm	14041.8
+    4788	debts	14032.3
+    4789	glancing	14027.6
+    4790	shops	14013.3
+    4791	complained	14008.6
+    4792	loyalty	14001.4
+    4793	coin	13996.7
+    4794	clad	13992.0
+    4795	staircase	13988.8
+    4796	documents	13976.9
+    4797	interpreted	13969.8
+    4798	4th	13969.0
+    4799	extremity	13966.6
+    4800	accord	13965.1
+    4801	sally	13963.5
+    4802	lace	13960.3
+    4803	tremble	13957.9
+    4804	exile	13955.6
+    4805	gospel	13947.7
+    4806	mechanical	13947.7
+    4807	successfully	13943.7
+    4808	scholar	13932.6
+    4809	wonders	13923.9
+    4810	Arab	13920.0
+    4811	temperament	13920.0
+    4812	expressing	13918.4
+    4813	Fred	13917.6
+    4814	trap	13917.6
+    4815	spots	13914.4
+    4816	awaiting	13910.5
+    4817	potatoes	13909.7
+    4818	likeness	13902.6
+    4819	harbour	13898.6
+    4820	proofs	13885.2
+    4821	jolly	13883.6
+    4822	contributed	13879.6
+    4823	wits	13876.5
+    4824	generosity	13869.3
+    4825	ruler	13866.2
+    4826	Lawrence	13858.3
+    4827	cake	13856.7
+    4828	lamps	13855.9
+    4829	crazy	13852.7
+    4830	sincerity	13852.7
+    4831	entertain	13851.1
+    4832	madame	13849.6
+    4833	sir	13849.6
+    4834	faculties	13845.6
+    4835	hesitate	13840.1
+    4836	deepest	13836.9
+    4837	seventeen	13830.6
+    4838	lordship	13817.9
+    4839	greeting	13808.4
+    4840	feminine	13805.2
+    4841	monstrous	13802.9
+    4842	tongues	13799.7
+    4843	barely	13795.8
+    4844	3d	13785.5
+    4845	mansion	13784.7
+    4846	facility	13783.9
+    4847	praised	13779.1
+    4848	warranties	13776.0
+    4849	Sarah	13775.2
+    4850	happier	13772.8
+    4851	indicating	13772.0
+    4852	rob	13764.1
+    4853	gigantic	13763.3
+    4854	honey	13760.9
+    4855	ladder	13757.8
+    4856	ending	13754.6
+    4857	Wales	13754.6
+    4858	swallowed	13751.5
+    4859	sunny	13747.5
+    4860	knelt	13743.5
+    4861	tyranny	13742.7
+    4862	decree	13739.6
+    4863	stake	13738.0
+    4864	divide	13734.0
+    4865	dreaming	13734.0
+    4866	proclaimed	13732.5
+    4867	dignified	13730.9
+    4868	tread	13729.3
+    4869	mines	13724.6
+    4870	viewing	13723.8
+    4871	defense	13723.0
+    4872	oldest	13720.6
+    4873	incredible	13718.2
+    4874	bidding	13711.9
+    4875	brick	13711.9
+    4876	arch	13707.1
+    4877	everlasting	13703.2
+    4878	elect	13700.0
+    4879	sprung	13696.9
+    4880	harder	13688.2
+    4881	winding	13686.6
+    4882	deductible	13684.2
+    4883	magistrate	13681.8
+    4884	respective	13679.5
+    4885	liquor	13676.3
+    4886	imitation	13670.0
+    4887	shy	13670.0
+    4888	perished	13669.2
+    4889	prime	13666.0
+    4890	studying	13662.8
+    4891	eighty	13661.3
+    4892	Hebrew	13658.1
+    4893	unfortunately	13656.5
+    4894	licensed	13654.9
+    4895	fog	13651.0
+    4896	coloured	13648.6
+    4897	bits	13647.0
+    4898	consult	13642.3
+    4899	moves	13642.3
+    4900	r	13642.3
+    4901	warn	13639.9
+    4902	Taylor	13638.3
+    4903	vile	13616.2
+    4904	depended	13612.2
+    4905	Phil	13609.8
+    4906	legend	13609.0
+    4907	locations	13604.3
+    4908	shallow	13602.7
+    4909	doom	13601.1
+    4910	dreaded	13595.6
+    4911	encouragement	13592.4
+    4912	impatiently	13575.8
+    4913	scent	13567.9
+    4914	varieties	13567.1
+    4915	irregular	13555.2
+    4916	battles	13554.5
+    4917	compass	13543.4
+    4918	neighbouring	13538.6
+    4919	bliss	13536.3
+    4920	harvest	13533.9
+    4921	promotion	13533.1
+    4922	stove	13519.6
+    4923	faithfully	13518.9
+    4924	Anthony	13517.3
+    4925	excellence	13515.7
+    4926	transfer	13515.7
+    4927	awaited	13511.7
+    4928	heathen	13510.9
+    4929	poetic	13510.9
+    4930	consulted	13509.4
+    4931	illustrated	13507.0
+    4932	Gilbert	13501.5
+    4933	br	13497.5
+    4934	fundamental	13496.7
+    4935	bundle	13492.0
+    4936	rebel	13481.7
+    4937	cultivation	13478.5
+    4938	joys	13478.5
+    4939	rigid	13476.9
+    4940	tragic	13468.2
+    4941	review	13462.7
+    4942	representing	13459.5
+    4943	flowed	13455.6
+    4944	brows	13454.0
+    4945	whereupon	13451.6
+    4946	terribly	13438.2
+    4947	melted	13435.8
+    4948	venerable	13435.8
+    4949	towers	13434.2
+    4950	cooking	13432.6
+    4951	mustn't	13422.3
+    4952	suspicions	13420.8
+    4953	old-fashioned	13419.2
+    4954	oppressed	13418.4
+    4955	Australia	13413.6
+    4956	friend's	13412.1
+    4957	revolt	13411.3
+    4958	swell	13407.3
+    4959	improve	13405.7
+    4960	Williams	13405.7
+    4961	describes	13403.4
+    4962	goddess	13401.8
+    4963	wreck	13393.1
+    4964	Tennessee	13392.3
+    4965	convince	13384.4
+    4966	sentences	13377.2
+    4967	bowl	13376.5
+    4968	radiant	13367.8
+    4969	Prussia	13364.6
+    4970	westward	13357.5
+    4971	indignant	13355.9
+    4972	refined	13345.6
+    4973	unseen	13344.8
+    4974	illustration	13340.9
+    4975	pertaining	13333.7
+    4976	swamp	13330.6
+    4977	Austrian	13329.0
+    4978	Saxon	13325.0
+    4979	congregation	13323.4
+    4980	nerve	13321.1
+    4981	undertaking	13321.1
+    4982	disclaimer	13317.1
+    4983	characteristics	13302.9
+    4984	stare	13291.8
+    4985	specimens	13291.0
+    4986	ascertain	13288.6
+    4987	pledge	13287.1
+    4988	earn	13286.3
+    4989	warfare	13285.5
+    4990	supposing	13279.9
+    4991	subsequently	13279.1
+    4992	attending	13278.4
+    4993	angrily	13273.6
+    4994	select	13268.9
+    4995	animated	13267.3
+    4996	industrial	13267.3
+    4997	hurriedly	13259.4
+    4998	manhood	13257.0
+    4999	quantities	13246.7
+    5000	interpretation	13245.9
+    5001	dressing	13242.0
+    5002	rejoiced	13241.2
+    5003	Edinburgh	13238.8
+    5004	Catherine	13236.4
+    5005	challenge	13236.4
+    5006	produces	13236.4
+    5007	forbid	13235.6
+    5008	gang	13234.8
+    5009	boiled	13233.3
+    5010	shouts	13231.7
+    5011	so-called	13229.3
+    5012	theme	13229.3
+    5013	thankful	13227.7
+    5014	admission	13226.9
+    5015	enters	13218.2
+    5016	elevated	13217.4
+    5017	Frenchman	13208.7
+    5018	pool	13204.8
+    5019	terrified	13203.2
+    5020	lads	13202.4
+    5021	persisted	13189.7
+    5022	conference	13185.0
+    5023	equality	13183.4
+    5024	genus	13180.3
+    5025	didst	13176.3
+    5026	newly	13172.3
+    5027	generals	13171.5
+    5028	surroundings	13162.1
+    5029	sorrows	13158.9
+    5030	occasioned	13154.1
+    5031	invasion	13151.0
+    5032	workmen	13147.0
+    5033	monks	13145.4
+    5034	sends	13145.4
+    5035	Turkish	13144.7
+    5036	discretion	13141.5
+    5037	pattern	13139.9
+    5038	reveal	13139.1
+    5039	endured	13128.8
+    5040	resolve	13128.0
+    5041	Columbia	13121.7
+    5042	preach	13120.9
+    5043	exceeding	13119.3
+    5044	ringing	13117.0
+    5045	triumphant	13117.0
+    5046	defiance	13113.8
+    5047	errand	13105.1
+    5048	woke	13104.3
+    5049	grandmother	13103.5
+    5050	weighed	13095.6
+    5051	wool	13092.4
+    5052	Orleans	13080.6
+    5053	communicate	13078.2
+    5054	strikes	13075.8
+    5055	promising	13066.3
+    5056	scenery	13066.3
+    5057	righteous	13065.5
+    5058	essentially	13064.0
+    5059	oppose	13060.8
+    5060	joyous	13053.7
+    5061	specimen	13052.9
+    5062	doctors	13049.7
+    5063	eloquent	13045.0
+    5064	manager	13045.0
+    5065	organs	13043.4
+    5066	sticks	13042.6
+    5067	drag	13041.0
+    5068	haunted	13041.0
+    5069	chorus	13040.2
+    5070	rational	13025.2
+    5071	crop	13023.6
+    5072	processing	13023.6
+    5073	accurate	13018.9
+    5074	wolf	13010.9
+    5075	adorned	13009.4
+    5076	sheets	13007.8
+    5077	resort	13006.2
+    5078	refusal	13002.2
+    5079	bond	12999.1
+    5080	vicinity	12992.8
+    5081	preacher	12990.4
+    5082	sympathetic	12988.0
+    5083	casting	12987.2
+    5084	opens	12982.5
+    5085	prophets	12980.1
+    5086	horns	12978.5
+    5087	warmly	12976.1
+    5088	salary	12970.6
+    5089	continuous	12965.9
+    5090	Satan	12962.7
+    5091	continual	12959.5
+    5092	defended	12959.5
+    5093	breaks	12958.7
+    5094	workers	12957.9
+    5095	lantern	12957.2
+    5096	balls	12955.6
+    5097	rod	12955.6
+    5098	blaze	12952.4
+    5099	examining	12951.6
+    5100	Naples	12951.6
+    5101	peculiarly	12950.0
+    5102	vegetables	12950.0
+    5103	ingenious	12948.4
+    5104	excite	12942.1
+    5105	Howard	12937.4
+    5106	horseback	12935.8
+    5107	re-use	12923.1
+    5108	Louisiana	12921.6
+    5109	farmers	12920.0
+    5110	wildly	12919.2
+    5111	mouths	12916.8
+    5112	carpet	12912.8
+    5113	sadness	12910.5
+    5114	customary	12904.1
+    5115	circles	12903.4
+    5116	aren't	12895.4
+    5117	wonderfully	12891.5
+    5118	max	12889.9
+    5119	Juan	12885.9
+    5120	successor	12871.7
+    5121	allied	12869.3
+    5122	ceiling	12863.8
+    5123	confirmation	12855.9
+    5124	glances	12855.1
+    5125	diamonds	12851.1
+    5126	goal	12848.0
+    5127	representations	12845.6
+    5128	cash	12840.1
+    5129	vacant	12837.7
+    5130	antiquity	12829.8
+    5131	despise	12826.6
+    5132	lawn	12817.9
+    5133	they'll	12817.9
+    5134	appealed	12814.0
+    5135	turkey	12811.6
+    5136	texts	12809.2
+    5137	neighbor	12805.3
+    5138	spreading	12802.9
+    5139	discharged	12792.6
+    5140	phrases	12791.8
+    5141	ultimate	12785.5
+    5142	tastes	12781.5
+    5143	submission	12779.1
+    5144	entry	12775.2
+    5145	Rachel	12769.7
+    5146	blush	12760.2
+    5147	monument	12757.8
+    5148	hardy	12756.2
+    5149	thorough	12755.4
+    5150	ein	12753.8
+    5151	ecclesiastical	12751.5
+    5152	fertile	12745.1
+    5153	exciting	12744.3
+    5154	captive	12738.8
+    5155	severity	12736.4
+    5156	considerations	12735.6
+    5157	shew	12734.8
+    5158	faster	12730.9
+    5159	Louise	12726.1
+    5160	grandeur	12723.0
+    5161	winning	12716.6
+    5162	solely	12713.5
+    5163	globe	12709.5
+    5164	malice	12708.7
+    5165	echoed	12706.4
+    5166	lodging	12692.9
+    5167	conservative	12692.1
+    5168	throng	12691.3
+    5169	prosperous	12688.2
+    5170	whistle	12685.0
+    5171	floated	12671.6
+    5172	transferred	12667.6
+    5173	declaring	12662.1
+    5174	reckoned	12655.7
+    5175	cheese	12654.9
+    5176	bite	12653.4
+    5177	thoughtfully	12652.6
+    5178	breach	12643.1
+    5179	enthusiastic	12642.3
+    5180	cars	12638.3
+    5181	downstairs	12638.3
+    5182	allowing	12631.2
+    5183	invite	12629.6
+    5184	adjoining	12620.1
+    5185	dusk	12618.5
+    5186	cathedral	12617.0
+    5187	truths	12616.2
+    5188	plague	12612.2
+    5189	sandy	12609.8
+    5190	boil	12606.7
+    5191	Caroline	12603.5
+    5192	beautifully	12600.4
+    5193	inhabited	12600.4
+    5194	tomorrow	12600.4
+    5195	exclamation	12599.6
+    5196	finishing	12590.9
+    5197	shocked	12589.3
+    5198	escort	12588.5
+    5199	forgetting	12584.5
+    5200	hanged	12582.9
+    5201	hats	12576.6
+    5202	mirth	12576.6
+    5203	uncomfortable	12574.2
+    5204	Connecticut	12571.1
+    5205	bows	12568.7
+    5206	pierced	12562.4
+    5207	harbor	12561.6
+    5208	tricks	12560.0
+    5209	rubbed	12559.2
+    5210	apparatus	12556.0
+    5211	mysteries	12541.0
+    5212	honesty	12537.9
+    5213	negroes	12535.5
+    5214	concerns	12529.9
+    5215	wander	12529.9
+    5216	assert	12528.4
+    5217	ceremonies	12528.4
+    5218	sacrificed	12520.4
+    5219	utterance	12518.1
+    5220	dismay	12513.3
+    5221	fright	12510.2
+    5222	rail	12509.4
+    5223	reflections	12508.6
+    5224	crops	12501.5
+    5225	pushing	12498.3
+    5226	proves	12496.7
+    5227	jimmy	12495.1
+    5228	pathetic	12493.5
+    5229	imperfect	12487.2
+    5230	haughty	12481.7
+    5231	navy	12481.7
+    5232	fortress	12478.5
+    5233	hurrying	12476.9
+    5234	x	12474.6
+    5235	blessings	12471.4
+    5236	attempting	12466.6
+    5237	insects	12465.9
+    5238	selling	12456.4
+    5239	appreciation	12455.6
+    5240	suppressed	12446.1
+    5241	acquire	12444.5
+    5242	offensive	12443.7
+    5243	ripe	12435.0
+    5244	dresses	12432.6
+    5245	reigned	12427.9
+    5246	coldly	12417.6
+    5247	candles	12412.1
+    5248	km	12409.7
+    5249	sixth	12398.6
+    5250	blazing	12397.8
+    5251	youngest	12395.4
+    5252	mask	12394.7
+    5253	Florida	12393.9
+    5254	lecture	12393.9
+    5255	parlor	12393.9
+    5256	decidedly	12392.3
+    5257	whereby	12390.7
+    5258	Gordon	12386.0
+    5259	reverend	12386.0
+    5260	successive	12385.2
+    5261	perception	12383.6
+    5262	buffalo	12381.2
+    5263	sire	12378.8
+    5264	quitted	12375.7
+    5265	keys	12374.9
+    5266	develop	12373.3
+    5267	function	12358.3
+    5268	morals	12356.7
+    5269	damned	12355.1
+    5270	vexed	12345.6
+    5271	2d	12344.8
+    5272	pouring	12340.9
+    5273	bullet	12333.7
+    5274	excessive	12332.9
+    5275	bind	12325.8
+    5276	identical	12325.0
+    5277	cliffs	12317.9
+    5278	tools	12312.4
+    5279	Byron	12309.2
+    5280	Mexican	12308.4
+    5281	piety	12308.4
+    5282	superstition	12304.5
+    5283	git	12302.9
+    5284	substantial	12302.9
+    5285	bulk	12293.4
+    5286	prevail	12293.4
+    5287	wiser	12291.8
+    5288	preaching	12284.7
+    5289	prolonged	12284.7
+    5290	annoyed	12276.0
+    5291	Westminster	12275.2
+    5292	splendour	12273.6
+    5293	remembering	12272.0
+    5294	Richmond	12259.4
+    5295	upset	12251.5
+    5296	cab	12250.7
+    5297	bunch	12244.3
+    5298	pencil	12243.5
+    5299	subjected	12243.5
+    5300	vegetable	12241.2
+    5301	exhibit	12238.8
+    5302	emerged	12237.2
+    5303	cooked	12235.6
+    5304	hay	12233.3
+    5305	Kansas	12233.3
+    5306	gale	12226.9
+    5307	preached	12226.9
+    5308	Arnold	12219.0
+    5309	trousers	12217.4
+    5310	debate	12213.5
+    5311	dated	12204.0
+    5312	tumult	12204.0
+    5313	corruption	12202.4
+    5314	summons	12201.6
+    5315	comrade	12193.7
+    5316	eternity	12193.7
+    5317	hears	12193.7
+    5318	lingered	12188.2
+    5319	propriety	12187.4
+    5320	stillness	12185.8
+    5321	partial	12182.6
+    5322	welcomed	12182.6
+    5323	cabinet	12178.7
+    5324	proceeds	12177.9
+    5325	vow	12176.3
+    5326	quaint	12174.7
+    5327	soup	12173.9
+    5328	beef	12170.8
+    5329	rests	12165.2
+    5330	slay	12164.4
+    5331	surgeon	12163.6
+    5332	irresistible	12158.9
+    5333	sealed	12149.4
+    5334	repeating	12146.2
+    5335	needn't	12144.7
+    5336	allowance	12143.1
+    5337	undertaken	12136.7
+    5338	treachery	12135.2
+    5339	posts	12131.2
+    5340	borders	12128.8
+    5341	attendant	12127.3
+    5342	unite	12123.3
+    5343	murderer	12120.9
+    5344	owners	12116.2
+    5345	NM	12115.4
+    5346	sweeping	12114.6
+    5347	unconsciously	12108.3
+    5348	blade	12101.9
+    5349	saviour	12099.6
+    5350	theories	12099.6
+    5351	Graham	12098.8
+    5352	behaved	12096.4
+    5353	pleaded	12095.6
+    5354	spy	12094.8
+    5355	possesses	12094.0
+    5356	lawful	12091.7
+    5357	Tommy	12091.7
+    5358	seasons	12090.1
+    5359	withdrawn	12090.1
+    5360	reckless	12086.9
+    5361	factory	12086.1
+    5362	shades	12083.7
+    5363	gossip	12080.6
+    5364	seventh	12079.0
+    5365	attendance	12075.0
+    5366	robes	12071.9
+    5367	journal	12065.5
+    5368	systems	12063.2
+    5369	Dryden	12060.0
+    5370	Maine	12059.2
+    5371	token	12054.5
+    5372	intimacy	12049.7
+    5373	abstract	12048.9
+    5374	machines	12048.1
+    5375	bestow	12037.1
+    5376	chanced	12036.3
+    5377	locks	12027.6
+    5378	honestly	12026.0
+    5379	legitimate	12026.0
+    5380	accent	12023.6
+    5381	symptoms	12017.3
+    5382	votes	12011.7
+    5383	ragged	12010.2
+    5384	Thursday	12009.4
+    5385	manifested	12008.6
+    5386	fidelity	12006.2
+    5387	swinging	12000.7
+    5388	descending	11999.9
+    5389	sincerely	11999.9
+    5390	bred	11995.9
+    5391	whereof	11995.9
+    5392	indies	11994.3
+    5393	novels	11990.4
+    5394	league	11988.8
+    5395	failing	11984.1
+    5396	succeeding	11981.7
+    5397	Santa	11979.3
+    5398	approve	11976.9
+    5399	cautiously	11976.1
+    5400	miller	11974.6
+    5401	afflicted	11972.2
+    5402	lodgings	11972.2
+    5403	petition	11965.1
+    5404	traffic	11963.5
+    5405	sparkling	11957.2
+    5406	limb	11955.6
+    5407	architecture	11951.6
+    5408	disposal	11936.6
+    5409	carriages	11929.5
+    5410	crack	11929.5
+    5411	kindred	11927.1
+    5412	naught	11927.1
+    5413	ornament	11921.6
+    5414	slew	11916.8
+    5415	steward	11911.3
+    5416	fantastic	11905.7
+    5417	evolution	11901.0
+    5418	patiently	11901.0
+    5419	reverse	11896.2
+    5420	survey	11890.7
+    5421	dug	11889.1
+    5422	amuse	11881.2
+    5423	stretching	11879.6
+    5424	Isaac	11874.1
+    5425	forthwith	11873.3
+    5426	contemporary	11869.3
+    5427	foliage	11867.8
+    5428	receives	11865.4
+    5429	scandal	11861.4
+    5430	donors	11858.3
+    5431	deliberate	11855.9
+    5432	influenced	11855.1
+    5433	intolerable	11851.1
+    5434	hearth	11849.6
+    5435	symbol	11847.2
+    5436	governments	11844.8
+    5437	repaired	11844.8
+    5438	pleasantly	11837.7
+    5439	homage	11836.1
+    5440	victorious	11835.3
+    5441	Columbus	11831.4
+    5442	recovery	11830.6
+    5443	defined	11829.8
+    5444	attendants	11828.2
+    5445	modesty	11824.2
+    5446	Diana	11821.1
+    5447	washing	11817.9
+    5448	pavement	11815.5
+    5449	unnatural	11814.8
+    5450	decisive	11811.6
+    5451	wisely	11806.1
+    5452	precise	11799.7
+    5453	negative	11798.9
+    5454	occurrence	11798.1
+    5455	snatched	11796.6
+    5456	shaft	11795.0
+    5457	linked	11793.4
+    5458	festival	11792.6
+    5459	exclusively	11788.6
+    5460	Jove	11788.6
+    5461	wickedness	11785.5
+    5462	visions	11782.3
+    5463	Maggie	11779.9
+    5464	rosy	11777.6
+    5465	carelessly	11776.0
+    5466	stem	11775.2
+    5467	corporation	11772.0
+    5468	DEC	11771.2
+    5469	feeding	11771.2
+    5470	Allen	11767.3
+    5471	cows	11762.5
+    5472	schemes	11754.6
+    5473	preference	11753.8
+    5474	urge	11753.8
+    5475	husbands	11752.3
+    5476	labours	11751.5
+    5477	shrill	11750.7
+    5478	exercises	11746.7
+    5479	sovereignty	11745.1
+    5480	reduce	11740.4
+    5481	distressed	11731.7
+    5482	clearing	11730.1
+    5483	removal	11727.7
+    5484	dean	11725.4
+    5485	Scottish	11722.2
+    5486	assertion	11719.8
+    5487	accessible	11718.2
+    5488	comedy	11718.2
+    5489	flush	11718.2
+    5490	code	11715.9
+    5491	philosophers	11713.5
+    5492	adequate	11711.1
+    5493	vaguely	11711.1
+    5494	treason	11709.5
+    5495	hunter	11702.4
+    5496	chambers	11697.7
+    5497	split	11695.3
+    5498	yielding	11692.9
+    5499	newsletter	11691.3
+    5500	snake	11689.0
+    5501	pub.	11685.8
+    5502	historian	11681.8
+    5503	ass	11678.7
+    5504	intensity	11678.7
+    5505	democracy	11669.2
+    5506	battery	11668.4
+    5507	draws	11666.8
+    5508	Netherlands	11666.8
+    5509	creed	11666.0
+    5510	liking	11666.0
+    5511	Luke	11655.7
+    5512	tyrant	11654.2
+    5513	strove	11647.8
+    5514	attraction	11647.0
+    5515	slaughter	11647.0
+    5516	dismal	11639.1
+    5517	deposited	11636.0
+    5518	assent	11632.8
+    5519	cups	11632.8
+    5520	concert	11628.8
+    5521	downward	11620.1
+    5522	canal	11616.2
+    5523	evenings	11612.2
+    5524	wax	11612.2
+    5525	detective	11609.1
+    5526	fancies	11604.3
+    5527	spoiled	11604.3
+    5528	revolver	11599.6
+    5529	Murray	11598.0
+    5530	earned	11586.1
+    5531	analysis	11582.2
+    5532	finer	11579.0
+    5533	paces	11575.8
+    5534	roaring	11573.5
+    5535	prompt	11570.3
+    5536	paperwork	11568.7
+    5537	wherefore	11567.9
+    5538	emphasis	11560.8
+    5539	sharing	11551.3
+    5540	delayed	11550.5
+    5541	inherited	11549.7
+    5542	bronze	11545.0
+    5543	waking	11542.6
+    5544	garment	11541.8
+    5545	redistributing	11541.8
+    5546	wholesome	11537.9
+    5547	remorse	11537.1
+    5548	Plato	11535.5
+    5549	Morris	11533.1
+    5550	stooped	11527.6
+    5551	dew	11524.4
+    5552	monk	11522.8
+    5553	thrill	11522.0
+    5554	hue	11515.7
+    5555	exclusive	11507.8
+    5556	funds	11507.8
+    5557	porter	11503.0
+    5558	uncommon	11502.3
+    5559	dash	11496.7
+    5560	strained	11494.3
+    5561	confounded	11492.8
+    5562	swim	11492.8
+    5563	strip	11488.0
+    5564	middle-aged	11483.3
+    5565	ultimately	11481.7
+    5566	team	11477.7
+    5567	missionary	11476.9
+    5568	esteemed	11461.9
+    5569	tracks	11446.9
+    5570	envelope	11444.5
+    5571	whoever	11443.7
+    5572	expensive	11442.9
+    5573	headquarters	11442.1
+    5574	cherished	11440.5
+    5575	brandy	11429.5
+    5576	startling	11427.1
+    5577	homer	11426.3
+    5578	talks	11425.5
+    5579	acute	11422.4
+    5580	cigarette	11417.6
+    5581	motor	11417.6
+    5582	embarrassed	11413.6
+    5583	Janet	11407.3
+    5584	volunteer	11402.6
+    5585	offspring	11401.8
+    5586	network	11397.8
+    5587	reaches	11397.8
+    5588	indispensable	11397.0
+    5589	plane	11393.9
+    5590	reaction	11392.3
+    5591	regiments	11385.2
+    5592	g	11383.6
+    5593	sums	11380.4
+    5594	partially	11379.6
+    5595	prejudices	11375.7
+    5596	proudly	11370.1
+    5597	baggage	11364.6
+    5598	terrace	11360.6
+    5599	deaf	11358.3
+    5600	allusion	11357.5
+    5601	grip	11357.5
+    5602	juice	11354.3
+    5603	Isabel	11346.4
+    5604	resigned	11346.4
+    5605	humility	11343.2
+    5606	Benjamin	11330.6
+    5607	blast	11330.6
+    5608	ministry	11329.8
+    5609	sexual	11329.8
+    5610	Nile	11329.0
+    5611	diameter	11327.4
+    5612	troop	11325.8
+    5613	onward	11316.3
+    5614	crowds	11313.2
+    5615	marrying	11309.2
+    5616	tightly	11309.2
+    5617	sullen	11302.1
+    5618	brutal	11301.3
+    5619	axe	11300.5
+    5620	Holmes	11293.4
+    5621	penalty	11292.6
+    5622	tops	11290.2
+    5623	diamond	11283.1
+    5624	boards	11274.4
+    5625	corridor	11274.4
+    5626	endowed	11266.5
+    5627	strengthened	11266.5
+    5628	cells	11248.3
+    5629	proportions	11246.7
+    5630	alternate	11242.8
+    5631	echo	11242.0
+    5632	restraint	11241.2
+    5633	trials	11240.4
+    5634	reads	11239.6
+    5635	identity	11238.8
+    5636	headed	11238.0
+    5637	softened	11237.2
+    5638	quivering	11231.7
+    5639	stages	11230.1
+    5640	sway	11225.4
+    5641	poetical	11224.6
+    5642	objected	11222.2
+    5643	screen	11220.6
+    5644	professed	11216.7
+    5645	dirt	11215.9
+    5646	ascertained	11215.1
+    5647	era	11213.5
+    5648	wider	11208.0
+    5649	ambassador	11205.6
+    5650	constituted	11205.6
+    5651	breed	11204.0
+    5652	interference	11204.0
+    5653	eyebrows	11197.7
+    5654	shapes	11197.7
+    5655	afar	11192.9
+    5656	consist	11183.4
+    5657	acceptance	11180.3
+    5658	displays	11176.3
+    5659	flashing	11176.3
+    5660	hunted	11173.1
+    5661	beauties	11172.4
+    5662	lazy	11172.4
+    5663	shrewd	11170.0
+    5664	extravagant	11169.2
+    5665	momentary	11169.2
+    5666	cordial	11166.8
+    5667	engineer	11166.0
+    5668	rapidity	11166.0
+    5669	Nov	11163.6
+    5670	halt	11158.9
+    5671	alternative	11158.1
+    5672	devils	11156.5
+    5673	stamp	11154.9
+    5674	compact	11152.6
+    5675	whites	11147.0
+    5676	breathless	11146.2
+    5677	encoding	11146.2
+    5678	drift	11145.5
+    5679	disappear	11141.5
+    5680	roared	11138.3
+    5681	revived	11136.8
+    5682	counter	11134.4
+    5683	Venus	11128.8
+    5684	imaginary	11128.0
+    5685	diminished	11127.3
+    5686	honoured	11123.3
+    5687	5th	11111.4
+    5688	despatched	11111.4
+    5689	objections	11111.4
+    5690	ray	11110.6
+    5691	climbing	11105.1
+    5692	attract	11103.5
+    5693	astonishing	11099.6
+    5694	competition	11097.2
+    5695	suggestions	11096.4
+    5696	ink	11082.2
+    5697	oft	11076.6
+    5698	crystal	11074.3
+    5699	shower	11074.3
+    5700	diseases	11067.1
+    5701	Ferdinand	11065.5
+    5702	obedient	11062.4
+    5703	draught	11061.6
+    5704	wondrous	11057.6
+    5705	await	11049.7
+    5706	armour	11048.9
+    5707	massive	11048.1
+    5708	bottles	11047.4
+    5709	kin	11045.8
+    5710	cellar	11045.0
+    5711	falsehood	11041.8
+    5712	pillars	11041.0
+    5713	Edgar	11038.7
+    5714	philosophical	11033.1
+    5715	Martha	11031.5
+    5716	worlds	11022.0
+    5717	memorable	11015.7
+    5718	Jacques	11011.0
+    5719	detected	11007.8
+    5720	stealing	11006.2
+    5721	noisy	11004.6
+    5722	henceforth	10996.7
+    5723	Cicero	10995.1
+    5724	laden	10992.0
+    5725	frost	10986.4
+    5726	device	10984.9
+    5727	glare	10984.9
+    5728	touches	10984.1
+    5729	senate	10981.7
+    5730	lasting	10979.3
+    5731	communion	10976.9
+    5732	transport	10976.2
+    5733	Constantinople	10975.4
+    5734	coffin	10973.8
+    5735	eventually	10973.0
+    5736	Johnny	10973.0
+    5737	enclosed	10970.6
+    5738	forgiveness	10970.6
+    5739	awfully	10966.7
+    5740	clinging	10947.7
+    5741	darkened	10946.9
+    5742	contemplation	10944.5
+    5743	termed	10944.5
+    5744	manufacture	10942.1
+    5745	swallow	10935.0
+    5746	commonplace	10931.1
+    5747	Nancy	10929.5
+    5748	resembled	10927.9
+    5749	she'd	10927.1
+    5750	labors	10922.4
+    5751	contracted	10921.6
+    5752	inscription	10921.6
+    5753	comfortably	10905.7
+    5754	indulge	10901.0
+    5755	indulgence	10898.6
+    5756	bravely	10892.3
+    5757	kneeling	10890.7
+    5758	yea	10888.3
+    5759	keenly	10886.8
+    5760	exhibition	10884.4
+    5761	agricultural	10881.2
+    5762	enlightened	10879.6
+    5763	quest	10878.1
+    5764	compliments	10874.9
+    5765	crest	10868.6
+    5766	extension	10865.4
+    5767	uneasiness	10856.7
+    5768	constitute	10851.2
+    5769	inflicted	10850.4
+    5770	lakes	10848.0
+    5771	swing	10845.6
+    5772	meadow	10836.1
+    5773	noblest	10836.1
+    5774	downloading	10834.5
+    5775	complex	10826.6
+    5776	controversy	10824.3
+    5777	freed	10819.5
+    5778	resignation	10819.5
+    5779	tempest	10818.7
+    5780	guidance	10817.9
+    5781	prospects	10816.3
+    5782	humbly	10811.6
+    5783	lined	10809.2
+    5784	serene	10804.5
+    5785	shrugged	10797.4
+    5786	honours	10796.6
+    5787	roughly	10796.6
+    5788	checks	10795.0
+    5789	remarkably	10789.4
+    5790	dainty	10784.7
+    5791	overhead	10783.1
+    5792	commencement	10778.4
+    5793	singularly	10776.8
+    5794	brightness	10761.0
+    5795	oppression	10760.2
+    5796	repeatedly	10759.4
+    5797	conspiracy	10755.4
+    5798	restrain	10751.5
+    5799	splendor	10742.8
+    5800	preservation	10740.4
+    5801	pub	10739.6
+    5802	pepper	10738.0
+    5803	basin	10736.4
+    5804	creeping	10735.6
+    5805	Matthew	10730.9
+    5806	publicly	10729.3
+    5807	Percy	10725.4
+    5808	continuing	10723.8
+    5809	grove	10721.4
+    5810	calamity	10719.8
+    5811	pony	10715.1
+    5812	vigour	10715.1
+    5813	melody	10711.1
+    5814	profitable	10711.1
+    5815	descendants	10710.3
+    5816	hire	10704.8
+    5817	speculation	10704.0
+    5818	discoveries	10699.3
+    5819	accepts	10698.5
+    5820	drunken	10698.5
+    5821	candidate	10696.9
+    5822	principally	10694.5
+    5823	worried	10692.1
+    5824	obstinate	10689.0
+    5825	hasten	10686.6
+    5826	foreigners	10682.6
+    5827	elderly	10681.1
+    5828	overwhelmed	10681.1
+    5829	instincts	10677.9
+    5830	telegraph	10670.8
+    5831	Russell	10662.9
+    5832	university	10661.3
+    5833	ghastly	10660.5
+    5834	patron	10659.7
+    5835	varying	10658.1
+    5836	barbarous	10655.7
+    5837	celestial	10655.7
+    5838	t'	10654.2
+    5839	patriotism	10653.4
+    5840	modify	10649.4
+    5841	earnestness	10647.0
+    5842	exertion	10646.2
+    5843	fox	10645.5
+    5844	refusing	10643.1
+    5845	horsemen	10639.1
+    5846	inspection	10634.4
+    5847	stations	10633.6
+    5848	grieved	10632.0
+    5849	louder	10632.0
+    5850	bursting	10625.7
+    5851	regretted	10620.9
+    5852	mournful	10615.4
+    5853	pursuing	10612.2
+    5854	traitor	10609.1
+    5855	associations	10601.9
+    5856	cautious	10598.0
+    5857	foundations	10598.0
+    5858	stamped	10598.0
+    5859	prior	10597.2
+    5860	undertook	10594.0
+    5861	telegram	10592.5
+    5862	beggar	10591.7
+    5863	chimney	10590.9
+    5864	complicated	10586.9
+    5865	Davis	10586.1
+    5866	striving	10586.1
+    5867	magistrates	10584.5
+    5868	converse	10582.2
+    5869	graces	10581.4
+    5870	wiped	10575.8
+    5871	oars	10572.7
+    5872	apology	10571.1
+    5873	scared	10571.1
+    5874	imprisonment	10569.5
+    5875	eastward	10567.9
+    5876	substitute	10565.6
+    5877	Yahweh	10560.8
+    5878	handful	10557.6
+    5879	usage	10556.1
+    5880	lodged	10551.3
+    5881	of.	10551.3
+    5882	villain	10551.3
+    5883	banished	10541.8
+    5884	restoration	10541.0
+    5885	serpent	10538.7
+    5886	hedge	10534.7
+    5887	k	10534.7
+    5888	jurisdiction	10532.3
+    5889	captains	10530.7
+    5890	settlers	10530.7
+    5891	gaining	10530.0
+    5892	valiant	10530.0
+    5893	primary	10525.2
+    5894	storms	10525.2
+    5895	beam	10522.8
+    5896	Victoria	10522.8
+    5897	tour	10512.5
+    5898	prophecy	10510.2
+    5899	spectacles	10510.2
+    5900	obsolete	10507.0
+    5901	buying	10502.3
+    5902	shepherd	10500.7
+    5903	wells	10500.7
+    5904	Harriet	10496.7
+    5905	exaggerated	10495.1
+    5906	heated	10494.4
+    5907	penetrated	10493.6
+    5908	travels	10492.0
+    5909	earl	10489.6
+    5910	hereditary	10488.8
+    5911	Ali	10488.0
+    5912	supernatural	10486.4
+    5913	competent	10482.5
+    5914	piled	10481.7
+    5915	hostess	10480.1
+    5916	agriculture	10478.5
+    5917	boughs	10476.2
+    5918	urgent	10476.2
+    5919	gratified	10475.4
+    5920	suffice	10474.6
+    5921	ports	10473.0
+    5922	drifted	10470.6
+    5923	accuracy	10465.9
+    5924	deceased	10465.9
+    5925	circular	10463.5
+    5926	securing	10458.7
+    5927	possibilities	10455.6
+    5928	Rhine	10454.8
+    5929	alert	10451.6
+    5930	neighboring	10442.9
+    5931	democratic	10440.6
+    5932	Quebec	10440.6
+    5933	bud	10439.8
+    5934	accounted	10431.9
+    5935	aided	10427.1
+    5936	Augustus	10425.5
+    5937	blanket	10425.5
+    5938	hail	10423.9
+    5939	pretence	10422.4
+    5940	beams	10417.6
+    5941	Andy	10416.8
+    5942	pig	10416.0
+    5943	shaped	10408.1
+    5944	oven	10407.3
+    5945	rounded	10406.5
+    5946	ivory	10400.2
+    5947	northward	10395.5
+    5948	isolated	10390.7
+    5949	policeman	10382.0
+    5950	Aug	10381.2
+    5951	conventional	10380.4
+    5952	Babylon	10378.1
+    5953	dusty	10378.1
+    5954	bishops	10374.1
+    5955	complaints	10372.5
+    5956	stripped	10370.1
+    5957	plead	10367.8
+    5958	hinder	10365.4
+    5959	8vo	10363.0
+    5960	cord	10355.1
+    5961	flows	10351.9
+    5962	personage	10351.9
+    5963	classical	10351.2
+    5964	alongside	10349.6
+    5965	wrongs	10348.0
+    5966	extract	10345.6
+    5967	rewarded	10343.2
+    5968	lungs	10334.5
+    5969	lighter	10332.2
+    5970	kisses	10331.4
+    5971	serves	10329.8
+    5972	pint	10324.3
+    5973	forgiven	10322.7
+    5974	sternly	10321.1
+    5975	proclamation	10320.3
+    5976	realised	10320.3
+    5977	pipes	10316.3
+    5978	arising	10314.0
+    5979	pitched	10314.0
+    5980	tube	10310.8
+    5981	observer	10308.4
+    5982	smote	10308.4
+    5983	avenue	10302.9
+    5984	elephant	10298.9
+    5985	Burke	10297.4
+    5986	footing	10295.8
+    5987	statesman	10295.8
+    5988	rebels	10292.6
+    5989	nails	10291.0
+    5990	wears	10290.2
+    5991	doomed	10289.4
+    5992	edges	10283.9
+    5993	Esther	10278.4
+    5994	Indiana	10276.0
+    5995	affecting	10274.4
+    5996	stormy	10274.4
+    5997	bee	10268.9
+    5998	bury	10267.3
+    5999	efficient	10266.5
+    6000	mix	10266.5
+    6001	supporting	10266.5
+    6002	actor	10261.8
+    6003	disturbance	10261.0
+    6004	sweat	10260.2
+    6005	executive	10258.6
+    6006	seemingly	10258.6
+    6007	tenth	10252.3
+    6008	blossoms	10250.7
+    6009	Ethel	10247.5
+    6010	folds	10245.1
+    6011	painfully	10245.1
+    6012	polish	10245.1
+    6013	shudder	10240.4
+    6014	oe.	10235.6
+    6015	roofs	10229.3
+    6016	comparative	10222.2
+    6017	begging	10216.7
+    6018	imposing	10216.7
+    6019	notable	10213.5
+    6020	invested	10209.5
+    6021	imprisoned	10208.0
+    6022	mute	10199.3
+    6023	Amy	10196.9
+    6024	cage	10195.3
+    6025	esq	10195.3
+    6026	pg	10192.1
+    6027	cured	10190.6
+    6028	cargo	10187.4
+    6029	prof.	10185.8
+    6030	negotiations	10181.9
+    6031	assented	10180.3
+    6032	jail	10180.3
+    6033	skilful	10180.3
+    6034	ideals	10178.7
+    6035	conferred	10177.1
+    6036	resulted	10171.6
+    6037	illusion	10169.2
+    6038	torment	10167.6
+    6039	troublesome	10162.1
+    6040	crowns	10158.9
+    6041	Feb	10155.7
+    6042	repentance	10152.6
+    6043	blankets	10151.0
+    6044	proprietor	10144.7
+    6045	uncertainty	10144.7
+    6046	concentrated	10143.9
+    6047	Mediterranean	10143.9
+    6048	covers	10141.5
+    6049	scream	10140.7
+    6050	compromise	10137.5
+    6051	respectful	10137.5
+    6052	chariot	10136.8
+    6053	ammunition	10136.0
+    6054	bonnet	10135.2
+    6055	secondary	10132.8
+    6056	Persia	10126.5
+    6057	persecution	10122.5
+    6058	lesser	10120.1
+    6059	assistant	10119.4
+    6060	saluted	10116.2
+    6061	fits	10112.2
+    6062	indulged	10111.4
+    6063	springing	10109.1
+    6064	cane	10106.7
+    6065	fold	10106.7
+    6066	boundary	10105.1
+    6067	valued	10101.9
+    6068	she'll	10099.6
+    6069	rugged	10098.8
+    6070	aloft	10098.0
+    6071	thieves	10093.2
+    6072	parlour	10091.7
+    6073	indebted	10090.1
+    6074	tons	10088.5
+    6075	processes	10085.3
+    6076	Dave	10078.2
+    6077	Moore	10076.6
+    6078	argue	10074.3
+    6079	dearly	10056.1
+    6080	logic	10054.5
+    6081	panic	10047.4
+    6082	restrained	10045.8
+    6083	lb	10043.4
+    6084	vainly	10043.4
+    6085	weariness	10041.0
+    6086	enlarged	10036.3
+    6087	Franklin	10035.5
+    6088	tasted	10033.9
+    6089	rural	10030.0
+    6090	torrent	10030.0
+    6091	resolute	10026.8
+    6092	refrain	10024.4
+    6093	kissing	10021.3
+    6094	gorgeous	10015.7
+    6095	meets	10015.7
+    6096	circulation	10014.9
+    6097	passionately	10009.4
+    6098	inasmuch	10005.4
+    6099	unexpectedly	10004.6
+    6100	stress	10002.3
+    6101	consumption	9999.94
+    6102	groan	9995.98
+    6103	suits	9994.40
+    6104	sustain	9993.61
+    6105	hosts	9987.28
+    6106	crash	9985.70
+    6107	resemble	9984.11
+    6108	epoch	9979.37
+    6109	quote	9975.41
+    6110	lacking	9971.46
+    6111	nominally	9971.46
+    6112	choked	9970.66
+    6113	aristocracy	9969.87
+    6114	granite	9969.08
+    6115	gradual	9967.50
+    6116	delights	9964.33
+    6117	hurled	9964.33
+    6118	joyful	9961.96
+    6119	sack	9960.38
+    6120	slumber	9958.01
+    6121	detached	9956.42
+    6122	snapped	9956.42
+    6123	shadowy	9954.05
+    6124	accompanying	9950.09
+    6125	annoyance	9948.51
+    6126	crush	9947.72
+    6127	needle	9941.39
+    6128	repent	9934.27
+    6129	phenomenon	9927.94
+    6130	execute	9926.36
+    6131	canst	9920.82
+    6132	smoked	9914.49
+    6133	greet	9911.33
+    6134	monarchy	9908.16
+    6135	behave	9905.00
+    6136	richly	9905.00
+    6137	controlled	9904.21
+    6138	strive	9902.63
+    6139	endeavor	9901.84
+    6140	barrier	9897.88
+    6141	Canadian	9897.88
+    6142	curve	9890.76
+    6143	politeness	9889.18
+    6144	flora	9883.64
+    6145	rely	9875.73
+    6146	flank	9872.56
+    6147	convenience	9870.98
+    6148	courteous	9866.23
+    6149	logs	9866.23
+    6150	lamb	9863.86
+    6151	effectually	9859.11
+    6152	Robinson	9856.74
+    6153	logical	9855.16
+    6154	shan't	9855.16
+    6155	dimly	9853.58
+    6156	withered	9851.99
+    6157	diet	9851.20
+    6158	praises	9851.20
+    6159	fulfil	9849.62
+    6160	mantle	9848.83
+    6161	ne'er	9848.83
+    6162	discussing	9843.29
+    6163	chicken	9838.54
+    6164	judicial	9838.54
+    6165	consistent	9836.17
+    6166	ridicule	9835.38
+    6167	as.	9834.59
+    6168	reins	9834.59
+    6169	barrel	9833.01
+    6170	distrust	9832.22
+    6171	trunks	9829.84
+    6172	verily	9829.05
+    6173	hunters	9827.47
+    6174	feather	9825.10
+    6175	desperately	9820.35
+    6176	goodly	9817.18
+    6177	habitual	9815.60
+    6178	voluntary	9815.60
+    6179	luncheon	9812.44
+    6180	eighteenth	9808.48
+    6181	exertions	9807.69
+    6182	expert	9806.90
+    6183	coolly	9806.11
+    6184	mistakes	9804.53
+    6185	tedious	9802.94
+    6186	contemplated	9796.61
+    6187	Clark	9795.82
+    6188	jacket	9795.82
+    6189	gleaming	9792.66
+    6190	shrank	9787.91
+    6191	swimming	9787.12
+    6192	Kent	9785.54
+    6193	perplexed	9782.37
+    6194	impressive	9780.79
+    6195	universally	9780.00
+    6196	displeasure	9776.84
+    6197	maids	9772.09
+    6198	rates	9772.09
+    6199	underneath	9771.30
+    6200	expedient	9767.34
+    6201	Emma	9758.64
+    6202	impress	9755.48
+    6203	bees	9751.52
+    6204	bounded	9751.52
+    6205	worshipped	9750.73
+    6206	resisted	9749.94
+    6207	provincial	9749.15
+    6208	popularity	9748.36
+    6209	baker	9747.56
+    6210	shattered	9747.56
+    6211	merciful	9745.98
+    6212	olive	9745.19
+    6213	tramp	9742.82
+    6214	compensation	9740.44
+    6215	Ernest	9736.49
+    6216	martial	9736.49
+    6217	genial	9735.70
+    6218	Syria	9735.70
+    6219	conjecture	9734.91
+    6220	van	9734.91
+    6221	waiter	9734.11
+    6222	detained	9730.95
+    6223	items	9728.58
+    6224	promote	9727.79
+    6225	Delaware	9726.99
+    6226	covenant	9725.41
+    6227	nought	9722.25
+    6228	interposed	9721.46
+    6229	seizing	9721.46
+    6230	sinner	9719.08
+    6231	vigor	9715.92
+    6232	devote	9715.13
+    6233	decorated	9705.63
+    6234	sentimental	9700.10
+    6235	yoke	9700.10
+    6236	properties	9698.51
+    6237	warlike	9696.93
+    6238	perilous	9694.56
+    6239	threats	9687.44
+    6240	kindled	9684.27
+    6241	lays	9684.27
+    6242	hostility	9682.69
+    6243	dragging	9679.53
+    6244	mare	9677.94
+    6245	regulations	9676.36
+    6246	obstacle	9674.78
+    6247	sage	9673.20
+    6248	destitute	9672.41
+    6249	pays	9671.62
+    6250	sleepy	9669.24
+    6251	Dublin	9662.91
+    6252	Jonathan	9661.33
+    6253	posterity	9661.33
+    6254	they'd	9661.33
+    6255	nod	9658.96
+    6256	mason	9655.00
+    6257	patriotic	9653.42
+    6258	plantation	9650.25
+    6259	pitiful	9649.46
+    6260	foster	9648.67
+    6261	requisite	9647.88
+    6262	expose	9647.09
+    6263	oxen	9647.09
+    6264	patch	9647.09
+    6265	Anderson	9644.72
+    6266	Stuart	9643.13
+    6267	interruption	9641.55
+    6268	lance	9641.55
+    6269	payable	9639.18
+    6270	definition	9637.60
+    6271	birthday	9636.81
+    6272	thumb	9636.81
+    6273	wolves	9635.22
+    6274	hammer	9632.06
+    6275	overwhelming	9631.27
+    6276	intensely	9628.10
+    6277	revolutionary	9627.31
+    6278	fragrant	9626.52
+    6279	bleeding	9625.73
+    6280	sheltered	9625.73
+    6281	circuit	9624.15
+    6282	dominions	9623.36
+    6283	sales	9616.24
+    6284	energetic	9615.44
+    6285	insignificant	9612.28
+    6286	repetition	9610.70
+    6287	we'd	9602.00
+    6288	amazing	9595.67
+    6289	trains	9591.71
+    6290	skirts	9590.13
+    6291	tip	9589.34
+    6292	trivial	9589.34
+    6293	kick	9588.55
+    6294	tended	9586.17
+    6295	rejoicing	9581.43
+    6296	dig	9579.05
+    6297	pet	9575.89
+    6298	skull	9575.89
+    6299	lectures	9574.31
+    6300	ness	9573.51
+    6301	threat	9571.93
+    6302	legislature	9570.35
+    6303	plunder	9567.98
+    6304	removing	9567.98
+    6305	jungle	9567.19
+    6306	ghosts	9566.39
+    6307	numbered	9562.44
+    6308	famine	9559.27
+    6309	palaces	9552.94
+    6310	sorrowful	9547.41
+    6311	improvements	9543.45
+    6312	Coleridge	9542.66
+    6313	fuller	9540.29
+    6314	asp	9533.96
+    6315	blocks	9531.58
+    6316	darted	9526.05
+    6317	shrine	9524.46
+    6318	heel	9522.88
+    6319	typical	9518.93
+    6320	throws	9516.55
+    6321	fortunately	9514.97
+    6322	recognise	9512.60
+    6323	fuel	9511.01
+    6324	6th	9507.85
+    6325	tranquil	9507.06
+    6326	frown	9501.52
+    6327	destination	9498.36
+    6328	plunge	9494.40
+    6329	moor	9488.86
+    6330	pin	9485.70
+    6331	mars	9484.91
+    6332	associate	9484.12
+    6333	here's	9480.95
+    6334	Owen	9480.95
+    6335	10th	9480.16
+    6336	Arabic	9478.58
+    6337	vicious	9478.58
+    6338	framed	9477.79
+    6339	banquet	9477.00
+    6340	expressive	9474.62
+    6341	instinctively	9461.96
+    6342	lighting	9461.96
+    6343	scanning	9461.96
+    6344	subordinate	9461.17
+    6345	jaws	9458.80
+    6346	patent	9458.80
+    6347	courtyard	9452.47
+    6348	gulf	9449.31
+    6349	destroying	9446.93
+    6350	detailed	9439.81
+    6351	regulating	9430.32
+    6352	closet	9429.53
+    6353	compel	9427.15
+    6354	inland	9426.36
+    6355	excepting	9423.20
+    6356	pretext	9417.66
+    6357	legislative	9414.50
+    6358	stationed	9413.71
+    6359	rash	9408.17
+    6360	margin	9401.05
+    6361	champion	9400.26
+    6362	settling	9400.26
+    6363	billion	9396.30
+    6364	shorter	9393.93
+    6365	betwixt	9393.14
+    6366	admiring	9392.34
+    6367	Morgan	9390.76
+    6368	nick	9390.76
+    6369	chemical	9389.97
+    6370	chapters	9389.18
+    6371	worthless	9386.02
+    6372	aristocratic	9382.85
+    6373	Nan	9382.06
+    6374	especial	9378.10
+    6375	hon	9378.10
+    6376	attentive	9376.52
+    6377	maintenance	9374.15
+    6378	Charlie	9372.57
+    6379	explanatory	9371.78
+    6380	differently	9367.82
+    6381	furiously	9367.82
+    6382	pulse	9367.03
+    6383	scanty	9367.03
+    6384	flee	9364.65
+    6385	admiral	9363.86
+    6386	clause	9360.70
+    6387	resume	9359.12
+    6388	compound	9358.33
+    6389	pilot	9353.58
+    6390	growled	9351.21
+    6391	charmed	9344.09
+    6392	imitate	9341.71
+    6393	happening	9339.34
+    6394	knot	9335.38
+    6395	rags	9329.85
+    6396	mock	9320.35
+    6397	majestic	9316.40
+    6398	messages	9314.02
+    6399	Prussian	9312.44
+    6400	suspense	9312.44
+    6401	Clare	9310.07
+    6402	relationship	9309.28
+    6403	skirt	9308.48
+    6404	agency	9303.74
+    6405	arisen	9302.95
+    6406	grin	9301.36
+    6407	unusually	9300.57
+    6408	Michigan	9298.99
+    6409	hoarse	9296.62
+    6410	mills	9286.33
+    6411	intently	9283.17
+    6412	dining	9281.59
+    6413	demonstration	9280.79
+    6414	depression	9277.63
+    6415	lain	9276.84
+    6416	expectations	9272.88
+    6417	joining	9272.09
+    6418	weekly	9268.14
+    6419	trenches	9267.35
+    6420	technical	9262.60
+    6421	vehicle	9262.60
+    6422	aimed	9253.10
+    6423	borrow	9253.10
+    6424	flattering	9249.15
+    6425	Portugal	9248.36
+    6426	prodigious	9246.78
+    6427	scope	9245.98
+    6428	vegetation	9245.98
+    6429	Switzerland	9243.61
+    6430	Arkansas	9242.82
+    6431	swelling	9242.82
+    6432	fortified	9241.24
+    6433	favoured	9238.07
+    6434	salute	9238.07
+    6435	topic	9237.28
+    6436	blushed	9233.33
+    6437	superb	9231.74
+    6438	strengthen	9230.16
+    6439	confidential	9228.58
+    6440	crow	9227.79
+    6441	shawl	9226.21
+    6442	sunrise	9226.21
+    6443	sings	9224.62
+    6444	coats	9220.67
+    6445	sturdy	9219.88
+    6446	dissolved	9218.30
+    6447	lifetime	9218.30
+    6448	dispersed	9217.50
+    6449	sergeant	9216.71
+    6450	contribute	9215.92
+    6451	strode	9215.13
+    6452	brigade	9214.34
+    6453	verdict	9211.97
+    6454	they've	9203.26
+    6455	honors	9198.52
+    6456	panting	9188.23
+    6457	females	9187.44
+    6458	richest	9187.44
+    6459	attribute	9186.65
+    6460	brighter	9184.28
+    6461	hook	9183.49
+    6462	discontent	9173.20
+    6463	orderly	9172.41
+    6464	airs	9165.29
+    6465	tiger	9165.29
+    6466	messengers	9163.71
+    6467	penetrate	9157.38
+    6468	Sabbath	9157.38
+    6469	identification	9156.59
+    6470	holiness	9155.80
+    6471	crooked	9154.21
+    6472	housekeeper	9144.72
+    6473	productions	9142.35
+    6474	prescribed	9139.18
+    6475	rector	9139.18
+    6476	spark	9135.23
+    6477	sleeve	9132.06
+    6478	honored	9127.31
+    6479	tame	9124.94
+    6480	highway	9124.15
+    6481	Alabama	9123.36
+    6482	Edmund	9118.61
+    6483	militia	9113.87
+    6484	nobleman	9113.87
+    6485	energies	9112.28
+    6486	spacious	9109.12
+    6487	tearing	9102.00
+    6488	affliction	9099.62
+    6489	photograph	9094.88
+    6490	ally	9090.92
+    6491	Hampshire	9088.55
+    6492	ascent	9086.18
+    6493	ditch	9084.59
+    6494	fishes	9083.80
+    6495	Jupiter	9080.64
+    6496	rubbing	9071.94
+    6497	tract	9069.56
+    6498	standards	9064.81
+    6499	afore	9064.02
+    6500	ribbon	9063.23
+    6501	Cecilia	9058.49
+    6502	Oregon	9057.69
+    6503	integrity	9054.53
+    6504	plus	9051.37
+    6505	transparent	9048.20
+    6506	farms	9043.45
+    6507	pulpit	9036.33
+    6508	ropes	9034.75
+    6509	nineteen	9033.96
+    6510	rescued	9032.38
+    6511	counting	9030.80
+    6512	perfume	9030.80
+    6513	Socrates	9030.80
+    6514	hounds	9028.42
+    6515	solicited	9028.42
+    6516	bother	9022.88
+    6517	fascinating	9016.56
+    6518	qualified	9016.56
+    6519	desolation	9015.76
+    6520	essay	9014.97
+    6521	rains	9014.97
+    6522	renew	9014.18
+    6523	odious	9011.81
+    6524	assuredly	9011.02
+    6525	suggests	9005.48
+    6526	rider	8996.78
+    6527	loneliness	8992.82
+    6528	pond	8992.03
+    6529	activities	8982.54
+    6530	dazzling	8981.75
+    6531	leaping	8981.75
+    6532	squadron	8980.16
+    6533	bowing	8977.79
+    6534	novelty	8977.79
+    6535	wrist	8971.46
+    6536	keeper	8968.30
+    6537	homeward	8966.71
+    6538	Alexandria	8965.92
+    6539	finely	8962.76
+    6540	li	8960.39
+    6541	efficiency	8958.80
+    6542	marvel	8956.43
+    6543	tranquillity	8954.85
+    6544	Agnes	8951.68
+    6545	charities	8951.68
+    6546	Spenser	8950.10
+    6547	condemn	8946.14
+    6548	elephants	8945.35
+    6549	elders	8942.98
+    6550	Julian	8942.98
+    6551	tries	8942.98
+    6552	2nd	8939.82
+    6553	sweetly	8939.02
+    6554	endurance	8937.44
+    6555	bags	8936.65
+    6556	reared	8932.70
+    6557	jaw	8931.90
+    6558	unique	8931.90
+    6559	navigation	8931.11
+    6560	inevitably	8928.74
+    6561	admirably	8927.16
+    6562	sect	8927.16
+    6563	drum	8923.20
+    6564	poles	8921.62
+    6565	verge	8918.46
+    6566	piercing	8912.13
+    6567	sanction	8911.33
+    6568	Russians	8904.21
+    6569	forlorn	8901.84
+    6570	approbation	8899.47
+    6571	organic	8895.51
+    6572	Stanley	8895.51
+    6573	allegiance	8891.56
+    6574	bin	8891.56
+    6575	expressly	8879.69
+    6576	ingenuity	8877.32
+    6577	dispose	8873.36
+    6578	stained	8873.36
+    6579	theology	8870.20
+    6580	withal	8870.20
+    6581	duration	8868.61
+    6582	fundraising	8851.21
+    6583	adj.	8846.46
+    6584	collecting	8846.46
+    6585	weigh	8841.71
+    6586	sweetest	8840.13
+    6587	float	8839.34
+    6588	consul	8837.76
+    6589	monastery	8837.76
+    6590	raging	8836.18
+    6591	publish	8833.80
+    6592	knocking	8832.22
+    6593	precaution	8832.22
+    6594	privately	8832.22
+    6595	Aaron	8828.27
+    6596	endeavored	8827.47
+    6597	insight	8827.47
+    6598	definitely	8825.89
+    6599	stature	8825.10
+    6600	Troy	8825.10
+    6601	Miriam	8824.31
+    6602	Judah	8823.52
+    6603	oblige	8822.73
+    6604	urging	8816.40
+    6605	shift	8810.86
+    6606	mould	8808.49
+    6607	courses	8807.70
+    6608	countless	8806.11
+    6609	associates	8798.20
+    6610	hymn	8797.41
+    6611	rapture	8797.41
+    6612	tonight	8797.41
+    6613	trumpet	8795.83
+    6614	Parker	8791.87
+    6615	entrusted	8787.92
+    6616	firmness	8787.92
+    6617	comic	8780.80
+    6618	breeding	8780.01
+    6619	ken	8775.26
+    6620	questioning	8772.89
+    6621	factor	8772.10
+    6622	monuments	8767.35
+    6623	loveliness	8766.56
+    6624	handled	8761.02
+    6625	communities	8754.69
+    6626	saloon	8754.69
+    6627	stumbled	8749.15
+    6628	witch	8748.36
+    6629	confronted	8747.57
+    6630	traveling	8747.57
+    6631	seamen	8745.99
+    6632	backed	8744.41
+    6633	profoundly	8742.03
+    6634	gladness	8738.87
+    6635	pomp	8737.29
+    6636	mess	8735.70
+    6637	practise	8734.12
+    6638	sanctuary	8734.12
+    6639	superstitious	8734.12
+    6640	casual	8732.54
+    6641	Iowa	8732.54
+    6642	analyzed	8725.42
+    6643	historic	8724.63
+    6644	bored	8723.84
+    6645	shrink	8723.84
+    6646	judging	8723.04
+    6647	treating	8717.51
+    6648	expenditure	8716.72
+    6649	encouraging	8715.13
+    6650	diplomatic	8714.34
+    6651	forcing	8713.55
+    6652	studio	8712.76
+    6653	exposure	8710.39
+    6654	crude	8705.64
+    6655	compilation	8704.85
+    6656	Vermont	8692.98
+    6657	eve	8689.82
+    6658	ascend	8689.03
+    6659	unbroken	8689.03
+    6660	Apollo	8688.23
+    6661	countess	8682.70
+    6662	binding	8680.32
+    6663	exceed	8677.95
+    6664	frail	8677.16
+    6665	Hans	8676.37
+    6666	champagne	8671.62
+    6667	shuddered	8671.62
+    6668	carter	8670.83
+    6669	mule	8667.67
+    6670	inserted	8666.87
+    6671	parson	8666.08
+    6672	rascal	8664.50
+    6673	inspire	8660.55
+    6674	banner	8657.38
+    6675	divorce	8655.01
+    6676	treacherous	8655.01
+    6677	nineteenth	8651.84
+    6678	invalid	8650.26
+    6679	weaker	8650.26
+    6680	organizations	8648.68
+    6681	bolt	8646.30
+    6682	ticket	8643.14
+    6683	backwards	8642.35
+    6684	captivity	8642.35
+    6685	lame	8640.77
+    6686	provoked	8639.18
+    6687	vein	8636.02
+    6688	lists	8625.74
+    6689	gallop	8624.94
+    6690	communications	8622.57
+    6691	dagger	8619.41
+    6692	passive	8618.62
+    6693	shoe	8618.62
+    6694	thrice	8613.08
+    6695	corrected	8611.49
+    6696	mystic	8605.17
+    6697	infancy	8602.00
+    6698	foam	8600.42
+    6699	Keith	8600.42
+    6700	tavern	8599.63
+    6701	fraud	8597.25
+    6702	7th	8596.46
+    6703	cradle	8594.09
+    6704	rifles	8589.34
+    6705	vigorously	8589.34
+    6706	censure	8587.76
+    6707	gentleness	8587.76
+    6708	jr	8587.76
+    6709	sobbing	8586.18
+    6710	monotonous	8579.85
+    6711	explosion	8578.27
+    6712	catastrophe	8570.36
+    6713	respectfully	8567.98
+    6714	wearied	8565.61
+    6715	cats	8564.82
+    6716	blamed	8563.24
+    6717	needful	8562.44
+    6718	fireplace	8561.65
+    6719	gravel	8560.86
+    6720	affords	8560.07
+    6721	discovering	8560.07
+    6722	jar	8560.07
+    6723	selfishness	8557.70
+    6724	tolerably	8553.74
+    6725	clerks	8551.37
+    6726	ark	8549.00
+    6727	moist	8549.00
+    6728	wid	8544.25
+    6729	sauce	8543.46
+    6730	prompted	8534.75
+    6731	exceptions	8532.38
+    6732	bullets	8527.63
+    6733	writ	8527.63
+    6734	Bruce	8526.84
+    6735	insolent	8523.68
+    6736	moisture	8523.68
+    6737	Thompson	8522.89
+    6738	furnace	8519.72
+    6739	healing	8519.72
+    6740	fewer	8517.35
+    6741	deem	8515.77
+    6742	apron	8513.39
+    6743	humiliation	8513.39
+    6744	punctuation	8512.60
+    6745	rolls	8511.81
+    6746	doe	8509.44
+    6747	rotten	8507.86
+    6748	richer	8505.48
+    6749	Swiss	8505.48
+    6750	behavior	8503.90
+    6751	nowadays	8501.53
+    6752	pamphlet	8499.15
+    6753	loan	8497.57
+    6754	beads	8494.41
+    6755	divers	8493.62
+    6756	unreasonable	8492.03
+    6757	realise	8490.45
+    6758	lust	8484.12
+    6759	ah	8480.17
+    6760	annually	8479.38
+    6761	detach	8478.58
+    6762	gaily	8477.00
+    6763	shares	8477.00
+    6764	gifted	8473.05
+    6765	planet	8473.05
+    6766	feverish	8466.72
+    6767	resurrection	8466.72
+    6768	Saul	8464.34
+    6769	consecrated	8461.97
+    6770	enforced	8460.39
+    6771	Vincent	8453.27
+    6772	shelf	8451.69
+    6773	fan	8450.89
+    6774	fluid	8449.31
+    6775	brightly	8448.52
+    6776	damsel	8448.52
+    6777	Gabriel	8447.73
+    6778	kid	8446.94
+    6779	frantic	8441.40
+    6780	neatly	8441.40
+    6781	anon	8435.86
+    6782	ascribed	8435.07
+    6783	insane	8435.07
+    6784	tropical	8434.28
+    6785	8th	8431.12
+    6786	Milan	8429.53
+    6787	hardened	8427.95
+    6788	overthrow	8427.16
+    6789	phase	8427.16
+    6790	achievement	8424.79
+    6791	immortality	8424.79
+    6792	obscurity	8421.62
+    6793	assumption	8420.04
+    6794	discern	8412.92
+    6795	hopeful	8412.13
+    6796	humorous	8410.55
+    6797	composure	8408.17
+    6798	turf	8408.17
+    6799	Poland	8407.38
+    6800	dame	8406.59
+    6801	missionaries	8406.59
+    6802	orator	8405.01
+    6803	perpetually	8405.01
+    6804	arbitrary	8403.43
+    6805	ecstasy	8397.89
+    6806	retirement	8397.10
+    6807	pronounce	8393.14
+    6808	authorized	8387.60
+    6809	familiarity	8387.60
+    6810	NL	8386.02
+    6811	hastings	8384.44
+    6812	clubs	8383.65
+    6813	reconciled	8383.65
+    6814	grievous	8382.86
+    6815	mercury	8381.27
+    6816	elegance	8379.69
+    6817	chivalry	8378.90
+    6818	luminous	8377.32
+    6819	beseech	8375.74
+    6820	benevolent	8374.95
+    6821	confided	8374.95
+    6822	dances	8374.15
+    6823	perplexity	8370.20
+    6824	escaping	8369.41
+    6825	terrific	8369.41
+    6826	companionship	8365.45
+    6827	commence	8364.66
+    6828	daisy	8364.66
+    6829	parliament	8361.50
+    6830	9th	8353.58
+    6831	creep	8352.79
+    6832	pleading	8347.26
+    6833	disdain	8345.67
+    6834	pm	8345.67
+    6835	sympathies	8341.72
+    6836	guides	8340.93
+    6837	emergency	8338.55
+    6838	parcel	8337.76
+    6839	suicide	8337.76
+    6840	replies	8336.18
+    6841	drawer	8335.39
+    6842	contribution	8334.60
+    6843	supposition	8331.43
+    6844	vii	8329.85
+    6845	weren't	8325.90
+    6846	link	8325.10
+    6847	homely	8321.94
+    6848	pluck	8321.94
+    6849	ruling	8317.19
+    6850	Patrick	8316.40
+    6851	statesmen	8311.65
+    6852	Hannah	8310.86
+    6853	printing	8310.86
+    6854	Joshua	8309.28
+    6855	synonymous	8307.70
+    6856	sinister	8306.91
+    6857	advocate	8306.12
+    6858	destructive	8304.53
+    6859	environment	8304.53
+    6860	blossom	8302.16
+    6861	bridle	8296.62
+    6862	yon	8295.83
+    6863	waistcoat	8291.88
+    6864	extends	8291.09
+    6865	confirm	8289.50
+    6866	listing	8287.13
+    6867	solemnity	8287.13
+    6868	projects	8284.76
+    6869	reporter	8284.76
+    6870	deprive	8283.17
+    6871	detachment	8280.80
+    6872	infernal	8270.52
+    6873	traversed	8269.72
+    6874	moss	8266.56
+    6875	skilled	8264.98
+    6876	announce	8263.40
+    6877	hateful	8260.23
+    6878	fugitive	8257.07
+    6879	Gothic	8257.07
+    6880	coolness	8256.28
+    6881	insurrection	8254.69
+    6882	cum	8252.32
+    6883	med	8251.53
+    6884	coachman	8249.16
+    6885	expend	8249.16
+    6886	stepping	8248.36
+    6887	Julius	8242.83
+    6888	resign	8237.29
+    6889	despatch	8233.33
+    6890	excluded	8233.33
+    6891	reject	8233.33
+    6892	tough	8230.17
+    6893	plea	8228.59
+    6894	Roy	8227.79
+    6895	fragment	8227.00
+    6896	lacked	8227.00
+    6897	Wordsworth	8224.63
+    6898	balcony	8223.84
+    6899	darker	8222.26
+    6900	mac	8222.26
+    6901	Nevada	8222.26
+    6902	Christopher	8219.88
+    6903	fork	8219.88
+    6904	flatter	8219.09
+    6905	iniquity	8212.76
+    6906	meditation	8212.76
+    6907	disastrous	8211.18
+    6908	stain	8209.60
+    6909	patches	8208.02
+    6910	hints	8203.27
+    6911	ordained	8198.52
+    6912	drinks	8197.73
+    6913	whipped	8197.73
+    6914	burial	8196.15
+    6915	Matt	8196.15
+    6916	employee	8193.78
+    6917	employer	8192.19
+    6918	hypothesis	8192.19
+    6919	steed	8191.40
+    6920	width	8189.82
+    6921	Sweden	8187.45
+    6922	transaction	8184.28
+    6923	victories	8182.70
+    6924	devout	8181.91
+    6925	outrage	8181.91
+    6926	vary	8179.54
+    6927	attorney	8176.37
+    6928	rouse	8175.58
+    6929	doubled	8170.04
+    6930	Sidney	8168.46
+    6931	schooner	8166.88
+    6932	flaming	8165.29
+    6933	offend	8161.34
+    6934	sheriff	8161.34
+    6935	encamped	8160.55
+    6936	magnificence	8158.17
+    6937	vent	8145.52
+    6938	politely	8144.73
+    6939	vines	8144.73
+    6940	flags	8142.35
+    6941	Italians	8138.40
+    6942	necessities	8136.81
+    6943	Austin	8135.23
+    6944	nobler	8132.07
+    6945	accusation	8117.04
+    6946	impulses	8113.08
+    6947	packet	8112.29
+    6948	shabby	8111.50
+    6949	irritated	8108.33
+    6950	Dakota	8107.54
+    6951	industrious	8105.17
+    6952	classic	8103.59
+    6953	ranch	8102.80
+    6954	ascending	8097.26
+    6955	cruelly	8096.47
+    6956	happiest	8095.68
+    6957	Antonio	8094.88
+    6958	accuse	8092.51
+    6959	insulted	8089.35
+    6960	bridges	8086.97
+    6961	players	8086.97
+    6962	sixteenth	8084.60
+    6963	solicitation	8083.81
+    6964	embarked	8075.11
+    6965	idol	8071.94
+    6966	odds	8071.94
+    6967	aims	8067.99
+    6968	illuminated	8067.99
+    6969	enchanted	8064.82
+    6970	adversary	8060.87
+    6971	pie	8060.87
+    6972	reflecting	8059.28
+    6973	pension	8057.70
+    6974	luxurious	8056.12
+    6975	pigs	8055.33
+    6976	choir	8053.74
+    6977	tumbled	8052.16
+    6978	conqueror	8051.37
+    6979	irritation	8049.00
+    6980	verb	8049.00
+    6981	monkey	8046.62
+    6982	acceptable	8045.04
+    6983	dynasty	8045.04
+    6984	accurately	8043.46
+    6985	divinity	8042.67
+    6986	signature	8042.67
+    6987	heretofore	8041.88
+    6988	hazard	8041.09
+    6989	Dora	8040.30
+    6990	sq.	8039.50
+    6991	stead	8037.92
+    6992	attire	8037.13
+    6993	fling	8036.34
+    6994	marine	8034.76
+    6995	occupations	8031.59
+    6996	soothing	8031.59
+    6997	devised	8030.80
+    6998	singer	8028.43
+    6999	spaces	8027.64
+    7000	Emerson	8026.06
+    7001	disguised	8023.68
+    7002	antique	8022.10
+    7003	orthodox	8019.73
+    7004	poisoned	8016.56
+    7005	dove	8015.77
+    7006	gratification	8014.98
+    7007	Sydney	8011.81
+    7008	electricity	8008.65
+    7009	alien	8002.32
+    7010	sorely	8002.32
+    7011	cracked	7994.41
+    7012	supremacy	7994.41
+    7013	summon	7991.25
+    7014	depressed	7989.66
+    7015	sexes	7988.87
+    7016	offerings	7988.08
+    7017	pledged	7988.08
+    7018	irony	7987.29
+    7019	recourse	7982.54
+    7020	tortured	7982.54
+    7021	thickly	7978.59
+    7022	correspondent	7976.21
+    7023	sounding	7975.42
+    7024	64	7973.84
+    7025	sombre	7969.88
+    7026	brushed	7968.30
+    7027	reasonably	7957.23
+    7028	12th	7956.44
+    7029	duel	7956.44
+    7030	reluctantly	7956.44
+    7031	implies	7955.64
+    7032	cable	7954.85
+    7033	ridden	7949.32
+    7034	acre	7948.52
+    7035	grieve	7945.36
+    7036	inquiring	7944.57
+    7037	colonists	7942.19
+    7038	Addison	7938.24
+    7039	republican	7938.24
+    7040	illustrate	7937.45
+    7041	Tim	7937.45
+    7042	Liverpool	7936.66
+    7043	gilded	7935.87
+    7044	clumsy	7935.07
+    7045	satin	7931.12
+    7046	displeased	7927.95
+    7047	odor	7927.16
+    7048	clearer	7926.37
+    7049	prairie	7921.63
+    7050	Hudson	7919.25
+    7051	feudal	7916.09
+    7052	flint	7908.97
+    7053	Easter	7908.18
+    7054	freshness	7908.18
+    7055	nursery	7906.59
+    7056	explanations	7905.01
+    7057	adoption	7902.64
+    7058	reluctance	7902.64
+    7059	crosses	7898.68
+    7060	blushing	7897.89
+    7061	imported	7897.89
+    7062	notorious	7895.52
+    7063	equipped	7893.94
+    7064	sinful	7890.77
+    7065	starving	7890.77
+    7066	Eugene	7886.02
+    7067	bedside	7884.44
+    7068	sovereigns	7883.65
+    7069	abrupt	7882.86
+    7070	excused	7879.70
+    7071	injure	7877.32
+    7072	incessant	7876.53
+    7073	correctly	7874.95
+    7074	drooping	7872.58
+    7075	adored	7871.78
+    7076	embroidered	7871.78
+    7077	pasture	7871.78
+    7078	pillar	7870.20
+    7079	import	7867.83
+    7080	founder	7862.29
+    7081	torch	7862.29
+    7082	vault	7862.29
+    7083	worm	7862.29
+    7084	ay	7859.92
+    7085	bravery	7859.13
+    7086	confinement	7853.59
+    7087	trusting	7846.47
+    7088	butler	7844.89
+    7089	rattle	7844.89
+    7090	transported	7844.89
+    7091	estimation	7844.09
+    7092	edit	7840.93
+    7093	gotten	7839.35
+    7094	cuts	7838.56
+    7095	headlong	7836.97
+    7096	outfit	7836.18
+    7097	insolence	7829.85
+    7098	secrecy	7829.85
+    7099	thereupon	7820.36
+    7100	unlucky	7817.20
+    7101	eighth	7816.40
+    7102	valour	7815.61
+    7103	grammar	7814.03
+    7104	relaxed	7812.45
+    7105	mentions	7804.54
+    7106	adjacent	7802.96
+    7107	knives	7802.16
+    7108	attacking	7801.37
+    7109	exceptional	7801.37
+    7110	recollections	7800.58
+    7111	deposit	7794.25
+    7112	establishing	7794.25
+    7113	muddy	7794.25
+    7114	arches	7793.46
+    7115	aspects	7790.30
+    7116	senior	7788.71
+    7117	fragrance	7785.55
+    7118	colonial	7784.76
+    7119	penetrating	7783.18
+    7120	refinement	7779.22
+    7121	te	7776.85
+    7122	yacht	7776.85
+    7123	intelligible	7776.06
+    7124	stray	7772.89
+    7125	forcibly	7771.31
+    7126	Jenny	7771.31
+    7127	superficial	7771.31
+    7128	tends	7767.35
+    7129	identified	7766.56
+    7130	wan	7766.56
+    7131	choosing	7764.19
+    7132	frighten	7762.61
+    7133	grotesque	7762.61
+    7134	reprinted	7761.82
+    7135	tutor	7761.82
+    7136	contributing	7761.03
+    7137	Welsh	7757.07
+    7138	gaiety	7756.28
+    7139	besieged	7753.90
+    7140	robbery	7753.11
+    7141	transmitted	7753.11
+    7142	swam	7749.95
+    7143	consequential	7746.78
+    7144	slid	7743.62
+    7145	stony	7742.83
+    7146	Donald	7741.25
+    7147	gratify	7741.25
+    7148	heavier	7741.25
+    7149	confidently	7740.46
+    7150	Mabel	7739.66
+    7151	demon	7734.92
+    7152	treatise	7734.92
+    7153	mechanically	7732.54
+    7154	batteries	7728.59
+    7155	trading	7728.59
+    7156	cock	7727.80
+    7157	pilgrimage	7727.80
+    7158	extinct	7726.22
+    7159	idleness	7725.42
+    7160	Sicily	7724.63
+    7161	merrily	7723.84
+    7162	excursion	7721.47
+    7163	handling	7719.89
+    7164	Utah	7719.89
+    7165	eminence	7718.30
+    7166	lump	7714.35
+    7167	boyhood	7713.56
+    7168	Montana	7713.56
+    7169	superfluous	7713.56
+    7170	wee	7711.97
+    7171	dome	7709.60
+    7172	shivering	7708.81
+    7173	accidental	7708.02
+    7174	thickness	7708.02
+    7175	Darwin	7706.44
+    7176	continuance	7704.06
+    7177	fixing	7703.27
+    7178	Harris	7703.27
+    7179	rustic	7703.27
+    7180	cheered	7697.73
+    7181	Vernon	7696.94
+    7182	premises	7694.57
+    7183	delivery	7687.45
+    7184	nodding	7687.45
+    7185	snowy	7681.91
+    7186	curved	7680.33
+    7187	productive	7679.54
+    7188	discouraged	7677.96
+    7189	variations	7677.16
+    7190	shilling	7674.79
+    7191	swollen	7674.79
+    7192	miraculous	7673.21
+    7193	stubborn	7673.21
+    7194	Belgium	7669.25
+    7195	drives	7668.46
+    7196	Jerome	7667.67
+    7197	orchard	7666.88
+    7198	persuasion	7666.88
+    7199	invaded	7666.09
+    7200	Alps	7661.34
+    7201	ungrateful	7658.97
+    7202	insensible	7658.18
+    7203	muscle	7655.80
+    7204	Madrid	7655.01
+    7205	Flanders	7654.22
+    7206	cultivate	7652.64
+    7207	involuntarily	7652.64
+    7208	speedy	7651.06
+    7209	variation	7649.48
+    7210	Marian	7648.68
+    7211	harp	7647.89
+    7212	peaks	7643.94
+    7213	daybreak	7642.35
+    7214	magnitude	7642.35
+    7215	precautions	7640.77
+    7216	rub	7640.77
+    7217	requiring	7638.40
+    7218	coral	7636.03
+    7219	grapes	7634.44
+    7220	fairest	7628.91
+    7221	locality	7628.91
+    7222	opponent	7622.58
+    7223	bondage	7621.79
+    7224	beans	7620.99
+    7225	cowardly	7619.41
+    7226	grandson	7614.67
+    7227	Leo	7612.29
+    7228	Gertrude	7605.17
+    7229	nail	7605.17
+    7230	protecting	7604.38
+    7231	hospitable	7603.59
+    7232	proving	7603.59
+    7233	benevolence	7594.89
+    7234	Brussels	7594.89
+    7235	civilisation	7594.89
+    7236	mounting	7591.72
+    7237	desiring	7590.93
+    7238	rushes	7588.56
+    7239	precision	7587.77
+    7240	watchful	7586.18
+    7241	harness	7584.60
+    7242	perchance	7584.60
+    7243	forbade	7579.06
+    7244	channels	7577.48
+    7245	indication	7576.69
+    7246	zealous	7576.69
+    7247	tact	7574.32
+    7248	seventeenth	7567.99
+    7249	Theodore	7565.61
+    7250	stating	7564.82
+    7251	toast	7564.03
+    7252	dreadfully	7562.45
+    7253	Judith	7561.66
+    7254	asterisk	7560.08
+    7255	Virgil	7559.29
+    7256	edifice	7556.12
+    7257	swelled	7556.12
+    7258	accomplishment	7555.33
+    7259	sundry	7550.58
+    7260	reckoning	7548.21
+    7261	mouse	7544.25
+    7262	prostrate	7544.25
+    7263	helm	7541.09
+    7264	slim	7541.09
+    7265	whistling	7537.93
+    7266	syllable	7537.13
+    7267	handwriting	7536.34
+    7268	commissioners	7535.55
+    7269	lime	7535.55
+    7270	spur	7534.76
+    7271	unfit	7532.39
+    7272	gen.	7531.60
+    7273	relish	7529.22
+    7274	reduction	7526.06
+    7275	sown	7526.06
+    7276	venetian	7525.27
+    7277	cordially	7521.31
+    7278	hush	7520.52
+    7279	breasts	7515.77
+    7280	slipping	7514.98
+    7281	pat	7513.40
+    7282	Arabian	7512.61
+    7283	dialogue	7511.82
+    7284	forwards	7511.82
+    7285	entreat	7511.03
+    7286	fascination	7510.24
+    7287	belly	7509.44
+    7288	neutral	7509.44
+    7289	grasping	7507.86
+    7290	diligence	7505.49
+    7291	disgusted	7504.70
+    7292	retiring	7503.12
+    7293	strokes	7500.74
+    7294	sob	7497.58
+    7295	vine	7496.00
+    7296	compose	7495.20
+    7297	Valentine	7492.04
+    7298	Harvey	7489.67
+    7299	icy	7488.08
+    7300	inconvenience	7488.08
+    7301	v	7483.34
+    7302	pots	7482.55
+    7303	dimensions	7480.96
+    7304	abused	7479.38
+    7305	armor	7478.59
+    7306	detect	7478.59
+    7307	contradiction	7473.84
+    7308	banker	7468.31
+    7309	infamous	7463.56
+    7310	powerless	7461.19
+    7311	passenger	7458.81
+    7312	crust	7456.44
+    7313	historians	7455.65
+    7314	disclaim	7453.27
+    7315	Norway	7451.69
+    7316	peculiarities	7450.90
+    7317	sting	7450.90
+    7318	simultaneously	7445.36
+    7319	watches	7445.36
+    7320	cong.	7444.57
+    7321	episode	7443.78
+    7322	achieve	7439.82
+    7323	populace	7439.03
+    7324	Sherman	7439.03
+    7325	incense	7438.24
+    7326	Rebecca	7436.66
+    7327	Jordan	7435.08
+    7328	persistent	7435.08
+    7329	Wisconsin	7435.08
+    7330	ho	7428.75
+    7331	ta	7428.75
+    7332	fruitful	7427.17
+    7333	scoundrel	7427.17
+    7334	coasts	7424.00
+    7335	starve	7419.26
+    7336	Denmark	7415.30
+    7337	Scots	7415.30
+    7338	consultation	7414.51
+    7339	habitation	7410.55
+    7340	goat	7406.60
+    7341	howling	7406.60
+    7342	tailor	7406.60
+    7343	flourish	7401.85
+    7344	trifles	7394.73
+    7345	dashing	7393.94
+    7346	disappearance	7393.15
+    7347	sour	7393.15
+    7348	practicable	7390.77
+    7349	shameful	7389.19
+    7350	inviting	7386.03
+    7351	criminals	7383.65
+    7352	leisurely	7383.65
+    7353	accumulated	7382.07
+    7354	audible	7380.49
+    7355	topics	7380.49
+    7356	expends	7378.91
+    7357	radiance	7377.32
+    7358	underline	7375.74
+    7359	parade	7374.95
+    7360	spoils	7374.95
+    7361	helmet	7365.46
+    7362	consternation	7364.67
+    7363	expenditures	7364.67
+    7364	impose	7363.88
+    7365	originator	7363.08
+    7366	pa	7362.29
+    7367	unequal	7362.29
+    7368	wooded	7356.76
+    7369	enduring	7352.01
+    7370	ox	7349.64
+    7371	valet	7349.64
+    7372	proclaim	7348.05
+    7373	Carl	7346.47
+    7374	impossibility	7346.47
+    7375	Lydia	7344.10
+    7376	territories	7342.51
+    7377	deference	7340.93
+    7378	ravine	7340.93
+    7379	Geoffrey	7339.35
+    7380	Blanche	7336.98
+    7381	accommodation	7333.02
+    7382	boyish	7331.44
+    7383	spray	7329.07
+    7384	theological	7328.27
+    7385	anonymous	7327.48
+    7386	injurious	7326.69
+    7387	formally	7324.32
+    7388	sports	7324.32
+    7389	ab	7322.74
+    7390	scales	7322.74
+    7391	Wyoming	7321.95
+    7392	discontinue	7321.15
+    7393	calf	7319.57
+    7394	manual	7318.78
+    7395	disturbing	7317.99
+    7396	potent	7317.20
+    7397	anticipation	7316.41
+    7398	melt	7314.83
+    7399	tilde	7314.83
+    7400	Thames	7314.03
+    7401	grade	7312.45
+    7402	mischievous	7310.87
+    7403	pang	7310.87
+    7404	pathos	7308.50
+    7405	alternately	7306.12
+    7406	brisk	7305.33
+    7407	stool	7304.54
+    7408	justification	7299.79
+    7409	foreigner	7298.21
+    7410	endeavouring	7297.42
+    7411	satire	7297.42
+    7412	Al	7295.84
+    7413	delete	7294.26
+    7414	masculine	7293.46
+    7415	spies	7291.88
+    7416	umbrella	7284.76
+    7417	transportation	7283.18
+    7418	yell	7281.60
+    7419	remnant	7280.81
+    7420	boot	7279.22
+    7421	ignored	7276.06
+    7422	thrilling	7276.06
+    7423	ale	7270.52
+    7424	mineral	7265.77
+    7425	goose	7263.40
+    7426	Nebraska	7261.82
+    7427	truce	7261.82
+    7428	lastly	7260.24
+    7429	airy	7254.70
+    7430	sketches	7254.70
+    7431	groves	7253.91
+    7432	col.	7253.12
+    7433	11th	7250.74
+    7434	comprehension	7250.74
+    7435	cling	7247.58
+    7436	duck	7247.58
+    7437	abyss	7246.79
+    7438	Alaska	7246.79
+    7439	baffled	7246.79
+    7440	planning	7246.00
+    7441	abominable	7235.71
+    7442	aversion	7235.71
+    7443	drawings	7234.13
+    7444	customers	7233.34
+    7445	weird	7230.96
+    7446	Stewart	7230.17
+    7447	traveled	7230.17
+    7448	Alan	7228.59
+    7449	incessantly	7226.22
+    7450	flattery	7223.84
+    7451	director	7221.47
+    7452	improbable	7221.47
+    7453	moderation	7219.89
+    7454	awakening	7219.10
+    7455	males	7219.10
+    7456	pairs	7218.31
+    7457	temporal	7217.52
+    7458	con	7215.93
+    7459	nicely	7215.93
+    7460	lapse	7212.77
+    7461	vitality	7211.98
+    7462	soap	7208.02
+    7463	patriot	7207.23
+    7464	malicious	7206.44
+    7465	eyed	7205.65
+    7466	pirates	7205.65
+    7467	enforce	7203.28
+    7468	doll	7199.32
+    7469	briskly	7195.36
+    7470	sez	7191.41
+    7471	skeleton	7189.83
+    7472	comprehensive	7188.24
+    7473	buttons	7187.45
+    7474	crushing	7186.66
+    7475	personages	7185.08
+    7476	threaten	7184.29
+    7477	nuts	7182.71
+    7478	undone	7181.12
+    7479	wright	7181.12
+    7480	frankness	7179.54
+    7481	hides	7177.96
+    7482	progressive	7170.05
+    7483	Rogers	7170.05
+    7484	villa	7163.72
+    7485	Aristotle	7160.55
+    7486	resource	7160.55
+    7487	IRS	7155.81
+    7488	confine	7154.22
+    7489	sewing	7154.22
+    7490	CO	7148.69
+    7491	congratulate	7144.73
+    7492	Walt	7141.57
+    7493	reconcile	7139.19
+    7494	insurance	7138.40
+    7495	terminated	7137.61
+    7496	dusky	7134.45
+    7497	appoint	7133.66
+    7498	pearl	7132.86
+    7499	thrilled	7131.28
+    7500	gains	7127.33
+    7501	interrupt	7122.58
+    7502	extravagance	7121.79
+    7503	jokes	7121.79
+    7504	suppress	7121.79
+    7505	quod	7121.00
+    7506	signify	7120.21
+    7507	layer	7117.04
+    7508	clue	7116.25
+    7509	kettle	7115.46
+    7510	contemplate	7113.09
+    7511	aforesaid	7111.50
+    7512	tooth	7109.13
+    7513	sensibility	7106.76
+    7514	boldness	7105.97
+    7515	mature	7105.17
+    7516	Cuba	7098.05
+    7517	tolerable	7096.47
+    7518	rabbit	7095.68
+    7519	befallen	7092.52
+    7520	needless	7092.52
+    7521	Yankee	7091.73
+    7522	awaken	7083.02
+    7523	clasp	7083.02
+    7524	lets	7080.65
+    7525	blinded	7079.07
+    7526	conductor	7078.28
+    7527	dependence	7077.48
+    7528	guarantee	7076.69
+    7529	affectionately	7073.53
+    7530	player	7072.74
+    7531	wires	7072.74
+    7532	thicket	7066.41
+    7533	walker	7062.45
+    7534	outstretched	7061.66
+    7535	procedure	7061.66
+    7536	wheeled	7060.87
+    7537	aye	7059.29
+    7538	oneself	7056.12
+    7539	recommendation	7055.33
+    7540	projecting	7054.54
+    7541	shriek	7052.96
+    7542	futile	7052.17
+    7543	cheerfulness	7051.38
+    7544	deity	7051.38
+    7545	fifteenth	7045.84
+    7546	gap	7045.05
+    7547	muscular	7045.05
+    7548	dripping	7044.26
+    7549	insect	7041.88
+    7550	values	7039.51
+    7551	brooding	7038.72
+    7552	restaurant	7037.14
+    7553	baptism	7036.35
+    7554	imaginative	7036.35
+    7555	rhyme	7033.18
+    7556	exhaustion	7031.60
+    7557	intrigue	7031.60
+    7558	senseless	7031.60
+    7559	Hercules	7030.81
+    7560	yearly	7030.81
+    7561	baron	7028.43
+    7562	occupying	7026.85
+    7563	imply	7022.90
+    7564	absurdity	7020.52
+    7565	launched	7020.52
+    7566	resolutely	7015.78
+    7567	vowed	7014.99
+    7568	attach	7011.82
+    7569	characterized	7010.24
+    7570	fellowship	7010.24
+    7571	posture	7006.28
+    7572	caps	7005.49
+    7573	Leon	7004.70
+    7574	demanding	7003.12
+    7575	owl	7002.33
+    7576	beset	7001.54
+    7577	ensuring	7001.54
+    7578	suite	6997.58
+    7579	Tennyson	6996.79
+    7580	thereto	6996.00
+    7581	heaped	6992.04
+    7582	jewel	6992.04
+    7583	regained	6991.25
+    7584	voluntarily	6984.92
+    7585	longitude	6977.01
+    7586	permanently	6976.22
+    7587	jumping	6974.64
+    7588	babe	6973.85
+    7589	secondly	6973.06
+    7590	violin	6971.47
+    7591	rogue	6969.10
+    7592	rainy	6968.31
+    7593	reconciliation	6968.31
+    7594	emotional	6967.52
+    7595	radical	6962.77
+    7596	accursed	6958.81
+    7597	tendencies	6958.02
+    7598	concrete	6957.23
+    7599	resident	6956.44
+    7600	lustre	6954.86
+    7601	hull	6954.07
+    7602	ominous	6953.28
+    7603	overboard	6952.49
+    7604	uproar	6951.69
+    7605	cavern	6950.90
+    7606	combine	6950.11
+    7607	respectively	6950.11
+    7608	menace	6946.95
+    7609	pilgrims	6945.37
+    7610	Jeff	6942.99
+    7611	peak	6942.20
+    7612	currency	6941.41
+    7613	silken	6941.41
+    7614	violet	6939.83
+    7615	Khan	6937.45
+    7616	mastery	6937.45
+    7617	objective	6929.54
+    7618	plucked	6927.17
+    7619	litter	6926.38
+    7620	memorial	6925.59
+    7621	bids	6923.21
+    7622	fondly	6923.21
+    7623	clapped	6920.84
+    7624	tariff	6917.68
+    7625	beneficial	6916.88
+    7626	unsolicited	6916.88
+    7627	reluctant	6914.51
+    7628	separately	6906.60
+    7629	patronage	6905.81
+    7630	revenues	6904.23
+    7631	dragon	6903.44
+    7632	Zeus	6901.85
+    7633	mike	6899.48
+    7634	ranges	6897.90
+    7635	vexation	6897.11
+    7636	indicates	6896.32
+    7637	overheard	6895.52
+    7638	tray	6894.73
+    7639	Raymond	6891.57
+    7640	thereafter	6890.78
+    7641	exporting	6889.99
+    7642	mound	6889.99
+    7643	taxation	6886.82
+    7644	frenzy	6884.45
+    7645	horizontal	6881.28
+    7646	thirsty	6880.49
+    7647	disputed	6879.70
+    7648	charter	6876.54
+    7649	redistribution	6876.54
+    7650	boasted	6875.75
+    7651	item	6875.75
+    7652	Moscow	6873.37
+    7653	termination	6872.58
+    7654	eminently	6871.79
+    7655	suggestive	6871.00
+    7656	linger	6869.42
+    7657	shady	6868.63
+    7658	calculation	6867.04
+    7659	expansion	6864.67
+    7660	mast	6859.92
+    7661	confer	6859.13
+    7662	Sophia	6859.13
+    7663	commanders	6853.59
+    7664	pitied	6852.01
+    7665	twist	6852.01
+    7666	traditional	6851.22
+    7667	involve	6850.43
+    7668	interfered	6848.06
+    7669	Achilles	6846.47
+    7670	wanton	6846.47
+    7671	repay	6845.68
+    7672	brother-in-law	6844.89
+    7673	routine	6844.89
+    7674	son-in-law	6842.52
+    7675	Gaul	6841.73
+    7676	groom	6840.14
+    7677	solve	6840.14
+    7678	grassy	6836.98
+    7679	tempt	6836.19
+    7680	unsuccessful	6836.19
+    7681	witty	6836.19
+    7682	politician	6834.61
+    7683	yearning	6834.61
+    7684	lid	6833.02
+    7685	noticing	6833.02
+    7686	courtiers	6831.44
+    7687	cheering	6829.86
+    7688	bounty	6828.28
+    7689	consequent	6826.70
+    7690	renown	6824.32
+    7691	regulation	6823.53
+    7692	fowl	6820.37
+    7693	mayor	6818.78
+    7694	wrinkled	6817.99
+    7695	defy	6817.20
+    7696	threads	6817.20
+    7697	violation	6817.20
+    7698	junction	6816.41
+    7699	boss	6814.83
+    7700	particles	6814.04
+    7701	glories	6810.87
+    7702	signifies	6810.08
+    7703	constrained	6806.92
+    7704	paternal	6806.92
+    7705	piles	6805.33
+    7706	hardware	6804.54
+    7707	engaging	6803.75
+    7708	e.g.	6802.17
+    7709	peer	6802.17
+    7710	counties	6801.38
+    7711	mocking	6801.38
+    7712	ch.	6799.01
+    7713	avoiding	6798.21
+    7714	rebuke	6796.63
+    7715	abolished	6793.47
+    7716	cheers	6792.68
+    7717	idiot	6791.09
+    7718	3rd	6790.30
+    7719	morbid	6790.30
+    7720	wrung	6787.93
+    7721	e-mail	6787.14
+    7722	outcome	6782.39
+    7723	gilt	6774.48
+    7724	coldness	6768.94
+    7725	applying	6768.15
+    7726	strand	6761.82
+    7727	renowned	6760.24
+    7728	fishermen	6757.08
+    7729	creative	6755.49
+    7730	circus	6753.12
+    7731	moustache	6753.12
+    7732	proverb	6750.75
+    7733	lowering	6746.79
+    7734	biggest	6746.00
+    7735	sly	6742.83
+    7736	nursing	6741.25
+    7737	boon	6739.67
+    7738	weighing	6738.09
+    7739	Oklahoma	6735.71
+    7740	brink	6734.13
+    7741	degraded	6734.13
+    7742	avenge	6731.76
+    7743	hum	6730.97
+    7744	minority	6730.97
+    7745	Spaniard	6730.97
+    7746	ridges	6729.39
+    7747	perils	6727.80
+    7748	Larry	6725.43
+    7749	merchandise	6723.06
+    7750	aloof	6721.47
+    7751	despairing	6720.68
+    7752	acquisition	6719.10
+    7753	asylum	6718.31
+    7754	chickens	6718.31
+    7755	placid	6718.31
+    7756	affirm	6715.94
+    7757	trod	6715.94
+    7758	gardener	6711.98
+    7759	schedule	6711.19
+    7760	calmness	6710.40
+    7761	protector	6710.40
+    7762	concealment	6707.23
+    7763	trench	6704.86
+    7764	fore	6699.32
+    7765	accession	6689.83
+    7766	h	6688.25
+    7767	dey	6685.87
+    7768	connexion	6685.08
+    7769	Cairo	6684.29
+    7770	mend	6681.92
+    7771	considers	6677.17
+    7772	twenty-one	6677.17
+    7773	municipal	6675.59
+    7774	achievements	6674.80
+    7775	cherish	6674.80
+    7776	deserving	6674.80
+    7777	exert	6672.42
+    7778	riot	6672.42
+    7779	veteran	6672.42
+    7780	advancement	6670.05
+    7781	inventor	6666.89
+    7782	meek	6666.09
+    7783	Cameron	6662.93
+    7784	hopelessly	6661.35
+    7785	judicious	6661.35
+    7786	tending	6658.18
+    7787	testify	6657.39
+    7788	governess	6656.60
+    7789	orchestra	6655.81
+    7790	garb	6655.02
+    7791	condemnation	6653.44
+    7792	foregoing	6652.65
+    7793	bacon	6649.48
+    7794	maternal	6648.69
+    7795	wasting	6648.69
+    7796	Australian	6645.53
+    7797	strata	6645.53
+    7798	hushed	6644.73
+    7799	Maryland	6644.73
+    7800	sculpture	6644.73
+    7801	miniature	6640.78
+    7802	corrections	6639.99
+    7803	tangled	6638.41
+    7804	completion	6631.28
+    7805	regulated	6631.28
+    7806	Athenian	6629.70
+    7807	flavor	6628.12
+    7808	brand	6627.33
+    7809	intimately	6625.75
+    7810	unlimited	6625.75
+    7811	dipped	6622.58
+    7812	luggage	6621.79
+    7813	inconsistent	6621.00
+    7814	forsaken	6619.42
+    7815	feebly	6618.63
+    7816	woven	6617.84
+    7817	Lloyd	6617.04
+    7818	rubbish	6617.04
+    7819	tool	6617.04
+    7820	spirited	6615.46
+    7821	christendom	6614.67
+    7822	chaos	6610.72
+    7823	twinkling	6610.72
+    7824	muffled	6609.13
+    7825	accents	6607.55
+    7826	accidentally	6603.60
+    7827	degradation	6599.64
+    7828	emancipation	6598.06
+    7829	prosecution	6596.48
+    7830	Cleveland	6595.68
+    7831	outbreak	6594.89
+    7832	defending	6593.31
+    7833	dwarf	6592.52
+    7834	abundantly	6590.15
+    7835	turner	6590.15
+    7836	disadvantage	6586.19
+    7837	abolition	6585.40
+    7838	disregard	6585.40
+    7839	deliberation	6584.61
+    7840	filthy	6583.82
+    7841	AK	6579.07
+    7842	notifies	6577.49
+    7843	dealings	6576.70
+    7844	demonstrated	6576.70
+    7845	paced	6575.91
+    7846	tense	6575.91
+    7847	drums	6573.53
+    7848	interpreter	6573.53
+    7849	vanish	6572.74
+    7850	astray	6571.16
+    7851	hen	6569.58
+    7852	workman	6569.58
+    7853	asunder	6566.41
+    7854	baked	6566.41
+    7855	Baltimore	6566.41
+    7856	bustle	6565.62
+    7857	winged	6565.62
+    7858	mentioning	6564.04
+    7859	pastoral	6564.04
+    7860	fabric	6563.25
+    7861	trim	6563.25
+    7862	musician	6558.50
+    7863	twenty-two	6558.50
+    7864	patty	6556.92
+    7865	mentally	6553.75
+    7866	wrecked	6553.75
+    7867	discreet	6552.96
+    7868	Godfrey	6552.96
+    7869	apostle	6552.17
+    7870	ledge	6549.80
+    7871	roast	6549.80
+    7872	accessed	6547.42
+    7873	preface	6546.63
+    7874	convincing	6542.68
+    7875	quiver	6537.93
+    7876	stocks	6537.93
+    7877	mourn	6534.77
+    7878	commented	6533.98
+    7879	redistribute	6532.39
+    7880	precipice	6528.44
+    7881	outdated	6527.65
+    7882	Juliet	6526.86
+    7883	dialect	6526.06
+    7884	elementary	6525.27
+    7885	freight	6525.27
+    7886	cowardice	6522.90
+    7887	wipe	6522.90
+    7888	deserts	6519.74
+    7889	shelves	6517.36
+    7890	denial	6514.20
+    7891	1b	6504.70
+    7892	traits	6503.91
+    7893	denounced	6503.12
+    7894	Eric	6503.12
+    7895	underground	6499.17
+    7896	phantom	6498.37
+    7897	whirling	6498.37
+    7898	pecuniary	6494.42
+    7899	dire	6493.63
+    7900	hostilities	6493.63
+    7901	gait	6492.84
+    7902	it'll	6492.05
+    7903	vividly	6490.46
+    7904	instruct	6488.88
+    7905	dickens	6486.51
+    7906	puritan	6486.51
+    7907	clutched	6484.93
+    7908	acknowledgment	6484.13
+    7909	conjunction	6481.76
+    7910	oppressive	6480.97
+    7911	intermediate	6480.18
+    7912	formula	6478.60
+    7913	Hungary	6477.01
+    7914	sneer	6469.10
+    7915	ore	6468.31
+    7916	plentiful	6468.31
+    7917	plump	6467.52
+    7918	combinations	6464.36
+    7919	purest	6463.56
+    7920	cheat	6462.77
+    7921	doubly	6462.77
+    7922	inadequate	6461.19
+    7923	Leslie	6459.61
+    7924	blest	6458.82
+    7925	forbear	6457.24
+    7926	haunt	6454.07
+    7927	treaties	6454.07
+    7928	fearless	6453.28
+    7929	constable	6452.49
+    7930	enveloped	6450.91
+    7931	enmity	6449.32
+    7932	Watson	6447.74
+    7933	bridegroom	6446.16
+    7934	curate	6445.37
+    7935	developing	6445.37
+    7936	frock	6442.99
+    7937	mining	6439.83
+    7938	audacity	6436.67
+    7939	improper	6434.29
+    7940	motto	6432.71
+    7941	Parisian	6431.92
+    7942	faction	6424.80
+    7943	architect	6422.43
+    7944	melting	6421.63
+    7945	delicately	6420.05
+    7946	register	6419.26
+    7947	heroine	6416.89
+    7948	indefinite	6412.14
+    7949	console	6408.19
+    7950	defensive	6408.19
+    7951	perceptible	6406.60
+    7952	fruitless	6405.81
+    7953	ransom	6401.06
+    7954	surplus	6398.69
+    7955	solicitude	6396.32
+    7956	effectual	6393.15
+    7957	shiver	6387.62
+    7958	gal	6386.82
+    7959	wed	6386.03
+    7960	contemptuous	6385.24
+    7961	plough	6382.87
+    7962	snakes	6381.29
+    7963	felicity	6380.50
+    7964	reef	6380.50
+    7965	outset	6379.70
+    7966	constitutes	6378.91
+    7967	lament	6378.91
+    7968	tissue	6378.12
+    7969	draft	6377.33
+    7970	impelled	6376.54
+    7971	epic	6374.96
+    7972	fisherman	6369.42
+    7973	Hawaii	6368.63
+    7974	obstinacy	6367.84
+    7975	Ulysses	6367.84
+    7976	lemon	6367.05
+    7977	Voltaire	6365.46
+    7978	hound	6364.67
+    7979	measuring	6361.51
+    7980	conscientious	6358.34
+    7981	robber	6355.97
+    7982	toy	6355.97
+    7983	impart	6355.18
+    7984	statute	6353.60
+    7985	Barry	6352.81
+    7986	girdle	6352.01
+    7987	basil	6348.06
+    7988	rebellious	6348.06
+    7989	stair	6346.48
+    7990	biting	6344.89
+    7991	consulting	6344.89
+    7992	perseverance	6344.89
+    7993	manila	6340.94
+    7994	massacre	6339.36
+    7995	cough	6338.57
+    7996	blazed	6337.77
+    7997	Claude	6337.77
+    7998	transition	6337.77
+    7999	button	6334.61
+    8000	headache	6332.24
+    8001	tenant	6331.44
+    8002	burns	6330.65
+    8003	harmonious	6329.86
+    8004	dreamy	6325.91
+    8005	burgundy	6324.32
+    8006	collections	6321.95
+    8007	unkind	6321.16
+    8008	inscribed	6319.58
+    8009	cushions	6318.79
+    8010	programme	6317.20
+    8011	din	6316.41
+    8012	laborious	6316.41
+    8013	manufacturing	6315.62
+    8014	markets	6312.46
+    8015	zone	6308.50
+    8016	humane	6306.92
+    8017	AC	6306.13
+    8018	fertility	6305.34
+    8019	languid	6305.34
+    8020	ninth	6304.55
+    8021	curses	6303.76
+    8022	introducing	6302.96
+    8023	alcohol	6300.59
+    8024	impending	6299.01
+    8025	declining	6297.43
+    8026	advantageous	6295.05
+    8027	heal	6294.26
+    8028	millennium	6294.26
+    8029	Karl	6293.47
+    8030	ft.	6291.10
+    8031	staid	6289.51
+    8032	planting	6287.93
+    8033	theatrical	6287.93
+    8034	spectator	6286.35
+    8035	Winchester	6283.19
+    8036	greedy	6281.60
+    8037	commonwealth	6280.81
+    8038	suffrage	6280.81
+    8039	tremulous	6280.81
+    8040	commodities	6280.02
+    8041	stuffed	6280.02
+    8042	admitting	6275.27
+    8043	aching	6273.69
+    8044	ninety	6273.69
+    8045	discomfort	6272.90
+    8046	imperative	6272.90
+    8047	Montreal	6272.11
+    8048	bobby	6271.32
+    8049	bachelor	6269.74
+    8050	geographical	6268.95
+    8051	longest	6268.95
+    8052	courageous	6266.57
+    8053	carpenter	6259.45
+    8054	Sundays	6254.70
+    8055	concluding	6253.12
+    8056	danish	6252.33
+    8057	steer	6251.54
+    8058	influential	6249.96
+    8059	surround	6249.96
+    8060	random	6249.17
+    8061	ounce	6248.38
+    8062	afresh	6246.79
+    8063	dictated	6239.67
+    8064	ruddy	6239.67
+    8065	rusty	6239.67
+    8066	drown	6238.88
+    8067	Irving	6238.09
+    8068	slide	6238.09
+    8069	sow	6237.30
+    8070	appalling	6236.51
+    8071	profess	6234.93
+    8072	sickly	6234.14
+    8073	rides	6233.34
+    8074	spoon	6233.34
+    8075	imminent	6232.55
+    8076	dominant	6230.97
+    8077	leadership	6224.64
+    8078	pinch	6223.06
+    8079	wearily	6223.06
+    8080	ducks	6222.27
+    8081	diary	6219.10
+    8082	duchess	6218.31
+    8083	regain	6218.31
+    8084	rum	6217.52
+    8085	churchyard	6214.36
+    8086	fondness	6214.36
+    8087	apprehend	6212.77
+    8088	ordinarily	6211.19
+    8089	quicker	6211.19
+    8090	thereon	6211.19
+    8091	ni	6209.61
+    8092	balloon	6208.03
+    8093	individuality	6208.03
+    8094	securely	6208.03
+    8095	connecting	6207.24
+    8096	celebrate	6206.45
+    8097	bluff	6205.65
+    8098	dawned	6205.65
+    8099	amiss	6204.86
+    8100	chalk	6203.28
+    8101	sticking	6201.70
+    8102	fuss	6200.91
+    8103	dazed	6199.33
+    8104	deputy	6199.33
+    8105	forsake	6197.74
+    8106	automobile	6196.95
+    8107	discussions	6195.37
+    8108	Harrison	6195.37
+    8109	refreshment	6195.37
+    8110	amendment	6194.58
+    8111	appealing	6189.04
+    8112	Eden	6189.04
+    8113	vertical	6188.25
+    8114	insufficient	6184.29
+    8115	Manchester	6182.71
+    8116	hem	6179.55
+    8117	gorge	6177.96
+    8118	baptized	6175.59
+    8119	damn	6174.01
+    8120	silvery	6173.22
+    8121	pastor	6171.64
+    8122	inherent	6170.05
+    8123	preventing	6169.26
+    8124	inference	6168.47
+    8125	advertisement	6167.68
+    8126	mutton	6167.68
+    8127	packing	6167.68
+    8128	enclosure	6165.31
+    8129	theft	6164.52
+    8130	publisher	6162.93
+    8131	spontaneous	6161.35
+    8132	Otto	6158.98
+    8133	rats	6158.98
+    8134	apparition	6158.19
+    8135	refreshing	6158.19
+    8136	Irene	6156.60
+    8137	sweetheart	6156.60
+    8138	renounce	6155.02
+    8139	lifeless	6154.23
+    8140	adore	6153.44
+    8141	vinegar	6149.48
+    8142	Normandy	6147.11
+    8143	uncovered	6147.11
+    8144	utility	6146.32
+    8145	orphan	6144.74
+    8146	symbols	6143.15
+    8147	gracefully	6142.36
+    8148	mightily	6142.36
+    8149	peculiarity	6142.36
+    8150	ash	6141.57
+    8151	floods	6139.20
+    8152	partake	6138.41
+    8153	contemptible	6137.62
+    8154	deities	6135.24
+    8155	profane	6134.45
+    8156	foreseen	6133.66
+    8157	ti	6132.87
+    8158	conceit	6132.08
+    8159	commend	6129.71
+    8160	twelfth	6129.71
+    8161	Bristol	6127.33
+    8162	manifestation	6126.54
+    8163	revive	6126.54
+    8164	prone	6123.38
+    8165	connect	6121.79
+    8166	princely	6117.84
+    8167	overtake	6117.05
+    8168	improving	6115.47
+    8169	downwards	6112.30
+    8170	ferocious	6111.51
+    8171	intervention	6110.72
+    8172	subsistence	6109.14
+    8173	susceptible	6109.14
+    8174	tunnel	6109.14
+    8175	disciple	6108.35
+    8176	revival	6107.55
+    8177	twins	6106.76
+    8178	ivy	6105.97
+    8179	puzzle	6103.60
+    8180	citadel	6100.43
+    8181	temporarily	6100.43
+    8182	despotism	6099.64
+    8183	internet	6099.64
+    8184	mechanism	6098.85
+    8185	stoop	6098.85
+    8186	directors	6097.27
+    8187	mathematics	6095.69
+    8188	raft	6095.69
+    8189	fade	6094.90
+    8190	soothe	6093.31
+    8191	pork	6092.52
+    8192	substituted	6092.52
+    8193	physically	6091.73
+    8194	brilliancy	6086.98
+    8195	dot	6086.98
+    8196	loaf	6086.19
+    8197	expanse	6079.86
+    8198	shocking	6079.07
+    8199	rudely	6075.12
+    8200	isle	6074.33
+    8201	balanced	6072.74
+    8202	extracted	6071.95
+    8203	fable	6071.95
+    8204	matches	6071.95
+    8205	index	6068.00
+    8206	Gerard	6066.41
+    8207	cigars	6065.62
+    8208	liver	6063.25
+    8209	transmit	6063.25
+    8210	dispatch	6061.67
+    8211	onto	6056.13
+    8212	veranda	6056.13
+    8213	dip	6054.55
+    8214	inexplicable	6052.97
+    8215	liar	6052.17
+    8216	diminish	6049.80
+    8217	dungeon	6045.85
+    8218	unit	6043.47
+    8219	pagan	6042.68
+    8220	Phillips	6040.31
+    8221	brig	6039.52
+    8222	monopoly	6039.52
+    8223	rim	6039.52
+    8224	sordid	6031.60
+    8225	complaining	6030.81
+    8226	temperate	6030.81
+    8227	chat	6030.02
+    8228	gambling	6030.02
+    8229	maps	6028.44
+    8230	amber	6025.28
+    8231	trot	6025.28
+    8232	howl	6021.32
+    8233	shipping	6021.32
+    8234	ton	6021.32
+    8235	magazines	6020.53
+    8236	bricks	6017.36
+    8237	submarine	6016.57
+    8238	Roberts	6015.78
+    8239	Cumberland	6012.62
+    8240	Cecil	6007.87
+    8241	semblance	6007.08
+    8242	Palestine	6006.29
+    8243	perpendicular	6005.50
+    8244	regardless	6005.50
+    8245	fervent	6004.71
+    8246	sane	6004.71
+    8247	wreath	6003.92
+    8248	animation	6001.54
+    8249	earthquake	5999.96
+    8250	sloping	5998.38
+    8251	smoothly	5998.38
+    8252	tension	5998.38
+    8253	intrigues	5996.00
+    8254	fearfully	5995.21
+    8255	macaulay	5994.42
+    8256	laboratory	5992.05
+    8257	cork	5991.26
+    8258	comments	5986.51
+    8259	whale	5986.51
+    8260	wedded	5985.72
+    8261	whiteness	5984.93
+    8262	convicted	5984.14
+    8263	deception	5982.55
+    8264	paved	5982.55
+    8265	scruple	5982.55
+    8266	paintings	5981.76
+    8267	therewith	5981.76
+    8268	religions	5980.97
+    8269	governing	5978.60
+    8270	colleagues	5977.81
+    8271	shrinking	5977.02
+    8272	tickets	5975.43
+    8273	prophetic	5974.64
+    8274	undergo	5974.64
+    8275	hare	5973.06
+    8276	haze	5972.27
+    8277	poisonous	5971.48
+    8278	omit	5969.90
+    8279	beware	5969.11
+    8280	sagacity	5965.94
+    8281	concession	5965.15
+    8282	worker	5965.15
+    8283	ted	5962.78
+    8284	incline	5961.99
+    8285	caste	5960.40
+    8286	leapt	5960.40
+    8287	dissatisfied	5955.66
+    8288	hardest	5954.07
+    8289	self-control	5954.07
+    8290	toilet	5953.28
+    8291	buddha	5951.70
+    8292	offense	5951.70
+    8293	woodland	5951.70
+    8294	gentry	5950.91
+    8295	starvation	5947.74
+    8296	grudge	5946.95
+    8297	penance	5946.16
+    8298	tips	5946.16
+    8299	rooted	5944.58
+    8300	outburst	5943.00
+    8301	fortitude	5939.83
+    8302	turk	5939.04
+    8303	devour	5937.46
+    8304	malignant	5935.88
+    8305	accorded	5932.71
+    8306	brandon	5931.92
+    8307	anticipate	5931.13
+    8308	speechless	5931.13
+    8309	inquisition	5929.55
+    8310	eccentric	5927.97
+    8311	anecdote	5927.18
+    8312	annals	5927.18
+    8313	scrutiny	5924.01
+    8314	burroughs	5920.85
+    8315	rhythm	5918.47
+    8316	discord	5917.68
+    8317	marius	5912.93
+    8318	diversion	5908.98
+    8319	archie	5905.02
+    8320	rat	5905.02
+    8321	knit	5902.65
+    8322	correspond	5901.07
+    8323	detain	5901.07
+    8324	dis	5901.07
+    8325	esp	5901.07
+    8326	interpret	5900.28
+    8327	vehement	5898.69
+    8328	soda	5897.90
+    8329	naughty	5894.74
+    8330	salon	5893.16
+    8331	operate	5890.78
+    8332	idly	5889.99
+    8333	imperious	5889.20
+    8334	Peru	5889.20
+    8335	candid	5888.41
+    8336	Whig	5888.41
+    8337	blooming	5886.83
+    8338	wharf	5886.04
+    8339	disgraceful	5883.66
+    8340	stunned	5883.66
+    8341	redemption	5881.29
+    8342	drain	5878.12
+    8343	wage	5878.12
+    8344	cooper	5874.96
+    8345	embassy	5874.96
+    8346	unfinished	5874.17
+    8347	nasty	5872.59
+    8348	impetuous	5871.00
+    8349	cemetery	5868.63
+    8350	oblivion	5868.63
+    8351	prohibited	5867.05
+    8352	breeches	5866.26
+    8353	abound	5864.68
+    8354	Christine	5860.72
+    8355	frivolous	5855.97
+    8356	Hugo	5855.18
+    8357	essays	5854.39
+    8358	plaster	5852.81
+    8359	tap	5850.44
+    8360	chairman	5848.06
+    8361	dismiss	5848.06
+    8362	Katherine	5848.06
+    8363	provoke	5848.06
+    8364	reside	5844.11
+    8365	deficient	5842.52
+    8366	decoration	5840.94
+    8367	heroism	5840.15
+    8368	toe	5840.15
+    8369	wade	5839.36
+    8370	apparel	5836.19
+    8371	hazel	5836.19
+    8372	inability	5836.19
+    8373	farthest	5833.82
+    8374	invent	5831.45
+    8375	knave	5831.45
+    8376	twain	5829.07
+    8377	carelessness	5826.70
+    8378	affectation	5822.75
+    8379	connections	5821.16
+    8380	climax	5820.37
+    8381	avowed	5816.42
+    8382	industries	5816.42
+    8383	brood	5813.25
+    8384	tempting	5812.46
+    8385	define	5804.55
+    8386	antwerp	5803.76
+    8387	forefathers	5803.76
+    8388	stretches	5802.18
+    8389	gratifying	5801.38
+    8390	plight	5800.59
+    8391	restricted	5800.59
+    8392	cupboard	5799.01
+    8393	ludicrous	5798.22
+    8394	alms	5797.43
+    8395	colossal	5795.06
+    8396	stupidity	5791.10
+    8397	monotony	5790.31
+    8398	stimulus	5790.31
+    8399	vigilance	5788.73
+    8400	digest	5784.77
+    8401	vale	5784.77
+    8402	overcoat	5783.19
+    8403	colorado	5782.40
+    8404	wink	5780.82
+    8405	nous	5775.28
+    8406	rack	5775.28
+    8407	incomprehensible	5773.70
+    8408	antagonist	5772.90
+    8409	methinks	5767.37
+    8410	barley	5764.20
+    8411	plateau	5758.66
+    8412	superintendent	5754.71
+    8413	indescribable	5744.42
+    8414	expanded	5743.63
+    8415	presentation	5742.84
+    8416	archbishop	5742.05
+    8417	devise	5740.47
+    8418	rubber	5738.89
+    8419	adieu	5738.09
+    8420	exclude	5737.30
+    8421	carts	5736.51
+    8422	lone	5734.93
+    8423	whisky	5734.14
+    8424	abuses	5732.56
+    8425	inflict	5730.97
+    8426	nightfall	5730.97
+    8427	counts	5730.18
+    8428	chocolate	5728.60
+    8429	privileged	5728.60
+    8430	hermit	5727.81
+    8431	exultation	5727.02
+    8432	overtook	5727.02
+    8433	coincidence	5726.23
+    8434	scratch	5726.23
+    8435	screw	5723.85
+    8436	caravan	5723.06
+    8437	divert	5719.90
+    8438	eliza	5719.90
+    8439	comparing	5717.52
+    8440	hood	5716.73
+    8441	explore	5715.15
+    8442	glove	5715.15
+    8443	chaste	5713.57
+    8444	whirl	5713.57
+    8445	adventurous	5707.24
+    8446	skipper	5703.28
+    8447	tiresome	5702.49
+    8448	implements	5701.70
+    8449	recompense	5701.70
+    8450	plank	5700.91
+    8451	insure	5696.96
+    8452	laboured	5696.16
+    8453	exaggeration	5691.42
+    8454	mi	5689.83
+    8455	shepherds	5689.04
+    8456	lilies	5688.25
+    8457	ballad	5685.88
+    8458	befall	5683.51
+    8459	cylinder	5682.71
+    8460	teddy	5676.39
+    8461	summary	5671.64
+    8462	daresay	5669.27
+    8463	photographs	5669.27
+    8464	colleges	5664.52
+    8465	dissolution	5664.52
+    8466	geneva	5662.94
+    8467	marches	5662.15
+    8468	instituted	5655.02
+    8469	seals	5655.02
+    8470	vehemence	5654.23
+    8471	chaplain	5653.44
+    8472	knots	5653.44
+    8473	wail	5650.28
+    8474	kneel	5647.11
+    8475	unlikely	5644.74
+    8476	deceit	5643.95
+    8477	challenged	5640.78
+    8478	geography	5639.20
+    8479	herald	5637.62
+    8480	lowly	5636.83
+    8481	peep	5636.83
+    8482	swarm	5636.04
+    8483	clarke	5633.66
+    8484	joyfully	5633.66
+    8485	engraved	5632.08
+    8486	ll	5632.08
+    8487	bowels	5631.29
+    8488	purposely	5629.71
+    8489	blindness	5628.92
+    8490	systematic	5626.54
+    8491	virtually	5624.96
+    8492	conformity	5621.80
+    8493	remedies	5617.84
+    8494	maxim	5617.05
+    8495	indexes	5613.89
+    8496	marshall	5613.89
+    8497	baking	5613.09
+    8498	invincible	5612.30
+    8499	impertinent	5611.51
+    8500	bust	5609.93
+    8501	visage	5609.93
+    8502	intuition	5609.14
+    8503	mingle	5609.14
+    8504	bathing	5607.56
+    8505	arched	5606.77
+    8506	investment	5605.97
+    8507	tabernacle	5604.39
+    8508	86	5601.23
+    8509	client	5601.23
+    8510	ghostly	5601.23
+    8511	furs	5600.44
+    8512	catalogue	5598.85
+    8513	dock	5598.06
+    8514	tenor	5598.06
+    8515	arouse	5597.27
+    8516	verbal	5592.53
+    8517	excessively	5590.94
+    8518	brazil	5588.57
+    8519	strenuous	5587.78
+    8520	irishman	5585.41
+    8521	recess	5582.24
+    8522	unclean	5581.45
+    8523	psalms	5580.66
+    8524	analogy	5579.08
+    8525	chemistry	5579.08
+    8526	peninsula	5579.08
+    8527	infer	5578.28
+    8528	maritime	5577.49
+    8529	secular	5576.70
+    8530	hawk	5574.33
+    8531	rein	5573.54
+    8532	averted	5572.75
+    8533	bake	5572.75
+    8534	constantine	5571.96
+    8535	oracle	5571.96
+    8536	alley	5568.00
+    8537	softness	5568.00
+    8538	pierce	5565.63
+    8539	spinning	5564.84
+    8540	snatch	5563.25
+    8541	manufactured	5561.67
+    8542	launch	5560.88
+    8543	psychology	5560.88
+    8544	worms	5560.88
+    8545	regulate	5560.09
+    8546	farming	5557.72
+    8547	fasten	5556.92
+    8548	actress	5553.76
+    8549	etiquette	5551.39
+    8550	theater	5551.39
+    8551	thanksgiving	5550.60
+    8552	valor	5549.01
+    8553	untouched	5548.22
+    8554	tactics	5547.43
+    8555	drug	5546.64
+    8556	adverse	5545.06
+    8557	gaunt	5544.27
+    8558	conducting	5542.68
+    8559	veritable	5541.10
+    8560	overtaken	5539.52
+    8561	distorted	5538.73
+    8562	rosa	5538.73
+    8563	nina	5537.94
+    8564	quart	5537.94
+    8565	caprice	5536.35
+    8566	candy	5531.61
+    8567	obliging	5525.28
+    8568	planets	5525.28
+    8569	soothed	5524.49
+    8570	sic	5523.70
+    8571	opium	5520.53
+    8572	pavilion	5520.53
+    8573	strait	5518.16
+    8574	sanguine	5516.58
+    8575	cords	5512.62
+    8576	odour	5512.62
+    8577	trout	5510.25
+    8578	paste	5509.46
+    8579	regularity	5504.71
+    8580	metallic	5497.59
+    8581	scrap	5496.80
+    8582	convict	5495.22
+    8583	instructive	5494.42
+    8584	investigate	5492.05
+    8585	celtic	5490.47
+    8586	package	5488.10
+    8587	pirate	5486.51
+    8588	fiend	5484.93
+    8589	moan	5484.93
+    8590	revealing	5484.93
+    8591	trades	5483.35
+    8592	rounds	5481.77
+    8593	accomplishments	5479.39
+    8594	crawl	5477.81
+    8595	aft	5476.23
+    8596	prevalent	5473.86
+    8597	role	5473.86
+    8598	dose	5471.48
+    8599	evans	5471.48
+    8600	hypocrisy	5470.69
+    8601	l	5469.90
+    8602	salmon	5468.32
+    8603	snap	5468.32
+    8604	alma	5465.94
+    8605	magical	5464.36
+    8606	tire	5463.57
+    8607	hetty	5462.78
+    8608	impenetrable	5462.78
+    8609	geese	5461.99
+    8610	madly	5460.41
+    8611	manifold	5460.41
+    8612	noticeable	5460.41
+    8613	pudding	5460.41
+    8614	volcanic	5459.61
+    8615	locke	5458.82
+    8616	magnetic	5458.82
+    8617	deals	5458.03
+    8618	core	5456.45
+    8619	decency	5455.66
+    8620	observance	5455.66
+    8621	durst	5448.54
+    8622	scratched	5448.54
+    8623	predecessor	5446.96
+    8624	diplomacy	5446.17
+    8625	wert	5446.17
+    8626	impartial	5444.58
+    8627	disinterested	5440.63
+    8628	wig	5440.63
+    8629	pump	5439.05
+    8630	swedish	5437.46
+    8631	norfolk	5436.67
+    8632	reigns	5433.51
+    8633	similarly	5432.72
+    8634	reap	5431.13
+    8635	dam	5430.34
+    8636	facilities	5430.34
+    8637	slippery	5430.34
+    8638	transformation	5427.97
+    8639	oxygen	5427.18
+    8640	suburbs	5427.18
+    8641	dares	5426.39
+    8642	ornamental	5425.60
+    8643	pondered	5424.80
+    8644	fringe	5423.22
+    8645	raiment	5421.64
+    8646	henrietta	5420.85
+    8647	wellington	5420.85
+    8648	foreman	5419.27
+    8649	feat	5418.48
+    8650	thirteenth	5418.48
+    8651	sultan	5416.89
+    8652	certificate	5416.10
+    8653	rue	5415.31
+    8654	heresy	5413.73
+    8655	arabia	5410.56
+    8656	medal	5409.77
+    8657	location	5405.03
+    8658	ether	5404.24
+    8659	ruby	5401.86
+    8660	heading	5396.32
+    8661	subdue	5394.74
+    8662	adorn	5391.58
+    8663	ancestor	5391.58
+    8664	warmer	5391.58
+    8665	cluster	5389.99
+    8666	quotation	5389.99
+    8667	fullest	5389.20
+    8668	exposition	5388.41
+    8669	custody	5386.04
+    8670	thermometer	5386.04
+    8671	plausible	5383.67
+    8672	toss	5381.29
+    8673	desperation	5378.92
+    8674	rhetoric	5378.92
+    8675	scornful	5378.13
+    8676	bailey	5376.55
+    8677	rung	5376.55
+    8678	civility	5375.75
+    8679	dingy	5375.75
+    8680	scaffold	5374.96
+    8681	concentration	5374.17
+    8682	avarice	5373.38
+    8683	scrape	5373.38
+    8684	pools	5371.80
+    8685	oar	5370.22
+    8686	flutter	5369.43
+    8687	martyr	5369.43
+    8688	handy	5368.63
+    8689	montague	5368.63
+    8690	bait	5367.84
+    8691	login	5367.84
+    8692	commotion	5367.05
+    8693	congenial	5367.05
+    8694	drawers	5365.47
+    8695	telescope	5365.47
+    8696	deposits	5363.10
+    8697	edwards	5361.51
+    8698	craving	5360.72
+    8699	bureau	5359.14
+    8700	oscar	5358.35
+    8701	speculative	5358.35
+    8702	huddled	5356.77
+    8703	diverse	5355.18
+    8704	slice	5354.39
+    8705	renaissance	5352.81
+    8706	angelo	5348.86
+    8707	meg	5347.27
+    8708	murderous	5347.27
+    8709	serenity	5347.27
+    8710	perspiration	5346.48
+    8711	coventry	5344.90
+    8712	impudent	5344.11
+    8713	ardor	5343.32
+    8714	necklace	5342.53
+    8715	alight	5341.74
+    8716	stimulated	5339.36
+    8717	clifford	5337.78
+    8718	steadfast	5333.82
+    8719	genoa	5332.24
+    8720	anglo-saxon	5330.66
+    8721	courier	5328.29
+    8722	inflamed	5328.29
+    8723	xi	5328.29
+    8724	drill	5325.91
+    8725	spelling	5323.54
+    8726	respond	5322.75
+    8727	seriousness	5321.17
+    8728	fourteenth	5319.58
+    8729	womb	5319.58
+    8730	literal	5317.21
+    8731	singers	5317.21
+    8732	usefulness	5315.63
+    8733	cloudy	5314.84
+    8734	mortality	5314.84
+    8735	profusion	5314.84
+    8736	fleeting	5314.05
+    8737	twentieth	5314.05
+    8738	maturity	5313.25
+    8739	surf	5310.88
+    8740	weed	5307.72
+    8741	phases	5306.13
+    8742	overcame	5304.55
+    8743	womanhood	5304.55
+    8744	envious	5302.97
+    8745	tapped	5302.18
+    8746	latent	5300.60
+    8747	whiskey	5298.22
+    8748	relatively	5292.69
+    8749	forbidding	5290.31
+    8750	cleopatra	5288.73
+    8751	willow	5288.73
+    8752	mathematical	5286.36
+    8753	sojourn	5283.19
+    8754	booty	5282.40
+    8755	camel	5280.03
+    8756	implore	5280.03
+    8757	amateur	5279.24
+    8758	morally	5276.07
+    8759	qualifications	5273.70
+    8760	gasp	5271.32
+    8761	101	5270.53
+    8762	gliding	5268.95
+    8763	tested	5263.41
+    8764	racing	5261.83
+    8765	brightest	5261.04
+    8766	joel	5260.25
+    8767	extremes	5257.88
+    8768	damascus	5257.08
+    8769	labored	5256.29
+    8770	peggy	5255.50
+    8771	exit	5252.34
+    8772	originality	5251.55
+    8773	humming	5248.38
+    8774	isolation	5247.59
+    8775	sometime	5246.80
+    8776	glee	5246.01
+    8777	adult	5245.22
+    8778	solace	5244.43
+    8779	biography	5242.84
+    8780	ff.	5241.26
+    8781	hardship	5241.26
+    8782	lied	5241.26
+    8783	donkey	5239.68
+    8784	trader	5238.89
+    8785	rumour	5234.93
+    8786	amply	5231.77
+    8787	confide	5231.77
+    8788	favors	5231.77
+    8789	perspective	5227.81
+    8790	belgian	5226.23
+    8791	withstand	5225.44
+    8792	robust	5224.65
+    8793	pro	5223.07
+    8794	val	5222.27
+    8795	eats	5221.48
+    8796	snare	5220.69
+    8797	monthly	5219.90
+    8798	wines	5215.95
+    8799	ignore	5215.15
+    8800	envoy	5214.36
+    8801	flown	5214.36
+    8802	reverie	5213.57
+    8803	jehovah	5207.24
+    8804	contrive	5206.45
+    8805	chatter	5205.66
+    8806	judas	5205.66
+    8807	nourishment	5204.87
+    8808	reforms	5203.29
+    8809	clatter	5201.70
+    8810	Adrian	5198.54
+    8811	allude	5197.75
+    8812	corrupted	5197.75
+    8813	thorn	5196.17
+    8814	junior	5193.79
+    8815	tony	5187.46
+    8816	Calcutta	5185.88
+    8817	re	5185.88
+    8818	Holt	5185.09
+    8819	psychological	5182.72
+    8820	constancy	5181.14
+    8821	misunderstood	5180.34
+    8822	signals	5177.97
+    8823	drying	5175.60
+    8824	harshly	5174.81
+    8825	distressing	5170.85
+    8826	novelist	5170.85
+    8827	Cyril	5169.27
+    8828	editors	5168.48
+    8829	intricate	5167.69
+    8830	limestone	5166.10
+    8831	forty-five	5165.31
+    8832	collision	5164.52
+    8833	pebbles	5163.73
+    8834	Willie	5163.73
+    8835	knitting	5162.94
+    8836	ordeal	5160.57
+    8837	foresee	5158.98
+    8838	peas	5157.40
+    8839	repast	5156.61
+    8840	supplying	5152.65
+    8841	clan	5151.86
+    8842	abject	5150.28
+    8843	dart	5149.49
+    8844	berth	5148.70
+    8845	bridal	5148.70
+    8846	indirect	5148.70
+    8847	unnoticed	5148.70
+    8848	tint	5147.91
+    8849	insults	5145.53
+    8850	precedent	5143.95
+    8851	twisting	5142.37
+    8852	bully	5139.21
+    8853	vacation	5138.41
+    8854	'll	5133.67
+    8855	canon	5132.88
+    8856	aisle	5131.29
+    8857	click	5131.29
+    8858	inspiring	5131.29
+    8859	oval	5130.50
+    8860	impracticable	5128.92
+    8861	delirium	5127.34
+    8862	cedar	5126.55
+    8863	contradict	5125.76
+    8864	ingratitude	5125.76
+    8865	soften	5125.76
+    8866	bewilderment	5124.96
+    8867	servitude	5123.38
+    8868	comely	5122.59
+    8869	stump	5121.80
+    8870	redeem	5121.01
+    8871	spun	5118.64
+    8872	elastic	5117.84
+    8873	poultry	5115.47
+    8874	horseman	5114.68
+    8875	dictionary	5112.31
+    8876	prettiest	5112.31
+    8877	adoration	5109.93
+    8878	Icel.	5109.14
+    8879	wager	5109.14
+    8880	involving	5107.56
+    8881	pathway	5104.40
+    8882	Essex	5102.81
+    8883	wistful	5102.81
+    8884	advent	5102.02
+    8885	gear	5102.02
+    8886	celebration	5100.44
+    8887	conceivable	5100.44
+    8888	drowning	5100.44
+    8889	faintest	5097.28
+    8890	acquiring	5094.90
+    8891	befell	5092.53
+    8892	good-looking	5092.53
+    8893	wares	5092.53
+    8894	rendezvous	5091.74
+    8895	snug	5091.74
+    8896	watery	5091.74
+    8897	accompaniment	5090.95
+    8898	chaps	5090.95
+    8899	crawling	5088.57
+    8900	lumber	5087.78
+    8901	publishing	5087.78
+    8902	customer	5086.99
+    8903	mediaeval	5084.62
+    8904	prints	5079.87
+    8905	lavish	5078.29
+    8906	MD	5074.33
+    8907	genesis	5069.59
+    8908	rug	5068.79
+    8909	analogous	5066.42
+    8910	eleventh	5066.42
+    8911	Noah	5066.42
+    8912	galley	5062.47
+    8913	partition	5062.47
+    8914	blunder	5061.67
+    8915	Glasgow	5061.67
+    8916	fanciful	5060.09
+    8917	ham	5057.72
+    8918	rainbow	5056.14
+    8919	sentinel	5055.34
+    8920	hereby	5053.76
+    8921	outlook	5053.76
+    8922	smitten	5051.39
+    8923	unmarried	5050.60
+    8924	mice	5049.81
+    8925	installed	5049.02
+    8926	vivacity	5049.02
+    8927	marking	5048.22
+    8928	aesthetic	5045.85
+    8929	consume	5045.85
+    8930	resent	5044.27
+    8931	pose	5041.90
+    8932	contentment	5040.31
+    8933	sterling	5039.52
+    8934	veneration	5038.73
+    8935	p.m.	5037.15
+    8936	barking	5034.78
+    8937	bower	5034.78
+    8938	organism	5034.78
+    8939	unintelligible	5032.40
+    8940	emphatic	5031.61
+    8941	occurring	5030.03
+    8942	factors	5029.24
+    8943	guise	5027.66
+    8944	editorial	5026.07
+    8945	impudence	5025.28
+    8946	midday	5022.91
+    8947	corporal	5022.12
+    8948	sg	5022.12
+    8949	aright	5018.95
+    8950	nigger	5015.79
+    8951	lily	5012.62
+    8952	noun	5007.09
+    8953	scout	5007.09
+    8954	spit	5007.09
+    8955	cursing	5006.29
+    8956	Friedrich	5005.50
+    8957	manifestly	5004.71
+    8958	Marco	5004.71
+    8959	battalion	5000.76
+    8960	heritage	5000.76
+    8961	brotherhood	4999.17
+    8962	nun	4999.17
+    8963	wad	4997.59
+    8964	folding	4995.22
+    8965	discerned	4994.43
+    8966	powerfully	4994.43
+    8967	Mitchell	4990.47
+    8968	helpful	4989.68
+    8969	persist	4989.68
+    8970	Ellis	4985.73
+    8971	frigate	4984.93
+    8972	spotted	4984.93
+    8973	atoms	4983.35
+    8974	curves	4983.35
+    8975	outlet	4981.77
+    8976	erroneous	4979.40
+    8977	violated	4979.40
+    8978	withheld	4978.60
+    8979	fairies	4975.44
+    8980	inherit	4975.44
+    8981	sledge	4975.44
+    8982	taller	4973.07
+    8983	supervision	4972.28
+    8984	butt	4971.48
+    8985	handsomely	4971.48
+    8986	tank	4965.16
+    8987	velocity	4965.16
+    8988	arctic	4963.57
+    8989	colleague	4963.57
+    8990	pins	4962.78
+    8991	butcher	4961.99
+    8992	drowsy	4961.99
+    8993	butterfly	4960.41
+    8994	chart	4957.24
+    8995	twin	4957.24
+    8996	sunken	4954.08
+    8997	exasperated	4950.12
+    8998	narrowly	4950.12
+    8999	Collins	4948.54
+    9000	insulting	4946.96
+    9001	deficiency	4945.38
+    9002	operating	4943.79
+    9003	overthrown	4942.21
+    9004	gallows	4941.42
+    9005	diligent	4940.63
+    9006	hindu	4940.63
+    9007	blunt	4939.84
+    9008	omen	4939.05
+    9009	bleak	4938.26
+    9010	vehemently	4938.26
+    9011	wretchedness	4935.88
+    9012	e'er	4935.09
+    9013	ensure	4931.93
+    9014	denotes	4931.14
+    9015	sentenced	4927.97
+    9016	unfair	4927.18
+    9017	encampment	4923.23
+    9018	possessor	4923.23
+    9019	absorbing	4921.64
+    9020	descendant	4920.85
+    9021	sub	4918.48
+    9022	drugs	4917.69
+    9023	engineers	4917.69
+    9024	independently	4915.31
+    9025	bucket	4914.52
+    9026	clerical	4914.52
+    9027	ache	4911.36
+    9028	glitter	4911.36
+    9029	ordinance	4906.61
+    9030	bamboo	4905.82
+    9031	Amsterdam	4905.03
+    9032	vocation	4899.49
+    9033	admirer	4898.70
+    9034	limp	4897.91
+    9035	pallid	4897.91
+    9036	mildly	4893.16
+    9037	organisation	4891.58
+    9038	Timothy	4891.58
+    9039	dealer	4890.79
+    9040	Yorkshire	4890.79
+    9041	auspicious	4886.83
+    9042	deuce	4882.88
+    9043	emblem	4882.88
+    9044	Gibson	4882.88
+    9045	primarily	4882.88
+    9046	reducing	4881.30
+    9047	ritual	4877.34
+    9048	decorations	4876.55
+    9049	thigh	4875.76
+    9050	groaning	4874.18
+    9051	scant	4871.80
+    9052	fiscal	4871.01
+    9053	mien	4871.01
+    9054	charging	4867.85
+    9055	cor	4867.85
+    9056	railing	4867.85
+    9057	peers	4866.26
+    9058	inferred	4865.47
+    9059	sanctity	4865.47
+    9060	accumulation	4863.89
+    9061	cynical	4861.52
+    9062	inspector	4861.52
+    9063	wardrobe	4859.14
+    9064	Jesuit	4854.40
+    9065	texture	4853.61
+    9066	adjustment	4852.02
+    9067	epistle	4851.23
+    9068	adventurer	4850.44
+    9069	priesthood	4850.44
+    9070	seaman	4849.65
+    9071	turbulent	4849.65
+    9072	chant	4844.90
+    9073	marsh	4844.90
+    9074	Palmer	4844.90
+    9075	unaware	4844.11
+    9076	vase	4843.32
+    9077	ty	4839.37
+    9078	initial	4837.78
+    9079	baths	4836.20
+    9080	weighty	4836.20
+    9081	minimum	4835.41
+    9082	correction	4829.87
+    9083	morsel	4829.08
+    9084	overlook	4828.29
+    9085	meagre	4827.50
+    9086	unanimous	4826.71
+    9087	magician	4824.33
+    9088	mystical	4824.33
+    9089	twenty-three	4823.54
+    9090	inhabit	4822.75
+    9091	shaggy	4822.75
+    9092	unaccountable	4822.75
+    9093	nightmare	4818.80
+    9094	carbon	4818.00
+    9095	coil	4818.00
+    9096	lawless	4818.00
+    9097	stairway	4818.00
+    9098	willingness	4818.00
+    9099	sarcasm	4815.63
+    9100	crisp	4810.88
+    9101	jerk	4810.09
+    9102	tout	4808.51
+    9103	vocabulary	4808.51
+    9104	stroll	4806.14
+    9105	poorly	4805.35
+    9106	composing	4804.56
+    9107	parliamentary	4804.56
+    9108	controlling	4803.76
+    9109	fitness	4803.76
+    9110	thoughtless	4802.97
+    9111	Soames	4802.18
+    9112	temperance	4802.18
+    9113	illumination	4801.39
+    9114	translations	4800.60
+    9115	martyrdom	4799.02
+    9116	mellow	4798.23
+    9117	nationality	4795.06
+    9118	jam	4794.27
+    9119	austere	4792.69
+    9120	shoots	4791.11
+    9121	casually	4789.52
+    9122	pensive	4788.73
+    9123	flavour	4787.15
+    9124	nets	4786.36
+    9125	dice	4784.78
+    9126	satisfactorily	4783.99
+    9127	shrunk	4783.19
+    9128	administer	4781.61
+    9129	ante	4781.61
+    9130	swine	4781.61
+    9131	Baptist	4780.03
+    9132	listener	4778.45
+    9133	unimportant	4778.45
+    9134	genera	4776.87
+    9135	contrivance	4776.07
+    9136	deplorable	4776.07
+    9137	museum	4776.07
+    9138	benefactor	4773.70
+    9139	tints	4772.12
+    9140	alphabet	4770.54
+    9141	rout	4768.16
+    9142	scatter	4767.37
+    9143	Boer	4766.58
+    9144	FTP	4766.58
+    9145	Steve	4766.58
+    9146	extant	4765.79
+    9147	Bohemia	4765.00
+    9148	misunderstanding	4765.00
+    9149	universities	4765.00
+    9150	dexterity	4762.63
+    9151	rag	4759.46
+    9152	inseparable	4758.67
+    9153	punch	4757.09
+    9154	brazen	4756.30
+    9155	economical	4756.30
+    9156	pernicious	4756.30
+    9157	Craig	4755.50
+    9158	mythology	4755.50
+    9159	drained	4754.71
+    9160	bolted	4753.92
+    9161	Abel	4753.13
+    9162	stride	4751.55
+    9163	circumference	4749.18
+    9164	meddle	4749.18
+    9165	axis	4747.59
+    9166	gum	4746.80
+    9167	las	4746.01
+    9168	kinder	4744.43
+    9169	closes	4742.06
+    9170	ferocity	4742.06
+    9171	giddy	4740.47
+    9172	secluded	4740.47
+    9173	resisting	4737.31
+    9174	satisfying	4735.73
+    9175	reliable	4734.94
+    9176	disgusting	4733.35
+    9177	thirty-six	4733.35
+    9178	ethical	4730.98
+    9179	Raleigh	4729.40
+    9180	crouching	4728.61
+    9181	lash	4728.61
+    9182	recital	4727.02
+    9183	Buddhist	4726.23
+    9184	collapse	4723.86
+    9185	unsatisfactory	4721.49
+    9186	lore	4718.32
+    9187	varies	4718.32
+    9188	mainland	4715.95
+    9189	Scot	4715.95
+    9190	repute	4715.16
+    9191	cushion	4714.37
+    9192	confound	4712.78
+    9193	scrub	4712.78
+    9194	myth	4710.41
+    9195	flights	4709.62
+    9196	oats	4708.04
+    9197	layers	4707.25
+    9198	ownership	4707.25
+    9199	cape	4706.45
+    9200	glimmer	4704.87
+    9201	scare	4704.87
+    9202	waked	4704.87
+    9203	Bengal	4703.29
+    9204	scrupulous	4703.29
+    9205	equals	4700.92
+    9206	redress	4700.13
+    9207	brake	4698.54
+    9208	nut	4698.54
+    9209	stability	4698.54
+    9210	crafty	4697.75
+    9211	kirk	4697.75
+    9212	bough	4696.17
+    9213	momentous	4696.17
+    9214	albeit	4695.38
+    9215	enlarge	4694.59
+    9216	hardness	4694.59
+    9217	civilised	4693.80
+    9218	dotted	4692.21
+    9219	defiant	4691.42
+    9220	timidity	4691.42
+    9221	solar	4687.47
+    9222	heartless	4683.51
+    9223	Thomson	4681.93
+    9224	mat	4681.14
+    9225	shun	4681.14
+    9226	raid	4679.56
+    9227	disclose	4678.76
+    9228	suppression	4674.02
+    9229	puff	4673.23
+    9230	juncture	4670.85
+    9231	beak	4670.06
+    9232	unjustly	4668.48
+    9233	foresaw	4664.52
+    9234	rot	4662.15
+    9235	aggressive	4661.36
+    9236	predicted	4661.36
+    9237	Quaker	4661.36
+    9238	grate	4659.78
+    9239	lease	4657.40
+    9240	ponderous	4656.61
+    9241	maketh	4655.82
+    9242	repaid	4655.82
+    9243	charcoal	4652.66
+    9244	chilly	4652.66
+    9245	arrogance	4651.87
+    9246	friction	4651.87
+    9247	participation	4651.87
+    9248	pier	4649.49
+    9249	stale	4648.70
+    9250	intoxicated	4644.75
+    9251	commissioned	4643.16
+    9252	ratio	4643.16
+    9253	121	4640.79
+    9254	comb	4640.00
+    9255	masterpiece	4640.00
+    9256	wholesale	4640.00
+    9257	embraces	4639.21
+    9258	trodden	4639.21
+    9259	Ephraim	4638.42
+    9260	Shaw	4634.46
+    9261	translate	4631.30
+    9262	mortar	4630.51
+    9263	recreation	4629.71
+    9264	rite	4628.13
+    9265	truthful	4628.13
+    9266	cavalier	4627.34
+    9267	caress	4626.55
+    9268	si	4624.97
+    9269	curling	4624.18
+    9270	rivalry	4623.39
+    9271	whim	4623.39
+    9272	abreast	4621.01
+    9273	Thebes	4620.22
+    9274	Faust	4619.43
+    9275	peg	4619.43
+    9276	Wilhelm	4619.43
+    9277	pestilence	4618.64
+    9278	ceremonial	4617.85
+    9279	receiver	4617.06
+    9280	sample	4617.06
+    9281	distinctive	4615.47
+    9282	consummate	4614.68
+    9283	matron	4610.73
+    9284	claiming	4609.94
+    9285	plural	4608.35
+    9286	initiative	4607.56
+    9287	inexhaustible	4606.77
+    9288	a.m.	4605.98
+    9289	spider	4603.61
+    9290	reed	4602.82
+    9291	streak	4602.82
+    9292	blocked	4601.23
+    9293	Titus	4601.23
+    9294	smashed	4598.07
+    9295	populous	4597.28
+    9296	baronet	4596.49
+    9297	commodore	4596.49
+    9298	jelly	4596.49
+    9299	advocates	4594.11
+    9300	Dinah	4592.53
+    9301	salutation	4589.37
+    9302	mutiny	4586.99
+    9303	chronicles	4586.20
+    9304	comforting	4585.41
+    9305	serviceable	4584.62
+    9306	parchment	4583.04
+    9307	playful	4583.04
+    9308	potato	4583.04
+    9309	transient	4579.87
+    9310	administrative	4579.08
+    9311	anarchy	4579.08
+    9312	barber	4579.08
+    9313	revision	4579.08
+    9314	operated	4578.29
+    9315	farce	4577.50
+    9316	germ	4576.71
+    9317	profile	4576.71
+    9318	provides	4576.71
+    9319	noting	4575.13
+    9320	disordered	4573.54
+    9321	menacing	4573.54
+    9322	heightened	4571.17
+    9323	finance	4570.38
+    9324	averse	4569.59
+    9325	azure	4568.80
+    9326	bathe	4568.80
+    9327	campaigns	4564.84
+    9328	lessen	4562.47
+    9329	slate	4562.47
+    9330	acquaint	4561.68
+    9331	gin	4559.30
+    9332	humiliating	4559.30
+    9333	cleft	4556.93
+    9334	conveyance	4556.93
+    9335	chivalrous	4554.56
+    9336	capricious	4553.77
+    9337	tribune	4553.77
+    9338	pilgrim	4552.97
+    9339	entreaty	4551.39
+    9340	womanly	4550.60
+    9341	paltry	4549.81
+    9342	sporting	4549.81
+    9343	maker	4549.02
+    9344	digestion	4545.85
+    9345	Bart	4544.27
+    9346	infamy	4541.90
+    9347	lambs	4541.90
+    9348	gaping	4540.32
+    9349	periodical	4540.32
+    9350	standpoint	4540.32
+    9351	amorous	4539.53
+    9352	tub	4539.53
+    9353	luxuriant	4538.73
+    9354	basic	4536.36
+    9355	mutually	4535.57
+    9356	Chris	4533.99
+    9357	greed	4532.40
+    9358	premature	4532.40
+    9359	extinction	4531.61
+    9360	boiler	4530.03
+    9361	intimation	4529.24
+    9362	scandalous	4527.66
+    9363	separating	4526.87
+    9364	oratory	4525.28
+    9365	banish	4524.49
+    9366	electrical	4524.49
+    9367	herb	4523.70
+    9368	multiply	4523.70
+    9369	prosper	4522.91
+    9370	friar	4522.12
+    9371	nightly	4520.54
+    9372	ole	4519.75
+    9373	monkeys	4518.16
+    9374	interminable	4516.58
+    9375	enjoys	4515.79
+    9376	similarity	4515.00
+    9377	riddle	4514.21
+    9378	cleaning	4512.63
+    9379	subscription	4511.84
+    9380	copious	4510.25
+    9381	exclaim	4509.46
+    9382	forged	4509.46
+    9383	voting	4509.46
+    9384	scourge	4508.67
+    9385	darkly	4507.09
+    9386	privacy	4506.30
+    9387	arena	4503.92
+    9388	bearded	4502.34
+    9389	Vera	4499.97
+    9390	alacrity	4494.43
+    9391	sensual	4493.64
+    9392	spin	4493.64
+    9393	neutrality	4492.85
+    9394	flannel	4492.06
+    9395	fasting	4491.27
+    9396	trailer	4491.27
+    9397	avert	4489.68
+    9398	trustworthy	4489.68
+    9399	Jamaica	4488.10
+    9400	unchanged	4485.73
+    9401	traveler	4484.15
+    9402	unfamiliar	4483.35
+    9403	puffed	4482.56
+    9404	mirrors	4480.98
+    9405	Phoebe	4480.19
+    9406	father-in-law	4478.61
+    9407	conform	4477.03
+    9408	particle	4476.23
+    9409	railways	4476.23
+    9410	stupendous	4476.23
+    9411	paddle	4474.65
+    9412	innate	4473.86
+    9413	reformation	4473.07
+    9414	volley	4471.49
+    9415	statistics	4470.70
+    9416	agrees	4469.11
+    9417	simpler	4469.11
+    9418	padre	4468.32
+    9419	congratulations	4467.53
+    9420	lids	4466.74
+    9421	muse	4466.74
+    9422	inhabitant	4465.95
+    9423	Ishmael	4465.16
+    9424	rustle	4465.16
+    9425	clump	4464.37
+    9426	calendar	4463.58
+    9427	flute	4463.58
+    9428	inaccessible	4461.99
+    9429	yore	4461.20
+    9430	jay	4459.62
+    9431	repulsive	4459.62
+    9432	fray	4458.04
+    9433	Po	4456.46
+    9434	nomination	4454.08
+    9435	conclusive	4453.29
+    9436	peaceable	4453.29
+    9437	Beth	4452.50
+    9438	inconceivable	4452.50
+    9439	e'en	4450.92
+    9440	emerald	4450.13
+    9441	lava	4450.13
+    9442	trillion	4448.54
+    9443	uppermost	4448.54
+    9444	arduous	4447.75
+    9445	lyric	4446.96
+    9446	downright	4446.17
+    9447	reproduction	4444.59
+    9448	foresight	4443.01
+    9449	consistency	4442.22
+    9450	ape	4441.42
+    9451	senators	4439.05
+    9452	pallor	4437.47
+    9453	span	4436.68
+    9454	salad	4431.93
+    9455	snuff	4431.93
+    9456	drooped	4431.14
+    9457	greetings	4431.14
+    9458	chestnut	4427.98
+    9459	inquisitive	4427.98
+    9460	vicar	4427.98
+    9461	Noel	4426.39
+    9462	attic	4425.60
+    9463	savings	4425.60
+    9464	affirmative	4424.02
+    9465	ills	4422.44
+    9466	applications	4421.65
+    9467	t	4421.65
+    9468	dye	4420.06
+    9469	Gloucester	4420.06
+    9470	nominal	4417.69
+    9471	demonstrate	4414.53
+    9472	dispense	4414.53
+    9473	dissatisfaction	4414.53
+    9474	merciless	4414.53
+    9475	trusty	4414.53
+    9476	coloring	4412.15
+    9477	perusal	4412.15
+    9478	plaintive	4412.15
+    9479	discarded	4410.57
+    9480	precarious	4408.20
+    9481	infection	4406.61
+    9482	ruinous	4405.03
+    9483	bolts	4404.24
+    9484	arithmetic	4402.66
+    9485	considerate	4402.66
+    9486	lark	4401.87
+    9487	ethics	4401.08
+    9488	conventions	4400.29
+    9489	stumbling	4400.29
+    9490	pitcher	4399.49
+    9491	slips	4399.49
+    9492	Seine	4398.70
+    9493	officially	4396.33
+    9494	Danube	4395.54
+    9495	annoy	4393.96
+    9496	glide	4392.37
+    9497	impunity	4390.79
+    9498	amends	4390.00
+    9499	sol	4389.21
+    9500	conveying	4386.05
+    9501	abandonment	4385.25
+    9502	mane	4384.46
+    9503	tinge	4384.46
+    9504	brim	4382.09
+    9505	forenoon	4380.51
+    9506	seventy-five	4380.51
+    9507	sparkle	4380.51
+    9508	syllables	4380.51
+    9509	shrug	4377.34
+    9510	enchantment	4375.76
+    9511	Franz	4375.76
+    9512	trait	4375.76
+    9513	bribe	4374.97
+    9514	composer	4373.39
+    9515	preparatory	4373.39
+    9516	audacious	4372.60
+    9517	outskirts	4372.60
+    9518	soiled	4372.60
+    9519	fiddle	4371.01
+    9520	football	4370.22
+    9521	Isaiah	4370.22
+    9522	partnership	4370.22
+    9523	continuation	4368.64
+    9524	pioneer	4368.64
+    9525	vest	4367.85
+    9526	bass	4367.06
+    9527	derby	4367.06
+    9528	quarry	4367.06
+    9529	rigging	4367.06
+    9530	dizzy	4366.27
+    9531	abnormal	4365.48
+    9532	omission	4364.68
+    9533	idolatry	4363.89
+    9534	sequence	4363.89
+    9535	squeeze	4362.31
+    9536	cabbage	4360.73
+    9537	canopy	4360.73
+    9538	athletic	4359.94
+    9539	Shirley	4359.94
+    9540	drunkenness	4359.15
+    9541	intrusion	4358.36
+    9542	'cause	4355.98
+    9543	assign	4355.19
+    9544	tackle	4354.40
+    9545	dreamt	4353.61
+    9546	sceptre	4352.82
+    9547	exacting	4352.03
+    9548	parched	4349.65
+    9549	eddy	4347.28
+    9550	percentage	4346.49
+    9551	twinkle	4342.53
+    9552	curb	4340.95
+    9553	sandstone	4340.16
+    9554	invaluable	4337.79
+    9555	fathom	4336.20
+    9556	preferable	4336.20
+    9557	Adelaide	4334.62
+    9558	advertising	4332.25
+    9559	scraps	4330.67
+    9560	lever	4329.08
+    9561	muster	4328.29
+    9562	cavity	4324.34
+    9563	barbarian	4322.75
+    9564	sleepless	4322.75
+    9565	fried	4320.38
+    9566	abstraction	4319.59
+    9567	forefinger	4319.59
+    9568	spade	4319.59
+    9569	erection	4318.80
+    9570	scorned	4318.80
+    9571	pail	4317.22
+    9572	withdrawal	4317.22
+    9573	senator	4315.63
+    9574	mortgage	4314.84
+    9575	ancestral	4311.68
+    9576	succour	4310.89
+    9577	ma	4309.31
+    9578	forbearance	4308.51
+    9579	repress	4308.51
+    9580	spouse	4305.35
+    9581	valid	4304.56
+    9582	witchcraft	4303.77
+    9583	workmanship	4302.98
+    9584	legacy	4300.60
+    9585	proximity	4300.60
+    9586	Bombay	4299.81
+    9587	Paula	4299.81
+    9588	incorporated	4298.23
+    9589	muzzle	4297.44
+    9590	Reuben	4296.65
+    9591	clusters	4293.48
+    9592	valve	4291.11
+    9593	compelling	4290.32
+    9594	dissipated	4289.53
+    9595	flickering	4287.15
+    9596	guinea	4286.36
+    9597	sup	4286.36
+    9598	tarry	4286.36
+    9599	derision	4285.57
+    9600	vehicles	4283.20
+    9601	accommodate	4282.41
+    9602	glossy	4282.41
+    9603	iris	4278.45
+    9604	relic	4277.66
+    9605	ant	4276.08
+    9606	heath	4269.75
+    9607	bug	4266.58
+    9608	vocal	4265.00
+    9609	downfall	4262.63
+    9610	construct	4261.05
+    9611	undue	4261.05
+    9612	vapor	4261.05
+    9613	bat	4259.46
+    9614	whimsical	4259.46
+    9615	contradictory	4255.51
+    9616	unlocked	4255.51
+    9617	foretold	4250.76
+    9618	automatic	4249.97
+    9619	explicit	4249.18
+    9620	indolent	4248.39
+    9621	mates	4247.60
+    9622	artful	4243.64
+    9623	downcast	4242.85
+    9624	well-being	4241.27
+    9625	Winston	4241.27
+    9626	ordinances	4240.48
+    9627	Catharine	4239.69
+    9628	effectively	4239.69
+    9629	missions	4239.69
+    9630	stalk	4239.69
+    9631	indistinct	4238.89
+    9632	pregnant	4236.52
+    9633	reddish	4236.52
+    9634	coveted	4235.73
+    9635	fret	4234.94
+    9636	peeping	4234.15
+    9637	buck	4233.36
+    9638	sumptuous	4232.56
+    9639	indefinitely	4231.77
+    9640	reliance	4230.98
+    9641	Panama	4230.19
+    9642	cocked	4229.40
+    9643	dad	4226.24
+    9644	everyday	4224.65
+    9645	intoxication	4221.49
+    9646	aghast	4219.12
+    9647	subterranean	4218.32
+    9648	turmoil	4218.32
+    9649	forfeit	4215.16
+    9650	chasm	4214.37
+    9651	inspect	4212.79
+    9652	perverse	4212.79
+    9653	precipitate	4212.79
+    9654	Dover	4212.00
+    9655	ambush	4210.41
+    9656	evermore	4210.41
+    9657	Mass.	4210.41
+    9658	blot	4209.62
+    9659	nook	4209.62
+    9660	verdure	4209.62
+    9661	parapet	4208.83
+    9662	Jake	4208.04
+    9663	cessation	4207.25
+    9664	ankle	4206.46
+    9665	classification	4206.46
+    9666	fervently	4206.46
+    9667	oddly	4205.67
+    9668	haul	4204.08
+    9669	Saxony	4203.29
+    9670	embarrassing	4202.50
+    9671	hairy	4200.92
+    9672	northwest	4200.92
+    9673	disabled	4199.34
+    9674	laurel	4199.34
+    9675	Preston	4198.55
+    9676	arrogant	4196.96
+    9677	hurts	4196.96
+    9678	demonstrations	4195.38
+    9679	splash	4195.38
+    9680	curl	4194.59
+    9681	livelihood	4193.80
+    9682	wary	4193.80
+    9683	scattering	4193.01
+    9684	brace	4192.22
+    9685	converts	4190.63
+    9686	detestable	4190.63
+    9687	143	4189.05
+    9688	abandoning	4189.05
+    9689	Somerset	4189.05
+    9690	weakly	4189.05
+    9691	clothe	4188.26
+    9692	gem	4187.47
+    9693	tremor	4185.89
+    9694	surveying	4184.31
+    9695	variable	4183.51
+    9696	anniversary	4175.60
+    9697	thirty-two	4174.81
+    9698	wrap	4174.02
+    9699	curly	4171.65
+    9700	diversity	4170.86
+    9701	prestige	4170.86
+    9702	desertion	4170.07
+    9703	freezing	4170.07
+    9704	heedless	4170.07
+    9705	sentry	4170.07
+    9706	believer	4169.27
+    9707	ram	4169.27
+    9708	rowing	4169.27
+    9709	negligence	4168.48
+    9710	self-	4168.48
+    9711	sulphur	4167.69
+    9712	discrimination	4166.90
+    9713	cooling	4162.95
+    9714	millionaire	4162.95
+    9715	flowering	4161.36
+    9716	meridian	4161.36
+    9717	wins	4161.36
+    9718	awed	4159.78
+    9719	beastly	4159.78
+    9720	nuisance	4158.99
+    9721	abstain	4158.20
+    9722	continental	4158.20
+    9723	stanza	4157.41
+    9724	target	4156.62
+    9725	unwonted	4156.62
+    9726	whit	4155.82
+    9727	Jason	4153.45
+    9728	stall	4152.66
+    9729	sham	4151.87
+    9730	dictate	4151.08
+    9731	empress	4151.08
+    9732	gout	4151.08
+    9733	jobs	4151.08
+    9734	manure	4151.08
+    9735	Nigel	4151.08
+    9736	sidewalk	4150.29
+    9737	sate	4148.70
+    9738	grievance	4147.91
+    9739	axes	4147.12
+    9740	bony	4146.33
+    9741	invest	4146.33
+    9742	Birmingham	4143.96
+    9743	ebb	4143.96
+    9744	rabble	4140.79
+    9745	restlessness	4140.00
+    9746	cruise	4137.63
+    9747	rally	4136.84
+    9748	rumor	4135.26
+    9749	hysterical	4132.88
+    9750	girlish	4130.51
+    9751	actively	4129.72
+    9752	shortest	4129.72
+    9753	Marseilles	4128.93
+    9754	cheque	4128.14
+    9755	disregarded	4127.34
+    9756	retort	4127.34
+    9757	rocking	4127.34
+    9758	emerge	4125.76
+    9759	perch	4124.18
+    9760	flask	4123.39
+    9761	KA	4123.39
+    9762	countryman	4121.81
+    9763	lonesome	4121.81
+    9764	manned	4121.01
+    9765	unarmed	4121.01
+    9766	wast	4121.01
+    9767	frog	4119.43
+    9768	twenty-eight	4119.43
+    9769	unscrupulous	4119.43
+    9770	yarn	4119.43
+    9771	victuals	4118.64
+    9772	outrageous	4117.85
+    9773	appropriation	4114.69
+    9774	foolishness	4114.69
+    9775	quickness	4114.69
+    9776	adversity	4113.89
+    9777	Parma	4112.31
+    9778	diseased	4111.52
+    9779	Iliad	4109.94
+    9780	salutary	4109.94
+    9781	smelt	4108.36
+    9782	territorial	4108.36
+    9783	hurricane	4107.57
+    9784	irons	4106.77
+    9785	canyon	4105.98
+    9786	Jeremiah	4105.98
+    9787	Brooklyn	4105.19
+    9788	indulging	4105.19
+    9789	vapour	4104.40
+    9790	disobedience	4103.61
+    9791	atrocious	4102.82
+    9792	leaps	4102.03
+    9793	tapestry	4099.65
+    9794	provocation	4098.86
+    9795	twenty-six	4098.86
+    9796	impotent	4098.07
+    9797	smite	4093.33
+    9798	acquitted	4090.95
+    9799	OS	4090.16
+    9800	tumultuous	4090.16
+    9801	barge	4089.37
+    9802	palpable	4087.79
+    9803	apprentice	4087.00
+    9804	lances	4086.21
+    9805	compartment	4085.41
+    9806	godly	4085.41
+    9807	sarcastic	4085.41
+    9808	therefrom	4085.41
+    9809	specifically	4084.62
+    9810	uniformity	4083.83
+    9811	emerging	4083.04
+    9812	atonement	4082.25
+    9813	whereabouts	4082.25
+    9814	Davy	4081.46
+    9815	framework	4081.46
+    9816	sponge	4081.46
+    9817	mountainous	4080.67
+    9818	annoying	4079.08
+    9819	cot	4079.08
+    9820	squirrel	4079.08
+    9821	wand	4076.71
+    9822	grind	4075.92
+    9823	bang	4075.13
+    9824	unreal	4075.13
+    9825	blacksmith	4074.34
+    9826	injunction	4072.76
+    9827	scarcity	4071.96
+    9828	withhold	4071.96
+    9829	outright	4070.38
+    9830	Bavaria	4069.59
+    9831	cement	4068.80
+    9832	growl	4067.22
+    9833	aggregate	4066.43
+    9834	fraction	4066.43
+    9835	exaltation	4064.05
+    9836	inexorable	4063.26
+    9837	jug	4063.26
+    9838	purer	4063.26
+    9839	sap	4063.26
+    9840	illegal	4062.47
+    9841	sister-in-law	4061.68
+    9842	presses	4060.89
+    9843	stealthily	4060.89
+    9844	dissolve	4060.10
+    9845	volcano	4059.31
+    9846	Hungarian	4057.72
+    9847	equilibrium	4056.93
+    9848	obstinately	4056.14
+    9849	sullenly	4056.14
+    9850	assassination	4055.35
+    9851	commissions	4054.56
+    9852	respectability	4052.98
+    9853	bases	4051.40
+    9854	Maxwell	4050.60
+    9855	resounded	4050.60
+    9856	closest	4049.81
+    9857	embroidery	4049.02
+    9858	gunpowder	4049.02
+    9859	reproof	4049.02
+    9860	Yale	4045.07
+    9861	combining	4043.48
+    9862	weaving	4041.90
+    9863	earnings	4041.11
+    9864	Hamburg	4039.53
+    9865	indoors	4039.53
+    9866	manufacturers	4039.53
+    9867	pitiless	4039.53
+    9868	scarf	4039.53
+    9869	picnic	4037.95
+    9870	misled	4035.57
+    9871	pompous	4035.57
+    9872	Brian	4034.78
+    9873	respite	4033.99
+    9874	exploit	4033.20
+    9875	tracing	4033.20
+    9876	geological	4031.62
+    9877	passport	4031.62
+    9878	confines	4030.83
+    9879	dishonour	4029.24
+    9880	executioner	4029.24
+    9881	township	4029.24
+    9882	vacancy	4029.24
+    9883	acquiescence	4026.87
+    9884	Cornwall	4026.87
+    9885	crumbling	4026.08
+    9886	three-quarters	4025.29
+    9887	exploration	4022.91
+    9888	needy	4021.33
+    9889	stationary	4021.33
+    9890	disconcerted	4020.54
+    9891	wanderer	4019.75
+    9892	beaver	4018.17
+    9893	lookout	4015.79
+    9894	onion	4015.79
+    9895	depicted	4015.00
+    9896	boisterous	4014.21
+    9897	couples	4013.42
+    9898	speakers	4013.42
+    9899	woollen	4012.63
+    9900	lightness	4011.05
+    9901	bitten	4007.88
+    9902	aux	4007.09
+    9903	toleration	4005.51
+    9904	Lucia	4004.72
+    9905	scar	4004.72
+    9906	bohemian	4002.34
+    9907	vested	4002.34
+    9908	affinity	4001.55
+    9909	Carlo	4001.55
+    9910	sous	4001.55
+    9911	penitent	4000.76
+    9912	Simpson	4000.76
+    9913	abiding	3997.60
+    9914	CA	3996.02
+    9915	immoral	3996.02
+    9916	dishonest	3995.22
+    9917	yawning	3994.43
+    9918	mustache	3992.85
+    9919	supplement	3992.85
+    9920	whirlwind	3992.85
+    9921	clash	3991.27
+    9922	Terence	3990.48
+    9923	lamentable	3989.69
+    9924	Bennett	3988.90
+    9925	farthing	3987.31
+    9926	speck	3987.31
+    9927	biscuit	3986.52
+    9928	appellation	3985.73
+    9929	GDP	3984.94
+    9930	reserves	3983.36
+    9931	uncouth	3982.57
+    9932	birch	3980.98
+    9933	armchair	3980.19
+    9934	Judy	3980.19
+    9935	greasy	3978.61
+    9936	leaden	3978.61
+    9937	dough	3977.03
+    9938	lining	3976.24
+    9939	cleverness	3971.49
+    9940	ascetic	3969.91
+    9941	clutch	3969.12
+    9942	Krishna	3969.12
+    9943	embark	3968.33
+    9944	quotations	3968.33
+    9945	friendliness	3967.53
+    9946	liberally	3967.53
+    9947	trance	3965.16
+    9948	untrue	3965.16
+    9949	rejection	3964.37
+    9950	grating	3962.79
+    9951	Hanover	3961.21
+    9952	inexperienced	3961.21
+    9953	mon	3960.41
+    9954	wintry	3960.41
+    9955	stalwart	3958.83
+    9956	meats	3958.04
+    9957	stamping	3956.46
+    9958	variance	3956.46
+    9959	apiece	3954.88
+    9960	firmament	3954.88
+    9961	absorption	3953.29
+    9962	apprehensive	3953.29
+    9963	terminate	3953.29
+    9964	wilful	3952.50
+    9965	conveniently	3951.71
+    9966	'n'	3950.92
+    9967	cleanliness	3950.92
+    9968	collective	3950.92
+    9969	Angela	3950.13
+    9970	filth	3950.13
+    9971	Philippines	3950.13
+    9972	timely	3950.13
+    9973	herein	3948.55
+    9974	ignoble	3948.55
+    9975	canton	3946.17
+    9976	lamentations	3944.59
+    9977	Moslem	3944.59
+    9978	ware	3943.80
+    9979	adjective	3943.01
+    9980	glen	3943.01
+    9981	invade	3943.01
+    9982	livid	3943.01
+    9983	buggy	3941.43
+    9984	prolong	3940.64
+    9985	weaken	3937.47
+    9986	folio	3935.10
+    9987	dismissal	3934.31
+    9988	quay	3934.31
+    9989	enchanting	3933.52
+    9990	heave	3931.93
+    9991	purified	3931.14
+    9992	Syrian	3931.14
+    9993	significantly	3929.56
+    9994	experimental	3927.98
+    9995	film	3926.40
+    9996	repressed	3926.40
+    9997	cooperation	3924.81
+    9998	sequel	3924.02
+    9999	wench	3924.02
+    10000	calves	3923.23
 }
 
 proc words-list {} { return [string trim $::morse::words::words] }
-proc words-words {} { return [lmap {rank word pos freq disp} [words-list] {set word}] }
-proc words-pos {} { return [lmap {rank word pos freq disp} [words-list] {set pos}] }
-proc words-freqs {} { return [lmap {rank word pos freq disp} [words-list] {set freq}] }
-# interesting, the same words appear as different pos, so the dictionary comes up
-# short of 5000, but all the words are in it.  Can merge the frequency counts by
-# discarding the pos and disp values and letting the order in the dict miss the
-# rank order in a few places.  Like "to" which bumps from 7 to 5, oh, several more
+proc words-words {} { return [lmap {rank word freq} [words-list] {set word}] }
+proc words-freqs {} { return [lmap {rank word freq} [words-list] {set freq}] }
 proc words-dict {} {
     set dict [dict create]
-    foreach {rank word pos freq disp} [words-list] {
-	dict incr dict $word $freq
+    foreach {rank word freq} [words-list] {
+	set freq [expr {int($freq*100)}]
+	if { ! [dict exists $dict $word]} {
+	    dict set dict $word $freq
+	} else {
+	    dict set dict $word [expr {$freq+[dict get dict $word]}]
+	}
     }
     return $dict
 }

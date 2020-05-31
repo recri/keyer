@@ -73,6 +73,36 @@ proc morse-to-text {dict morse} {
     return $text
 }
 
+# translate a single morse code into a prosign string
+# join the longest alphabetic prefix in the code to the prosign of the remainder
+proc morse::morse::prosign {dict idict code} {
+    for {set n [string length $code]} {$n > 0} {incr n -1} {
+	set prefix [string range $code 0 $n-1]
+	set suffix [string range $code $n end]
+	if {[dict exists $idict $prefix] && [string is alpha [dict get $idict $prefix]]} {
+	    if {$suffix ne {}} {
+		return [dict get $idict $prefix][prosign $dict $idict $suffix]
+	    } else {
+		return [dict get $idict $prefix]
+	    }
+	}
+    }
+    error "failed to find alphabetic prefix to $code"
+}    
+#
+# translate a morse string
+# into text using dictionary and shortest alphabtic prosigns
+#
+proc morse-to-prosign {dict morse} {
+    set inversion [morse-inversion $dict]
+    set morse [string trim $morse]
+    set text {}
+    foreach c [split $morse  { }] {
+	append text "<[morse::morse::prosign $dict $inversion $c]>"
+    }
+    return $text
+}
+
 #
 # compute the length in dit clocks
 # of the given character in the given dict
@@ -217,3 +247,18 @@ proc morse-words-of-length {dict dits} {
 }
 
 
+#
+# the dits representation places a period or a space for each cycle of the dit clock in the code
+# the length of the dits is the dit clock length of the code
+# the didah representation places a period, hyphen, or space for each element in the code
+# the length of the didah is the number of elements in the code
+#
+# translate a morse code in dits to dits and dahs
+# so . ... . goes to .-.
+#
+proc dits-to-didah {code} { return  [regsub -all {\. ?} [regsub -all {\.\.\. ?} $code -] .] }
+
+#
+# translate a morse code in dits and dahs to dits
+# so .-. goes to . ... .
+proc didah-to-dits {code} { return [regsub -all - [regsub -all {\.} $code {. }] {... }] }
