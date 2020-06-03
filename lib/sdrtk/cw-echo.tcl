@@ -269,6 +269,7 @@ snit::widget sdrtk::cw-echo {
 	    set data(trimmed-response) [regsub -all { } $data(response) {}]
 	    set data(n-t-r) [string length $data(trimmed-response)]
 	    # switch on state
+	    puts "$data(state)"
 	    switch $data(state) {
 		start {
 		    array set data [list \
@@ -444,19 +445,22 @@ snit::widget sdrtk::cw-echo {
 	return [lindex $x [expr {int(rand()*[llength $x])}]]
     }
     method sample-draw {} {
-	switch $options(-source) {
-	    letters -
-	    digits -
-	    characters {
-		set draw {}
-		for {set i 0} {$i < $options(-length)} {incr i} {
-		    append draw [choose $data(sample)]
+	return [$data(course) sample-draw]
+	if {0} {
+	    switch $options(-source) {
+		letters -
+		digits -
+		characters {
+		    set draw {}
+		    for {set i 0} {$i < $options(-length)} {incr i} {
+			append draw [choose $data(sample)]
+		    }
+		    set draw [string toupper $draw]
+		    # puts "sample-draw -> $draw"
+		    return $draw
 		}
-		set draw [string toupper $draw]
-		# puts "sample-draw -> $draw"
-		return $draw
+		default { error "uncaught source $options(-source) in sample-draw" }
 	    }
-	    default { error "uncaught source $options(-source) in sample-draw" }
 	}
     }
     #
@@ -537,11 +541,11 @@ snit::widget sdrtk::cw-echo {
 	::sdrtk::dialbook $w
 	foreach text [lsort [::options get-opts]] {
 	    if {[::options is-hide $text]} continue
-
+	    
 	    set type [::options get $text type]
 	    set name [::options get $text name]
 	    set readout [::options get $text readout]
-	
+	    
 	    set wx $w.x$text
 	    package require sdrtk::readout-$type
 	    sdrtk::readout-$type $wx -dialbook $w \
@@ -549,9 +553,9 @@ snit::widget sdrtk::cw-echo {
 		-value [::options cget $text] -variable [::options cvar $text] -command [list ::options configure $text]
 	    $w add $wx $name $type -text $text
 	}
-
+	
 	if {[$w select] eq {}} { $w select 0 }
-
+	
 	return $w
     }
     #
@@ -674,7 +678,7 @@ snit::widget sdrtk::cw-echo {
 	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out -length
 	}
     }
-
+    
     method info-option {opt} {
 	switch -- $opt {
 	    -dict { return {dictionary for decoding morse} }
@@ -695,14 +699,14 @@ snit::widget sdrtk::cw-echo {
 	    default { puts "no info-option for $opt" }
 	}
     }
-
+    
     method ConfigText {opt val} { $hull configure $opt $val }
     method {Config -dti2} {val} { 
 	set options(-dti2) $val
 	# $val
 	$win.sandbox configure -detime {}
     }
-
+    
 }
 
 #

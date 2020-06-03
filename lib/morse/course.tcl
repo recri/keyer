@@ -277,7 +277,7 @@ snit::type morse::course {
 
     constructor {args} {
 	$self configurelist $args
-	$self test
+	$self begin
     }
 
     method Configure {opt val} {
@@ -317,6 +317,9 @@ snit::type morse::course {
 		dict set data($cat) $item [$self initial-entry $cat $item]
 	    }
 	}
+	puts "begin done"
+	puts "letters [dict keys $data(letters)]"
+	puts "digrams [dict keys $data(digrams)]"
     }
     # we can enumerate the initial letter set, but we do not
     # enumerate the ngrams on that set, we choose ngrams for
@@ -324,17 +327,18 @@ snit::type morse::course {
     # set of letters in play
     method enumerate {cat} {
 	switch $cat {
-	    letter { return [split $options(-order) {}] }
+	    letters { return [split $options(-order) {}] }
 	    digrams { return [$self ngrams 2] }
 	    trigrams { return [$self ngrams 3] }
 	    tetragrams { return [$self ngrams 4] }
 	    pentagrams { return [$self ngrams 5] }
-	    longerwords { return [$self longerwords] }
+	    longerwords { return [$self longerwords 5] }
 	    default { error "uncaught category $cat" }
 	}
     }
     method initial-entry {cat item} {
-	return  [dict create freq [$self frequency $cat $item] challenge 0 hit 0 miss 0 pass 0 time]
+	# puts "initial-entry $cat $item wants freq [$self frequency $cat $item]"
+	return  [dict create freq [$self frequency $cat $item] challenge 0 hit 0 miss 0 pass 0 time 0]
     }
     #
     # if only newletters are specified, then we get grams on the entire set
@@ -358,6 +362,9 @@ snit::type morse::course {
 	# puts [lmap k $kx v $vx {list $k [format %.1f [expr {20*log10($v)}]]}]
 	return $kx
     }
+    method longerwords {n} {
+	return {}
+    }
     # as for ngrams, but only take whole words
     method nwords {n {newletters {}} {oldletters {}}} {
 	set newglob [string tolower "\[[join $newletters {}]\]"]
@@ -378,12 +385,13 @@ snit::type morse::course {
     }
     method frequency {cat item} {
 	switch $cat {
-	    letter -
+	    letters -
 	    digrams -
 	    trigrams -
 	    tetragrams -
 	    pentagrams { return [dict get $tdata(grams) $options(-words) $item] }
 	    longerwords { return [dict get $tdata(wor5k) $item] }
+	    default { error "uncaught category $cat" }
 	}
     }
     method pause {} {
@@ -493,4 +501,18 @@ snit::type morse::course {
 	}
 	# test scramble
     }
+
+    method pause {} {
+    }
+    method play {} {
+    }
+    method save {} {
+    }
+    method restore {} {
+    }
+    method sample-draw {} {
+    }
+    method sample-score {sample score} {
+    }
 }
+
