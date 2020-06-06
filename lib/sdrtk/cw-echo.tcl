@@ -23,11 +23,11 @@ package require snit
 package require morse::morse
 package require morse::itu
 package require morse::dicts
-package require morse::abbrev
-package require morse::callsigns
-package require morse::voa
-package require morse::n0hff
-package require morse::course
+#package require morse::abbrev
+#package require morse::callsigns
+#package require morse::voa
+#package require morse::n0hff
+#package require morse::course
 
 package require sdrtk::lscale
 package require sdrtk::lradiomenubutton
@@ -97,51 +97,28 @@ package require midi
 namespace eval ::sdrtk {}
 
 snit::widget sdrtk::cw-echo {
-    option -chk -default {}
-    option -cho -default {}
-    option -key -default {}
-    option -keyo -default {}
-    option -kbd -default {}
-    option -kbdo -default {}
-    option -dto1 -default {}
-    option -dto2 -default {}
-    option -dti1 -default {}
-    option -dti2 -default {} -configuremethod Config
-    option -dec1 -default {}
-    option -dec2 -default {}
-    option -out -default {}
-    option -dict -default fldigi
+    option -chk -default {};	# challenge keyer
+    option -cho -default {};	# challenge keyer oscillator
+    option -key -default {};	# response keyer
+    option -keyo -default {};	# response keyer oscillator
+    option -kbd -default {};	# response keyboard
+    option -kbdo -default {};	# response keyboard oscillator
+    option -dto1 -default {};	# challenge detone (not used)
+    option -dto2 -default {};	# response detone (not used)
+    option -dti1 -default {};	# challenge detimer
+    option -dti2 -default {} -configuremethod Config; # response detimer
+    option -dec1 -default {};			      # challenge decoder
+    option -dec2 -default {};			      # response decoder
+    option -out -default {};			      # 
+    option -dict -default builtin;
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
     option -background -default white -configuremethod ConfigText
     
-    # letter orders
-    option -order -default {THEBANDOFIVRYUWSMGCLKPJQXZ}
-    option -order-label {Character Order}
-    option -order-values {
-	{50ETARSLUQJHONCVIBYPWKZMDXFG}
-	{FGHMJRUBDKNTVYCEILOSAPQXZW}
-	{ETAIMNSODRCUKPHGWLQBFYZVXJ}
-	{EISHTMOANWGDUVJBRKLFPXZCYQ}
-	{FKBQTCZHWXMDYUPAJOERSGNLVI}
-	{ETIMSOHAWUJVPCGKQFZRYLBXDN}
-	{AEIOUTNRSDLHBCFGJKMPQVWXYZ}
-	{THEBANDOFIVRYUWSMGCLKPJQXZ}
-    }
-    option -order-labels {
-	{50ETAR...}
-	{FGHMJR...}
-	{ETAIMN...}
-	{EISHTM...}
-	{FKBQTC...}
-	{ETIMSO...}
-	{AEIOUT...}
-	{THEBAN...}
-    }
     # source of challenge
     option -source -default letters
     option -source-label {Source}
-    option -source-values -default {letters digits characters callsigns abbrevs qcodes prefixes suffixes words phrases sentences}
+    option -source-values -default {{short letters} {long letters} letters digits characters callsigns abbrevs qcodes prefixes suffixes words phrases sentences}
     # length of challenge in characters
     option -length -default 1
     option -length-label {Length}
@@ -153,7 +130,7 @@ snit::widget sdrtk::cw-echo {
     # speed of challenge
     option -challenge-wpm 30
     option -challenge-wpm-label {Challenge WPM}
-    option -challenge-wpm-values {15 17.5 20 22.5 25 30 35 40 50}
+    option -challenge-wpm-values {15 17.5 20 22.5 25 27.5 30 32.5 35 40 50}
     # frequency of challenge sidetone
     option -challenge-tone E5
     option -challenge-tone-label {Challenge Tone}
@@ -236,7 +213,7 @@ snit::widget sdrtk::cw-echo {
     method keypress {a} { $options(-kbd) puts [string toupper $a] }
     method setup {} {
 	#  -source -length
-	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -session -order -char-space -word-space -gain -dah-offset} {
+	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -session -source -char-space -word-space -gain -dah-offset} {
 	    $self update $opt $options($opt)
 	}
 	$win.echo select $win.play
@@ -269,7 +246,7 @@ snit::widget sdrtk::cw-echo {
 	    set data(trimmed-response) [regsub -all { } $data(response) {}]
 	    set data(n-t-r) [string length $data(trimmed-response)]
 	    # switch on state
-	    puts "$data(state)"
+	    # puts "$data(state)"
 	    switch $data(state) {
 		start {
 		    array set data [list \
@@ -342,7 +319,7 @@ snit::widget sdrtk::cw-echo {
 		    if {$data(n-t-c) != 0} {
 			# $self status "\n" normal
 			# puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
-			set data(state) challenge-again
+			set data(state) pause-before-new-challenge
 			continue
 		    }
 		    break
@@ -361,34 +338,14 @@ snit::widget sdrtk::cw-echo {
 			$self status {}
 			$self status "$data(response)" wrong " is wrong!\n" normal
 			$self score-challenge misses
-			array set data [list time-pause [clock millis] state pause-before-challenge-again]
+			array set data [list time-pause [clock millis] state pause-before-new-challenge]
 			break
 		    }
 		    if {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
-			$self score-challenge passes
-			array set data [list time-pause [clock millis] state pause-before-challenge-again]
+			$self score-challenge passes 
+			array set data [list time-pause [clock millis] state pause-before-new-challenge]
 			continue
 		    }
-		}
-		pause-before-challenge-again {
-		    if {[clock millis]-$data(time-pause) > 50} {
-			if {[$options(-dti2) pending] && [$options(-dti2) peek] ne { }} {
-			    set data(state) wait-response-echo
-			    set data(time-pause) [clock millis]
-			    continue
-			}
-			set data(state) challenge-again
-			continue
-		    }
-		    break
-		}
-		challenge-again {
-		    if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
-			$options(-chk) puts [string toupper $data(pre-challenge)]
-			array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} state wait-challenge-echo]
-			continue
-		    }
-		    break
 		}
 		default { error "uncaught state $data(state)" }
 	    }
@@ -430,9 +387,46 @@ snit::widget sdrtk::cw-echo {
     }
     proc accumulate-playtime {args} { return [lindex [accumulate-time {*}$args] 0] }
     proc accumulate-pausetime {args} { return [lindex [accumulate-time {*}$args] 1] }
+
     # score the results of a timed session
+    proc init-summary {tag} {
+	return [dict create tag $tag]
+    }
+    proc incr-summary {sum char time} {
+	dict incr sum count 1
+	dict incr sum time $time
+	dict incr sum time2 [expr {$time*$time}]
+	dict lappend sum $char $time
+	return $sum
+    }
+    proc format-summary {sum} {
+	set tag [dict get $sum tag]
+	set n [dict get $sum count]
+	set t [dict get $sum time]
+	set t2 [dict get $sum time2]
+	set avg [expr {double($t)/$n}]
+	set var [expr {double($t2)/$n - $avg*$avg}]
+	return [format "%5s %3d avg %6.1f var %6.1f" $tag $n $avg $var]
+    }
     method score-session {} {
 	puts "score-session"
+	set total [init-summary total]
+	set hit [init-summary hit]
+	set miss [init-summary miss]
+	foreach entry $data(session-log) { 
+	    foreach {ch re score time} $entry break
+	    set total [incr-summary $total $ch $time]
+	    if {$ch eq $re} {
+		set hit [incr-summary $hit $ch $time]
+	    } else {
+		set miss [incr-summary $miss $ch $time]
+	    }
+	    # puts $entry
+	}
+	puts [format-summary $total]
+	puts [format-summary $hit]
+	puts [format-summary $miss]
+
     }
     # score the results of a single challenge
     method score-challenge {as} {
@@ -445,22 +439,21 @@ snit::widget sdrtk::cw-echo {
 	return [lindex $x [expr {int(rand()*[llength $x])}]]
     }
     method sample-draw {} {
-	return [$data(course) sample-draw]
-	if {0} {
-	    switch $options(-source) {
-		letters -
-		digits -
-		characters {
-		    set draw {}
-		    for {set i 0} {$i < $options(-length)} {incr i} {
-			append draw [choose $data(sample)]
-		    }
-		    set draw [string toupper $draw]
-		    # puts "sample-draw -> $draw"
-		    return $draw
+	switch $options(-source) {
+	    {short letters} -
+	    {long letters} -
+	    letters -
+	    digits -
+	    characters {
+		set draw {}
+		for {set i 0} {$i < $options(-length)} {incr i} {
+		    append draw [choose $data(sample)]
 		}
-		default { error "uncaught source $options(-source) in sample-draw" }
+		set draw [string toupper $draw]
+		# puts "sample-draw -> $draw"
+		return $draw
 	    }
+	    default { error "uncaught source $options(-source) in sample-draw" }
 	}
     }
     #
@@ -573,7 +566,7 @@ snit::widget sdrtk::cw-echo {
 	ttk::frame $w
 	set row 0
 	#  -source -length
-	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -order -session -char-space -word-space -gain -dah-offset} {
+	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -source -session -char-space -word-space -gain -dah-offset} {
 	    ttk::label $w.l$opt -text "$options($opt-label): "
 	    sdrtk::radiomenubutton $w.x$opt \
 		-defaultvalue $options($opt) \
@@ -607,11 +600,10 @@ snit::widget sdrtk::cw-echo {
 	# puts "update $opt $val"
 	set options($opt) $val
 	switch -- $opt {
-	    -order {
-		set data(course) [morse::course course -order $val -seed [clock seconds] -old $data(course)]
-	    }
 	    -source {
 		switch -- $val {
+		    {short letters} { set data(sample) [split {adegikmnorstuw} {}] }
+		    {long letters} { set data(sample) [split {bcfhjlpqvxyz} {}] }
 		    letters { set data(sample) [split {abcdefghijklmnopqrstuvwxyz} {}] }
 		    digits { set data(sample) [split {0123456789} {}] }
 		    characters { set data(sample) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+} {}] }

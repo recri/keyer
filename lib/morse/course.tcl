@@ -19,51 +19,18 @@
 #
 # morse code course
 #
-# given a character preference string, and a random number seed,
-# introduce the characters (roughly in the order given), words formed of 
-# introduced characters, and longer words
-#
-# introducing new elements when the current elements are recognized at 90%
-#
-# {0123456789
-# these could be handled by addition, subtraction, division, and multiplication (by juxtaposition) tables
-# with decimals, which misses ? and whichever of . or , is not the radix point.
+# manage test and drill on a character set.
 # 
-# In any case provide a course which will test all its elements
-# in a reasonable amount of time if the student gets everything right
-# so it may be used as a quick review/warmup
-#
-# perhaps make altered courses by changing the size of the groups of letters added
-# at each step?  So {T H E} vs {T H E B} vs {T H E B A N} vs {T H E B A N D}
-#
-# hmm, measures of skill: 
-#  1) are the characters correct? 
-#  2) is the spacing correct?  
-#  3) how long did it take to answer?
-#
-package provide morse::course 1.0.0
 
-package require morse::abbrev
-# morse-qcodes morse-ham-abbrev morse-ham-qcodes morse-ham
-package require morse::callsigns
-# morse-pileup-callsigns
-package require morse::n0hff
-# n0hff-letter-orders n0hff-common-words n0hff-words-by-function 
-# n0hff-words-sentences n0hff-more-words n0hff-prefixes n0hff-suffixes
-# n0hff-phrases n0hff-long
-package require morse::voa
-# morse-voa-vocabulary
-package require morse::words
-# words-words words-freq
+package provide morse::course 1.0.0
 
 package require morse::morse
 package require morse::itu
 package require snit
 
 snit::type morse::course {
-    option -old -default {} -configuremethod Configure
     option -seed -default {314159} -configuremethod Configure
-    option -words -default wor5k -configuremethod Configure
+    option -chars -default {ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.,/=<sk>
     # the order is the rough order of introduction of the letters
     option -order -default {THEBANDOFIVRYUWSMGCLKPJQXZ} -configuremethod Configure
     # these are orders which have been used in courses, or our own invention
