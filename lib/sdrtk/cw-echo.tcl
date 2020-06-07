@@ -114,6 +114,7 @@ snit::widget sdrtk::cw-echo {
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
     option -background -default white -configuremethod ConfigText
+    option -calibrate -default 0; # calibrate challenge response timing
     
     # source of challenge
     option -source -default letters
@@ -151,6 +152,10 @@ snit::widget sdrtk::cw-echo {
     option -response-tone F5
     option -response-tone-label {Response Tone}
     option -response-tone-values [lreverse {C4 C4# D4 D4# E4 F4 F4# G4 G4# A5 A5# B5 C5 C5# D5 D5# E5 F5 F5# G5 G5# A6 A6# B6}]
+    # mode of response keyer
+    option -response-mode B
+    option -response-mode-label {Keyer Mode}
+    option -response-mode-values {A B}
     # offset of dah tone from dit tone
     option -dah-offset 0
     option -dah-offset-label {Dah Tone Offset}
@@ -279,12 +284,8 @@ snit::widget sdrtk::cw-echo {
 			set data(state) start
 			continue
 		    }
-		    if {[clock millis]-$data(time-pause) > 50} {
-			if {[$options(-dti2) pending] && [$options(-dti2) pending] ne { }} {
-			    set data(time-pause) [clock millis]
-			} else {
-			    set data(state) new-challenge
-			}
+		    if {[clock millis]-$data(time-pause) > 250} {
+			set data(state) new-challenge
 		    }
 		}
 		new-challenge {
@@ -314,19 +315,22 @@ snit::widget sdrtk::cw-echo {
 			set t [clock millis]
 			array set data [list time-of-echo $t time-to-echo [expr {8*$data(time-warp)*($t-$data(time-challenge))}] state wait-response-echo]
 			# puts "time-to-echo $data(time-to-echo)"
+			if {$options(-calibrate)} {
+			    $options(-kbd) puts $data(trimmed-challenge)
+			}
 			continue
 		    } 
 		    if {$data(n-t-c) != 0} {
 			# $self status "\n" normal
 			# puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
-			set data(state) pause-before-new-challenge
+			array set data [list time-pause [clock millis] state pause-before-new-challenge]
 			continue
 		    }
 		    break
 		}
 		wait-response-echo {
 		    # $self status "Waiting for response ... {$data(trimmed-challenge)} {$data(trimmed-response)}" normal
-		    set data(response-time) [format %.0f [expr {[clock millis]-$data(time-challenge)-$data(challenge-response-ms)}]]
+		    set data(response-time) [format %.0f [expr {[clock millis]-$data(time-challenge)}]]
 		    if {[string first $data(trimmed-challenge) $data(trimmed-response)] >= 0} {
 			$self status {}
 			$self status $data(trimmed-challenge) right " is correct!\n" normal
@@ -336,13 +340,15 @@ snit::widget sdrtk::cw-echo {
 		    }
 		    if {$data(n-t-r) > 0 && [string first $data(trimmed-response) $data(trimmed-challenge)] < 0} {
 			$self status {}
-			$self status "$data(response)" wrong " is wrong!\n" normal
+			$self status "$data(trimmed-response)" wrong " is not $data(trimmed-challenge)!\n" normal
 			$self score-challenge misses
 			array set data [list time-pause [clock millis] state pause-before-new-challenge]
 			break
 		    }
 		    if {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
 			$self score-challenge passes 
+			$self status {}
+			$self status "$data(trimmed-challenge)" right " was the answer.\n"
 			array set data [list time-pause [clock millis] state pause-before-new-challenge]
 			continue
 		    }
@@ -351,7 +357,7 @@ snit::widget sdrtk::cw-echo {
 	    }
 	    break
 	}
-	set data(handler) [after 50 [mymethod timeout]]
+	set data(handler) [after 10 [mymethod timeout]]
     }
     method status {args} { 
 	if {$data(last-status) ne $args} {
@@ -390,31 +396,50 @@ snit::widget sdrtk::cw-echo {
 
     # score the results of a timed session
     proc init-summary {tag} {
-	return [dict create tag $tag]
+	return [dict create tag $tag count 0 time 0 time2 0 chars {} avg 0 var 0]
     }
     proc incr-summary {sum char time} {
-	dict incr sum count 1
-	dict incr sum time $time
-	dict incr sum time2 [expr {$time*$time}]
+	set n [dict get $sum count]
+	incr n
+	set t [expr {[dict get $sum time]+$time}]
+	set t2 [expr {[dict get $sum time2]+$time*$time}]
+	set avg [expr {double($t)/$n}]
+	set var [expr {double($t2)/$n - $avg*$avg}]
+	dict set sum count $n
+	dict set sum time $t
+	dict set sum time2 $t2
+	dict set sum avg $avg
+	dict set sum var $var
+	if {$char ni [dict get $sum chars]} { dict lappend sum chars $char }
 	dict lappend sum $char $time
 	return $sum
     }
     proc format-summary {sum} {
-	set tag [dict get $sum tag]
 	set n [dict get $sum count]
-	set t [dict get $sum time]
-	set t2 [dict get $sum time2]
-	set avg [expr {double($t)/$n}]
-	set var [expr {double($t2)/$n - $avg*$avg}]
-	return [format "%5s %3d avg %6.1f var %6.1f" $tag $n $avg $var]
+	set tag [dict get $sum tag]
+	set avg [dict get $sum avg]
+	set var [dict get $sum var]
+	set rms [expr {sqrt($var)}]
+	return [format "%5s %3d avg %6.1f rms %6.1f" $tag $n $avg $rms]
     }
+    proc tag-summary {sum} { dict get $sum tag }
+    proc time-summary {sum} { dict get $sum time }
+    proc time2-summary {sum} { dict get $sum time2 }
+    proc avg-summary {sum} { dict get $sum avg }
+    proc var-summary {sum} { dict get $sum var }
+    proc chars-summary {sum} { dict get $sum chars }
+    proc times-summary {sum char} { dict get $sum $char }
+    proc exists-summary {sum char} { dict exists $sum $char }
     method score-session {} {
 	puts "score-session"
 	set total [init-summary total]
 	set hit [init-summary hit]
 	set miss [init-summary miss]
+	set ms [expr {([morse-dit-ms $options(-challenge-wpm)]+[morse-dit-ms $options(-response-wpm)])/2}]
 	foreach entry $data(session-log) { 
 	    foreach {ch re score time} $entry break
+	    set l [morse-word-length [$options(-dict)] $ch]
+	    set time [expr {$time/(2+$l)/$ms}]
 	    set total [incr-summary $total $ch $time]
 	    if {$ch eq $re} {
 		set hit [incr-summary $hit $ch $time]
@@ -426,7 +451,17 @@ snit::widget sdrtk::cw-echo {
 	puts [format-summary $total]
 	puts [format-summary $hit]
 	puts [format-summary $miss]
-
+	foreach char [lsort [chars-summary $total]] {
+	    set hits {}
+	    set misses {}
+	    if {[exists-summary $hit $char]} {
+		set hits [lsort -real -increasing [times-summary $hit $char]]
+	    }
+	    if {[exists-summary $miss $char]} {
+		set misses [lmap {x} [times-summary $miss $char] {lindex {-} 0}]
+	    }
+	    puts [format "%2d $char $hits $misses" [morse-word-length [$options(-dict)] $char]]
+	}
     }
     # score the results of a single challenge
     method score-challenge {as} {
@@ -475,7 +510,8 @@ snit::widget sdrtk::cw-echo {
 	}
 	pack [ttk::frame $w] -side top -expand true -fill x
 	set row 0
-	foreach var {session-time response-time challenges hits misses passes challenge-wpm response-wpm} {
+	# response-time hits misses passes
+	foreach var {session-time challenges challenge-wpm response-wpm} {
 	    grid [ttk::label $w.l$var -text "$var: "] -row $row -column 0
 	    grid [ttk::label $w.v$var -textvar [myvar data($var)]] -row $row -column 1
 	    switch $var {
@@ -511,7 +547,8 @@ snit::widget sdrtk::cw-echo {
 		} else {
 		    $win.play.b$but configure -text Play
 		    lappend data(session-stamps) pause [clock millis]
-		    set data(handler) [after 50 [mymethod timeout]]
+		    array set data [list time-pause [clock millis] state pause-before-new-challenge]
+		    set data(handler) [after 10 [mymethod timeout]]
 		}
 	    }
 	    settings {
@@ -566,7 +603,7 @@ snit::widget sdrtk::cw-echo {
 	ttk::frame $w
 	set row 0
 	#  -source -length
-	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -source -session -char-space -word-space -gain -dah-offset} {
+	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -response-mode -source -session -char-space -word-space -gain -dah-offset} {
 	    ttk::label $w.l$opt -text "$options($opt-label): "
 	    sdrtk::radiomenubutton $w.x$opt \
 		-defaultvalue $options($opt) \
@@ -667,7 +704,7 @@ snit::widget sdrtk::cw-echo {
     #
     method exposed-options {} { 
 	return {
-	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out -length
+	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out -length -calibrate
 	}
     }
     
@@ -688,6 +725,7 @@ snit::widget sdrtk::cw-echo {
 	    -dti2 { return {response time decoder} }
 	    -out { return {output gain} }
 	    -length { return {length of challenges} }
+	    -calibrate { return {calibrate response times} }
 	    default { puts "no info-option for $opt" }
 	}
     }

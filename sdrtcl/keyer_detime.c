@@ -130,7 +130,7 @@ static int _process(jack_nframes_t nframes, void *arg) {
       int port;
       while (framework_midi_event_get(&dp->fw, i, &event, &port))
 	_detime_event(dp, event.size, event.buffer);
-      if ((dp->frame & 63) == 0) 
+      if ((dp->frame & 7) == 0) 
 	_detime_query(dp);
       /* increment the frame counter */
       dp->frame += 1;

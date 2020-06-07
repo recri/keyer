@@ -76,9 +76,7 @@ proc get-window-types {} {
 
 # these are morse code dictionaries
 package require morse::dicts
-proc get-morse-dicts {} { 
-    return [concat {builtin} [morse-dicts]]
-}
+proc get-morse-dicts {} { return [morse-dicts] }
 
 # these are the iambic keyers
 proc get-iambic-keyers {} { 
@@ -586,6 +584,7 @@ snit::type keyer::options {
 	    {*goertzel-char* -replications} {
 		$self describe $option value -min 1 -max 32 -step 1 -units samples
 	    }
+	    {* -calibrate} { $self describe $option bool }
 	    * { puts "populate $name $opt: no clues" }
 	}
     }

@@ -53,7 +53,7 @@ snit::type sdrtcl::cw-decode {
     
     constructor {args} {
 	$self configurelist $args
-	after 250 [mymethod timeout]
+	after 10 [mymethod timeout]
     }
 
     method timeout {} {
@@ -72,7 +72,7 @@ snit::type sdrtcl::cw-decode {
 		}
 	    }
 	}
-	set handler [after 250 [mymethod timeout]]
+	set handler [after 10 [mymethod timeout]]
     }
 
     method get {} {
