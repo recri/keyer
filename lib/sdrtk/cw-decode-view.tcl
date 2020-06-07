@@ -30,7 +30,7 @@ package require morse::dicts
 namespace eval ::sdrtk {}
 
 snit::widgetadaptor sdrtk::cw-decode-view {
-    option -detime -default {};	# sdrtcl::keyer-detime or equivalent
+    option -detime -default {} -configuremethod Config;	# sdrtcl::keyer-detime or equivalent
     option -dict -default builtin
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
@@ -77,10 +77,15 @@ snit::widgetadaptor sdrtk::cw-decode-view {
 	    default { puts "no info-option for $opt" }
 	}
     }
+    method Config {opt val} {
+	puts "cw-decode-view::configure $opt $val"
+	set options($opt) $val
+    }
     method ConfigText {opt val} {
 	$hull configure $opt $val
     }
     method timeout {} {
+	# puts "cw-decode-view::timeout $options(-detime)"
 	# get new text
 	# append to accumulated code
 	if {$options(-detime) ne {} &&  ! [$options(-detime) is-busy] } {
@@ -97,7 +102,7 @@ snit::widgetadaptor sdrtk::cw-decode-view {
 	    }
 	    $self see end
 	}
-	set handler [after 250 [mymethod timeout]]
+	set handler [after 100 [mymethod timeout]]
     }
 
     method save {} {

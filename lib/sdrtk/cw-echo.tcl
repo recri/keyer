@@ -107,19 +107,20 @@ snit::widget sdrtk::cw-echo {
     option -dto2 -default {};	# response detone (not used)
     option -dti1 -default {};	# challenge detimer
     option -dti2 -default {} -configuremethod Config; # response detimer
-    option -dec1 -default {};			      # challenge decoder
-    option -dec2 -default {};			      # response decoder
-    option -out -default {};			      # 
-    option -dict -default builtin;
-    option -font -default TkDefaultFont
-    option -foreground -default black -configuremethod ConfigText
-    option -background -default white -configuremethod ConfigText
+    option -dec1 -default {};   # challenge decoder
+    option -dec2 -default {};	# response decoder
+    option -out -default {};	# output mixer
+    option -dict -default builtin; # decoding dictionary
+    option -font -default TkDefaultFont; # font
+    option -foreground -default black -configuremethod ConfigText; # foreground color
+    option -background -default white -configuremethod ConfigText; # background color
     option -calibrate -default 0; # calibrate challenge response timing
     
     # source of challenge
     option -source -default letters
     option -source-label {Source}
-    option -source-values -default {{short letters} {long letters} letters digits characters callsigns abbrevs qcodes prefixes suffixes words phrases sentences}
+    # retired: callsigns abbrevs qcodes prefixes suffixes words phrases sentences
+    option -source-values -default {{short letters} {long letters} letters digits characters}
     # length of challenge in characters
     option -length -default 1
     option -length-label {Length}
@@ -187,6 +188,7 @@ snit::widget sdrtk::cw-echo {
 	pack [ttk::notebook $win.echo] -fill both -expand true
 	$win.echo add [$self play-tab $win.play] -text Echo
 	$win.echo add [$self setup-tab $win.setup] -text Setup
+	$win.echo add [$self stats-tab $win.stats] -text Stats
 	$win.echo add [$self about-tab $win.about] -text About
 	$win.echo add [$self sandbox-tab $win.sandbox] -text Sandbox
 	$win.echo add [$self dial-tab $win.dial] -text Dial
@@ -198,13 +200,22 @@ snit::widget sdrtk::cw-echo {
 	switch -glob [$win.echo select] {
 	    *play {
 		# steal back the detimer on keyboard and key
-		$win.sandbox configure -detime {}
+		if {[$options(-dec2) cget -detime] eq {}} {
+		    $options(-dec2) configure -detime [$win.sandbox cget -detime]
+		    $win.sandbox configure -detime {}
+		}
+	    }
+	    *stats {
 	    }
 	    *setup {
 	    }
 	    *sandbox {
 		# steal the detimer on keyboard and key
-		$win.sandbox configure -detime $options(-dti2)
+		# $win.play configure -detime {}
+		if {[$win.sandbox cget -detime] eq {}} {
+		    $win.sandbox configure -detime [$options(-dec2) cget -detime]
+		    $options(-dec2) configure -detime {}
+		}
 	    }
 	    *about {
 	    }
@@ -218,7 +229,7 @@ snit::widget sdrtk::cw-echo {
     method keypress {a} { $options(-kbd) puts [string toupper $a] }
     method setup {} {
 	#  -source -length
-	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -session -source -char-space -word-space -gain -dah-offset} {
+	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -response-mode -session -source -char-space -word-space -gain -dah-offset} {
 	    $self update $opt $options($opt)
 	}
 	$win.echo select $win.play
@@ -396,20 +407,21 @@ snit::widget sdrtk::cw-echo {
 
     # score the results of a timed session
     proc init-summary {tag} {
-	return [dict create tag $tag count 0 time 0 time2 0 chars {} avg 0 var 0]
+	return [dict create tag $tag count 0 time 0 time2 0 chars {} avg 0 var 0 min 10000 max -10000]
     }
     proc incr-summary {sum char time} {
 	set n [dict get $sum count]
 	incr n
-	set t [expr {[dict get $sum time]+$time}]
-	set t2 [expr {[dict get $sum time2]+$time*$time}]
-	set avg [expr {double($t)/$n}]
-	set var [expr {double($t2)/$n - $avg*$avg}]
 	dict set sum count $n
+	set t [expr {[dict get $sum time]+$time}]
 	dict set sum time $t
+	set t2 [expr {[dict get $sum time2]+$time*$time}]
 	dict set sum time2 $t2
+	set avg [expr {double($t)/$n}]
 	dict set sum avg $avg
-	dict set sum var $var
+	dict set sum var [expr {double($t2)/$n - $avg*$avg}]
+	dict set sum min [expr {min($time,[dict get $sum min])}]
+	dict set sum max [expr {max($time,[dict get $sum max])}]
 	if {$char ni [dict get $sum chars]} { dict lappend sum chars $char }
 	dict lappend sum $char $time
 	return $sum
@@ -420,7 +432,9 @@ snit::widget sdrtk::cw-echo {
 	set avg [dict get $sum avg]
 	set var [dict get $sum var]
 	set rms [expr {sqrt($var)}]
-	return [format "%5s %3d avg %6.1f rms %6.1f" $tag $n $avg $rms]
+	set min [dict get $sum min]
+	set max [dict get $sum max]
+	return [format "%5s %3d min %6.1f avg %6.1f rms %6.1f max %6.1f" $tag $n $min $avg $rms $max]
     }
     proc tag-summary {sum} { dict get $sum tag }
     proc time-summary {sum} { dict get $sum time }
@@ -561,7 +575,7 @@ snit::widget sdrtk::cw-echo {
     #
     method sandbox-tab {w} {
 	# $options(-dti2)
-	pack [sdrtk::cw-decode-view $w -detime {} ] -fill both -expand true
+	pack [sdrtk::cw-decode-view $w] -fill both -expand true
 	return $w
     }
     #
@@ -589,11 +603,23 @@ snit::widget sdrtk::cw-echo {
 	return $w
     }
     #
+    # stats-tab
+    #
+    method stats-tab {w} {
+	ttk::frame $w
+	pack [canvas $w.c -background lightgrey] -fill both -expand true
+	return $w
+    }
+    #
     # about-tab
     #
     method about-tab {w} {
 	ttk::frame $w
 	pack [text $w.text -width 40 -background lightgrey] -fill both -expand true
+	$w.text insert end "" bold "Welcome to Echo\n" \
+	    normal "Echo is a CW/Morse code trainer for your ear and your fist. " \
+	    normal "Click" italic {[Play]} normal " on the " italic "Play" normal "tab and the computer will play morse code for you." \
+	    normal "Echo the code back and Echo will collect statistics on your speed and accuracy."
 	return $w
     }
     #
@@ -683,6 +709,9 @@ snit::widget sdrtk::cw-echo {
 		::options cset -$options(-kbdo)-freq $rfreq
 		::options cset -$options(-keyo)-freq $rfreq
 	    }
+	    -response-mode {
+		::options cset -$options(-key)-mode $val
+	    }
 	    -dah-offset {
 		set cfreq [::midi::note-to-hertz [expr {[::midi::name-octave-to-note $options(-challenge-tone)]+$val}]]
 		::options cset -$options(-chk)-two $cfreq
@@ -734,7 +763,7 @@ snit::widget sdrtk::cw-echo {
     method {Config -dti2} {val} { 
 	set options(-dti2) $val
 	# $val
-	$win.sandbox configure -detime {}
+	# $win.sandbox configure -detime {}
     }
     
 }

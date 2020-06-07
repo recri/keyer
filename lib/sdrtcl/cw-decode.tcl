@@ -59,7 +59,7 @@ snit::type sdrtcl::cw-decode {
     method timeout {} {
 	# get new text
 	# append to accumulated code
-	if { ! [$options(-detime) is-busy]} {
+	if {$options(-detime) ne {} && ! [$options(-detime) is-busy]} {
 	    append data(code) [$options(-detime) get]
 	    while {[regexp {^([-.]*) (.*)$} $data(code) all symbol data(code)]} {
 		if {$symbol ne {}} {
