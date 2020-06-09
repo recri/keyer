@@ -78,7 +78,7 @@ snit::widgetadaptor sdrtk::cw-decode-view {
 	}
     }
     method Config {opt val} {
-	puts "cw-decode-view::configure $opt $val"
+	# puts "cw-decode-view::configure $opt $val"
 	set options($opt) $val
     }
     method ConfigText {opt val} {

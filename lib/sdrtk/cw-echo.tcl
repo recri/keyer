@@ -227,7 +227,7 @@ snit::widget sdrtk::cw-echo {
     option -length-label {Length}
     option -length-values {1 2 3 4 5 6 ...}
     # length of session in minutes
-    option -session -default 0.5
+    option -session -default 1
     option -session-label {Session Length}
     option -session-values -default {0.5 1 2 5 10 15 20}
     # speed of challenge
@@ -419,7 +419,6 @@ snit::widget sdrtk::cw-echo {
 			set data(response-dit-ms) [morse-dit-ms $options(-response-wpm)]
 			set data(challenge-response-ms) [expr {$data(challenge-dits)*($data(challenge-dit-ms)+$data(response-dit-ms))}]
 			$options(-chk) puts [string toupper $data(pre-challenge)]
-			incr data(challenges)
 		    }
 		}
 		wait-challenge-echo {
@@ -452,19 +451,19 @@ snit::widget sdrtk::cw-echo {
 		    if {[string first $data(trimmed-challenge) $data(trimmed-response)] >= 0} {
 			$self status {}
 			$self status $data(trimmed-challenge) right " is correct!\n" normal
-			$self score-challenge hits
+			$self score-challenge; # hits
 			array set data [list time-wait [clock millis] state wait-before-new-challenge]
 			break
 		    }
 		    if {$data(n-t-r) > 0 && [string first $data(trimmed-response) $data(trimmed-challenge)] < 0} {
 			$self status {}
 			$self status "$data(trimmed-response)" wrong " is not $data(trimmed-challenge)!\n" normal
-			$self score-challenge misses
+			$self score-challenge; # misses
 			array set data [list time-wait [clock millis] state wait-before-new-challenge]
 			break
 		    }
 		    if {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
-			$self score-challenge passes 
+			$self score-challenge; # pass
 			$self status {}
 			$self status "$data(trimmed-challenge)" right " was the answer.\n"
 			array set data [list time-wait [clock millis] state wait-before-new-challenge]
@@ -565,11 +564,9 @@ snit::widget sdrtk::cw-echo {
 	set ms [expr {([morse-dit-ms $options(-challenge-wpm)]+[morse-dit-ms $options(-response-wpm)])/2}]
 	set start [lindex $data(session-log) 0]
 	set end [lindex $data(session-log) end]
-	puts $start
-	puts $end
-	puts "[llength $data(session-log)] == 2+[llength [lrange $data(session-log) 1 end-1]]"
+	puts "{[join $data(session-log) \n]}"
 	foreach entry [lrange $data(session-log) 1 end-1] { 
-	    foreach {ch re score time} $entry break
+	    foreach {ch re time} $entry break
 	    set l [morse-word-length [$options(-dict)] $ch]
 	    set time [expr {$time/(2+$l)/$ms}]
 	    set total [incr-summary $total $ch $time]
@@ -609,10 +606,9 @@ snit::widget sdrtk::cw-echo {
 	}
     }
     # score the results of a single challenge
-    method score-challenge {as} {
-	incr data($as)
-	lappend data(session-log) [list $data(pre-challenge) $data(trimmed-response) $as $data(response-time)]
-	# puts "score-challenge {$data(pre-challenge)} {$data(trimmed-response)} $as $data(response-time) ms"
+    method score-challenge {} {
+	lappend data(session-log) [list $data(pre-challenge) $data(trimmed-response) $data(response-time)]
+	# puts "score-challenge {$data(pre-challenge)} {$data(trimmed-response)} $data(response-time) ms"
     }
     proc choose {x} {
 	# puts "choose from {$x} [expr {int(rand()*[llength $x])}]"
@@ -647,27 +643,16 @@ snit::widget sdrtk::cw-echo {
 	    play/pause 0
 	    session-time 0
 	    response-time 0
-	    challenges 0
-	    hits 0
-	    misses 0
-	    passes 0
-	    challenge {}
-	    response {}
-	    course {}
 	}
 	pack [ttk::frame $w] -side top -expand true -fill x
 	set row 0
 	# response-time hits misses passes
-	foreach var {session-time challenges challenge-wpm response-wpm} {
+	foreach var {session-time challenge-wpm response-wpm} {
 	    grid [ttk::label $w.l$var -text "$var: "] -row $row -column 0
 	    grid [ttk::label $w.v$var -textvar [myvar data($var)]] -row $row -column 1
 	    switch $var {
 		session-time { set data($var) 0:00 }
-		response-time -
-		challenges -
-		hits -
-		misses -
-		passes  { set data($var) 0 }
+		response-time { set data($var) 0 }
 		challenge-wpm { set data($var) "$options(-challenge-wpm) WPM" }
 		response-wpm { set data($var) "$options(-response-wpm) WPM" }
 		default { error "uncaught dashboard variable $var" }
