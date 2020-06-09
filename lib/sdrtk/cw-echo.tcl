@@ -23,11 +23,6 @@ package require snit
 package require morse::morse
 package require morse::itu
 package require morse::dicts
-#package require morse::abbrev
-#package require morse::callsigns
-#package require morse::voa
-#package require morse::n0hff
-#package require morse::course
 
 package require sdrtk::lscale
 package require sdrtk::lradiomenubutton
@@ -94,7 +89,113 @@ package require midi
 # Given an order of introduction for the characters, we can introduce ngrams and words once their
 # constituent characters have been introduced as singletons.
 
-namespace eval ::sdrtk {}
+namespace eval ::sdrtk {} 
+
+# session summary type, with summary combination arithmetic
+snit::type summary {
+    option -start {}
+    option -end {}
+    option -play-time {}
+    option -length {}
+    variable data
+    constructor {args} {
+	set data [dict create tag $self count 0 time 0 time2 0 chars {}]
+    }
+    method incr {char {time {}}} {
+	if {$time ne {}} {
+	    set n [dict get [dict incr data count] count]
+	    set t [dict get [dict set data time [expr {[dict get $data time]+$time}]] time]
+	    set t2 [dict get [dict set data time2 [expr {[dict get $data time2]+$time*$time}]] time2]
+	    set avg [dict get [dict set data avg [expr {double($t)/$n}]] avg]
+	    set var [dict get [dict set data var [expr {double($t2)/$n - $avg*$avg}]] var]
+	    set rms [dict get [dict set data rms [expr {sqrt($var)}]] rms]
+	    set min [dict get [dict set data min [expr {min($time,[dict get $data min])}]] min]
+	    set max [dict get [dict set data max [expr {max($time,[dict get $data max])}]] max]
+	}
+	if { ! [dict exists $data $char]} {
+	    dict lappend data chars $char
+	    dict set data $char {}
+	}
+	dict lappend data $char $time
+	# dict set times [lsort [dict get 
+    }
+    method format {} {
+	dict with $data {count tag avg var rms min max} {
+	    format "%5s %3d min %3.1f avg %3.1f rms %3.1f max %3.1f" $tag $count $min $avg $rms $max
+	}
+    }
+    method get {item} { dict get $data $item }
+    method tag {} { $self get tag }
+    method count {} { $self get count }
+    method time {sum} { $self get time }
+    method time2 {sum} { $self get time2 }
+    method avg {sum} { $self get avg }
+    method var {sum} { $self get var }
+    method chars {sum} { $self get chars }
+    method times {sum char} { $self get $char }
+    method exists {sum char} { dict exists $data $char }
+}
+
+set exercises {
+    warmup {
+	EEEEE TTTTT IIIII MMMMM SSSSS OOOOO HHHHH 00000 55555
+	AAAAA NNNNN UUUUU DDDDD VVVVV BBBBB 44444 66666
+	ABCDEF GHIJK LMNOP QRSTU VWXYZ 12345 67890 / , . ? <SK> <AR> <BT>
+	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
+    }
+    exercise {
+	AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF GGGGG HHHHH IIIII JJJJJ
+	KKKKK LLLLL MMMMM NNNNN OOOOO PPPPP QQQQQ RRRRR
+	SSSSS TTTTT UUUUU VVVVV WWWWW XXXXX YYYYY ZZZZZ
+	11111 22222 33333 44444 55555 66666 77777 88888 99999 00000
+    }
+    drill {
+	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
+	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
+	BENS BEST BENT WIRE/5
+	, , , , , . . . . .
+	BENS BEST BENT WIRE/5
+	? ? ? ? ? 
+	BENS BEST BENT WIRE/5
+	/ / / / / * * * * * + + + + + = = = = =
+    }
+}
+
+set pangrams {
+    {quick zephyrs blow, vexing daft jim}
+    {the five boxing wizards jump quickly}
+    {sphinx of black quartz, judge my vow}
+    {waltz, bad nymph, for quick jigs vex}
+    {the five boxing wizards jump quickly}
+    {five quacking zephyrs jolt my wax bed}
+    {two driven jocks help fax my big quiz}
+    {pack my box with five dozen liquor jugs}
+    {a quick brown fox jumps over the lazy dog}
+    {jinxed wizards pluck ivy from the big quilt}
+    {the quick brown fox jumps over the lazy dog}
+    {amazingly few discotheques provide jukeboxes}
+    {a wizard’s job is to vex chumps quickly in fog}
+    {the lazy major was fixing Cupid’s broken quiver}
+    {my faxed joke won a pager in the cable TV quiz show}
+    {six boys guzzled cheap raw plum vodka quite joyfully}
+    {my girl wove six dozen plaid jackets before she quit}
+    {crazy Fredrick bought many very exquisite opal jewels}
+    {six big devils from Japan quickly forgot how to waltz}
+    {sixty zippers were quickly picked from the woven jute bag}
+    {few black taxis drive up major roads on quiet hazy nights}
+    {just keep examining every low bid quoted for zinc etchings}
+    {jack quietly moved up front and seized the big ball of wax}
+    {a quick movement of the enemy will jeopardize six gunboats}
+    {we promptly judged antique ivory buckles for the next prize}
+    {whenever the black fox jumped the squirrel gazed suspiciously}
+    {jaded zombies acted quaintly but kept driving their oxen forward}
+    {the job requires extra pluck and zeal from every young wage earner}
+    {a quart jar of oil mixed with zinc oxide makes a very bright paint}
+    {a mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent}
+    {just work for improved basic techniques to maximize your typing skill}
+    {the public was amazed to view the quickness and dexterity of the juggler}
+    {gaze at this sentence for just about sixty seconds and then explain what makes it quite different from the average sentence}
+}
 
 snit::widget sdrtk::cw-echo {
     option -chk -default {};	# challenge keyer
@@ -106,15 +207,15 @@ snit::widget sdrtk::cw-echo {
     option -dto1 -default {};	# challenge detone (not used)
     option -dto2 -default {};	# response detone (not used)
     option -dti1 -default {};	# challenge detimer
-    option -dti2 -default {} -configuremethod Config; # response detimer
+    option -dti2 -default {};	# response detimer
     option -dec1 -default {};   # challenge decoder
     option -dec2 -default {};	# response decoder
     option -out -default {};	# output mixer
     option -dict -default builtin; # decoding dictionary
-    option -font -default TkDefaultFont; # font
-    option -foreground -default black -configuremethod ConfigText; # foreground color
-    option -background -default white -configuremethod ConfigText; # background color
-    option -calibrate -default 0; # calibrate challenge response timing
+    option -font -default TkDefaultFont
+    option -foreground -default black -configuremethod ConfigText
+    option -background -default white -configuremethod ConfigText
+    option -calibrate -default 0; # run calibrating challenge response timing
     
     # source of challenge
     option -source -default letters
@@ -128,7 +229,7 @@ snit::widget sdrtk::cw-echo {
     # length of session in minutes
     option -session -default 0.5
     option -session-label {Session Length}
-    option -session-values -default {0.5 1 2 5 10 15 20 25 30 45 60}
+    option -session-values -default {0.5 1 2 5 10 15 20}
     # speed of challenge
     option -challenge-wpm 30
     option -challenge-wpm-label {Challenge WPM}
@@ -148,7 +249,7 @@ snit::widget sdrtk::cw-echo {
     # speed of response
     option -response-wpm 20
     option -response-wpm-label {Response WPM}
-    option -response-wpm-values {12 15 20 25 30 35 40}
+    option -response-wpm-values {12.5 15 17.5 20 22.5 25 27.5 30 32.5 35 40}
     # frequency of challenge sidetone
     option -response-tone F5
     option -response-tone-label {Response Tone}
@@ -177,6 +278,8 @@ snit::widget sdrtk::cw-echo {
 	state {}
 	last-status {}
 	time-warp 1
+	reddish-color "#D81B60"
+	bluish-color "#1E88E5"
     }
     
     constructor {args} {
@@ -233,8 +336,8 @@ snit::widget sdrtk::cw-echo {
 	    $self update $opt $options($opt)
 	}
 	$win.echo select $win.play
-	$win.play.text tag configure wrong -foreground red
-	$win.play.text tag configure right -foreground green
+	$win.play.text tag configure wrong -foreground $data(reddish-color)
+	$win.play.text tag configure right -foreground $data(bluish-color)
 	set data(state) start
     }
 
@@ -243,7 +346,9 @@ snit::widget sdrtk::cw-echo {
     #
     method timeout {} {
 	while {1} {
-	    # check if pause
+	    # check if explicitly paused
+	    # the status message is repeated, but not shown 
+	    # because it matches the previous status message
 	    if { ! $data(play/pause)} {
 		$self status "Press Play to continue\n" normal
 		return
@@ -267,35 +372,37 @@ snit::widget sdrtk::cw-echo {
 		start {
 		    array set data [list \
 					session-time 0 \
-					session-log {} \
-					response-time 0 \
+					session-time-limit [expr {int($options(-session)*60*1000)}] \
 					session-stamps [list play [clock millis]] \
+					session-log [list [list start [clock seconds] $options(-session) $options(-source) $options(-length)]] \
+					response-time 0 \
 					challenges 0 \
 					hits 0 \
 					misses 0 \
 					passes 0 \
-					session-start [clock seconds] \
 					pre-challenge {} \
 					challenge {} \
 					trimmed-challenge {} \
 					response {} \
 					trimmed-response {} \
-					time-pause [clock millis] \
+					time-wait [clock millis] \
 					time-challenge 0 \
 					time-of-echo 0 \
 					time-to-echo 0 \
-					state pause-before-new-challenge \
+					state wait-before-new-challenge \
 				       ]
 		}
-		pause-before-new-challenge {
-		    if {($data(play-time)/1000.0)/60.0 >= $options(-session)} {
+		wait-before-new-challenge {
+		    if {$data(play-time) >= $data(session-time-limit)} {
 			$self status "Session complete\n"
+			lappend data(session-log) [list end [clock seconds] $data(play-time)]
 			$self score-session
 			$self play-button play/pause
 			set data(state) start
 			continue
 		    }
-		    if {[clock millis]-$data(time-pause) > 250} {
+		    # should this timeout be a word space?
+		    if {[clock millis]-$data(time-wait) > 250} {
 			set data(state) new-challenge
 		    }
 		}
@@ -334,7 +441,7 @@ snit::widget sdrtk::cw-echo {
 		    if {$data(n-t-c) != 0} {
 			# $self status "\n" normal
 			# puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
-			array set data [list time-pause [clock millis] state pause-before-new-challenge]
+			array set data [list time-wait [clock millis] state wait-before-new-challenge]
 			continue
 		    }
 		    break
@@ -346,21 +453,21 @@ snit::widget sdrtk::cw-echo {
 			$self status {}
 			$self status $data(trimmed-challenge) right " is correct!\n" normal
 			$self score-challenge hits
-			array set data [list time-pause [clock millis] state pause-before-new-challenge]
+			array set data [list time-wait [clock millis] state wait-before-new-challenge]
 			break
 		    }
 		    if {$data(n-t-r) > 0 && [string first $data(trimmed-response) $data(trimmed-challenge)] < 0} {
 			$self status {}
 			$self status "$data(trimmed-response)" wrong " is not $data(trimmed-challenge)!\n" normal
 			$self score-challenge misses
-			array set data [list time-pause [clock millis] state pause-before-new-challenge]
+			array set data [list time-wait [clock millis] state wait-before-new-challenge]
 			break
 		    }
 		    if {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
 			$self score-challenge passes 
 			$self status {}
 			$self status "$data(trimmed-challenge)" right " was the answer.\n"
-			array set data [list time-pause [clock millis] state pause-before-new-challenge]
+			array set data [list time-wait [clock millis] state wait-before-new-challenge]
 			continue
 		    }
 		}
@@ -378,12 +485,16 @@ snit::widget sdrtk::cw-echo {
 	    # puts -nonewline [join $args { }]
 	}
     }
+    #
+    # maintain the count of play time and pause time for the current session in milliseconds
+    # also maintain the start time and end time in seconds from unix epoch
+    #
     proc format-time {millis} {
 	# return [format {%d:%02d:%03d} [expr {($millis/1000)/60}] [expr {($millis/1000)%60}] [expr {$millis%1000}]]
 	return [format {%d:%02d} [expr {($millis/1000)/60}] [expr {($millis/1000)%60}]]
     }
-    proc accumulate-time {args} {
-	#puts "accumulate-time $args"
+    proc accumulate-playtime {args} {
+	#puts "accumulate-playtime $args"
 	set playtime 0
 	set pausetime 0
 	foreach {tag millis} $args {
@@ -399,13 +510,13 @@ snit::widget sdrtk::cw-echo {
 	    set lasttag $tag
 	    set lastmillis $millis
 	}
-	#puts "accumulate-time $args -> $playtime $pausetime"
-	return [list $playtime $pausetime]
+	return $playtime
     }
-    proc accumulate-playtime {args} { return [lindex [accumulate-time {*}$args] 0] }
-    proc accumulate-pausetime {args} { return [lindex [accumulate-time {*}$args] 1] }
 
+    #
     # score the results of a timed session
+    # take the session log with the accumulated time and session parameters
+    #
     proc init-summary {tag} {
 	return [dict create tag $tag count 0 time 0 time2 0 chars {} avg 0 var 0 min 10000 max -10000]
     }
@@ -434,9 +545,10 @@ snit::widget sdrtk::cw-echo {
 	set rms [expr {sqrt($var)}]
 	set min [dict get $sum min]
 	set max [dict get $sum max]
-	return [format "%5s %3d min %6.1f avg %6.1f rms %6.1f max %6.1f" $tag $n $min $avg $rms $max]
+	return [format "%5s %3d min %3.1f avg %3.1f rms %3.1f max %3.1f" $tag $n $min $avg $rms $max]
     }
     proc tag-summary {sum} { dict get $sum tag }
+    proc count-summary {sum} { dict get $sum count }
     proc time-summary {sum} { dict get $sum time }
     proc time2-summary {sum} { dict get $sum time2 }
     proc avg-summary {sum} { dict get $sum avg }
@@ -445,12 +557,18 @@ snit::widget sdrtk::cw-echo {
     proc times-summary {sum char} { dict get $sum $char }
     proc exists-summary {sum char} { dict exists $sum $char }
     method score-session {} {
-	puts "score-session"
+	# puts "score-session"
+	# record start time, end time, elapsed trial time, session length
 	set total [init-summary total]
 	set hit [init-summary hit]
 	set miss [init-summary miss]
 	set ms [expr {([morse-dit-ms $options(-challenge-wpm)]+[morse-dit-ms $options(-response-wpm)])/2}]
-	foreach entry $data(session-log) { 
+	set start [lindex $data(session-log) 0]
+	set end [lindex $data(session-log) end]
+	puts $start
+	puts $end
+	puts "[llength $data(session-log)] == 2+[llength [lrange $data(session-log) 1 end-1]]"
+	foreach entry [lrange $data(session-log) 1 end-1] { 
 	    foreach {ch re score time} $entry break
 	    set l [morse-word-length [$options(-dict)] $ch]
 	    set time [expr {$time/(2+$l)/$ms}]
@@ -458,13 +576,16 @@ snit::widget sdrtk::cw-echo {
 	    if {$ch eq $re} {
 		set hit [incr-summary $hit $ch $time]
 	    } else {
+		# score the correct answer not given as a miss
 		set miss [incr-summary $miss $ch $time]
+		# if an incorrect answer was given, score it as a miss, too
+		# should be a prosign and not a #, but details
+		if {$re ne {}} {
+		    set miss [incr-summary $miss $re $time]
+		}
 	    }
 	    # puts $entry
 	}
-	puts [format-summary $total]
-	puts [format-summary $hit]
-	puts [format-summary $miss]
 	foreach char [lsort [chars-summary $total]] {
 	    set hits {}
 	    set misses {}
@@ -474,7 +595,17 @@ snit::widget sdrtk::cw-echo {
 	    if {[exists-summary $miss $char]} {
 		set misses [lmap {x} [times-summary $miss $char] {lindex {-} 0}]
 	    }
-	    puts [format "%2d $char $hits $misses" [morse-word-length [$options(-dict)] $char]]
+	    #puts [format "%2d $char $hits $misses" [morse-word-length [$options(-dict)] $char]]
+	}
+	#puts "total [count-summary $total]"
+	#puts "hit   [count-summary $hit]"
+	#puts "miss  [count-summary $miss]"
+	$self status ""
+	set percent [expr {int(round(100.0*[count-summary $hit]/[count-summary $total]))}]
+	if {[count-summary $miss] == 0} {
+	    $self status "${percent}%" right " correct on [count-summary $total] trials.\n" normal
+	} else {
+	    $self status "${percent}%" wrong " correct on [count-summary $total] trials.\n" normal
 	}
     }
     # score the results of a single challenge
@@ -501,6 +632,8 @@ snit::widget sdrtk::cw-echo {
 		set draw [string toupper $draw]
 		# puts "sample-draw -> $draw"
 		return $draw
+	    }
+	    warmup {
 	    }
 	    default { error "uncaught source $options(-source) in sample-draw" }
 	}
@@ -762,16 +895,13 @@ snit::widget sdrtk::cw-echo {
     method ConfigText {opt val} { $hull configure $opt $val }
     method {Config -dti2} {val} { 
 	set options(-dti2) $val
-	# $val
-	# $win.sandbox configure -detime {}
     }
     
 }
 
 #
-# todo - 20200429
-# [ ] - fix the repeat after no answer
-# [ ] - implement the flashcard algorithm
-# [ ] - implement several flashcard decks
-# [ ] - make the sandbox work, need to steal the focus
-#	when activated and give it back as necessary
+# todo 2020-06-07
+# [x] implement color blind friendly colors reddish #d81b60, bluish #1e88e5
+# [ ] output statistics into stats tab
+# [ ] accumulate statistics to startup file
+# [ ] accumulate layers of statistics
