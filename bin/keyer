@@ -557,7 +557,7 @@ snit::type keyer::options {
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {* -level} { $self describe $option value -format %.0f -min -160 -max 160 -step 1 -units dB }
 	    {* -deviation} { $self describe $option value -format %.0f -min 100 -max 10000 -step 100 -units Hz}
-	    {*cw-echo* -key} -
+	    {*quack* -key} -
 	    {* -chk} -
 	    {* -cho} -
 	    {* -keyo} -
@@ -567,6 +567,7 @@ snit::type keyer::options {
 	    {* -dto*} -
 	    {* -dti*} -
 	    {* -out} -
+	    {* -cas} -
 	    {* -ascii} -
 	    {* -atap*} -
 	    {* -detime} -
@@ -1034,7 +1035,7 @@ snit::type keyer::setups {
 	    info { x42-meter, audio level meter jack plugin }
 	}
 
-	echo {
+	quack {
 	    start { 
 		keyer -start {
 		    sdrtcl::keyer-ascii@chk sdrtcl::keyer-tone@cho 
@@ -1043,10 +1044,12 @@ snit::type keyer::setups {
 		    sdrtcl::keyer-ascii@kbd sdrtcl::keyer-tone@kbdo 
 		    sdrtcl::filter-goertzel@dto2 sdrtcl::keyer-detime@dti2 sdrtcl::cw-decode@dec2
 		    sdrtcl::gain@out
-		    sdrtk::cw-echo@echo
-		} -echo-chk chk -echo-cho cho -echo-dec1 dec1 -echo-dec2 dec2 -echo-kbd kbd -echo-kbdo kbdo -echo-key key -echo-keyo keyo
-		-echo-dti1 dti1 -echo-dti2 dti2 -echo-dto1 dto1 -echo-dto2 dto2 -echo-out out -dec1-detime dti1 -dec2-detime dti2
-		-dial 0 -eval {wm withdraw .}
+		    sdrtcl::midi-insert-key@cas
+		    sdrtk::quack@quack
+		} -quack-chk chk -quack-cho cho -quack-dec1 dec1 -quack-dec2 dec2 -quack-kbd kbd -quack-kbdo kbdo -quack-key key -quack-keyo keyo
+		-quack-dti1 dti1 -quack-dti2 dti2 -quack-dto1 dto1 -quack-dto2 dto2 -quack-out out -dec1-detime dti1 -dec2-detime dti2
+		-quack-cas cas -cas-dit Alt_R -cas-dah Control_R
+		-eval {wm withdraw .} -dial 0
 	    }
 	    info {echo back challenge training, goertzel removed}
 	    connect {
@@ -1061,6 +1064,7 @@ snit::type keyer::setups {
 		kbdo:out_i {out:in_i dto2:in_i} kbdo:out_q out:in_q
 		kbdo:midi_out dti2:midi_in
 		out:out_i {system:playback_1 system:playback_2}
+		cas:midi_out key:midi_in
 	    }
 	}
 

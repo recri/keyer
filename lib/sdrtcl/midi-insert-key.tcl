@@ -52,7 +52,7 @@ snit::type sdrtcl::midi-insert-key {
     option -ptt -default none -configuremethod ConfigureKey
     option -key-4 -default none -configuremethod ConfigureKey
     option -key-5 -default none -configuremethod ConfigureKey
-    option -window -default . -configuremethod Configure
+    option -window -default all -configuremethod Configure
 
     component insert
     delegate option * to insert

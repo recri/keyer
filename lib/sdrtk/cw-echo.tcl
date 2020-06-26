@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide sdrtk::cw-echo 1.0.0
+package provide sdrtk::quack 1.0.0
 
 package require Tk
 package require snit
@@ -91,51 +91,7 @@ package require midi
 
 namespace eval ::sdrtk {} 
 
-# session summary type, with summary combination arithmetic
-snit::type summary {
-    option -start {}
-    option -end {}
-    option -play-time {}
-    option -length {}
-    variable data
-    constructor {args} {
-	set data [dict create tag $self count 0 time 0 time2 0 chars {}]
-    }
-    method incr {char {time {}}} {
-	if {$time ne {}} {
-	    set n [dict get [dict incr data count] count]
-	    set t [dict get [dict set data time [expr {[dict get $data time]+$time}]] time]
-	    set t2 [dict get [dict set data time2 [expr {[dict get $data time2]+$time*$time}]] time2]
-	    set avg [dict get [dict set data avg [expr {double($t)/$n}]] avg]
-	    set var [dict get [dict set data var [expr {double($t2)/$n - $avg*$avg}]] var]
-	    set rms [dict get [dict set data rms [expr {sqrt($var)}]] rms]
-	    set min [dict get [dict set data min [expr {min($time,[dict get $data min])}]] min]
-	    set max [dict get [dict set data max [expr {max($time,[dict get $data max])}]] max]
-	}
-	if { ! [dict exists $data $char]} {
-	    dict lappend data chars $char
-	    dict set data $char {}
-	}
-	dict lappend data $char $time
-	# dict set times [lsort [dict get 
-    }
-    method format {} {
-	dict with $data {count tag avg var rms min max} {
-	    format "%5s %3d min %3.1f avg %3.1f rms %3.1f max %3.1f" $tag $count $min $avg $rms $max
-	}
-    }
-    method get {item} { dict get $data $item }
-    method tag {} { $self get tag }
-    method count {} { $self get count }
-    method time {sum} { $self get time }
-    method time2 {sum} { $self get time2 }
-    method avg {sum} { $self get avg }
-    method var {sum} { $self get var }
-    method chars {sum} { $self get chars }
-    method times {sum char} { $self get $char }
-    method exists {sum char} { dict exists $data $char }
-}
-
+# cwops copyright exercises, probably need to go away
 set exercises {
     warmup {
 	EEEEE TTTTT IIIII MMMMM SSSSS OOOOO HHHHH 00000 55555
@@ -161,43 +117,7 @@ set exercises {
     }
 }
 
-set pangrams {
-    {quick zephyrs blow, vexing daft jim}
-    {the five boxing wizards jump quickly}
-    {sphinx of black quartz, judge my vow}
-    {waltz, bad nymph, for quick jigs vex}
-    {the five boxing wizards jump quickly}
-    {five quacking zephyrs jolt my wax bed}
-    {two driven jocks help fax my big quiz}
-    {pack my box with five dozen liquor jugs}
-    {a quick brown fox jumps over the lazy dog}
-    {jinxed wizards pluck ivy from the big quilt}
-    {the quick brown fox jumps over the lazy dog}
-    {amazingly few discotheques provide jukeboxes}
-    {a wizard’s job is to vex chumps quickly in fog}
-    {the lazy major was fixing Cupid’s broken quiver}
-    {my faxed joke won a pager in the cable TV quiz show}
-    {six boys guzzled cheap raw plum vodka quite joyfully}
-    {my girl wove six dozen plaid jackets before she quit}
-    {crazy Fredrick bought many very exquisite opal jewels}
-    {six big devils from Japan quickly forgot how to waltz}
-    {sixty zippers were quickly picked from the woven jute bag}
-    {few black taxis drive up major roads on quiet hazy nights}
-    {just keep examining every low bid quoted for zinc etchings}
-    {jack quietly moved up front and seized the big ball of wax}
-    {a quick movement of the enemy will jeopardize six gunboats}
-    {we promptly judged antique ivory buckles for the next prize}
-    {whenever the black fox jumped the squirrel gazed suspiciously}
-    {jaded zombies acted quaintly but kept driving their oxen forward}
-    {the job requires extra pluck and zeal from every young wage earner}
-    {a quart jar of oil mixed with zinc oxide makes a very bright paint}
-    {a mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent}
-    {just work for improved basic techniques to maximize your typing skill}
-    {the public was amazed to view the quickness and dexterity of the juggler}
-    {gaze at this sentence for just about sixty seconds and then explain what makes it quite different from the average sentence}
-}
-
-snit::widget sdrtk::cw-echo {
+snit::widget sdrtk::quack {
     option -chk -default {};	# challenge keyer
     option -cho -default {};	# challenge keyer oscillator
     option -key -default {};	# response keyer
@@ -211,6 +131,7 @@ snit::widget sdrtk::cw-echo {
     option -dec1 -default {};   # challenge decoder
     option -dec2 -default {};	# response decoder
     option -out -default {};	# output mixer
+    option -cas -default {}; 	# keyboard keys
     option -dict -default builtin; # decoding dictionary
     option -font -default TkDefaultFont
     option -foreground -default black -configuremethod ConfigText
@@ -238,7 +159,7 @@ snit::widget sdrtk::cw-echo {
     option -challenge-tone E5
     option -challenge-tone-label {Challenge Tone}
     option -challenge-tone-values [lreverse {C4 C4# D4 D4# E4 F4 F4# G4 G4# A5 A5# B5 C5 C5# D5 D5# E5 F5 F5# G5 G5# A6 A6# B6}]
-    # character space padding
+    # character space padding, farnsworth here
     option -char-space 3
     option -char-space-label {Char Spacing}
     option -char-space-values {3 3.5 4 4.5 5 5.5 6}
@@ -274,15 +195,55 @@ snit::widget sdrtk::cw-echo {
 	challenge-trimmed {}
 	response {}
 	response-trimmed {}
-	sample {}
 	state {}
 	last-status {}
 	time-warp 1
 	reddish-color "#D81B60"
 	bluish-color "#1E88E5"
+	config-options {-challenge-wpm -challenge-tone -response-wpm -response-tone -response-mode -session -source -length -char-space -word-space -gain -dah-offset}
+	summary {} 
+	sample-chars {}
+	sample-words {}
+	sample {}
+	pangrams {
+	    {quick zephyrs blow, vexing daft jim}
+	    {the five boxing wizards jump quickly}
+	    {sphinx of black quartz, judge my vow}
+	    {waltz, bad nymph, for quick jigs vex}
+	    {the five boxing wizards jump quickly}
+	    {five quacking zephyrs jolt my wax bed}
+	    {two driven jocks help fax my big quiz}
+	    {pack my box with five dozen liquor jugs}
+	    {a quick brown fox jumps over the lazy dog}
+	    {jinxed wizards pluck ivy from the big quilt}
+	    {the quick brown fox jumps over the lazy dog}
+	    {amazingly few discotheques provide jukeboxes}
+	    {a wizard's job is to vex chumps quickly in fog}
+	    {the lazy major was fixing Cupid's broken quiver}
+	    {my faxed joke won a pager in the cable TV quiz show}
+	    {six boys guzzled cheap raw plum vodka quite joyfully}
+	    {my girl wove six dozen plaid jackets before she quit}
+	    {crazy Fredrick bought many very exquisite opal jewels}
+	    {six big devils from Japan quickly forgot how to waltz}
+	    {sixty zippers were quickly picked from the woven jute bag}
+	    {few black taxis drive up major roads on quiet hazy nights}
+	    {just keep examining every low bid quoted for zinc etchings}
+	    {jack quietly moved up front and seized the big ball of wax}
+	    {a quick movement of the enemy will jeopardize six gunboats}
+	    {we promptly judged antique ivory buckles for the next prize}
+	    {whenever the black fox jumped the squirrel gazed suspiciously}
+	    {jaded zombies acted quaintly but kept driving their oxen forward}
+	    {the job requires extra pluck and zeal from every young wage earner}
+	    {a quart jar of oil mixed with zinc oxide makes a very bright paint}
+	    {a mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent}
+	    {just work for improved basic techniques to maximize your typing skill}
+	    {the public was amazed to view the quickness and dexterity of the juggler}
+	    {gaze at this sentence for just about sixty seconds and then explain what makes it quite different from the average sentence}
+	}
     }
     
     constructor {args} {
+	puts "quack::constructor $self ($win) $args"
 	$self configurelist $args
 	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
 	bind all <KeyPress> [mymethod keypress %A]
@@ -309,6 +270,8 @@ snit::widget sdrtk::cw-echo {
 		}
 	    }
 	    *stats {
+		# draw the current statistics
+		$self stats-draw $win.stats
 	    }
 	    *setup {
 	    }
@@ -330,11 +293,55 @@ snit::widget sdrtk::cw-echo {
 	}
     }
     method keypress {a} { $options(-kbd) puts [string toupper $a] }
-    method setup {} {
-	#  -source -length
-	foreach opt {-challenge-wpm -challenge-tone -response-wpm -response-tone -response-mode -session -source -char-space -word-space -gain -dah-offset} {
-	    $self update $opt $options($opt)
+    #
+    # configuration and history
+    #
+    proc read-data {file} {
+	if {[catch {open $file r} fp]} { return {} }
+	if {[catch {read $fp} data]} { close $fp; return {} }
+	catch {close $fp}
+	return $data
+    }
+    proc write-data {file data} {
+	if {[catch {open $file w} fp]} { return {} }
+	if {[catch {puts $fp $data}]} { close $fp; return {} }
+	catch {close $fp}
+	return $data
+    }
+    proc append-data {file data} {
+	if {[catch {open $file a} fp]} { return {} }
+	if {[catch {puts $fp $data}]} { close $fp; return {} }
+	catch {close $fp}
+	return $data
+    }
+    method initialize-quack-config {} { 
+	if { ! [file exists ~/.config/quack/config.tcl]} {
+	    if { ! [file exists ~/.config/quack]} {
+		if { ! [file exists ~/.config]} {
+		    file mkdir ~/.config
+		}
+		file mkdir ~/.config/quack
+	    }
+	    write-data ~/.config/quack/config.tcl {}
+	    write-data ~/.config/quack/history.tcl {}
+	    write-data ~/.config/quack/pangrams.tcl $data(pangrams)
 	}
+    }
+    method load-quack-config {} { array set options [string trim [read-data ~/.config/quack/config.tcl]] }
+    method load-quack-history {} { set data(history) [read-data ~/.config/quack/history.tcl] }
+    method save-quack-config {} { write-data ~/.config/quack/config.tcl [concat {*}[lmap opt $data(config-options) {list $opt $options($opt)}]] }
+    method append-quack-history {session} { 
+	append-data ~/.config/quack/history.tcl "{$session}"
+	lappend data(history) $session
+    }
+    method clear-quack-config {} { exec cat /dev/null > ~/.config/quack/quack.tcl }
+    method clear-quack-history {} { exec cat /dev/null > ~/.config/quack/history.tcl }
+    method setup {} {
+	$self initialize-quack-config
+	$self load-quack-config
+	$self load-quack-history
+	$self history-update
+	foreach opt $data(config-options) { $self update $opt $options($opt) }
 	$win.echo select $win.play
 	$win.play.text tag configure wrong -foreground $data(reddish-color)
 	$win.play.text tag configure right -foreground $data(bluish-color)
@@ -374,7 +381,10 @@ snit::widget sdrtk::cw-echo {
 					session-time 0 \
 					session-time-limit [expr {int($options(-session)*60*1000)}] \
 					session-stamps [list play [clock millis]] \
-					session-log [list [list start [clock seconds] $options(-session) $options(-source) $options(-length)]] \
+					session-log [list start [clock seconds] $options(-session) \
+							 wpm $options(-challenge-wpm) $options(-response-wpm) \
+							 source $options(-source) $options(-length)] \
+					sample [$self sample-make] \
 					response-time 0 \
 					challenges 0 \
 					hits 0 \
@@ -394,9 +404,8 @@ snit::widget sdrtk::cw-echo {
 		}
 		wait-before-new-challenge {
 		    if {$data(play-time) >= $data(session-time-limit)} {
-			$self status "Session complete\n"
-			lappend data(session-log) [list end [clock seconds] $data(play-time)]
-			$self score-session
+			lappend data(session-log) end [clock seconds] $data(play-time)
+			$self status "Session complete, [$self score-session]\n"
 			$self play-button play/pause
 			set data(state) start
 			continue
@@ -408,9 +417,7 @@ snit::widget sdrtk::cw-echo {
 		}
 		new-challenge {
 		    if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
-			array set data [list  \
-					    challenge {} trimmed-challenge {} response {} trimmed-response {} \
-					    state wait-challenge-echo ]
+			array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} state wait-challenge-echo ]
 			set data(pre-challenge) [$self sample-draw]
 			set data(n-p-c) [string length $data(pre-challenge)]
 			set data(time-challenge) [clock millis]
@@ -513,29 +520,48 @@ snit::widget sdrtk::cw-echo {
     }
 
     #
-    # score the results of a timed session
+    # score the results of a timed session over single characters
     # take the session log with the accumulated time and session parameters
+    # the 'summary' is a statistical summary of the responses
     #
-    proc init-summary {tag} {
-	return [dict create tag $tag count 0 time 0 time2 0 chars {} avg 0 var 0 min 10000 max -10000]
+    proc sum {args} { tcl::mathop::+ {*}$args }
+    proc sum2 {args} { tcl::mathop::+ {*}[lmap {x} $args {expr {$x*$x}}] }
+    proc avg {args} { expr {double([sum {*}$args])/[llength $args]} }
+    proc avg2 {args} { expr {double([sum2 {*}$args])/[llength $args]} }
+    proc var {args} { expr {[avg2 {*}$args]-pow([avg {*}$args],2)} }
+    proc quartiles {args} {
+	# this is only accidentally correct according to any of the tedious
+	# definitions given in wikipedia, but it's easy and obvious to write
+	set args [lsort -increasing -real $args]
+	set n [llength $args]
+	set q1 [expr {max(0,min($n-1,int(round($n*0.25))))}]
+	set q2 [expr {max(0,min($n-1,int(round($n*0.50))))}]
+	set q3 [expr {max(0,min($n-1,int(round($n*0.75))))}]
+	list [lindex $args 0] [lindex $args $q1] [lindex $args $q2] [lindex $args $q3] [lindex $args end]
     }
+    proc percent {n m} { expr {int(round(100.0*$n/$m))} }
+    proc init-summary {tag} { dict create tag $tag times {} chars {} }
+    proc tag-summary {sum} { dict get $sum tag }
+    proc times-summary {sum} { dict get $sum times }
+    proc count-summary {sum} { llength [times-summary $sum] }
+    proc time-summary {sum} { sum {*}[times-summary $sum] }
+    proc time2-summary {sum} { sum2 {*}[times-summary $sum] }
+    proc avg-summary {sum} { avg {*}[times-summary $sum] }
+    proc var-summary {sum} { var {*}[times-summary $sum] }
+    proc quartiles-summary {sum} { quartiles {*}[times-summary $sum] }
+    proc chars-summary {sum} { dict get $sum chars }
+    proc char-times-summary {sum char} { if {[dict exists $sum $char]} { dict get $sum $char } else { list } }
+    proc char-count-summary {sum char} { llength [char-times-summary $sum $char] }
+    proc char-exists-summary {sum char} { dict exists $sum $char }
+    proc char-quartiles-summary {sum char} { quartiles {*}[char-times-summary $sum $char] }
+
     proc incr-summary {sum char time} {
-	set n [dict get $sum count]
-	incr n
-	dict set sum count $n
-	set t [expr {[dict get $sum time]+$time}]
-	dict set sum time $t
-	set t2 [expr {[dict get $sum time2]+$time*$time}]
-	dict set sum time2 $t2
-	set avg [expr {double($t)/$n}]
-	dict set sum avg $avg
-	dict set sum var [expr {double($t2)/$n - $avg*$avg}]
-	dict set sum min [expr {min($time,[dict get $sum min])}]
-	dict set sum max [expr {max($time,[dict get $sum max])}]
 	if {$char ni [dict get $sum chars]} { dict lappend sum chars $char }
+	dict lappend sum times $time
 	dict lappend sum $char $time
 	return $sum
     }
+
     proc format-summary {sum} {
 	set n [dict get $sum count]
 	set tag [dict get $sum tag]
@@ -546,73 +572,109 @@ snit::widget sdrtk::cw-echo {
 	set max [dict get $sum max]
 	return [format "%5s %3d min %3.1f avg %3.1f rms %3.1f max %3.1f" $tag $n $min $avg $rms $max]
     }
-    proc tag-summary {sum} { dict get $sum tag }
-    proc count-summary {sum} { dict get $sum count }
-    proc time-summary {sum} { dict get $sum time }
-    proc time2-summary {sum} { dict get $sum time2 }
-    proc avg-summary {sum} { dict get $sum avg }
-    proc var-summary {sum} { dict get $sum var }
-    proc chars-summary {sum} { dict get $sum chars }
-    proc times-summary {sum char} { dict get $sum $char }
-    proc exists-summary {sum char} { dict exists $sum $char }
-    method score-session {} {
-	# puts "score-session"
-	# record start time, end time, elapsed trial time, session length
-	set total [init-summary total]
-	set hit [init-summary hit]
-	set miss [init-summary miss]
-	set ms [expr {([morse-dit-ms $options(-challenge-wpm)]+[morse-dit-ms $options(-response-wpm)])/2}]
-	set start [lindex $data(session-log) 0]
-	set end [lindex $data(session-log) end]
-	puts "{[join $data(session-log) \n]}"
-	foreach entry [lrange $data(session-log) 1 end-1] { 
-	    foreach {ch re time} $entry break
-	    set l [morse-word-length [$options(-dict)] $ch]
+    proc session-summary {sum morse session} {
+	set start [lrange $session 0 2]
+	set wpm [lrange $session 3 5]
+	set source [lrange $session 6 8]
+	set end [lrange $session end-2 end]
+	set ms [expr {([morse-dit-ms [lindex $wpm 1]]+[morse-dit-ms [lindex $wpm 2]])/2}]
+	foreach {ch re time} [lrange $session 9 end-3] { 
+	    set l [morse-word-length $morse $ch]
 	    set time [expr {$time/(2+$l)/$ms}]
-	    set total [incr-summary $total $ch $time]
+	    dict set sum total [incr-summary [dict get $sum total] $ch $time]
 	    if {$ch eq $re} {
-		set hit [incr-summary $hit $ch $time]
+		dict set sum hit [incr-summary [dict get $sum hit] $ch $time]
 	    } else {
 		# score the correct answer not given as a miss
-		set miss [incr-summary $miss $ch $time]
+		dict set sum miss [incr-summary [dict get $sum miss] $ch $time]
 		# if an incorrect answer was given, score it as a miss, too
 		# should be a prosign and not a #, but details
 		if {$re ne {}} {
-		    set miss [incr-summary $miss $re $time]
+		    dict set sum miss [incr-summary [dict get $sum miss] $re $time]
 		}
 	    }
 	    # puts $entry
 	}
-	foreach char [lsort [chars-summary $total]] {
+	set chars [lsort [chars-summary [dict get $sum total]]]
+	foreach char $chars {
 	    set hits {}
 	    set misses {}
-	    if {[exists-summary $hit $char]} {
-		set hits [lsort -real -increasing [times-summary $hit $char]]
+	    if {[char-exists-summary [dict get $sum hit] $char]} {
+		set hits [lsort -real -increasing [char-times-summary [dict get $sum hit] $char]]
 	    }
-	    if {[exists-summary $miss $char]} {
-		set misses [lmap {x} [times-summary $miss $char] {lindex {-} 0}]
+	    if {[char-exists-summary [dict get $sum miss] $char]} {
+		set misses [lmap {x} [char-times-summary [dict get $sum miss] $char] {lindex {-} 0}]
 	    }
-	    #puts [format "%2d $char $hits $misses" [morse-word-length [$options(-dict)] $char]]
 	}
-	#puts "total [count-summary $total]"
-	#puts "hit   [count-summary $hit]"
-	#puts "miss  [count-summary $miss]"
-	$self status ""
-	set percent [expr {int(round(100.0*[count-summary $hit]/[count-summary $total]))}]
-	if {[count-summary $miss] == 0} {
-	    $self status "${percent}%" right " correct on [count-summary $total] trials.\n" normal
-	} else {
-	    $self status "${percent}%" wrong " correct on [count-summary $total] trials.\n" normal
-	}
+	return $sum
     }
+
+    proc init-session-summary {} { dict create total [init-summary total] hit [init-summary hit] miss [init-summary miss] }
+
+    proc history-summary {sessions morse {filter {}}} {
+	if {$sessions eq {}} { return {} }
+	set summary [init-session-summary]
+	foreach session $sessions {
+	    if {$filter eq {} || [$filter $session]} {
+		set summary [session-summary $summary $morse $session]
+	    }
+	}
+	set total [dict get $summary total]
+	set hit [dict get $summary hit]
+	set miss [dict get $summary miss]
+	set stats {}
+	lappend stats [list { } [percent [count-summary $hit] [count-summary $total]] {*}[quartiles-summary $hit]]
+	set chars [lsort [chars-summary $total]]
+	if {1} {
+	    # sort chars by dit length
+	    set lengths [lmap c $chars {morse-word-length $morse $c}]
+	    # puts $lengths
+	    set indices [lsort -indices -increasing -integer $lengths]
+	    set chars [lmap i $indices {lindex $chars $i}]
+	}
+	foreach char $chars {
+	    set ntot [char-count-summary $total $char]
+	    set nhit [char-count-summary $hit $char]
+	    set nmiss [char-count-summary $miss $char]
+	    # puts "$char total $ntot hit $nhit miss $nmiss"
+	    lappend stats [list $char [percent $nhit [expr {$nmiss+$nhit}]] {*}[char-quartiles-summary $hit $char]]
+	}
+	return $stats
+    }
+
+    method history-update {} {
+	set data(summary) [history-summary $data(history) [$options(-dict)]]
+    }
+
+    method score-session {} {
+	# puts "score-session"
+	# record start time, end time, elapsed trial time, session length
+	$self append-quack-history $data(session-log)
+	$self history-update
+	set s [session-summary [init-session-summary] [$options(-dict)] $data(session-log)]
+	return "[percent [count-summary [dict get $s hit]] [count-summary [dict get $s total]]]% correct"
+    }
+
     # score the results of a single challenge
     method score-challenge {} {
-	lappend data(session-log) [list $data(pre-challenge) $data(trimmed-response) $data(response-time)]
+	lappend data(session-log) $data(pre-challenge) $data(trimmed-response) $data(response-time)
 	# puts "score-challenge {$data(pre-challenge)} {$data(trimmed-response)} $data(response-time) ms"
     }
     proc choose {x} {
 	# puts "choose from {$x} [expr {int(rand()*[llength $x])}]"
 	return [lindex $x [expr {int(rand()*[llength $x])}]]
+    }
+    method sample-make {} {
+	set dist [concat {*}[lmap x [lsort -index 0 [lrange $data(summary) 1 end]] {lrange $x 0 1}]]
+	set sample {}
+	foreach char $data(sample-chars) {
+	    set char [string toupper $char]
+	    set n [expr {100-([dict exists $dist $char]?[dict get $dist $char]:0)}]
+	    if {$n > 10} {
+		lappend sample {*}[lrepeat $n $char]
+	    }
+	}
+	return $sample
     }
     method sample-draw {} {
 	switch $options(-source) {
@@ -626,7 +688,6 @@ snit::widget sdrtk::cw-echo {
 		    append draw [choose $data(sample)]
 		}
 		set draw [string toupper $draw]
-		# puts "sample-draw -> $draw"
 		return $draw
 	    }
 	    warmup {
@@ -649,12 +710,17 @@ snit::widget sdrtk::cw-echo {
 	# response-time hits misses passes
 	foreach var {session-time challenge-wpm response-wpm} {
 	    grid [ttk::label $w.l$var -text "$var: "] -row $row -column 0
-	    grid [ttk::label $w.v$var -textvar [myvar data($var)]] -row $row -column 1
+	    if {$var in {challenge-wpm response-wpm source}} {
+		grid [ttk::label $w.v$var -textvar [myvar options(-$var)]] -row $row -column 1
+	    } else {
+		grid [ttk::label $w.v$var -textvar [myvar data($var)]] -row $row -column 1
+	    }
 	    switch $var {
 		session-time { set data($var) 0:00 }
 		response-time { set data($var) 0 }
-		challenge-wpm { set data($var) "$options(-challenge-wpm) WPM" }
-		response-wpm { set data($var) "$options(-response-wpm) WPM" }
+		source -
+		challenge-wpm -
+		response-wpm { }
 		default { error "uncaught dashboard variable $var" }
 	    }
 	    incr row
@@ -679,7 +745,7 @@ snit::widget sdrtk::cw-echo {
 		} else {
 		    $win.play.b$but configure -text Play
 		    lappend data(session-stamps) pause [clock millis]
-		    array set data [list time-pause [clock millis] state pause-before-new-challenge]
+		    array set data [list time-pause [clock millis] state wait-before-new-challenge]
 		    set data(handler) [after 10 [mymethod timeout]]
 		}
 	    }
@@ -728,14 +794,49 @@ snit::widget sdrtk::cw-echo {
 	pack [canvas $w.c -background lightgrey] -fill both -expand true
 	return $w
     }
+    method stats-draw {w} {
+	$w.c delete all
+	for {set i 0} {$i < [llength $data(summary)]} {incr i} {
+	    $self stats-draw-row $w $i [lindex $data(summary) $i] 
+	}
+    }
+    method stats-draw-row {w i row} {
+	# puts "stats-draw-row $w $i $row"
+	lassign $row char percent min q1 median q3 max
+	# row label
+	$w.c create text 0 0 -text [format "$char %3d%%" $percent] -anchor nw -tag [list text$i row$i] -font {Courier 12}
+	# percent correct
+	if {$percent != 0} { $w.c create rectangle 0 0.1 $percent 0.9 -fill $data(bluish-color) -tag [list rect$i row$i] }
+	if {$percent != 100} { $w.c create rectangle $percent 0.1 100 0.9 -fill $data(reddish-color) -tag [list rect$i row$i] }
+	if {$min ne {}} {
+	    # box and whiskers verticals
+	    $w.c create line $min 0.1 $min 0.9 -tag [list box$i row$i]
+	    $w.c create line $q1 0.1 $q1 0.9 -tag [list box$i row$i]
+	    $w.c create line $median 0.1 $median 0.9 -width 2 -tags [list box$i row$i]
+	    $w.c create line $q3 0.1 $q3 0.9 -tag [list box$i row$i]
+	    $w.c create line $max 0.1 $max 0.9 -tag [list box$i row$i]
+	    # box and whiskers horizontals
+	    $w.c create line $min 0.5 $q1 0.5 -tags [list box$i row$i]
+	    $w.c create line $q3 0.5 $max 0.5 -tags [list box$i row$i]
+	    $w.c create line $q1 0.1 $q3 0.1 -tags [list box$i row$i]
+	    $w.c create line $q1 0.9 $q3 0.9 -tags [list box$i row$i]
+	}
+	# scale
+	$w.c scale rect$i 0 0 1 18
+	if {$min ne {}} { $w.c scale box$i 0 0 30 18 }
+	$w.c move row$i 0 [expr {$i*18}]
+	$w.c move text$i 10 0
+	$w.c move rect$i 70 0
+	if {$min ne {}} { $w.c move box$i 150 0 }
+    }
     #
     # about-tab
     #
     method about-tab {w} {
 	ttk::frame $w
 	pack [text $w.text -width 40 -background lightgrey] -fill both -expand true
-	$w.text insert end "" bold "Welcome to Echo\n" \
-	    normal "Echo is a CW/Morse code trainer for your ear and your fist. " \
+	$w.text insert end "" bold "Welcome to Quack\n" \
+	    normal "Quack is a CW/Morse code trainer for your ear and your fist. " \
 	    normal "Click" italic {[Play]} normal " on the " italic "Play" normal "tab and the computer will play morse code for you." \
 	    normal "Echo the code back and Echo will collect statistics on your speed and accuracy."
 	return $w
@@ -783,15 +884,16 @@ snit::widget sdrtk::cw-echo {
 	switch -- $opt {
 	    -source {
 		switch -- $val {
-		    {short letters} { set data(sample) [split {adegikmnorstuw} {}] }
-		    {long letters} { set data(sample) [split {bcfhjlpqvxyz} {}] }
-		    letters { set data(sample) [split {abcdefghijklmnopqrstuvwxyz} {}] }
-		    digits { set data(sample) [split {0123456789} {}] }
-		    characters { set data(sample) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+} {}] }
-		    callsigns { set data(sample) [morse-pileup-callsigns] }
-		    abbrevs { set data(sample) [morse-ham-abbrev] }
-		    qcodes { set data(sample) [morse-ham-qcodes] }
-		    words { set data(sample) [morse-voa-vocabulary] }
+		    {short letters} { set data(sample-chars) [split {adegikmnorstuw} {}] }
+		    {long letters} { set data(sample-chars) [split {bcfhjlpqvxyz} {}] }
+		    letters { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz} {}] }
+		    digits { set data(sample-chars) [split {0123456789} {}] }
+		    punctuation { set data(sample-chars) [split {.,?/-=+*} {}] }
+		    characters { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*} {}] }
+		    callsigns { set data(sample-words) [morse-pileup-callsigns] }
+		    abbrevs { set data(sample-words) [morse-ham-abbrev] }
+		    qcodes { set data(sample-words) [morse-ham-qcodes] }
+		    words { set data(sample-words) [morse-voa-vocabulary] }
 		    suffixes { }
 		    prefixes { }
 		    phrases { }
@@ -799,11 +901,8 @@ snit::widget sdrtk::cw-echo {
 		}
 		$self sample-trim
 	    }
-	    -length {
-		$self sample-trim
-	    }
-	    -session {
-	    }
+	    -length { $self sample-trim }
+	    -session { }
 	    -challenge-wpm { 
 		::options cset -$options(-chk)-wpm $val
 		::options cset -$options(-dti1)-wpm $val
@@ -813,6 +912,7 @@ snit::widget sdrtk::cw-echo {
 		set cfreq [::midi::note-to-hertz [::midi::name-octave-to-note $val]]
 		::options cset -$options(-dto1)-freq $cfreq
 		::options cset -$options(-cho)-freq $cfreq
+		$self update -dah-offset $options(-dah-offset)
 	    }
 	    -char-space { ::options cset -$options(-chk)-ils $val }
 	    -word-space { ::options cset -$options(-chk)-iws $val }
@@ -826,6 +926,7 @@ snit::widget sdrtk::cw-echo {
 		set rfreq [::midi::note-to-hertz [::midi::name-octave-to-note $val]]
 		::options cset -$options(-kbdo)-freq $rfreq
 		::options cset -$options(-keyo)-freq $rfreq
+		$self update -dah-offset $options(-dah-offset)
 	    }
 	    -response-mode {
 		::options cset -$options(-key)-mode $val
@@ -845,13 +946,14 @@ snit::widget sdrtk::cw-echo {
 	    }
 	    default { error "uncaught option update $opt" }
 	}
+	$self save-quack-config
     }
     #
     #
     #
     method exposed-options {} { 
 	return {
-	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out -length -calibrate
+	    -dict -chk -cho -key -keyo -kbd -kbdo -dec1 -dec2 -dto1 -dto2 -dti1 -dti2 -out -cas -length -calibrate
 	}
     }
     
@@ -871,6 +973,7 @@ snit::widget sdrtk::cw-echo {
 	    -dti1 { return {challenge time decoder} }
 	    -dti2 { return {response time decoder} }
 	    -out { return {output gain} }
+	    -cas { return {keyboard keys} }
 	    -length { return {length of challenges} }
 	    -calibrate { return {calibrate response times} }
 	    default { puts "no info-option for $opt" }
@@ -887,6 +990,7 @@ snit::widget sdrtk::cw-echo {
 #
 # todo 2020-06-07
 # [x] implement color blind friendly colors reddish #d81b60, bluish #1e88e5
+# [x] accumulate statistics to startup file
 # [ ] output statistics into stats tab
-# [ ] accumulate statistics to startup file
-# [ ] accumulate layers of statistics
+# [ ] output layered statistics to show progress
+# [ ] use statistics to target drills
