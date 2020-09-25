@@ -11,6 +11,9 @@ all::
 
 make:: all
 
+ubuntu-deps:
+	sudo apt install build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon
+
 clean::
 	@find . -name '*~' -exec rm -f \{} \;
 	for dir in $(SUBDIRS); do (cd $$dir && $(MAKE) clean); done

@@ -7,6 +7,8 @@
 * But reading n0hff's book I've noted a few good tricks.
 ** Koch noticed that sending dits and dahs at different frequencies
    enhanced the ability to hear their different lengths.
+*** But I find it mostly confusing, maybe it needs to be less obvious
+    or maybe I don't need it.
 ** The general practice round is to get words and phrases
    sent at high speed with expanded letter spaces and word spaces
    and tonally distinguished dits and dahs, and then progressively
@@ -21,3 +23,73 @@
    and the signal to key a single oscillator, while dit and dah would be
    signals from an iambic paddle or single lever paddle, and the signals
    to a frequency shifting oscillator,
+* Working with it now, 2020.09.20
+    having renamed it quack and then cwack
+** Needs to vary more
+*** the speed
+*** the sidetones
+*** the characters sent
+*** single vs multiple character groups
+    doing single characters leads to guessing ahead, speeding
+    switching up to full character set worked surprisingly well
+** Ideally just mutate the character set, word size, and speed
+    toward improvement
+** Make a big feedback screen
+*** Big echo in green when correct
+*** Big echo in red when wrong
+*** Running countdown timer piechart
+*** Running score with piechart
+* Starting up cwack, the Alt_R Ctl_R keys are already set
+so if you build keyer, configure and start jack, and run keyer cwack,
+then you can start playing.
+* Or make a ghetto midi keyer.
+** Theory
+We use a Teensy LC or 3.2 to make a keyer interface.  Female stereo
+jacks with pigtails provide key/paddle, radio key/ptt, and headphone
+sidetone.  The Teensy touch sensors provide a touch sensitive iambic
+paddle or key, and 7 additional programmable buttons.  The built in
+LED is used for visual feedback, but most feedback is in morse code.
+
+The Teensy interfaces as a MIDI/Serial composite device.  On MIDI it
+handles keying events.  On Serial it implements a simple interpreter
+which allows programming the touch buttons and modifying the keyer
+behavior.
+
+The default behavior sends MIDI key down/up events for each paddle
+transition and interprets received MIDI key up/down events to actuate
+the key, ptt, and sidetone lines.
+
+An extended behavior enables a full iambic keyer running on the Teensy.
+It continues to report key up/down over MIDI and act on key up/down
+received from MIDI, but it does most of the work itself.
+
+*** A stereo female jack connects to a key or iambic paddle
+**** tip to right paddle (dah) or straight key
+**** ring to left paddle (dit)
+**** sleeve to ground
+*** A stereo female jack connects to a key/ptt input on a radio
+**** tip to key, active low
+**** ring to ptt, active low
+**** sleeve to ground
+*** A stereo female jack connects to a headset
+**** tip/ring to sidetone
+**** sleeve to ground
+*** Touch sensor pins
+***** one positioned as dit paddle (15)
+***** one positioned as dah paddle (16)
+***** remaining 7 common to LC and 3.6 (17..19, 22,23,0,1)
+        positioned as buttons on edges of construction
+** Materials
+*** 1 TeensyLC $15.95
+https://www.amazon.com/Teensy-Development-Board-Without-Pins/dp/B01BMRTZGE
+***  2 (or more) female stereo jacks to bare wire $7.99
+https://www.amazon.com/Fancasee-Replacement-Connector-Headphone-Earphone/dp/B07Y8LNMM6
+*** a few inches of heat shrink tube
+*** Solid insulated wire in variety of colors - chunk of ethernet cable will do
+*** Header pins
+** Construction
+**** solder the female stereo jacks to pins
+***** GND, 2, 5
+***** GND,21,20
+***** 6,7,8
+***** 9,10,11

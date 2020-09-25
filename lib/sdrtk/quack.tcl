@@ -139,10 +139,10 @@ snit::widget sdrtk::quack {
     option -calibrate -default 0; # run calibrating challenge response timing
     
     # source of challenge
-    option -source -default letters
+    option -source -default {itu characters}
     option -source-label {Source}
     # retired: callsigns abbrevs qcodes prefixes suffixes words phrases sentences
-    option -source-values -default {{short letters} {long letters} letters digits characters}
+    option -source-values -default {{short letters} {long letters} letters alphanumerics digits characters {itu characters}}
     # length of challenge in characters
     option -length -default 1
     option -length-label {Length}
@@ -680,8 +680,10 @@ snit::widget sdrtk::quack {
 	    {short letters} -
 	    {long letters} -
 	    letters -
+	    alphanumerics -
 	    digits -
-	    characters {
+	    characters -
+            {itu characters} {
 		set draw {}
 		for {set i 0} {$i < $options(-length)} {incr i} {
 		    append draw [choose $data(sample)]
@@ -888,7 +890,9 @@ snit::widget sdrtk::quack {
 		    letters { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz} {}] }
 		    digits { set data(sample-chars) [split {0123456789} {}] }
 		    punctuation { set data(sample-chars) [split {.,?/-=+*} {}] }
+		    alphanumerics { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789} {}] }
 		    characters { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*} {}] }
+                    {itu characters} { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*!\"$&'():;@_} {}] }
 		    callsigns { set data(sample-words) [morse-pileup-callsigns] }
 		    abbrevs { set data(sample-words) [morse-ham-abbrev] }
 		    qcodes { set data(sample-words) [morse-ham-qcodes] }
