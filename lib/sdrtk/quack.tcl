@@ -892,7 +892,7 @@ snit::widget sdrtk::quack {
 		    punctuation { set data(sample-chars) [split {.,?/-=+*} {}] }
 		    alphanumerics { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789} {}] }
 		    characters { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*} {}] }
-                    {itu characters} { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*!\"$&'():;@_} {}] }
+                    {itu characters} { set data(sample-chars) [split "abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*!\"\$&'():;@_" {}] }
 		    callsigns { set data(sample-words) [morse-pileup-callsigns] }
 		    abbrevs { set data(sample-words) [morse-ham-abbrev] }
 		    qcodes { set data(sample-words) [morse-ham-qcodes] }
