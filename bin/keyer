@@ -557,7 +557,6 @@ snit::type keyer::options {
 	    {*meter* -style} { $self describe $option enum -values {s-meter} }
 	    {* -level} { $self describe $option value -format %.0f -min -160 -max 160 -step 1 -units dB }
 	    {* -deviation} { $self describe $option value -format %.0f -min 100 -max 10000 -step 100 -units Hz}
-	    {*quack* -key} -
 	    {*cwack* -key} -
 	    {* -chk} -
 	    {* -cho} -
@@ -1046,7 +1045,7 @@ snit::type keyer::setups {
 		    sdrtcl::filter-goertzel@dto2 sdrtcl::keyer-detime@dti2 sdrtcl::cw-decode@dec2
 		    sdrtcl::gain@out
 		    sdrtcl::midi-insert-key@cas
-		    sdrtk::quack@cwack
+		    sdrtk::cwack@cwack
 		} -cwack-chk chk -cwack-cho cho -cwack-dec1 dec1 -cwack-dec2 dec2 -cwack-kbd kbd -cwack-kbdo kbdo -cwack-key key -cwack-keyo keyo
 		-cwack-dti1 dti1 -cwack-dti2 dti2 -cwack-dto1 dto1 -cwack-dto2 dto2 -cwack-out out -dec1-detime dti1 -dec2-detime dti2
 		-cwack-cas cas -cas-dit Alt_R -cas-dah Control_R
@@ -1068,39 +1067,6 @@ snit::type keyer::setups {
 		cas:midi_out key:midi_in
 	    }
 	}
-	quack {
-	    start { 
-		keyer -start {
-		    sdrtcl::keyer-ascii@chk sdrtcl::keyer-tone@cho 
-		    sdrtcl::filter-goertzel@dto1 sdrtcl::keyer-detime@dti1 sdrtcl::cw-decode@dec1
-		    sdrtcl::keyer-iambic@key sdrtcl::keyer-tone@keyo
-		    sdrtcl::keyer-ascii@kbd sdrtcl::keyer-tone@kbdo 
-		    sdrtcl::filter-goertzel@dto2 sdrtcl::keyer-detime@dti2 sdrtcl::cw-decode@dec2
-		    sdrtcl::gain@out
-		    sdrtcl::midi-insert-key@cas
-		    sdrtk::quack@quack
-		} -quack-chk chk -quack-cho cho -quack-dec1 dec1 -quack-dec2 dec2 -quack-kbd kbd -quack-kbdo kbdo -quack-key key -quack-keyo keyo
-		-quack-dti1 dti1 -quack-dti2 dti2 -quack-dto1 dto1 -quack-dto2 dto2 -quack-out out -dec1-detime dti1 -dec2-detime dti2
-		-quack-cas cas -cas-dit Alt_R -cas-dah Control_R
-		-eval {wm withdraw .} -dial 0
-	    }
-	    info {echo back challenge training, goertzel removed}
-	    connect {
-		chk:midi_out cho:midi_in 
-		cho:out_i {out:in_i dto1:in_i} cho:out_q out:in_q
-		cho:midi_out dti1:midi_in
-		{?system:midi_capture_1 ?system:midi_capture_2 ?system:midi_capture_3} key:midi_in
-		key:midi_out keyo:midi_in
-		keyo:out_i {out:in_i dto2:in_i} keyo:out_q out:in_q
-		keyo:midi_out dti2:midi_in
-		kbd:midi_out kbdo:midi_in
-		kbdo:out_i {out:in_i dto2:in_i} kbdo:out_q out:in_q
-		kbdo:midi_out dti2:midi_in
-		out:out_i {system:playback_1 system:playback_2}
-		cas:midi_out key:midi_in
-	    }
-	}
-
 	hlt {
 	    start { keyer hl -start {hl-test@hlt} -hl-low-pwr 1 -hl-lna-db 14 -hl-pa 0 }
 	    info { hermes lite test dashboard }

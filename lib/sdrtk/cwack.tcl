@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 # 
-package provide sdrtk::quack 1.0.0
+package provide sdrtk::cwack 1.0.0
 
 package require Tk
 package require snit
@@ -186,7 +186,7 @@ set exercises {
     }
 }
 
-snit::widget sdrtk::quack {
+snit::widget sdrtk::cwack {
     option -chk -default {};	# challenge keyer
     option -cho -default {};	# challenge keyer oscillator
     option -key -default {};	# response keyer
@@ -393,32 +393,32 @@ snit::widget sdrtk::quack {
 	catch {close $fp}
 	return $data
     }
-    method initialize-quack-config {} { 
-	if { ! [file exists ~/.config/quack/config.tcl]} {
-	    if { ! [file exists ~/.config/quack]} {
+    method initialize-cwack-config {} { 
+	if { ! [file exists ~/.config/cwack/config.tcl]} {
+	    if { ! [file exists ~/.config/cwack]} {
 		if { ! [file exists ~/.config]} {
 		    file mkdir ~/.config
 		}
-		file mkdir ~/.config/quack
+		file mkdir ~/.config/cwack
 	    }
-	    write-data ~/.config/quack/config.tcl {}
-	    write-data ~/.config/quack/history.tcl {}
-	    write-data ~/.config/quack/pangrams.tcl $data(pangrams)
+	    write-data ~/.config/cwack/config.tcl {}
+	    write-data ~/.config/cwack/history.tcl {}
+	    write-data ~/.config/cwack/pangrams.tcl $data(pangrams)
 	}
     }
-    method load-quack-config {} { array set options [string trim [read-data ~/.config/quack/config.tcl]] }
-    method load-quack-history {} { set data(history) [read-data ~/.config/quack/history.tcl] }
-    method save-quack-config {} { write-data ~/.config/quack/config.tcl [concat {*}[lmap opt $data(config-options) {list $opt $options($opt)}]] }
-    method append-quack-history {session} { 
-	append-data ~/.config/quack/history.tcl "{$session}"
+    method load-cwack-config {} { array set options [string trim [read-data ~/.config/cwack/config.tcl]] }
+    method load-cwack-history {} { set data(history) [read-data ~/.config/cwack/history.tcl] }
+    method save-cwack-config {} { write-data ~/.config/cwack/config.tcl [concat {*}[lmap opt $data(config-options) {list $opt $options($opt)}]] }
+    method append-cwack-history {session} { 
+	append-data ~/.config/cwack/history.tcl "{$session}"
 	lappend data(history) $session
     }
-    method clear-quack-config {} { exec cat /dev/null > ~/.config/quack/quack.tcl }
-    method clear-quack-history {} { exec cat /dev/null > ~/.config/quack/history.tcl }
+    method clear-cwack-config {} { exec cat /dev/null > ~/.config/cwack/cwack.tcl }
+    method clear-cwack-history {} { exec cat /dev/null > ~/.config/cwack/history.tcl }
     method setup {} {
-	$self initialize-quack-config
-	$self load-quack-config
-	$self load-quack-history
+	$self initialize-cwack-config
+	$self load-cwack-config
+	$self load-cwack-history
 	$self history-update
 	foreach opt $data(config-options) { $self update $opt $options($opt) }
 	$win.echo select $win.play
@@ -765,7 +765,7 @@ method history-update {} {
 method score-session {} {
     # puts "score-session"
     # record start time, end time, elapsed trial time, session length
-    $self append-quack-history $data(session-log)
+    $self append-cwack-history $data(session-log)
     $self history-update
     set s [session-summary [init-session-summary] [$options(-dict)] $data(session-log)]
     return "[percent [count-summary [dict get $s hit]] [count-summary [dict get $s total]]]% correct"
@@ -972,8 +972,8 @@ method stats-draw-row {w i row} {
 method about-tab {w} {
     ttk::frame $w
     pack [text $w.text -width 40 -background lightgrey] -fill both -expand true
-    $w.text insert end "" bold "Welcome to Quack\n" \
-        normal "Quack is a CW/Morse code trainer for your ear and your fist. " \
+    $w.text insert end "" bold "Welcome to cwack\n" \
+        normal "cwack is a CW/Morse code trainer for your ear and your fist. " \
         normal "Click" italic {[Play]} normal " on the " italic "Play" normal "tab and the computer will play morse code for you." \
         normal "Echo the code back and Echo will collect statistics on your speed and accuracy."
     return $w
@@ -1082,7 +1082,7 @@ method update {opt val} {
         }
         default { error "uncaught option update $opt" }
     }
-    $self save-quack-config
+    $self save-cwack-config
 }
 #
 #
