@@ -77,6 +77,35 @@ snit::type sdrtcl::keyer-iambic {
     method is-active {} { return [$keyer is-active] }
 
     variable optinfo
+    method info-option-values {opt} {
+        switch -- $opt {
+            -keyer { return [array names data] }
+            -verbose { return {0 1} }
+            -server { return * }
+	    -client { return * }
+	    -chan { return 1-16 }
+	    -note { return 0-127 }
+	    -wpm { return 1-100 }
+	    -word { return {50 60} }
+	    -dit { return  {0.5-1.5} }
+	    -dah { return  {2.5-3.5} }
+	    -ies { return  {0.5-1.5} }
+	    -ils { return  {2.5-3.5} }
+	    -iws { return  {6.5-7.5 } }
+	    -swap { return  {0 1} }
+	    -alsp { return  {0 1} }
+	    -awsp { return  {0 1} }
+	    -mode { return  {A B S} }
+	    -weight { return  {33-66} }
+	    -ratio { return  {33-66} }
+	    -comp { return  {0-10} }
+	    -mdit { return  {0 1} }
+	    -mdah { return  {0 1} }
+	    -mide { return  {0 1} }
+	    -two { return {0 1} }
+	    default { error "no match for $opt in keyer-iambic info-option-values" }
+        }
+    }
     method info-option {opt} {
 	if { ! [catch {$keyer info option $opt} result] } { return $result }
 	switch $opt {
@@ -114,9 +143,13 @@ snit::type sdrtcl::keyer-iambic {
     }
     
     method Configure {opt val} {
-	# puts "keyer-iambic::Configure $opt $val"
+        # puts "keyer-iambic::Configure $opt $val"
 	set options($opt) $val
 	if {$opt eq {-keyer}} {
+            # puts "keyer configure $opt $val"
+            foreach opt [$self.keyer info options] {
+                set options($opt) [$self.keyer cget $opt]
+            }
 	    set connections {}
 	    dict for {port props} [sdrtcl::jack list-ports] {
 		if {$port eq "$options(-client):midi_in"} {
@@ -125,6 +158,7 @@ snit::type sdrtcl::keyer-iambic {
 		    lappend connections $options(-client):midi_out [dict get $props connections]
 		}
 	    }
+            # puts "$connections"
 	    $keyer deactivate
 	    rename $self.keyer {}
 	    set opts {}
@@ -134,11 +168,23 @@ snit::type sdrtcl::keyer-iambic {
 	    }
 	    package require sdrtcl::keyer-iambic-$val
 	    install keyer using sdrtcl::keyer-iambic-$val $self.keyer {*}$opts
+            # puts "keyer $val installed"
 	    $keyer activate
+            # puts "keyer $val activated"
 	    # restore connections
-	    foreach {port1 port2} $connections { sdrtcl::jack connect $port1 $port2 }
+	    foreach {port1 port2} $connections { 
+                foreach p1 $port1 {
+                    foreach p2 $port2 {
+                        # puts "jack connect $p1 $p2"
+                        sdrtcl::jack connect $p1 $p2 
+                    }
+                }
+            }
+
 	} else {
-	    if { ! [catch {$keyer configure $opt $val} result]} { return $result }
+	    if { ! [catch {$keyer configure $opt $val} result]} { return $result } else {
+                puts "$options($val) configure $opt $val threw $result"
+            }
 	}
 	return {}
     }
@@ -146,10 +192,9 @@ snit::type sdrtcl::keyer-iambic {
     method Cget {opt} {
 	if {$opt eq {-keyer}} { return $options($opt) }
 	if {[lsearch $data($options(-keyer)) $opt] >= 0} {
-	    return [$keyer cget $opt]
-	} else {
-	    return $options($opt)
+	    set options($opt) [$keyer cget $opt]
 	}
+        return $options($opt)
     }
 
 }
