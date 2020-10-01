@@ -1,0 +1,26 @@
+#!/usr/bin/env tclsh
+
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+#package require morse
+package require morse::dicts
+
+set union [dict create]
+foreach dict [morse-dicts] {
+    dict for {c v} [$dict] {
+        if {$c eq "#transliterate#"} continue
+       dict lappend union $v $c $dict
+    }
+}
+foreach code [lsort [dict keys $union]] {
+    if {[lindex [dict get $union $code] 1] ne {builtin}} {
+        puts "$code [dict get $union $code]"
+    }
+}
+

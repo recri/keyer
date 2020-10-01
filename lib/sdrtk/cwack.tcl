@@ -24,12 +24,8 @@ package require morse::morse
 package require morse::itu
 package require morse::dicts
 
-package require sdrtk::lscale
-package require sdrtk::lradiomenubutton
 package require sdrtk::dialbook
 package require sdrtk::cw-decode-view
-
-package require midi
 
 #
 # generate morse code to be echoed back
@@ -79,7 +75,7 @@ package require midi
 # answer, overall, and decaying averages.
 #
 # The general scheme is that we have a set of characters, alphabetic, +numeric, +ham-punctuation,
-# +itu-punctuation, +prosigns (though I think the ITU character set covers the prosigns?)
+# +itu-punctuation, +prosigns (though I think the ITU character set covers the prosigns?) (wrong)
 #
 # And then we have n-grams and words formed of the characters which we form from a dictionary of
 # of english words, a dictionary of callsigns, and a dictionary of abbreviations.
@@ -90,10 +86,11 @@ package require midi
 # constituent characters have been introduced as singletons.
 
 namespace eval ::sdrtk {} 
+namespace eval ::cwack {}
 
-## sdrtk::pie widget
+## cwack::pie widget
 ## show time remaining or percent correct as pie charts
-snit::widget sdrtk::pie {
+snit::widget cwack::pie {
     component title
     component chart
     component caption
@@ -160,433 +157,511 @@ snit::widget sdrtk::pie {
     }
 }
 
+# tk type, but grid into a larger array at -row -column
+snit::type cwack::lscale {
+
+component label
+component value
+component scale
+
+option -window
+option -var
+option -row
+option -column
+option -text
+option -variable
+option -format
+option -from
+option -to
+
+proc constrain {var fmt val} { set $var [format $fmt $val] }
+
+constructor {args} {
+    $self configurelist $args
+
+    set win $options(-window)
+    set var $options(-var)
+    set row $options(-row)
+    set column $options(-column)
+
+    install label using ttk::label $win.label$var -text $options(-text)
+    install value using ttk::label $win.value$var -textvar $options(-variable)
+    install scale using ttk::scale $win.scale$var -orient horizontal \
+        -variable $options(-variable) -from $options(-from) -to $options(-to) \
+        -command [list [myproc constrain] $options(-variable) $options(-format)]
+
+    grid $win.label$var -row $row -column [expr {$column+0}] -sticky e
+    grid $win.value$var -row $row -column [expr {$column+1}] -ipadx 10
+    grid $win.scale$var -row $row -column [expr {$column+2}] -sticky ew
+}
+}
+
 # cwops copyright exercises, probably need to go away
 set exercises {
-    warmup {
-	EEEEE TTTTT IIIII MMMMM SSSSS OOOOO HHHHH 00000 55555
-	AAAAA NNNNN UUUUU DDDDD VVVVV BBBBB 44444 66666
-	ABCDEF GHIJK LMNOP QRSTU VWXYZ 12345 67890 / , . ? * + =
-	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
-    }
-    exercise {
-	AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF GGGGG HHHHH IIIII JJJJJ
-	KKKKK LLLLL MMMMM NNNNN OOOOO PPPPP QQQQQ RRRRR
-	SSSSS TTTTT UUUUU VVVVV WWWWW XXXXX YYYYY ZZZZZ
-	11111 22222 33333 44444 55555 66666 77777 88888 99999 00000
-    }
-    drill {
-	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
-	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
-	BENS BEST BENT WIRE/5
-	, , , , , . . . . .
-	BENS BEST BENT WIRE/5
-	? ? ? ? ? 
-	BENS BEST BENT WIRE/5
-	/ / / / / * * * * * + + + + + = = = = =
-    }
+warmup {
+    EEEEE TTTTT IIIII MMMMM SSSSS OOOOO HHHHH 00000 55555
+    AAAAA NNNNN UUUUU DDDDD VVVVV BBBBB 44444 66666
+    ABCDEF GHIJK LMNOP QRSTU VWXYZ 12345 67890 / , . ? * + =
+    THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
+}
+exercise {
+    AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF GGGGG HHHHH IIIII JJJJJ
+    KKKKK LLLLL MMMMM NNNNN OOOOO PPPPP QQQQQ RRRRR
+    SSSSS TTTTT UUUUU VVVVV WWWWW XXXXX YYYYY ZZZZZ
+    11111 22222 33333 44444 55555 66666 77777 88888 99999 00000
+}
+drill {
+    THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
+    THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
+    BENS BEST BENT WIRE/5
+    , , , , , . . . . .
+    BENS BEST BENT WIRE/5
+    ? ? ? ? ? 
+    BENS BEST BENT WIRE/5
+    / / / / / * * * * * + + + + + = = = = =
+}
+}
+
+array set sources {
+{short letters}  {adegikmnorstuw}
+{long letters}   {bcfhjlpqvxyz}
+letters          {abcdefghijklmnopqrstuvwxyz}
+digits           {0123456789}
+punctuation      {.,?/-=+*}
+alphanumerics    {abcdefghijklmnopqrstuvwxyz0123456789}
+characters       {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*}
+{itu characters} "abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*!\"\$&'():;@_"
+
+#callsigns { set data(sample-words) [morse-pileup-callsigns] }
+#abbrevs { set data(sample-words) [morse-ham-abbrev] }
+#qcodes { set data(sample-words) [morse-ham-qcodes] }
+#words { set data(sample-words) [morse-voa-vocabulary] }
+#suffixes { }
+#prefixes { }
+#phrases { }
 }
 
 snit::widget sdrtk::cwack {
-    option -chk -default {};	# challenge keyer
-    option -cho -default {};	# challenge keyer oscillator
-    option -key -default {};	# response keyer
-    option -keyo -default {};	# response keyer oscillator
-    option -kbd -default {};	# response keyboard
-    option -kbdo -default {};	# response keyboard oscillator
-    option -dto1 -default {};	# challenge detone (not used)
-    option -dto2 -default {};	# response detone (not used)
-    option -dti1 -default {};	# challenge detimer
-    option -dti2 -default {};	# response detimer
-    option -dec1 -default {};   # challenge decoder
-    option -dec2 -default {};	# response decoder
-    option -out -default {};	# output mixer
-    option -cas -default {}; 	# keyboard keys
-    option -dict -default builtin; # decoding dictionary
-    option -font -default TkDefaultFont
-    option -foreground -default black -configuremethod ConfigText
-    option -background -default white -configuremethod ConfigText
-    
-    # source of challenge
-    option -source -default {itu characters}
-    option -source-label {Source}
+option -chk -default {};	# challenge keyer
+option -cho -default {};	# challenge keyer oscillator
+option -key -default {};	# response keyer
+option -keyo -default {};	# response keyer oscillator
+option -kbd -default {};	# response keyboard
+option -kbdo -default {};	# response keyboard oscillator
+option -dto1 -default {};	# challenge detone (not used)
+option -dto2 -default {};	# response detone (not used)
+option -dti1 -default {};	# challenge detimer
+option -dti2 -default {};	# response detimer
+option -dec1 -default {};       # challenge decoder
+option -dec2 -default {};	# response decoder
+option -out -default {};	# output mixer
+option -cas -default {}; 	# keyboard keys
+option -dict -default builtin;  # decoding dictionary
+option -font -default TkDefaultFont
+option -foreground -default black -configuremethod ConfigText
+option -background -default white -configuremethod ConfigText
 
-    # retired: callsigns abbrevs qcodes prefixes suffixes words phrases sentences
-    option -source-values -default {{short letters} letters alphanumerics characters {itu characters}}
+# retired option: source of challenge
+option -source -default {itu characters}
+option -source-label {Source}
 
-    # length of challenge in characters
-    option -length -default 1
-    option -length-label {Length}
-    option -length-values {1 2 3 4 5 6 ...}
+# retired values: callsigns abbrevs qcodes prefixes suffixes words phrases sentences
+option -source-values -default {{short letters} letters alphanumerics characters {itu characters}}
 
-    # length of session in minutes
-    option -session -default 1
-    option -session-label {Session Length}
-    option -session-values -default {0.5 1 2 5 10 15 20}
+# retired option: length of challenge in characters
+option -length -default 1
+option -length-label {Length}
+option -length-values {1 2 3 4 5 6 ...}
 
-    # speed
-    option -wpm 30
-    option -wpm-label {WPM}
-    option -wpm-values {12.5 15 17.5 20 22.5 25 27.5 30 32.5 35 40 50}
+# length of session in minutes
+option -session -default 1
+option -session-label {Session Length}
+option -session-values -default {0.25 30}
 
-    # frequency of response sidetone
-    option -response-tone 600
-    option -response-tone-label {Response Tone}
-    option -response-tone-values {800 750 700 650 600 550 500 450 400}
+# speed
+option -wpm 30
+option -wpm-label {WPM}
+option -wpm-values {12.5 15 17.5 20 22.5 25 27.5 30 32.5 35 40 50}
 
-    # frequency of challenge sidetone
-    option -challenge-tone 550
-    option -challenge-tone-label {Challenge Tone}
-    option -challenge-tone-values {800 750 700 650 600 550 500 450 400}
+# frequency of response sidetone
+option -tone 600
+option -tone-label {Response Tone}
+option -tone-values {400 1000}
 
-    # character space padding, farnsworth here
-    option -char-space 3
-    option -char-space-label {Char Spacing}
-    option -char-space-values {3 3.5 4 4.5 5 5.5 6}
+# frequency of challenge sidetone
+option -challenge-tone 550
+option -challenge-tone-label {Challenge Tone}
+option -challenge-tone-values {400 1000}
 
-    # word space padding
-    option -word-space 7
-    option -word-space-label {Word Spacing}
-    option -word-space-values {7 8 9 10 11 12 13 14}
+# retired option: character space padding, farnsworth here
+option -char-space 3
+option -char-space-label {Char Spacing}
+option -char-space-values {3 3.5 4 4.5 5 5.5 6}
 
-    # mode of response keyer
-    option -response-mode B
-    option -response-mode-label {Keyer Mode}
-    option -response-mode-values {A B}
+# retired option: word space padding
+option -word-space 7
+option -word-space-label {Word Spacing}
+option -word-space-values {7 8 9 10 11 12 13 14}
 
-    # offset of dah tone from dit tone
-    option -dah-offset 0.0
-    option -dah-offset-label {Dah Tone Offset}
-    option -dah-offset-values {-0.10 -0.05 -0.02 -0.01 0.0 0.01 0.02 0.05 0.10}
+# mode of response keyer
+option -mode B
+option -mode-label {Keyer Mode}
+option -mode-values {A B}
 
-    # output gain
-    option -gain 0
-    option -gain-label {Output Gain}
-    option -gain-values {-30 -20 -15 -12 -9 -6 -3 0 3 6}
-    
-    # repeat or continue on error
-    option -on-error {Repeat}
-    option -on-error-label {Action on error}
-    option -on-error-values {Repeat Continue}
+# swap paddles
+option -swap 0
+option -swap-label {Swap paddles}
+option -swap-values {0 1}
 
-    variable data -array {
-	handler {}
-	pre-challenge {}
-	challenge {}
-	challenge-trimmed {}
-	response {}
-	response-trimmed {}
-	state {}
-	time-warp 1
-	reddish-color "#D81B60"
-	bluish-color "#1E88E5"
-        black "#111"
-	config-options {-wpm -challenge-tone -response-tone -response-mode -session -source -length -char-space -word-space -gain -dah-offset}
-	summary {} 
-	sample-chars {}
-	sample-words {}
-	sample {}
-	pangrams {
-	    {quick zephyrs blow, vexing daft jim}
-	    {the five boxing wizards jump quickly}
-	    {sphinx of black quartz, judge my vow}
-	    {waltz, bad nymph, for quick jigs vex}
-	    {the five boxing wizards jump quickly}
-	    {five quacking zephyrs jolt my wax bed}
-	    {two driven jocks help fax my big quiz}
-	    {pack my box with five dozen liquor jugs}
-	    {a quick brown fox jumps over the lazy dog}
-	    {jinxed wizards pluck ivy from the big quilt}
-	    {the quick brown fox jumps over the lazy dog}
-	    {amazingly few discotheques provide jukeboxes}
-	    {a wizard's job is to vex chumps quickly in fog}
-	    {the lazy major was fixing Cupid's broken quiver}
-	    {my faxed joke won a pager in the cable TV quiz show}
-	    {six boys guzzled cheap raw plum vodka quite joyfully}
-	    {my girl wove six dozen plaid jackets before she quit}
-	    {crazy Fredrick bought many very exquisite opal jewels}
-	    {six big devils from Japan quickly forgot how to waltz}
-	    {sixty zippers were quickly picked from the woven jute bag}
-	    {few black taxis drive up major roads on quiet hazy nights}
-	    {just keep examining every low bid quoted for zinc etchings}
-	    {jack quietly moved up front and seized the big ball of wax}
-	    {a quick movement of the enemy will jeopardize six gunboats}
-	    {we promptly judged antique ivory buckles for the next prize}
-	    {whenever the black fox jumped the squirrel gazed suspiciously}
-	    {jaded zombies acted quaintly but kept driving their oxen forward}
-	    {the job requires extra pluck and zeal from every young wage earner}
-	    {a quart jar of oil mixed with zinc oxide makes a very bright paint}
-	    {a mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent}
-	    {just work for improved basic techniques to maximize your typing skill}
-	    {the public was amazed to view the quickness and dexterity of the juggler}
-	    {gaze at this sentence for just about sixty seconds and then explain what makes it quite different from the average sentence}
-	}
+# offset of dah tone from dit tone
+option -dah-offset 0.0
+option -dah-offset-label {Dah Tone Offset}
+option -dah-offset-values {-0.10 -0.05 -0.02 -0.01 0.0 0.01 0.02 0.05 0.10}
+
+# output gain
+option -gain 0
+option -gain-label {Output Gain}
+option -gain-values {-30 -20 -15 -12 -9 -6 -3 0 3 6}
+
+# retired as option, just repeat: repeat or continue on error
+option -on-error {Repeat}
+option -on-error-label {Action on error}
+option -on-error-values {Repeat Continue}
+
+# iambic keyer to use (the -values are a cheat, I know the answer)
+option -keyer vk6ph
+option -keyer-label {Keyer}
+option -keyer-values {ad5dz dttsp k1el nd7pa vk6ph}
+
+# difficulty of challenges, average length in dit clocks
+option -difficulty 1
+option -difficulty-label {Difficulty of challenges}
+option -difficulty-values {1 19}
+
+# spread of challenges, sd of lengths in dit clocks
+option -spread 0
+option -spread-label {Spread of challenges}
+option -spread-values {0 10}
+
+variable data -array {
+    handler {}
+    pre-challenge {}
+    challenge {}
+    challenge-trimmed {}
+    response {}
+    response-trimmed {}
+    state {}
+    time-warp 1
+    reddish-color "#D81B60"
+    bluish-color "#1E88E5"
+    black "#111"
+    config-options {-wpm -difficulty -spread -session -tone -challenge-tone -mode -swap -keyer -gain -dah-offset}
+    summary {} 
+    dits {}
+    sample-chars {}
+    sample-words {}
+    sample {}
+    pangrams {
+        {quick zephyrs blow, vexing daft jim}
+        {the five boxing wizards jump quickly}
+        {sphinx of black quartz, judge my vow}
+        {waltz, bad nymph, for quick jigs vex}
+        {the five boxing wizards jump quickly}
+        {five quacking zephyrs jolt my wax bed}
+        {two driven jocks help fax my big quiz}
+        {pack my box with five dozen liquor jugs}
+        {a quick brown fox jumps over the lazy dog}
+        {jinxed wizards pluck ivy from the big quilt}
+        {the quick brown fox jumps over the lazy dog}
+        {amazingly few discotheques provide jukeboxes}
+        {a wizard's job is to vex chumps quickly in fog}
+        {the lazy major was fixing Cupid's broken quiver}
+        {my faxed joke won a pager in the cable TV quiz show}
+        {six boys guzzled cheap raw plum vodka quite joyfully}
+        {my girl wove six dozen plaid jackets before she quit}
+        {crazy Fredrick bought many very exquisite opal jewels}
+        {six big devils from Japan quickly forgot how to waltz}
+        {sixty zippers were quickly picked from the woven jute bag}
+        {few black taxis drive up major roads on quiet hazy nights}
+        {just keep examining every low bid quoted for zinc etchings}
+        {jack quietly moved up front and seized the big ball of wax}
+        {a quick movement of the enemy will jeopardize six gunboats}
+        {we promptly judged antique ivory buckles for the next prize}
+        {whenever the black fox jumped the squirrel gazed suspiciously}
+        {jaded zombies acted quaintly but kept driving their oxen forward}
+        {the job requires extra pluck and zeal from every young wage earner}
+        {a quart jar of oil mixed with zinc oxide makes a very bright paint}
+        {a mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent}
+        {just work for improved basic techniques to maximize your typing skill}
+        {the public was amazed to view the quickness and dexterity of the juggler}
+        {gaze at this sentence for just about sixty seconds and then explain what makes it quite different from the average sentence}
     }
-    
-    constructor {args} {
-	$self configurelist $args
-	bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
-	bind all <KeyPress> [mymethod keypress %A]
-	bind $win <Destroy> [list destroy .]
-	# five tabs in a notebook
-	pack [ttk::notebook $win.echo] -fill both -expand true
-	$win.echo add [$self play-tab $win.play] -text Cwack
-	$win.echo add [$self setup-tab $win.setup] -text Setup
-	$win.echo add [$self stats-tab $win.stats] -text Stats
-	$win.echo add [$self about-tab $win.about] -text About
-	$win.echo add [$self sandbox-tab $win.sandbox] -text Sandbox
-	$win.echo add [$self dial-tab $win.dial] -text Dial
-	bind $win.echo <<NotebookTabChanged>> [mymethod swaptabs]
-	after 500 [mymethod setup]
-    }
+}
 
-    method swaptabs {} {
-	switch -glob [$win.echo select] {
-	    *play {
-		# steal back the detimer on keyboard and key
-		if {[$options(-dec2) cget -detime] eq {}} {
-		    $options(-dec2) configure -detime [$win.sandbox cget -detime]
-		    $win.sandbox configure -detime {}
-		}
-	    }
-	    *stats {
-		# draw the current statistics
-		$self stats-draw $win.stats
-	    }
-	    *setup {
-	    }
-	    *sandbox {
-		# steal the detimer on keyboard and key
-		# $win.play configure -detime {}
-		if {[$win.sandbox cget -detime] eq {}} {
-		    $win.sandbox configure -detime [$options(-dec2) cget -detime]
-		    $options(-dec2) configure -detime {}
-		}
-	    }
-	    *about {
-	    }
-	    *dial {
-	    }
-	    default {
-		error "uncaught NotebookTabChanged select [$win.echo select]"
-	    }
-	}
-    }
-    method keypress {a} { $options(-kbd) puts [string toupper $a] }
-    #
-    # configuration and history
-    #
-    proc read-data {file} {
-	if {[catch {open $file r} fp]} { return {} }
-	if {[catch {read $fp} data]} { close $fp; return {} }
-	catch {close $fp}
-	return $data
-    }
-    proc write-data {file data} {
-	if {[catch {open $file w} fp]} { return {} }
-	if {[catch {puts $fp $data}]} { close $fp; return {} }
-	catch {close $fp}
-	return $data
-    }
-    proc append-data {file data} {
-	if {[catch {open $file a} fp]} { return {} }
-	if {[catch {puts $fp $data}]} { close $fp; return {} }
-	catch {close $fp}
-	return $data
-    }
-    method initialize-cwack-config {} { 
-	if { ! [file exists ~/.config/cwack/config.tcl]} {
-	    if { ! [file exists ~/.config/cwack]} {
-		if { ! [file exists ~/.config]} {
-		    file mkdir ~/.config
-		}
-		file mkdir ~/.config/cwack
-	    }
-	    write-data ~/.config/cwack/config.tcl {}
-	    write-data ~/.config/cwack/history.tcl {}
-	    write-data ~/.config/cwack/pangrams.tcl $data(pangrams)
-	}
-    }
-    method load-cwack-config {} { array set options [string trim [read-data ~/.config/cwack/config.tcl]] }
-    method load-cwack-history {} { set data(history) [read-data ~/.config/cwack/history.tcl] }
-    method save-cwack-config {} { write-data ~/.config/cwack/config.tcl [concat {*}[lmap opt $data(config-options) {list $opt $options($opt)}]] }
-    method append-cwack-history {session} { 
-	append-data ~/.config/cwack/history.tcl "{$session}"
-	lappend data(history) $session
-    }
-    method clear-cwack-config {} { exec cat /dev/null > ~/.config/cwack/cwack.tcl }
-    method clear-cwack-history {} { exec cat /dev/null > ~/.config/cwack/history.tcl }
-    method setup {} {
-	$self initialize-cwack-config
-	$self load-cwack-config
-	$self load-cwack-history
-	$self history-update
-	foreach opt $data(config-options) { $self update $opt $options($opt) }
-	$win.echo select $win.play
-	$win.play.text tag configure wrong -foreground $data(reddish-color)  -justify center
-	$win.play.text tag configure right -foreground $data(bluish-color) -justify center
-        $win.play.text tag configure pass  -foreground $data(black) -justify center
-	set data(state) start
-    }
+constructor {args} {
+    $self configurelist $args
+    bind $win <ButtonPress-3> [mymethod option-menu %X %Y]
+    bind all <KeyPress> [mymethod keypress %A]
+    bind $win <Destroy> [list destroy .]
+    # five tabs in a notebook
+    pack [ttk::notebook $win.echo] -fill both -expand true
+    $win.echo add [$self play-tab $win.play] -text Cwack
+    $win.echo add [$self stats-tab $win.stats] -text Stats
+    $win.echo add [$self about-tab $win.about] -text About
+    $win.echo add [$self sandbox-tab $win.sandbox] -text Sandbox
+    $win.echo add [$self dial-tab $win.dial] -text Dial
+    bind $win.echo <<NotebookTabChanged>> [mymethod swaptabs]
+    after 500 [mymethod setup]
+}
 
-    #
-    # state machine
-    #
-    method timeout {} {
-	while {1} {
-	    # check if explicitly paused
-	    if { ! $data(play/pause)} {
-		$self status-line "Press Play to continue."
-		return
-	    }
-	    # compute time elapsed
-	    set data(play-time) [accumulate-playtime {*}$data(session-stamps) play [clock millis]]
-	    set data(session-time) [format-time $data(play-time)]
-            set data(percent-time) [expr {min(100,100.0*$data(play-time)/($options(-session)*60*1000))}]
-            $win.play.timepct configure -caption "[format-time [expr {max(0,int($options(-session)*60*1000-$data(play-time)))}]] remaining" -percent1 $data(percent-time)
-	    # update challenge text
-	    append data(challenge) [$options(-dec1) get]
-	    # trimmed challenge
-	    set data(trimmed-challenge) [string trim $data(challenge)]
-	    set data(n-t-c) [string length $data(trimmed-challenge)]
-	    # update response text
-	    append data(response) [$options(-dec2) get]
-	    # trimmed response
-	    set data(trimmed-response) [regsub -all { } $data(response) {}]
-	    set data(n-t-r) [string length $data(trimmed-response)]
-            set data(response-space) [expr {$data(n-t-r) > 0 && [regexp {^.* $}  $data(response)]}]
-	    # switch on state
-	    # puts "$data(state)"
-	    switch $data(state) {
-		start {
-		    array set data [list \
-					session-time 0 \
-					session-time-limit [expr {int($options(-session)*60*1000)}] \
-					session-stamps [list play [clock millis]] \
-					session-log [list start [clock seconds] $options(-session) \
-							 wpm $options(-wpm) $options(-wpm) \
-							 source $options(-source) $options(-length)] \
-					sample [$self sample-make] \
-					response-time 0 \
-					challenges 0 \
-					hits 0 \
-					misses 0 \
-					passes 0 \
-					pre-challenge {} \
-					challenge {} \
-					trimmed-challenge {} \
-					response {} \
-					trimmed-response {} \
-					time-wait [clock millis] \
-					time-challenge 0 \
-					time-of-echo 0 \
-					time-to-echo 0 \
-					state wait-before-new-challenge \
-				       ]
-		}
-		wait-before-new-challenge {
-		    if {$data(play-time) >= $data(session-time-limit)} {
-			lappend data(session-log) end [clock seconds] $data(play-time)
-                        $self status-line "Session complete, [$self score-session]"
-			$self play-button play/pause
-			set data(state) start
-			continue
-		    }
-		    # should this timeout be a word space?
-		    if {[clock millis]-$data(time-wait) > 250} {
-			set data(state) new-challenge
-		    }
-		}
-		new-challenge {
+method swaptabs {} {
+    switch -glob [$win.echo select] {
+        *play {
+            # steal back the detimer on keyboard and key
+            if {[$options(-dec2) cget -detime] eq {}} {
+                $options(-dec2) configure -detime [$win.sandbox cget -detime]
+                $win.sandbox configure -detime {}
+            }
+        }
+        *stats {
+            # draw the current statistics
+            $self stats-draw $win.stats
+        }
+        *setup {
+        }
+        *sandbox {
+            # steal the detimer on keyboard and key
+            # $win.play configure -detime {}
+            if {[$win.sandbox cget -detime] eq {}} {
+                $win.sandbox configure -detime [$options(-dec2) cget -detime]
+                $options(-dec2) configure -detime {}
+            }
+        }
+        *about {
+        }
+        *dial {
+        }
+        default {
+            error "uncaught NotebookTabChanged select [$win.echo select]"
+        }
+    }
+}
+method keypress {a} { $options(-kbd) puts [string toupper $a] }
+#
+# configuration and history
+#
+proc read-data {file} {
+    if {[catch {open $file r} fp]} { return {} }
+    if {[catch {read $fp} data]} { close $fp; return {} }
+    catch {close $fp}
+    return $data
+}
+proc write-data {file data} {
+    if {[catch {open $file w} fp]} { return {} }
+    if {[catch {puts $fp $data}]} { close $fp; return {} }
+    catch {close $fp}
+    return $data
+}
+proc append-data {file data} {
+    if {[catch {open $file a} fp]} { return {} }
+    if {[catch {puts $fp $data}]} { close $fp; return {} }
+    catch {close $fp}
+    return $data
+}
+method initialize-cwack-config {} { 
+    if { ! [file exists ~/.config/cwack/config.tcl]} {
+        if { ! [file exists ~/.config/cwack]} {
+            if { ! [file exists ~/.config]} {
+                file mkdir ~/.config
+            }
+            file mkdir ~/.config/cwack
+        }
+        write-data ~/.config/cwack/config.tcl {}
+        write-data ~/.config/cwack/history.tcl {}
+        write-data ~/.config/cwack/pangrams.tcl $data(pangrams)
+    }
+}
+method load-cwack-config {} { array set options [string trim [read-data ~/.config/cwack/config.tcl]] }
+method load-cwack-history {} { set data(history) [read-data ~/.config/cwack/history.tcl] }
+method save-cwack-config {} { write-data ~/.config/cwack/config.tcl [concat {*}[lmap opt $data(config-options) {list $opt $options($opt)}]] }
+method append-cwack-history {session} { 
+    append-data ~/.config/cwack/history.tcl "{$session}"
+    lappend data(history) $session
+}
+method clear-cwack-config {} { exec cat /dev/null > ~/.config/cwack/cwack.tcl }
+method clear-cwack-history {} { exec cat /dev/null > ~/.config/cwack/history.tcl }
+method setup {} {
+    $self initialize-cwack-config
+    $self load-cwack-config
+    $self load-cwack-history
+    $self history-update
+    foreach opt $data(config-options) { $self update $opt $options($opt) }
+    $win.echo select $win.play
+    $win.play.text tag configure wrong -foreground $data(reddish-color)  -justify center
+    $win.play.text tag configure right -foreground $data(bluish-color) -justify center
+    $win.play.text tag configure pass  -foreground $data(black) -justify center
+    set data(state) start
+}
+
+#
+# state machine
+method timeout {} {
+    while {1} {
+        # check if explicitly paused
+        if { ! $data(play/pause)} {
+            $self status-line "Press Play to continue."
+            return
+        }
+        # compute time elapsed
+        set data(play-time) [accumulate-playtime {*}$data(session-stamps) play [clock millis]]
+        set data(session-time) [format-time $data(play-time)]
+        set data(percent-time) [expr {min(100,100.0*$data(play-time)/($options(-session)*60*1000))}]
+        $win.play.timepct configure -caption "[format-time [expr {max(0,int($options(-session)*60*1000-$data(play-time)))}]] remaining" -percent1 $data(percent-time)
+        # update challenge text
+        append data(challenge) [$options(-dec1) get]
+        # trimmed challenge
+        set data(trimmed-challenge) [string trim $data(challenge)]
+        set data(n-t-c) [string length $data(trimmed-challenge)]
+        # update response text
+        append data(response) [$options(-dec2) get]
+        # trimmed response
+        set data(trimmed-response) [regsub -all { } $data(response) {}]
+        set data(n-t-r) [string length $data(trimmed-response)]
+        set data(response-space) [expr {$data(n-t-r) > 0 && [regexp {^.* $}  $data(response)]}]
+        # switch on state
+        # puts "$data(state)"
+        switch $data(state) {
+            start {
+                array set data [list \
+                                    session-time 0 \
+                                    session-time-limit [expr {int($options(-session)*60*1000)}] \
+                                    session-stamps [list play [clock millis]] \
+                                    session-log [list start [clock seconds] $options(-session) \
+                                                     wpm $options(-wpm) $options(-wpm) \
+                                                     source $options(-source) $options(-length)] \
+                                    sample [$self sample-make] \
+                                    response-time 0 \
+                                    challenges 0 \
+                                    hits 0 \
+                                    misses 0 \
+                                    passes 0 \
+                                    pre-challenge {} \
+                                    challenge {} \
+                                    trimmed-challenge {} \
+                                    response {} \
+                                    trimmed-response {} \
+                                    time-wait [clock millis] \
+                                    time-challenge 0 \
+                                    time-of-echo 0 \
+                                    time-to-echo 0 \
+                                    state wait-before-new-challenge \
+                                   ]
+                if {$data(sample) eq {}} { error "no sample to play from" }
+            }
+            wait-before-new-challenge {
+                if {$data(play-time) >= $data(session-time-limit)} {
+                    lappend data(session-log) end [clock seconds] $data(play-time)
+                    $self status-line "Session complete, [$self score-session]"
+                    $self play-button play/pause
+                    set data(state) start
+                    continue
+                }
+                # should this timeout be a word space?
+                if {[clock millis]-$data(time-wait) > 250} {
+                    set data(state) new-challenge
+                }
+            }
+            new-challenge {
+                array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} state challenge ]
+                set data(pre-challenge) [$self sample-draw]
+                set data(n-p-c) [string length $data(pre-challenge)]
+                set data(challenge-dits) [morse-word-length [$options(-dict)] $data(pre-challenge)]
+                set data(challenge-dit-ms) [morse-dit-ms $options(-wpm)]; # 
+                set data(response-dit-ms) [morse-dit-ms $options(-wpm)]; # 
+                set data(challenge-response-ms) [expr {$data(challenge-dits)*($data(challenge-dit-ms)+$data(response-dit-ms))}]
+            }
+            wait-before-reissue-challenge {
+                if {$data(play-time) >= $data(session-time-limit)} {
+                    lappend data(session-log) end [clock seconds] $data(play-time)
+                    $self status-line "Session complete, [$self score-session]"
+                    $self play-button play/pause
+                    set data(state) start
+                    continue
+                }
+                # should this timeout be a word space?
+                if {[clock millis]-$data(time-wait) > 250} {
                     array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} state challenge ]
-                    set data(pre-challenge) [$self sample-draw]
-                    set data(n-p-c) [string length $data(pre-challenge)]
-                    set data(challenge-dits) [morse-word-length [$options(-dict)] $data(pre-challenge)]
-                    set data(challenge-dit-ms) [morse-dit-ms $options(-wpm)]; # 
-                    set data(response-dit-ms) [morse-dit-ms $options(-wpm)]; # 
-                    set data(challenge-response-ms) [expr {$data(challenge-dits)*($data(challenge-dit-ms)+$data(response-dit-ms))}]
                 }
-                wait-before-reissue-challenge {
-		    if {$data(play-time) >= $data(session-time-limit)} {
-			lappend data(session-log) end [clock seconds] $data(play-time)
-			$self status-line "Session complete, [$self score-session]"
-			$self play-button play/pause
-			set data(state) start
-			continue
-		    }
-		    # should this timeout be a word space?
-		    if {[clock millis]-$data(time-wait) > 250} {
-                        array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} state challenge ]
-		    }
+            }
+            challenge {
+                array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} ]
+                if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
+                    array set data [list time-challenge [clock millis] state wait-challenge-echo]
+                    $options(-chk) puts [string toupper $data(pre-challenge)]
                 }
-                challenge {
-                    array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} ]
-		    if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
-                        array set data [list time-challenge [clock millis] state wait-challenge-echo]
-                        $options(-chk) puts [string toupper $data(pre-challenge)]
-		    }
-		}
-		wait-challenge-echo {
-		    # $self status-line "Waiting for challenge to echo ..."
-		    if {$data(n-p-c) > $data(n-t-c)} {
-			# waiting for more input
-			break
-		    }
-		    if {[string first $data(pre-challenge) $data(trimmed-challenge)] >= 0} {
-			# $self status-line ""
-			set t [clock millis]
-			array set data [list time-of-echo $t time-to-echo [expr {8*$data(time-warp)*($t-$data(time-challenge))}] state wait-response-echo]
-			# puts "time-to-echo $data(time-to-echo)"
-			continue
-		    } 
-		    if {$data(n-t-c) != 0} {
-			# $self status-line ""
-			# puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
-			array set data [list time-wait [clock millis] state wait-before-new-challenge]
-			continue
-		    }
-		    break
-		}
-		wait-response-echo {
-		    # $self status-line "Waiting for response ... {$data(trimmed-challenge)} {$data(trimmed-response)}"
-		    set data(response-time) [format %.0f [expr {[clock millis]-$data(time-challenge)}]]
-                    if {$data(response-space)} {
-                        if {[string first $data(trimmed-challenge) $data(trimmed-response)] >= 0} {
-                            $self status "\n" normal $data(trimmed-challenge) right
-                            $self score-challenge; # hits
-                            $self score-current
-                            array set data [list time-wait [clock millis] state wait-before-new-challenge]
-                            break
-                        }
-                        if {$data(n-t-r) > 0 && [string first $data(trimmed-response) $data(trimmed-challenge)] < 0} {
-                            $self status "\n" normal "$data(trimmed-challenge)" wrong
-                            $self score-challenge; # misses
-                            $self score-current
-                            if {$options(-on-error) eq {Repeat}} {
-                                array set data [list time-wait [clock millis] state wait-before-reissue-challenge]
-                            } else {
-                                array set data [list time-wait [clock millis] state wait-before-new-challenge]
-                            }
-                            break
-                        }
-                    }
-                    if {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
-                        $self score-challenge; # pass
+            }
+            wait-challenge-echo {
+                # $self status-line "Waiting for challenge to echo ..."
+                if {$data(n-p-c) > $data(n-t-c)} {
+                    # waiting for more input
+                    break
+                }
+                if {[string first $data(pre-challenge) $data(trimmed-challenge)] >= 0} {
+                    # $self status-line ""
+                    set t [clock millis]
+                    array set data [list time-of-echo $t time-to-echo [expr {8*$data(time-warp)*($t-$data(time-challenge))}] state wait-response-echo]
+                    # puts "time-to-echo $data(time-to-echo)"
+                    continue
+                } 
+                if {$data(n-t-c) != 0} {
+                    # $self status-line ""
+                    # puts "wait-challenge-echo {$data(pre-challenge)} and {$data(challenge)}"
+                    array set data [list time-wait [clock millis] state wait-before-new-challenge]
+                    continue
+                }
+                break
+            }
+            wait-response-echo {
+                # $self status-line "Waiting for response ... {$data(trimmed-challenge)} {$data(trimmed-response)}"
+                set data(response-time) [format %.0f [expr {[clock millis]-$data(time-challenge)}]]
+                if {$data(response-space)} {
+                    if {[string first $data(trimmed-challenge) $data(trimmed-response)] >= 0} {
+                        $self status "\n" normal $data(trimmed-challenge) right
+                        $self score-challenge; # hits
                         $self score-current
-                        $self status "\n" normal "$data(trimmed-challenge)" pass
+                        array set data [list time-wait [clock millis] state wait-before-new-challenge]
+                        break
+                    }
+                    if {$data(n-t-r) > 0 && [string first $data(trimmed-response) $data(trimmed-challenge)] < 0} {
+                        $self status "\n" normal "$data(trimmed-challenge)" wrong
+                        $self score-challenge; # misses
+                        $self score-current
                         if {$options(-on-error) eq {Repeat}} {
                             array set data [list time-wait [clock millis] state wait-before-reissue-challenge]
                         } else {
                             array set data [list time-wait [clock millis] state wait-before-new-challenge]
                         }
-                        continue
+                        break
                     }
                 }
-                default { error "uncaught state $data(state)" }
+                if {[clock millis] > $data(time-of-echo)+$data(time-to-echo)} {
+                    $self score-challenge; # pass
+                    $self score-current
+                    $self status "\n" normal "$data(trimmed-challenge)" pass
+                    if {$options(-on-error) eq {Repeat}} {
+                        array set data [list time-wait [clock millis] state wait-before-reissue-challenge]
+                    } else {
+                        array set data [list time-wait [clock millis] state wait-before-new-challenge]
+                    }
+                    continue
+                }
             }
-            break
+            default { error "uncaught state $data(state)" }
         }
-        set data(handler) [after 10 [mymethod timeout]]
+        break
     }
+    set data(handler) [after 10 [mymethod timeout]]
+}
 method status {args} {
     $win.play.text insert end {*}$args
     $win.play.text see end
@@ -706,21 +781,21 @@ proc session-summary {sum morse session} {
         # puts $entry
     }
     if {0} {
-    set chars [lsort [chars-summary [dict get $sum total]]]
-    foreach char $chars {
-        set hits {}
-        set misses {}
-        set passes {}
-        if {[char-exists-summary [dict get $sum hit] $char]} {
-            set hits [lsort -real -increasing [char-times-summary [dict get $sum hit] $char]]
+        set chars [lsort [chars-summary [dict get $sum total]]]
+        foreach char $chars {
+            set hits {}
+            set misses {}
+            set passes {}
+            if {[char-exists-summary [dict get $sum hit] $char]} {
+                set hits [lsort -real -increasing [char-times-summary [dict get $sum hit] $char]]
+            }
+            if {[char-exists-summary [dict get $sum miss] $char]} {
+                set misses [lmap {x} [char-times-summary [dict get $sum miss] $char] {lindex {-} 0}]
+            }
+            if {[char-exists-summary [dict get $sum pass] $char]} {
+                set passes [lmap {x} [char-times-summary [dict get $sum pass] $char] {lindex {-} 0}]
+            }
         }
-        if {[char-exists-summary [dict get $sum miss] $char]} {
-            set misses [lmap {x} [char-times-summary [dict get $sum miss] $char] {lindex {-} 0}]
-        }
-        if {[char-exists-summary [dict get $sum pass] $char]} {
-            set passes [lmap {x} [char-times-summary [dict get $sum pass] $char] {lindex {-} 0}]
-        }
-    }
     }
     return $sum
 }
@@ -770,6 +845,7 @@ method score-session {} {
     set s [session-summary [init-session-summary] [$options(-dict)] $data(session-log)]
     return "[percent [count-summary [dict get $s hit]] [count-summary [dict get $s total]]]% correct"
 }
+
 method score-current {} {
     set s [session-summary [init-session-summary] [$options(-dict)] $data(session-log)]
     set total [count-summary [dict get $s total]]; # 
@@ -788,82 +864,139 @@ method score-challenge {} {
     lappend data(session-log) $data(pre-challenge) $data(trimmed-response) $data(response-time)
     # puts "score-challenge {$data(pre-challenge)} {$data(trimmed-response)} $data(response-time) ms"
 }
-proc choose {x} {
-    # puts "choose from {$x} [expr {int(rand()*[llength $x])}]"
-    return [lindex $x [expr {int(rand()*[llength $x])}]]
+
+proc choosei {n} { return [expr {int(rand()*$n)}] }
+proc choose {x} { return [lindex $x [choosei [llength $x]]] }
+proc shuffle {x} {
+    set y {}
+    while {[llength $x]} {
+        lappend y [lindex $x [set i [choosei [llength $x]]]]
+        set x [lreplace $x $i $i]
+    }
+    return $y
 }
-# this is biasing toward the worst characters in the history
+
+# make a sample with specified -difficulty and -spread
 method sample-make {} {
-    set dist [concat {*}[lmap x [lsort -index 0 [lrange $data(summary) 1 end]] {lrange $x 0 1}]]
-    set sample {}
-    foreach char $data(sample-chars) {
-        set char [string toupper $char]
-        set n [expr {100-([dict exists $dist $char]?[dict get $dist $char]:0)}]
-        if {$n > 10} {
-            lappend sample {*}[lrepeat $n $char]
+    if {$data(dits) eq {}} {
+        set dits [dict create]
+        set dict [$options(-dict)]
+        # generate unigraphs classified by dit length
+        set cset [dict keys $dict]
+        set cdits [dict create]
+        foreach c $cset {
+            dict lappend cdits [morse-word-length $dict $c] $c 
+        }
+        dict set dits 1 $cdits
+        # generate digraphs classified by dit length
+        set nset [lsort -integer [dict keys $cdits]]
+        set wdits [dict map {k v} $cdits {}]
+        foreach n1 $nset {
+            foreach n2 $nset {
+                set n [expr {$n1+3+$n2}]
+                if {$n ni $nset} continue
+                set ns [list $n1 $n2]
+                if {$ns ni [dict get $wdits $n]} { dict lappend wdits $n $ns }
+            }
+        }
+        dict set dits 2 $wdits
+        # generate n-graphs classified by dit length
+        for {set i 3} {$i <= 5} {incr i} {
+            set pdits [dict get $dits [expr {$i-1}]]
+            set wdits [dict map {k v} $pdits {}]
+            foreach n1 $nset {
+                foreach n2 $nset {
+                    set n [expr {$n1+3+$n2}]
+                    if {$n ni $nset} continue
+                    foreach w2 [dict get $pdits $n2] {
+                        set ns [concat $n1 $w2]
+                        if {$ns ni [dict get $wdits $n]} { 
+                            dict lappend wdits $n $ns
+                        }
+                    }
+                }
+            }
+            dict set dits $i $wdits
+        }
+        # 
+        #foreach n $nset {
+            #puts "$n -> [dict values [dict map {k v} $dits {llength [dict get $v $n]}]]"
+            #foreach k [dict keys $dits] { puts "$n $k -> [dict get $dits $k $n]" }
+        #}
+        set data(dits) $dits
+    }
+    set dits $data(dits)
+    set nset [dict keys [dict get $dits 1]]
+    set diff [expr {int($options(-difficulty))|1}]
+    set sample [concat {*}[dict values [dict map {j v} $dits {dict get $v $diff}]]]
+    for {set i 2} {$i <= $options(-spread)} {incr i 2} {
+        set n [expr {int($diff+$i)|1}]
+        if {$n in $nset} {
+            lappend sample {*}[concat {*}[dict values [dict map {j v} $dits {dict get $v $n}]]]
+        }
+        set n [expr {int($options(-difficulty)-$i)|1}]
+        if {$n in $nset} {
+            lappend sample {*}[concat {*}[dict values [dict map {j v} $dits {dict get $v $n}]]]
         }
     }
+    puts "make-sample $sample"
     return $sample
 }
 method sample-draw {} {
-    switch $options(-source) {
-        {short letters} -
-        {long letters} -
-        letters -
-        alphanumerics -
-        digits -
-        characters -
-        {itu characters} {
-            set draw {}
-            for {set i 0} {$i < $options(-length)} {incr i} {
-                append draw [choose $data(sample)]
-            }
-            set draw [string toupper $draw]
-            return $draw
-        }
-        warmup {
-        }
-        default { error "uncaught source $options(-source) in sample-draw" }
+    set draw [choose $data(sample)]
+    if {[llength $draw] == 1} {
+        return $draw
     }
+    set ldraw {}
+    foreach i $draw {
+        append ldraw [choose [dict get $data(dits) 1 $i]]
+    }
+    return $ldraw
 }
 #
 # play-tab
 #
+proc constrain {format var newval} { set $var [format $format $newval] }
+
 method play-tab {w} {
     array set data {
         session-stamps {}
         play/pause 0
         session-time 0
         response-time 0
+        session-time-limit 100
     }
     pack [ttk::frame $w] -side top -expand true -fill x
     set row 0
-    # response-time hits misses passes
-    foreach var {} {
-        grid [ttk::label $w.l$var -text "$var: "] -row $row -column 0
-        if {$var in {wpm source}} {
-            grid [ttk::label $w.v$var -textvar [myvar options(-$var)]] -row $row -column 1
-        } else {
-            grid [ttk::label $w.v$var -textvar [myvar data($var)]] -row $row -column 1
-        }
-        switch $var {
-            session-time { set data($var) 0:00 }
-            response-time { set data($var) 0 }
-            source -
-            wpm { }
-            default { error "uncaught dashboard variable $var" }
-        }
-        incr row
-    }
     grid [text $w.text -height 4 -width 10 -background lightgrey -font {Courier 40 bold}] -row $row -column 0 -columnspan 2 -sticky ew
     bind $w.text <KeyPress> {}
     incr row
     grid [ttk::button $w.play -text Play -command [mymethod play-button play/pause]] -row $row -column 0 -columnspan 2
     grid [ttk::label $w.status-line] -row [incr row] -column 0 -columnspan 2
-    grid [sdrtk::pie $w.timepct -title {Time Remaing} -percent1-color $data(bluish-color) -other-color grey] -row [incr row] -column 0
-    grid [sdrtk::pie $w.hitpct -title {Hits/Passes/Misses} \
+    grid [cwack::pie $w.timepct -title {Time Remaing} -percent1-color $data(bluish-color) -other-color grey] -row [incr row] -column 0
+    grid [cwack::pie $w.hitpct -title {Hits/Passes/Misses} \
               -percent1-color $data(bluish-color) -percent2-color grey -percent3-color $data(reddish-color)] \
         -row $row -column 1
+    # response-time hits misses passes
+    grid [ttk::frame $w.ctl] -row [incr row] -column 0 -columnspan 2 -sticky ew
+    set row 0
+    foreach var {wpm difficulty spread session tone challenge-tone dah-offset gain} {
+        cwack::lscale %AUTO% -window $w.ctl -var $var -row [incr row] -column 0  -variable [myvar options(-$var)] \
+             -text "$options(-$var-label): " \
+             -from [lindex $options(-$var-values) 0] -to [lindex $options(-$var-values) end] -format %.1f
+        if {0} {
+        grid [ttk::label $w.ctl.l$var -text "$options(-$var-label): "] -row [incr row] -column 0 -sticky e
+        if {$var in {wpm tone challenge-tone dah-offset gain difficulty spread session}} {
+            grid [ttk::label $w.ctl.v$var -textvar [myvar options(-$var)]] -row $row -column 1 -padx 10
+            grid [ttk::scale $w.ctl.s$var -orient horizontal -from [lindex $options(-$var-values) 0] -to [lindex $options(-$var-values) end] -variable [myvar options(-$var)]] -row $row -column 2 -sticky ew
+            $w.ctl.s$var configure -command [list [myproc constrain] %.1f [myvar options(-$var)]]
+        } else {
+            grid [ttk::label $w.v$var -textvar [myvar data($var)]] -row $row -column 1
+        }
+        }
+        grid columnconfigure $w.ctl 2 -weight 10
+    }
+    # keyer, swap, mode, dah-offset, favor single letters, favor words, no triple letters, preferred code dict
     return $w
 }
 method play-button {but} {
@@ -943,7 +1076,7 @@ method stats-draw-row {w i row} {
     # row label
     $w.c create text 0 0 -text [format "$char %3d%%" $percent] -anchor nw -tag [list text$i row$i] -font {Courier 12}
     # percent correct
-    if {$percent != 0} { $w.c create rectangle 0 0.1 $percent 0.9 -fill $data(bluish-cbolor) -tag [list rect$i row$i] }
+    if {$percent != 0} { $w.c create rectangle 0 0.1 $percent 0.9 -fill $data(bluish-color) -tag [list rect$i row$i] }
     if {$percent != 100} { $w.c create rectangle $percent 0.1 100 0.9 -fill $data(reddish-color) -tag [list rect$i row$i] }
     if {$min ne {}} {
         # box and whiskers verticals
@@ -978,70 +1111,15 @@ method about-tab {w} {
         normal "Echo the code back and Echo will collect statistics on your speed and accuracy."
     return $w
 }
-#
-# setup-tab
-#
-method setup-tab {w} {
-    ttk::frame $w
-    set row 0
-    #  -source -length
-    foreach opt {-wpm -challenge-tone -response-tone -response-mode -source -session -char-space -word-space -gain -dah-offset} {
-        ttk::label $w.l$opt -text "$options($opt-label): "
-        sdrtk::radiomenubutton $w.x$opt \
-            -defaultvalue $options($opt) \
-            -variable [myvar options($opt)] \
-            -values $options($opt-values) \
-            -command [mymethod update $opt]
-        if {[info exists options($opt-labels)]} {
-            $w.x$opt configure -labels $options($opt-labels)
-        }
-        grid $w.l$opt -row $row -column 0 -sticky ew
-        grid $w.x$opt -row $row -column 1 -sticky ew
-        incr row
-    }
-    # -gain -dah-offset
-    foreach opt {} {
-        sdrtk::lscale $w.x$opt \
-            -label "$options($opt-label)" \
-            -from $options($opt-min) \
-            -to $options($opt-max) \
-            -value $options($opt) \
-            -variable [myvar options($opt)] \
-            -command [mymethod update $opt]
-        grid $w.x$opt -row $row -column 0 -columnspan 2 -sticky ew
-        incr row
-    }
-    return $w
-}
 method sample-trim {} {
 }
 method update {opt val} {
     # puts "update $opt $val"
     set options($opt) $val
     switch -- $opt {
-        -source {
-            switch -- $val {
-                {short letters} { set data(sample-chars) [split {adegikmnorstuw} {}] }
-                {long letters} { set data(sample-chars) [split {bcfhjlpqvxyz} {}] }
-                letters { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz} {}] }
-                digits { set data(sample-chars) [split {0123456789} {}] }
-                punctuation { set data(sample-chars) [split {.,?/-=+*} {}] }
-                alphanumerics { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789} {}] }
-                characters { set data(sample-chars) [split {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*} {}] }
-                {itu characters} { set data(sample-chars) [split "abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*!\"\$&'():;@_" {}] }
-                callsigns { set data(sample-words) [morse-pileup-callsigns] }
-                abbrevs { set data(sample-words) [morse-ham-abbrev] }
-                qcodes { set data(sample-words) [morse-ham-qcodes] }
-                words { set data(sample-words) [morse-voa-vocabulary] }
-                suffixes { }
-                prefixes { }
-                phrases { }
-                default { error "uncaught -source $val" }
-            }
-            $self sample-trim
-        }
-        -length { $self sample-trim }
         -session { }
+        -difficulty {}
+        -spread {}
         -wpm { 
             ::options cset -$options(-chk)-wpm $val
             ::options cset -$options(-dti1)-wpm $val
@@ -1058,20 +1136,21 @@ method update {opt val} {
         }
         -char-space { ::options cset -$options(-chk)-ils $val }
         -word-space { ::options cset -$options(-chk)-iws $val }
-        -response-tone { 
+        -tone { 
             set rfreq $val
             ::options cset -$options(-kbdo)-freq $rfreq
             ::options cset -$options(-keyo)-freq $rfreq
             $self update -dah-offset $options(-dah-offset)
         }
-        -response-mode {
-            ::options cset -$options(-key)-mode $val
+        -swap -
+        -mode {
+            ::options cset -$options(-key)$opt $val
         }
         -dah-offset {
             set cfreq [expr {$options(-challenge-tone)+$val}]
             ::options cset -$options(-chk)-two $cfreq
             ::options cset -$options(-cho)-two $cfreq
-            set rfreq [expr {$options(-response-tone)+$val}]
+            set rfreq [expr {$options(-tone)+$val}]
             ::options cset -$options(-kbd)-two $rfreq
             ::options cset -$options(-key)-two $rfreq
             ::options cset -$options(-kbdo)-two $rfreq
@@ -1079,6 +1158,9 @@ method update {opt val} {
         }
         -gain {
             ::options cset -$options(-out)-gain $val
+        }
+        -keyer {
+            ::options cset -$options(-key)$opt $val
         }
         default { error "uncaught option update $opt" }
     }
@@ -1147,10 +1229,33 @@ method {Config -dti2} {val} {
 # [-] only score word spaces when the required space has passed, not when you cross the decision boundary.
 #       it's already waiting for 6 dits of key up to mark a word space
 # [x] fix the iambic keyer selector
+# [x] move setup controls to bottom of play-tab
+# [x] eliminate setup-tab
+# [ ] eliminate dial-tab, make dial controls optional popup window
+# [x] how about parameterizing progress by the distribution of dit-lengths?
+#       so symbols are drawn from distribution with specified mean and sd
+#       the mean centers the symbol length, the sd spreads the symbol length,
+#       just give characters and words blindly
+# [ ] add keyer setup control
+# [ ] add button to favor single letters over words.
+# [ ] add button to favor words over single letters.
+# [ ] add button to drop tripled letters.
+# [ ] add button to specify the preferred code dictionary for output
+#       recommend farsi, hebrew, arabic, or wabun for eliminating visual cues
+# [-] add button to drop the non-english characters 
+# [-] add button to drop the less used punctuation marks
+# [ ] accumulate running mean and sd and monte carlo accept/reject candidates
+#       according to how they update the running mean and sd.
+# [x] sample-make should deal with fractional difficulty and spread
 # [ ] starting from nil, discover the student's ability and push the boundaries
 # [ ] should just start pushing letter combinations when the letters are known
 # [ ] what happens if letter frequency is inversely proportional to dit length?
-# [ ] how about parameterizing progress by the distribution of dit-lengths?
-#       so symbols are drawn from distribution with specified mean and sd
-#       the mean centers the symbol length, the sd spreads the symbol length
-#       give characters and words blindly
+# [ ] rewrite builtin to include <SK> style prosigns rather than exotic single characters
+# [ ] * is not a widely used abbreviation for <SK>
+# [ ] * and % would be useful single character abbreviations
+# [ ] add user button to controls, segregate setups by user, allow multiple users
+# [ ] simplify code
+# [ ] rewrite into julia
+# [x] add dah-offset scale
+# [x] refactor labeled scales
+# [ ] break scales into two columns
