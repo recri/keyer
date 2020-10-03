@@ -112,12 +112,31 @@ proc morse-character-length {dict character} {
 }
 
 #
+# split a word into morse symbols
+#
+proc morse-word-split {word} {
+    set split {}
+    while {[regexp {^([^<]*)(<[^>]*>)?(.*)$} $word all prefix prosign postfix]} {
+        if {$prefix ne {}} {
+            lappend split {*}[split $prefix {}]
+        }
+        if {$prosign ne {}} {
+            lappend split $prosign
+        }
+        if {$postfix eq {}} {
+            return $split
+        }
+        set word $postfix
+    }
+}
+
+#
 # compute the length in dit clocks
 # of the given word in the given dict
 #
 proc morse-word-length {dict word} {
     set code {}
-    foreach character [split $word {}] {
+    foreach character [morse-word-split $word] {
 	if {$code ne {}} {
 	    append code { }
 	}

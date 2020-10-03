@@ -48,11 +48,11 @@
 ///
 int tone_freq = 600;            // tone frequency
 #ifdef USE_AUDIO_DAC
-float tone_level = 1.0;         // tone level
-int tone_rise = 2;              // ms of rise time for tone
-int tone_fall = 2;              // ms of fall time for tone
+float tone_level = 0.5;         // tone level
+int tone_rise = 4;              // ms of rise time for tone
+int tone_fall = 4;              // ms of fall time for tone
 #endif
-float touch_sensitivity = 7;    // number of sd over mean that signals touch
+float touch_sensitivity = 9;    // number of sd over mean that signals touch
 int transition_timeout = 1;     // debounce refractory period after transition, ms
 byte sidetone_follows_key = 1;  // generate sidetone when key is active
 
