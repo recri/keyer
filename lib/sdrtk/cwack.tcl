@@ -168,7 +168,7 @@ snit::widget cwack::pie {
         set extent2 [expr {min(359.999,360.0*$options(-percent2)/100)}]
         set extent3 [expr {min(359.999,360.0*$options(-percent3)/100)}]
         set extent4 [expr {min(359.999,360-$extent1-$extent2-$extent3)}]
-        set start1 [expr {90-$extent1}]; # 
+        set start1 [expr {90-$extent1}]
         set start2 [expr {$start1-$extent2}]
         set start3 [expr {$start2-$extent3}]
         set start4 [expr {$start3-$extent4}]
@@ -186,6 +186,7 @@ snit::widget cwack::pie {
 }
 
 # tk type, but grid into a larger array at -row -column
+# to constrain column widths
 snit::type cwack::lscale {
 
     component label
@@ -229,51 +230,6 @@ snit::type cwack::lscale {
     }
 }
 
-# cwops copyright exercises, probably need to go away
-set exercises {
-    warmup {
-	EEEEE TTTTT IIIII MMMMM SSSSS OOOOO HHHHH 00000 55555
-	AAAAA NNNNN UUUUU DDDDD VVVVV BBBBB 44444 66666
-	ABCDEF GHIJK LMNOP QRSTU VWXYZ 12345 67890 / , . ? * + =
-	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
-    }
-    exercise {
-	AAAAA BBBBB CCCCC DDDDD EEEEE FFFFF GGGGG HHHHH IIIII JJJJJ
-	KKKKK LLLLL MMMMM NNNNN OOOOO PPPPP QQQQQ RRRRR
-	SSSSS TTTTT UUUUU VVVVV WWWWW XXXXX YYYYY ZZZZZ
-	11111 22222 33333 44444 55555 66666 77777 88888 99999 00000
-    }
-    drill {
-	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
-	THE QUICK BROWN FOX JUMPS OVER THE LAZY DOGS BACK 7 0 3 6 4 5 1 2 8 9
-	BENS BEST BENT WIRE/5
-	, , , , , . . . . .
-	BENS BEST BENT WIRE/5
-	? ? ? ? ? 
-	BENS BEST BENT WIRE/5
-	/ / / / / * * * * * + + + + + = = = = =
-    }
-}
-
-array set sources {
-    {short letters}  {adegikmnorstuw}
-    {long letters}   {bcfhjlpqvxyz}
-    letters          {abcdefghijklmnopqrstuvwxyz}
-    digits           {0123456789}
-    punctuation      {.,?/-=+*}
-    alphanumerics    {abcdefghijklmnopqrstuvwxyz0123456789}
-    characters       {abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*}
-    {itu characters} "abcdefghijklmnopqrstuvwxyz0123456789.,?/-=+*!\"\$&'():;@_"
-
-    #callsigns { set data(sample-words) [morse-pileup-callsigns] }
-    #abbrevs { set data(sample-words) [morse-ham-abbrev] }
-    #qcodes { set data(sample-words) [morse-ham-qcodes] }
-    #words { set data(sample-words) [morse-voa-vocabulary] }
-    #suffixes { }
-    #prefixes { }
-    #phrases { }
-}
-
 snit::widget sdrtk::cwack {
     option -chk -default {};	# challenge keyer
     option -cho -default {};	# challenge keyer oscillator
@@ -285,7 +241,7 @@ snit::widget sdrtk::cwack {
     option -dto2 -default {};	# response detone (not used)
     option -dti1 -default {};	# challenge detimer
     option -dti2 -default {};	# response detimer
-    option -dec1 -default {};       # challenge decoder
+    option -dec1 -default {};	# challenge decoder
     option -dec2 -default {};	# response decoder
     option -out -default {};	# output mixer
     option -cas -default {}; 	# keyboard keys
@@ -536,6 +492,22 @@ snit::widget sdrtk::cwack {
 	set data(state) start
     }
     
+    proc morse-escape-prosign {str} {
+	set escaped {}
+	foreach c [morse-word-split $str] {
+	    if {[regexp {^<(.+)>$} $c all meat]} {
+		switch [string length $meat] {
+		    2 { append escaped \\$meat }
+		    3 { append escaped \\\\$meat }
+		    default { error "excessively long prosign $c" }
+		}
+	    } else {
+		append escaped $c
+	    }
+	}
+	return $escaped
+    }
+
     #
     # state machine
     method timeout {} {
@@ -609,8 +581,8 @@ snit::widget sdrtk::cwack {
 		    set data(pre-challenge) [$self sample-draw]
 		    set data(n-p-c) [string length $data(pre-challenge)]
 		    set data(challenge-dits) [morse-word-length [$options(-dict)] $data(pre-challenge)]
-		    set data(challenge-dit-ms) [morse-dit-ms $options(-wpm)]; # 
-		    set data(response-dit-ms) [morse-dit-ms $options(-wpm)]; # 
+		    set data(challenge-dit-ms) [morse-dit-ms $options(-wpm)]
+		    set data(response-dit-ms) [morse-dit-ms $options(-wpm)]
 		    set data(challenge-response-ms) [expr {$data(challenge-dits)*($data(challenge-dit-ms)+$data(response-dit-ms))}]
 		}
 		wait-before-reissue-challenge {
@@ -630,11 +602,13 @@ snit::widget sdrtk::cwack {
 		    array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} ]
 		    if {$options(-chk) ne {} && ! [$options(-chk) is-busy]} {
 			array set data [list time-challenge [clock millis] state wait-challenge-echo]
-			$options(-chk) puts [string toupper $data(pre-challenge)]
+			$options(-chk) puts [morse-escape-prosign [string toupper $data(pre-challenge)]]
+			# puts "challenge {$data(pre-challenge)}"
 		    }
 		}
 		wait-challenge-echo {
 		    # $self status-line "Waiting for challenge to echo ..."
+		    # if {[string match <*> $data(pre-challenge)]} { puts "$data(pre-challenge) received $data(challenge) $data(trimmed-challenge)" }
 		    if {$data(n-p-c) > $data(n-t-c)} {
 			# waiting for more input
 			break
@@ -882,7 +856,7 @@ snit::widget sdrtk::cwack {
     
     method score-current {} {
 	set s [session-summary [init-session-summary] [$options(-dict)] $data(session-log)]
-	set total [count-summary [dict get $s total]]; # 
+	set total [count-summary [dict get $s total]]
 	if {$total == 0} {
 	    $win.play.hitpct configure -percent1 0 -percent2 0 -percent3 0 -caption "0/0/0"
 	} else {

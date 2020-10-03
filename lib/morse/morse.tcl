@@ -26,6 +26,26 @@ namespace eval ::morse {}
 namespace eval ::morse::morse {}
 
 #
+# split a word into morse symbols
+# <AA> is a prosign in the dictionary
+#
+proc morse-word-split {word} {
+    set split {}
+    while {[regexp {^([^<]*)(<[^>]*>)?(.*)$} $word all prefix prosign postfix]} {
+        if {$prefix ne {}} {
+            lappend split {*}[split $prefix {}]
+        }
+        if {$prosign ne {}} {
+            lappend split $prosign
+        }
+        if {$postfix eq {}} {
+            return $split
+        }
+        set word $postfix
+    }
+}
+
+#
 # translate a text into morse
 # using a dictionary
 # should handle spaces
@@ -33,8 +53,12 @@ namespace eval ::morse::morse {}
 #
 proc text-to-morse {dict text} {
     set code {}
-    foreach c [split $text {}] {
-	lappend code [dict get $dict $c]
+    foreach c [morse-word-split $text] {
+	if {$c eq {\n}} {
+	    lappend code { }
+	} else {
+	    lappend code [dict get $dict $c]
+	}
     }
     return [join $code { }]
 }
@@ -67,7 +91,7 @@ proc morse-to-text {dict morse} {
 	if {[dict exists $inversion $c]} {
 	    append text [join [dict get $inversion $c] {|}]
 	} else {
-	    append text \#
+	    append text <[morse::morse::prosign $dict $inversion $c]>
 	}
     }
     return $text
@@ -97,7 +121,7 @@ proc morse-to-prosign {dict morse} {
     set inversion [morse-inversion $dict]
     set morse [string trim $morse]
     set text {}
-    foreach c [split $morse  { }] {
+    foreach c [split $morse { }] {
 	append text "<[morse::morse::prosign $dict $inversion $c]>"
     }
     return $text
@@ -113,6 +137,7 @@ proc morse-character-length {dict character} {
 
 #
 # split a word into morse symbols
+# <AA> is a prosign in the dictionary
 #
 proc morse-word-split {word} {
     set split {}
@@ -140,7 +165,11 @@ proc morse-word-length {dict word} {
 	if {$code ne {}} {
 	    append code { }
 	}
-	append code [dict get $dict $character]
+	if {$character eq { } } {
+	    append code \n
+	} else {
+	    append code [dict get $dict $character]
+	}
     }
     return [morse-dit-length $code]
 }
@@ -166,7 +195,7 @@ proc morse-dit-length {code} {
     }
     return $length
 }
-    
+
 #
 # compute the dit time for words/minute in milliseconds
 #
