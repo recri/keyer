@@ -1308,7 +1308,8 @@ snit::widget sdrtk::cwack {
 # [-] * and % would be useful single character abbreviations
 # [x] expand allowed dit lengths beyond known single character dit lengths
 # [ ] add user button to controls, segregate setups by user, allow multiple users
-# [ ] some kind of glitch in the timeout loop, pause/play fixes it
+# [x] some kind of glitch in the timeout loop, pause/play fixes it, 
+#	different prosign convention in keyer-ascii puts than in dict.
 # [x] is volume broken? dah-offset broken? yes, all option updates were broken
 # [ ] simplify code
 # [ ] rewrite into julia
