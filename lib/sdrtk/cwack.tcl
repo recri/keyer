@@ -135,11 +135,11 @@ snit::widget cwack::pie {
     
     constructor {args} {
         install title using ttk::label $win.title -textvar [myvar options(-title)]
-        install chart using canvas $win.chart
+        install chart using canvas $win.chart -width 50 -height 50
         install caption using ttk::label $win.caption -textvar [myvar options(-caption)]
-        grid $win.title -row 1
-        grid $win.chart -row 2 -sticky nsew
-        grid $win.caption -row 3
+        grid $win.title -column 1 -row 1
+        grid $win.chart -column 1 -row 2 -sticky nsew
+        grid $win.caption -column 1 -row 3
         foreach row {1 2 3} weight {0 1 0} { grid rowconfigure $win $row -weight $weight }
         grid columnconfigure $win 1 -weight 1
         foreach tag {percent1 percent2 percent3 other} {
@@ -264,22 +264,26 @@ snit::widget sdrtk::cwack {
     
     # length of session in minutes
     option -session -default 1
-    option -session-label {Session Length}
+    option -session-label {Session}
+    option -session-tooltip {Session length in minutes}
     option -session-values -default {0.25 30}
     
     # speed
     option -wpm 30
     option -wpm-label {WPM}
+    option -wpm-tooltip {Words per minute}
     option -wpm-values {12.5 15 17.5 20 22.5 25 27.5 30 32.5 35 40 50}
     
     # frequency of response sidetone
     option -tone 600
-    option -tone-label {Response Tone}
+    option -tone-label {Tone}
+    option -tone-tooltip {Tone used for user keyer}
     option -tone-values {400 1000}
     
     # frequency of challenge sidetone
     option -challenge-tone 550
-    option -challenge-tone-label {Challenge Tone}
+    option -challenge-tone-label {Tone2}
+    option -challenge-tone-tooltip {Tone used for cwack keyer}
     option -challenge-tone-values {400 1000}
     
     # retired option: character space padding, farnsworth here
@@ -294,22 +298,26 @@ snit::widget sdrtk::cwack {
     
     # mode of response keyer
     option -mode B
-    option -mode-label {Keyer Mode}
+    option -mode-label {Mode}
+    option -mode-tooltip {Keyer operation mode}
     option -mode-values {A B}
     
     # swap paddles
     option -swap 0
-    option -swap-label {Swap paddles}
+    option -swap-label {Swap}
+    option -swap-tooltip {Swap dit and dah paddles}
     option -swap-values {0 1}
     
     # offset of dah tone from dit tone
     option -dah-offset 0.0
-    option -dah-offset-label {Dah Tone Offset}
+    option -dah-offset-label {Offset}
+    option -dah-offset-tooltip {Offset of dah tone from base tone.}
     option -dah-offset-values {-50 50}
     
     # output gain
     option -gain 0
-    option -gain-label {Output Gain}
+    option -gain-label {Volume}
+    option -gain-tooltip {Output gain in decibels}
     option -gain-values {-30 -20 -15 -12 -9 -6 -3 0 3 6}
     
     # retired as option, just repeat: repeat or continue on error
@@ -320,16 +328,19 @@ snit::widget sdrtk::cwack {
     # iambic keyer to use (the -values are a cheat, I know the answer)
     option -keyer vk6ph
     option -keyer-label {Keyer}
+    option -keyer-tooltip {Implementation of iambic keyer}
     option -keyer-values {ad5dz dttsp k1el nd7pa vk6ph}
     
     # difficulty of challenges, average length in dit clocks
     option -difficulty 1
-    option -difficulty-label {Difficulty of challenges}
+    option -difficulty-label {Difficulty}
+    option -difficulty-tooltip {Average length of challenges in dit clocks}
     option -difficulty-values {1 19}
     
     # spread of challenges, sd of lengths in dit clocks
     option -spread 0
-    option -spread-label {Spread of challenges}
+    option -spread-label {Spread}
+    option -spread-tooltip {Standard deviation of challenges in dit clocks}
     option -spread-values {0 10}
     
     variable data -array {
@@ -1019,17 +1030,20 @@ snit::widget sdrtk::cwack {
 	    response-time 0
 	    session-time-limit 100
 	}
-	pack [ttk::frame $w] -side top -expand true -fill x
+	pack [ttk::frame $w] -side top -expand true -fill both
 	set row 0
-	grid [text $w.text -height 4 -width 10 -background lightgrey -font {Courier 40 bold}] -row $row -column 0 -columnspan 2 -sticky ew
+	grid columnconfigure $w 0 -weight 1
+	grid columnconfigure $w 1 -weight 1
+	grid [text $w.text -height 4 -width 7 -background lightgrey -font {Courier 40 bold}] -row $row -column 0 -columnspan 2 -sticky ew
 	bind $w.text <KeyPress> {}
 	incr row
 	grid [ttk::button $w.play -text Play -command [mymethod play-button play/pause]] -row $row -column 0 -columnspan 2
 	grid [ttk::label $w.status-line] -row [incr row] -column 0 -columnspan 2
-	grid [cwack::pie $w.timepct -title {Time Remaing} -percent1-color $data(bluish-color) -other-color grey] -row [incr row] -column 0
+	grid rowconfigure $w [incr row] -weight 1
+	grid [cwack::pie $w.timepct -title {Time Remaing} -percent1-color $data(bluish-color) -other-color grey] -row $row -column 0 -sticky nsew
 	grid [cwack::pie $w.hitpct -title {Hits/Passes/Misses} \
 		  -percent1-color $data(bluish-color) -percent2-color grey -percent3-color $data(reddish-color)] \
-	    -row $row -column 1
+	    -row $row -column 1 -sticky nsew
 	# response-time hits misses passes
 	grid [ttk::frame $w.ctl] -row [incr row] -column 0 -columnspan 2 -sticky ew
 	set scolumn 0
