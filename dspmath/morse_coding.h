@@ -26,17 +26,19 @@
 ** and commented with prosigns for the punctuation characters.
 ** the " needed an extra \ escape in this representation
 ** the $ and ; would need to be quoted in a Tcl list representation
+**
+** Revised to use amateur prosigns in preference to punctuation characters.
 */
 static const char morse_coding_dict_string[] = 
   "! -.-.-- "			/* <SN> */
   "\\\" .-..-. "		/* <RR> */
   "$ ...-..- "			/* <SX> */
-  "& .-... "			/* <AS> */
+  /* "& .-... "			/* <AS> */
   "' .----. "			/* <WG> */
-  "( -.--. "			/* <KN> */
+  /* "( -.--. "			/* <KN> */
   ") -.--.- "			/* <KK> */
   /* "* ...-.- "		/* <SK> */
-  "+ .-.-. "			/* <AR> */
+  /* "+ .-.-. "			/* <AR> */
   ", --..-- "			/* <MIM> */
   "- -....- "			/* <BA> */
   ". .-.-.- "			/* <RK> */
@@ -51,11 +53,14 @@ static const char morse_coding_dict_string[] =
   "N -. O --- P .--. Q --.- R .-. S ... T - U ..- V ...- W .-- X -..- Y -.-- Z --.. "
   "_ ..--.- "			/* <UK> */
   "<AA> .-.- "                  /* <AA>,Ä,Æ,Ą */
+  "<AR> .-.-. "			/* <AR>,+ */
+  "<AS> .-... "			/* <AS>,& */
+  "<CT> -.-.- "                 /* <CT>,<KA> */
+  "<HM> ....-- "                /* <HM> */
+  "<INT> ..-.- "                /* <INT> */
+  "<KN> -.--. "			/* <KN>,( */
   "<SK> ...-.- "                /* <SK>,* */
   "<VE> ...-. "                 /* <VE>,<SN>,Ŝ */
-  "<INT> ..-.- "                /* <INT> */
-  "<HM> ....-- "                /* <HM> */
-  "<CT> -.-.- "                 /* <CT>,<KA> */
   "<NJ> -..--- "                /* <NJ>,<XM>,<DO> */
   "<SOS> ...---... "		/* <SOS> */
   "Á .--.- "			/* À,Á,Â  */

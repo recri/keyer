@@ -116,77 +116,86 @@ namespace eval ::tcl::mathfunc {
     proc ncdf {x mu sigma} { expr {sncdf((double($x)-$mu)/$sigma)} }
 }
 
-## cwack::pie widget
-## show time remaining or percent correct as pie charts
-snit::widget cwack::pie {
+#
+# * compute running mean and var from https://www.johndcook.com/blog/standard_deviation
+# *
+# * Initialize M1 = x1 and S1 = 0.
+# *
+# * For subsequent x‘s, use the recurrence formulas
+# * 
+# * Mk = Mk-1+ (xk – Mk-1)/k
+# * Sk = Sk-1 + (xk – Mk-1)*(xk – Mk).
+# *
+# * For 2 ≤ k ≤ n, the kth estimate of the variance is s2 = Sk/(k – 1).
+#
+snit::type rsummary {
+    variable sum
+    constructor {args} {
+        $self clear
+        $self accumulate {*}$args
+    }
+    method clear {} { set sum [dict create mk 0 sk 0 k 0] }
+    method accumulate {args} {
+        dict with sum {
+            foreach xk $args {
+                if {$k == 0} {
+                    set k 1
+                    set mk $xk
+                    set sk 0
+                } else {
+                    incr k
+                    set mj $mk
+                    set sj $sk
+                    set mk [expr {double($mj)+($xk-$mj)/double($k)}]
+                    set sk [expr {double($sj)+double($xk-$mj)*($xk-$mk)}]
+                }
+            }
+        }
+    }
+    method mean {} { dict get $sum mk }
+    method var {} { dict with sum { return [expr {$k >= 2 ? $sk/($k-1) : 0}] } }
+    method sd {} { expr {sqrt([$self var])} }
+    method n {} { dict get $sum k }
+}
+
+## cwack::progressbar labelled progress bar
+## tk type, but grid into a larger array at -row -column
+## show time remaining or percent correct as progress bars
+snit::type cwack::progressbar {
     component title
-    component chart
-    component caption
+    component value
+    component progress
     
+    option -window
+    option -var
+    option -row
+    option -column
+    option -variable
+
     option -title -default {}
-    option -caption -default {}
-    option -percent1 -default 0.0 -configuremethod redraw
-    option -percent2 -default 0.0 -configuremethod redraw
-    option -percent3 -default 0.0 -configuremethod redraw
-    option -percent1-color -default blue -configuremethod recolor
-    option -percent2-color -default red -configuremethod recolor
-    option -percent3-color -default yellow -configuremethod recolor
-    option -other-color -default grey -configuremethod recolor
+    option -foreground -default blue
+    option -background -default red
     
     constructor {args} {
-        install title using ttk::label $win.title -textvar [myvar options(-title)]
-        install chart using canvas $win.chart -width 50 -height 50
-        install caption using ttk::label $win.caption -textvar [myvar options(-caption)]
-        grid $win.title -column 1 -row 1
-        grid $win.chart -column 1 -row 2 -sticky nsew
-        grid $win.caption -column 1 -row 3
-        foreach row {1 2 3} weight {0 1 0} { grid rowconfigure $win $row -weight $weight }
-        grid columnconfigure $win 1 -weight 1
-        foreach tag {percent1 percent2 percent3 other} {
-            $win.chart create arc 0 0 1 1 -tag $tag -style pieslice -fill {} -outline {} -width 3
-        }
-        $self configurelist $args
-    }
-    
-    method redraw {option val} {
-        set options($option) $val
-        after 1 [mymethod doredraw]
-    }
-    method doredraw {} {
-        set wid  [winfo width $win.chart] 
-        set hgt [winfo height $win.chart]
-        set edg [expr {0.8*min($wid,$hgt)}]
-        set x0 [expr {($wid-$edg)/2}]
-        set x1 [expr {$wid-$x0}]
-        set y0 [expr {($hgt-$edg)/2}]
-        set y1 [expr {$hgt-$y0}]
-        # recenter all
-        foreach tag {percent1 percent2 percent3 other} {
-            $win.chart coords $tag $x0 $y0 $x1 $y1
-        }
-        set extent1 [expr {min(359.999,360.0*$options(-percent1)/100)}]
-        set extent2 [expr {min(359.999,360.0*$options(-percent2)/100)}]
-        set extent3 [expr {min(359.999,360.0*$options(-percent3)/100)}]
-        set extent4 [expr {min(359.999,360-$extent1-$extent2-$extent3)}]
-        set start1 [expr {90-$extent1}]
-        set start2 [expr {$start1-$extent2}]
-        set start3 [expr {$start2-$extent3}]
-        set start4 [expr {$start3-$extent4}]
-        $win.chart itemconfigure percent1 -start $start1 -extent $extent1 -fill $options(-percent1-color) -outline black
-        $win.chart itemconfigure percent2 -start $start2 -extent $extent2 -fill $options(-percent2-color) -outline black
-        $win.chart itemconfigure percent3 -start $start3 -extent $extent3 -fill $options(-percent3-color) -outline black
-        $win.chart itemconfigure other -start $start4 -extent $extent4 -fill $options(-other-color) -outline black
-    }
-    method recolor {option color} {
-        set options($option) $color
-        set tag [lindex [split $option -] 1]
-        # puts "recolor $option $color {$tag}"
-        $win.chart itemconfigure $tag -fill $color -outline black -width 3
+	$self configurelist $args
+
+	set win $options(-window)
+	set var $options(-var)
+	set row $options(-row)
+	set column $options(-column)
+
+        install title using ttk::label $win.title$var -text $options(-title)
+        install value using ttk::label $win.value$var -textvar $options(-variable)
+        install progress using ttk::progressbar $win.progress$var -mode determinate -variable $options(-variable)
+        grid $win.title$var -column $column -row $row -sticky e
+        grid $win.value$var -column [incr column] -row $row -ipadx 10
+        grid $win.progress$var -column [incr column] -row $row -sticky ew
     }
 }
 
-# tk type, but grid into a larger array at -row -column
-# to constrain column widths
+## cwack::lscale labeled scale
+## tk type, but grid into a larger array at -row -column
+## to constrain column widths together
 snit::type cwack::lscale {
 
     component label
@@ -335,7 +344,7 @@ snit::widget sdrtk::cwack {
     option -difficulty 1
     option -difficulty-label {Difficulty}
     option -difficulty-tooltip {Average length of challenges in dit clocks}
-    option -difficulty-values {1 19}
+    option -difficulty-values {1 31}
     
     # spread of challenges, sd of lengths in dit clocks
     option -spread 0
@@ -351,51 +360,15 @@ snit::widget sdrtk::cwack {
 	response {}
 	response-trimmed {}
 	state {}
-	time-warp 1
 	reddish-color "#D81B60"
 	bluish-color "#1E88E5"
 	black "#111"
 	config-options {-wpm -difficulty -spread -session -tone -challenge-tone -mode -swap -keyer -gain -dah-offset}
 	summary {} 
 	dits {}
-	sample-chars {}
-	sample-words {}
 	sample {}
-	pangrams {
-	    {quick zephyrs blow, vexing daft jim}
-	    {the five boxing wizards jump quickly}
-	    {sphinx of black quartz, judge my vow}
-	    {waltz, bad nymph, for quick jigs vex}
-	    {the five boxing wizards jump quickly}
-	    {five quacking zephyrs jolt my wax bed}
-	    {two driven jocks help fax my big quiz}
-	    {pack my box with five dozen liquor jugs}
-	    {a quick brown fox jumps over the lazy dog}
-	    {jinxed wizards pluck ivy from the big quilt}
-	    {the quick brown fox jumps over the lazy dog}
-	    {amazingly few discotheques provide jukeboxes}
-	    {a wizard's job is to vex chumps quickly in fog}
-	    {the lazy major was fixing Cupid's broken quiver}
-	    {my faxed joke won a pager in the cable TV quiz show}
-	    {six boys guzzled cheap raw plum vodka quite joyfully}
-	    {my girl wove six dozen plaid jackets before she quit}
-	    {crazy Fredrick bought many very exquisite opal jewels}
-	    {six big devils from Japan quickly forgot how to waltz}
-	    {sixty zippers were quickly picked from the woven jute bag}
-	    {few black taxis drive up major roads on quiet hazy nights}
-	    {just keep examining every low bid quoted for zinc etchings}
-	    {jack quietly moved up front and seized the big ball of wax}
-	    {a quick movement of the enemy will jeopardize six gunboats}
-	    {we promptly judged antique ivory buckles for the next prize}
-	    {whenever the black fox jumped the squirrel gazed suspiciously}
-	    {jaded zombies acted quaintly but kept driving their oxen forward}
-	    {the job requires extra pluck and zeal from every young wage earner}
-	    {a quart jar of oil mixed with zinc oxide makes a very bright paint}
-	    {a mad boxer shot a quick, gloved jab to the jaw of his dizzy opponent}
-	    {just work for improved basic techniques to maximize your typing skill}
-	    {the public was amazed to view the quickness and dexterity of the juggler}
-	    {gaze at this sentence for just about sixty seconds and then explain what makes it quite different from the average sentence}
-	}
+	timepct 0
+	hitpct 0
     }
     
     constructor {args} {
@@ -478,7 +451,6 @@ snit::widget sdrtk::cwack {
 	    }
 	    write-data ~/.config/cwack/config.tcl {}
 	    write-data ~/.config/cwack/history.tcl {}
-	    write-data ~/.config/cwack/pangrams.tcl $data(pangrams)
 	}
     }
     method load-cwack-config {} { array set options [string trim [read-data ~/.config/cwack/config.tcl]] }
@@ -501,6 +473,7 @@ snit::widget sdrtk::cwack {
 	$win.play.text tag configure right -foreground $data(bluish-color) -justify center
 	$win.play.text tag configure pass  -foreground $data(black) -justify center
 	set data(state) start
+	# after 1 [mymethod test]
     }
     
     proc morse-escape-prosign {str} {
@@ -531,8 +504,7 @@ snit::widget sdrtk::cwack {
 	    # compute time elapsed
 	    set data(play-time) [accumulate-playtime {*}$data(session-stamps) play [clock millis]]
 	    set data(session-time) [format-time $data(play-time)]
-	    set data(percent-time) [expr {min(100,100.0*$data(play-time)/($options(-session)*60*1000))}]
-	    $win.play.timepct configure -caption "[format-time [expr {max(0,int($options(-session)*60*1000-$data(play-time)))}]] remaining" -percent1 $data(percent-time)
+	    set data(timepct)  [expr {min(100,round(100.0*$data(play-time)/($options(-session)*60*1000)))}]
 	    # update challenge text
 	    append data(challenge) [$options(-dec1) get]
 	    # trimmed challenge
@@ -572,6 +544,7 @@ snit::widget sdrtk::cwack {
 					time-to-echo 0 \
 					state wait-before-new-challenge \
 				       ]
+		    $self score-current
 		    if {$data(sample) eq {}} { error "no sample to play from" }
 		}
 		wait-before-new-challenge {
@@ -627,7 +600,7 @@ snit::widget sdrtk::cwack {
 		    if {[string first $data(pre-challenge) $data(trimmed-challenge)] >= 0} {
 			# $self status-line ""
 			set t [clock millis]
-			array set data [list time-of-echo $t time-to-echo [expr {8*$data(time-warp)*($t-$data(time-challenge))}] state wait-response-echo]
+			array set data [list time-of-echo $t time-to-echo [expr {8*($t-$data(time-challenge))}] state wait-response-echo]
 			# puts "time-to-echo $data(time-to-echo)"
 			continue
 		    } 
@@ -869,12 +842,9 @@ snit::widget sdrtk::cwack {
 	set s [session-summary [init-session-summary] [$options(-dict)] $data(session-log)]
 	set total [count-summary [dict get $s total]]
 	if {$total == 0} {
-	    $win.play.hitpct configure -percent1 0 -percent2 0 -percent3 0 -caption "0/0/0"
+	    set data(hitpct) 100
 	} else {
-	    foreach var {hit miss pass} {
-		set $var [percent [count-summary [dict get $s $var]] $total]
-	    }
-	    $win.play.hitpct configure -percent1 $hit -percent2 $pass -percent3 $miss -caption "[join [lmap t {hit pass miss} {count-summary [dict get $s $t]}] /]"
+	    set data(hitpct) [percent [count-summary [dict get $s hit]] $total]
 	}
     }
     
@@ -916,9 +886,8 @@ snit::widget sdrtk::cwack {
     proc sample-make-one-sample {bins} {
 	set i [expr {int(rand()*[dict get $bins sum])}]
 	foreach j [dict keys $bins {[0-9]*}] {
-	    set k [dict get $bins $j]
-	    if {$k > $i} { return $j }
-	    set i [expr {$i-$k}]
+	    set i [expr {$i-[dict get $bins $j]}]
+	    if {$i <= 0} { return $j }
 	}
 	puts "ran off end of sample bins: $bins"
 	return [sample-choose [dict keys $bins {[0-9]*}]]
@@ -941,40 +910,39 @@ snit::widget sdrtk::cwack {
 	    # characters by dit length
 	    # combinations of characters by dit length
 	    # tabulated by length of combination
+	    set maxn 31
 	    set dits [dict create]
 	    set dict [$options(-dict)]
 	    # generate unigraphs classified by dit length
 	    set cset [dict keys $dict]
 	    set cdits [dict create]
-	    # the 31 in this loop is the max length considered
-	    for {set nd 1} {$nd <= 31} {incr nd 2} { dict set cdits $nd {} }
-	    foreach c $cset {
-		dict lappend cdits [morse-word-length $dict $c] $c 
-	    }
+	    foreach c $cset { dict lappend cdits [morse-word-length $dict $c] $c }
 	    dict set dits 1 $cdits
 	    # generate digraphs classified by dit length
 	    set nset [lsort -integer [dict keys $cdits]]
-	    set wdits [dict map {k v} $cdits {}]
+	    set wdits [dict create]
 	    foreach n1 $nset {
 		foreach n2 $nset {
 		    set n [expr {$n1+3+$n2}]
-		    if {$n ni $nset} continue
+		    if {$n > $maxn} continue
 		    set ns [lsort -integer [list $n1 $n2]]
-		    if {$ns ni [dict get $wdits $n]} { dict lappend wdits $n $ns }
+		    if { ( ! [dict exists $wdits $n] ) || $ns ni [dict get $wdits $n] } {
+			dict lappend wdits $n $ns
+		    }
 		}
 	    }
 	    dict set dits 2 $wdits
 	    # generate n-graphs classified by dit length up to length 5
 	    for {set i 3} {$i <= 5} {incr i} {
 		set pdits [dict get $dits [expr {$i-1}]]
-		set wdits [dict map {k v} $pdits {}]
-		foreach n1 $nset {
-		    foreach n2 $nset {
+		set wdits [dict create]
+		foreach n2 [lsort -integer [dict keys $pdits]] {
+		    foreach n1 $nset {
 			set n [expr {$n1+3+$n2}]
-			if {$n ni $nset} continue
+			if {$n > $maxn} continue
 			foreach w2 [dict get $pdits $n2] {
 			    set ns [lsort -integer [concat $n1 $w2]]
-			    if {$ns ni [dict get $wdits $n]} { 
+			    if { ( ! [dict exists $wdits $n] ) || $ns ni [dict get $wdits $n] } {
 				dict lappend wdits $n $ns
 			    }
 			}
@@ -1001,7 +969,10 @@ snit::widget sdrtk::cwack {
 		}
 	    }
 	}
-	set nset [dict keys [dict get $data(dits) 1]]
+	set nset [lsort -integer [dict keys [dict get $data(dits) 1]]]
+	# puts "character $nset"
+	set nset [lsort -integer [dict keys $data(mdits)]]
+	# puts "merged $nset"
 	set bins [sample-make-weights $options(-difficulty) $options(-spread) [tcl::mathfunc::max {*}$nset]]
 	return $bins
     }
@@ -1011,12 +982,16 @@ snit::widget sdrtk::cwack {
 	# puts "sample-draw length $length"
 	set draw [sample-choose [dict get $data(mdits) $length]]
 	# puts "sample-draw draw {$draw}"
-	if {[llength $draw] == 1} {
+	# the list/item ambiguity bites us when the item is a "
+	if {[string length $draw] == 1 || [regexp {^<[^>]+>$} $draw]} {
+	    return $draw
+	} elseif {[llength $draw] == 1} {
+	    puts "sample-draw {$draw} character didn't match patterns"
 	    return $draw
 	} else {
 	    set draw [join [lmap i [sample-shuffle $draw] {sample-choose [dict get $data(dits) 1 $i]}] {}]
 	    return $draw
-	}
+ 	}
     }
     
     #
@@ -1030,35 +1005,28 @@ snit::widget sdrtk::cwack {
 	    response-time 0
 	    session-time-limit 100
 	}
-	pack [ttk::frame $w] -side top -expand true -fill both
-	set row 0
-	grid columnconfigure $w 0 -weight 1
-	grid columnconfigure $w 1 -weight 1
-	grid [text $w.text -height 4 -width 7 -background lightgrey -font {Courier 40 bold}] -row $row -column 0 -columnspan 2 -sticky ew
-	bind $w.text <KeyPress> {}
-	incr row
-	grid [ttk::button $w.play -text Play -command [mymethod play-button play/pause]] -row $row -column 0 -columnspan 2
-	grid [ttk::label $w.status-line] -row [incr row] -column 0 -columnspan 2
-	grid rowconfigure $w [incr row] -weight 1
-	grid [cwack::pie $w.timepct -title {Time Remaing} -percent1-color $data(bluish-color) -other-color grey] -row $row -column 0 -sticky nsew
-	grid [cwack::pie $w.hitpct -title {Hits/Passes/Misses} \
-		  -percent1-color $data(bluish-color) -percent2-color grey -percent3-color $data(reddish-color)] \
-	    -row $row -column 1 -sticky nsew
-	# response-time hits misses passes
-	grid [ttk::frame $w.ctl] -row [incr row] -column 0 -columnspan 2 -sticky ew
-	set scolumn 0
-	foreach vars { {wpm difficulty spread session} {tone challenge-tone dah-offset gain} } {
-	    set srow 0
+
+	pack [ttk::frame $w] -expand true -fill both
+	set row -1
+	grid [text $w.text -height 4 -width 16 -background lightgrey -font {Courier 40 bold}] -row [incr row] -column 0 -columnspan 6 -sticky ew
+	bind $w.text <KeyPress> {}; # this isn't taking effect
+	grid [ttk::button $w.play -text Play -command [mymethod play-button play/pause]] -row [incr row] -column 0 -columnspan 6
+	grid [ttk::label $w.status-line] -row [incr row] -column 0 -columnspan 6
+	cwack::progressbar %AUTO% -window $w -var timepct -row [incr row] -column 0 -title {Time: } -foreground $data(bluish-color) -background grey -variable [myvar data(timepct)]
+	cwack::progressbar %AUTO% -window $w -var hitpct -row $row -column 3 -title {Score: } -foreground $data(bluish-color) -background $data(reddish-color) -variable [myvar data(hitpct)]
+	grid [ttk::frame $w.hbar1 -height 8 -borderwidth 2 -relief sunken ] -row [incr row] -column 0 -columnspan 6 -sticky ew
+	foreach vars { {wpm difficulty} {spread session} {tone challenge-tone} {dah-offset gain} } {
+	    incr row
+	    set column 0
 	    foreach var $vars {
-		cwack::lscale %AUTO% -window $w.ctl -var $var -row $srow -column $scolumn  -variable [myvar options(-$var)] \
+		cwack::lscale %AUTO% -window $w -var $var -row $row -column $column  -variable [myvar options(-$var)] \
 		    -text "$options(-$var-label): " \
 		    -from [lindex $options(-$var-values) 0] -to [lindex $options(-$var-values) end] -format %.1f \
 		    -command [mymethod update -$var]
-		incr srow
+		incr column 3
 	    }
-	    grid columnconfigure $w.ctl [expr {$scolumn+2}] -weight 10
-	    incr scolumn 3
 	}
+	foreach c {2 5} { grid columnconfigure $w $c -weight 10 }
 	grid [ttk::frame $w.but] -row [incr row]
 	foreach var {keyer swap mode letters words odict} {
 	}
@@ -1190,7 +1158,6 @@ snit::widget sdrtk::cwack {
 		::options cset -$options(-kbd)-wpm $val 
 		::options cset -$options(-key)-wpm $val
 		::options cset -$options(-dti2)-wpm $val
-		set data(time-warp) 1
 	    }
 	    -challenge-tone { 
 		set cfreq $val
@@ -1262,10 +1229,39 @@ snit::widget sdrtk::cwack {
     }
     
     method ConfigText {opt val} { $hull configure $opt $val }
-    method {Config -dti2} {val} { 
-	set options(-dti2) $val
+    method {Config -dti2} {val} { set options(-dti2) $val }
+    method test {} {
+	# generate samples for all combinations of difficulty and spread
+	set mind [lindex $options(-difficulty-values) 0]
+	set maxd [lindex $options(-difficulty-values) 1]
+	set mins [lindex $options(-spread-values) 0]
+	set maxs [lindex $options(-spread-values) 1]
+	set dict [$options(-dict)]
+	#set mind 25
+	#set maxd 25
+	#set mins 0
+	#set maxs 0
+	puts "test starts mind $mind maxd $maxd mins $mins maxs $maxs"
+	set sum [rsummary testsummary]
+	for {set options(-difficulty) $mind} {$options(-difficulty) <= $maxd} {incr options(-difficulty)} {
+	    for {set options(-spread) $mins} {$options(-spread) <= $maxs} {incr options(-spread)} {
+		$sum clear
+		set data(sample) [$self sample-make]
+		#puts "dits $data(dits)"
+		#puts "bins $data(sample)"
+		#break
+		for {set n 0} {$n < 2000} {incr n} {
+		    set draw [$self sample-draw]
+		    set dits [morse-word-length $dict $draw]
+		    # puts "$options(-difficulty) $options(-spread) {$draw} $dits"
+		    $sum accumulate $dits
+		}
+		puts [format "diff %.1f spread %.1f mean %.1f sd %.1f n %d" $options(-difficulty) $options(-spread) [$sum mean] [$sum sd] [$sum n]]
+	    }
+	}
+	rename $sum {}
+	puts "test ends"
     }
-    
 }
 
 #
@@ -1303,6 +1299,7 @@ snit::widget sdrtk::cwack {
 # [x] add dah-offset scale
 # [x] refactor labeled scales
 # [x] break scales into two columns
+# [ ] change pies to progress bars
 # [ ] add keyer setup control
 # [ ] add button to favor single letters over words.
 # [ ] add button to favor words over single letters.
