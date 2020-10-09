@@ -187,9 +187,9 @@ snit::type cwack::progressbar {
         install title using ttk::label $win.title$var -text $options(-title)
         install value using ttk::label $win.value$var -textvar $options(-variable)
         install progress using ttk::progressbar $win.progress$var -mode determinate -variable $options(-variable)
-        grid $win.title$var -column $column -row $row -sticky e
-        grid $win.value$var -column [incr column] -row $row -ipadx 10
-        grid $win.progress$var -column [incr column] -row $row -sticky ew
+        grid $win.title$var -column [expr {$column+0}] -row $row -sticky e
+        grid $win.value$var -column [expr {$column+1}] -row $row -ipadx 10
+        grid $win.progress$var -column [expr {$column+2}] -row $row -sticky ew -columnspan 3
     }
 }
 
@@ -231,11 +231,40 @@ snit::type cwack::lscale {
 
 	grid $win.label$var -row $row -column [expr {$column+0}] -sticky e
 	grid $win.value$var -row $row -column [expr {$column+1}] -ipadx 10
-	grid $win.scale$var -row $row -column [expr {$column+2}] -sticky ew
+	grid $win.scale$var -row $row -column [expr {$column+2}] -sticky ew -columnspan 3
     }
     method update {val} {
 	set options(-variable) [format $options(-format) $val]
 	if {$options(-command) ne {}} { {*}$options(-command) $options(-variable) }
+    }
+}
+
+package require sdrtk::radiomenubutton
+
+snit::type cwack::lradiomenubutton {
+    component label
+    component radiomenubutton
+
+    option -window
+    option -var
+    option -row
+    option -column
+
+    delegate option -text to label
+    delegate option -values to radiomenubutton
+    delegate option -labels to radiomenubutton
+    delegate option -defaultvalue to radiomenubutton
+    delegate option -command to radiomenubutton
+    delegate option -variable to radiomenubutton
+
+    constructor {args} {
+	set win [set options(-window) [from args -window]]
+	set var [set options(-var) [from args -var]]
+	install label using ttk::label $win.lbl$var
+	install radiomenubutton using sdrtk::radiomenubutton $win.rbm$var
+	$self configurelist $args
+	grid $win.lbl$var -row $options(-row) -column [expr {$options(-column)+0}]
+	grid $win.rbm$var -row $options(-row) -column [expr {$options(-column)+1}]
     }
 }
 
@@ -352,6 +381,12 @@ snit::widget sdrtk::cwack {
     option -spread-tooltip {Standard deviation of challenges in dit clocks}
     option -spread-values {0 10}
     
+    # bias toward words over letters
+    option -wordish 0.5
+    option -wordish-label {Wordish}
+    option -wordish-tooltip {Bias towards more words than letters.}
+    option -wordish-values {0 1}
+
     variable data -array {
 	handler {}
 	pre-challenge {}
@@ -363,7 +398,7 @@ snit::widget sdrtk::cwack {
 	reddish-color "#D81B60"
 	bluish-color "#1E88E5"
 	black "#111"
-	config-options {-wpm -difficulty -spread -session -tone -challenge-tone -mode -swap -keyer -gain -dah-offset}
+	config-options {-wpm -difficulty -spread -wordish -session -tone -challenge-tone -mode -swap -keyer -gain -dah-offset}
 	summary {} 
 	dits {}
 	sample {}
@@ -473,7 +508,7 @@ snit::widget sdrtk::cwack {
 	$win.play.text tag configure right -foreground $data(bluish-color) -justify center
 	$win.play.text tag configure pass  -foreground $data(black) -justify center
 	set data(state) start
-	# after 1 [mymethod test]
+	after 1 [mymethod test]
     }
     
     proc morse-escape-prosign {str} {
@@ -616,7 +651,7 @@ snit::widget sdrtk::cwack {
 		    # $self status-line "Waiting for response ... {$data(trimmed-challenge)} {$data(trimmed-response)}"
 		    set data(response-time) [format %.0f [expr {[clock millis]-$data(time-challenge)}]]
 		    if {$data(response-space)} {
-			if {[string first $data(trimmed-challenge) $data(trimmed-response)] >= 0} {
+			if {[string equal $data(trimmed-challenge) $data(trimmed-response)]} {
 			    $self status "\n" normal $data(trimmed-challenge) right
 			    $self score-challenge; # hits
 			    $self score-current
@@ -1006,16 +1041,18 @@ snit::widget sdrtk::cwack {
 	    session-time-limit 100
 	}
 
+	# the frame is gridded ten columns
 	pack [ttk::frame $w] -expand true -fill both
 	set row -1
-	grid [text $w.text -height 4 -width 16 -background lightgrey -font {Courier 40 bold}] -row [incr row] -column 0 -columnspan 6 -sticky ew
+	grid [text $w.text -height 4 -width 16 -background lightgrey -font {Courier 40 bold}] -row [incr row] -column 0 -columnspan 10 -sticky ew
 	bind $w.text <KeyPress> {}; # this isn't taking effect
-	grid [ttk::button $w.play -text Play -command [mymethod play-button play/pause]] -row [incr row] -column 0 -columnspan 6
-	grid [ttk::label $w.status-line] -row [incr row] -column 0 -columnspan 6
+	grid [ttk::button $w.play -text Play -command [mymethod play-button play/pause]] -row [incr row] -column 0 -columnspan 10
+	grid [ttk::label $w.status-line] -row [incr row] -column 0 -columnspan 10
+	grid [ttk::frame $w.hbar0 -height 8 -borderwidth 2 -relief sunken ] -row [incr row] -column 0 -columnspan 10 -sticky ew
 	cwack::progressbar %AUTO% -window $w -var timepct -row [incr row] -column 0 -title {Time: } -foreground $data(bluish-color) -background grey -variable [myvar data(timepct)]
-	cwack::progressbar %AUTO% -window $w -var hitpct -row $row -column 3 -title {Score: } -foreground $data(bluish-color) -background $data(reddish-color) -variable [myvar data(hitpct)]
-	grid [ttk::frame $w.hbar1 -height 8 -borderwidth 2 -relief sunken ] -row [incr row] -column 0 -columnspan 6 -sticky ew
-	foreach vars { {wpm difficulty} {spread session} {tone challenge-tone} {dah-offset gain} } {
+	cwack::progressbar %AUTO% -window $w -var hitpct -row $row -column 5 -title {Score: } -foreground $data(bluish-color) -background $data(reddish-color) -variable [myvar data(hitpct)]
+	grid [ttk::frame $w.hbar1 -height 8 -borderwidth 2 -relief sunken ] -row [incr row] -column 0 -columnspan 10 -sticky ew
+	foreach vars { {difficulty spread} {wpm session}} {
 	    incr row
 	    set column 0
 	    foreach var $vars {
@@ -1023,12 +1060,30 @@ snit::widget sdrtk::cwack {
 		    -text "$options(-$var-label): " \
 		    -from [lindex $options(-$var-values) 0] -to [lindex $options(-$var-values) end] -format %.1f \
 		    -command [mymethod update -$var]
-		incr column 3
+		incr column 5
 	    }
 	}
-	foreach c {2 5} { grid columnconfigure $w $c -weight 10 }
-	grid [ttk::frame $w.but] -row [incr row]
-	foreach var {keyer swap mode letters words odict} {
+	grid [ttk::frame $w.hbar2 -height 8 -borderwidth 2 -relief sunken ] -row [incr row] -column 0 -columnspan 10 -sticky ew
+	foreach vars { {tone challenge-tone} {dah-offset gain} } {
+	    incr row
+	    set column 0
+	    foreach var $vars {
+		cwack::lscale %AUTO% -window $w -var $var -row $row -column $column  -variable [myvar options(-$var)] \
+		    -text "$options(-$var-label): " \
+		    -from [lindex $options(-$var-values) 0] -to [lindex $options(-$var-values) end] -format %.1f \
+		    -command [mymethod update -$var]
+		incr column 5
+	    }
+	}
+	grid [ttk::frame $w.hbar3 -height 8 -borderwidth 2 -relief sunken ] -row [incr row] -column 0 -columnspan 10 -sticky ew
+	foreach c {0 1 2 3 4 5 6 7 8 9} { grid columnconfigure $w $c -weight 1 }
+	incr row
+	set scolumn 0
+	#  odict
+	foreach var {keyer swap mode} {
+	    cwack::lradiomenubutton %AUTO% -window $w -var $var -row $row -column $scolumn -variable [myvar options(-$var)] \
+		-text "$options(-$var-label): " -values $options(-$var-values)
+	    incr scolumn 2
 	}
 	# keyer, swap, mode, favor single letters, favor words, no triple letters, preferred code dict
 	return $w
@@ -1149,9 +1204,10 @@ snit::widget sdrtk::cwack {
 	# puts "update $opt $val"
 	set options($opt) $val
 	switch -- $opt {
-	    -session { }
+	    -session {}
 	    -difficulty {}
 	    -spread {}
+	    -wordish {}
 	    -wpm { 
 		::options cset -$options(-chk)-wpm $val
 		::options cset -$options(-dti1)-wpm $val
@@ -1231,7 +1287,12 @@ snit::widget sdrtk::cwack {
     method ConfigText {opt val} { $hull configure $opt $val }
     method {Config -dti2} {val} { set options(-dti2) $val }
     method test {} {
+	# $self test1
+    }
+    method test1 {} {
 	# generate samples for all combinations of difficulty and spread
+	set saved [array get options]
+	
 	set mind [lindex $options(-difficulty-values) 0]
 	set maxd [lindex $options(-difficulty-values) 1]
 	set mins [lindex $options(-spread-values) 0]
@@ -1261,6 +1322,8 @@ snit::widget sdrtk::cwack {
 	}
 	rename $sum {}
 	puts "test ends"
+	
+	array set options $saved
     }
 }
 
