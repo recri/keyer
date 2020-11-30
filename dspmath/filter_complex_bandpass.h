@@ -56,7 +56,7 @@ static void *filter_complex_bandpass_preconfigure(filter_complex_bandpass_t *p, 
   if (fabsf(q->high_frequency) >= q->sample_rate / 2) return (void *)"high frequency is too high for sample rate";
   if ((q->low_frequency + 10) >= q->high_frequency) return (void *)"bandwidth is too narrow";
   if ((q->length&1) == 0) return (void *)"filter length must be odd";
-  void *e = bandpass_complex(q->low_frequency, q->high_frequency, q->sample_rate, q->length, q->coeff); if (e != q->coeff)
+  void *e = bandpass_complex(q->low_frequency, q->high_frequency, q->sample_rate, q->length, WINDOW_BLACKMAN_HARRIS, q->coeff); if (e != q->coeff)
     return e;
  return p;
 }
