@@ -62,6 +62,8 @@ typedef enum {
   WINDOW_GAUSSIAN_25 = 27
 } window_type_t;
 
+#define WINDOW_MAX WINDOW_GAUSSIAN_25
+
 #ifdef FRAMEWORK_H
 /* these can be listed in any order */
 /* unimplemented windows are commented out */

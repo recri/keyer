@@ -52,7 +52,7 @@
 static void *polyphase_fft_window(int polys, int size, float *coeff) {
   int fsize = polys*size;
   int adjust = (fsize&1)==0 ? -1 : 0;
-  void *e = lowpass_real(1.0, size, fsize+adjust, coeff); if (e != coeff) return e;
+  void *e = lowpass_real(1.0, size, fsize+adjust, WINDOW_BLACKMAN_HARRIS, coeff); if (e != coeff) return e;
   if (adjust != 0)
   coeff[fsize+adjust] = 0.0f;
   float maxTap = 0.0f;

@@ -51,37 +51,41 @@
 ///
 /// key handling
 ///
-static elapsedMicros t0, t4;
+static elapsedMicros time0, time4;
 static byte key0, key4;
-static const byte note0 = 0, note4 = 1, channel = 1;
+static const byte note0 = 1, note4 = 0, channel = 1;
 
 void setup() {
-  t0 = 0;
+  time0 = 0;
   pinMode(0, INPUT_PULLUP);
   key0 = digitalRead(0);
 
   pinMode(2, OUTPUT);
   digitalWrite(2, LOW);
 
-  t4 = 0;
-  pinmode(4, INPUT_PULLUP);
+  time4 = 0;
+  pinMode(4, INPUT_PULLUP);
   key4 = digitalRead(4);
 }
 
 void loop() {
-  byte new_key;
-  new_key = digitalRead(0);
-  if (new_key != key0 && t0 > 1000) {
-    t0 = 0;
-    key0 = new_key;
-    usbMIDI.sendNoteOn(note0, key0 != 0 ? 0 : 1, channel);
-    usbMIDI.send_now();
+  while (usbMIDI.read());
+  if (time0 > 1000) {
+    const byte new_key = digitalRead(0);
+    if (new_key != key0) {
+      time0 = 0;
+      key0 = new_key;
+      usbMIDI.sendNoteOn(note0, key0 != 0 ? 0 : 1, channel);
+      usbMIDI.send_now();
+    }
   }
-  new_key = digitalRead(4);
-  if (new_key != key4 && t4 > 1000) {
-    t4 = 0;
-    key4 = new_key;
-    usbMIDI.sendNoteOn(note4, key4 != 0 ? 0 : 1, channel);
-    usbMIDI.send_now();
+  if (time4 > 1000) {
+    const byte new_key = digitalRead(4);
+    if (new_key != key4) {
+      time4 = 0;
+      key4 = new_key;
+      usbMIDI.sendNoteOn(note4, key4 != 0 ? 0 : 1, channel);
+      usbMIDI.send_now();
+    }
   }
 }

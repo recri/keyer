@@ -67,6 +67,7 @@ ALL=$(LIBSDRTCL)/agc.so \
 	$(LIBSDRTCL)/filter_goertzel.so \
 	$(LIBSDRTCL)/fftw.so \
 	$(LIBSDRTCL)/gain.so \
+	$(LIBSDRTCL)/hilbert.so \
 	$(LIBSDRTCL)/iq_balance.so \
 	$(LIBSDRTCL)/iq_correct.so \
 	$(LIBSDRTCL)/iq_correct_train.so \
@@ -167,6 +168,9 @@ $(LIBSDRTCL)/fftw.so: fftw.c framework.h ../dspmath/dspmath.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(FFTW3_CFLAGS) $< $(FFTW3_LIBS) $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/gain.so: gain.c framework.h ../dspmath/dspmath.h
+	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
+
+$(LIBSDRTCL)/hilbert.so: hilbert.c framework.h ../dspmath/dspmath.h ../dspmath/hilbert.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(JACK_CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/iq_balance.so: iq_balance.c framework.h ../dspmath/dspmath.h ../dspmath/iq_balance.h

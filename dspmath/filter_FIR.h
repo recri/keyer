@@ -51,18 +51,20 @@ static void *complement_real(int size, float *coeff) {
 /*
 ** all real filters apply the same parameter checks
 */
-static void *check_real(float lo, float hi, float sr, int size) {
+static void *check_real(float lo, float hi, float sr, int size, int window) {
   if ((lo < 0.0) || (hi > (sr / 2.0)) || (hi <= lo))
     return (void *)"lo frequency and/or hi frequency out of bounds";
   if (size < 1)
     return (void *)"size too small";
   if ((size&1) == 0)
     return (void *)"size not odd";
+  if (window < 0 || window >= WINDOW_MAX) 
+    return (void *)"invalid window";
   return NULL;
 }
 
-static void *bandpass_real(float lo, float hi, float sr, int size, float *coeff) {
-  void *e = check_real(lo, hi, sr, size); if (e != NULL) return e;
+static void *bandpass_real(float lo, float hi, float sr, int size, int window, float *coeff) {
+  void *e = check_real(lo, hi, sr, size, window); if (e != NULL) return e;
   int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = (hi - lo) / 2.0f;
@@ -71,20 +73,20 @@ static void *bandpass_real(float lo, float hi, float sr, int size, float *coeff)
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j) * 2.0f * cosf(ff * k);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(window, size, j) * 2.0f * cosf(ff * k);
     else
       coeff[j] = 2.0f * fc * 2.0f * cosf(ff * k);
   }
   return coeff;
 }
 
-static void *bandstop_real(float lo, float hi, float sr, int size, float *coeff) {
-  void *e = bandpass_real(lo, hi, sr, size, coeff); if (e != coeff) return e;
+static void *bandstop_real(float lo, float hi, float sr, int size, int window, float *coeff) {
+  void *e = bandpass_real(lo, hi, sr, size, window, coeff); if (e != coeff) return e;
   return complement_real(size, coeff);
 }
 
-static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) {
-  void *e = check_real(lo, hi, sr, size); if (e != NULL) return e;
+static void *hilbert_real(float lo, float hi, float sr, int size, int window, float *coeff) {
+  void *e = check_real(lo, hi, sr, size, window); if (e != NULL) return e;
   int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = (hi - lo) / 2.0f;
@@ -93,7 +95,7 @@ static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) 
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j) * 2.0f * sinf(ff * k);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(window, size, j) * 2.0f * sinf(ff * k);
     else
       coeff[j] = 2.0f * fc * 2.0f * sinf(ff * k);
   }
@@ -103,22 +105,22 @@ static void *hilbert_real(float lo, float hi, float sr, int size, float *coeff) 
 /*
 ** a lowpass real filter is used to implement polyphase spectra
 */
-static void *lowpass_real(float cutoff, float sr, int size, float *coeff) {
-  void *e = check_real(0.0f, cutoff, sr, size); if (e != NULL) return e;
+static void *lowpass_real(float cutoff, float sr, int size, int window, float *coeff) {
+  void *e = check_real(0.0f, cutoff, sr, size, window); if (e != NULL) return e;
   int midpoint = (size >> 1) | 1;
   float fc = cutoff / sr;
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(window, size, j);
     else
       coeff[j] = 2.0f * fc;
   }
   return (void *)coeff;
 }
 
-static void *highpass_real(float cutoff, float sr, int size, float *coeff) {
-  void *e = lowpass_real(cutoff, sr, size, coeff); if (e != coeff) return e;
+static void *highpass_real(float cutoff, float sr, int size, int window, float *coeff) {
+  void *e = lowpass_real(cutoff, sr, size, window, coeff); if (e != coeff) return e;
   return complement_real(size, coeff);
 }
 
@@ -135,21 +137,23 @@ static void *complement_complex(int size, float complex *coeff) {
 /*
 ** all complex filters apply the same parameter checks.
 */
-static void *check_complex(float lo, float hi, float sr, int size) {
+static void *check_complex(float lo, float hi, float sr, int size, int window) {
   if ((lo < -(sr / 2.0)) || (hi > (sr / 2.0)) || (hi <= lo))
     return (void *)"lo frequency and/or hi frequency out of bounds";
   if (size < 1)
     return (void *)"size too small";
   if ((size&1) == 0)
     return (void *)"size not odd";
+  if (window < 0 || window >= WINDOW_MAX) 
+    return (void *)"invalid window";
   return NULL;
 }
 
 /*
 ** a complex bandpass filter is used to implement the radio bandpass
 */
-static void *bandpass_complex(float lo, float hi, float sr, int size, float complex *coeff) {
-  void *e = check_complex(lo, hi, sr, size); if (e != NULL) return e;
+static void *bandpass_complex(float lo, float hi, float sr, int size, int window, float complex *coeff) {
+  void *e = check_complex(lo, hi, sr, size, window); if (e != NULL) return e;
   int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = (hi - lo) / 2.0f;
@@ -159,20 +163,20 @@ static void *bandpass_complex(float lo, float hi, float sr, int size, float comp
     int j = i - 1, k = i - midpoint;
     float phs = ff * k;
     if (i != midpoint)
-      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j) * 2.0f * cexpf(I * phs);
+      coeff[j] = (sinf(two_pi * k * fc) / (pi * k)) * window_get(window, size, j) * 2.0f * cexpf(I * phs);
     else
       coeff[j] = 2.0f * fc * 2.0f * cexpf(I * phs);
   }
   return (void *)coeff;
 }
 
-static void *bandstop_complex(float lo, float hi, float sr, int size, float complex *coeff) {
-  void *e = bandpass_complex(lo, hi, sr, size, coeff); if (e != coeff) return e;
+static void *bandstop_complex(float lo, float hi, float sr, int size, int window, float complex *coeff) {
+  void *e = bandpass_complex(lo, hi, sr, size, window, coeff); if (e != coeff) return e;
   return complement_complex(size, coeff);
 }
   
-static void *hilbert_complex(float lo, float hi, float sr, int size, float complex *coeff) {
-  void *e = check_complex(lo, hi, sr, size); if (e != NULL) return e;
+static void *hilbert_complex(float lo, float hi, float sr, int size, int window, float complex *coeff) {
+  void *e = check_complex(lo, hi, sr, size, window); if (e != NULL) return e;
   int midpoint = (size >> 1) | 1;
   lo /= sr, hi /= sr;
   float fc = ((hi - lo) / 2.0);
@@ -182,7 +186,7 @@ static void *hilbert_complex(float lo, float hi, float sr, int size, float compl
     int j = i - 1, k = i - midpoint;
     float tmp, phs = ff * k;
     if (i != midpoint)
-      coeff[j] = 2.0f * ((sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j)) * sinf(phs) * I;
+      coeff[j] = 2.0f * ((sinf(two_pi * k * fc) / (pi * k)) * window_get(window, size, j)) * sinf(phs) * I;
     else
       coeff[j] = 2.0f * (2.0f * fc) * sinf(phs) * I;
     /* por que? */
@@ -192,23 +196,23 @@ static void *hilbert_complex(float lo, float hi, float sr, int size, float compl
   return (void *)coeff;
 }
   
-static void *lowpass_complex(float cutoff, float sr, int size, float complex *coeff) {
-  void *e = check_complex(0.0f, cutoff, sr, size); if (e != NULL) return e;
+static void *lowpass_complex(float cutoff, float sr, int size, int window, float complex *coeff) {
+  void *e = check_complex(0.0f, cutoff, sr, size, window); if (e != NULL) return e;
   float fc = cutoff / sr;
   int midpoint = (size >> 1) | 1;
 
   for (int i = 1; i <= size; i++) {
     int j = i - 1, k = i - midpoint;
     if (i != midpoint)
-      coeff[j] = ((sinf(two_pi * k * fc) / (pi * k)) * window_get(WINDOW_BLACKMAN_HARRIS, size, j));
+      coeff[j] = ((sinf(two_pi * k * fc) / (pi * k)) * window_get(window, size, j));
     else
       coeff[j] = 2.0f * fc;
   }
   return (void *)coeff;
 }
 
-static void *highpass_complex(float cutoff, float sr, int size, float complex *coeff) {
-  void *e = lowpass_complex(cutoff, sr, size, coeff); if (e != coeff) return e;
+static void *highpass_complex(float cutoff, float sr, int size, int window, float complex *coeff) {
+  void *e = lowpass_complex(cutoff, sr, size, window, coeff); if (e != coeff) return e;
   return complement_complex(size, coeff);
 }
 

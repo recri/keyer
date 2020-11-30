@@ -380,7 +380,7 @@ snit::type keyer::options {
 	    {* -gain} { $self describe $option value -format %.1f -min -50 -max 50 -step 0.1 -units dB -graticule 20 -steps-per-div 50}
 	    {*latency-timing* -delay} -
 	    {*sample-delay* -delay} { $self describe $option value -format %.0f -min 0 -max 15000 -step 1 -units samples -graticule 20 -steps-per-div 50}
-	    {* -delay} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
+	    {*ptt* -delay} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50}
 	    {* -hang} { $self describe $option value -format %.1f -min 0.0 -max 1000 -step 0.1 -units ms -graticule 20 -steps-per-div 50 }
 	    {*spectrum* -period} {  $self describe $option ivalue -min 1 -max 500 -units ms -graticule 20 -steps-per-div 25 }
 	    {*debounce* -period} { $self describe $option value -format %.3f -min 0.1 -max 50 -step 0.1 -units ms -graticule 20 -steps-per-div 25 }

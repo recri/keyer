@@ -59,6 +59,7 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
       Tcl_GetIntFromObj(interp, objv[3], &sample_rate) != TCL_OK ||
       Tcl_GetIntFromObj(interp, objv[4], &size) != TCL_OK)
     return TCL_ERROR;
+  int window = WINDOW_BLACKMAN_HARRIS;
   double lo, hi, cutoff;
   switch (ftype) {
   case BANDPASS:
@@ -85,11 +86,11 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     float *coeff = (float *)Tcl_SetByteArrayLength(result, size*sizeof(float));
     void *e;
     switch (ftype) {
-    case BANDPASS: e = bandpass_real(lo, hi, sample_rate, size, coeff); break;
-    case BANDSTOP: e = bandstop_real(lo, hi, sample_rate, size, coeff); break;
-    case HILBERT: e = hilbert_real(lo, hi, sample_rate, size, coeff); break;
-    case LOWPASS: e = lowpass_real(cutoff, sample_rate, size, coeff); break;
-    case HIGHPASS: e = highpass_real(cutoff, sample_rate, size, coeff); break;
+    case BANDPASS: e = bandpass_real(lo, hi, sample_rate, size, window, coeff); break;
+    case BANDSTOP: e = bandstop_real(lo, hi, sample_rate, size, window, coeff); break;
+    case HILBERT: e = hilbert_real(lo, hi, sample_rate, size, window, coeff); break;
+    case LOWPASS: e = lowpass_real(cutoff, sample_rate, size, window, coeff); break;
+    case HIGHPASS: e = highpass_real(cutoff, sample_rate, size, window, coeff); break;
     }
     if (e != coeff) {
       Tcl_DecrRefCount(result);
@@ -99,11 +100,11 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
     float complex *coeff = (float complex *)Tcl_SetByteArrayLength(result, size*sizeof(float complex));
     void *e;
     switch (ftype) {
-    case BANDPASS: e = bandpass_complex(lo, hi, sample_rate, size, coeff); break;
-    case BANDSTOP: e = bandstop_complex(lo, hi, sample_rate, size, coeff); break;
-    case HILBERT: e = hilbert_complex(lo, hi, sample_rate, size, coeff); break;
-    case LOWPASS: e = lowpass_complex(cutoff, sample_rate, size, coeff); break;
-    case HIGHPASS: e = highpass_complex(cutoff, sample_rate, size, coeff); break;
+    case BANDPASS: e = bandpass_complex(lo, hi, sample_rate, size, window, coeff); break;
+    case BANDSTOP: e = bandstop_complex(lo, hi, sample_rate, size, window, coeff); break;
+    case HILBERT: e = hilbert_complex(lo, hi, sample_rate, size, window, coeff); break;
+    case LOWPASS: e = lowpass_complex(cutoff, sample_rate, size, window, coeff); break;
+    case HIGHPASS: e = highpass_complex(cutoff, sample_rate, size, window, coeff); break;
     }
     if (e != coeff) {
       Tcl_DecrRefCount(result);

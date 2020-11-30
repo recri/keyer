@@ -62,6 +62,7 @@ typedef struct {
   int length;			/* length of chunk to process */
   int planbits;			/* plan bits for fftw */
   int sample_rate;		/* sample rate */
+  int window;			/* filter window */
   float high_frequency;		/* high cutoff of bandpass */
   float low_frequency;		/* low cutoff of bandpass */
   // derived options
@@ -80,6 +81,7 @@ typedef struct {
   int fftlen;			/* length of fft */
   int planbits;			/* plan bits for fftw */
   int sample_rate;		/* sample rate */
+  int window;			/* filter window */
   float high_frequency;		/* high cutoff of bandpass */
   float low_frequency;		/* low cutoff of bandpass */
   float complex *zinput;	/* incoming signal buffer */
@@ -118,6 +120,7 @@ static void filter_overlap_save_configure(filter_overlap_save_t *p, filter_overl
     p->fftlen = 2*q->length;
     p->planbits = q->planbits;
     p->sample_rate = q->sample_rate;
+    p->window = q->window;
     p->input_index = p->length;
     p->input_limit = p->fftlen;
     p->output_index = LHS ? p->length : 0;
@@ -195,7 +198,7 @@ static void *filter_overlap_save_preconfigure(filter_overlap_save_t *p, filter_o
     // write filter coeffs into the right hand side of fft input, pad with zeroes on the left
     complex_vector_clear(zkernel, fftlen);
     filter = zkernel + (LHS ? 0 : (fftlen-ncoef));
-    void *e = bandpass_complex(q->low_frequency, q->high_frequency, q->sample_rate, ncoef, filter); if (e != filter) {
+    void *e = bandpass_complex(q->low_frequency, q->high_frequency, q->sample_rate, ncoef, q->window,filter); if (e != filter) {
       fftwf_destroy_plan(pkernel);
       fftwf_free(zkernel);
       return e;
