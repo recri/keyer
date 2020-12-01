@@ -36,7 +36,7 @@ typedef struct {
 
 static void *_init(void *arg) {
   _t *data = (_t *)arg;
-  data->opts.sample_rate = sdrkit_sample_rate(arg);
+  // data->opts.sample_rate = sdrkit_sample_rate(arg);
   void *e = hilbert_init(&data->hilbert, &data->opts); if (e != &data->hilbert) return e;
   return arg;
 }
