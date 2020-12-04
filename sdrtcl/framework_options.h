@@ -30,7 +30,7 @@
 #endif
 #if FRAMEWORK_OPTIONS_KEYER_TONE // options that control the keyer tone generator
   { "-freq", "freq", "Freq", "700.0", fw_option_float, fw_flag_none, offsetof(_t, opts.freq), "frequency of tone in hertz" },
-  { "-gain", "gain", "Gain", "-30.0", fw_option_float, fw_flag_none, offsetof(_t, opts.gain), "level of tone in decibels" },
+  { "-gain", "gain", "Gain", "0.0", fw_option_float, fw_flag_none, offsetof(_t, opts.gain), "level of tone in decibels" },
   { "-rise", "rise", "Rise", "5.0", fw_option_float, fw_flag_none, offsetof(_t, opts.rise), "rise time in milliseconds" },
   { "-fall", "fall", "Fall", "5.0", fw_option_float, fw_flag_none, offsetof(_t, opts.fall), "fall time in milliseconds" },
   { "-ramp", "ramp", "Ramp", "5.0", fw_option_float, fw_flag_none, offsetof(_t, opts.ramp), "rise and fall time in milliseconds" },

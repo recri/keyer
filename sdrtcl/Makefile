@@ -293,7 +293,7 @@ $(LIBSDRTCL)/alsa_rawmidi.so: alsa_rawmidi.c
 $(LIBSDRTCL)/alsa_sequencer.so: alsa_sequencer.c
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
 
-$(LIBSDRTCL)/keyer_ascii.so: keyer_ascii.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/morse_timing.h ../dspmath/morse_coding.h
+$(LIBSDRTCL)/keyer_ascii.so: keyer_ascii.c framework.h framework_options.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/morse_timing.h ../dspmath/morse_coding.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/keyer_builtin_dict.so: keyer_builtin_dict.c framework.h ../dspmath/midi.h ../dspmath/morse_coding.h
@@ -302,16 +302,16 @@ $(LIBSDRTCL)/keyer_builtin_dict.so: keyer_builtin_dict.c framework.h ../dspmath/
 $(LIBSDRTCL)/keyer_debounce.so: keyer_debounce.cc framework.h ../dspmath/midi.h ../dspmath/debouncer.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBSDRTCL)/keyer_detime.so: keyer_detime.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/ring_buffer.h ../dspmath/detime.h
+$(LIBSDRTCL)/keyer_detime.so: keyer_detime.c framework.h framework_options.h ../dspmath/midi.h ../dspmath/ring_buffer.h ../dspmath/detime.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/keyer_detone.so: keyer_detone.c framework.h ../dspmath/midi.h ../dspmath/filter_goertzel.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $<  $(JACK_LIBS) $(LIBS)
 
-$(LIBSDRTCL)/keyer_iambic_ad5dz.so: keyer_iambic_ad5dz.cc framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_ad5dz.h
+$(LIBSDRTCL)/keyer_iambic_ad5dz.so: keyer_iambic_ad5dz.cc framework.h framework_options.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_ad5dz.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBSDRTCL)/keyer_iambic_nd7pa.so: keyer_iambic_nd7pa.cc framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_nd7pa.h
+$(LIBSDRTCL)/keyer_iambic_nd7pa.so: keyer_iambic_nd7pa.cc framework.h framework_options.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_nd7pa.h
 	g++ -fPIC -shared -o $@ $(CPPFLAGS) $< $(JACK_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/keyer_iambic_dttsp.so: keyer_iambic_dttsp.cc framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/iambic_dttsp.h
@@ -329,7 +329,7 @@ $(LIBSDRTCL)/keyer_ptt.so: keyer_ptt.c framework.h ../dspmath/midi.h ../dspmath/
 $(LIBSDRTCL)/keyer_ptt_mute.so: keyer_ptt_mute.c framework.h ../dspmath/midi.h ../dspmath/midi_buffer.h
 	gcc -fPIC -shared -o $@ $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
-$(LIBSDRTCL)/keyer_tone.so: keyer_tone.c framework.h keyer_options_def.h keyer_options_var.h ../dspmath/midi.h ../dspmath/keyed_tone.h\
+$(LIBSDRTCL)/keyer_tone.so: keyer_tone.c framework.h framework_options.h ../dspmath/midi.h ../dspmath/keyed_tone.h\
 	 ../dspmath/ramp.h ../dspmath/window.h
 	gcc -fPIC -shared -o $@ $(OSC_CFLAGS) $(CFLAGS) $< $(JACK_LIBS) $(LIBS)
 
