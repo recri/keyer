@@ -310,3 +310,58 @@ proc dits-to-didah {code} { return  [regsub -all {\. ?} [regsub -all {\.\.\. ?} 
 # translate a morse code in dits and dahs to dits
 # so .-. goes to . ... .
 proc didah-to-dits {code} { return [regsub -all - [regsub -all {\.} $code {. }] {... }] }
+
+#
+# translate a morse code in dits and dahs to binary
+#
+proc didah-to-binary {code} {
+    set binary 1
+    foreach didah [split $code {}] {
+	set binary [expr {$binary<<1|($didah eq {-})}]
+    }
+    return $binary
+}
+
+proc binary-to-didah {binary} {
+    set code {}
+    while {$binary != 1} {
+	append code [expr {$binary&1 ? {-} : {.}}]
+	set binary [expr {$binary>>1}]
+    }
+    return $code
+}
+
+#
+# translate a morse code dictionary to a binary decoding dictionary
+#
+proc morse-to-binary {dict} {
+    if { ! [info exists ::morse::morse::binary($dict)]} {
+	set binary [dict create]
+	dict for {key value} $dict {
+	    if { ! [string match \#*\# $key] && [didah-to-binary $value] < 128} {
+		dict set binary [didah-to-binary $value] $key
+	    }
+	}
+	set ::morse::morse::binary($dict) $binary
+    }
+    return $::morse::morse::binary($dict)
+}
+
+#
+# translate a morse code dictionary to a binary decoding string
+#
+proc morse-to-string {dict} {
+    set binary [morse-to-binary $dict]
+    set string {}
+    foreach key [lsort -integer [dict keys $binary]] {
+	while {[string length $string] < $key} {
+	    append string \#
+	}
+	append string [dict get $binary $key]
+    }
+    while {[string length $string] < 128} {
+	append string \#
+    }
+    return $string
+}
+

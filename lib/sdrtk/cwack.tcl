@@ -1387,3 +1387,11 @@ snit::widget sdrtk::cwack {
 # [x] is volume broken? dah-offset broken? yes, all option updates were broken
 # [ ] simplify code
 # [ ] rewrite into julia
+#----------------
+# [ ] score only the first attempt at any challenge, not the misses on retries, nor the
+#	final success on retries.
+# [ ] group by number of elements rather than overall timing. 
+#	[e,t][i,a,n,m][s,u,r,d,w,k,g,o,ee,et,te,tt]...
+# [ ] adjust difficulty on score on last 4 challenges,
+#       75% or better increase, 50% hold, less than 50% decrease difficulty
+# [ ] lock out key while until challenge is finished
