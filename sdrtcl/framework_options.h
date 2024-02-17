@@ -84,6 +84,9 @@
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_TWO
   { "-two",      "two",      "Two",     "0.0",      fw_option_float,    fw_flag_none,	    offsetof(_t, opts.two),        "frequency of second tone in hertz" },
 #endif    
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_FARNSWORTH
+  { "-farnsworth","farnsworth","Farnsworth","0.0",  fw_option_float,    fw_flag_none,	    offsetof(_t, opts.farnsworth),  "Farnsworth keying speed" },
+#endif
 #else
 #error "framework_options.h multiply included"
 #endif

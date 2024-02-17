@@ -44,6 +44,7 @@
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_RATIO 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_COMP 1
 #define FRAMEWORK_OPTIONS_KEYER_OPTIONS_TWO 1
+#define FRAMEWORK_OPTIONS_KEYER_OPTIONS_FARNSWORTH 1
 
 #include "../dspmath/midi.h"
 #include "../dspmath/midi_buffer.h"
@@ -92,7 +93,7 @@ static void *_init(void *arg) {
   void *p = midi_buffer_init(&data->midi); if (p != &data->midi) return p;
   morse_timing(&data->samples_per, sdrkit_sample_rate(data), data->opts.word, data->opts.wpm,
 	       data->opts.dit, data->opts.dah, data->opts.ies, data->opts.ils, data->opts.iws,
-	       data->opts.weight, data->opts.ratio, data->opts.comp);
+	       data->opts.weight, data->opts.ratio, data->opts.comp, data->opts.farnsworth);
   if (data->dict == NULL) _builtin_dict(data);
   return arg;
 }
@@ -294,10 +295,11 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
        data->opts.ratio != save.ratio || data->opts.comp != save.comp ||
        data->opts.dit != save.dit || data->opts.dah != save.dah || 
        data->opts.word != save.word || data->opts.ies != save.ies || 
-       data->opts.ils != save.ils || data->opts.iws != save.iws) {
+       data->opts.ils != save.ils || data->opts.iws != save.iws ||
+       data->opts.farnsworth != save.farnsworth) {
     morse_timing(&data->pre_samples_per, sdrkit_sample_rate(data), data->opts.word, data->opts.wpm, 
 		 data->opts.dit, data->opts.dah, data->opts.ies, data->opts.ils, data->opts.iws,
-		 data->opts.weight, data->opts.ratio, data->opts.comp);
+		 data->opts.weight, data->opts.ratio, data->opts.comp, data->opts.farnsworth);
     data->modified = data->fw.busy = 1;
   }
   return TCL_OK;

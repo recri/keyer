@@ -210,6 +210,11 @@ snit::widgetadaptor sdrtk::cw-text {
 	return $save
     }
 
+method repeat-selected {} {
+    # save the extent of the selected region
+    # when you reach the end of the selection
+    # mark the extent as unsent and send again
+}
     # external functions moved in here for convenience
     # not actually used because Stop sending requires
     # other actions to implement in the sender component
@@ -218,6 +223,7 @@ snit::widgetadaptor sdrtk::cw-text {
 	menu $win.m -tearoff no
 	$win.m add command -label {Stop sending} -command [list $win abort]
 	$win.m add command -label {Clear window} -command [list $win clear]
+	$win.m add command -label {Repeat selected} -command [list $win repeat-selected]
 	$win.m add separator
 	$win.m add command -label {Send file} -command [list $win choose file]
 	$win.m add separator

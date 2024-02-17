@@ -31,7 +31,8 @@ typedef struct {
 
 static void morse_timing(morse_timing_t *samples_per, unsigned sample_rate, float word, float wpm, 
 			 float dit, float dah, float ies, float ils, float iws,
-			 float weight, float ratio, float comp) {
+			 float weight, float ratio, float comp,
+			 float farnsworth) {
   /* ms_per_dit = (ms_per_second * second_per_minute) / (words_per_minute * dits_per_word */
   /*            = (ms_per_minute) / (dits_per_minute) */
   float ms_per_dit = (1000 * 60) / (wpm * word);
@@ -48,6 +49,16 @@ static void morse_timing(morse_timing_t *samples_per, unsigned sample_rate, floa
   samples_per->ies = (ies  -w-c) * samples_per->base;
   samples_per->ils = (ils  -w-c) * samples_per->base;
   samples_per->iws = (iws  -w-c) * samples_per->base;
+  //
+  // Farnsworth timing: stretch inter-character and inter-word pauses
+  // to reduce wpm to the specified farnsworth speed.
+  // formula from https://morsecode.world/international/timing.html
+  //
+  if (farnsworth > 5 && farnsworth < wpm) {
+    float f = 50.0/19.0 * wpm / farnsworth - 31.0/19.0;
+    samples_per->ils *= f;		// stretched inter-character pause
+    samples_per->iws *= f;		// stretched inter-word pause
+  }
   /* printf("morse_timing base %u, dit %u, dah %u, ies %u, ils %u, iws %u\n",
      samples_per->base, samples_per->dit, samples_per->dah, samples_per->ies, samples_per->ils, samples_per->iws); */
 

@@ -73,4 +73,7 @@ float comp;
 #if FRAMEWORK_OPTIONS_KEYER_OPTIONS_TWO
 float two;
 #endif
+#if FRAMEWORK_OPTIONS_KEYER_OPTIONS_FARNSWORTH
+float farnsworth;
+#endif
 #endif
