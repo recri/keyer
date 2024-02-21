@@ -7,7 +7,13 @@
  *  We implement the tcl interface as a simple interface to the
  *  discovery layer,
 	::alsa::device cards
-	::alsa::device devices card
+	   returns an array set or dict init 
+	   returns {card name longname} for each card
+	   three list items for each device found concatenated
+	   into a single list.
+	::alsa::device devices <card>
+	   for <card> in the list returned by alsa::device cards
+	   returns the devices on the card
 	::alsa::device info card | device
 
   This code is a hacked up version of alsa-utils-1.0.24.2/aplay/aplay.c
@@ -134,25 +140,30 @@ static int alsa_card_list(ClientData clientData, Tcl_Interp *interp)
   snd_ctl_t *handle;
   int card, err;
   Tcl_Obj *cards = Tcl_NewListObj(0, NULL);
-
   for (card = -1; (err = snd_card_next(&card)) >= 0 && card >= 0; ) {
     // open the card
     char name[32], *sname, *lname;
+    Tcl_Obj *dict = Tcl_NewListObj(0, NULL);
     sprintf(name, "hw:%d", card);
+    Tcl_ListObjAppendElement(interp, cards, Tcl_ObjPrintf("%s", name));
+    Tcl_ListObjAppendElement(interp, cards, dict);
     if ((err = snd_ctl_open(&handle, name, 0)) < 0) {
       Tcl_SetObjResult(interp, Tcl_ObjPrintf("snd_ctl_open (%s): %s", name, snd_strerror(err)));
       Tcl_DecrRefCount(cards);
       return TCL_ERROR;
     }
-    Tcl_ListObjAppendElement(interp, cards, Tcl_ObjPrintf("%s", name));
+    /* short name */
+    Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf("sname"));
     if (err = snd_card_get_name(card, &sname)) {
-      Tcl_ListObjAppendElement(interp, cards, Tcl_ObjPrintf("snd_card_get_name(%s): %s", name, snd_strerror(err)));
+      Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf("snd_card_get_name(%s): %s", name, snd_strerror(err)));
     } else {
-      Tcl_ListObjAppendElement(interp, cards, Tcl_ObjPrintf("%s", sname));
+      Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf("%s", sname));
       free(sname);
     }
+    /* long name */
+    Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf("lname"));
     if (err = snd_card_get_longname(card, &lname)) {
-      Tcl_ListObjAppendElement(interp, cards, Tcl_ObjPrintf("snd_card_get_longname(%s): %s", name, snd_strerror(err)));
+      Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf("snd_card_get_longname(%s): %s", name, snd_strerror(err)));
     } else {
       Tcl_ListObjAppendElement(interp, cards, Tcl_ObjPrintf("%s", lname));
       free(lname);
@@ -200,6 +211,7 @@ static int alsa_device_list(ClientData clientData, Tcl_Interp *interp, char *car
   return TCL_OK;
 }
 
+#if 0
 static int alsa_subdevice_list(ClientData clientData, Tcl_Interp *interp, char *device)
 {
   snd_ctl_t *handle;
@@ -288,7 +300,7 @@ static int alsa_subdevice_list(ClientData clientData, Tcl_Interp *interp, char *
 #endif
   return TCL_OK;
 }
-
+#endif
 /*
   the command which enables alsa sequencer listing and channels
 */
@@ -299,15 +311,17 @@ static int alsa_device(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_
       return alsa_card_list(clientData, interp);
     } else if (argc == 3 && strcmp(cmd, "devices") == 0) {
       return alsa_device_list(clientData, interp, Tcl_GetString(objv[2]));
+    } else if (argc == 3 && strcmp(cmd, "info") == 0) {
+      return alsa_info(clientData, interp, Tcl_GetString(objv[2]));
+#if 0
     } else if (argc == 3 && strcmp(cmd, "subdevices") == 0) {
       return alsa_subdevice_list(clientData, interp, Tcl_GetString(objv[2]));
-#if 0
     } else if (argc == 4 && strcmp(cmd, "open") == 0) {
       return alsa_sequencer_open(clientData, interp, objv[2], objv[3]);
 #endif
     }
   }
-  Tcl_AppendResult(interp, "usage: ", Tcl_GetString(objv[0]), " list", NULL);
+  Tcl_AppendResult(interp, "usage: ", Tcl_GetString(objv[0]), " cards|devices <card>|info <card>", NULL);
   return TCL_ERROR;
 }
 

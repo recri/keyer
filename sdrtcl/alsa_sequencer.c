@@ -37,7 +37,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
-*/
+ */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -503,7 +503,7 @@ int main(int argc, char *argv[])
 typedef struct {
   Tcl_Channel chan;
   int direction, fd;
-  snd_sequencer_t *sequencer;
+  snd_seq_t *sequencer;
 } sequencer_instance_t;
 
 int sequencer_close(ClientData instanceData, Tcl_Interp *interp) {
@@ -582,7 +582,7 @@ static Tcl_ChannelType sequencer_channel_type = {
   NULL				/* truncateProc */
 };
 
-int sequencer_make_channel(ClientData clientData, Tcl_Interp *interp, snd_sequencer_t *sequencer, int direction) {
+int sequencer_make_channel(ClientData clientData, Tcl_Interp *interp, snd_seq_t *sequencer, int direction) {
   if (snd_sequencer_poll_descriptors_count(sequencer) != 1) {
     Tcl_AppendResult(interp, "sequencer device needs more than one file descriptor", NULL);
     snd_sequencer_close(sequencer);
@@ -680,14 +680,13 @@ static int alsa_sequencer_list(ClientData clientData, Tcl_Interp *interp) {
   return TCL_OK;
 }
 
-#if 0
 /*
   sequencer device channel create for reading or writing, not both at once.
 */
 static int alsa_sequencer_open(ClientData clientData, Tcl_Interp *interp, Tcl_Obj *port, Tcl_Obj *direction) {
   const char *port_name = Tcl_GetString(port), *direction_name = Tcl_GetString(direction);
-  static snd_sequencer_t *input, **inputp;
-  static snd_sequencer_t *output, **outputp;
+  static snd_seq_t *input, **inputp;
+  static snd_seq_t *output, **outputp;
   if (strcmp(direction_name, "r") == 0) {
     inputp = &input;
     outputp = NULL;
@@ -716,7 +715,6 @@ static int alsa_sequencer_open(ClientData clientData, Tcl_Interp *interp, Tcl_Ob
     return sequencer_make_channel(clientData, interp, output, TCL_WRITABLE);
   }
 }
-#endif
 
 /*
   the command which enables alsa sequencer listing and channels
@@ -726,10 +724,8 @@ static int alsa_sequencer(ClientData clientData, Tcl_Interp *interp, int argc, T
     const char *cmd = Tcl_GetString(objv[1]);
     if (argc == 2 && strcmp(cmd, "list") == 0) {
       return alsa_sequencer_list(clientData, interp);
-#if 0
     } else if (argc == 4 && strcmp(cmd, "open") == 0) {
       return alsa_sequencer_open(clientData, interp, objv[2], objv[3]);
-#endif
     }
   }
   Tcl_AppendResult(interp, "usage: ", Tcl_GetString(objv[0]), " list | open port direction", NULL);

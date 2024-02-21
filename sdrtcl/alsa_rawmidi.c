@@ -61,12 +61,20 @@ typedef struct {
   snd_rawmidi_t *rawmidi;
 } rawmidi_instance_t;
 
+/*
+  the channel instance close function
+*/
 int rawmidi_close(ClientData instanceData, Tcl_Interp *interp) {
   rawmidi_instance_t *rmi = (rawmidi_instance_t *)instanceData;
   Tcl_DeleteFileHandler(rmi->fd);
   snd_rawmidi_close(rmi->rawmidi);
   ckfree((char *)rmi);
+  return TCL_OK;
 }
+
+/*
+  the channel instance read function
+*/
 int rawmidi_input(ClientData instanceData, char *buf, int bufSize, int *errorCodePtr) {
   rawmidi_instance_t *rmi = (rawmidi_instance_t *)instanceData;
   int err = snd_rawmidi_read(rmi->rawmidi, buf, bufSize);
@@ -78,6 +86,10 @@ int rawmidi_input(ClientData instanceData, char *buf, int bufSize, int *errorCod
     return err;
   }
 }
+
+/*
+  the channel instance write function
+*/
 int rawmidi_output(ClientData instanceData, const char *buf, int toWrite, int *errorCodePtr) {
   rawmidi_instance_t *rmi = (rawmidi_instance_t *)instanceData;
   int err = snd_rawmidi_write(rmi->rawmidi, buf, toWrite);
@@ -89,9 +101,10 @@ int rawmidi_output(ClientData instanceData, const char *buf, int toWrite, int *e
     return err;
   }
 }
+
 /*
-  this one is verbatim from FileWatchProc in
-  tcl8.5.8/unix/tclUnixChan.c
+  the channel instance watch function
+  this one is verbatim from FileWatchProc in tcl8.5.8/unix/tclUnixChan.c
 */
 void rawmidi_watch(ClientData instanceData, int mask) {
   rawmidi_instance_t *rmi = (rawmidi_instance_t *)instanceData;
@@ -104,6 +117,10 @@ void rawmidi_watch(ClientData instanceData, int mask) {
     Tcl_DeleteFileHandler(rmi->fd);
   }
 }
+
+/*
+  the channel instance get handle function
+*/
 int rawmidi_get_handle(ClientData instanceData, int direction, ClientData *handlePtr) {
   rawmidi_instance_t *rmi = (rawmidi_instance_t *)instanceData;
   if (direction & rmi->direction) {
@@ -112,7 +129,11 @@ int rawmidi_get_handle(ClientData instanceData, int direction, ClientData *handl
   }
   return TCL_ERROR;
 }
-int rawmidi_block(ClientData instanceData, int mode) {
+
+/*
+  the channel instance block mode function
+*/
+int rawmidi_block_mode(ClientData instanceData, int mode) {
   rawmidi_instance_t *rmi = (rawmidi_instance_t *)instanceData;
   return snd_rawmidi_nonblock(rmi->rawmidi, mode == TCL_MODE_NONBLOCKING);
 }
@@ -129,7 +150,7 @@ static Tcl_ChannelType rawmidi_channel_type = {
   rawmidi_watch,		/* watchProc */
   rawmidi_get_handle,		/* getHandleProc */
   NULL,				/* close2Proc */
-  NULL,				/* blockModeProc */
+  rawmidi_block_mode,		/* blockModeProc */
   NULL,				/* flushProc */
   NULL,				/* handlerProc */
   NULL,				/* wideSeekProc */

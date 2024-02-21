@@ -1,0 +1,10 @@
+* A collection of synthesized musical instruments.
+  These come from the faust physmodels.lib with a
+  ui and a few midi assignments:
+  brass.dsp, clarinet.dsp, djembe.dsp, elecGuitar.dsp,
+  flute.dsp, guitar.dsp, ks.dsp, marimba.dsp, 
+  modularInterpInst.dsp, nylonGuitar.dsp, 
+  SFFormantModelBP.dsp, SFFormantModelFofCycle.dsp,
+  SFFormantModelFofSmooth.dsp, violin.dsp
+* More could be built from other files, but they would
+  need ui definitions.

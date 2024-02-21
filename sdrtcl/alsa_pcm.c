@@ -54,10 +54,16 @@ static int alsa_pcm_list(ClientData clientData, Tcl_Interp *interp)
     n = hints;
     while (*n != NULL) {
       char *name, *descr, *io;
+      Tcl_Obj *dict = Tcl_NewListObj(0, NULL);
       name = snd_device_name_get_hint(*n, "NAME");
+      Tcl_ListObjAppendElement(interp, pcm, Tcl_ObjPrintf("%s", name?name:"(null)"));
+      Tcl_ListObjAppendElement(interp, pcm, dict);
       descr = snd_device_name_get_hint(*n, "DESC");
+      Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf("desc"));
+      Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf(descr?descr:"(null)"));
       io = snd_device_name_get_hint(*n, "IOID");
-      Tcl_ListObjAppendElement(interp, pcm, Tcl_ObjPrintf("%s %s %s", name?name:"(null)", descr?descr:"(null)", io?io:"(null)"));
+      Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf("ioid"));
+      Tcl_ListObjAppendElement(interp, dict, Tcl_ObjPrintf(io?io:"(null)"));
       if (name != NULL)
 	free(name);
       if (descr != NULL)

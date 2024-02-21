@@ -35,10 +35,12 @@ FFTW3_LIBS=$(shell pkg-config --libs fftw3f)
 
 # sdrtcl should actually be jacktcl
 LIBSDRTCL=../lib/sdrtcl
-ALSA=$(LIBSDRTCL)/alsa_device.so \
-	$(LIBSDRTCL)/alsa_pcm.so \
-	$(LIBSDRTCL)/alsa_rawmidi.so \
-	$(LIBSDRTCL)/alsa_sequencer.so
+
+# $(LIBSDRTCL)/alsa_device.so
+# $(LIBSDRTCL)/alsa_pcm.so
+# $(LIBSDRTCL)/alsa_seq.so
+
+ALSA=	$(LIBSDRTCL)/alsa_rawmidi.so
 
 KEYERS=$(LIBSDRTCL)/keyer_ascii.so \
 	$(LIBSDRTCL)/keyer_builtin_dict.so \
@@ -290,7 +292,7 @@ $(LIBSDRTCL)/alsa_pcm.so: alsa_pcm.c
 $(LIBSDRTCL)/alsa_rawmidi.so: alsa_rawmidi.c
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
 
-$(LIBSDRTCL)/alsa_sequencer.so: alsa_sequencer.c
+$(LIBSDRTCL)/alsa_seq.so: alsa_seq.c
 	gcc -fPIC -shared -o $@ $(CFLAGS) $(ALSA_CFLAGS) $< $(ALSA_LIBS) $(LIBS)
 
 $(LIBSDRTCL)/keyer_ascii.so: keyer_ascii.c framework.h framework_options.h ../dspmath/midi.h ../dspmath/midi_buffer.h ../dspmath/morse_timing.h ../dspmath/morse_coding.h
