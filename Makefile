@@ -2,7 +2,7 @@ VSN_FFTW3=3.2.2
 VSN_JACK=1.9.7
 VSN_TCL=8.6
 VSN_TK=8.6
-CURSUBDIRS=sdrtcl bin lib/morse lib/sdrkit lib/sdrtk lib/sdrutil lib/sdrtcl lib/sdrtcltk
+CURSUBDIRS=sdrtcl faustcl bin lib/morse lib/sdrkit lib/sdrtk lib/sdrutil lib/sdrtcl lib/sdrtcltk 
 OLDSUBDIRS=
 SUBDIRS=$(CURSUBDIRS) $(OLDSUBDIRS)
 
@@ -12,7 +12,7 @@ all::
 make:: all
 
 ubuntu-deps:
-	sudo apt install build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon
+	sudo apt install build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon faust
 
 clean::
 	@find . -name '*~' -exec rm -f \{} \;

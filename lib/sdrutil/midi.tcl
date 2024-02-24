@@ -102,6 +102,15 @@ namespace eval ::midi {
     # compute the standard frequency of a midi note number
     proc note-to-hertz {note} { return [expr {440.0 * pow(2, ($note-$::midi::notes(A_440))/12.0)}] }
 
+    # precompute the result
+    variable cache-note-to-hertz {}
+    for {set m 0} {$m < 128} {incr m} {
+	lappend cache-note-to-hertz [note-to-hertz $m]
+    }
+
+    # convert a midi note into a frequency in Hertz
+    proc mtof {note} { lindex ${::midi::cache-note-to-hertz} $note }
+    
     # compute a note name of a midi note number
     proc note-to-name {note} { return [lindex $::midi::notes(octave) [expr {$note%12}]] }
     proc name-to-note {name} { return [lsearch $::midi::notes(octave) $name] }
@@ -123,4 +132,10 @@ namespace eval ::midi {
 	return [expr {$velocity / 127.0}]
     }
 
+    variable cache-velocity-to-level {}
+    for {set m 0} {$m < 128} {incr m} {
+	lappend cache-velocity-to-level [velocity-to-level $m]
+    }
+
+    proc vtol {vel} { lindex ${::midi::cache-velocity-to-level} $vel }
 }

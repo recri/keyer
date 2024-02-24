@@ -1,14 +1,83 @@
+/************************************************************************
+ IMPORTANT NOTE : this file contains two clearly delimited sections :
+ the ARCHITECTURE section (in two parts) and the USER section. Each section
+ is governed by its own copyright and license. Please check individually
+ each section for license and copyright information.
+ *************************************************************************/
+
+/******************* BEGIN jack-tcltk.cpp ****************/
+/************************************************************************
+ FAUST Architecture File
+ Copyright (C) 2003-2024 GRAME, Centre National de Creation Musicale
+ ---------------------------------------------------------------------
+ This Architecture section is free software; you can redistribute it
+ and/or modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 3 of
+ the License, or (at your option) any later version.
+ 
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program; If not, see <http://www.gnu.org/licenses/>.
+ 
+ EXCEPTION : As a special exception, you may create a larger work
+ that contains this FAUST architecture section and distribute
+ that work under terms of your choice, so long as this FAUST
+ architecture section is not modified.
+ 
+ ************************************************************************
+ ************************************************************************/
+
+#include <libgen.h>
+#include <stdlib.h>
+#include <iostream>
+#include <list>
+
+#include "faust/dsp/timed-dsp.h"
+#include "faust/dsp/one-sample-dsp.h"
+#include "faust/gui/FUI.h"
+#include "faust/gui/PrintUI.h"
+#include "faust/misc.h"
+#include "faust/gui/GTKUI.h"
+#include "faust/gui/JSONUI.h"
+#include "faust/gui/PresetUI.h"
+#include "faust/audio/jack-dsp.h"
+
+#ifdef OSCCTRL
+#include "faust/gui/OSCUI.h"
+static void osc_compute_callback(void* arg)
+{
+    static_cast<OSCUI*>(arg)->endBundle();
+}
+#endif
+
+#ifdef HTTPCTRL
+#include "faust/gui/httpdUI.h"
+#endif
+
+#if SOUNDFILE
+#include "faust/gui/SoundUI.h"
+#endif
+
+// Always include this file, otherwise -nvoices only mode does not compile....
+#include "faust/gui/MidiUI.h"
+
+#ifdef OCVCTRL
+#include "faust/gui/OCVUI.h"
+#endif
 
 <<includeIntrinsic>>
 
-#include "faust/misc.h"
-#include "faust/gui/UI.h"
-#include "faust/audio/jack-dsp.h"
+// #include "faust/misc.h"
+// #include "faust/gui/UI.h"
+// #include "faust/audio/jack-dsp.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
-
 #include <tcl8.6/tcl.h>
 
 #define FAUSTFLOAT float
@@ -38,6 +107,9 @@ struct TcltkUI : public UI  {
   TcltkUI(Tcl_Interp *interp, Tcl_Obj *ui_list, FAUSTFLOAT **zonePtrs)
     : interp(interp), ui_list(ui_list), zonePtrs(zonePtrs) {
     nzones = 0;
+    // proc faustk::%s {w c} {
+    //   ...
+    // }
   }
 
   void appendList(int argc, Tcl_Obj *objv[]) {
@@ -87,19 +159,27 @@ struct TcltkUI : public UI  {
   }
   // -- widget layouts
   void openTabBox(const char* label) {
+    // ttk::labelframe $w.$path
+    // ttk::notebook
     appendLabel("openTabBox", label);
   }
   void openHorizontalBox(const char* label) {
+    // ttk::labelframe
+    // grid
     appendLabel("openHorizontalBox", label);
   }
   void openVerticalBox(const char* label) {
+    // ttk::labelframe
+    // grid
     appendLabel("openVerticalBox", label);
   }
   void closeBox() {
+    // {}
     Tcl_Obj *objv[] = { Tcl_NewStringObj("closeBox", -1) };
     appendList(1, objv);
   } 
   // -- active widgets
+  // ttk::button $w.%s -text %s
   void addButton(const char* label, FAUSTFLOAT* zone) {
     appendLabelZone("addButton", label, zone);
   }
@@ -142,7 +222,6 @@ typedef struct {
   Tcl_Obj *command_name;
   dsp *DSP;
   audio *AUDIO;
-  // MapUI *ui_map;
   Tcl_Obj *meta_dict;
   Tcl_Obj *ui_list;
   FAUSTFLOAT *zonePtrs[NZONES];
@@ -245,7 +324,16 @@ static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
 // the command which cleans up
 static void _delete(ClientData clientData) {
   _data *cdata = (_data *)clientData;  
-  // FIX.ME - cleanly delete in the clientData
+  if (cdata->AUDIO) cdata->AUDIO->stop();
+  // cdata->AUDIO->init(command_name, cdata->DSP)
+  // complement of init() is in delete
+  if (cdata->ui_list) Tcl_DecrRefCount(cdata->ui_list);
+  if (cdata->meta_dict) Tcl_DecrRefCount(cdata->meta_dict);
+  if (cdata->AUDIO) delete cdata->AUDIO;
+  if (cdata->DSP) delete cdata->DSP;
+  if (cdata->command_name) Tcl_DecrRefCount(cdata->command_name);
+  if (cdata->class_name) Tcl_DecrRefCount(cdata->class_name);
+  Tcl_Free((char *)clientData);
 }
 
 // the factory command which builds instances faust dsp instruments or effects
@@ -266,31 +354,23 @@ static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj
   // initialize command data
   memset(cdata, 0, sizeof(_data));
   cdata->interp = interp;
-  cdata->class_name = objv[0]; 
-  cdata->command_name = objv[1];
+  Tcl_IncrRefCount((cdata->class_name = objv[0]));
+  Tcl_IncrRefCount((cdata->command_name = objv[1]));
+
   cdata->DSP = new mydsp();
 #ifdef MIDICTRL
   cdata->AUDIO = new jackaudio_midi();
 #else
   cdata->AUDIO = new jackaudio();
 #endif
-  //  cdata->ui_map = new MapUI();
-  cdata->meta_dict = Tcl_NewDictObj(); 
-  cdata->ui_list = Tcl_NewListObj(0, NULL); 
-
-  // persist tcl objects
-  Tcl_IncrRefCount(cdata->class_name);
-  Tcl_IncrRefCount(cdata->command_name);
-  Tcl_IncrRefCount(cdata->meta_dict);
-  Tcl_IncrRefCount(cdata->ui_list);
+  Tcl_IncrRefCount((cdata->meta_dict = Tcl_NewDictObj())); 
+  Tcl_IncrRefCount((cdata->ui_list = Tcl_NewListObj(0, NULL))); 
 
   // check for allocation errors
   if (cdata->DSP == NULL) { _delete(cdata); return _error_str(interp, "Faust DSP allocation failure"); }
   if (cdata->AUDIO == NULL) { _delete(cdata); return _error_str(interp, "Faust audio allocation failure"); }
-  //   if (cdata->ui_map == NULL) { _delete(cdata); return _error_str(interp, "Faust MapUI allocation failure"); }
 
   // load the ui data
-  // cdata->DSP->buildUserInterface(cdata->ui_map);
   cdata->DSP->metadata(new TcltkMeta(cdata->interp, cdata->meta_dict));
   cdata->DSP->buildUserInterface(new TcltkUI(cdata->interp, cdata->ui_list, cdata->zonePtrs));
 
