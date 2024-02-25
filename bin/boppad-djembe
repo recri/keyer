@@ -1,0 +1,95 @@
+#!/usr/bin/wish
+
+#
+# find the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+set hw hw:2,0,0
+set instr djembe
+if {$argc > 0} {
+    set hw [lindex $argv 0]
+    if {$argc > 1} {
+	set instr [lindex $argv 1]
+    }
+}
+
+package require alsa::rawmidi
+package require faustcl::$instr
+package require midi
+
+    
+set ::instrs [lmap i {0 1 2 3 4 5 6 7 8 9 A B C D E F} { faustcl::$instr in$i }]
+
+set ::midimap [dict create]
+set ::notesoff $::instrs
+set ::noteson {}
+set ::lastnoteon {}
+set ::lastnoteoff {}
+
+proc midiin {fp} {
+    if {[eof $fp]} {
+	close $fp
+	return
+    }
+    set msg [read $fp 3]
+    if { ! [dict exists $::midimap $msg] } {
+	binary scan $msg c* msgmap
+	dict set ::midimap $msg $msgmap
+    }
+    foreach {data1 data2 data3} [dict get $::midimap $msg] break
+    switch $data1 {
+	-112 {
+	    if {[llength $::notesoff] > 0} { 
+		set ::lastnoteon [lindex $::notesoff 0]
+		set ::notesoff [lrange $::notesoff 1 end]
+	    } else {
+		set ::lastnoteon [lindex $::noteson 0]
+		set ::noteson [lrange $::noteson 1 end]
+		$::lastnoteon configure -gate 0
+	    }
+	    lappend ::noteson $::lastnoteon
+	    after 0 [list $::lastnoteon configure -freq [midi::mtof $data2] -gain [midi::vtol $data3] -gate 1]
+	}
+	-80 {
+	    if {$::lastnoteon != {}} {
+		$::lastnoteon configure -strikePosition [midi::vtol $data3]
+	    }
+	}
+	-128 { 
+	    set freq [midi::mtof $data2]
+	    set notes $::noteson
+	    set ::noteson {}
+	    set ::lastnoteoff {}
+	    foreach note $notes {
+		if {[$note cget -freq] == $freq} {
+		    set ::lastnoteoff $note
+		    lappend ::notesoff $::lastnoteoff
+		} else {
+		    lappend ::noteson $note
+		}
+	    }
+	    if {$::lastnoteoff ne {}} {
+		$::lastnoteoff configure -gate 0
+		if {$::lastnoteon eq $::lastnoteoff} { set ::lastnoteon {} }
+	    }
+	}
+    }
+}
+
+set fp [alsa::rawmidi open $hw r]
+fconfigure $fp -encoding binary -blocking false -buffering none
+fileevent $fp readable [list midiin $fp]
+
+# boppad, in current preset, plays 36 38 42 47 as notes
+# and uses control 1 to send radial position, over and over again
+# as a policy, send radial position to the last note struck only
+
+vwait done
+

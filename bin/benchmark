@@ -1,0 +1,69 @@
+#/usr/bin/tclsh
+
+#
+# benchmark using lists, associative arrays, and dictionaries
+# as lookup tables
+#
+
+#
+# use the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+package require midi
+
+set list [list]
+set dict [dict create]
+array set arra {}
+
+for {set i 0} {$i < 128} {incr i} {
+    set f [midi::note-to-hertz $i]
+    lappend list $f
+    dict set dict $i $f
+    set arra($i) $f
+}
+
+proc listget {i} { lindex $::list $i }
+proc dictget {i} { dict get $::dict $i }
+proc arraget {i} { set ::arra($i) }
+proc compget {i} { midi::note-to-hertz $i }
+
+set numbers {}
+for {set i 0} {$i < 1000000} {incr i} {
+    set n [expr {int(128*rand())}]
+    lappend numbers $n
+    listget $n
+    dictget $n
+    arraget $n
+    compget $n
+}
+
+foreach a {b c d e f g h i j k} {
+    set timing {}
+    lappend timing [clock microseconds] listget
+    foreach i $numbers { listget $i }
+    lappend timing [clock microseconds] dictget
+    foreach i $numbers { dictget $i }
+    lappend timing [clock microseconds] arrayget
+    foreach i $numbers { arraget $i }
+    lappend timing [clock microseconds] compget
+    foreach i $numbers { compget $i }
+    lappend timing [clock microseconds]
+    
+
+    set listtime [expr {[lindex $timing 2]-[lindex $timing 0]}]
+    set dicttime [expr {[lindex $timing 4]-[lindex $timing 2]}]
+    set arratime [expr {[lindex $timing 6]-[lindex $timing 4]}]
+    set comptime [expr {[lindex $timing 8]-[lindex $timing 6]}]
+
+    puts "listget $listtime µs (1)"
+    puts "dictget $dicttime µs ([expr {double($dicttime)/$listtime}])"
+    puts "arraget $arratime µs ([expr {double($arratime)/$listtime}])"
+    puts "compget $comptime µs ([expr {double($comptime)/$listtime}])"
+}

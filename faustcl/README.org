@@ -22,8 +22,8 @@
   need ui definitions.  In fact, much of the contents
   of sdrtcl could be rewritten into faustcl.
 * Todo list for this project
-[ ] Rewrite the data types in faustcl.cpp
-[ ] Implement delete in faustcl.cpp
+[*] Rewrite the data types in faustcl.cpp
+[*] Implement delete in faustcl.cpp
 [ ] Make faust generate the zonePtrs map without faustcl.tcl
 [x] Check the sizes of the built modules.
    text	   data	    bss	    dec	    hex	filename
@@ -62,6 +62,22 @@ text segment of all the programs.
 [ ] Enable direct midi control.
 [ ] Enable direct OSC control.
 [ ] Enable direct polyphony.
+[ ] Check the sizes with midi and polyphony enabled.  Ouch.
+   text	   data	    bss	    dec	    hex	filename
+ 517846	  17104	 262240	 797190	  c2a06	../lib/faustcl/brass.so
+ 518597	  17104	 262240	 797941	  c2cf5	../lib/faustcl/clarinet.so
+ 520532	  16960	     72	 537564	  833dc	../lib/faustcl/djembe.so
+ 519217	  16992	     72	 536281	  82ed9	../lib/faustcl/elecguitar.so
+ 521434	  17080	 262240	 800754	  c37f2	../lib/faustcl/flute.so
+ 519221	  16992	     72	 536285	  82edd	../lib/faustcl/guitar.so
+ 513386	  16960	     72	 530418	  817f2	../lib/faustcl/ks.so
+ 545545	  16960	   1096	 563601	  89991	../lib/faustcl/marimba.so
+ 589746	  17048	     72	 606866	  94292	../lib/faustcl/modularinterpinst.so
+ 519290	  16992	     72	 536354	  82f22	../lib/faustcl/nylonguitar.so
+ 578429	  17128	 262240	 857797	  d16c5	../lib/faustcl/sfformantmodelbp.so
+ 582925	  17080	 262240	 862245	  d2825	../lib/faustcl/sfformantmodelfofcycle.so
+ 573864	  17096	 262240	 853200	  d04d0	../lib/faustcl/sfformantmodelfofsmooth.so
+ 520699	  17104	 262240	 800043	  c352b	../lib/faustcl/violin.so
 * Grander still, further usurp ChucK
 [ ] build a faust interpreter, as in the chuck Faust chugin,
   and program the modules on the fly.
