@@ -1,11 +1,4 @@
-/************************************************************************
- IMPORTANT NOTE : this file contains two clearly delimited sections :
- the ARCHITECTURE section (in two parts) and the USER section. Each section
- is governed by its own copyright and license. Please check individually
- each section for license and copyright information.
- *************************************************************************/
-
-/******************* BEGIN jack-tcltk.cpp ****************/
+/******************* BEGIN libjacktcl.cpp ****************/
 /************************************************************************
  FAUST Architecture File
  Copyright (C) 2003-2024 GRAME, Centre National de Creation Musicale
@@ -31,43 +24,626 @@
  ************************************************************************
  ************************************************************************/
 
+
 #include <libgen.h>
 #include <stdlib.h>
 #include <iostream>
 #include <list>
 
+#include <stdio.h>
+#include <string.h>
+#include <stddef.h>
+#include <tcl8.6/tcl.h>
+
+// UI inclusions
+
+//#define FILEUI 1	// be prepared to maintain rc files per component if -file true
+#define PRINTUI 1	// be prepared to maintain a print UI if -print true
+//#define PRESETUI 1	// be prepared to maintain preset files per component if -preset true
+//#define OSCCTRL 1	// be prepared to implement an OSC controller if -osc true
+//#define HTTPCTRL 1	// be prepared to implement an http controller if -httpd true
+//#define SOUNDFILE 1	// be prepared to implement a sound file UI if -soundfile true
+#define MIDICTRL 1	// always be prepared to implement a MIDI controller if -midi tue
+//#define OCVCTRL 1	// be prepared to implement an OCV controller if -ocv true
+
+// polyphony
+
+//#define POLY2 1	// be prepared to implement polyphony if -poly true
+//#define EFFECT 1	// be prepared for common polyphony effect if -effect auto|effect.dsp
+
 #include "faust/dsp/timed-dsp.h"
 #include "faust/dsp/one-sample-dsp.h"
-#include "faust/dsp/poly-dsp.h"
-//#include "faust/gui/FUI.h"
-//#include "faust/gui/PrintUI.h"
+
+// UI includes, preserving order of #define's
+#ifdef FILEUI
+#include "faust/gui/FUI.h"
+#endif
+
+#ifdef PRINTUI
+#include "faust/gui/PrintUI.h"
+#endif
 #include "faust/misc.h"
-//#include "faust/gui/PresetUI.h"
+
+#ifdef PRESETUI
+#include "faust/gui/PresetUI.h"
+#endif
 #include "faust/audio/jack-dsp.h"
 
-//#ifdef OSCCTRL
-//#include "faust/gui/OSCUI.h"
-//static void osc_compute_callback(void* arg)
-//{
-//    static_cast<OSCUI*>(arg)->endBundle();
-//}
-//#endif
+#ifdef OSCCTRL
+#include "faust/gui/OSCUI.h"
+static void osc_compute_callback(void* arg)
+{
+    static_cast<OSCUI*>(arg)->endBundle();
+}
+#endif
 
-//#ifdef HTTPCTRL
-//#include "faust/gui/httpdUI.h"
-//#endif
+#ifdef HTTPCTRL
+#include "faust/gui/httpdUI.h"
+#endif
 
-//#if SOUNDFILE
-//#include "faust/gui/SoundUI.h"
-//#endif
+#ifdef SOUNDFILE
+#include "faust/gui/SoundUI.h"
+#else
+struct Soundfile {};
+#endif
 
 // Always include this file, otherwise -nvoices only mode does not compile....
 #include "faust/gui/MidiUI.h"
 
-//#ifdef OCVCTRL
-//#include "faust/gui/OCVUI.h"
-//#endif
+#ifdef OCVCTRL
+#include "faust/gui/OCVUI.h"
+#endif
 
+#include "faust/gui/MapUI.h"	// map ui used in TclTkGui
+
+// polyphony
+#include "faust/dsp/poly-dsp.h"
+
+#ifdef POLY2
+#include "faust/dsp/dsp-combiner.h"
+#endif
+
+using namespace std;
+
+// #define FAUSTFLOAT float  // FIX.ME delete
+
+// TclTkMeta stores metadata as a tcl dictionary;
+struct TclTkMeta : public Meta {
+  Tcl_Interp *interp;
+  Tcl_Obj *dict;
+
+  TclTkMeta(Tcl_Interp *interp, Tcl_Obj *dict) : interp(interp), dict(dict) { }
+
+  void declare (const char* key, const char* value) {
+    Tcl_DictObjPut(interp, dict, Tcl_NewStringObj(key, -1), Tcl_NewStringObj(value, -1));
+  }
+
+};
+
+// TclTkGUI produces a string to be evaluated which defines
+// a Tcl proc faustk::%s {w cmd} { ... } which builds a tk
+// interface for $cmd in the window $w
+struct TclTkGUI : public GUI  {
+  Tcl_Interp *interp;
+  Tcl_Obj *ui_list, *command_name;
+  MapUI *mapui;
+    
+public:
+  TclTkGUI(Tcl_Interp *interp, Tcl_Obj *ui_list, Tcl_Obj *command_name, MapUI *mapui) :
+    interp(interp), ui_list(ui_list), command_name(command_name), mapui(mapui) {
+    appendCode(Tcl_ObjPrintf("proc faustk::%s {w cmd} {", Tcl_GetString(command_name)));
+    // Tcl_ListObjAppendElement(interp, ui_list, );
+  }
+
+protected:
+  // here begins simplified version of PathBuilder
+  std::vector<std::string> pathList;
+
+  // Return true for the first level of groups
+  bool pushLabel(const std::string& label) {
+    pathList.push_back(label); return pathList.size() == 1;
+  }
+    
+  // Return true for the last level of groups
+  bool popLabel() {
+    pathList.pop_back(); return pathList.size() == 0;
+  }
+  
+  // Return a complete path built from a label
+  std::string buildPath(const std::string& label) {
+    std::string res = "";
+    for (size_t i = 0; i < pathList.size(); i++) {
+      res = res + "." + pathList[i];
+    }
+    return (res + "." + label);
+  }
+  // here ends simplified version of PathBuilder
+
+  // add to the code
+  void appendCode(Tcl_Obj *lineOfCode) {
+    Tcl_ListObjAppendElement(interp, ui_list, lineOfCode);
+  }
+
+  const char *findShortName(FAUSTFLOAT *zone) {
+    for (const auto& it : mapui->getShortnameMap()) {
+      if (it.second == zone) return it.first.c_str();
+    }
+    return "";
+  }
+
+  // append a layout item
+  void appendLayout(const char *type, const char *label) {
+    const char *path = buildPath(label).c_str();
+    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s", type, path, label));
+    pushLabel(label);
+  }
+
+  // append a button or checkbutton
+  void appendButton(const char *type, const char *label, FAUSTFLOAT *zone) {
+    const char *path = buildPath(label).c_str();
+    const char *option = findShortName(zone);
+    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s -command $cmd -option -%s", type, path, label, option));
+  }
+  
+  // append a slider or a nentry
+  void appendSlider(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT init, FAUSTFLOAT step) {
+    const char *path = buildPath(label).c_str();
+    const char *option = findShortName(zone);
+    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s -command $cmd -option -%s -min %f -max %f -init %f -step %f",
+			     type, path, label, option, min, max, init, step));
+  }
+  
+  // append a bargraph
+  void appendBargraph(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max) {
+    const char *path = buildPath(label).c_str();
+    const char *option = findShortName(zone);
+    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s -command $cmd -option -%s -min %f -max %f",
+			     type, path, label, option, min, max));
+  }
+  
+public:
+  // -- layouts widget
+  void openTabBox(const char* label) { appendLayout("tgroup", label); }
+  void openHorizontalBox(const char* label) { appendLayout("hgroup", label); }
+  void openVerticalBox(const char* label) { appendLayout("vgroup", label); }
+  void closeBox() { if (popLabel()) { appendCode(Tcl_NewStringObj("}", -1)); } }
+
+  // -- active widgets
+  void addButton(const char* label, FAUSTFLOAT* zone) { appendButton("button", label, zone); }
+  void addCheckButton(const char* label, FAUSTFLOAT* zone) { appendButton("checkbutton", label, zone); }
+  void addVerticalSlider(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
+    appendSlider("vslider", label, zone, min, max, init, step);
+  }
+  void addHorizontalSlider(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
+    appendSlider("hslider", label, zone, min, max, init, step);
+  }
+  void addNumEntry(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
+    appendSlider("nentry", label, zone, min, max, init, step);
+  }
+  // -- passive widgets
+  void addHorizontalBargraph(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT min, FAUSTFLOAT max) {
+    appendBargraph("hbargraph", label, zone, min, max);
+  }
+  void addVerticalBargraph(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT min, FAUSTFLOAT max) {
+    appendBargraph("vbargraph", label, zone, min, max);
+  }
+  // -- soundfiles - haven't found an example of this to copy, yet
+  void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) { }
+  // -- metadata declarations
+  void declare(FAUSTFLOAT* zone, const char* key, const char* val) { 
+    const char *option = findShortName(zone);
+    appendCode(Tcl_ObjPrintf("  declare -%s {%s} {%s}", option, key, val));
+  }
+};
+
+// the structure which defines the faust dsp instrument or effect
+// this is all the information maintained by the _factory().
+struct _client_data_t {
+  dsp *DSP;
+  Tcl_Interp *interp;
+  int argc;			// only valid until _factory() returns;
+  Tcl_Obj *const *objv;		// only valid until _factory() returns;
+  Tcl_Obj *class_name;
+  Tcl_Obj *command_name;
+  int nvoices;
+  bool midi_sync;
+  bool control;
+  int group;
+#ifdef FILEUI
+  Tcl_Obj *rc_file_name;
+  FUI *finterface;
+#endif
+#ifdef PRINTUI
+  PrintUI *printerface;
+#endif
+#ifdef PRESETUI
+  Tcl_Obj *preset_dir;
+  PresetUI *pinterface;
+#endif
+#ifdef OSCCTRL
+  OSCUI *oscinterface;
+#endif
+#ifdef HTTPCTRL
+  httpdUI *httpdinterface;
+#endif
+#ifdef SOUNDFILE
+  SoundUI *soundinterface;
+#endif
+#ifdef MIDICTRL
+  bool opt_midi;
+  MidiUI* midiinterface;
+#endif
+#ifdef OCVCTRL
+  OCVUI *ocvinterface;
+#endif
+#ifdef MIDICTRL
+  jackaudio_midi *AUDIO;
+#else
+  jackaudio *AUDIO;
+#endif
+  MapUI *mapui;
+  Tcl_Obj *meta_dict;
+  Tcl_Obj *ui_list;
+  TclTkGUI *interface;
+
+  // create a client_data_t
+  _client_data_t(dsp *DSP, Tcl_Interp *interp, int argc, Tcl_Obj *const*objv) :
+    DSP(DSP), interp(interp), argc(argc), objv(objv) {
+  }
+
+  // and clean it up
+  ~_client_data_t() {
+#ifdef FILEUI
+    if (finterface) { finterface->saveState(Tcl_GetString(rc_file_name)); delete finterface; }
+    if (rc_file_name) Tcl_DecrRefCount(rc_file_name);
+#endif
+#ifdef MIDICTRL
+    if (midiinterface) { midiinterface->stop(); delete midiinterface; }
+#endif    
+#ifdef OSCCTRL
+    if (oscinterface) { oscinterface->stop(); delete oscinterface; }
+#endif
+#ifdef OCVCTRL
+    if (ocvinterface) { ocvinterface->stop(); delete ocvinterface; }
+#endif
+#ifdef HTTPCTRL
+    if (httpdinterface) { httpdinterface->stop(); delete httpdinterface; }
+#endif
+    // if (interface) { interface->stop(); delete interface; }
+    if (AUDIO) { AUDIO->stop(); delete AUDIO; }
+    // AUDIO->init(command_name, DSP) complement is in delete
+#ifdef SOUNDFILE
+    if (soundinterface) delete soundinterface;
+#endif
+#ifdef PRINTUI
+    if (printerface) delete printerface;
+#endif
+#ifdef PRESETUI
+    if (presetui) delete presetui:
+    if (preset_dir) Tcl_DecrRefCount(preset_dir);
+#endif    
+    if (ui_list) Tcl_DecrRefCount(ui_list);
+    if (meta_dict) Tcl_DecrRefCount(meta_dict);
+    if (command_name) Tcl_DecrRefCount(command_name);
+    if (class_name) Tcl_DecrRefCount(class_name);
+    if (mapui) delete mapui;
+    if (DSP) delete DSP;
+  }
+    
+  /*
+  ** common error/success return with dyanamic or static interp result
+  */
+  int _result_obj(Tcl_Obj *obj, int ret) {
+    Tcl_SetObjResult(interp, obj);
+    return ret;
+  }
+  int _result_str(const char *str, int ret) {
+    Tcl_SetObjResult(interp, Tcl_NewStringObj(str, -1));
+    return ret;
+  }
+  int _error_obj(Tcl_Obj *obj) { return _result_obj(obj, TCL_ERROR); }
+  int _error_str(const char *str) { return _result_str(str, TCL_ERROR); }
+  int _success_obj(Tcl_Obj *obj) { return _result_obj(obj, TCL_OK); }
+  int _success_str(const char *str) { return _result_str(str, TCL_OK); }
+
+  // option helpers
+  int _optionLookup(Tcl_Obj *obj, FAUSTFLOAT **valp) {
+    *valp = mapui->getParamZone(string(Tcl_GetString(obj)+1));
+    return (*valp != NULL) ? TCL_OK :
+      _error_obj(Tcl_ObjPrintf("invalid option \"%s\".", Tcl_GetString(obj)));
+  }
+
+  int _getFloatFromObj(Tcl_Obj *obj, float *valp) {
+    double double_val;
+    if (Tcl_GetDoubleFromObj(interp, obj, &double_val) == TCL_OK) {
+      *valp = double_val;
+      return TCL_OK;
+    }
+    return TCL_ERROR;
+  }
+	
+#ifdef PRINTUI
+  // print command implementation
+  int _print() {
+    DSP->buildUserInterface(printerface);
+    return TCL_OK;
+  }
+#endif
+  
+  // cget command implementation
+  int _cget() {
+    FAUSTFLOAT *optvalptr;
+    if (argc != 3) return _error_obj(Tcl_ObjPrintf("usage: %s cget -option", Tcl_GetString(objv[0])));
+    if (_optionLookup(objv[2], &optvalptr) != TCL_OK) return TCL_ERROR;
+    return _success_obj(Tcl_NewDoubleObj(*optvalptr));
+  }
+
+  // configure command implementation
+  int _configure() {
+    if (argc < 2 || (argc&1) != 0)
+      return _error_obj(Tcl_ObjPrintf("usage: %s configure [-option value ...]", Tcl_GetString(objv[0])));
+    if (argc == 2) {
+      Tcl_ResetResult(interp);
+      int index = 0;
+      for (auto it = mapui->getShortnameMap().begin(); it != mapui->getShortnameMap().end(); ++it) {
+	Tcl_AppendResult(interp,  (index++ == 0 ? "" : " "), "-", it->first.c_str(), " ", Tcl_GetString(Tcl_NewDoubleObj(*it->second)), NULL);
+      }
+      return TCL_OK;
+    }
+    for (int a = 2; a < argc; a += 2) {
+      FAUSTFLOAT *optvalptr, val;
+      if (_optionLookup(objv[a], &optvalptr) != TCL_OK) return TCL_ERROR;
+      if (_getFloatFromObj(objv[a+1], &val) == TCL_ERROR) return TCL_ERROR;
+      *optvalptr = val;
+    }
+    return TCL_OK;
+  }
+
+  int _command() {
+    if (argc < 2) {
+      return _error_obj(Tcl_ObjPrintf("usage: %s name method [...]", Tcl_GetString(objv[0])));
+    } else {
+      const char *method = Tcl_GetString(objv[1]);
+      if (strcmp(method, "configure") == 0) return _configure();
+      if (strcmp(method, "cget") == 0) return _cget();
+      if (strcmp(method, "print") == 0) return _print();
+      if (strcmp(method, "meta") == 0) return _success_obj(meta_dict);
+      if (strcmp(method, "ui") == 0) return _success_obj(ui_list);
+      return _error_obj(Tcl_ObjPrintf("usage: %s name configure|cget|meta|ui [...]", Tcl_GetString(objv[0])));
+    }
+  }
+
+  void _analyze() {
+    MidiMeta::analyse(DSP, midi_sync, nvoices);
+  }
+  
+  int _getoptionint(const char *optname, int defaultvalue) {
+    int optvalue;
+    for (int i = 2; i+1 < argc; i += 2)
+      if (strcmp(optname, Tcl_GetString(objv[i])) == 0)
+	if (Tcl_GetIntFromObj(interp, objv[i+1], &optvalue) == TCL_OK)
+	  return optvalue;
+    return defaultvalue;
+  }
+  
+  int _getoptionbool(const char *optname, bool defaultvalue) {
+    int optvalue;
+    for (int i = 2; i+1 < argc; i += 2)
+      if (strcmp(optname, Tcl_GetString(objv[i])) == 0)
+	if (Tcl_GetBooleanFromObj(interp, objv[i+1], &optvalue) == TCL_OK)
+	  return optvalue;
+    return defaultvalue;
+  }
+  
+  int _dspUpdateError(dsp *newDSP) {
+    if (newDSP == NULL) {
+      _error_str("Faust DSP allocation failure");
+      return 1;
+    } else {
+      DSP = newDSP;
+      return 0;
+    }
+  }
+
+  // the factory command which builds instances faust dsp instruments or effects
+  // _command and _delete are used at the very end of the method
+  int _factory(Tcl_ObjCmdProc *_command, Tcl_CmdDeleteProc *_delete) {
+    if (DSP == NULL) {
+      return _error_str("Faust DSP allocation failure");
+    }
+
+    // test for insufficient arguments
+    if (argc < 2 || (argc&1) != 0) {
+      return _error_obj(Tcl_ObjPrintf("usage: %s name [-option value ...]", Tcl_GetString(objv[0])));
+    }
+
+    // initialize command data
+    Tcl_IncrRefCount(class_name = objv[0]);
+    Tcl_IncrRefCount(command_name = objv[1]);
+
+    // build the TclTk interface
+    DSP->buildUserInterface(mapui = new MapUI());
+    meta_dict = Tcl_NewDictObj();
+    Tcl_IncrRefCount(meta_dict);
+    DSP->metadata(new TclTkMeta(interp, meta_dict) );
+    ui_list = Tcl_NewListObj(0, NULL);
+    Tcl_IncrRefCount(ui_list);
+    interface = new TclTkGUI(interp, ui_list, command_name, mapui);
+    DSP->buildUserInterface(interface);
+
+    // search for midi timing options
+    // and nvoices specifications in meta data.
+    midi_sync = false;
+    control = true;
+    nvoices = 0;
+    MidiMeta::analyse(DSP, midi_sync, nvoices);
+    nvoices = _getoptionint("-nvoices", nvoices);
+    control = _getoptionbool("-control", control);
+    group = _getoptionbool("-group", 1);
+    
+    // create options to command
+    opt_midi = _getoptionbool("-midi", false);
+
+    cout << "Started with " << nvoices << " voices\n";
+
+    if (nvoices > 1) {
+      // make a polyphonic synth
+      if (_dspUpdateError(new mydsp_poly(DSP, nvoices, control, group)))
+	return TCL_ERROR;
+      // disabled because I can't find effect.h except in #includes in architecture files
+      // add a common effect to the output
+      // if (_dspUpdateError(new dsp_sequencer(DSP, new effect())))
+      //    return TCL_ERROR;
+    }
+
+    if (opt_midi && midi_sync) {
+      // add midi timing support
+      if (_dspUpdateError(new timed_dsp(DSP)))
+	return TCL_ERROR;
+    }
+
+#ifdef FILEUI
+    if (_getoptionbool("-file", true)) { 
+      finterface = new FUI();
+      // .config works for Linux and MacOS
+      Tcl_IncrRefCount((rc_file_name = Tcl_ObjPrintf("%s/.config/faustcl/%s", getenv("HOME"), Tcl_GetString(command_name))));
+    }
+#endif
+#ifdef PRINTUI
+    if (_getoptionbool("-print", true)) { printerface = new PrintUI(); }
+#endif
+#ifdef PRESETUI
+    if (_getoptionbool("-preset", false)) {
+      pinterface = new PresetUI(interface, string(PRESETDIR) + string(Tcl_GetString(command_name)) + string((nvoices > 0) ? "_poly" : ""));
+      DSP->buildUserInterface(pinterface);
+    }
+#endif
+    
+#ifdef HTTPCTRL
+    if (_getoptionbool("-httpd", false)) {
+      // FIX.ME - need to build const char * const * argv
+      httpdinterface = new httpdUI(string(Tcl_GetString(command_name)), DSP->getNumInputs(), DSP->getNumOutputs(), argc, argv);
+      DSP->buildUserInterface(httpdinterface);
+      cout << "HTTPD is on" << endl;
+    }
+#endif
+    
+#ifdef OCVCTRL
+    if (_getoptionbool("-ocv", 0)) {
+      DSP->buildUserInterface(ocvinterface);
+      cout << "OCVCTRL defined" << endl;
+    }
+#endif
+    
+#ifdef MIDICTRL
+    AUDIO = new jackaudio_midi();
+#else
+    AUDIO = new jackaudio();
+#endif
+
+    if (AUDIO == NULL) return _error_str("Faust audio allocation failure");
+
+    // parse command line options
+    if (argc > 2 && _configure() != TCL_OK) return TCL_ERROR;
+
+    // initialize the audio
+    if ( ! AUDIO->init(Tcl_GetString(command_name), DSP)) {
+      return _error_str("Unable to init audio");
+    }
+
+    // also, ignore these for the moment
+#ifdef SOUNDFILE
+    if (_getoptionbool("-soundfile", false)) {
+      soundinterface new SoundUI("", AUDIO->getSampleRate());
+      DSP->buildUserInterface(soundinterface);
+    }
+#endif
+ 
+#ifdef OSCCTRL
+    if (_getoptionbool("-osc", false)) {
+      // FIX.ME - need const char **argv;
+      oscinterface = new OSCUI(name, argc, argv);
+      DSP->buildUserInterface(oscinterface);
+      cout << "OSC is on" << endl;
+    }
+#endif
+
+#ifdef MIDICTRL
+    if (opt_midi) {
+      midiinterface = new MidiUI(AUDIO);
+      cout << "JACK MIDI is used" << endl;
+      DSP->buildUserInterface(midiinterface);
+      cout << "MIDI is on" << endl;
+    }
+#endif
+    
+    if (!AUDIO->start()) {
+      cerr << "Unable to start audio" << endl;
+      exit(1);
+    }
+    
+    cout << "ins " << AUDIO->getNumInputs() << endl;
+    cout << "outs " << AUDIO->getNumOutputs() << endl;
+
+    // run user interfaces
+#ifdef HTTPCTRL
+    if (httpdinterface) httpdinterface->run();
+#endif
+    
+#ifdef OCVCTRL
+    if (ocvinterface) ocvinterface->run();
+#endif
+    
+#ifdef OSCCTRL
+    if (oscinterface) oscinterface->run();
+#endif
+    
+#ifdef MIDICTRL
+    if (midiinterface && ! midiinterface->run()) cerr << "MidiUI run error " << endl;
+#endif
+    
+    // After the allocation of controllers
+#ifdef FILEUI
+    if (finterface) finterface->recallState(Tcl_GetString(rc_file_name));
+#endif
+  
+    // if (interface) interface->run();
+
+    // create Tcl command
+    Tcl_CreateObjCommand(interp, Tcl_GetString(command_name), _command, (ClientData)this, _delete);
+
+    return _success_obj(objv[1]);
+  }
+};
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+  // the command which implements instances of faust dsp instruments of effects
+  static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+    _client_data_t *cdata = ((_client_data_t *)clientData);
+    cdata->interp = interp;
+    cdata->argc = argc;
+    cdata->objv = objv;
+    return cdata->_command();
+  }
+
+  static void _delete(ClientData clientData) {
+    delete ((_client_data_t *)clientData);
+  }
+  
+  int jacktcl_factory(dsp *DSP, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
+    _client_data_t *cdata = new _client_data_t(DSP, interp, argc, objv);
+    return cdata->_factory(_command, _delete);
+  }
+
+#ifdef __cplusplus
+}
+#endif
+
+/******************* BEGIN jacktcl.cpp ****************/
 /******************************************************************************
  *******************************************************************************
  
@@ -88,142 +664,11 @@
 
 /*******************BEGIN ARCHITECTURE SECTION (part 2/2)***************/
 
-using namespace std;
-
-#define FAUSTFLOAT float
-
-#include TCL_INCLUDE_FILE	// include file generated from json
-
-#include <stdio.h>
-#include <string.h>
-#include <stddef.h>
-#include <tcl8.6/tcl.h>
-
-// Meta stores metadata as a tcl dictionary;
-struct TcltkMeta : public Meta {
-  Tcl_Interp *interp;
-  Tcl_Obj *dict;
-
-  TcltkMeta(Tcl_Interp *interp, Tcl_Obj *dict) : interp(interp), dict(dict) {}
-
-  void declare (const char* key, const char* value) {
-    Tcl_DictObjPut(interp, dict, Tcl_NewStringObj(key, -1), Tcl_NewStringObj(value, -1));
-  }
-};
-
-struct Soundfile {};
-
-struct TcltkUI : public UI  {
-  Tcl_Interp *interp;
-  Tcl_Obj *ui_list;
-  FAUSTFLOAT **zonePtrs;
-  int nzones;
-
-  TcltkUI(Tcl_Interp *interp, Tcl_Obj *ui_list, FAUSTFLOAT **zonePtrs)
-    : interp(interp), ui_list(ui_list), zonePtrs(zonePtrs) {
-    nzones = 0;
-    // proc faustk::%s {w c} {
-    //   ...
-    // }
-  }
-
-  void appendList(int argc, Tcl_Obj *objv[]) {
-    Tcl_ListObjAppendElement(interp, ui_list, Tcl_NewListObj(argc, objv));
-  }
-  void appendLabel(const char *type, const char *label) {
-    Tcl_Obj *objv[] = { Tcl_NewStringObj(type, -1), Tcl_NewStringObj(label, -1) };
-    appendList(2, objv);
-  }
-  void appendLabelZone(const char *type, const char *label, FAUSTFLOAT *zone) {
-    zonePtrs[nzones] = zone;
-    Tcl_Obj *objv[] = {
-      Tcl_NewStringObj(type, -1),
-      Tcl_NewStringObj(label, -1),
-      Tcl_NewByteArrayObj((const unsigned char *)zone, sizeof(FAUSTFLOAT)),
-      Tcl_NewIntObj(nzones++)
-    };
-    appendList(4, objv);
-  }
-  void appendLabelZoneIMMS(const char *type, const char *label, FAUSTFLOAT *zone,
-			   FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
-    zonePtrs[nzones] = zone;
-    Tcl_Obj *objv[] = { 
-      Tcl_NewStringObj(type, -1), 
-      Tcl_NewStringObj(label, -1), 
-      Tcl_NewByteArrayObj((const unsigned char *)zone, sizeof(FAUSTFLOAT)),
-      Tcl_NewIntObj(nzones++),
-      Tcl_NewDoubleObj(init),
-      Tcl_NewDoubleObj(min),
-      Tcl_NewDoubleObj(max),
-      Tcl_NewDoubleObj(step)
-    };
-    appendList(8, objv);
-  }
-  void appendLabelZoneMM(const char *type, const char *label, FAUSTFLOAT *zone, 
-		    FAUSTFLOAT min, FAUSTFLOAT max) {
-    zonePtrs[nzones] = zone;
-    Tcl_Obj *objv[] = { 
-      Tcl_NewStringObj(type, -1), 
-      Tcl_NewStringObj(label, -1),
-      Tcl_NewByteArrayObj((const unsigned char *)zone, sizeof(FAUSTFLOAT)),
-      Tcl_NewIntObj(nzones++),
-      Tcl_NewDoubleObj(min), 
-      Tcl_NewDoubleObj(max)
-    };
-    appendList(6, objv);
-  }
-  // -- widget layouts
-  void openTabBox(const char* label) {
-    // ttk::labelframe $w.$path
-    // ttk::notebook
-    appendLabel("openTabBox", label);
-  }
-  void openHorizontalBox(const char* label) {
-    // ttk::labelframe
-    // grid
-    appendLabel("openHorizontalBox", label);
-  }
-  void openVerticalBox(const char* label) {
-    // ttk::labelframe
-    // grid
-    appendLabel("openVerticalBox", label);
-  }
-  void closeBox() {
-    // {}
-    Tcl_Obj *objv[] = { Tcl_NewStringObj("closeBox", -1) };
-    appendList(1, objv);
-  } 
-  // -- active widgets
-  // ttk::button $w.%s -text %s
-  void addButton(const char* label, FAUSTFLOAT* zone) {
-    appendLabelZone("addButton", label, zone);
-  }
-  void addCheckButton(const char* label, FAUSTFLOAT* zone) {
-    appendLabelZone("addCheckButton", label, zone);
-  }
-  void addVerticalSlider(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
-    appendLabelZoneIMMS("addVerticalSlider", label, zone, init, min, max, step);
-  }
-  void addHorizontalSlider(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
-    appendLabelZoneIMMS("addHorizontalSlider", label, zone, init, min, max, step);;
-  }
-  void addNumEntry(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
-    appendLabelZoneIMMS("addNumEntry", label, zone, init, min, max, step);;
-  }
-  // -- passive widgets
-  void addHorizontalBargraph(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT min, FAUSTFLOAT max) {
-    appendLabelZoneMM("addHorizontalBargraph", label, zone, min, max);
-  }
-  void addVerticalBargraph(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT min, FAUSTFLOAT max) {
-    appendLabelZoneMM("addVerticalBargraph", label, zone, min, max);
-  }
-  // -- soundfiles
-  void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) { }
-  // -- metadata declarations
-  void declare(FAUSTFLOAT* zone, const char* key, const char* val) { }
-};
-
-// two mysterious otherwise undefined symbols
+// these are class statics declared, but not defined, in GUI.h
+// I believe their definition is pushed to here so that they
+// can be resolved at shared library relocation time so that
+// each user of a shared library gets its own copies of them.
+// if not, then there may be no shared libraries.
 list<GUI*> GUI::fGuiList;
 ztimedmap GUI::gTimedZoneMap;
 
@@ -231,341 +676,32 @@ ztimedmap GUI::gTimedZoneMap;
 extern "C"
 {
 #endif
-
-// the structure which defines the faust dsp instrument or effect
-typedef struct {
-  Tcl_Interp *interp;
-  Tcl_Obj *class_name;
-  Tcl_Obj *command_name;
-  Tcl_Obj *rc_file_name;
-  int nvoices;
-  int midi_sync;
-  int control;
-  int group;
-  dsp *DSP;
-  jackaudio_midi *AUDIO;
-  MidiUI* MIDI;
-  Tcl_Obj *meta_dict;
-  Tcl_Obj *ui_list;
-#ifdef FILEUI
-    FUI *finterface;
-#endif
-#ifdef PRESETUI
-    PresetUI *pinterface;
-#endif
-  FAUSTFLOAT *zonePtrs[NZONES];
-} _client_data_t;
-
-  /*
-  ** common error/success return with dyanamic or static interp result
-  */
-  static int _result_obj(Tcl_Interp *interp, Tcl_Obj *obj, int ret) {
-    Tcl_SetObjResult(interp, obj);
-    return ret;
-  }
-  static int _result_str(Tcl_Interp *interp, const char *str, int ret) {
-    Tcl_SetObjResult(interp, Tcl_NewStringObj(str, -1));
-    return ret;
-  }
-  static int _error_obj(Tcl_Interp *interp, Tcl_Obj *obj) {
-    return _result_obj(interp, obj, TCL_ERROR);
-  }
-  static int _error_str(Tcl_Interp *interp, const char *str) {
-    return _result_str(interp, str, TCL_ERROR);
-  }
-  static int _success_obj(Tcl_Interp *interp, Tcl_Obj *obj) {
-    return _result_obj(interp, obj, TCL_OK);
-  }
-  static int _success_str(Tcl_Interp *interp, const char *str) {
-    return _result_str(interp, str, TCL_OK);
-  }
-
-  // option helpers
-  int _optionLookup(Tcl_Interp *interp, Tcl_Obj *obj, int *valp) {
-    char *str = Tcl_GetString(obj);
-    for (int opt = 0; opt < NZONES; opt += 1) {
-      if (strcmp(_options[opt].shortname, str+1) == 0 ||
-	  strcmp(_options[opt].address, str+1) == 0) {
-	*valp = opt;
-	return TCL_OK;
-      }
-    }
-    Tcl_ResetResult(interp);
-    return _error_obj(interp, Tcl_ObjPrintf("invalid option %s", str));
-  }
-
-  int _getFloatFromObj(Tcl_Interp *interp, Tcl_Obj *obj, float *valp) {
-    double double_val;
-    if (Tcl_GetDoubleFromObj(interp, obj, &double_val) == TCL_OK) {
-      *valp = double_val;
-      return TCL_OK;
-    }
-    return TCL_ERROR;
-  }
-	
-  // cget command implementation
-  static int _cget(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-    _client_data_t *cdata = (_client_data_t *)clientData;
-    int opt;
-    if (argc != 3) return _error_obj(interp, Tcl_ObjPrintf("usage: %s cget -option", Tcl_GetString(objv[0])));
-    if (_optionLookup(interp, objv[2], &opt) != TCL_OK) return TCL_ERROR;
-    return _success_obj(interp, Tcl_NewDoubleObj(*cdata->zonePtrs[opt]));
-  }
-
-  // configure command implementation
-  static int _configure(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-    _client_data_t *cdata = (_client_data_t *)clientData;
-    if (argc < 2 || (argc&1) != 0)
-      return _error_obj(interp, Tcl_ObjPrintf("usage: %s configure [-option value ...]", Tcl_GetString(objv[0])));
-    if (argc == 2) {
-      Tcl_ResetResult(interp);
-      for (int i = 0; i < NZONES; i += 1) {
-	Tcl_AppendResult(interp, i==0?"-":" -", _options[i].shortname, " ", Tcl_GetString(Tcl_NewDoubleObj(*cdata->zonePtrs[i])), NULL);
-      }
-      return TCL_OK;
-    } else if ((argc & 1) != 0) {
-      return _error_str(interp, "usage: %s configure [option value ...]");
-    } else {
-      for (int a = 2; a < argc; a += 2) {
-	int opt;
-	FAUSTFLOAT val;
-	if (_optionLookup(interp, objv[a], &opt) == TCL_ERROR) return TCL_ERROR;
-	if (_getFloatFromObj(interp, objv[a+1], &val) == TCL_ERROR) return TCL_ERROR;
-	*cdata->zonePtrs[opt] = val;
-      }
-      return TCL_OK;
-    }
-  }
-
-  // the command which implements instances of faust dsp instruments of effects
-  static int _command(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-    _client_data_t *cdata = (_client_data_t *)clientData;  
-    if (argc >= 2) {
-      const char *method = Tcl_GetString(objv[1]);
-      if (strcmp(method, "configure") == 0) return _configure(clientData, interp, argc, objv);
-      if (strcmp(method, "cget") == 0) return _cget(clientData, interp, argc, objv);
-      if (strcmp(method, "meta") == 0) return _success_obj(interp, cdata->meta_dict);
-      if (strcmp(method, "ui") == 0) return _success_obj(interp, cdata->ui_list);
-    }
-    return _error_obj(interp, Tcl_ObjPrintf("usage: %s name configure|cget|meta|ui [...]", Tcl_GetString(objv[0])));
-  }
-
-  // the command which cleans up
-  static void _delete(ClientData clientData) {
-    _client_data_t *cdata = (_client_data_t *)clientData;  
-    if (cdata->MIDI) cdata->MIDI->stop();
-    if (cdata->MIDI) delete cdata->MIDI;
-    if (cdata->AUDIO) cdata->AUDIO->stop();
-    // cdata->AUDIO->init(command_name, cdata->DSP) complement is in delete
-    if (cdata->ui_list) Tcl_DecrRefCount(cdata->ui_list);
-    if (cdata->meta_dict) Tcl_DecrRefCount(cdata->meta_dict);
-    if (cdata->AUDIO) delete cdata->AUDIO;
-    if (cdata->DSP) delete cdata->DSP;
-    if (cdata->rc_file_name) Tcl_DecrRefCount(cdata->rc_file_name);
-    if (cdata->command_name) Tcl_DecrRefCount(cdata->command_name);
-    if (cdata->class_name) Tcl_DecrRefCount(cdata->class_name);
-    Tcl_Free((char *)clientData);
-  }
-
-  static void _analyze(dsp *DSP, int *midi_sync, int *nvoices) {
-    // midi_sync = some UI element specifies "midi:start" "midi:stop" "midi:clock" or "midi:timestamp"
-    // nvoices = metadata options entry specifies [nvoices:<int>]
-  }
-  
-  static int _getoption(Tcl_Interp *interp, int argc, Tcl_Obj * const *objv, const char *optname, int defaultvalue) {
-    int optvalue;
-    for (int i = 0; i+1 < argc; i += 1)
-      if (strcmp(optname, Tcl_GetString(objv[i])) == 0)
-	if (Tcl_GetIntFromObj(interp, objv[i+1], &optvalue) == TCL_OK)
-	  return optvalue;
-    return defaultvalue;
-  }
-  
-  static int _dsperror(Tcl_Interp *interp, _client_data_t *cdata) {
-    if (cdata->DSP == NULL) {
-      _delete(cdata);
-      _error_str(interp, "Faust DSP allocation failure");
-      return 1;
-    } else {
-      return 0;
-    }
-  }
-
-  // the factory command which builds instances faust dsp instruments or effects
+  extern int jacktcl_factory(dsp *DSP, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv);
   static int _factory(ClientData clientData, Tcl_Interp *interp, int argc, Tcl_Obj* const *objv) {
-    // test for insufficient arguments
-    if (argc < 2 || (argc&1) != 0)
-      return _error_obj(interp, Tcl_ObjPrintf("usage: %s name [-option value ...]", Tcl_GetString(objv[0])));
-
-    // allocate command data
-    _client_data_t *cdata = (_client_data_t *)Tcl_Alloc(sizeof(_client_data_t));
-    if (cdata == NULL)
-      return _error_str(interp, "memory allocation failure");
-
-    // initialize command data
-    memset(cdata, 0, sizeof(_client_data_t));
-    cdata->midi_sync = false;
-    cdata->control = true;
-    cdata->nvoices = 4;
-    cdata->interp = interp;
-    Tcl_IncrRefCount((cdata->class_name = objv[0]));
-    Tcl_IncrRefCount((cdata->command_name = objv[1]));
-    Tcl_IncrRefCount((cdata->rc_file_name = Tcl_ObjPrintf("%s/.config/faustcl/%s", getenv("HOME"), Tcl_GetString(cdata->command_name))));
-
-    // // //
-    cdata->DSP = new mydsp();
-    if (_dsperror(interp, cdata)) return TCL_ERROR;
-    _analyze(cdata->DSP, &cdata->midi_sync, &cdata->nvoices);
-    
-    cdata->nvoices = _getoption(interp, argc, objv, "-nvoices", cdata->nvoices);
-    cdata->control = _getoption(interp, argc, objv, "-control", cdata->control);
-    cdata->group = _getoption(interp, argc, objv, "-group", 1);
-
-    cout << "Started with " << cdata->nvoices << " voices\n";
-
-    if (cdata->nvoices > 1) {
-      // make a polyphonic synth
-      cdata->DSP = new mydsp_poly(cdata->DSP, cdata->nvoices, cdata->control, cdata->group);
-      if (_dsperror(interp, cdata)) return TCL_ERROR;
-      // disabled because I can't find effect.h except in #includes in architecture files
-      // add a common effect to the output
-      // cdata->DSP = new dsp_sequencer(cdata->DSP, new effect());
-      // if (_dsperror(interp, cdata)) return TCL_ERROR;
-    }
-
-    if (cdata->midi_sync) {
-      // add midi timing support
-      cdata->DSP = new timed_dsp(cdata->DSP);
-      if (_dsperror(interp, cdata)) return TCL_ERROR;
-    }
-
-    // // // // 
-
-    // build the TclTk interface
-    Tcl_IncrRefCount((cdata->meta_dict = Tcl_NewDictObj())); 
-    Tcl_IncrRefCount((cdata->ui_list = Tcl_NewListObj(0, NULL))); 
-
-    cdata->DSP->metadata(new TcltkMeta(cdata->interp, cdata->meta_dict));
-    cdata->DSP->buildUserInterface(new TcltkUI(cdata->interp, cdata->ui_list, cdata->zonePtrs));
-
-    // // // // 
-
-    // ignore these for a while, they need pointers allocated in _client_data_t
-#ifdef FILEUI
-    cdata->finterface = new FUI();
-#endif
-    //#ifdef PRESETUI
-    //    cdata->pinterface = new PresetUI(cdata->interface, string(PRESETDIR) + string(Tcl_GetString(cdata->command_name)) + ((cdata->nvoices > 0) ? "_poly" : ""));
-    //    cdata->DSP->buildUserInterface(cdata->pinterface);
-    //#else
-    //    DSP->buildUserInterface(interface);
-    //    DSP->buildUserInterface(&finterface);
-    //#endif
-    
-#ifdef HTTPCTRL
-    httpdUI httpdinterface(name, DSP->getNumInputs(), DSP->getNumOutputs(), argc, argv);
-    DSP->buildUserInterface(&httpdinterface);
-    cout << "HTTPD is on" << endl;
-#endif
-    
-#ifdef OCVCTRL
-    OCVUI ocvinterface;
-    DSP->buildUserInterface(&ocvinterface);
-    cout << "OCVCTRL defined" << endl;
-#endif
-    // end of first ignore list
-    
-    cdata->AUDIO = new jackaudio_midi();
-    if (cdata->AUDIO == NULL) { _delete(cdata); return _error_str(interp, "Faust audio allocation failure"); }
-
-    // parse command line options
-    if (argc > 2) {
-      if (_configure(cdata, interp, argc, objv) != TCL_OK) {
-	_delete(cdata);
-	return TCL_ERROR;
-      }
-    }
-
-    // initialize the dsp
-    if ( ! cdata->AUDIO->init(Tcl_GetString(cdata->command_name), cdata->DSP)) {
-      _delete(cdata);
-      return _error_str(interp, "Unable to init audio");
-    }
-
-    // also, ignore these for the moment
-#if SOUNDFILE
-    SoundUI soundinterface("", audio.getSampleRate());
-    DSP->buildUserInterface(&soundinterface);
-#endif
-
-#ifdef OSCCTRL
-    OSCUI oscinterface(name, argc, argv);
-    DSP->buildUserInterface(&oscinterface);
-    cout << "OSC is on" << endl;
-    audio.addControlCallback(osc_compute_callback, &oscinterface);
-#endif
-    
-    cdata->MIDI = new MidiUI(cdata->AUDIO);
-    if (cdata->MIDI == NULL) { _delete(cdata); return _error_str(interp, "Faust MIDI interface allocation failure"); }
-    cout << "JACK MIDI is used" << endl;
-    cdata->DSP->buildUserInterface(cdata->MIDI);
-    cout << "MIDI is on" << endl;
-
-  // construct midi and osc user interfaces
-
-  // start the dsp running
-  if ( ! cdata->AUDIO->start()) {
-    _delete(cdata);
-    return _error_str(interp,"Unable to start audio");
+    return jacktcl_factory(new mydsp(), interp, argc, objv);
   }
-  cout << "ins " << cdata->AUDIO->getNumInputs() << endl;
-  cout << "outs " << cdata->AUDIO->getNumOutputs() << endl;
-    
-  // run user interfaces
-#ifdef HTTPCTRL
-  cdata->httpdinterface.run();
-#endif
-    
-#ifdef OCVCTRL
-  cdata->ocvinterface.run();
-#endif
-    
-#ifdef OSCCTRL
-  cdata->oscinterface.run();
-#endif
-    
-  if (!cdata->MIDI->run()) {
-    return _error_str(interp, "MidiUI run error");
-  }
-    
-  // After the allocation of controllers
-  // finterface.recallState(Tcl_GetString(cdata->rcfilename));
-  
-  // create Tcl command
-  Tcl_CreateObjCommand(interp, Tcl_GetString(cdata->command_name), _command, (ClientData)cdata, _delete);
 
-  Tcl_SetObjResult(interp, objv[1]);
-
-  return TCL_OK;
-}
-
-// the initialization function which installs the adapter factory
-// this is the only global symbol defined in the library
-int DLLEXPORT TCL_INIT_NAME(Tcl_Interp *interp) {
-// tcl stubs and tk stubs are needed for dynamic loading,
-// you must have this set as a compiler option
+  // the initialization function which installs the adapter factory
+  // this is the only global symbol defined in the library
+  int DLLEXPORT TCL_INIT_NAME(Tcl_Interp *interp) {
+    // tcl stubs and tk stubs are needed for dynamic loading,
+    // you must have this set as a compiler option
 #ifdef USE_TCL_STUBS
-  if (Tcl_InitStubs(interp, TCL_VERSION, 1) == NULL)
-    return _error_str(interp, "Tcl_InitStubs failed");
+    if (Tcl_InitStubs(interp, TCL_VERSION, 1) == NULL) {
+      Tcl_SetResult(interp, "Tcl_InitStubs failed");
+      return TCL_EROR;
+    }
 #endif
 #ifdef USE_TK_STUBS
-  if (Tk_InitStubs(interp, TCL_VERSION, 1) == NULL)
-    return _error_str(interp,"Tk_InitStubs failed");
+    if (Tk_InitStubs(interp, TCL_VERSION, 1) == NULL) {
+      Tcl_SetResult(interp, "Tk_InitStubs failed");
+      return TCL_EROR;
+    }
 #endif
-  Tcl_PkgProvide(interp, TCL_PKG_NAME, TCL_PKG_VERSION);
-  Tcl_CreateObjCommand(interp, TCL_CMD_NAME, _factory, NULL, NULL);
-  return TCL_OK;
-}
+    Tcl_PkgProvide(interp, TCL_PKG_NAME, TCL_PKG_VERSION);
+    Tcl_CreateObjCommand(interp, TCL_CMD_NAME, _factory, NULL, NULL);
+    return TCL_OK;
+  }
 
 #ifdef __cplusplus
 }

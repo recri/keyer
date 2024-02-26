@@ -50,11 +50,8 @@ libdir-all-clean::
 %.dsp.json: %.dsp architecture/faustcl.cpp
 	faust -json $< > /dev/null
 
-%.dsp.h: %.dsp.json architecture/faustcl.tcl
-	tclsh architecture/faustcl.tcl $< $@
-
 # tip of the hat to stack overflow for the string to title case conversion hack
-%.o: %.cpp %.dsp.h
+%.o: %.cpp
 	$(CXX) -c -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=$(shell X=$* bash -c 'echo $${X^}_Init') \
 	-DTCL_PKG_NAME=\"faustcl::$*\" -DTCL_PKG_VERSION=\"1.0.0\" -DTCL_CMD_NAME=\"faustcl::$*\" \
 	-DTCL_INCLUDE_FILE=\"$*.dsp.h\" $< -o $@

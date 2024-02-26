@@ -4,6 +4,8 @@
   lower cased to satisfy the loadable library entry
   point rules of Tcl.  We could declare aliases to
   restore the original names in Tcl code.
+  These should be repackaged as faust::pm::name to
+  keep the provenance clear.
 ** brass.dsp
 ** clarinet.dsp
 ** djembe.dsp
@@ -59,10 +61,10 @@ text segment of all the programs.
  285332	   6176	 262240	 553748	  87314	lib/faustcl/sfformantmodelfofcycle.so
  277187	   6192	 262240	 545619	  85353	lib/faustcl/sfformantmodelfofsmooth.so
  228198	   6264	 262240	 496702	  7943e	lib/faustcl/violin.so
-[ ] Enable direct midi control.
+[x] Enable direct midi control.
 [ ] Enable direct OSC control.
-[ ] Enable direct polyphony.
-[ ] Check the sizes with midi and polyphony enabled.  Ouch.
+[x] Enable direct polyphony.
+[x] Check the sizes with midi and polyphony enabled.  Ouch.
    text	   data	    bss	    dec	    hex	filename
  517846	  17104	 262240	 797190	  c2a06	../lib/faustcl/brass.so
  518597	  17104	 262240	 797941	  c2cf5	../lib/faustcl/clarinet.so
@@ -78,10 +80,28 @@ text segment of all the programs.
  582925	  17080	 262240	 862245	  d2825	../lib/faustcl/sfformantmodelfofcycle.so
  573864	  17096	 262240	 853200	  d04d0	../lib/faustcl/sfformantmodelfofsmooth.so
  520699	  17104	 262240	 800043	  c352b	../lib/faustcl/violin.so
-* Grander still, further usurp ChucK
-[ ] build a faust interpreter, as in the chuck Faust chugin,
-  and program the modules on the fly.
+[ ] these sizes are depressing.  I should figure out how to compile 
+    faustcl.cpp into a shared library that takes a dsp pointer, so
+    the jack-tcl.cpp wrapper simply 
+* Grander
+[ ] build a libfaust command, as in the chuck Faust chugin,
+  and compile the modules on the fly.  This probably uses
+  the same shared library, libfaustcl.so, as the statically
+  compiled stuff.
 [ ] implement a high resolution/priority tcl timer thread for
   audio code to run inside.  That's the jack process loop, so
-  how do you slice that processing buffer up to trigger 
-[ ] world domination!
+  how do you slice that processing buffer up to trigger ...
+  ah, you don't, you trigger on MIDI or sample time and generate
+  MIDI
+* MacOS notes
+** Install activeTcl from https://www.activestate.com/products/tcl/
+** Install jack from https://jackaudio.org/downloads/
+*** the developer is unidentified, so you will need to override
+    Apple's block on the install.
+*** And you'll want to put the qtjackctl app into your applications
+    folder as it is how you start, stop, and wire up jack.
+*** And my machine failed to open the default device in duplex mode,
+    mumbles about making a aggregate device somehow, appears to be
+    a long standing issue with Mac's, complaints start in 2009.
+*** Download faust from github.com/grame-cncm/faust/releases
+*** Now figure out how to compile shared libraries. 
