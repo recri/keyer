@@ -9,22 +9,9 @@ CXXFLAGS= -g -O3 $(TCL_CFLAGS) $(JACK_CFLAGS)
 
 LIBS=$(TCL_LIBS) $(JACK_LIBS) -lm
 
-LIBDIR=../lib/faustcl
+LIBDIR=../../lib/faustcl
 
-ALL=	$(LIBDIR)/brass.so \
-	$(LIBDIR)/clarinet.so \
-	$(LIBDIR)/djembe.so \
-	$(LIBDIR)/elecguitar.so \
-	$(LIBDIR)/flute.so \
-	$(LIBDIR)/guitar.so \
-	$(LIBDIR)/ks.so \
-	$(LIBDIR)/marimba.so \
-	$(LIBDIR)/modularinterpinst.so \
-	$(LIBDIR)/nylonguitar.so \
-	$(LIBDIR)/sfformantmodelbp.so \
-	$(LIBDIR)/sfformantmodelfofcycle.so \
-	$(LIBDIR)/sfformantmodelfofsmooth.so \
-	$(LIBDIR)/violin.so
+ALL=	$(LIBDIR)/miditester.so
 
 all:: $(ALL) libdir-all
 
@@ -43,9 +30,8 @@ libdir-clean::
 libdir-all-clean::
 	cd $(LIBDIR) && make all-clean
 
-
-%.cpp: %.dsp architecture/faustcl.cpp
-	faust -a architecture/faustcl.cpp $< -o $@
+%.cpp: %.dsp ../architecture/faustcl.cpp
+	faust -a ../architecture/faustcl.cpp $< -o $@
 
 %.dsp.json: %.dsp architecture/faustcl.cpp
 	faust -json $< > /dev/null
@@ -54,7 +40,7 @@ libdir-all-clean::
 %.o: %.cpp
 	$(CXX) -c -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=$(shell X=$* bash -c 'echo $${X^}_Init') \
 	-DTCL_PKG_NAME=\"faustcl::$*\" -DTCL_PKG_VERSION=\"1.0.0\" -DTCL_CMD_NAME=\"faustcl::$*\" \
-	-DTCL_INCLUDE_FILE=\"$*.dsp.h\" $< -o $@
+	$< -o $@
 
 $(LIBDIR)/%.so: %.o
 	$(CXX) -shared $< $(LIBS) -o $@

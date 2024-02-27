@@ -38,7 +38,6 @@
 // UI inclusions
 
 //#define FILEUI 1	// be prepared to maintain rc files per component if -file true
-#define PRINTUI 1	// be prepared to maintain a print UI if -print true
 //#define PRESETUI 1	// be prepared to maintain preset files per component if -preset true
 //#define OSCCTRL 1	// be prepared to implement an OSC controller if -osc true
 //#define HTTPCTRL 1	// be prepared to implement an http controller if -httpd true
@@ -59,9 +58,6 @@
 #include "faust/gui/FUI.h"
 #endif
 
-#ifdef PRINTUI
-#include "faust/gui/PrintUI.h"
-#endif
 #include "faust/misc.h"
 
 #ifdef PRESETUI
@@ -121,7 +117,7 @@ struct TclTkMeta : public Meta {
 };
 
 // TclTkGUI produces a string to be evaluated which defines
-// a Tcl proc faustk::%s {w cmd} { ... } which builds a tk
+// a Tcl proc %s {w cmd} { ... } which builds a tk
 // interface for $cmd in the window $w
 struct TclTkGUI : public GUI  {
   Tcl_Interp *interp;
@@ -131,7 +127,7 @@ struct TclTkGUI : public GUI  {
 public:
   TclTkGUI(Tcl_Interp *interp, Tcl_Obj *ui_list, Tcl_Obj *command_name, MapUI *mapui) :
     interp(interp), ui_list(ui_list), command_name(command_name), mapui(mapui) {
-    appendCode(Tcl_ObjPrintf("proc faustk::%s {w cmd} {", Tcl_GetString(command_name)));
+    appendCode(Tcl_ObjPrintf("proc %s {w cmd} {", Tcl_GetString(command_name)));
     // Tcl_ListObjAppendElement(interp, ui_list, );
   }
 
@@ -140,8 +136,9 @@ protected:
   std::vector<std::string> pathList;
 
   // Return true for the first level of groups
-  bool pushLabel(const std::string& label) {
-    pathList.push_back(label); return pathList.size() == 1;
+  bool pushLabel(const char *label) {
+    const std::string _label(label);
+    pathList.push_back(_label); return pathList.size() == 1;
   }
     
   // Return true for the last level of groups
@@ -150,13 +147,15 @@ protected:
   }
   
   // Return a complete path built from a label
-  std::string buildPath(const std::string& label) {
+  const std::string buildPath(const char *label) {
+    const std::string _label(label);
     std::string res = "";
     for (size_t i = 0; i < pathList.size(); i++) {
       res = res + "." + pathList[i];
     }
-    return (res + "." + label);
+    return (res + "." + _label);
   }
+
   // here ends simplified version of PathBuilder
 
   // add to the code
@@ -173,32 +172,32 @@ protected:
 
   // append a layout item
   void appendLayout(const char *type, const char *label) {
-    const char *path = buildPath(label).c_str();
-    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s", type, path, label));
+    const std::string path = buildPath(label);
+    appendCode(Tcl_ObjPrintf("  %s $w%s -label %s", type, path.c_str(), label));
     pushLabel(label);
   }
 
   // append a button or checkbutton
   void appendButton(const char *type, const char *label, FAUSTFLOAT *zone) {
-    const char *path = buildPath(label).c_str();
+    const std::string path = buildPath(label);
     const char *option = findShortName(zone);
-    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s -command $cmd -option -%s", type, path, label, option));
+    appendCode(Tcl_ObjPrintf("  %s $w%s -label %s -command $cmd -option -%s", type, path.c_str(), label, option));
   }
   
   // append a slider or a nentry
   void appendSlider(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT init, FAUSTFLOAT step) {
-    const char *path = buildPath(label).c_str();
+    const std::string path = buildPath(label);
     const char *option = findShortName(zone);
-    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s -command $cmd -option -%s -min %f -max %f -init %f -step %f",
-			     type, path, label, option, min, max, init, step));
+    appendCode(Tcl_ObjPrintf("  %s $w%s -label %s -command $cmd -option -%s -min %f -max %f -init %f -step %f",
+			     type, path.c_str(), label, option, min, max, init, step));
   }
   
   // append a bargraph
   void appendBargraph(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max) {
-    const char *path = buildPath(label).c_str();
+    const std::string path = buildPath(label);
     const char *option = findShortName(zone);
-    appendCode(Tcl_ObjPrintf("  faustk::%s $w%s -label %s -command $cmd -option -%s -min %f -max %f",
-			     type, path, label, option, min, max));
+    appendCode(Tcl_ObjPrintf("  %s $w%s -label %s -command $cmd -option -%s -min %f -max %f",
+			     type, path.c_str(), label, option, min, max));
   }
   
 public:
@@ -245,16 +244,15 @@ struct _client_data_t {
   Tcl_Obj *const *objv;		// only valid until _factory() returns;
   Tcl_Obj *class_name;
   Tcl_Obj *command_name;
+  bool *arg_used;		// allocated to argc values, false
+  const char **argv;		// allocated with argc values, Tcl_GetString(objv[i])
   int nvoices;
   bool midi_sync;
   bool control;
-  int group;
+  bool group;
 #ifdef FILEUI
   Tcl_Obj *rc_file_name;
   FUI *finterface;
-#endif
-#ifdef PRINTUI
-  PrintUI *printerface;
 #endif
 #ifdef PRESETUI
   Tcl_Obj *preset_dir;
@@ -288,7 +286,44 @@ struct _client_data_t {
 
   // create a client_data_t
   _client_data_t(dsp *DSP, Tcl_Interp *interp, int argc, Tcl_Obj *const*objv) :
-    DSP(DSP), interp(interp), argc(argc), objv(objv) {
+    DSP(DSP), interp(interp), argc(argc), objv(objv),
+    class_name(nullptr), command_name(nullptr), arg_used(nullptr), argv(nullptr),
+    nvoices(0), midi_sync(false), control(false), group(false),
+#ifdef FILEUI
+    rc_file_name(nullptr), finterface(nullptr),
+#endif
+#ifdef PRESETUI
+    preset_dir(nullptr), pinterface(nullptr),
+#endif
+#ifdef OSCCTRL
+    oscinterface(nullptr),
+#endif
+#ifdef HTTPCTRL
+    httpdinterface(nullptr),
+#endif
+#ifdef SOUNDFILE
+    soundinterface(nullptr),
+#endif
+#ifdef MIDICTRL
+    opt_midi(false), midiinterface(nullptr),
+#endif
+#ifdef OCVCTRL
+    ocvinterface(nullptr),
+#endif
+    AUDIO(nullptr), mapui(nullptr), meta_dict(nullptr), ui_list(nullptr), interface(nullptr)
+  {
+    _init_for_argc();
+  }
+
+  void _init_for_argc(void) {
+    if (arg_used) delete arg_used;
+    if (argv) delete argv;
+    arg_used = new bool[argc];
+    argv = new const char *[argc];
+    for (int i = 0; i < argc; i += 1) {
+      arg_used[i] = false;
+      argv[i] = Tcl_GetString(objv[i]);
+    }
   }
 
   // and clean it up
@@ -315,9 +350,6 @@ struct _client_data_t {
 #ifdef SOUNDFILE
     if (soundinterface) delete soundinterface;
 #endif
-#ifdef PRINTUI
-    if (printerface) delete printerface;
-#endif
 #ifdef PRESETUI
     if (presetui) delete presetui:
     if (preset_dir) Tcl_DecrRefCount(preset_dir);
@@ -326,6 +358,8 @@ struct _client_data_t {
     if (meta_dict) Tcl_DecrRefCount(meta_dict);
     if (command_name) Tcl_DecrRefCount(command_name);
     if (class_name) Tcl_DecrRefCount(class_name);
+    if (arg_used) delete arg_used;
+    if (argv) delete argv;
     if (mapui) delete mapui;
     if (DSP) delete DSP;
   }
@@ -362,18 +396,10 @@ struct _client_data_t {
     return TCL_ERROR;
   }
 	
-#ifdef PRINTUI
-  // print command implementation
-  int _print() {
-    DSP->buildUserInterface(printerface);
-    return TCL_OK;
-  }
-#endif
-  
   // cget command implementation
   int _cget() {
     FAUSTFLOAT *optvalptr;
-    if (argc != 3) return _error_obj(Tcl_ObjPrintf("usage: %s cget -option", Tcl_GetString(objv[0])));
+    if (argc != 3) return _error_obj(Tcl_ObjPrintf("usage: %s cget -option", argv[0]));
     if (_optionLookup(objv[2], &optvalptr) != TCL_OK) return TCL_ERROR;
     return _success_obj(Tcl_NewDoubleObj(*optvalptr));
   }
@@ -390,23 +416,25 @@ struct _client_data_t {
       }
       return TCL_OK;
     }
-    for (int a = 2; a < argc; a += 2) {
-      FAUSTFLOAT *optvalptr, val;
-      if (_optionLookup(objv[a], &optvalptr) != TCL_OK) return TCL_ERROR;
-      if (_getFloatFromObj(objv[a+1], &val) == TCL_ERROR) return TCL_ERROR;
-      *optvalptr = val;
+    for (int a = 2; a+1 < argc; a += 2) {
+      if (! arg_used[a]) {
+	FAUSTFLOAT *optvalptr, val;
+	if (_optionLookup(objv[a], &optvalptr) != TCL_OK) return TCL_ERROR;
+	if (_getFloatFromObj(objv[a+1], &val) == TCL_ERROR) return TCL_ERROR;
+	*optvalptr = val;
+      }
     }
     return TCL_OK;
   }
 
   int _command() {
+    _init_for_argc();
     if (argc < 2) {
-      return _error_obj(Tcl_ObjPrintf("usage: %s name method [...]", Tcl_GetString(objv[0])));
+      return _error_obj(Tcl_ObjPrintf("usage: %s name method [...]", argv[0]));
     } else {
       const char *method = Tcl_GetString(objv[1]);
       if (strcmp(method, "configure") == 0) return _configure();
       if (strcmp(method, "cget") == 0) return _cget();
-      if (strcmp(method, "print") == 0) return _print();
       if (strcmp(method, "meta") == 0) return _success_obj(meta_dict);
       if (strcmp(method, "ui") == 0) return _success_obj(ui_list);
       return _error_obj(Tcl_ObjPrintf("usage: %s name configure|cget|meta|ui [...]", Tcl_GetString(objv[0])));
@@ -417,21 +445,28 @@ struct _client_data_t {
     MidiMeta::analyse(DSP, midi_sync, nvoices);
   }
   
+  // these need to parse and search metadata too
   int _getoptionint(const char *optname, int defaultvalue) {
     int optvalue;
     for (int i = 2; i+1 < argc; i += 2)
-      if (strcmp(optname, Tcl_GetString(objv[i])) == 0)
-	if (Tcl_GetIntFromObj(interp, objv[i+1], &optvalue) == TCL_OK)
+      if (arg_used[i] == false && strcmp(optname, Tcl_GetString(objv[i])) == 0) 
+	if (Tcl_GetIntFromObj(interp, objv[i+1], &optvalue) == TCL_OK) {
+	  arg_used[i] = true;
+	  arg_used[i+1] = true;
 	  return optvalue;
+	}
     return defaultvalue;
   }
   
-  int _getoptionbool(const char *optname, bool defaultvalue) {
+  bool _getoptionbool(const char *optname, bool defaultvalue) {
     int optvalue;
     for (int i = 2; i+1 < argc; i += 2)
-      if (strcmp(optname, Tcl_GetString(objv[i])) == 0)
-	if (Tcl_GetBooleanFromObj(interp, objv[i+1], &optvalue) == TCL_OK)
+      if (arg_used[i] == false && strcmp(optname, Tcl_GetString(objv[i])) == 0)
+	if (Tcl_GetBooleanFromObj(interp, objv[i+1], &optvalue) == TCL_OK) {
+	  arg_used[i] = true;
+	  arg_used[i+1] = true;
 	  return optvalue;
+	}
     return defaultvalue;
   }
   
@@ -508,9 +543,6 @@ struct _client_data_t {
       // .config works for Linux and MacOS
       Tcl_IncrRefCount((rc_file_name = Tcl_ObjPrintf("%s/.config/faustcl/%s", getenv("HOME"), Tcl_GetString(command_name))));
     }
-#endif
-#ifdef PRINTUI
-    if (_getoptionbool("-print", true)) { printerface = new PrintUI(); }
 #endif
 #ifdef PRESETUI
     if (_getoptionbool("-preset", false)) {

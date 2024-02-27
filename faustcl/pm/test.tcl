@@ -1,18 +1,16 @@
 #!/usr/bin/tclsh
 
-lappend auto_path ../lib
+lappend auto_path ../../lib
 
 if {$argv == {}} {
-    set argv {brass clarinet djembe elecguitar flute guitar ks marimba 
-	modularinterpinst nylonguitar sfformantmodelbp sfformantmodelfofcycle
-	sfformantmodelfofsmooth violin}
+    set argv [lmap f [glob *.dsp] {file rootname $f}]
 }
 foreach root $argv {
     puts "testing $root"
     set stem ${root}1
     puts "command name $stem"
-    puts "package require faustcl::$root [package require faustcl::$root]"
-    puts "faustcl::$root $stem -> [faustcl::$root $stem]"
+    puts "package require faust::pm::$root [package require faust::pm::$root]"
+    puts "faust::pm::$root $stem -> [faust::pm::$root $stem]"
     # puts "$stem meta"
     # foreach {key value} [$stem meta] { puts "$key -> $value" }
     # puts "$stem ui -> set [$stem ui]"

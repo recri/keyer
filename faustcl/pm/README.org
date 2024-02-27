@@ -1,0 +1,117 @@
+* A collection of synthesized musical instruments
+  come from the faust physmodels.lib with ui's and
+  a few midi assignments.  The names have been 
+  lower cased to satisfy the loadable library entry
+  point rules of Tcl.  We could declare aliases to
+  restore the original names in Tcl code.
+  These should be repackaged as faust::pm::name to
+  keep the provenance clear.
+** brass.dsp
+** clarinet.dsp
+** djembe.dsp
+** elecGuitar.dsp,
+** flute.dsp 
+** guitar.dsp
+** ks.dsp
+** marimba.dsp
+** modularInterpInst.dsp 
+** nylonGuitar.dsp
+** SFFormantModelBP.dsp
+** SFFormantModelFofCycle.dsp
+** SFFormantModelFofSmooth.dsp
+** violin.dsp
+* More could be built from other files, but they would
+  need ui definitions.  In fact, much of the contents
+  of sdrtcl could be rewritten into faustcl.
+* Todo list for this project
+[*] Rewrite the data types in faustcl.cpp
+[*] Implement delete in faustcl.cpp
+[ ] Make faust generate the zonePtrs map without faustcl.tcl
+[x] Check the sizes of the built modules.
+   text	   data	    bss	    dec	    hex	filename
+  44372	   2272	 262176	 308820	  4b654	lib/faustcl/brass.so
+  45223	   2272	 262176	 309671	  4b9a7	lib/faustcl/clarinet.so
+  48425	   2136	      8	  50569	   c589	lib/faustcl/djembe.so
+  44787	   2160	      8	  46955	   b76b	lib/faustcl/elecguitar.so
+  47612	   2248	 262176	 312036	  4c2e4	lib/faustcl/flute.so
+  44735	   2160	      8	  46903	   b737	lib/faustcl/guitar.so
+  39336	   2128	      8	  41472	   a200	lib/faustcl/ks.so
+  66135	   2136	   1032	  69303	  10eb7	lib/faustcl/marimba.so
+ 107129	   2232	      8	 109369	  1ab39	lib/faustcl/modularinterpinst.so
+  44796	   2160	      8	  46964	   b774	lib/faustcl/nylonguitar.so
+ 101566	   2288	 262176	 366030	  595ce	lib/faustcl/sfformantmodelbp.so
+ 103205	   2248	 262176	 367629	  59c0d	lib/faustcl/sfformantmodelfofcycle.so
+  96111	   2264	 262176	 360551	  58067	lib/faustcl/sfformantmodelfofsmooth.so
+  47285	   2272	 262176	 311733	  4c1b5	lib/faustcl/violin.so
+[x] Check the sizes with the MapUI enabled.  The point being that the simple
+addition of the MapUI definition and a call to it added 180000 bytes to the
+text segment of all the programs.
+   text	   data	    bss	    dec	    hex	filename
+ 225281	   6264	 262240	 493785	  788d9	lib/faustcl/brass.so
+ 225988	   6264	 262240	 494492	  78b9c	lib/faustcl/clarinet.so
+ 227514	   6104	     72	 233690	  390da	lib/faustcl/djembe.so
+ 226584	   6152	     72	 232808	  38d68	lib/faustcl/elecguitar.so
+ 228829	   6240	 262240	 497309	  7969d	lib/faustcl/flute.so
+ 226828	   6152	     72	 233052	  38e5c	lib/faustcl/guitar.so
+ 221270	   6120	     72	 227462	  37886	lib/faustcl/ks.so
+ 248358	   6056	   1096	 255510	  3e616	lib/faustcl/marimba.so
+ 291452	   6128	     72	 297652	  48ab4	lib/faustcl/modularinterpinst.so
+ 226865	   6152	     72	 233089	  38e81	lib/faustcl/nylonguitar.so
+ 282491	   6232	 262240	 550963	  86833	lib/faustcl/sfformantmodelbp.so
+ 285332	   6176	 262240	 553748	  87314	lib/faustcl/sfformantmodelfofcycle.so
+ 277187	   6192	 262240	 545619	  85353	lib/faustcl/sfformantmodelfofsmooth.so
+ 228198	   6264	 262240	 496702	  7943e	lib/faustcl/violin.so
+[x] Enable direct midi control.
+[ ] Enable direct OSC control.
+[x] Enable direct polyphony.
+[x] Check the sizes with midi and polyphony enabled.  Ouch.
+   text	   data	    bss	    dec	    hex	filename
+ 517846	  17104	 262240	 797190	  c2a06	../lib/faustcl/brass.so
+ 518597	  17104	 262240	 797941	  c2cf5	../lib/faustcl/clarinet.so
+ 520532	  16960	     72	 537564	  833dc	../lib/faustcl/djembe.so
+ 519217	  16992	     72	 536281	  82ed9	../lib/faustcl/elecguitar.so
+ 521434	  17080	 262240	 800754	  c37f2	../lib/faustcl/flute.so
+ 519221	  16992	     72	 536285	  82edd	../lib/faustcl/guitar.so
+ 513386	  16960	     72	 530418	  817f2	../lib/faustcl/ks.so
+ 545545	  16960	   1096	 563601	  89991	../lib/faustcl/marimba.so
+ 589746	  17048	     72	 606866	  94292	../lib/faustcl/modularinterpinst.so
+ 519290	  16992	     72	 536354	  82f22	../lib/faustcl/nylonguitar.so
+ 578429	  17128	 262240	 857797	  d16c5	../lib/faustcl/sfformantmodelbp.so
+ 582925	  17080	 262240	 862245	  d2825	../lib/faustcl/sfformantmodelfofcycle.so
+ 573864	  17096	 262240	 853200	  d04d0	../lib/faustcl/sfformantmodelfofsmooth.so
+ 520699	  17104	 262240	 800043	  c352b	../lib/faustcl/violin.so
+[ ] these sizes are depressing.  I should figure out how to compile 
+    faustcl.cpp into a shared library that takes a dsp pointer, so
+    the jack-tcl.cpp wrapper simply 
+* Grander
+[ ] build a libfaust command, as in the chuck Faust chugin,
+  and compile the modules on the fly.  This probably uses
+  the same shared library, libfaustcl.so, as the statically
+  compiled stuff.
+[ ] implement a high resolution/priority tcl timer thread for
+  audio code to run inside.  That's the jack process loop, so
+  how do you slice that processing buffer up to trigger ...
+  ah, you don't, you trigger on MIDI or sample time and generate
+  MIDI
+* MacOS notes
+** Install activeTcl from https://www.activestate.com/products/tcl/
+** Install jack from https://jackaudio.org/downloads/
+*** the developer is unidentified, so you will need to override
+    Apple's block on the install.
+*** And you'll want to put the qtjackctl app into your applications
+    folder as it is how you start, stop, and wire up jack.
+*** And my machine failed to open the default device in duplex mode,
+    mumbles about making a aggregate device somehow, appears to be
+    a long standing issue with Mac's, complaints start in 2009.
+*** Download faust from github.com/grame-cncm/faust/releases
+*** Now figure out how to compile shared libraries. 
+[ ] search meta options for factory flags
+[ ] split the loadable library and specifics
+[ ] handle the camel case dsp names
+[ ] faust dsp's go into the faust Tcl namespace
+[ ] faust dsp's from a particular library or directory
+	get an additional identifying prefix
+[ ] fix the bogus string in the ui_proc
+[ ] collect all the individual ui declare's into a dict
+[ ] add expm (examples/physicalmodels) package
+[ ] add stk (examples/physicalmodels/stk) package
