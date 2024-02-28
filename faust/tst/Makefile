@@ -1,6 +1,6 @@
 PKG=tst
 
-LIBDIR=../../lib/faust_$(PKG)
+LIBDIR=../../lib/faust/$(PKG)
 
 ALL=	$(LIBDIR)/midiTester.so
 

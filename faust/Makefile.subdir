@@ -26,13 +26,13 @@ all-clean:: libdir-all-clean
 	rm -f $(ALL)
 
 libdir-all::
-	cd $(LIBDIR) && make all
+	cd $(LIBDIR)/.. && make all
 
 libdir-clean::
-	cd $(LIBDIR) && make clean
+	cd $(LIBDIR)/.. && make clean
 
 libdir-all-clean::
-	cd $(LIBDIR) && make all-clean
+	cd $(LIBDIR)/.. && make all-clean
 
 test: all
 	tclsh ../test.tcl
@@ -54,8 +54,10 @@ test: all
 $(LIBDIR)/%.so: %.o
 	$(CXX) -shared $< $(LIBS) -o $@
 
-$(LIBDIR)/%.so: %.dsp ../architecture/faustcl.cpp
-	faust -a ../architecture/faustcl.cpp $< | \
+# link flags for shared library, appended to end of the $(CXX) command arguments
+#  -L $(LIBDIR)/.. -ljacktcltk -Wl,-rpath='$$ORIGIN/..'
+$(LIBDIR)/%.so: %.dsp ../architecture/jacktcltk.cpp
+	faust -a ../architecture/jacktcltk.cpp $< | \
 	$(CXX) -shared -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=$(shell X=`echo $* | tr [:upper:] [:lower:]` bash -c 'echo $${X^}_Init') \
 	-DTCL_PKG_NAME=\"faust::$(PKG)::$*\" -DTCL_PKG_VERSION=\"1.0.0\" -DTCL_CMD_NAME=\"faust::$(PKG)::$*\" \
 	-xc++ - $(LIBS) -o $@

@@ -1,4 +1,4 @@
-SUBDIRS= morse sdrkit sdrtk sdrutil sdrtcl sdrtcltk faust_pm faust_stk faust_tst
+SUBDIRS= morse sdrkit sdrtk sdrutil sdrtcl sdrtcltk faust
 
 .PHONY: all clean all-clean
 

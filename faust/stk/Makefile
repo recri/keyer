@@ -1,6 +1,6 @@
 PKG=stk
 
-LIBDIR=../../lib/faust_$(PKG)
+LIBDIR=../../lib/faust/$(PKG)
 
 ALL=	$(LIBDIR)/bass.so \
 	$(LIBDIR)/tibetanBowl.so

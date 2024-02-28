@@ -1,3 +1,6 @@
+# add architecture to subdir to build a shared library
+# doesn't work at present.
+
 SUBDIRS=pm stk tst
 
 .PHONY: all clean all-clean

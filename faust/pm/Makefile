@@ -1,6 +1,6 @@
 PKG=pm
 
-LIBDIR=../../lib/faust_$(PKG)
+LIBDIR=../../lib/faust/$(PKG)
 
 ALL=	$(LIBDIR)/brass.so \
 	$(LIBDIR)/clarinet.so \
