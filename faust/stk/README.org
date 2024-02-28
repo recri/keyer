@@ -1,0 +1,5 @@
+* Models from .../faust/examples/physicalModels/faust-stk
+  directory in the faust-2.70.3 distribution.
+  So, presumably, Romain Michon's reimplementation in faust
+  of the Synthesis ToolKit originally by Perry R. Cook & 
+  Gary P. Scavone. https://ccrma.stanford.edu/software/stk/ 

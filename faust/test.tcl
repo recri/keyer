@@ -1,16 +1,18 @@
-#!/usr/bin/tclsh
 
 lappend auto_path ../../lib
 
 if {$argv == {}} {
-    set argv [lmap f [glob *.dsp] {file rootname $f}]
+    set argv [lsort -nocase [lmap f [glob *.dsp] {file rootname $f}]]
+    if {$argv eq {}} {
+	error "run me in a directory with faust .dsp files"
+    }
 }
 foreach root $argv {
     puts "testing $root"
     set stem ${root}1
     puts "command name $stem"
     puts "package require faust::pm::$root [package require faust::pm::$root]"
-    puts "faust::pm::$root $stem -> [faust::pm::$root $stem]"
+    puts "faust::pm::$root $stem -midi 1 -> [faust::pm::$root $stem -midi 1]"
     # puts "$stem meta"
     # foreach {key value} [$stem meta] { puts "$key -> $value" }
     # puts "$stem ui -> set [$stem ui]"

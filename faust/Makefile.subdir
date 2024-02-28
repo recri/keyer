@@ -1,0 +1,61 @@
+#
+# included makefile for sub directory builds
+# sub directory makefiles should define
+# PKG, LIBDIR, and ALL.
+# PKG is the package name
+# LIBDIR is the target library directory
+# ALL is the list of shared object targets
+#
+TCL_CFLAGS=$(shell pkg-config --cflags tcl)
+TCL_LIBS=$(shell pkg-config --libs tcl)
+
+JACK_CFLAGS=$(shell pkg-config --cflags jack)
+JACK_LIBS=$(shell pkg-config --libs jack)
+
+CFLAGS=-std=c99 -g -O3 $(TCL_CFLAGS) ${JACK_CFLAGS) -I.
+CXXFLAGS= -g -O3 $(TCL_CFLAGS) $(JACK_CFLAGS) -I.
+
+LIBS=$(TCL_LIBS) $(JACK_LIBS) -lm
+
+all:: $(ALL) libdir-all
+
+clean:: libdir-clean
+	rm -f *~ *.cpp *.o *.so *.dsp.json *.dsp.h
+
+all-clean:: libdir-all-clean
+	rm -f $(ALL)
+
+libdir-all::
+	cd $(LIBDIR) && make all
+
+libdir-clean::
+	cd $(LIBDIR) && make clean
+
+libdir-all-clean::
+	cd $(LIBDIR) && make all-clean
+
+test: all
+	tclsh ../test.tcl
+      
+%.cpp: %.dsp ../architecture/jacktcltk.cpp
+	faust -a ../architecture/jacktcltk.cpp $< -o $@
+
+# to make a lower case name_Init
+#	$(CXX) -c -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=Pm_$(shell echo $* | tr [:upper:] [:lower:])_Init \
+# to make a title case Name_Init
+# 	$(CXX) -c -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=$(shell X=$* bash -c 'echo $${X^}_Init') \
+# to make a title cased lower cased Namecamelcase_Init
+
+%.o: %.cpp
+	$(CXX) -c -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=$(shell X=`echo $* | tr [:upper:] [:lower:]` bash -c 'echo $${X^}_Init') \
+	-DTCL_PKG_NAME=\"faust::$(PKG)::$*\" -DTCL_PKG_VERSION=\"1.0.0\" -DTCL_CMD_NAME=\"faust::$(PKG)::$*\" \
+	 $< -o $*.o
+
+$(LIBDIR)/%.so: %.o
+	$(CXX) -shared $< $(LIBS) -o $@
+
+$(LIBDIR)/%.so: %.dsp ../architecture/faustcl.cpp
+	faust -a ../architecture/faustcl.cpp $< | \
+	$(CXX) -shared -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=$(shell X=`echo $* | tr [:upper:] [:lower:]` bash -c 'echo $${X^}_Init') \
+	-DTCL_PKG_NAME=\"faust::$(PKG)::$*\" -DTCL_PKG_VERSION=\"1.0.0\" -DTCL_CMD_NAME=\"faust::$(PKG)::$*\" \
+	-xc++ - $(LIBS) -o $@

@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
+#include <ctype.h>
 #include <tcl8.6/tcl.h>
 
 // UI inclusions
@@ -119,85 +120,113 @@ struct TclTkMeta : public Meta {
 // TclTkGUI produces a string to be evaluated which defines
 // a Tcl proc %s {w cmd} { ... } which builds a tk
 // interface for $cmd in the window $w
+
 struct TclTkGUI : public GUI  {
   Tcl_Interp *interp;
   Tcl_Obj *ui_list, *command_name;
-  MapUI *mapui;
-    
+  dsp *DSP;
+  MapUI mapui;
+
 public:
-  TclTkGUI(Tcl_Interp *interp, Tcl_Obj *ui_list, Tcl_Obj *command_name, MapUI *mapui) :
-    interp(interp), ui_list(ui_list), command_name(command_name), mapui(mapui) {
-    appendCode(Tcl_ObjPrintf("proc %s {w cmd} {", Tcl_GetString(command_name)));
-    // Tcl_ListObjAppendElement(interp, ui_list, );
+  TclTkGUI(Tcl_Interp *interp, Tcl_Obj *ui_list, Tcl_Obj *command_name, dsp *DSP) :
+    interp(interp), ui_list(ui_list), command_name(command_name), DSP(DSP) {
+    DSP->buildUserInterface(&mapui);
   }
+
+  // used for map zoneptr to shortName, actually maps shortName to zonePtr.
+  // used by configure for constructing all parameter mappings
+  std::map<std::string, FAUSTFLOAT*>& getShortnameMap() { return mapui.getShortnameMap(); }
+
+  // used to find zonePtr from shortName, address, or label
+  // since I only use shortName, could be replaced by getShortNameMap()
+  FAUSTFLOAT* getParamZone(const std::string& str) { return mapui.getParamZone(str); }
 
 protected:
-  // here begins simplified version of PathBuilder
-  std::vector<std::string> pathList;
-
-  // Return true for the first level of groups
-  bool pushLabel(const char *label) {
-    const std::string _label(label);
-    pathList.push_back(_label); return pathList.size() == 1;
+  // find the short name that identifies the zone
+  const char *findShortName(FAUSTFLOAT *zone) {
+    for (const auto& it : getShortnameMap()) {
+      if (it.second == zone)
+	return it.first.c_str();
+    }
+    return "";
   }
-    
-  // Return true for the last level of groups
-  bool popLabel() {
-    pathList.pop_back(); return pathList.size() == 0;
+
+  // build a path from the stack of labels stored
+  std::string buildWindowPath(const char *label) {
+    std::string slashes = mapui.buildPath(label);
+    std::string dots = "";
+    for (auto &c : slashes)
+      dots += (c == '/' ? '.' : isupper(c) ? tolower(c) : c);
+    return dots;
   }
   
-  // Return a complete path built from a label
-  const std::string buildPath(const char *label) {
-    const std::string _label(label);
-    std::string res = "";
-    for (size_t i = 0; i < pathList.size(); i++) {
-      res = res + "." + pathList[i];
-    }
-    return (res + "." + _label);
-  }
+  // find the short name for an option
+  std::string buildShortName(const char *label) { return mapui.buildShortname(label); }
+  
+  // push a label
+  bool pushLabel(const char *label) { return mapui.pushLabel(label); }
 
-  // here ends simplified version of PathBuilder
-
+  // pop a label
+  bool popLabel() { return mapui.popLabel(); }
+  
   // add to the code
   void appendCode(Tcl_Obj *lineOfCode) {
     Tcl_ListObjAppendElement(interp, ui_list, lineOfCode);
   }
 
-  const char *findShortName(FAUSTFLOAT *zone) {
-    for (const auto& it : mapui->getShortnameMap()) {
-      if (it.second == zone) return it.first.c_str();
-    }
-    return "";
+  void appendPrefix() {
+    appendCode(Tcl_ObjPrintf("proc %s {w cmd} {", Tcl_GetString(command_name)));
+    appendCode(Tcl_NewStringObj("  set meta [dict create]", -1));
   }
 
+  void appendSuffix() {
+    appendCode(Tcl_NewStringObj("}", -1));
+  }
+  
   // append a layout item
   void appendLayout(const char *type, const char *label) {
-    const std::string path = buildPath(label);
+    const std::string path = buildWindowPath(label);
+    if (pushLabel(label))
+      appendPrefix();
     appendCode(Tcl_ObjPrintf("  %s $w%s -label %s", type, path.c_str(), label));
-    pushLabel(label);
   }
 
+  // mark the end of a layout item
+  void appendEndLayout(void) {
+    if (popLabel())
+      appendSuffix();
+  }
+  
   // append a button or checkbutton
   void appendButton(const char *type, const char *label, FAUSTFLOAT *zone) {
-    const std::string path = buildPath(label);
-    const char *option = findShortName(zone);
-    appendCode(Tcl_ObjPrintf("  %s $w%s -label %s -command $cmd -option -%s", type, path.c_str(), label, option));
+    const std::string path = buildWindowPath(label);
+    const std::string option = buildShortName(label);
+    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
+    appendCode(Tcl_ObjPrintf("  %s $w%s -label %s -command $cmd -option -%s", type, path.c_str(), label, option.c_str()));
   }
   
   // append a slider or a nentry
   void appendSlider(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT init, FAUSTFLOAT step) {
-    const std::string path = buildPath(label);
-    const char *option = findShortName(zone);
+    const std::string path = buildWindowPath(label);
+    const std::string option = buildShortName(label);
+    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
     appendCode(Tcl_ObjPrintf("  %s $w%s -label %s -command $cmd -option -%s -min %f -max %f -init %f -step %f",
-			     type, path.c_str(), label, option, min, max, init, step));
+			     type, path.c_str(), label, option.c_str(), min, max, init, step));
   }
   
   // append a bargraph
   void appendBargraph(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max) {
-    const std::string path = buildPath(label);
-    const char *option = findShortName(zone);
+    const std::string path = buildWindowPath(label);
+    const std::string option = buildShortName(label);
+    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
     appendCode(Tcl_ObjPrintf("  %s $w%s -label %s -command $cmd -option -%s -min %f -max %f",
-			     type, path.c_str(), label, option, min, max));
+			     type, path.c_str(), label, option.c_str(), min, max));
+  }
+
+  // append a declaration
+  void appendDeclare(FAUSTFLOAT *zone, const char *key, const char *value) {
+    const char *option = findShortName(zone);
+    appendCode(Tcl_ObjPrintf("  dict set meta -%s %s {%s}", option, key, value));
   }
   
 public:
@@ -205,7 +234,7 @@ public:
   void openTabBox(const char* label) { appendLayout("tgroup", label); }
   void openHorizontalBox(const char* label) { appendLayout("hgroup", label); }
   void openVerticalBox(const char* label) { appendLayout("vgroup", label); }
-  void closeBox() { if (popLabel()) { appendCode(Tcl_NewStringObj("}", -1)); } }
+  void closeBox() { appendEndLayout(); }
 
   // -- active widgets
   void addButton(const char* label, FAUSTFLOAT* zone) { appendButton("button", label, zone); }
@@ -230,8 +259,7 @@ public:
   void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) { }
   // -- metadata declarations
   void declare(FAUSTFLOAT* zone, const char* key, const char* val) { 
-    const char *option = findShortName(zone);
-    appendCode(Tcl_ObjPrintf("  declare -%s {%s} {%s}", option, key, val));
+    appendDeclare(zone, key, val);
   }
 };
 
@@ -279,7 +307,6 @@ struct _client_data_t {
 #else
   jackaudio *AUDIO;
 #endif
-  MapUI *mapui;
   Tcl_Obj *meta_dict;
   Tcl_Obj *ui_list;
   TclTkGUI *interface;
@@ -310,7 +337,7 @@ struct _client_data_t {
 #ifdef OCVCTRL
     ocvinterface(nullptr),
 #endif
-    AUDIO(nullptr), mapui(nullptr), meta_dict(nullptr), ui_list(nullptr), interface(nullptr)
+    AUDIO(nullptr), meta_dict(nullptr), ui_list(nullptr), interface(nullptr)
   {
     _init_for_argc();
   }
@@ -360,7 +387,6 @@ struct _client_data_t {
     if (class_name) Tcl_DecrRefCount(class_name);
     if (arg_used) delete arg_used;
     if (argv) delete argv;
-    if (mapui) delete mapui;
     if (DSP) delete DSP;
   }
     
@@ -382,7 +408,8 @@ struct _client_data_t {
 
   // option helpers
   int _optionLookup(Tcl_Obj *obj, FAUSTFLOAT **valp) {
-    *valp = mapui->getParamZone(string(Tcl_GetString(obj)+1));
+    *valp = interface->getParamZone(Tcl_GetString(obj)+1);
+    // printf("option %s, zone %lud\n", Tcl_GetString(obj), (unsigned long)*valp);
     return (*valp != NULL) ? TCL_OK :
       _error_obj(Tcl_ObjPrintf("invalid option \"%s\".", Tcl_GetString(obj)));
   }
@@ -395,7 +422,7 @@ struct _client_data_t {
     }
     return TCL_ERROR;
   }
-	
+  
   // cget command implementation
   int _cget() {
     FAUSTFLOAT *optvalptr;
@@ -411,8 +438,8 @@ struct _client_data_t {
     if (argc == 2) {
       Tcl_ResetResult(interp);
       int index = 0;
-      for (auto it = mapui->getShortnameMap().begin(); it != mapui->getShortnameMap().end(); ++it) {
-	Tcl_AppendResult(interp,  (index++ == 0 ? "" : " "), "-", it->first.c_str(), " ", Tcl_GetString(Tcl_NewDoubleObj(*it->second)), NULL);
+      for (auto & it : interface->getShortnameMap()) {
+	Tcl_AppendResult(interp,  (index++ == 0 ? "" : " "), "-", it.first.c_str(), " ", Tcl_GetString(Tcl_NewDoubleObj(*it.second)), NULL);
       }
       return TCL_OK;
     }
@@ -497,13 +524,12 @@ struct _client_data_t {
     Tcl_IncrRefCount(command_name = objv[1]);
 
     // build the TclTk interface
-    DSP->buildUserInterface(mapui = new MapUI());
     meta_dict = Tcl_NewDictObj();
     Tcl_IncrRefCount(meta_dict);
     DSP->metadata(new TclTkMeta(interp, meta_dict) );
     ui_list = Tcl_NewListObj(0, NULL);
     Tcl_IncrRefCount(ui_list);
-    interface = new TclTkGUI(interp, ui_list, command_name, mapui);
+    interface = new TclTkGUI(interp, ui_list, command_name, DSP);
     DSP->buildUserInterface(interface);
 
     // search for midi timing options

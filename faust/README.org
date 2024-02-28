@@ -93,6 +93,16 @@ text segment of all the programs.
   how do you slice that processing buffer up to trigger ...
   ah, you don't, you trigger on MIDI or sample time and generate
   MIDI
+[ ] search meta options for factory flags
+[ ] split the loadable library and specifics
+[ ] handle the camel case dsp names
+[ ] faust dsp's go into the faust Tcl namespace
+[ ] faust dsp's from a particular library or directory
+	get an additional identifying prefix
+[ ] fix the bogus string in the ui_proc
+[ ] collect all the individual ui declare's into a dict
+[ ] add expm (examples/physicalmodels) package
+[ ] add stk (examples/physicalmodels/stk) package
 * MacOS notes
 ** Install activeTcl from https://www.activestate.com/products/tcl/
 ** Install jack from https://jackaudio.org/downloads/
@@ -105,13 +115,3 @@ text segment of all the programs.
     a long standing issue with Mac's, complaints start in 2009.
 *** Download faust from github.com/grame-cncm/faust/releases
 *** Now figure out how to compile shared libraries. 
-[ ] search meta options for factory flags
-[ ] split the loadable library and specifics
-[ ] handle the camel case dsp names
-[ ] faust dsp's go into the faust Tcl namespace
-[ ] faust dsp's from a particular library or directory
-	get an additional identifying prefix
-[ ] fix the bogus string in the ui_proc
-[ ] collect all the individual ui declare's into a dict
-[ ] add expm (examples/physicalmodels) package
-[ ] add stk (examples/physicalmodels/stk) package
