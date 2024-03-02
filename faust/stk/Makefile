@@ -6,3 +6,9 @@ ALL=	$(LIBDIR)/bass.so \
 	$(LIBDIR)/tibetanBowl.so
 
 include ../Makefile.subdir
+
+sources::
+	ln -s /usr/share/faust/examples/physicalModeling/faust-stk/*.dsp .
+	ln -s /usr/share/faust/examples/physicalModeling/faust-stk/*.h .
+	ln -s /usr/share/faust/examples/physicalModeling/faust-stk/README .
+

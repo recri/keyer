@@ -404,11 +404,7 @@ struct _client_data_t {
 #ifdef OCVCTRL
   OCVUI *ocvinterface;
 #endif
-#ifdef MIDICTRL
-  jackaudio_midi *AUDIO;
-#else
-  jackaudio *AUDIO;
-#endif
+  audio *AUDIO;
   Tcl_Obj *meta_dict;
   Tcl_Obj *ui_list;
   TclTkGUI *interface;
@@ -584,6 +580,7 @@ struct _client_data_t {
 	  arg_used[i+1] = true;
 	  return optvalue;
 	}
+    // FIX.ME search meta_dict
     return defaultvalue;
   }
   
@@ -596,6 +593,7 @@ struct _client_data_t {
 	  arg_used[i+1] = true;
 	  return optvalue;
 	}
+    // FIX.ME search meta_dict
     return defaultvalue;
   }
   
@@ -696,7 +694,10 @@ struct _client_data_t {
 #endif
     
 #ifdef MIDICTRL
-    AUDIO = new jackaudio_midi();
+    if (opt_midi)
+      AUDIO = new jackaudio_midi();
+    else
+      AUDIO = new jackaudio();
 #else
     AUDIO = new jackaudio();
 #endif
@@ -730,7 +731,7 @@ struct _client_data_t {
 
 #ifdef MIDICTRL
     if (opt_midi) {
-      midiinterface = new MidiUI(AUDIO);
+      midiinterface = new MidiUI(static_cast<jackaudio_midi*>(AUDIO));
       cout << "JACK MIDI is used" << endl;
       DSP->buildUserInterface(midiinterface);
       cout << "MIDI is on" << endl;

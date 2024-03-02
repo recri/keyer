@@ -1,0 +1,1 @@
+/usr/share/faust/examples/physicalModeling/faust-stk/piano.dsp

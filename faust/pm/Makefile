@@ -17,4 +17,10 @@ ALL=	$(LIBDIR)/brass.so \
 	$(LIBDIR)/SFFormantModelFofSmooth.so \
 	$(LIBDIR)/violin.so
 
+ALL=	$(LIBDIR)/djembe.so \
+	$(LIBDIR)/elecGuitar.so \
+	$(LIBDIR)/flute.so \
+	$(LIBDIR)/guitar.so \
+	$(LIBDIR)/nylonGuitar.so
+
 include ../Makefile.subdir

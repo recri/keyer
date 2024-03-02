@@ -15,3 +15,6 @@ clean::
 all-clean::
 	@find . -name '*~' -exec rm -f \{} \;
 	for dir in $(SUBDIRS); do $(MAKE) -C $$dir all-clean; done
+
+test::
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir test; done

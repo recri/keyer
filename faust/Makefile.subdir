@@ -34,10 +34,10 @@ libdir-clean::
 libdir-all-clean::
 	cd $(LIBDIR)/.. && make all-clean
 
-test: all
-	tclsh ../test.tcl
+test::
+	PKG=$(PKG) tclsh ../test.tcl
       
-%.cpp: %.dsp ../architecture/jacktcltk.cpp
+%.cpp: %.dsp ../architecture/jacktcltk.cpp ../architecture/libjacktcltk.cpp
 	faust -a ../architecture/jacktcltk.cpp $< -o $@
 
 # to make a lower case name_Init
@@ -56,8 +56,11 @@ $(LIBDIR)/%.so: %.o
 
 # link flags for shared library, appended to end of the $(CXX) command arguments
 #  -L $(LIBDIR)/.. -ljacktcltk -Wl,-rpath='$$ORIGIN/..'
-$(LIBDIR)/%.so: %.dsp ../architecture/jacktcltk.cpp
+$(LIBDIR)/%.so: %.dsp ../architecture/jacktcltk.cpp ../architecture/libjacktcltk.cpp
 	faust -a ../architecture/jacktcltk.cpp $< | \
-	$(CXX) -shared -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=$(shell X=`echo $* | tr [:upper:] [:lower:]` bash -c 'echo $${X^}_Init') \
-	-DTCL_PKG_NAME=\"faust::$(PKG)::$*\" -DTCL_PKG_VERSION=\"1.0.0\" -DTCL_CMD_NAME=\"faust::$(PKG)::$*\" \
+	$(CXX) -shared -fPIC $(CXXFLAGS) \
+	-DTCL_INIT_NAME=$(shell tclsh ../initname.tcl $*) \
+	-DTCL_PKG_NAME=\"faust::$(PKG)::$*\" \
+	-DTCL_PKG_VERSION=\"1.0.0\" \
+	-DTCL_CMD_NAME=\"faust::$(PKG)::$*\" \
 	-xc++ - $(LIBS) -o $@

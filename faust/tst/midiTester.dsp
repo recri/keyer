@@ -1,1 +1,1 @@
-/usr/local/share/faust/examples/misc/midiTester.dsp
+/usr/share/faust/examples/misc/midiTester.dsp
