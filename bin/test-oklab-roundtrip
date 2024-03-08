@@ -1,0 +1,43 @@
+#!/bin/sh
+# -*- mode: Tcl; tab-width: 8; -*-
+# the next line restarts using tclsh \
+exec tclsh "$0" ${1+"$@"}
+
+#
+# use the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+package require oklab
+
+if {$argv eq {}} {
+    set n 1000
+} else {
+    set n [lindex $argv 0]
+}
+
+proc random_hexrgb {} { format \#%012x [expr {round(rand()*0xffffffffffff)}] }
+
+proc random_srgb {} { hexrgb_to_srgb [random_hbexrgb] }
+
+proc squared_error {v1 v2} {
+    tcl::mathop::+ {*}[lmap c1 $v1 c2 $v2 {expr {pow($c1-$c2, 2)}}]
+}
+
+for {set i 0} {$i < $n} {incr i} {
+    set hexrgb1 [random_hexrgb]
+    set srgb1 [hexrgb_to_srgb $hexrgb1]
+    if {[srgb_to_hexrgb $srgb1] ne $hexrgb1} {
+	puts "hexrgb<->srgb error $hexrgb1 vs [srgb_to_hexrgb $srgb1]"
+    }
+    set srgb2 [oklab_to_srgb [srgb_to_oklab $srgb1]]
+    set diff [squared_error $srgb1 $srgb2]
+    if {$diff > 1e-11} { puts [format "srgb<->oklab error %e" $diff] }
+}
+

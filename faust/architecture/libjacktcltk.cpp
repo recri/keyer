@@ -123,13 +123,13 @@ struct TclTkMeta : public Meta {
 
 struct TclTkGUI : public GUI  {
   Tcl_Interp *interp;
-  Tcl_Obj *ui_list, *command_name;
+  Tcl_Obj *ui_proc, *tkclass_name;
   dsp *DSP;
   MapUI mapui;
 
 public:
-  TclTkGUI(Tcl_Interp *interp, Tcl_Obj *ui_list, Tcl_Obj *command_name, dsp *DSP) :
-    interp(interp), ui_list(ui_list), command_name(command_name), DSP(DSP) {
+  TclTkGUI(Tcl_Interp *interp, Tcl_Obj *ui_proc, Tcl_Obj *tkclass_name, dsp *DSP) :
+    interp(interp), ui_proc(ui_proc), tkclass_name(tkclass_name), DSP(DSP) {
     DSP->buildUserInterface(&mapui);
   }
 
@@ -151,23 +151,11 @@ protected:
     return "";
   }
 
-  // build a path from the stack of labels stored
-  std::string buildWindowPath(const char *label) {
-    std::string slashes = mapui.buildPath(label);
-    std::string dots = "";
-    for (auto &c : slashes)
-      dots += (c == '/' ? '.' : isupper(c) ? tolower(c) : c);
-    return dots;
-  }
-  
-  // build a parent path from the stack of labels
-  std::string buildParentPath(void) {
-    std::string dots = buildWindowPath("");
-    return dots.substr(0, dots.length()-1);
-  }
-  
   // find the short name for an option
   std::string buildShortName(const char *label) { return mapui.buildShortname(label); }
+  
+  // find the long name for an option
+  std::string buildPath(const char *label) { return mapui.buildPath(label); }
   
   // push a label
   bool pushLabel(const char *label) { return mapui.pushLabel(label); }
@@ -175,162 +163,85 @@ protected:
   // pop a label
   bool popLabel() { return mapui.popLabel(); }
   
-  // add to the code
-  void appendCode(Tcl_Obj *lineOfCode) {
-    Tcl_ListObjAppendElement(interp, ui_list, lineOfCode);
+  // append a declaration
+  // construct a metadata dictionary and append to each widget as it is defined
+  Tcl_Obj *metadata = NULL;
+  
+  void appendDeclare(FAUSTFLOAT *zone, const char *key, const char *value) {
+    Tcl_AppendPrintfToObj(metadata, " %s {%s}", key, value);
   }
+  
+  Tcl_Obj *fetchDeclares(void) {
+    Tcl_Obj *meta = metadata;
+    metadata = Tcl_NewStringObj("", 0);
+    return meta;
+  }
+  
+  // add to the code
+  int indent = 0;
 
   void appendPrefix() {
-    appendCode(Tcl_ObjPrintf("proc %s {w cmd} {", Tcl_GetString(command_name)));
-    appendCode(Tcl_NewStringObj("  set meta [dict create]", -1));
+    metadata = Tcl_NewStringObj("", 0);
+    Tcl_AppendToObj(ui_proc, "package require faustk\n", -1);
+    // Tcl_AppendToObj(ui_proc, "namespace eval faustk::pm {}\n", -1);
+    Tcl_AppendPrintfToObj(ui_proc, "proc %s {w cmd} {\n", Tcl_GetString(tkclass_name));
+    indent = 4;
   }
 
   void appendSuffix() {
-    appendCode(Tcl_NewStringObj("}", -1));
+    Tcl_AppendToObj(ui_proc, "}", -1);
+    indent = 0;
   }
-
-  // a stack of layout types
-  // and various useful information
-  struct {
-    std::string s;
-    void pushType(char c) { s.push_back(c); }
-    void popType() { s.pop_back(); }
-    char curType() { return  s.length() > 0 ? s[s.length()-1] : '*'; }
-    char prevType() { return s.length() > 1 ? s[s.length()-2] : '*'; }
-    const char *packEdge(char type) {
-      switch (type) {
-      case '*': return "top";
-      case 't': return "top";
-      case 'v': return "top";
-      case 'h': return "left";
-      default: cerr << "invalid type in packEdge()"; return "top";
-      }
-    }
-    const char *fillCoord(char type) {
-      switch (type) {
-      case '*': return "x";
-      case 't': return "x";
-      case 'v': return "x";
-      case 'h': return "y";
-      default: cerr << "invalid type in fillCoord()"; return "x";
-      }
-    }
-  } typeStack;
-  void pushType(char c) { typeStack.pushType(c); }
-  void popType(void) { typeStack.popType(); }
-  char curType() { return typeStack.curType(); }
-  char prevType() { return typeStack.prevType(); }
-  const char *packEdge(char type) { return typeStack.packEdge(type); }
-  const char *fillCoord(char type) { return typeStack.fillCoord(type); }
 
   // append a layout item
   void appendLayout(const char *type, const char *label) {
-    const std::string path = buildWindowPath(label);
-    const std::string ppath = buildParentPath();
     if (pushLabel(label))
       appendPrefix();
-    pushType(type[0]);
-    switch (prevType()) {
-    case '*':
-    case 'v':
-    case 'h':
-      switch (curType()) {
-      default: 
-	cerr  << "invalid curType in appendLayout()";
-	appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
-	appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
-	break;
-      case 'v':
-      case 'h':
-	appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
-	appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
-	break;
-      case 't':
-	appendCode(Tcl_ObjPrintf("  ttk::notebook $w%s", path.c_str()));
-	appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
-	break;
-      }
-      break;
-    case 't':
-      switch (curType()) {
-      default:
-	cerr  << "invalid curType in appendLayout()";
-	appendCode(Tcl_ObjPrintf("  ttk::frame $w%s", path.c_str()));
-	appendCode(Tcl_ObjPrintf("  $w%s add $w%s -text %s", ppath.c_str(), path.c_str(), label));
-	break;
-      case 'v':
-      case 'h':
-	appendCode(Tcl_ObjPrintf("  ttk::frame $w%s", path.c_str()));
-	appendCode(Tcl_ObjPrintf("  $w%s add $w%s -text %s", ppath.c_str(), path.c_str(), label));
-	break;
-      case 't':
-	appendCode(Tcl_ObjPrintf("  ttk::notebook $w%s", path.c_str()));
-	appendCode(Tcl_ObjPrintf("  $w%s add $w%s -text %s", ppath.c_str(), path.c_str(), label));
-	break;
-      }
-      break;
-    }
+    Tcl_Obj *meta = fetchDeclares();
+    const char *meta_str = Tcl_GetString(meta);
+    Tcl_AppendPrintfToObj(ui_proc, "%*sfaustk::%s %s {%s} {\n", indent, "", type, label, meta_str);
+    Tcl_DecrRefCount(meta);
+    indent += 4;
   }
 
   // mark the end of a layout item
   void appendEndLayout(void) {
-    popType();
+    indent -= 4;
+    Tcl_AppendPrintfToObj(ui_proc, "%*s}\n", indent, "");
     if (popLabel())
       appendSuffix();
-
   }
   
   // append a button or checkbutton
   void appendButton(const char *type, const char *label, FAUSTFLOAT *zone) {
-    const std::string path = buildWindowPath(label);
     const std::string option = buildShortName(label);
-    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
-    appendCode(Tcl_ObjPrintf("  ttk::%s $w%s -text %s -command [list $cmd toggle -%s 1]", type, path.c_str(), label, option.c_str()));
-    appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
+    Tcl_Obj *meta = fetchDeclares();
+    const char *option_str = option.c_str(), *meta_str = Tcl_GetString(meta);
+    Tcl_AppendPrintfToObj(ui_proc, "%*sfaustk::%s %s %s {%s}\n",
+			  indent, "", type, label, option_str, meta_str);
+    Tcl_DecrRefCount(meta);
   }
   
   // append a slider or a nentry
   void appendSlider(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT init, FAUSTFLOAT step) {
-    const std::string path = buildWindowPath(label);
     const std::string option = buildShortName(label);
-    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
-    switch (type[0]) {
-    case 'v':
-    case 'h':
-      appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
-      appendCode(Tcl_ObjPrintf("  ttk::scale $w%s.scale -orient %s -command [list debounce $cmd configure -%s] -from %f -to %f -value %f # -increment %f",
-			       path.c_str(), type[0] == 'h' ? "horizontal" : "vertical", option.c_str(), min, max, init, step));
-      appendCode(Tcl_ObjPrintf("  pack $w%s.scale -side top -fill both -expand true", path.c_str()));
-      break;
-    case 'n':
-      appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
-      appendCode(Tcl_ObjPrintf("  ttk::spinbox $w%s.spinbox -command [list debounce $cmd configure -%s] -from %f -to %f -value %f -increment %f",
-			     path.c_str(), option.c_str(), min, max, init, step));
-      appendCode(Tcl_ObjPrintf("  pack $w%s.spinbox -side top -fill both -expand true", path.c_str()));
-      break;
-    }
-    appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
+    Tcl_Obj *meta = fetchDeclares();
+    const char *option_str = option.c_str(), *meta_str = Tcl_GetString(meta);
+    Tcl_AppendPrintfToObj(ui_proc, "%*sfaustk::%s %s %s %.2f %.2f %.2f %.2f {%s}\n",
+			  indent, "", type, label, option_str, min, max, init, step, meta_str);
+    Tcl_DecrRefCount(meta);
   }
   
   // append a bargraph
   void appendBargraph(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max) {
-    const std::string path = buildWindowPath(label);
     const std::string option = buildShortName(label);
-    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
-    const char *orient = type[0] == 'h' ? "horizontal" : "vertical";
-    appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
-    appendCode(Tcl_ObjPrintf("  ttk::progressbar $w%s.progressbar -maximum %f -value 0",
-			     path.c_str(), max-min));
-    appendCode(Tcl_ObjPrintf("  pack $w%s.scale -side top -fill both -expand true", path.c_str()));
-    appendCode(Tcl_ObjPrintf("  # every 50ms [list $w%s.progressbar configure -value [list expr {[$cmd cget -%s]-%f}]]", path.c_str(), option.c_str(), min));
+    Tcl_Obj *meta = fetchDeclares();
+    const char *option_str = option.c_str(), *meta_str = Tcl_GetString(meta);
+    Tcl_AppendPrintfToObj(ui_proc, "%*sfaustk::%s %s %s %.2f %.2f {%s}\n",
+			  indent, "", type, label, option_str, min, max, meta_str);
+    Tcl_DecrRefCount(meta);
   }
 
-  // append a declaration
-  void appendDeclare(FAUSTFLOAT *zone, const char *key, const char *value) {
-    const char *option = findShortName(zone);
-    appendCode(Tcl_ObjPrintf("  dict set meta -%s %s {%s}", option, key, value));
-  }
-  
 public:
   // -- layouts widget
   void openTabBox(const char* label) { appendLayout("tgroup", label); }
@@ -374,6 +285,7 @@ struct _client_data_t {
   Tcl_Obj *const *objv;		// only valid until _factory() returns;
   Tcl_Obj *class_name;
   Tcl_Obj *command_name;
+  Tcl_Obj *tkclass_name;
   bool *arg_used;		// allocated to argc values, false
   const char **argv;		// allocated with argc values, Tcl_GetString(objv[i])
   int nvoices;
@@ -406,13 +318,13 @@ struct _client_data_t {
 #endif
   audio *AUDIO;
   Tcl_Obj *meta_dict;
-  Tcl_Obj *ui_list;
+  Tcl_Obj *ui_proc;
   TclTkGUI *interface;
 
   // create a client_data_t
   _client_data_t(dsp *DSP, Tcl_Interp *interp, int argc, Tcl_Obj *const*objv) :
     DSP(DSP), interp(interp), argc(argc), objv(objv),
-    class_name(nullptr), command_name(nullptr), arg_used(nullptr), argv(nullptr),
+    class_name(nullptr), command_name(nullptr), tkclass_name(tkclass_name), arg_used(nullptr), argv(nullptr),
     nvoices(0), midi_sync(false), control(false), group(false),
 #ifdef FILEUI
     rc_file_name(nullptr), finterface(nullptr),
@@ -435,7 +347,7 @@ struct _client_data_t {
 #ifdef OCVCTRL
     ocvinterface(nullptr),
 #endif
-    AUDIO(nullptr), meta_dict(nullptr), ui_list(nullptr), interface(nullptr)
+    AUDIO(nullptr), meta_dict(nullptr), ui_proc(nullptr), interface(nullptr)
   {
     _init_for_argc();
   }
@@ -479,10 +391,11 @@ struct _client_data_t {
     if (presetui) delete presetui:
     if (preset_dir) Tcl_DecrRefCount(preset_dir);
 #endif    
-    if (ui_list) Tcl_DecrRefCount(ui_list);
+    if (ui_proc) Tcl_DecrRefCount(ui_proc);
     if (meta_dict) Tcl_DecrRefCount(meta_dict);
     if (command_name) Tcl_DecrRefCount(command_name);
     if (class_name) Tcl_DecrRefCount(class_name);
+    if (tkclass_name) Tcl_DecrRefCount(tkclass_name);
     if (arg_used) delete arg_used;
     if (argv) delete argv;
     if (DSP) delete DSP;
@@ -561,7 +474,7 @@ struct _client_data_t {
       if (strcmp(method, "configure") == 0) return _configure();
       if (strcmp(method, "cget") == 0) return _cget();
       if (strcmp(method, "meta") == 0) return _success_obj(meta_dict);
-      if (strcmp(method, "ui") == 0) return _success_obj(ui_list);
+      if (strcmp(method, "ui") == 0) return _success_obj(ui_proc);
       return _error_obj(Tcl_ObjPrintf("usage: %s name configure|cget|meta|ui [...]", Tcl_GetString(objv[0])));
     }
   }
@@ -622,14 +535,14 @@ struct _client_data_t {
     // initialize command data
     Tcl_IncrRefCount(class_name = objv[0]);
     Tcl_IncrRefCount(command_name = objv[1]);
-
+    Tcl_IncrRefCount(tkclass_name = Tcl_ObjPrintf("faustk%s", Tcl_GetString(class_name)+5));
     // build the TclTk interface
     meta_dict = Tcl_NewDictObj();
     Tcl_IncrRefCount(meta_dict);
     DSP->metadata(new TclTkMeta(interp, meta_dict) );
-    ui_list = Tcl_NewListObj(0, NULL);
-    Tcl_IncrRefCount(ui_list);
-    interface = new TclTkGUI(interp, ui_list, command_name, DSP);
+    ui_proc = Tcl_NewStringObj("", 0);
+    Tcl_IncrRefCount(ui_proc);
+    interface = new TclTkGUI(interp, ui_proc, tkclass_name, DSP);
     DSP->buildUserInterface(interface);
 
     // search for midi timing options

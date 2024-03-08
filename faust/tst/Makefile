@@ -2,7 +2,9 @@ PKG=tst
 
 LIBDIR=../../lib/faust/$(PKG)
 
-ALL=	$(LIBDIR)/midiTester.so
+ALL=	
+
+OTHER=	$(LIBDIR)/midiTester.so
 
 include ../Makefile.subdir
 

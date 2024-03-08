@@ -1,0 +1,73 @@
+#!/bin/sh
+# -*- mode: Tcl; tab-width: 8; -*-
+# the next line restarts using tclsh \
+exec wish "$0" ${1+"$@"}
+
+#
+# use the script location to find the rest of the libraries
+#
+set script [expr { ! [catch {file readlink [info script]} link] ? $link : [info script]}]
+set dirname [file dirname $script]
+
+#
+# append the ../lib directory to the Tcl search path
+#
+lappend auto_path [file join $dirname .. lib]
+
+package require oklab
+
+set nsteps 0
+set color1 grey
+set color2 grey
+if {[llength $argv] > 0} {
+    set color1 [lindex $argv 0]
+    if {[llength $argv] > 1} {
+	set color2 [lindex $argv 1]
+	if {[llength $argv] > 2} {
+	    set nsteps [lindex $argv 2]
+	}
+    }
+}
+
+ttk::frame .t
+ttk::labelframe .t.color1 -text "Color 1"
+button .t.color1.b -text {Choose Color 1} -bg $::color1 -command {choose-color color1}
+ttk::labelframe .t.color2 -text "Color 2"
+button .t.color2.b -text {Choose Color 2} -bg $::color2 -command {choose-color color2}
+ttk::labelframe .t.nsteps -text Number
+ttk::spinbox .t.nsteps.n -from 0 -to 1024 -increment 1 -textvar nsteps
+ttk::labelframe .t.interp -text Interpolate
+ttk::button .t.interp.b -text Go -command {interpolate $nsteps $::color1 $::color2}
+
+pack .t.color1.b
+pack .t.color1 -side left
+pack .t.color2.b
+pack .t.color2 -side left
+pack .t.nsteps.n
+pack .t.nsteps -side left
+pack .t.interp.b
+pack .t.interp -side left
+pack .t
+
+ttk::labelframe .b -text {The Colors}
+pack .b -side top -expand true -fill x
+
+proc choose-color {varname} {
+    set color [tk_chooseColor -initialcolor gray -title "Choose $varname"]
+    set ::$varname $color
+    .t.$varname.b configure -background $color
+}
+
+proc interpolate {nsteps color1 color2} {
+    foreach c [winfo children .b] { destroy $c }
+    puts "interpolate $nsteps {$color1} {$color2}"
+    set i 0
+    foreach c [hexrgb_interpolate $nsteps $color1 $color2] {
+	pack [frame .b.c"[incr i]" -height 64 -background $c] -side left -expand true -fill x
+    }
+}
+
+after 1
+if {[llength $argv] > 3 && [lindex $argv 3] eq {go}} {
+    interpolate $nsteps $color1 $color2
+}

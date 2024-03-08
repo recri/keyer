@@ -1,1 +1,0 @@
-../lib/sdrtk/cwtext.tcl

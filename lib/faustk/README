@@ -1,0 +1,134 @@
+  // append a layout item
+  void appendLayout(const char *type, const char *label) {
+    const std::string path = buildWindowPath(label);
+    const std::string ppath = buildParentPath();
+    if (pushLabel(label))
+      appendPrefix();
+    pushType(type[0]);
+    switch (prevType()) {
+    case '*':
+    case 'v':
+    case 'h':
+      switch (curType()) {
+      default: 
+	cerr  << "invalid curType in appendLayout()";
+	appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
+	appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
+	break;
+      case 'v':
+      case 'h':
+	appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
+	appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
+	break;
+      case 't':
+	appendCode(Tcl_ObjPrintf("  ttk::notebook $w%s", path.c_str()));
+	appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
+	break;
+      }
+      break;
+    case 't':
+      switch (curType()) {
+      default:
+	cerr  << "invalid curType in appendLayout()";
+	appendCode(Tcl_ObjPrintf("  ttk::frame $w%s", path.c_str()));
+	appendCode(Tcl_ObjPrintf("  $w%s add $w%s -text %s", ppath.c_str(), path.c_str(), label));
+	break;
+      case 'v':
+      case 'h':
+	appendCode(Tcl_ObjPrintf("  ttk::frame $w%s", path.c_str()));
+	appendCode(Tcl_ObjPrintf("  $w%s add $w%s -text %s", ppath.c_str(), path.c_str(), label));
+	break;
+      case 't':
+	appendCode(Tcl_ObjPrintf("  ttk::notebook $w%s", path.c_str()));
+	appendCode(Tcl_ObjPrintf("  $w%s add $w%s -text %s", ppath.c_str(), path.c_str(), label));
+	break;
+      }
+      break;
+    }
+  }
+
+  // mark the end of a layout item
+  void appendEndLayout(void) {
+    popType();
+    if (popLabel())
+      appendSuffix();
+
+  }
+  
+  // append a button or checkbutton
+  void appendButton(const char *type, const char *label, FAUSTFLOAT *zone) {
+    const std::string path = buildWindowPath(label);
+    const std::string option = buildShortName(label);
+    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
+    appendCode(Tcl_ObjPrintf("  ttk::%s $w%s -text %s -command [list $cmd toggle -%s 1]", type, path.c_str(), label, option.c_str()));
+    appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
+  }
+  
+  // append a slider or a nentry
+  void appendSlider(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT init, FAUSTFLOAT step) {
+    const std::string path = buildWindowPath(label);
+    const std::string option = buildShortName(label);
+    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
+    switch (type[0]) {
+    case 'v':
+    case 'h':
+      appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
+      appendCode(Tcl_ObjPrintf("  ttk::scale $w%s.scale -orient %s -command [list debounce $cmd configure -%s] -from %f -to %f -value %f # -increment %f",
+			       path.c_str(), type[0] == 'h' ? "horizontal" : "vertical", option.c_str(), min, max, init, step));
+      appendCode(Tcl_ObjPrintf("  pack $w%s.scale -side top -fill both -expand true", path.c_str()));
+      break;
+    case 'n':
+      appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
+      appendCode(Tcl_ObjPrintf("  ttk::spinbox $w%s.spinbox -command [list debounce $cmd configure -%s] -from %f -to %f -value %f -increment %f",
+			     path.c_str(), option.c_str(), min, max, init, step));
+      appendCode(Tcl_ObjPrintf("  pack $w%s.spinbox -side top -fill both -expand true", path.c_str()));
+      break;
+    }
+    appendCode(Tcl_ObjPrintf("  pack $w%s -side %s -fill %s -expand true", path.c_str(), packEdge(prevType()), fillCoord(prevType())));
+  }
+  
+  // append a bargraph
+  void appendBargraph(const char *type, const char *label, FAUSTFLOAT *zone, FAUSTFLOAT min, FAUSTFLOAT max) {
+    const std::string path = buildWindowPath(label);
+    const std::string option = buildShortName(label);
+    // printf("path %s, option %s, label %s, zone %lud\n", path.c_str(), option.c_str(), label, (unsigned long)zone);
+    const char *orient = type[0] == 'h' ? "horizontal" : "vertical";
+    appendCode(Tcl_ObjPrintf("  ttk::labelframe $w%s -text %s -labelanchor n", path.c_str(), label));
+    appendCode(Tcl_ObjPrintf("  ttk::progressbar $w%s.progressbar -maximum %f -value 0",
+			     path.c_str(), max-min));
+    appendCode(Tcl_ObjPrintf("  pack $w%s.scale -side top -fill both -expand true", path.c_str()));
+    appendCode(Tcl_ObjPrintf("  # every 50ms [list $w%s.progressbar configure -value [list expr {[$cmd cget -%s]-%f}]]", path.c_str(), option.c_str(), min));
+  }
+
+public:
+  // -- layouts widget
+  void openTabBox(const char* label) { appendLayout("tgroup", label); }
+  void openHorizontalBox(const char* label) { appendLayout("hgroup", label); }
+  void openVerticalBox(const char* label) { appendLayout("vgroup", label); }
+  void closeBox() { appendEndLayout(); }
+
+  // -- active widgets
+  void addButton(const char* label, FAUSTFLOAT* zone) { appendButton("button", label, zone); }
+  void addCheckButton(const char* label, FAUSTFLOAT* zone) { appendButton("checkbutton", label, zone); }
+  void addVerticalSlider(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
+    appendSlider("vslider", label, zone, min, max, init, step);
+  }
+  void addHorizontalSlider(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
+    appendSlider("hslider", label, zone, min, max, init, step);
+  }
+  void addNumEntry(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT init, FAUSTFLOAT min, FAUSTFLOAT max, FAUSTFLOAT step) {
+    appendSlider("nentry", label, zone, min, max, init, step);
+  }
+  // -- passive widgets
+  void addHorizontalBargraph(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT min, FAUSTFLOAT max) {
+    appendBargraph("hbargraph", label, zone, min, max);
+  }
+  void addVerticalBargraph(const char* label, FAUSTFLOAT* zone, FAUSTFLOAT min, FAUSTFLOAT max) {
+    appendBargraph("vbargraph", label, zone, min, max);
+  }
+  // -- soundfiles - haven't found an example of this to copy, yet
+  void addSoundfile(const char* label, const char* filename, Soundfile** sf_zone) { }
+  // -- metadata declarations
+  void declare(FAUSTFLOAT* zone, const char* key, const char* val) { 
+    appendDeclare(zone, key, val);
+  }
