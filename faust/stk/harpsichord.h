@@ -1,1 +1,1 @@
-/usr/share/faust/examples/physicalModeling/faust-stk/harpsichord.h
+/usr/local/share/faust/examples/physicalModeling/faust-stk/harpsichord.h

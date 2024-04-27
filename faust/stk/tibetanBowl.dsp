@@ -1,1 +1,1 @@
-/usr/share/faust/examples/physicalModeling/faust-stk/tibetanBowl.dsp
+/usr/local/share/faust/examples/physicalModeling/faust-stk/tibetanBowl.dsp
