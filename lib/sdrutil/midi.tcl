@@ -121,10 +121,14 @@ namespace eval ::midi {
 
     # convert note name to midi note
     proc name-octave-to-note {name} {
-	if {[regexp {^([A-G])(\d*)(#?)$} $name all note octave sharp]} {
+	if {[regexp {^([A-G])([b#]?)(\d*)$} $name all note sharp octave]} {
 	    return [expr {[octave-to-note $octave]+[name-to-note $note$sharp]}]
 	}
 	error "$name did not match regexp"
+    }
+
+    proc note-to-name-octave {note} {
+	return "[note-to-name $note][note-to-octave $note]"
     }
 
     # translate a midi velocity to a level

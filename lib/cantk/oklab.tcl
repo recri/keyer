@@ -115,7 +115,7 @@ proc hexrgb_to_srgb {c} {
 }
 
 #
-proc srgb_to_hexrgb {c} { string cat "#" [join [lmap x $c {format %04x [expr {round(0xffff*$x)}]}] {}] }
+proc srgb_to_hexrgb {c} { string cat "#" [join [lmap x $c {format %04x [expr {round(0xffff*$x)&0xffff}]}] {}] }
 
 #
 proc hexrgb_to_oklab {c} { srgb_to_oklab [hexrgb_to_srgb $c] }

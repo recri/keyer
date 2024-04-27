@@ -40,6 +40,12 @@ test::
 %.cpp: %.dsp ../architecture/jacktcltk.cpp ../architecture/libjacktcltk.cpp
 	faust -a ../architecture/jacktcltk.cpp $< -o $@
 
+%.svg: %.dsp
+	faust2svg $<
+       
+%.pdf: %.dsp
+	faust2pdf $<
+
 # to make a lower case name_Init
 #	$(CXX) -c -fPIC $(CXXFLAGS) -DTCL_INIT_NAME=Pm_$(shell echo $* | tr [:upper:] [:lower:])_Init \
 # to make a title case Name_Init

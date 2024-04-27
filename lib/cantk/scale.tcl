@@ -35,7 +35,7 @@ package require Tk
 package require snit
 package require cantk::oklab
 
-snit::widgetadaptor cantk::scale {
+snit::widgetadaptor cantk::scalish {
     option -orient -default central -configuremethod config
     option -from -default 0 -configuremethod config
     option -to -default 100 -configuremethod config
@@ -44,8 +44,8 @@ snit::widgetadaptor cantk::scale {
     option -value -default 50 -configuremethod config
     option -variable -default {} -configuremethod config
     option -command -default {} -configuremethod config
-    option -render -default cantk::scale-central -configuremethod config
-    
+    option -render -default {} -configuremethod config
+
     delegate option * to hull
     delegate method * to hull
 
@@ -148,9 +148,9 @@ snit::widgetadaptor cantk::scale {
 	set options(-value) $value
 	# format for display
 	set data(value) [format %.*f $options(-digits) $value]
-	# render the updated value
+	# render
 	if {$options(-render) ne {}} {
-	    $options(-render) $w
+	    {*}$options(-render)
 	}
     }
 
@@ -170,6 +170,9 @@ snit::widgetadaptor cantk::scale {
     method window-configure {w width height} {
 	# runaway, change the window width, adds a border
 	# $w configure -width $width -height $height
+	if {$options(-render) ne {}} {
+	    {*}$options(-render)
+	}
     }
 
     method button-press {w x y s} { 
@@ -207,231 +210,217 @@ snit::widgetadaptor cantk::scale {
 
 }    
 
-#
-# degrees measured from 3 o'clock counterclockwise
-# -style is arc, which only draws the perimeter
-# -width specifies the perimeter line thickness
-# -outline specifies the perimeter line color
-# -dash specifies a dash pattern using {.,- }
-# $w create arc 0 0 width height -start degrees -extent degrees
-array set ::cantk::scale-knob {
-    start 240
-    extent -300
-    width 10
-    inset 20
-    dash {}
-    outline black
-    step-n 0
-    step-width 0.5
-    headp 0.6
-    tailp -0.2
-    window-width 0
-    window-height 0
-}
+snit::widgetadaptor cantk::knob {
+    option -start -default 240
+    option -extent -default -300
+    option -width -default 10
+    option -inset -default 20
+    option -dash -default {}
+    option -outline -default black
+    option -step-n -default 0;		# number of steps in the color blend
+    option -step-width -default 0.5;	# width taper when rendering steps
+    option -headp -default 0.6;		# proportion of radius for the dial pointer head
+    option -tailp -default 0.2;		# proportion of radius for the dial pointer tail
 
-#
-# okay, broken dreams
-# 1) canvas arc doesn't comply to spec, draws an pie outline
-# 2) canvas draws ugly jagged lines
-# 3) tried the JKnobMan route, 27 image strip came to 188Kbytes
-#
-# So, roll your own:
-# 1) draw a series of lines, interpolating from background color to
-#    forground color, getting thinner as we get to foreground color.
-# 2) ideally, you would adjust the alpha in a gradient from edge of
-#    the line to the center, but Tk doen't do alpha.
-# 3) draw the path for the arc manually.  Make the line segments from
-#    start to start+extent at <1 degree resolution.
-#
-proc cantk::scale-central {w} {
-    upvar data data options options
+    delegate option * to hull
+    delegate method * to hull
 
-    # copy knob data into data
-    if { ! [info exists data(knob-start)]} {
-	foreach {name value} [array get ::cantk::scale-knob] {
-	    set data(knob-$name) $value
-	}
+    variable data -array {
+	window-width 0
+	window-height 0
+    }
+
+    constructor {args} {
+	installhull using cantk::scalish -width 64 -height 64
+	$self configure {*}$args
+	$hull configure -render [mymethod render]
     }
     
-    # delete any previous rendering
-    $w delete all
+    method render {} {
+	# delete any previous rendering
+	$win delete all
 
-    # get the window size
-    set width [$w cget -width]
-    set height [$w cget -height]
+	# get the window size
+	set width [$win cget -width]
+	set height [$win cget -height]
 
-    # compute a linear approximation to the full arc
-    # this will be a list of interleaved x and y
-    # we'll use a range of these coordinates
-    # ! [info exists central(line)] ||
-    if {$data(knob-window-width) != $width || $data(knob-window-height) != $height} {
-	# frame of circle which defines the arc
-	set x0 $data(knob-inset)
-	set y0 $data(knob-inset)
-	set x1 [expr {$width-$data(knob-inset)}]
-	set y1 [expr {$height-$data(knob-inset)}]
-	# center of circle
-	set data(knob-xc) [expr {($x0+$x1)/2.0}]
-	set data(knob-yc) [expr {($y0+$y1)/2.0}]
-	# radius of circle
-	set data(knob-r) [expr {min($data(knob-xc)-$x0,$data(knob-yc)-$y0)}]
-	# number of segments of perimeter
-	set n [expr {int(abs($data(knob-extent))/2)}]
-	set data(knob-line) [arc-to-line $n $data(knob-xc) $data(knob-yc) $data(knob-r) $data(knob-start) $data(knob-extent)]
-	set data(knob-window-width) $width
-	set data(knob-window-height) $height
-    }
-
-    # proportion of -value in -from to -to
-    set p [expr {($options(-value)-$options(-from))/($options(-to)-$options(-from))}]
-
-    # index of extent of arc
-    set extent [expr {max(2,2*int($p*([llength $data(knob-line)]/2)))}]
-
-    # points to draw in arc
-    set xy [lrange $data(knob-line) 0 $extent+1]
-
-    # point on perimeter that pointer points at
-    # expressed as a vector from xc yc
-    set xp [expr {[lindex $xy end-1]-$data(knob-xc)}]
-    set yp [expr {[lindex $xy end]-$data(knob-yc)}]
-
-    # compute endpoints of pointer line
-    set xp1 [expr {$data(knob-headp)*$xp+$data(knob-xc)}]
-    set yp1 [expr {$data(knob-headp)*$yp+$data(knob-yc)}]
-    set xp2 [expr {$data(knob-tailp)*$xp+$data(knob-xc)}]
-    set yp2 [expr {$data(knob-tailp)*$yp+$data(knob-yc)}]
-
-    # draw with antialias hack
-    set bg [color-lookup [$w cget -background]]
-    set fg [color-lookup $data(knob-outline)]
-    foreach {width color} [interpolate-width-and-color $data(knob-step-n) $data(knob-step-width) $data(knob-width) $fg $bg] {
-	$w create line $xy -width $width -fill $color -capstyle round
-	$w create line $xp1 $yp1 $xp2 $yp2 -width $width -fill $color -capstyle round
-    }
-}
-
-proc color-lookup {c} {
-    if { ! [regexp {^#[0-9A-Fa-f]+$} $c] || (([string length $c]-1)%3) != 0 || [string length $c] > 13} {
-	set new [winfo rgb . $c]
-	if {$new eq {}} { error "unknown color \"$c\'" }
-	set new [string cat \# [join [lmap x $new {format %04x $x}] {}]]
-	set c $new
-    }
-    set c
-}
-
-proc interpolate-width-and-color {step-n step-width width outline background} {
-    # interpolate from background to outline color, then skip the background color
-    set result {}
-    foreach c [lrange [hexrgb_interpolate ${step-n} $background $outline] 1 end] {
-	lappend result $width $c
-	set width [expr {$width-${step-width}}]; 	# or maybe 2*${step-width}
-    }
-    set result
-}
-
-proc arc-to-line {n xc yc r start extent} {
-    # puts "xc $xc yc $yc r $r"
-    # put the angles of the endpoints of the arc on as
-    # while the list of angles is less than the resolution $n
-    # double the number of angles by bisecting the arcs
-    for {set as [list $start [expr {$start+$extent}]]} {[llength $as] < $n} {set as $nas} {
-	set nas {}
-	foreach a1 [lrange $as 0 end-1] a2 [lrange $as 1 end] {
-	    lappend nas $a1 [expr {($a1+$a2)/2.0}]
+	# compute a linear approximation to the full arc
+	# this will be a list of interleaved x and y
+	# we'll use a range of these coordinates
+	# ! [info exists central(line)] ||
+	if {$data(window-width) != $width || $data(window-height) != $height} {
+	    # frame of circle which defines the arc
+	    set diam [expr {min($width, $height)}]
+	    set x0 [expr {$options(-inset) * $diam}]
+	    set y0 [expr {$options(-inset) * $diam}]
+	    set x1 [expr {$width-$options(-inset)*$diam}]
+	    set y1 [expr {$height-$options(-inset)*$diam}]
+	    # center of circle
+	    set data(xc) [expr {($x0+$x1)/2.0}]
+	    set data(yc) [expr {($y0+$y1)/2.0}]
+	    # radius of circle
+	    set data(r) [expr {min($data(xc)-$x0,$data(yc)-$y0)}]
+	    # number of segments of perimeter
+	    set n [expr {int(abs($options(-extent))/2)}]
+	    set data(line) [arc-to-line $n $data(xc) $data(yc) $data(r) $options(-start) $options(-extent)]
+	    set data(window-width) $width
+	    set data(window-height) $height
 	}
-	lappend nas [lindex $as end]
+
+	# proportion of -value in -from to -to
+	foreach opt {value from to} {
+	    set data($opt) [$win cget -$opt] 
+	}
+	set p [expr {($data(value)-$data(from))/($data(to)-$data(from))}]
+
+	# index of extent of arc
+	set extent [expr {max(2,2*int($p*([llength $data(line)]/2)))}]
+
+	# points to draw in arc
+	set xy [lrange $data(line) 0 $extent+1]
+
+	# point on perimeter that pointer points at
+	# expressed as a vector from xc yc
+	set xp [expr {[lindex $xy end-1]-$data(xc)}]
+	set yp [expr {[lindex $xy end]-$data(yc)}]
+
+	# compute endpoints of pointer line
+	set xp1 [expr {$options(-headp)*$xp+$data(xc)}]
+	set yp1 [expr {$options(-headp)*$yp+$data(yc)}]
+	set xp2 [expr {$options(-tailp)*$xp+$data(xc)}]
+	set yp2 [expr {$options(-tailp)*$yp+$data(yc)}]
+
+	# draw with antialias hack
+	set bg [color-lookup [$win cget -background]]
+	set fg [color-lookup $options(-outline)]
+	foreach {width color} [interpolate-width-and-color $options(-step-n) $options(-step-width) $options(-width) $fg $bg] {
+	    $win create line $xy -width $width -fill $color -capstyle round
+	    $win create line $xp1 $yp1 $xp2 $yp2 -width $width -fill $color -capstyle round
+	}
     }
-    # puts "as: $as"
-    set xy {}
-    foreach a $as {
-	lappend xy [expr {$xc+$r*cos($a*3.14159/180.0)}] [expr {$yc-$r*sin($a*3.14159/180.0)}]
+
+    proc color-lookup {c} {
+	if { ! [regexp {^#[0-9A-Fa-f]+$} $c] || (([string length $c]-1)%3) != 0 || [string length $c] > 13} {
+	    set new [winfo rgb . $c]
+	    if {$new eq {}} { error "unknown color \"$c\'" }
+	    set new [string cat \# [join [lmap x $new {format %04x $x}] {}]]
+	    set c $new
+	}
+	set c
     }
-    # puts "xy: [lmap c  $xy {format %.2f $c}]"
-    return $xy
+
+    proc interpolate-width-and-color {step-n step-width width outline background} {
+	# interpolate from background to outline color, then skip the background color
+	set result {}
+	foreach c [lrange [hexrgb_interpolate ${step-n} $background $outline] 1 end] {
+	    lappend result $width $c
+	    set width [expr {$width-${step-width}}]; 	# or maybe 2*${step-width}
+	}
+	set result
+    }
+    
+    proc arc-to-line {n xc yc r start extent} {
+	# puts "xc $xc yc $yc r $r"
+	# put the angles of the endpoints of the arc on as
+	# while the list of angles is less than the resolution $n
+	# double the number of angles by bisecting the arcs
+	for {set as [list $start [expr {$start+$extent}]]} {[llength $as] < $n} {set as $nas} {
+	    set nas {}
+	    foreach a1 [lrange $as 0 end-1] a2 [lrange $as 1 end] {
+		lappend nas $a1 [expr {($a1+$a2)/2.0}]
+	    }
+	    lappend nas [lindex $as end]
+	}
+	# puts "as: $as"
+	set xy {}
+	foreach a $as {
+	    lappend xy [expr {$xc+$r*cos($a*3.14159/180.0)}] [expr {$yc-$r*sin($a*3.14159/180.0)}]
+	}
+	# puts "xy: [lmap c  $xy {format %.2f $c}]"
+	return $xy
+    }
 }
 
-########################################################################
-# standard options for Tk scale
-#
-#       -activebackground     -foreground          -relief
-#       -background           -highlightbackground -repeatdelay
-#       -borderwidth          -highlightcolor      -repeatinterval
-#       -cursor               -highlightthickness  -takefocus
-#       -font                 -orient              -troughcolor
-# 
-# Widget specific options for Tk scale
-#	-bigincrement	- default 1/10th of scale range
-#	-command	- invoked when scale changes value
-#	-digits		- digits of precision
-#	-label
-#	-length		- the desired long dimension of the scale
-#	-resolution	- value rounded to multiple of this
-#	-showvalue	- should the current value be displayed 
-#	-sliderlength	- the size of the slider along the long dimension
-#	-sliderrelief
-#	-state		- normal, active, or disabled
-#	-tickinterval
-#	-to
-#	-variable
-#	-width		- narrow dimension
-#
-# Widget methods for Tk scale
-#
-#	cget
-#	configure
-#	coords
-#	get
-#	identify
-#	set
-#
-# Bindings for Tk scale
-#	<Button-1> in trough, +/- $options(-resolution)
-#	<Button-1> on slider, drag slider to value
-#	<Control-Button-1> in trough to end of range
-#	<Button-2> scale set to mouse position
-#	<KeyPress-Up> <KeyPress-Right> value += $options(-resolution)
-#	<KeyPress-Down> <KeyPress-Left> value -= $options(-resolution)
-#	<Control-KeyPress-Up> <Control-KeyPress-Right> value += $options(-bigincrement)
- #	<Control-KeyPress-Down> <Control-KeyPress-Left> value -= $options(-bigincrement)
-#	<KeyPress-Home> moves to top/left end of range
-#	<KeyPress-End> moves to left/bottom end of range
-#
-########################################################################
-# Standard options for ttk::scale
-#
-#       -class                -cursor              -style
-#       -takefocus
-#
-# Widget-Specific Options for ttk::scale
-#
-#	-command
-#	-from
-#	-length
-#	-orient
-#	-to
-#	-value
-#	-variable
-#
-# Widget commands for ttk::scale
-#
-#	cget
-#	configure
-#	get
-#	identify
-#	instate
-#	set
-#	state
-#
-# Styling Options for ttk::scale, clas sname TScale
-#
-#	-background
-#	-borderwidth
-#	-darkcolor
-#	-groovewidth
-#	-lightcolor
-#	-sliderwidth
-#	-troughcolor
-#	-troughrelief
-#
+    ########################################################################
+    # standard options for Tk scale
+    #
+    #       -activebackground     -foreground          -relief
+    #       -background           -highlightbackground -repeatdelay
+    #       -borderwidth          -highlightcolor      -repeatinterval
+    #       -cursor               -highlightthickness  -takefocus
+    #       -font                 -orient              -troughcolor
+    # 
+    # Widget specific options for Tk scale
+    #	-bigincrement	- default 1/10th of scale range
+    #	-command	- invoked when scale changes value
+    #	-digits		- digits of precision
+    #	-label
+    #	-length		- the desired long dimension of the scale
+    #	-resolution	- value rounded to multiple of this
+    #	-showvalue	- should the current value be displayed 
+    #	-sliderlength	- the size of the slider along the long dimension
+    #	-sliderrelief
+    #	-state		- normal, active, or disabled
+    #	-tickinterval
+    #	-to
+    #	-variable
+    #	-width		- narrow dimension
+    #
+    # Widget methods for Tk scale
+    #
+    #	cget
+    #	configure
+    #	coords
+    #	get
+    #	identify
+    #	set
+    #
+    # Bindings for Tk scale
+    #	<Button-1> in trough, +/- $options(-resolution)
+    #	<Button-1> on slider, drag slider to value
+    #	<Control-Button-1> in trough to end of range
+    #	<Button-2> scale set to mouse position
+    #	<KeyPress-Up> <KeyPress-Right> value += $options(-resolution)
+    #	<KeyPress-Down> <KeyPress-Left> value -= $options(-resolution)
+    #	<Control-KeyPress-Up> <Control-KeyPress-Right> value += $options(-bigincrement)
+    #	<Control-KeyPress-Down> <Control-KeyPress-Left> value -= $options(-bigincrement)
+    #	<KeyPress-Home> moves to top/left end of range
+    #	<KeyPress-End> moves to left/bottom end of range
+    #
+    ########################################################################
+    # Standard options for ttk::scale
+    #
+    #       -class                -cursor              -style
+    #       -takefocus
+    #
+    # Widget-Specific Options for ttk::scale
+    #
+    #	-command
+    #	-from
+    #	-length
+    #	-orient
+    #	-to
+    #	-value
+    #	-variable
+    #
+    # Widget commands for ttk::scale
+    #
+    #	cget
+    #	configure
+    #	get
+    #	identify
+    #	instate
+    #	set
+    #	state
+    #
+    # Styling Options for ttk::scale, clas sname TScale
+    #
+    #	-background
+    #	-borderwidth
+    #	-darkcolor
+    #	-groovewidth
+    #	-lightcolor
+    #	-sliderwidth
+    #	-troughcolor
+    #	-troughrelief
+    #
