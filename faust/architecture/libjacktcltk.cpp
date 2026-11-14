@@ -52,7 +52,7 @@
 //#define EFFECT 1	// be prepared for common polyphony effect if -effect auto|effect.dsp
 
 #include "faust/dsp/timed-dsp.h"
-#include "faust/dsp/one-sample-dsp.h"
+//#include "faust/dsp/one-sample-dsp.h"
 
 // UI includes, preserving order of #define's
 #ifdef FILEUI
@@ -289,6 +289,7 @@ struct _client_data_t {
   bool *arg_used;		// allocated to argc values, false
   const char **argv;		// allocated with argc values, Tcl_GetString(objv[i])
   int nvoices;
+  bool midi;
   bool midi_sync;
   bool control;
   bool group;
@@ -325,7 +326,7 @@ struct _client_data_t {
   _client_data_t(dsp *DSP, Tcl_Interp *interp, int argc, Tcl_Obj *const*objv) :
     DSP(DSP), interp(interp), argc(argc), objv(objv),
     class_name(nullptr), command_name(nullptr), tkclass_name(tkclass_name), arg_used(nullptr), argv(nullptr),
-    nvoices(0), midi_sync(false), control(false), group(false),
+    nvoices(0), midi(false), midi_sync(false), control(false), group(false),
 #ifdef FILEUI
     rc_file_name(nullptr), finterface(nullptr),
 #endif
@@ -480,7 +481,7 @@ struct _client_data_t {
   }
 
   void _analyze() {
-    MidiMeta::analyse(DSP, midi_sync, nvoices);
+    MidiMeta::analyse(DSP, midi, midi_sync, nvoices);
   }
   
   // these need to parse and search metadata too
@@ -550,7 +551,7 @@ struct _client_data_t {
     midi_sync = false;
     control = true;
     nvoices = 0;
-    MidiMeta::analyse(DSP, midi_sync, nvoices);
+    MidiMeta::analyse(DSP, midi, midi_sync, nvoices);
     nvoices = _getoptionint("-nvoices", nvoices);
     control = _getoptionbool("-control", control);
     group = _getoptionbool("-group", 1);

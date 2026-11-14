@@ -11,8 +11,8 @@ static const char _file[] = __FILE__;
 static const char _date[] = __DATE__;
 static const char _time[] = __TIME__;
 
-#define NPADS 2
-#define PADS 15, 16
+//#define NPADS 2
+//#define PADS 15, 16
 
 #include "Config.h"
 #include "TouchPads.h"

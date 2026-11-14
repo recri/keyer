@@ -44,6 +44,8 @@ extern "C" {
 
   typedef struct {
 #include "framework_options_vars.h"
+    int ditPctDeaf;
+    int dahPctDeaf;
   } options_t;
 
   typedef struct {
@@ -162,6 +164,8 @@ extern "C" {
 
   static const fw_option_table_t _options[] = {
 #include "framework_options.h"
+  { "-dit-pct-deaf",     "ditPctDeaf",      "Deaf",    "75",       fw_option_int,     fw_flag_none,        offsetof(_t, opts.ditPctDeaf),      "enhanced Curtiss B" },
+  { "-dah-pct-deaf",     "dahPctDeaf",      "Deaf",    "45",	   fw_option_int,     fw_flag_none,        offsetof(_t, opts.dahPctDeaf),      "enhanced Curtiss B" },
     { NULL, NULL, NULL, NULL, fw_option_none, fw_flag_none, 0, NULL }
   };
 

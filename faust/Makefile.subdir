@@ -58,11 +58,13 @@ test::
 	 $< -o $*.o
 
 $(LIBDIR)/%.so: %.o
+	-mkdir -p $(LIBDIR)
 	$(CXX) -shared $< $(LIBS) -o $@
 
 # link flags for shared library, appended to end of the $(CXX) command arguments
 #  -L $(LIBDIR)/.. -ljacktcltk -Wl,-rpath='$$ORIGIN/..'
 $(LIBDIR)/%.so: %.dsp ../architecture/jacktcltk.cpp ../architecture/libjacktcltk.cpp
+	-mkdir -p $(LIBDIR)
 	faust -a ../architecture/jacktcltk.cpp $< | \
 	$(CXX) -shared -fPIC $(CXXFLAGS) \
 	-DTCL_INIT_NAME=$(shell tclsh ../initname.tcl $*) \

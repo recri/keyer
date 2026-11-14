@@ -20,7 +20,8 @@
 #define IAMBIC_AD5DZ_H
 
 /*
-** A morse code keyer reduced to a simple logic class.
+** AD5DZ's iabic keyer
+** modified to support the enhanced Curtiss B from the Morserino
 **
 ** // usage
 **
@@ -33,7 +34,7 @@
 ** keyout = k.clock(dit, dah, ticks);	
 **
 ** // the timing is specified with
-** k.setTimes(microseconds_per_tick_of_the_clock,
+** k.setTimes(machine_ticks_per_tick_of_the_clock,
 **	      words_per_minute,
 **            dits_per_word,
 **            dits_per_dit,
@@ -49,6 +50,9 @@
 **            automatic_inter_letter_space,
 **            automatic_inter_word_space
 **        )
+** // set the enhanced B parameters
+** k.setEnhanced(ditDeafPerCent, // percentage of dit which ignores touches
+**		 dahDeafPerCent) // percentage of dah which ignores touches
 */
 
 /*
@@ -77,20 +81,22 @@ public:
   int _ticksPerIes;
   int _ticksPerIls;
   int _ticksPerIws;
-
+  byte _ditPctDeaf;		// insert
+  byte _dahPctDeaf;		// insert
   byte _keyOut;			// output key state
   key_t _key;			// input key didah state, swapped
   key_t _memKey;		// memory of states seen since element began
   keyer_t _keyerState;		// current keyer state
   int _keyerDuration;		// ticks to next keyer state transition
-
+  int _deafDuration;		// deaf to touches while positive // insert
   // initialize a keyer
   iambic_ad5dz() {
     _keyOut = IAMBIC_OFF;
     _key = KEY_OFF;
     _memKey = KEY_OFF;
     setTiming(1, 20, 50, 1, 3, 1, 3, 7);
-    setModes('A', false, false, false);
+    setModes('B', false, false, false);
+    setEnhanced(75,45);		// insert
   }
 
   // mask the key memory to the appropriate bits
@@ -102,10 +108,14 @@ public:
   bool _transitionTo(keyer_t newState, int newDuration) {
     switch (newState) {
     case KEYER_OFF: break;
-    case KEYER_DIT: _keyOut = IAMBIC_DIT; _memToOff(); break;
-    case KEYER_DAH: _keyOut = IAMBIC_DAH; _memToOff(); break;
+    case KEYER_DIT: _keyOut = IAMBIC_DIT; _memToOff(); 
+      _deafDuration = _ticksPerDit * _ditPctDeaf / 100; break; // insert
+    case KEYER_DAH: _keyOut = IAMBIC_DAH; _memToOff();
+      _deafDuration = _ticksPerDah * _dahPctDeaf / 100; break; // insert
     case KEYER_DIT_SPACE: // fall through
-    case KEYER_DAH_SPACE: _keyOut = IAMBIC_OFF; if (_key == KEY_OFF && _mode == 'A') _memToOff(); break;
+    case KEYER_DAH_SPACE: _keyOut = IAMBIC_OFF; 
+      // if (_key == KEY_OFF && _mode == 'A') _memToOff(); // remove
+      break;
     case KEYER_SYMBOL_SPACE: _memToOff(); break;
     case KEYER_WORD_SPACE: break;
       // default: fprintf(stderr, "uncaught case %d in transitionTo()", newState);
@@ -133,7 +143,8 @@ public:
 
     _key = _fix_swapped(raw_dit_on, raw_dah_on);
 
-    _memKey = (key_t)(_memKey | _key);
+    if ((_deafDuration -= ticks) <= 0) // insert
+      _memKey = (key_t)(_memKey | _key);
 
     if ((_keyerDuration -= ticks) > 0) return _keyOut;
 
@@ -162,9 +173,19 @@ public:
   // set the modes
   void setModes(char mode, bool swapped, bool autoIls, bool autoIws) {
     _mode = mode;		// set the paddle key mode
+    if (mode == 'A') {		// insert
+      _ditPctDeaf = _dahPctDeaf = 100;  // insert
+    } else if (mode == 'B') {		// insert
+      _ditPctDeaf = _dahPctDeaf = 0;    // insert
+    } 
     _autoIls = autoIls;		// set the auto inter-letter spacing
     _autoIws = autoIws;		// set the auto inter-word spacing
     _fix_swapped = swapped ? &_is_swapped : &_is_not_swapped;
+  }
+  // set the enhanced curtiss B parameters
+  void setEnhanced(byte ditPctDeaf, byte dahPctDeaf) {
+    _ditPctDeaf = ditPctDeaf;
+    _dahPctDeaf = dahPctDeaf;
   }
 };
 

@@ -2,8 +2,12 @@ VSN_FFTW3=3.2.2
 VSN_JACK=1.9.7
 VSN_TCL=8.6
 VSN_TK=8.6
-CURSUBDIRS=sdrtcl faust bin lib
-
+# leave out faust
+# CURSUBDIRS=sdrtcl faust bin lib
+# UBUNTU_DEPS=build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon faust
+# CHECK_FAUST=	which faust > /dev/null 2>&1 || \
+CURSUBDIRS=sdrtcl bin lib
+UBUNTU_DEPS=build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon
 OLDSUBDIRS=
 SUBDIRS=$(CURSUBDIRS) $(OLDSUBDIRS)
 
@@ -12,8 +16,9 @@ all::
 
 make:: all
 
+
 ubuntu-deps:
-	sudo apt install build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon faust
+	sudo apt install $(UBUNTU_DEPS)
 
 clean::
 	@find . -name '*~' -exec rm -f \{} \;
@@ -35,5 +40,4 @@ check::
 	pkg-config --exists 'tcl >= $(VSN_TCL)' && \
 	test -f /usr/include/tcl/tcl.h && \
 	test -f /usr/include/tcl/tk.h) && \
-	which faust > /dev/null 2>&1 || \
 	echo you seem to be missing required packages, consult the README.org

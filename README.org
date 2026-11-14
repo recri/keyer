@@ -84,6 +84,7 @@
    | libusb-1.0-0-dev   |
    | graphviz           |
    | tkcon              |
+   | faust              |
 
    These are not all the required packages.  Several other packages
    will be dragged in because they're required by the packages
@@ -91,7 +92,7 @@
 
    The "apt" command to install these packages is
    #+BEGIN_EXAMPLE
-   sudo apt install build-essential git-core jackd2 tk8.6-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon
+   sudo apt install build-essential git-core jackd2 tcl-dev tk-dev tcllib tklib tcl-udp tcl-thread libasound2-dev libfftw3-dev libjack-jackd2-dev libusb-1.0-0-dev graphviz tkcon faust
    #+END_EXAMPLE
 
    Run this apt command in a terminal emulator.  There will be a test part way

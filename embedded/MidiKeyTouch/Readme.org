@@ -1,0 +1,5 @@
+* The TouchMonitor is compiled in if Serial is active.
+* ? will print a help.
+* I'm going to implement a continuous printout for spotting the changes.
+* General observations, 149 µs per read of 12 touch pads in Teensy 3.1/2.
+* I don't know if there's any low pass filtering on the raw values.

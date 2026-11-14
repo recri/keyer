@@ -5186,7 +5186,7 @@ set morse::words-5k::pos {
     ZZ2	plural letter of the alphabet (e.g. A's, b's)
 }
 
-proc words-5k-list {} { return [string trim ${::morse::words-5k::words}] }
+proc words-5k-list {} { return  [string trim ${::morse::words-5k::words}] }
 proc words-5k-words {} { return [lmap {rank word pos freq disp} [words-5k-list] {set word}] }
 proc words-5k-pos {} { return [lmap {rank word pos freq disp} [words-5k-list] {set pos}] }
 proc words-5k-freqs {} { return [lmap {rank word pos freq disp} [words-5k-list] {set freq}] }
@@ -5196,7 +5196,7 @@ proc words-5k-freqs {} { return [lmap {rank word pos freq disp} [words-5k-list] 
 # rank order in a few places.  Like "to" which bumps from 7 to 5, oh, several more
 proc words-5k-dict {} {
     set dict [dict create]
-    foreach {rank word pos freq disp} [words-list] {
+    foreach {rank word pos freq disp} [words-5k-list] {
 	dict incr dict $word $freq
     }
     return $dict

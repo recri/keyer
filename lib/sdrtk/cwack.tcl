@@ -288,6 +288,13 @@ snit::widget sdrtk::cwack {
     option -foreground -default black -configuremethod ConfigText
     option -background -default white -configuremethod ConfigText
     
+    # new options
+    # number of repeats after initial prompt 1..unlimited
+    # display prompts
+    # display responses
+    # prompt resevoir - file name, read in, sort lines by dit-length,
+    # externalize built in prompt as file
+
     # retired option: source of challenge
     option -source -default {itu characters}
     option -source-label {Source}
@@ -413,11 +420,10 @@ snit::widget sdrtk::cwack {
 	bind $win <Destroy> [list destroy .]
 	# five tabs in a notebook
 	pack [ttk::notebook $win.echo] -fill both -expand true
-	$win.echo add [$self play-tab $win.play] -text Cwack
-	$win.echo add [$self stats-tab $win.stats] -text Stats
+	$win.echo add [$self play-tab $win.play] -text Play
 	$win.echo add [$self about-tab $win.about] -text About
 	$win.echo add [$self sandbox-tab $win.sandbox] -text Sandbox
-	$win.echo add [$self dial-tab $win.dial] -text Dial
+	$win.echo add [$self option-tab $win.dial] -text Options
 	bind $win.echo <<NotebookTabChanged>> [mymethod swaptabs]
 	after 500 [mymethod setup]
     }
@@ -431,12 +437,6 @@ snit::widget sdrtk::cwack {
 		    $win.sandbox configure -detime {}
 		}
 	    }
-	    *stats {
-		# draw the current statistics
-		$self stats-draw $win.stats
-	    }
-	    *setup {
-	    }
 	    *sandbox {
 		# steal the detimer on keyboard and key
 		# $win.play configure -detime {}
@@ -447,7 +447,7 @@ snit::widget sdrtk::cwack {
 	    }
 	    *about {
 	    }
-	    *dial {
+	    *option {
 	    }
 	    default {
 		error "uncaught NotebookTabChanged select [$win.echo select]"
@@ -555,6 +555,10 @@ snit::widget sdrtk::cwack {
 	    # puts "$data(state)"
 	    switch $data(state) {
 		start {
+		    ## initialize data
+		    ## get selected word set
+		    ## choose initial prompt set
+		    ## initialize scores
 		    array set data [list \
 					session-time 0 \
 					session-time-limit [expr {int($options(-session)*60*1000)}] \
@@ -596,6 +600,7 @@ snit::widget sdrtk::cwack {
 		    }
 		}
 		new-challenge {
+		    # draw a prompt from the prompt set
 		    array set data [list challenge {} trimmed-challenge {} response {} trimmed-response {} state challenge ]
 		    set data(pre-challenge) [$self sample-draw]
 		    set data(n-p-c) [string length $data(pre-challenge)]
@@ -648,6 +653,7 @@ snit::widget sdrtk::cwack {
 		    break
 		}
 		wait-response-echo {
+		    # this is using space to terminate the response, which won't work for phrases with spaces.
 		    # $self status-line "Waiting for response ... {$data(trimmed-challenge)} {$data(trimmed-response)}"
 		    set data(response-time) [format %.0f [expr {[clock millis]-$data(time-challenge)}]]
 		    if {$data(response-space)} {
@@ -889,8 +895,8 @@ snit::widget sdrtk::cwack {
 	# puts "score-challenge {$data(pre-challenge)} {$data(trimmed-response)} $data(response-time) ms"
     }
     
-    proc sample-choosei {n} { return [expr {int(rand()*$n)}] }
-    proc sample-choose {x} { return [lindex $x [sample-choosei [llength $x]]] }
+    proc sample-choose-i {n} { return [expr {int(rand()*$n)}] }
+    proc sample-choose {x} { return [lindex $x [sample-choose-i [llength $x]]] }
     proc sample-shuffle {x} {
 	set y {}
 	while {[llength $x]} {
@@ -900,133 +906,33 @@ snit::widget sdrtk::cwack {
 	return $y
     }
     
-    # make a sample with specified -difficulty and -spread
-    # for mean mu and standard deviation sigma evaluate the relative weights
-    # for bins centered at the positive odd x
-    # puts "about to execute proc weights"
-    proc sample-make-weights {mu sigma max} {
-	# puts "sample-make-weights $mu $sigma $max"
-	set sigma [expr {max(0.01,$sigma)}]
-	set bins [dict create sum 0]
-	for {set n 1} {$n <= $max} {incr n 2} {
-	    set wt [expr {int(101*(ncdf($n-1, $mu, $sigma)-ncdf($n+1, $mu, $sigma)))}]
-	    dict set bins $n $wt
-	    dict incr bins sum $wt
-	}
-	set bins [dict map {n wt} $bins { if {$wt} { set wt } else continue }]
-	# puts "$bins"
-	return $bins
-    }
-    
-    proc sample-make-one-sample {bins} {
-	set i [expr {int(rand()*[dict get $bins sum])}]
-	foreach j [dict keys $bins {[0-9]*}] {
-	    set i [expr {$i-[dict get $bins $j]}]
-	    if {$i <= 0} { return $j }
-	}
-	puts "ran off end of sample bins: $bins"
-	return [sample-choose [dict keys $bins {[0-9]*}]]
-    }
-    
-    proc sample-make-sample {bins {n 1}} {
-	if {$n == 1} {
-	    return [sample-make-one-sample $bins]
-	}
-	set samps {}
-	while {[llength $samps] < $n} {
-	    lappend samps [sample-make-one-sample $bins]
-	}
-	return $samps
-    }
-    
+    # sample make called at start
+    # should make the overall collection of prompts
+    # and the sub-collection which will be the initial working collection of prompts
+    # the working collections are all integer indexes into the overall collection
     method sample-make {} {
-	if {$data(dits) eq {}} {
-	    # make the dits table
-	    # characters by dit length
-	    # combinations of characters by dit length
-	    # tabulated by length of combination
-	    set maxn 31
-	    set dits [dict create]
-	    set dict [$options(-dict)]
-	    # generate unigraphs classified by dit length
-	    set cset [dict keys $dict]
-	    set cdits [dict create]
-	    foreach c $cset { dict lappend cdits [morse-word-length $dict $c] $c }
-	    dict set dits 1 $cdits
-	    # generate digraphs classified by dit length
-	    set nset [lsort -integer [dict keys $cdits]]
-	    set wdits [dict create]
-	    foreach n1 $nset {
-		foreach n2 $nset {
-		    set n [expr {$n1+3+$n2}]
-		    if {$n > $maxn} continue
-		    set ns [lsort -integer [list $n1 $n2]]
-		    if { ( ! [dict exists $wdits $n] ) || $ns ni [dict get $wdits $n] } {
-			dict lappend wdits $n $ns
-		    }
-		}
+	if {$data(current-words-list) eq {} || $data(words-list-name) ne $data(current-words-list-name)} {
+	    # load the word list
+	    package require cwack::$data(words-list-name)
+	    # set the name of the current word list
+	    set data(current-words-list-name) $data(words-list-name)
+	    # set the current word list
+	    set data(current-words-list) [cwack::$data(words-list-name)]
+	    # start the word list index at the specified difficulty level
+	    set data(word-list-index) [expr {$data(difficulty) * [llength $data(current-words-list)]}]
+	    # build the current prompt set
+	    set data(current-prompt-set) {}
+	    for {set i $data(prompt-set-size)} {$i > 0} {incr i -1} {
+		lappend data(current-prompt-set) $data(word-list-index)
+		incr data(word-list-index)
 	    }
-	    dict set dits 2 $wdits
-	    # generate n-graphs classified by dit length up to length 5
-	    for {set i 3} {$i <= 5} {incr i} {
-		set pdits [dict get $dits [expr {$i-1}]]
-		set wdits [dict create]
-		foreach n2 [lsort -integer [dict keys $pdits]] {
-		    foreach n1 $nset {
-			set n [expr {$n1+3+$n2}]
-			if {$n > $maxn} continue
-			foreach w2 [dict get $pdits $n2] {
-			    set ns [lsort -integer [concat $n1 $w2]]
-			    if { ( ! [dict exists $wdits $n] ) || $ns ni [dict get $wdits $n] } {
-				dict lappend wdits $n $ns
-			    }
-			}
-		    }
-		}
-		dict set dits $i $wdits
-	    }
-	    # print out the table
-	    if {0} {
-		foreach n $nset {
-		    set vals [dict values [dict map {k v} $dits {llength [dict get $v $n]}]]
-		    if {$vals ne {}} { puts "$n -> $vals" }
-		    foreach k [dict keys $dits] { 
-			set vals [dict get $dits $k $n]
-			if {$vals ne {}} { puts "$n $k -> $vals" }
-		    }
-		}
-	    }
-	    set data(dits) $dits
-	    set data(mdits) [dict create]
-	    dict for {n d} $dits {
-		dict for {nd v} $d {
-		    dict lappend data(mdits) $nd {*}$v
-		}
-	    }
+	    # shuffle the prompt set
+	    set data(current-prompt-set) [shuffle $data(current-prompt-set)]
 	}
-	set nset [lsort -integer [dict keys [dict get $data(dits) 1]]]
-	# puts "character $nset"
-	set nset [lsort -integer [dict keys $data(mdits)]]
-	# puts "merged $nset"
-	set bins [sample-make-weights $options(-difficulty) $options(-spread) [tcl::mathfunc::max {*}$nset]]
-	return $bins
     }
     
     method sample-draw {} {
-	set length [sample-make-one-sample $data(sample)]
-	# puts "sample-draw length $length"
-	set draw [sample-choose [dict get $data(mdits) $length]]
-	# puts "sample-draw draw {$draw}"
-	# the list/item ambiguity bites us when the item is a "
-	if {[string length $draw] == 1 || [regexp {^<[^>]+>$} $draw]} {
-	    return $draw
-	} elseif {[llength $draw] == 1} {
-	    puts "sample-draw {$draw} character didn't match patterns"
-	    return $draw
-	} else {
-	    set draw [join [lmap i [sample-shuffle $draw] {sample-choose [dict get $data(dits) 1 $i]}] {}]
-	    return $draw
- 	}
+	return [sample-choose $data(current-prompt-set)]
     }
     
     #
@@ -1122,9 +1028,9 @@ snit::widget sdrtk::cwack {
 	return $w
     }
     #
-    # dial-tab
+    # option-tab
     #
-    method dial-tab {w} {
+    method option-tab {w} {
 	::sdrtk::dialbook $w
 	foreach text [lsort [::options get-opts]] {
 	    if {[::options is-hide $text]} continue
@@ -1146,54 +1052,11 @@ snit::widget sdrtk::cwack {
 	return $w
     }
     #
-    # stats-tab
-    #
-    method stats-tab {w} {
-	ttk::frame $w
-	pack [canvas $w.c -background lightgrey] -fill both -expand true
-	return $w
-    }
-    method stats-draw {w} {
-	$w.c delete all
-	for {set i 0} {$i < [llength $data(summary)]} {incr i} {
-	    $self stats-draw-row $w $i [lindex $data(summary) $i] 
-	}
-    }
-    method stats-draw-row {w i row} {
-	# puts "stats-draw-row $w $i $row"
-	lassign $row char percent min q1 median q3 max
-	# row label
-	$w.c create text 0 0 -text [format "$char %3d%%" $percent] -anchor nw -tag [list text$i row$i] -font {Courier 12}
-	# percent correct
-	if {$percent != 0} { $w.c create rectangle 0 0.1 $percent 0.9 -fill $data(bluish-color) -tag [list rect$i row$i] }
-	if {$percent != 100} { $w.c create rectangle $percent 0.1 100 0.9 -fill $data(reddish-color) -tag [list rect$i row$i] }
-	if {$min ne {}} {
-	    # box and whiskers verticals
-	    $w.c create line $min 0.1 $min 0.9 -tag [list box$i row$i]
-	    $w.c create line $q1 0.1 $q1 0.9 -tag [list box$i row$i]
-	    $w.c create line $median 0.1 $median 0.9 -width 2 -tags [list box$i row$i]
-	    $w.c create line $q3 0.1 $q3 0.9 -tag [list box$i row$i]
-	    $w.c create line $max 0.1 $max 0.9 -tag [list box$i row$i]
-	    # box and whiskers horizontals
-	    $w.c create line $min 0.5 $q1 0.5 -tags [list box$i row$i]
-	    $w.c create line $q3 0.5 $max 0.5 -tags [list box$i row$i]
-	    $w.c create line $q1 0.1 $q3 0.1 -tags [list box$i row$i]
-	    $w.c create line $q1 0.9 $q3 0.9 -tags [list box$i row$i]
-	}
-	# scale
-	$w.c scale rect$i 0 0 1 18
-	if {$min ne {}} { $w.c scale box$i 0 0 30 18 }
-	$w.c move row$i 0 [expr {$i*18}]
-	$w.c move text$i 10 0
-	$w.c move rect$i 70 0
-	if {$min ne {}} { $w.c move box$i 150 0 }
-    }
-    #
     # about-tab
     #
     method about-tab {w} {
 	ttk::frame $w
-	pack [text $w.text -width 40 -background lightgrey] -fill both -expand true
+	pack [text $w.text -width 40 -background lightgrey -wrap word] -fill both -expand true
 	$w.text insert end "" bold "Welcome to cwack\n" \
 	    normal "cwack is a CW/Morse code trainer for your ear and your fist. " \
 	    normal "Click" italic {[Play]} normal " on the " italic "Play" normal "tab and the computer will play morse code for you." \
